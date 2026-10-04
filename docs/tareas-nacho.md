@@ -1218,6 +1218,25 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `scripts/`: `.call` 158 → 155, `.get(&` 118 → 117. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso
     (`vehicle/` y `tests/`). La reserva `nacho/N-224-run-tally-typed` (solo el claim) se dejó: `run_tally.gd` ya se
     había saltado por `RunManager`. Siguientes: `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5).
+  - [x] `fault_repair_spot.gd` (2026-10-04, rama `nacho/N-224-fault-repair-spot-typed`, reserva retomada): el punto
+    de arreglo de una avería. El dueño como `VehicleFaults` (`repair_prompt`, `repair_method`, `is_driver`, `fix`;
+    `vehicle_faults.gd` precarga este archivo y ya nombra `Player`, así que no suma nada al grafo de un `--script`) y el
+    jugador como `Player` para `carried_package`: el `Node3D` de `test_vehicle_faults.gd` no es `Player` y no carga nada,
+    igual que antes. En el archivo: 5 → 0 usos (`.call` 4 → 0, `.get(&` 1 → 0); en `scripts/`: `.call` 156 → 152,
+    `.get(&` 117 → 116 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`).
+    Siguientes (fuera de `BUDGETS`): `run_tally.gd` (9, reserva `nacho/N-224-run-tally-typed` de solo el claim),
+    `vehicle.gd` (7), `network_manager.gd` (7), `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
+  - [x] `run_tally.gd` (2026-10-04, rama `nacho/N-224-run-tally-typed`, reserva retomada): el resumen de la
+    pantalla de "se fue el anfitrión" (N-222). `run_manager.gd` no se puede precargar (nombra autoloads; `net_trio.gd`
+    carga este archivo por `--script`) ni sumar un método público (ya tiene 20, tope del lint), así que el registro
+    entra por argumentos tipados: `has_unfinished_run(run)`/`of(run)` pasan a `unfinished(results, elapsed_seconds)`
+    y `count(deliveries, cargo, endless, expected_houses, distance, elapsed_seconds)`, `handed_over()` sale de
+    `run_deliveries.gd` por `preload`, y `hud_pause.gd` arma el resumen con `_unfinished_tally()` sobre el autoload
+    `RunManager` tipado. En el archivo: 9 → 0 usos (`.call` 1 → 0, `.get(&` 8 → 0); en `scripts/`: `.call` 152 → 151,
+    `.get(&` 116 → 109 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo; `test_host_gone_tally.gd` suma
+    el caso "con resultados ya no está sin terminar". Aviso `docs/avisos/2026-10-04-n224-run-tally-tipado.md`
+    (`hud_pause.gd` es de Slatex). Siguientes (fuera de `BUDGETS`): `vehicle.gd` (7), `network_manager.gd` (7),
+    `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -2011,37 +2030,106 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   nuevo no se corrige contra el `seq` del anterior) y `_stop_orphaned_run` congela el camión y corta la predicción (`stop_prediction()`) si el host se va mientras
   el cliente predice. Segunda pasada de `auditor-red` sobre el arreglo: el freno vencido no se suelta y el reinicio de
   `applied_seq` es solo en el host (en el cliente borraba el historial si el volante iba y volvía entre dos ticks).
-- [ ] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:
+- [x] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:
   barreras y vagones del paso a nivel (`rail_crossing_segment.gd:213,281`, llegan RTT/2 tarde al cliente) y operarios y
   autoelevador del depósito (`depot_worker.gd:42-44`, `depot_forklift.gd:32-34`, cada peer en su fase; hoy también
   frenan al camión del host). Arreglo: `add_collision_exception_with` del camión en los peers que no son host (paso a
   nivel) y en todos (depósito), o capa propia fuera de la máscara del camión. Test: muro solo en el mundo del cliente en
   `test_vehicle_prediction` y las excepciones en `get_collision_exceptions()`. Origen: construcción 2026-10-02
   (`auditor-red`, N-922.1). Con `constructor-red` (y `constructor-mundo` para el depósito), después `auditor-red`.
-- [ ] **N-922.4** Predecir sin suelo: quien vuelve (N-221) o entra tarde en Endless al volante arranca la predicción
+  **[x] Hecho (2026-10-02, `263460d5`, rama `nacho/N-922-net-audit`)** — excepción de colisión del lado del cuerpo
+  (`scripts/gameplay/vehicle/truck_pass_through.gd`, `TruckPassThrough.let_through()`, reintentada cada tick hasta que
+  el camión esté en el árbol): operarios (`DepotWorker`, también los del lote final) y autoelevador en todos los peers;
+  barreras y vagones del paso a nivel solo donde no es el host (`RailCrossingSegment.lets_truck_through`). Tests:
+  muro solo en el mundo del cliente (sin excepción, salto de 3,5 m; con ella, la copia pasa sin salto) y
+  `get_collision_exceptions()` en `test_vehicle_prediction`; `net_trio` imprime `through=ok` (host sólido, clientes
+  con la excepción). Regla en `docs/convenciones-godot.md` §2.
+- [x] **N-922.4** Predecir sin suelo: quien vuelve (N-221) o entra tarde en Endless al volante arranca la predicción
   antes de que el streamer arme el terreno (60 m por tick) y la copia cae. Arreglo: en `vehicle_prediction.gd`
   `_start`/`wanted`, un rayo de 4 m hacia abajo desde `latest_pose` (máscara 1, sin el camión); sin impacto no se
   predice. Test: mundo del cliente sin piso en `test_vehicle_prediction`. Origen: construcción 2026-10-02. Con
   `constructor-red`.
-- [ ] **N-922.5** `--net-sim` en LAN no retrasa ni los inputs del conductor ni el `host_state` del reconciliador
+  **[x] Hecho (2026-10-02, `12e7ccca`)** — `VehiclePrediction.has_ground()`: rayo de 0,5 m arriba a 4 m abajo de la pose
+  más nueva del host, máscara 1, sin el camión; sin impacto la copia sigue congelada y dibujada del búfer, y arranca
+  cuando aparece el piso. Test en `test_vehicle_prediction` (sin el arreglo, la copia caía a y 0,11).
+- [x] **N-922.5** `--net-sim` en LAN no retrasa ni los inputs del conductor ni el `host_state` del reconciliador
   (`vehicle.gd:674`, `vehicle_prediction.gd:129`): con LAN la predicción se ve perfecta. Arreglo: cola de retraso chica
   en `modules/net_prediction` con el perfil de `pose_net_sim()`; test del módulo y etapa de `net_pair` con `--net-sim`.
   Origen: construcción 2026-10-02. Con `constructor-red`.
-- [ ] **N-922.6** Barro: la copia predicha no recibe el empuje de la cuadrilla (BOGGED) ni el arrastre (HAULING, 3-5
+  **[x] Hecho (2026-10-02, `8c807e16`)** — `NetDelayQueue` (`modules/net_prediction`, nuevo): un sentido de un enlace
+  simulado (lag, jitter, pérdida, en orden). `VehiclePrediction` usa dos (`uplink`, `downlink`), la mitad del lag cada
+  uno como hace Steam, desde `Vehicle.configure_net_sim()` (lo llama `_ready` con `NetworkManager.pose_net_sim()`).
+  Tests: módulo (`test_net_prediction`), `test_vehicle_prediction` y una etapa de `net_pair` que maneja 2 s más con el
+  perfil estándar (6 inputs y 5 estados retenidos, host 9 ticks atrás contra 3, corrección máx. 0,007 m/tick).
+- [x] **N-922.6** Barro: la copia predicha no recibe el empuje de la cuadrilla (BOGGED) ni el arrastre (HAULING, 3-5
   m/s) (`mud_segment.gd:453-462` vs `:525,609`): efecto goma durante el arrastre, sin salto. Pasar las dos a
   `_drag_truck` con `pushers` y `haul_method` (ya replicados). Origen: construcción 2026-10-02. Con `constructor-tramos`.
-- [ ] **N-922.7** Presentación al dejar o tomar la predicción: al soltar el volante en movimiento el hueco de ~7 m se
+  **[x] Hecho (2026-10-02, `ef62cc6d`)** — empuje y arrastre en `_drag_truck` (host y copia predicha), el arrastre
+  soltado pasado `pit_end + HAUL_PAST_PIT` como lo termina el host. Test nuevo `test_mud_prediction` (sin el arreglo,
+  la copia quedaba quieta: 0 m empujada, 0 m/s arrastrada).
+- [x] **N-922.7** Presentación al dejar o tomar la predicción: al soltar el volante en movimiento el hueco de ~7 m se
   cierra en 0,3 s y el camión dibujado retrocede (`vehicle_prediction.gd:186-197`; usar
   `maxf(EXIT_BLEND_SECONDS, 1.5 * gap / speed)`); al empezar, la cámara salta 1-2 m. Opcional: la caja manual no modela
   el embrague en la copia (`vehicle_gearbox.gd`, ~0,5 m/s, sin salto). Origen: construcción 2026-10-02. Con
   `constructor-camion`.
-- [ ] **N-922.8** Restos de la segunda pasada de `auditor-red` (2026-10-02, sobre el arreglo de N-922.2), riesgo bajo:
+  **[x] Hecho (2026-10-02, `a8e11eed`)** — al soltar, el hueco se cierra en `clampf(1.5 * hueco_adelante / velocidad,
+  0,3 s, 2 s)` (`VehiclePrediction.exit_blend_seconds()`): a 72 km/h, 0,61 s y nunca para atrás (antes retrocedía
+  0,17 m por cuadro). Al tomar, la copia arranca donde se la dibuja y el reconciliador la lleva a la pose más nueva del
+  host (`NetPredictionReconciler.nudge()`, nuevo; ≤ 10 cm por tick, salto pasados 3 m): sin el salto de ~0,9 m de la
+  cámara. Embrague de la camioneta vieja: la marcha del host que llega pone el embrague de la copia predicha
+  `SHIFT_SECONDS` (`vehicle.gd _on_remote_gear_changed`). Tests en `test_vehicle_prediction` y `test_net_prediction`.
+- [x] **N-922.8** Restos de la segunda pasada de `auditor-red` (2026-10-02, sobre el arreglo de N-922.2), riesgo bajo:
   (a) al volver los inputs tras un corte de subida, `NetInputBuffer.consume()` juega ~2 ticks el input retenido de
   hace más de 30 ticks entero antes de alcanzar uno nuevo (`net_input_buffer.gd:75-81`): con el input vencido, jugar
   el más viejo que espera o seguir "vencido" hasta alcanzar uno recibido; test en `test_net_prediction`; (b) en el
   cliente huérfano (host caído) el barro no-`IDLE` descongela y arrastra el camión detrás del overlay
   (`mud_segment.gd:424-427`): que el segmento mire `RunManager.is_running` o abortarlo en `_stop_orphaned_run`; test
   `mud`. Origen: construcción 2026-10-02. Con `constructor-red` y `constructor-tramos`.
+  **[x] Hecho (2026-10-02, `8c3a52c7`)** — (a) `NetInputBuffer.is_stale()` sigue verdadero hasta que se juega un input
+  llegado después (antes, los ~2 ticks en que los inputs nuevos venían un colchón adelante del contador devolvían el
+  viejo como fresco: acelerador a fondo otra vez); test en `test_net_prediction`. (b) `_stop_orphaned_run` llama al
+  grupo `stops_with_orphaned_run`; `MudSegment.stop_orphaned_run()` suelta el rescate como al fin de la partida. Test en
+  `test_mud_prediction` (sin el arreglo, el camión congelado era arrastrado 2,2 m).
+- [x] **N-922.9** El contador de `NetInputBuffer` se adelanta cuando la latencia de subida crece menos de
+  `MAX_LEAD + CUSHION` ticks (~115 ms): durante el hueco sigue contando, y cuando los inputs vuelven juega cada uno al
+  llegar pero lo rotula con el contador, unos ticks más adelante (`net_input_buffer.gd` `consume()`, regla "Ahead").
+  El cliente compara entonces el estado del host "después del input L" con el suyo después de L, cuando el host jugó
+  L-3: con el input constante no se nota, con el volante en movimiento es un error sistemático que el reconciliador
+  corrige hacia un camión que reacciona tarde, hasta que la latencia baje o el adelanto llegue a `MAX_LEAD`. Se ve en
+  la etapa `--net-sim` de `net_pair` (encendida a mitad de manejo: el host queda 9 ticks atrás y no ~13). Decisión de
+  diseño: rotular con el número del input jugado (y cómo rotular un tick de input retenido) o reanclar el contador a
+  `newest - CUSHION` al volver los inputs tras un hueco (repite rótulos; el reconciliador ya ignora los viejos), sin
+  perder la tolerancia al jitter. Test en `test_net_prediction` (subida que pasa de 2 a 7 ticks a mitad de camino: el
+  input jugado es el del rótulo). Origen: construcción 2026-10-02 (N-922.5). Con `constructor-red`, después
+  `auditor-red`.
+  **[x] Hecho (2026-10-02, `cf558086`)** — según `auditor-red` (2026-10-02): (1, medio) reanclar con histéresis:
+  `REANCHOR_TICKS` (15) inputs seguidos que llegan detrás del contador, ninguno a tiempo en el medio, y el contador
+  vuelve una vez a `CUSHION` detrás del más nuevo; una pérdida o un tick sin llegadas no cuentan. El rótulo sigue siendo
+  el contador (no el input jugado: un tick de input retenido mediría mal); los rótulos repetidos tras reanclar los
+  ignora el reconciliador. Agregado `played_seq()`. Test en `test_net_prediction` (subida de 2 a 7 ticks con el input
+  distinto cada tick: sin el arreglo el rótulo quedaba 3 adelante para siempre; con él, vuelve a ser el input jugado
+  ~20 ticks después del cambio; jitter dentro del colchón y 10 % de pérdida no mueven el contador). `net_pair`: la etapa `--net-sim` mueve
+  el volante todo el tiempo y prende el perfil a 1 s de arrancar; el host cuenta ticks seguidos con la pose rotulada
+  adelante del input jugado (20-28 con el arreglo, ~200 sin él; tope 60) y el cliente mide el error medio (1,6 cm antes,
+  2,4-7 cm desde 1 s después; tope +15 cm). Host 14-16 ticks atrás con `--net-sim` (antes 9: el adelanto). (2, bajo)
+  `NetPredictionReconciler.start_snaps`: un `nudge()` lejano salta y cuenta ahí, no en `snaps`; si un estado medido lo
+  reemplaza, reemplaza también su salto. Test en `test_vehicle_prediction` (`_check_quick_handback`: soltar a ~70 km/h
+  y retomar 0,1 s después, a 5-6 m de la pose más nueva del host). (3, bajo) `NetPoseSmoother.configure_sim(sim,
+  lag_share)` (opcional); el camión usa 0,5 en LAN como los estados que predice; test de igualdad en `_check_net_sim`
+  y de `lag_share` en `test_net_pose_smoother`. `PROTOCOL_VERSION` sigue en 27 (sin cambios de RPC ni de
+  replicación). Notas que quedan (bajo/info, sin tarea):
+  - Info: una subida de latencia de d ticks cuesta una corrección única de unos d ticks de recorrido (0,6-1 m a
+    ~12 m/s en `net_pair`, suavizada a ≤ 10 cm/tick; pasados 3 m a alta velocidad sería un salto). Es real: el host
+    retuvo un input esos ticks. Sin el arreglo no había corrección pero quedaba el volante 3 ticks tarde.
+  - Info: si la latencia baja, el contador queda hasta `MAX_LAG` detrás del más nuevo (más demora de input en el host,
+    rótulos correctos); no se reancla hacia adelante antes de eso.
+  - Bajo: retomar el volante mientras el camión dibujado sigue en la mezcla de salida lo lleva de golpe a la pose más
+    nueva del host, un viaje de ida y vuelta atrás (5-6 m a 70 km/h; ahora en `start_snaps`). Extrapolar esa pose
+    medio RTT lo achicaría.
+  - Info: jugadores y cajas (`player_ride.gd`, `package_net_pose.gd`) y `tender_input_lag.gd` siguen con el lag
+    entero de `--net-sim` en LAN (Steam: la mitad por sentido); solo el camión se alineó.
+  - Info (herramienta de prueba): apagar `--net-sim` a mitad de manejo deja en la cola las poses e inputs retenidos;
+    salen tarde (los inputs, ignorados por viejos) y el búfer de poses infla su jitter un rato.
 
 ## 3. Arte y dirección visual
 

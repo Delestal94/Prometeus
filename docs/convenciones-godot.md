@@ -161,6 +161,15 @@ en `scripts/ui/ping_catalog.gd` y el envío en `Player._send_ping()`.
   desincronizar el camión: en los clientes el camión está congelado y lo posiciona el
   host, y en el host pesan menos del 1 % del camión (`test_cargo_clutter`). Cualquier
   objeto suelto nuevo que sea solo decorado va igual.
+- **Cuerpos sólidos que no están igual en cada peer** (N-922.3): el cliente al volante simula
+  su copia del camión (N-218), así que algo sólido que en su mundo está en otro lado que en el
+  del host la frena o la empuja y la predicción vuelve con un salto de 3 m. Esos cuerpos dejan
+  pasar al camión con `TruckPassThrough.let_through()` (`scripts/gameplay/vehicle/`, excepción
+  de colisión de su lado, reintentada cada tick hasta que el camión esté en el árbol): lo que
+  cada peer mueve con su propio reloj (operarios y autoelevador del depósito y del lote final)
+  en todos los peers; lo que mueve el host y le llega tarde al cliente (barreras y tren del
+  paso a nivel) solo donde no es el host. Un cuerpo móvil nuevo en capa 1 que no se replica
+  va igual.
 
 ## 3. Organización de escenas dentro de `do-not-drop/`
 

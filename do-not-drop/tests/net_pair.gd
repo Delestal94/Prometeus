@@ -28,6 +28,17 @@ extends Node
 ## input), the host plays its numbered inputs and its truck moves with them, no
 ## correction moves the client's copy more than 10 cm a tick, and once the
 ## client gets out its copy is frozen again (DRIVE lines with the numbers).
+## N-922.5: then it drives with the standard `--net-sim` profile on its truck
+## (Vehicle.configure_net_sim, what `--net-sim` does on a LAN): its inputs and
+## the host's states are held back half the lag each (several of each on the
+## way at any time, none on the clean link), the host's states come in at
+## least 3 ticks later than on the clean link, and still no correction moves
+## it more than 10 cm a tick. N-922.9: that drive weaves the wheel all along
+## and switches the profile on a second into it: the host's pose is stamped
+## ahead of the input it played for well under a second (its input counter
+## re-anchors; before, for the rest of the drive), and from a second after
+## the switch the client's mean error grows by less than 15 cm over the one
+## before it.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -39,6 +50,19 @@ const NEWS_DESK: Script = preload("res://scripts/presentation/newspaper/news_des
 ## within this margin of the budget prints a WARNING (35 s today), a sign the
 ## pair is about to start failing on a slower runner.
 const SLOW_LOAD_MARGIN_SECONDS: float = 10.0
+## N-922.9, the drive into --net-sim: the wheel weaves this far (of full lock) every this many seconds...
+const NET_SIM_WEAVE: float = 0.6
+const NET_SIM_WEAVE_PERIOD: float = 1.5
+## ...and from a second after the switch, the mean error grows by less than this (m) over the one before it: the
+## truck is faster by then and 2 % of its inputs are lost (2.4-7 cm measured, against 1.6 cm before). What it guards
+## against is a counter that keeps moving, or a correction that doesn't settle; one left ahead for good is caught by
+## the host's count of ticks stamped ahead (at these speeds its error is only ~3 cm).
+const MAX_NET_SIM_ERROR_GROWTH: float = 0.15
+## ...and on the host, the pose is stamped ahead of the input it played this many ticks in a row at most: the gap as
+## the profile goes on (half its lag and jitter, 4-6 ticks), NetInputBuffer.REANCHOR_TICKS inputs landing behind the
+## counter and the ticks that jitter or a slow frame leave without one meanwhile (20-28 measured). Before N-922.9 the
+## counter stayed ahead for the whole drive (~200).
+const MAX_STAMP_AHEAD_TICKS: int = 60
 
 var _network: Node
 var _level: Node
@@ -273,16 +297,27 @@ func _check_client_drives(client_player: Player) -> void:
 	var start: Vector3 = vehicle.global_position
 	# The client gets out before it reports, and a change of driver puts the
 	# host's input number back to 0 (N-922): the highest one it played counts.
-	var played: Array[int] = [0]
-	var track_seq := func() -> void: played[0] = maxi(played[0], int(vehicle.get(&"net_input_seq")))
+	# N-922.9: [highest played, ticks in a row the pose was stamped ahead of the
+	# input played, the most of those]. A loss or the gap as --net-sim goes on
+	# hold one input a few ticks; a counter that stays ahead is the bug.
+	var played: Array[int] = [0, 0, 0]
+	var inputs: NetInputBuffer = (vehicle.get(&"_prediction") as VehiclePrediction).inputs
+	var track_seq := func() -> void:
+		played[0] = maxi(played[0], int(vehicle.get(&"net_input_seq")))
+		played[1] = played[1] + 1 if inputs.tick_seq() > inputs.played_seq() else 0
+		played[2] = maxi(played[2], played[1])
 	get_tree().physics_frame.connect(track_seq)
 	rpc_id(_client_peer_id, &"_client_drive", vehicle.get_path())
 	await _wait_for_report(&"drive")
 	get_tree().physics_frame.disconnect(track_seq)
 	var moved: float = vehicle.global_position.distance_to(start)
-	print("DRIVE role=host moved %.1f m, played up to input %d" % [moved, played[0]])
+	print(("DRIVE role=host moved %.1f m, played up to input %d,"
+		+ " stamped ahead of the input played %d ticks in a row at most") % [moved, played[0], played[2]])
 	_expect(moved > 2.0, "the host's truck drives with the client's inputs (moved %.1f m)" % moved)
 	_expect(played[0] > 0, "the host plays the client's numbered inputs")
+	_expect(played[2] <= MAX_STAMP_AHEAD_TICKS,
+		("the host's pose is stamped with the input it played again soon after --net-sim goes on (stamped ahead %d"
+			+ " ticks in a row, at most %d)") % [played[2], MAX_STAMP_AHEAD_TICKS])
 	var left: bool = await _wait_until(func() -> bool: return int(vehicle.driver_peer_id) == 0)
 	_expect(left, "the client gets out of the driver's seat")
 	_expect(int(vehicle.get(&"net_input_seq")) == 0, "with the client out, the host's pose stands for no input")
@@ -296,33 +331,166 @@ func _client_drive(vehicle_path: NodePath) -> void:
 		_report(&"drive", false, "client has no truck to drive")
 		return
 	var predicting: bool = await _wait_until(func() -> bool: return bool(vehicle.call(&"is_predicted")), 10.0)
-	var prediction: VehiclePrediction = vehicle.get(&"_prediction")
 	var start: Vector3 = vehicle.global_position
-	var worst_shift: float = 0.0
-	var errors: Array[float] = []
-	Input.action_press(&"drive_accelerate")
-	var deadline: int = Time.get_ticks_msec() + 2000
-	while Time.get_ticks_msec() < deadline:
-		await get_tree().physics_frame
-		worst_shift = maxf(worst_shift, prediction.last_shift)
-		errors.append(prediction.reconciler.last_error)
-	Input.action_release(&"drive_accelerate")
+	var clean: Dictionary = await _drive_for(vehicle, 2.0)
 	var moved: float = vehicle.global_position.distance_to(start)
-	Input.action_press(&"drive_handbrake")
-	await _pump(1.0)
-	Input.action_release(&"drive_handbrake")
-	errors.sort()
-	var median: float = errors[errors.size() / 2] if not errors.is_empty() else INF
 	print("DRIVE role=client predicted %s moved %.1f m, worst correction %.3f m/tick, error median %.3f worst %.3f" % [
-		predicting, moved, worst_shift, median, errors[-1] if not errors.is_empty() else INF])
+		predicting, moved, clean.worst_shift, clean.median_error, clean.worst_error]
+		+ ", host %d ticks behind" % clean.behind)
+	# N-922.5: driving with the standard --net-sim profile, which on a LAN only the game can simulate: the inputs out
+	# and the host's states back are held half its lag each (75-95 ms, 4-6 ticks), so the host's states come in later
+	# -- and the corrections still stay under 10 cm a tick. N-922.9: the wheel weaving all along and the profile
+	# switched on mid-drive, the host's input counter runs on through the first gap and the inputs land behind it; it
+	# re-anchors a cushion behind them within a quarter second, so the host's states are stamped with the input they
+	# come after again and the error doesn't grow (before, the counter stayed 3 ticks ahead for good, and the client
+	# was corrected all along toward a truck that steered late).
+	# Three seconds in all: about 25 m on the yard, short of the bump past it (contacts each peer feels its own way).
+	var simulated: Dictionary = await _drive_into_net_sim(vehicle, 1.0, 2.0)
+	var still_predicting: bool = bool(vehicle.call(&"is_predicted"))
+	print(("DRIVE role=client --net-sim %s switched on mid-drive, the wheel weaving: worst correction %.3f m/tick,"
+		+ " mean error %.3f m before, %.3f m the first second (worst %.3f), %.3f m after (worst %.3f),"
+		+ " host %d ticks behind, %d inputs and %d host states held") % [
+		NetStats.describe_sim(NetStats.STANDARD_SIM), simulated.worst_shift, simulated.clean_error,
+		simulated.settling_error, simulated.settling_worst, simulated.settled_error, simulated.worst_error,
+		simulated.behind, simulated.inputs_held, simulated.states_held])
 	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
 	if player != null:
 		player.call(&"leave_seat")
 	var frozen_again: bool = await _wait_until(func() -> bool: return vehicle.freeze, 5.0)
-	var ok: bool = predicting and moved > 2.0 and worst_shift <= 0.1001 and frozen_again
+	var sim_ok: bool = still_predicting and int(simulated.inputs_held) >= 3 and int(simulated.states_held) >= 1 \
+			and int(simulated.behind) - int(clean.behind) >= 3 and float(simulated.worst_shift) <= 0.1001 \
+			and int(clean.inputs_held) == 0 and int(clean.states_held) == 0
+	var steady: bool = float(simulated.settled_error) <= float(simulated.clean_error) + MAX_NET_SIM_ERROR_GROWTH
+	var ok: bool = predicting and moved > 2.0 and float(clean.worst_shift) <= 0.1001 and frozen_again and sim_ok \
+			and steady
 	_report(&"drive", ok,
-		"client at the wheel: predicted %s, moved %.1f m, worst correction %.3f m/tick, frozen again %s" % [
-			predicting, moved, worst_shift, frozen_again])
+		("client at the wheel: predicted %s, moved %.1f m, worst correction %.3f m/tick, frozen again %s;"
+		+ " with --net-sim: predicted %s, %d inputs and %d host states held, host %d ticks behind (clean %d),"
+		+ " worst correction %.3f m/tick, mean error %.3f m once settled against %.3f m before it") % [
+			predicting, moved, clean.worst_shift, frozen_again, still_predicting, simulated.inputs_held,
+			simulated.states_held, simulated.behind, clean.behind, simulated.worst_shift, simulated.settled_error,
+			simulated.clean_error])
+
+
+## Client at the wheel: accelerates for `seconds`, then holds the handbrake for one. Returns the worst correction
+## in a tick, the median and worst error measured, and how many ticks behind the client's newest input the host's
+## newest state was (median).
+func _drive_for(vehicle: VehicleBody3D, seconds: float) -> Dictionary:
+	var prediction: VehiclePrediction = vehicle.get(&"_prediction")
+	var worst_shift: float = 0.0
+	var errors: Array[float] = []
+	var behind: Array[int] = []
+	var held_out: Array[int] = []
+	var held_back: Array[int] = []
+	Input.action_press(&"drive_accelerate")
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		await get_tree().physics_frame
+		worst_shift = maxf(worst_shift, prediction.last_shift)
+		errors.append(prediction.reconciler.last_error)
+		if prediction.host_seq > 0:
+			behind.append(prediction.applied_seq - prediction.host_seq)
+		held_out.append(prediction.uplink.pending())
+		held_back.append(prediction.downlink.pending())
+	Input.action_release(&"drive_accelerate")
+	Input.action_press(&"drive_handbrake")
+	await _pump(1.0)
+	Input.action_release(&"drive_handbrake")
+	return {
+		"worst_shift": worst_shift,
+		"median_error": _median(errors),
+		"worst_error": errors.max() if not errors.is_empty() else INF,
+		"behind": int(_median(behind)),
+		"inputs_held": int(_median(held_out)),
+		"states_held": int(_median(held_back)),
+	}
+
+
+## N-922.9: the client accelerates with the wheel weaving for `clean_seconds`, then the standard --net-sim profile is
+## switched on mid-drive for `sim_seconds` more, then the handbrake for a second and the profile off again. Returns
+## the reconciler's mean error before the switch, over the first second after it (the host's counter lands ahead of
+## the inputs and re-anchors: the ticks it held an input meanwhile are corrected once) and over the rest; the worst
+## correction in a tick since the switch; over the rest also the worst error, how many ticks behind the client's
+## newest input the host's newest state was, and the inputs and states held (medians).
+func _drive_into_net_sim(vehicle: VehicleBody3D, clean_seconds: float, sim_seconds: float) -> Dictionary:
+	var prediction: VehiclePrediction = vehicle.get(&"_prediction")
+	var clean: Array[float] = []
+	var settling: Array[float] = []
+	var settled: Array[float] = []
+	var behind: Array[int] = []
+	var held_out: Array[int] = []
+	var held_back: Array[int] = []
+	var worst_shift: float = 0.0
+	var started: int = Time.get_ticks_msec()
+	var sim_at: int = started + int(clean_seconds * 1000.0)
+	var end_at: int = sim_at + int(sim_seconds * 1000.0)
+	var simulating: bool = false
+	Input.action_press(&"drive_accelerate")
+	while Time.get_ticks_msec() < end_at:
+		await get_tree().physics_frame
+		var now: int = Time.get_ticks_msec()
+		_steer(NET_SIM_WEAVE * sin(float(now - started) / 1000.0 * TAU / NET_SIM_WEAVE_PERIOD))
+		if not simulating and now >= sim_at:
+			vehicle.call(&"configure_net_sim", NetStats.STANDARD_SIM)
+			simulating = true
+			continue
+		var error: float = prediction.reconciler.last_error
+		if not simulating:
+			clean.append(error)
+			continue
+		worst_shift = maxf(worst_shift, prediction.last_shift)
+		if now < sim_at + 1000:
+			settling.append(error)
+		else:
+			settled.append(error)
+			if prediction.host_seq > 0:
+				behind.append(prediction.applied_seq - prediction.host_seq)
+			held_out.append(prediction.uplink.pending())
+			held_back.append(prediction.downlink.pending())
+	Input.action_release(&"drive_accelerate")
+	_steer(0.0)
+	Input.action_press(&"drive_handbrake")
+	await _pump(1.0)
+	Input.action_release(&"drive_handbrake")
+	vehicle.call(&"configure_net_sim", {"lag_ms": 0, "jitter_ms": 0, "loss_pct": 0.0})
+	return {
+		"clean_error": _mean(clean),
+		"settling_error": _mean(settling),
+		"settling_worst": settling.max() if not settling.is_empty() else INF,
+		"settled_error": _mean(settled),
+		"worst_error": settled.max() if not settled.is_empty() else INF,
+		"worst_shift": worst_shift,
+		"behind": int(_median(behind)),
+		"inputs_held": int(_median(held_out)),
+		"states_held": int(_median(held_back)),
+	}
+
+
+## The wheel at `value` (-1 left .. 1 right), as a stick would put it.
+static func _steer(value: float) -> void:
+	Input.action_release(&"drive_left")
+	Input.action_release(&"drive_right")
+	if value > 0.0:
+		Input.action_press(&"drive_right", value)
+	elif value < 0.0:
+		Input.action_press(&"drive_left", -value)
+
+
+static func _mean(values: Array[float]) -> float:
+	if values.is_empty():
+		return INF
+	var total: float = 0.0
+	for value: float in values:
+		total += value
+	return total / values.size()
+
+
+static func _median(values: Array) -> float:
+	if values.is_empty():
+		return -1.0
+	var sorted: Array = values.duplicate()
+	sorted.sort()
+	return float(sorted[sorted.size() / 2])
 
 
 ## N-221: the client comes back from the same running game (same identity in

@@ -74,8 +74,14 @@ def triangle_intersection(a, b):
     if min(la, lb) < EPS:
         return False
     na, nb = tuple(x / la for x in na), tuple(x / lb for x in nb)
-    distances_b = [dot(na, sub(p, a[0])) for p in b]
-    distances_a = [dot(nb, sub(p, b[0])) for p in a]
+    # An exactly shared vertex lies on both planes by construction. Computing
+    # its dot product can instead produce a signed rounding residue, which
+    # fabricates a crossing just outside the existing common-point EPS ball.
+    # Preserve this exact identity without widening tolerances or skipping the
+    # pair: a real crossing elsewhere on triangles sharing a point still counts.
+    vertices_a, vertices_b = {tuple(p) for p in a}, {tuple(p) for p in b}
+    distances_b = [0. if tuple(p) in vertices_a else dot(na, sub(p, a[0])) for p in b]
+    distances_a = [0. if tuple(p) in vertices_b else dot(nb, sub(p, b[0])) for p in a]
     if (min(distances_b) > EPS or max(distances_b) < -EPS or
             min(distances_a) > EPS or max(distances_a) < -EPS):
         return False

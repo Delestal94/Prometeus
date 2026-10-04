@@ -47,12 +47,13 @@ los checks antes de integrarlo. Nunca forzar un push sobre el trabajo del otro.
 Desde la raíz, con Blender en `PATH` (5.2.2 LTS comprobado):
 
 ```powershell
-blender --background --factory-startup --python art/gel_character/build_gel_body.py
-blender --background --factory-startup --python art/gel_character/test_gel_body_source.py
+blender --background --factory-startup --python-exit-code 1 --python art/gel_character/build_gel_body.py
+blender --background --factory-startup --python-exit-code 1 --python art/gel_character/test_gel_body_source.py
 python -m unittest discover -s art/gel_character -p "test_*.py"
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod0.glb --gel-body
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod1.glb --gel-body
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod2.glb --gel-body
+python art/gel_character/validate_gel_exports.py --output art/gel_character/review_bloque_b/export_pose_validation.json
 blender --background --factory-startup --python art/gel_character/analyze_gel_body.py -- --core-experiment
 ```
 
@@ -62,11 +63,29 @@ en `do-not-drop/assets/models/characters/gel/`. El cuerpo de autoría y LOD1 tie
 quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
 suprime ramas anatómicas. Los límites son 6000/2500/800 triángulos.
 
+La axila de LOD1 reconstruye loops cruzados de quads y los proyecta a la
+superficie curva de LOD0; LOD2 se deriva de esa superficie corregida. Tras los
+pesos de superficie de Blender, campos suaves C1 distribuyen las transiciones
+de hombro, cadera, rodilla y muñeca, con hasta cuatro influencias. Las plantas y
+punteras quedan rígidas; el tobillo conserva una transición deformable. Un
+intercambio local pecho-brazo de menos de un punto porcentual corrige los
+pliegues de recogida sin cambiar los demás propietarios. El pulgar apunta hacia
+delante y realmente deforma la manopla, evitando invadir el muslo en A90 grueso.
+
+Las regresiones cubren siete poses A0/A30/A60/A75/A80/A85/A90, nueve clips en
+cinco tiempos explícitos, cierre del pulgar y los casos gruesos de A90/recogida.
+LOD2 conserva posiciones, morphs y pesos exactos de vértices de LOD1, con
+compuertas de 53 muestras estáticas y 52 poses durante la simplificación.
+Estas pruebas finitas no certifican todas las poses ni el continuo de morphs.
+
 El rig de exportación conserva 20 nombres y los nueve clips actuales, incluido
 `Run` agregado en main por N-115. Los reposos nuevos
 acomodan la referencia; el retarget usa diferencias de rotación mundial y
-offsets jerárquicos del destino. **No conserva literalmente las posiciones del
-rig anterior**, que no tiene estas proporciones. Los 35 huesos de autoría del
+IK de dos segmentos para conservar las metas relativas de tobillos y agarres
+con las longitudes propias del gel. Las recogidas ajustan el alcance del torso
+y los codos; se verifican conexiones, longitudes y metas en cada clave horneada.
+**No conserva literalmente las posiciones del rig anterior**, que no tiene
+estas proporciones. Los 35 huesos de autoría del
 master permanecen intactos. No se reemplaza el personaje activo ni se agregan
 controles de proporciones del bloque C.
 
@@ -75,6 +94,11 @@ contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses
 de morph (base, 22 extremos y 30 combinaciones con semilla 311018). Esa muestra
 **no demuestra todas las combinaciones continuas**, ni sustituye pruebas animadas.
+
+`gel_pose_validation.check(path, lod, morph_weights=...)` comprueba de forma
+independiente los clips del GLB exportado, con su jerarquía, inverse binds,
+interpolación y pesos reales. Compara normales transportadas, no orientación
+contra un reposo inmóvil: una rotación rígida no equivale a un pliegue.
 
 El estado inicial del `.blend` y de los tres GLB es Delgada: los once pesos de
 morph son cero, aunque sus rangos siguen siendo −1…+1. El generador los fija

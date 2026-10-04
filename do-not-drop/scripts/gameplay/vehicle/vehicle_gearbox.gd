@@ -54,7 +54,8 @@ var gear: int = FIRST_GEAR:
 			return
 		gear = clamped
 		gear_changed.emit(gear)
-## Seconds left of the clutch being in after a shift (host only).
+## Seconds left of the clutch being in after a shift: the host's, and the copy a client at the wheel predicts,
+## timed from the gear arriving (vehicle.gd _on_remote_gear_changed, N-922.7).
 var shift_left: float = 0.0
 ## The one shift (+1 / -1) waiting for the clutch to come out, 0 for none.
 var _queued: int = 0
