@@ -398,6 +398,12 @@ const BUDGETS: Dictionary = {
 	# property. Two .get left: the level's local_player (no common base class) and the box's package_id of the
 	# player's hands.
 	"res://scripts/ui/hud/hud_cargo_panel.gd": {"call": 0, "callv": 0, "get": 2, "root": 0},
+	# The wardrobe (N-224.4) holds its character view as CharacterPreview (bounce, show_look, set_framing).
+	# Nothing left by name.
+	"res://scripts/ui/cosmetics_panel.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The service counter (N-224.4) holds its shop as ServiceStopShop (open_for_crew). Left by name: the
+	# EventBus emit and RunManager.is_running (null-safe autoload lookups).
+	"res://scripts/gameplay/route/service_counter.gd": {"call": 0, "callv": 0, "get": 1, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

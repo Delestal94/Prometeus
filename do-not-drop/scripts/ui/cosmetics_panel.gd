@@ -35,7 +35,7 @@ const SWATCH_HEIGHT: Dictionary = {
 ## Picked before the panel enters the tree.
 var mode: Mode = Mode.MENU
 var page: Page = Page.FACE
-var preview: Control
+var preview: CharacterPreview
 var _nickname_edit: LineEdit
 var _random_button: Button
 var _done_button: Button
@@ -503,7 +503,7 @@ func _pick(kind: String, id: StringName) -> void:
 		"paint": changed = UnlockManager.select_paint(id)
 	_sync()
 	if changed and kind in ["preset", "eyes", "mouth", "uniform"]:
-		preview.call(&"bounce")
+		preview.bounce()
 
 
 ## A face picked at random, never a blank one and never the one you have.
@@ -515,7 +515,7 @@ func _randomize_face() -> void:
 	UnlockManager.select_eyes(eyes.pick_random())
 	UnlockManager.select_mouth(mouths.pick_random())
 	_sync()
-	preview.call(&"bounce")
+	preview.bounce()
 
 
 ## Everything shown from the saved profile: cards, nickname, the character.
@@ -535,7 +535,7 @@ func _sync() -> void:
 		(card.get_node(^"Check") as CanvasItem).visible = chosen
 	if is_instance_valid(_nickname_edit) and not _nickname_edit.has_focus():
 		_nickname_edit.text = UnlockManager.nickname
-	preview.call(&"show_look", _shirt_color(), UnlockManager.selected_eyes, UnlockManager.selected_mouth)
+	preview.show_look(_shirt_color(), UnlockManager.selected_eyes, UnlockManager.selected_mouth)
 
 
 ## The shirt the others will see: the automatic team colour is this peer's
@@ -563,7 +563,7 @@ func _show_page(which: Page, instant: bool = false) -> void:
 		var shown: bool = _page_of(index) == which
 		_pages[index].visible = shown
 		_tabs[index].set_pressed_no_signal(shown)
-	preview.call(&"set_framing", CharacterPreview.Framing.FACE if which == Page.FACE else CharacterPreview.Framing.BODY,
+	preview.set_framing(CharacterPreview.Framing.FACE if which == Page.FACE else CharacterPreview.Framing.BODY,
 			instant)
 	_wire_focus()
 
