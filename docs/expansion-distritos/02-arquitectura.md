@@ -17,7 +17,7 @@
 | D-0207 | Recurso `VehicleDefinition` (asientos, carga, escena, física, licencia requerida) | constructor-camion | high | la camioneta actual descrita por un `.tres` sin cambiar su manejo (`test_reference_truck` verde) |
 | D-0208 | Extraer de `vehicle.gd` una base común `FleetVehicle` (asientos, carga, red, presentación) para vehículos que no son de ruedas | constructor-camion | xhigh | camioneta hereda de la base; tests de vehículo verdes; documento `agregar-vehiculo.md` actualizado |
 | D-0209 | Interfaz de "movimiento" del vehículo (ruedas, casco, alas, pedal) para que asientos y carga no sepan cuál es | constructor-camion | xhigh | test con un vehículo falso de cada tipo usa la misma interfaz |
-| D-0210 | `OrderBook`: pedidos activos, estado y vencimiento, autoridad en el host | constructor-progresion | high | test `test_order_book` crea, cumple y vence pedidos |
+| D-0210 | ✅ `OrderBook`: pedidos activos, estado y vencimiento, autoridad en el host | constructor-progresion | high | test `test_order_book` crea, cumple y vence pedidos |
 | D-0211 | ✅ `Inventory`: stock por producto y ubicación (estante, palet, caja abierta) con autoridad en el host | constructor-negocio | high | test `test_inventory` mueve unidades sin duplicar ni perder |
 | D-0212 | `PackedBox`: modelo de datos de un paquete armado (caja, contenido, relleno, cinta, etiqueta, sellos, pedido) | constructor-negocio | high | test serializa y compara contra el pedido |
 | D-0213 | Puente `PackedBox` → `DeliveryPackage` + trampa actual (la entrega sigue igual) | constructor-trampas | xhigh | una caja armada en el galpón aparece en la camioneta con la trampa calculada (test) |
