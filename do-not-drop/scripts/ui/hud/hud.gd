@@ -22,6 +22,8 @@ const RESTART_HOLD_SECONDS: float = 0.9
 const CAPTURE_MODE_SCRIPT: String = "res://scripts/tools/capture_mode.gd"
 ## The logical height the HUD is laid out for (project.godot's viewport).
 const BASE_HEIGHT: float = 720.0
+## Room kept above and below the overlay card when it has to shrink to fit.
+const OVERLAY_FIT_MARGIN: float = 16.0
 ## Safe margin from every screen edge, in HUD units (redesign 2026-09-28:
 ## 24 put the cards against the bezel on a TV).
 const EDGE_MARGIN: int = 40
@@ -204,9 +206,23 @@ func apply_hud_scale() -> void:
 	# screen doesn't draw it at 75% either. The dimmed backdrop stays full screen.
 	if overlay_center != null:
 		var shape_scale: float = layout_scale(1.0, root.size)
+		# A long results card (stories, rows, breakdown, complaints, photos)
+		# outgrew the screen and lost its buttons below the edge: it shrinks
+		# to fit instead.
+		var panel: Control = card.get_parent() as Control
+		shape_scale *= fit_scale(panel.get_combined_minimum_size().y, root.size.y / shape_scale)
 		overlay_center.position = Vector2.ZERO
 		overlay_center.scale = Vector2(shape_scale, shape_scale)
 		overlay_center.size = root.size / shape_scale
+
+
+## How much a card `content_height` tall shrinks to fit `available_height`
+## with a margin: 1.0 when it already fits, never grows it.
+static func fit_scale(content_height: float, available_height: float) -> float:
+	var room: float = available_height - 2.0 * OVERLAY_FIT_MARGIN
+	if content_height <= room or content_height <= 0.0:
+		return 1.0
+	return maxf(room, 1.0) / content_height
 
 
 func make_rich(parent: Node, font_size: int) -> RichTextLabel:
@@ -501,6 +517,8 @@ func _build_overlay_card() -> void:
 	overlay.add_child(overlay_center)
 	card = make_panel(overlay_center, Vector2(900, 0))
 	card.add_theme_constant_override("separation", 14)
+	# Re-fit to the screen whenever the card's content changes its height.
+	(card.get_parent() as Control).minimum_size_changed.connect(apply_hud_scale, CONNECT_DEFERRED)
 	overlay_kicker = UiTheme.tag(card, "", YELLOW, -2.0, 16)
 	overlay_title = UiTheme.title(card, tr("HUD_START_TITLE"), 62)
 	var hero := HBoxContainer.new()
