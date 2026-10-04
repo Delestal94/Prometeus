@@ -31,3 +31,15 @@ cuando queda vacío para sacarlo del patio. El objeto físico "caja tomable" lo 
 **Test** `test_pallet`: no se abre sin recibir; `take` falla cerrado; abre una vez; saca 3 de 5; no saca de más;
 vacío = agotado; no se pierde ni duplica ninguna unidad.
 **Hecho cuando:** el test pasa.
+
+### D-0608 · Estanterías con huecos etiquetados por producto — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `Shelf` (`scripts/gameplay/business/shelf.gd`): huecos con etiqueta de producto sobre el `Inventory`; `test_shelf_slots`.
+**Depende de:** D-0904 (`PlaceableDefinition.slots`), D-0211 (`Inventory`)
+**Qué:** `class_name Shelf`, `RefCounted`. `make(id, slot_count)` (usa `slots` del `.tres`), `set_label` / `clear_label`
+(un producto por hueco y un hueco por producto en cada estante; no se re-etiqueta con unidades adentro),
+`deposit(inventory, slot, product, qty, from)` y `withdraw(inventory, slot, qty, to)` (todo o nada, solo con
+`Inventory.move`: no se crea ni se pierde nada), `count`, `free_space`, `find_slot`, `to_dict` / `from_dict`.
+Las unidades viven en `shelf:<estante>_<hueco>`. Capacidad por hueco: `CompanyTuning.SHELF_SLOT_CAPACITY = 24` (un palet).
+El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es D-0616.
+**Test** `test_shelf_slots`: 8 huecos, etiquetas, depósito solo del producto etiquetado, tope, retiro, 50 movimientos conservan el total, JSON.
+**Hecho cuando:** dejar producto en un hueco lo suma al `Inventory` (test pasa).
