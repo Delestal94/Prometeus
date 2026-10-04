@@ -266,9 +266,10 @@ func _ready() -> void:
 		# the MultiplayerSynchronizer. Letting the physics engine run too would
 		# fight the incoming synced transform every frame.
 		freeze = true
-		# The pose buffer simulates a bad link only where the transport
-		# doesn't (LAN under --net-sim); over Steam the sockets do it.
-		_net_smoother.configure_sim(NetworkManager.pose_net_sim())
+		# The pose buffer and the prediction simulate a bad link only where
+		# the transport doesn't (LAN under --net-sim); over Steam the sockets do it.
+		configure_net_sim(NetworkManager.pose_net_sim())
+		gearbox.gear_changed.connect(_on_remote_gear_changed)
 	# Runs on every peer's copy of the van -- horn_honked is already relayed
 	# to everyone (see EventBus.request_horn()), so whoever's driving doesn't
 	# need to be this peer, or the host, for it to be heard here too.
@@ -628,6 +629,14 @@ func receive_driver_input(seq: int, throttle: float, steering_input: float, hand
 	_prediction.receive(seq, clampf(throttle, -1.0, 1.0), clampf(steering_input, -1.0, 1.0), handbrake)
 
 
+## A client: the host's gear arrived. Predicting its truck (N-218), the copy has the clutch in for the shift as the
+## host's had, instead of pulling straight on in the new gear (N-922.7): the host times the clutch, which isn't
+## replicated, so the copy times its own from the gear arriving.
+func _on_remote_gear_changed(_gear: int) -> void:
+	if _prediction.active and gearbox.enabled:
+		gearbox.shift_left = VehicleGearbox.SHIFT_SECONDS
+
+
 ## Whether this truck's variant is worked by a manual gearbox (N-114).
 func has_manual_gearbox() -> bool:
 	return bool(VARIANTS[variant_id].get("manual", false))
@@ -700,6 +709,16 @@ func _process(delta: float) -> void:
 		if pose != Transform3D.IDENTITY:
 			transform = _prediction.blend_exit(pose, delta)
 	_pose_remote_wheels(delta)
+
+
+## The bad link a `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}) simulates on this peer's copy: the host's
+## poses it draws, and, at the wheel, the inputs it sends and the host's states it compares with (N-922.5). The
+## poses and the states come the same way, half the lag as over Steam (N-922.9): with the whole lag on the poses,
+## the newest one a prediction starts toward was half a lag older than the host's states it is then compared with.
+## The smoother keeps what it had for an empty profile; one with zeros turns everything off.
+func configure_net_sim(sim: Dictionary) -> void:
+	_net_smoother.configure_sim(sim, 0.5)
+	_prediction.configure_sim(sim)
 
 
 ## Whether this peer is the client predicting the truck it drives (N-218).
@@ -807,6 +826,9 @@ func _drive(delta: float, running: bool) -> void:
 		gearbox.tick(delta)
 		if not running:
 			gearbox.reset()
+	elif gearbox.enabled:
+		# The predicting copy's own clutch (_on_remote_gear_changed) runs out; the shifts are the host's.
+		gearbox.shift_left = maxf(gearbox.shift_left - delta, 0.0)
 	if gearbox.enabled and running:
 		# The engine holds the truck back when it is over its gear's limit;
 		# the brake lights stay off for that (decided above).

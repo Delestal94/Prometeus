@@ -19,11 +19,16 @@ extends RefCounted
 ##   (Steam's global FAKE_PACKET_* config): half the lag on what goes out and
 ##   half on what comes in, so the round trip grows by `lag`; each packet, in
 ##   each direction, waits an extra 0..jitter ms, and `loss` % are dropped;
-## - on LAN (ENet simulates nothing) the host's truck poses on a client are
-##   held back and dropped, through the `--fake-lag` buffer
-##   (vehicle_net_smoother.gd): `lag` + 0..jitter ms late, `loss` % lost. So is
-##   the care input the client sends to the host (tender_input_lag.gd, S-205),
-##   one way only: `lag` + 0..jitter ms late, `loss` % lost.
+## - on LAN (ENet simulates nothing) the poses of remote bodies on a client
+##   are held back and dropped, through the `--fake-lag` buffer
+##   (NetPoseSmoother): `lag` + 0..jitter ms late, `loss` % lost. So is the
+##   care input the client sends to the host (tender_input_lag.gd, S-205), one
+##   way only: `lag` + 0..jitter ms late, `loss` % lost. A body the client
+##   predicts (net_prediction's NetDelayQueue) has both ways simulated, as the
+##   sockets would: its inputs out and the host's states back, each `lag` / 2
+##   + 0..jitter ms late and `loss` % lost; its poses come back as its states
+##   do, `lag` / 2 + 0..jitter ms late (NetPoseSmoother.configure_sim's
+##   `lag_share`, N-922.9).
 ## Run it on one side only (the client): on both, the two add up.
 ## `--net-sim` alone, or `--net-sim=standard`, is the standard test profile
 ## every network feature goes through: 150 ms, ±20 ms and 2 %.

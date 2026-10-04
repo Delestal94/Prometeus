@@ -121,11 +121,13 @@ static func local_now() -> float:
 
 
 ## Takes a `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}); an empty one
-## leaves the buffer as it was.
-func configure_sim(sim: Dictionary) -> void:
+## leaves the buffer as it was. `lag_share`: the part of its lag this way
+## carries (a half, as the sockets split it, for a sender whose other way is
+## simulated too and has to match: NetDelayQueue in net_prediction).
+func configure_sim(sim: Dictionary, lag_share: float = 1.0) -> void:
 	if sim.is_empty():
 		return
-	fake_lag = maxf(float(sim.get("lag_ms", 0)) / 1000.0, 0.0)
+	fake_lag = maxf(float(sim.get("lag_ms", 0)) / 1000.0 * clampf(lag_share, 0.0, 1.0), 0.0)
 	fake_jitter = maxf(float(sim.get("jitter_ms", 0)) / 1000.0, 0.0)
 	fake_loss = clampf(float(sim.get("loss_pct", 0.0)) / 100.0, 0.0, 1.0)
 

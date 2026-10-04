@@ -1,39 +1,45 @@
 class_name RunTally
 extends RefCounted
 ## What a run got done so far, from the state every peer already keeps
-## (RunManager's delivery record and cargo, the distance the level tracks).
+## (RunManager's delivery record and cargo, the distance the level tracks),
+## handed in by whoever reads RunManager (hud_pause.gd): run_manager.gd names
+## autoloads, so this file can't preload it as a type (a --script would
+## compile it before they exist).
 ## A client whose host drops mid-run has no results from the host coming:
 ## this is what its disconnect screen shows instead (N-222).
 
 
-## Whether `run` (RunManager) has a run on the go or cut short: started, and
-## no results from anyone. Read-only, so the disconnect screen can ask this
-## whether or not the level already stopped the run (level_common.gd).
-static func has_unfinished_run(run: Object) -> bool:
-	return (run.get(&"results") as Dictionary).is_empty() and float(run.get(&"elapsed_seconds")) > 0.0
+const RUN_DELIVERIES = preload("res://scripts/core/run_deliveries.gd")
 
 
-## The tally of `run` (RunManager, or anything with its fields) as it stands.
-## Houses count the doors that got their box; boxes, the ones still in one
-## piece, handed over or aboard.
-static func of(run: Object) -> Dictionary:
+## Whether a run is on the go or cut short: started (`elapsed_seconds` > 0),
+## and no `results` from anyone. Read-only, so the disconnect screen can ask
+## this whether or not the level already stopped the run (level_common.gd).
+static func unfinished(results: Dictionary, elapsed_seconds: float) -> bool:
+	return results.is_empty() and elapsed_seconds > 0.0
+
+
+## The tally of a run as it stands, from RunManager's record. Houses count
+## the doors that got their box; boxes, the ones still in one piece, handed
+## over or aboard.
+static func count(deliveries: Array, cargo: Dictionary, endless: bool, expected_houses: int,
+		distance: float, elapsed_seconds: float) -> Dictionary:
 	var delivered: int = 0
-	for entry: Dictionary in run.get(&"deliveries"):
-		if bool(run.call(&"handed_over", StringName(entry.get("outcome", &"")))):
+	for entry: Dictionary in deliveries:
+		if RUN_DELIVERIES.handed_over(StringName(entry.get("outcome", &""))):
 			delivered += 1
-	var cargo: Dictionary = run.get(&"cargo")
 	var intact: int = 0
 	for entry: Dictionary in cargo.values():
 		if int(entry.get("state", 0)) == ITrapBehavior.TrapState.OK:
 			intact += 1
 	return {
-		"endless": StringName(run.get(&"current_mode")) == &"endless",
+		"endless": endless,
 		"houses_delivered": delivered,
-		"houses_expected": maxi(int(run.get(&"expected_houses")), delivered),
+		"houses_expected": maxi(expected_houses, delivered),
 		"cargo_intact": intact,
 		"cargo_total": cargo.size(),
-		"distance": float(run.get(&"current_distance")),
-		"elapsed_seconds": float(run.get(&"elapsed_seconds")),
+		"distance": distance,
+		"elapsed_seconds": elapsed_seconds,
 	}
 
 

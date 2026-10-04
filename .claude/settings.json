@@ -33,6 +33,16 @@
             "timeout": 90
           }
         ]
+      },
+      {
+        "matcher": "Bash|mcp__github__create_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr-ci-watch.sh\"",
+            "timeout": 10
+          }
+        ]
       }
     ]
   },

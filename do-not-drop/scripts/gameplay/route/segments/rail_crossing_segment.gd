@@ -13,7 +13,12 @@ class_name RailCrossingSegment
 ## cycle for everyone (_begin_cycle), a client that builds the segment asks
 ## for the phase it's in (_request_state), and every peer runs the same
 ## timers from there. Only the host's physics decides anything, and there the
-## barrier arms and train cars are solid.
+## barrier arms and train cars are solid. On a client they reach the truck half
+## a round trip late, so its truck drives through them (N-922.3): the copy a
+## client predicts (N-218) would otherwise stop at an arm the host's truck had
+## not met yet, or be shoved by a car already gone there, and snap back 3 m.
+## The host's truck still hits them, and the client's copy is eased back to it
+## like after any bump only the host felt.
 ##
 ## The arms are static bodies turned by hand, so they never move into
 ## anything: a step that would put an arm inside the truck, a box or a player
@@ -35,6 +40,7 @@ class_name RailCrossingSegment
 ## while some of it is short of a bore's black end (_place_train()).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_through.gd")
 ## The script the NetworkManager autoload runs, as a type (N-224.4): world_seed
 ## lives there, not in NetSession, so a rename fails to compile here.
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
@@ -91,6 +97,8 @@ const CAR_SIZE := Vector3(7.5, 3.0, 2.6)
 enum State { WAITING, WARNING, CLOSING, TRAIN, OPENING, DONE }
 
 var will_close: bool = false
+## Whether the truck drives through the arms and the cars here: on every peer but the host (set in _build).
+var lets_truck_through: bool = false
 var state: int = State.WAITING
 var track_z: float = 0.0
 var _timer: float = 0.0
@@ -107,6 +115,8 @@ var _bell: AudioStreamPlayer3D
 ## they move with it for free.
 var _train_horn: AudioStreamPlayer3D
 var _train_chug: AudioStreamPlayer3D
+## The truck is already an exception of every arm and car (lets_truck_through).
+var _truck_let_through: bool = false
 
 
 func _init() -> void:
@@ -152,6 +162,7 @@ func _build() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([seed_value, roundi(global_position.x), roundi(global_position.z), &"rail"])
 	will_close = rng.randf() < CLOSE_CHANCE
+	lets_truck_through = not _is_host()
 	if will_close and _is_online() and not _is_host():
 		# Joining mid-crossing: pick it up where the host's is.
 		if multiplayer.get_peers().has(1):
@@ -340,6 +351,11 @@ func _dress(model: Node3D) -> Node3D:
 
 
 func _physics_process(delta: float) -> void:
+	if lets_truck_through and not _truck_let_through:
+		var bodies: Array = []
+		bodies.append_array(_arms)
+		bodies.append_array(_train)
+		_truck_let_through = TruckPassThrough.let_through(bodies, get_tree())
 	match state:
 		State.WAITING:
 			if will_close and _is_host() and _truck_approaching():

@@ -205,9 +205,19 @@ func _on_connection_lost(reason: String) -> void:
 	hud.overlay_stats.text = tr("HUD_HOST_GONE")
 	# N-222: the host's results will never come, so what this peer saw of the
 	# run is what the crew gets to keep on screen.
-	if RUN_TALLY.has_unfinished_run(RunManager):
-		hud.overlay_stats.text += "\n" + RUN_TALLY.describe(RUN_TALLY.of(RunManager))
+	var tally: Dictionary = _unfinished_tally()
+	if not tally.is_empty():
+		hud.overlay_stats.text += "\n" + RUN_TALLY.describe(tally)
 	hud.results.set_hero(false)
 	hud.complaints_label.visible = false
 	hud.photo_strip.visible = false
 	hud.results.set_buttons(tr("HUD_BACK_TO_MENU"), false, false, false)
+
+
+## What this peer saw of the run, from RunManager's record (RunTally): {} when
+## no run is on the go or cut short (not started, or results are in).
+func _unfinished_tally() -> Dictionary:
+	if not RUN_TALLY.unfinished(RunManager.results, RunManager.elapsed_seconds):
+		return {}
+	return RUN_TALLY.count(RunManager.deliveries, RunManager.cargo, RunManager.current_mode == RunManager.MODE_ENDLESS,
+			RunManager.expected_houses, RunManager.current_distance, RunManager.elapsed_seconds)
