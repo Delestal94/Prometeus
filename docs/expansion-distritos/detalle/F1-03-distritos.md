@@ -68,6 +68,7 @@ y la mercadería vuelve al stock si la caja está sana.
 
 ### D-0306 · Bloqueos (`GateRequirement`) — A · Opus 5.5 · high · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `GateRequirement` + `WorldGate` + 7 `.tres` en `data/gates/` (boceto del mapa); `CompanyState.open_gate/is_gate_open/gate_owned` y campo `equipment`; test `test_gate`. La replicación por evento queda en D-2003.
+**[x] Modelos (2026-10-04, sesión de arte)** — tranquera con garita, vallas de obra, puesto de guardaparque y carteles de costa y montaña (`assets/tools/build_world_gates.py`, `models/environment/gates/`); `WorldGate` los instancia por `kind` y al abrirse levanta la barra, corre las vallas o abre la puerta; `test_gate` lo cubre.
 **Depende de:** D-0205, D-0202
 **Qué:** `scripts/gameplay/districts/world_gate.gd` (`Node3D` con `StaticBody3D`) + recurso `GateRequirement`.
 - **Campos del recurso:** `id`, `kind` (`barrier|roadblock|water|equipment|altitude`),

@@ -82,6 +82,7 @@
 | Señal de barro | (usa `sm_env_sign_gravel.glb` y el cartel propio "¡BARRO!" del tramo) | ⏳ | `MudSegment` (N-108): falta un modelo propio; necesita la PC. |
 | Cartel "entrega adelante" | `…/sm_env_sign_delivery_ahead.glb` | ✅ | ~80 m antes de cada casa, del lado de la casa. |
 | Guardarraíl (4 m) | `models/environment/props/sm_env_prop_guardrail.glb` | ✅ | Del lado de afuera de cada `CurveSegment`, cada 4 m. |
+| Bloqueos del mapa de la expansión (D-0306) | `models/environment/gates/sm_env_gate_{barrier,roadblock,checkpoint,sign_coast,sign_mountain}.glb` | ✅ | `tools/build_world_gates.py` (2026-10-04). Tranquera con garita (1.388 tris, `Boom` con origen en la bisagra), vallas de obra con conos y arena (2.428, `BarricadeLeft`/`BarricadeRight`), puesto de guardaparque con cartel y barra (2.162, `Boom`, `Door`, `Board`), carteles de costa (554) y de montaña (480) con `Board` liso para el texto. Pivote en el centro de la calzada (8 m en X). Los instancia y abre `world_gate.gd`; la colisión sigue en código. Capturas: `tests/render_world_gates.gd`. |
 | Baranda de puente (6 m) | `…/sm_env_prop_bridge_railing.glb` | ✅ | En `NarrowBridgeSegment` (`RAILING_MODEL`); la colisión sigue siendo la de código. |
 | Conos, barrera, farol, banco, buzón | `…/props/sm_env_prop_*.glb` | ✅ | Lote 1. |
 | Fardo, cajón de madera, pallet, hidrante, parada de colectivo, mojón | `…/props/sm_env_prop_{hay_bale,wooden_crate,pallet,fire_hydrant,bus_stop,milestone}.glb` | ✅ | En la rotación de mobiliario de banquina; pallet y cajón además detrás de la valla de obras. |
