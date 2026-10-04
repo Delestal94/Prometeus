@@ -15,7 +15,7 @@ class_name ChasingDog
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## Quaternius' rigged Shiba Inu (CC0, assets/README.md), animated by wildlife_animal.gd.
 const DOG_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_dog_rigged.glb"
-const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
+const ANIMAL_SCRIPT := preload("res://scripts/presentation/wildlife_animal.gd")
 
 enum State { WAITING, CHASING, GIVING_UP, DONE }
 
@@ -48,7 +48,7 @@ const TURN_RATE: float = 9.0
 @export var side: float = 1.0
 
 var state: State = State.WAITING
-var dog: Node3D
+var dog: ANIMAL_SCRIPT
 var run_distance: float = 0.0
 var barks: int = 0
 var _home: Vector3
@@ -62,19 +62,21 @@ var _vehicle_cache: Node3D
 
 
 func _ready() -> void:
+	var model: Node3D
 	if ResourceLoader.exists(DOG_MODEL):
-		dog = (load(DOG_MODEL) as PackedScene).instantiate() as Node3D
+		model = (load(DOG_MODEL) as PackedScene).instantiate() as Node3D
 	else:
-		dog = Node3D.new()
+		model = Node3D.new()
 		var body := MeshInstance3D.new()
 		var box := BoxMesh.new()
 		box.size = Vector3(0.3, 0.45, 0.75)
 		body.mesh = box
 		body.position.y = 0.45
-		dog.add_child(body)
-	dog.name = "Dog"
-	dog.set_script(ANIMAL_SCRIPT)
-	dog.set(&"steered", true)
+		model.add_child(body)
+	model.name = "Dog"
+	model.set_script(ANIMAL_SCRIPT)
+	dog = model as ANIMAL_SCRIPT
+	dog.steered = true
 	add_child(dog)
 	# It runs beside a moving truck, well past this segment: world space.
 	dog.top_level = true
@@ -89,6 +91,7 @@ func _ready() -> void:
 	_bark.volume_db = WorldMix.DOG_BARK_DB
 	_bark.max_distance = 45.0
 	dog.add_child(_bark)
+	# EventBus stays by name: a test may swap it for a plain Node (N-224.4).
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"horn_honked", _on_horn_honked)
@@ -104,7 +107,7 @@ func _physics_process(delta: float) -> void:
 		State.WAITING:
 			if vehicle != null and _flat(vehicle.global_position - dog.global_position).length() < NOTICE_DISTANCE:
 				state = State.CHASING
-				dog.call(&"run")
+				dog.run()
 		State.CHASING:
 			if vehicle == null:
 				_give_up()
@@ -128,8 +131,8 @@ func _physics_process(delta: float) -> void:
 			_move(home.limit_length(pace * delta))
 			if home.length() < 0.3 or _give_up_timer <= 0.0:
 				state = State.DONE
-				dog.call(&"idle")
-				dog.set(&"ground_speed", 0.0)
+				dog.idle()
+				dog.ground_speed = 0.0
 
 
 func _on_horn_honked(_peer_id: int) -> void:
@@ -141,7 +144,7 @@ func _on_horn_honked(_peer_id: int) -> void:
 func _give_up() -> void:
 	state = State.GIVING_UP
 	_give_up_timer = GIVE_UP_SECONDS
-	dog.call(&"run")
+	dog.run()
 
 
 ## One bark, sometimes followed straight away by a second, higher one.
@@ -165,7 +168,7 @@ func _bark_once() -> void:
 func _move(offset: Vector3) -> void:
 	var delta: float = get_physics_process_delta_time()
 	var speed: float = offset.length() / maxf(delta, 0.0001)
-	dog.set(&"ground_speed", lerpf(float(dog.get(&"ground_speed")), speed, 0.25))
+	dog.ground_speed = lerpf(dog.ground_speed, speed, 0.25)
 	if offset.length() < 0.001:
 		return
 	var to: Vector3 = dog.global_position + offset

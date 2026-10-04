@@ -25,6 +25,9 @@ var _last_mud_distance: float = -INF
 ## how many have been laid. Their spacing comes from the seed and their number,
 ## not from _rng, so a station only takes the place of the segment it replaces.
 const SERVICE_STOP = preload("res://scripts/gameplay/route/service_stop_rules.gd")
+## The session as a type (N-224.4): the script the NetworkManager autoload runs, which declares
+## world_seed (NetSession does not). It names no autoload, so preloading it compiles under a --script.
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 var _service_seed: int = 0
 var _service_count: int = 0
 var _service_next_at: float = INF
@@ -63,8 +66,8 @@ func _ready() -> void:
 	_service_seed = _session_seed() if _session_seed() != 0 else int(_rng.seed)
 	_service_next_at = SERVICE_STOP.endless_next_at(_service_seed, 0, 0.0)
 	RouteSegment.warm_models(WARM_MODELS)
-	# The service station's borrowed depot props (N-110), loaded by path as its segment does.
-	(load("res://scripts/gameplay/route/service_stop.gd") as Script).call(&"warm_models")
+	# The service station's borrowed depot props (N-110).
+	ServiceStop.warm_models()
 	# The bridge's river loop is synthesized the first time it is asked for
 	# (~55 ms): cached here, while the level loads, not under the first bridge.
 	SynthAudio.river_flow_loop()
@@ -73,14 +76,12 @@ func _ready() -> void:
 	add_child(sky)
 
 
-## Looked up by node path rather than by the NetworkManager identifier on
-## purpose. A test that names this script's class_name compiles it before
-## the autoloads exist, and a bare `NetworkManager.world_seed` is a compile
-## error at that point -- the same node-path pattern the rest of the project
-## already uses for EventBus.
+## Looked up by node path, typed as the script the autoload runs: a bare `NetworkManager`
+## identifier is a compile error in a test that names this script's class_name (it
+## compiles before the autoloads exist).
 func _session_seed() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return int(network.get(&"world_seed")) if network != null else 0
+	var network: NETWORK_MANAGER = get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+	return network.world_seed if network != null else 0
 
 
 ## Mud (N-108) is rare, comes after the first stretch and never twice within
@@ -116,10 +117,11 @@ func _pick_next_script() -> Script:
 ## shop): the level doesn't count a crew that parked there as stuck.
 func in_service_bay(world_point: Vector3) -> bool:
 	for segment: RouteSegment in _active:
-		if is_instance_valid(segment) and segment.get_script() == SERVICE_STOP.SEGMENT:
-			var stop: Node3D = segment.get(&"stop")
-			if stop != null and bool(stop.call(&"in_bay", world_point)):
-				return true
+		if not is_instance_valid(segment):
+			continue
+		var stop := (segment as ServiceStopSegment).stop as ServiceStop if segment is ServiceStopSegment else null
+		if stop != null and stop.in_bay(world_point):
+			return true
 	return false
 
 
