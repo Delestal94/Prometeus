@@ -133,6 +133,7 @@ Incluye los 3 `UnlockManager.TRUCKS` actuales como variantes de la camioneta.
 **Hecho cuando:** 7 filas (camioneta ×3 variantes, 4x4, bici, carrito, lancha, avioneta). Es la fuente de D-0207.
 
 ### D-0116 · Catálogo inicial de productos — A · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/catalogo-productos.md`: 10 de F1 + 30 nuevos en 3 lotes.
 **Depende de:** D-0109
 **Qué:** `diseno/catalogo-productos.md`. Para los 10 contenidos actuales y 30 nuevos:
 - id, contenido base (`PackageContent` existente o "nuevo, necesita modelo") y celdas (X×Y×Z en celdas de 0,2 m);
