@@ -27,7 +27,7 @@
 | D-0917 | Modo construcción con mando | constructor-ui | high | test de input |
 | D-0918 | Reusar `depot_layout.gd`/`depot_zones.gd` como base de las zonas | constructor-mundo | high | sin duplicar lógica (revisión) |
 | D-0919 | Etiquetas de zona pintadas en el piso (recepción, armado, despacho) | constructor-mundo | low | captura |
-| D-0920 | Precio y venta con devolución parcial | constructor-progresion | low | test |
+| D-0920 | ✅ Precio y venta con devolución parcial | constructor-progresion | low | test |
 
 ## Ampliación
 

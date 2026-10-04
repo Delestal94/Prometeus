@@ -31,3 +31,14 @@ puede pisar, la rotación y el reembolso.
 **Depende de:** nada
 **Qué:** decidir si las máquinas necesitan enchufe. Decisión: no, coherente con D-0505 (sin energía).
 **Test:** ninguno (decisión). **Hecho cuando:** decisión escrita y el detalle de D-0904 y D-0922 coherente.
+
+### D-0920 · Precio y venta con devolución parcial — B · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `PlaceableShop` (`scripts/gameplay/business/placeable_shop.gd`): `buy` cobra el precio y suma la pieza al `layout`, `sell` la saca y paga `PlaceableDefinition.refund()` (50 %); `test_placeable_shop`.
+**Depende de:** D-0904 (`PlaceableDefinition`), D-0501 (billetera)
+**Qué:** helpers estáticos sobre el `CompanyState` que recibe el llamador (sin nombrar autoloads). Una pieza
+colocada es una entrada de `layout`: `{id, x, z, turns}`. Si la celda está libre lo decide la grilla
+(D-0225 / D-0902); acá solo se mueve plata y entradas. Movimientos en el libro: `placeable_buy`,
+`placeable_sell`. Las piezas `owned_at_start` se agregan con `free = true` (D-0911).
+**Test** `test_placeable_shop`: comprar cobra y registra; sin plata no cambia nada; `free` no cobra; vender
+devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devuelve -1 sin cambios.
+**Hecho cuando:** el test pasa.
