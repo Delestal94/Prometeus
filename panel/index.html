@@ -633,13 +633,13 @@ async function poll() {
   S.tick++;
   try {
     if (S.rate && S.rate.remaining < 4 && Date.now() < S.rate.reset) throw new Error("GitHub pidió una pausa hasta las " + hhmm(new Date(S.rate.reset)));
-    const prevTop = S.events[0]?.id;
+    const seen = new Set(S.events.map((e) => e.id)); // los ids de GitHub no siguen el tiempo (cada tipo de evento tiene su secuencia): se ordena por fecha
     const pages = S.tick > 1 ? [1] : store.get("tmp-token") ? [1, 2, 3] : [1, 2];
     const [runs, ...evPages] = await Promise.all([gh("/actions/runs?per_page=60"), ...pages.map((n) => gh("/events?per_page=100&page=" + n).catch(() => []))]);
     const byId = new Map([...evPages.flat(), ...S.events].map((e) => [e.id, e]));
-    S.events = [...byId.values()].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 600);
+    S.events = [...byId.values()].sort((a, b) => new Date(b.created_at) - new Date(a.created_at) || Number(b.id) - Number(a.id)).slice(0, 600);
     S.runs = runs.workflow_runs || [];
-    const fresh = S.events.filter((e) => !prevTop || Number(e.id) > Number(prevTop));
+    const fresh = S.events.filter((e) => !seen.has(e.id));
     const need = (t) => S.tick === 1 || fresh.some((e) => e.type === t);
     const jobs = [];
     if (need("PullRequestEvent") || S.tick % 3 === 0) jobs.push(gh("/pulls?state=all&sort=updated&direction=desc&per_page=60").then((p) => (S.pulls = p)));
