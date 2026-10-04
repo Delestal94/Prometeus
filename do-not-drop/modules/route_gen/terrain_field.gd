@@ -199,10 +199,16 @@ func _natural_height_from(p: Vector2, road: Vector3, with_ridge: bool = true) ->
 	for zone: Rect2 in flat_zones:
 		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
 		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
-	for platform: Dictionary in platforms:
+	for platform: Dictionary in _platform_candidates(p):
 		var blend: float = smoothstep(0.0, PLATFORM_BLEND, _platform_gap(platform, p))
 		height = lerpf(height, float(platform.height), 1.0 - blend)
 	return height
+
+
+## Override with a read-only spatial index for large fields. Keep platform order
+## and include every rectangle whose blend can affect p; default is exhaustive.
+func _platform_candidates(_p: Vector2) -> Array[Dictionary]:
+	return platforms
 
 
 ## How far `p` is outside a platform's rectangle (0 anywhere inside it).

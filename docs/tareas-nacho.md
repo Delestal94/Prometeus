@@ -30,6 +30,64 @@ se conectará en otro paso: continuar un guardado deberá conservar la semilla d
   `test_menu_session_paths` y `test_net_session` pasan; lint y `check_modules` verdes.
   Aviso: `docs/avisos/2026-10-02-semillas-por-partida.md`.
 
+### N-950 · Spike de ciudad procedural — A · Aviso: sí (módulo portable) · **[ ] en desarrollo (base mergeada en PR #260; faltan los [ ] de abajo)**
+Pedido directo del equipo (2026-10-02): seis distritos, ciudad asimétrica y
+variable por semilla, calles diagonales, plazas, parques y monumentos.
+Rama reservada `nacho/N-950-town-spike` retomada tras más de dos horas sin
+implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
+- [x] Base del plano versionado y determinista, seis distritos conectados,
+  lotes con frente de calle y áreas verdes fuera del asfalto.
+- [x] Escena independiente del barrio inicial con depósito, tres casas,
+  taller, parque, plaza/monumento, mobiliario y dos salidas cerradas.
+  Validación del primer paso: 100 semillas en `test_town_plan`, escena en
+  `test_town_prototype`, módulo aislado portable, lint y revisión visual.
+- [x] Camión, pedidos de orden libre y navegación/GPS por calles: escena
+  offline `town_delivery.tscn` con jugador, carga y timbres reales, selección
+  de tres clientes y regreso al depósito. Sin progreso persistente todavía.
+- [ ] Medición del spike: duración, esfuerzo de carga, visibilidad y render.
+- [x] Integración del arte existente (2026-10-03): viviendas variadas a escala
+  nativa, clientes distintos, piezas/materiales del depósito y taller,
+  estante original y árboles/bancos/farolas existentes (`town_art.gd`).
+- [x] Segundo distrito construido (2026-10-03): Centro con arquitectura
+  original de dos plantas, comercios, plaza/parque y corredor transitable.
+  F4 guía al Centro; F1–F3 vuelven a pedidos. Campo e Industrial siguen cerrados.
+  Apertura sin mover el plano; rutas entre distritos sobre 100 semillas.
+- [x] Reparto entre dos distritos (2026-10-03): seis pedidos A–F, tres
+  clientes iniciales y tres del Centro con timbre/modelo original. Estante
+  de dos niveles accesibles, F1–F6 clientes y F7 plaza. Direcciones estables
+  sobre 100 semillas; final exige resolver ambos distritos y volver al depósito.
+- [x] Aceras y accesos peatonales (2026-10-03): calles diagonales/cruces,
+  rampas, entradas a cada lote y caminos a plazas/parques que rodean edificios.
+  Pavimento agrupado con colisión y árboles/muebles fuera del paso. Cinco
+  semillas del módulo, módulo aislado y jugador real cruzando sin saltar,
+  tanto en headless (componente de movimiento) como con pantalla.
+- [x] Reutilización de carretera (2026-10-03): TerrainField/shader/texturas,
+  StraightSegment/pintura y RouteDresser/RoutePlacement originales. Perfil
+  urbano con bases niveladas y relieve natural entre ellas; vegetación, autos, mobiliario/paradas
+  respetan lotes/accesos y se agrupan con DressingBatcher. Pruebas de escena
+  y reparto verifican integración sin cambiar el plano ni sus direcciones.
+- [x] Completar frentes libres de Barrio y Centro con parcelas compactas; generador
+  v2 compatible con v1, calles/clientes intactos y accesos verdes reservados.
+- [x] Escenas de ciudad completa (2026-10-03): seis distritos, siete conectores
+  abiertos, doce entradas verdes y mismos seis pedidos. Almacenes Industrial/Puerto,
+  farmhouses/molino en Campo, cabañas/pinos en Sierra y torre de agua.
+  Suelo continuo entre zonas e índice de plataformas que conserva alturas.
+- [x] Biomas de Puerto/Sierra (2026-10-03): bahía exterior con lecho físico,
+  agua, muelle transitable y acceso que esquiva lotes/parques; relieve original
+  en Sierra y nieve local en altura. Calles, parcelas y accesos permanecen nivelados.
+  `town_biomes.gd`, `town_terrain.gd`; pruebas de 20 semillas y escena completa.
+- [x] Aceras realistas (2026-10-03): 16 cm sobre asfalto, cordón vertical;
+  rebajes sólo vehiculares y de accesibilidad en esquinas. `town_walkways.gd`
+  y `town_prototype.gd`; `character_step` permite subir cordones sin saltar,
+  comprobando cuerpo completo, techo, pared y superficie de apoyo.
+- [x] Relieve urbano natural (2026-10-03): ondulaciones asimétricas entre
+  plataformas; bases de torre/molino reservadas antes de generar el suelo.
+- [x] Primeras calles interiores (2026-10-03): generador v3, secundarias de
+  8 m en 0/1/2/4, clientes originales y generadores v1/v2 conservados.
+  Sigue faltando mayor ocupación de sus interiores y manzanas completas.
+- [ ] Completar manzanas interiores, horizonte y presupuesto de render.
+- [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
+
 ## QA — bugs abiertos
 
 ### N-919 · Regresión de #208: los `--script` que llegan a `DeliveryHouse` cargan el HUD sin script — B · `Opus 5.5 · high` · Aviso: sí (`scripts/gameplay/player/player_cargo_care.gd` es de Slatex) · M8

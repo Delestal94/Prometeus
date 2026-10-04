@@ -4,6 +4,8 @@ extends RefCounted
 ## `_bob_time`, `_last_safe_ground`, `velocity`...) stays on the Player, which keeps thin wrappers for what the
 ## tests call (`_apply_look`, `_update_ground_safety`) and the constants the rest of the project reads.
 
+const CHARACTER_STEP := preload("res://modules/character_step/character_step.gd")
+
 ## Three contexts, three frames -- walking, driving (FirstPersonCamera's own
 ## BASE_FOV) and carrying a package don't feel like the same view even
 ## though they used to share one flat 78°.
@@ -53,7 +55,7 @@ static func on_foot_step(p: Player, delta: float) -> void:
 			p.velocity.y = -0.2
 	else:
 		p.velocity.y -= Player.GRAVITY * delta
-	p.move_and_slide()
+	CHARACTER_STEP.move_and_slide(p, delta)
 	update_ground_safety(p)
 	var ground_speed: float = Vector2(p.velocity.x, p.velocity.z).length()
 	p.locomotion_speed = ground_speed
