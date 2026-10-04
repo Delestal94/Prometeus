@@ -34,12 +34,21 @@ extends SceneTree
 ##   test drives: a microphone with a packet ready every frame, a minute at 144
 ##   frames a second, sends at most VOICE_SEND_BYTES_PER_SECOND (packets of
 ##   MAX_PACKET_BYTES) or VOICE_SEND_PACKETS_PER_SECOND (small ones) a second
-##   plus one burst, and gets close to that cap; what it holds back is counted
-##   in dropped_sends; a packet over MAX_PACKET_BYTES never leaves; the send
-##   budget is all or nothing and holds one packet of the largest size; what a
-##   capped sender lets out is decoded whole; 200 packets of MAX_PACKET_BYTES
-##   from one peer in a second decode at most a burst plus a second of
-##   VOICE_BYTES_PER_SECOND (another peer still passes);
+##   plus one burst, and gets close to that cap; what it takes from Steam and
+##   holds back is counted in dropped_sends; a packet over MAX_PACKET_BYTES
+##   never leaves; the send budget is all or nothing and holds one packet of
+##   the largest size; what a capped sender lets out is decoded whole; 200
+##   packets of MAX_PACKET_BYTES from one peer in a second decode at most a
+##   burst plus a second of VOICE_BYTES_PER_SECOND (another peer still passes);
+## - The send budget is looked at before getVoice() (audit of N-212): without
+##   it Steam is not asked and keeps the voice. With Steam as it is assumed to
+##   behave (ClockedSteam: a chunk every 20 ms, or every 10 ms, NoData in
+##   between, kept until asked), 20 s of push-to-talk at 30, 60, 144 and 240
+##   frames a second lose nothing -- dropped_sends 0, every byte recorded is
+##   sent, within the packets a second -- and is decoded whole; a 300 ms hitch
+##   leaves whole in one packet, a 1 s one (over MAX_PACKET_BYTES) is one
+##   packet lost, counted once; clear_peers() puts dropped_sends back to 0 and
+##   refills the send budget;
 ## - NetStatsOverlay builds on first show with the default theme.
 
 const TIMEOUT_PORT: int = 7812
@@ -51,6 +60,12 @@ const VOICE_FPS: int = 144
 const VOICE_SECONDS: int = 60
 ## A small voice packet: with one every frame the packets a second run out first.
 const SMALL_VOICE_PACKET: int = 64
+## Steam's voice as ClockedSteam plays it: compressed speech this many bytes a
+## second (a few KB, under the send cap; 300 ms of it fits in MAX_PACKET_BYTES
+## and a second of it doesn't), for this long, at these frame rates.
+const REAL_VOICE_BYTES_PER_SECOND: int = 3000
+const REAL_VOICE_SECONDS: int = 20
+const REAL_VOICE_FPS: Array[int] = [30, 60, 144, 240]
 
 var _failures: int = 0
 
@@ -138,6 +153,56 @@ class FakeSteam extends Object:
 		var pcm := PackedByteArray()
 		pcm.resize(packet.size() * 10)
 		return {"result": 0, "uncompressed": pcm, "size": pcm.size()}
+
+
+## Steam's microphone on the test's clock, as its voice API is ASSUMED to
+## behave (not measured with real Steam): while recording, a chunk of
+## `chunk_bytes` of compressed speech every `chunk_msec`; getVoice() hands out
+## everything recorded since it was last asked as one packet (Steam keeps it
+## until then), and k_EVoiceResultNoData while there is nothing new.
+class ClockedSteam extends FakeSteam:
+	const NO_DATA: int = 3  # Steam's k_EVoiceResultNoData.
+	var chunk_msec: int = 20
+	var chunk_bytes: int = 60
+	## The test's clock: set it with the voice's override_clock_msec.
+	var now_msec: int = 0
+	## The size of the last packet getVoice() handed out.
+	var last_packet: int = 0
+	var _start_msec: int = -1
+	var _stop_msec: int = -1
+	var _banked: int = 0  # Chunks of earlier recordings.
+	var _handed: int = 0  # Chunks getVoice() already handed out.
+
+	func startVoiceRecording() -> void:
+		super()
+		_banked = recorded_chunks()
+		_start_msec = now_msec
+		_stop_msec = -1
+
+	func stopVoiceRecording() -> void:
+		super()
+		_stop_msec = now_msec
+
+	func getVoice() -> Dictionary:
+		gets += 1
+		var chunks: int = recorded_chunks() - _handed
+		if chunks <= 0:
+			return {"result": NO_DATA, "buffer": PackedByteArray(), "written": 0}
+		_handed += chunks
+		last_packet = chunks * chunk_bytes
+		var buffer := PackedByteArray()
+		buffer.resize(last_packet)
+		return {"result": 0, "buffer": buffer, "written": last_packet}
+
+	func recorded_chunks() -> int:
+		if _start_msec < 0:
+			return _banked
+		var until: int = _stop_msec if _stop_msec >= 0 else now_msec
+		return _banked + floori(maxi(0, until - _start_msec) / float(chunk_msec))
+
+	## Every byte recorded so far, handed out or not.
+	func produced() -> int:
+		return recorded_chunks() * chunk_bytes
 
 
 class TestVoice extends SteamVoice:
@@ -563,6 +628,11 @@ func _test_voice_bandwidth() -> void:
 	_check_voice_sending()
 	_check_send_budget()
 	_check_voice_decoding()
+	_check_budget_before_get()
+	for chunk_msec: int in [20, 10]:
+		for fps: int in REAL_VOICE_FPS:
+			_check_real_voice(chunk_msec, fps)
+	_check_voice_hitches()
 
 
 func _check_voice_sending() -> void:
@@ -661,6 +731,128 @@ func _check_voice_decoding() -> void:
 	_expect(listener.take_voice_packet(9, 5250, quarter), "250 ms later a quarter second's bytes are back")
 	listener.free()
 	fake.free()
+
+
+## Without a packet left, or with fewer bytes than the smallest packet, Steam
+## isn't asked (its voice stays there); send_budget_ready() spends nothing.
+func _check_budget_before_get() -> void:
+	# 10 ms chunks: one is recorded before a packet's budget comes back (~17 ms
+	# at VOICE_SEND_PACKETS_PER_SECOND), two by the time it has.
+	var voice: TestVoice = _clocked_voice(10)
+	var fake: ClockedSteam = voice.backend
+	_voice_frame(voice, 1000, true)
+	for index: int in int(SteamVoice.VOICE_SEND_PACKET_BURST):
+		voice.take_send_budget(1000, 1)
+	_expect(not voice.send_budget_ready(1000), "Without a packet left the budget isn't ready")
+	var gets: int = fake.gets
+	_voice_frame(voice, 1010, true)
+	_expect(fake.produced() > 0 and fake.gets == gets and voice.sent.is_empty() and voice.dropped_sends == 0,
+		"...and Steam, with voice recorded, isn't asked: it keeps it, nothing is lost (gets %d -> %d)" % [
+			gets, fake.gets])
+	_voice_frame(voice, 1020, true)
+	_expect(voice.sent.size() == 1 and voice.sent[0] == 2 * fake.chunk_bytes
+		and fake.produced() == 2 * fake.chunk_bytes and voice.dropped_sends == 0,
+		"With a packet's budget back, what waited in Steam leaves in one packet (sent %s of %d B)" % [
+			voice.sent, fake.produced()])
+	_free_voice(voice)
+	voice = TestVoice.new()
+	var most: int = int(SteamVoice.VOICE_SEND_BYTE_BURST) - SteamVoice.VOICE_SEND_MIN_PACKET_BYTES + 1
+	_expect(voice.take_send_budget(0, most), "A packet leaves fewer bytes than the smallest packet")
+	_expect(not voice.send_budget_ready(0), "...so the budget isn't ready: the bytes left can't cover a packet")
+	for index: int in 10:
+		voice.send_budget_ready(500)
+	_expect(voice.take_send_budget(500, SteamVoice.MAX_PACKET_BYTES),
+		"Asking whether it's ready spends nothing: 500 ms later the largest packet still goes")
+	voice.free()
+
+
+## Push-to-talk held REAL_VOICE_SECONDS at `fps`, Steam recording a chunk every
+## `chunk_msec`, then released and drained: nothing is lost, whatever the
+## frame rate (with 10 ms chunks, past 60 fps Steam has more packets than the
+## cap; they wait in Steam and leave merged).
+func _check_real_voice(chunk_msec: int, fps: int) -> void:
+	var voice: TestVoice = _clocked_voice(chunk_msec)
+	var fake: ClockedSteam = voice.backend
+	var frames: int = fps * REAL_VOICE_SECONDS
+	var last_msec: int = 0
+	for frame: int in frames + SteamVoice.DRAIN_FRAMES + 2:
+		last_msec = 1000 + roundi(frame * 1000.0 / fps)
+		_voice_frame(voice, last_msec, frame < frames)
+	var what: String = "%d ms chunks at %d frames/s" % [chunk_msec, fps]
+	var sent: int = _total(voice.sent)
+	_expect(voice.dropped_sends == 0,
+		"%s: no packet taken from Steam is lost (dropped %d)" % [what, voice.dropped_sends])
+	_expect(fake.produced() > 0 and sent == fake.produced(),
+		"%s: every byte recorded is sent (%d of %d B)" % [what, sent, fake.produced()])
+	var packet_cap: float = SteamVoice.VOICE_SEND_PACKETS_PER_SECOND * (last_msec - 1000) / 1000.0 \
+		+ SteamVoice.VOICE_SEND_PACKET_BURST
+	_expect(voice.sent.size() <= packet_cap,
+		"%s: within the packets a second (%d packets, cap %.0f)" % [what, voice.sent.size(), packet_cap])
+	_check_heard_whole(voice)
+	_free_voice(voice)
+
+
+## Frames at 60 a second, with hitches in between where Steam keeps recording.
+func _check_voice_hitches() -> void:
+	var voice: TestVoice = _clocked_voice(20)
+	var fake: ClockedSteam = voice.backend
+	var msec: int = _voice_frames(voice, 1000, 1000)
+	msec += 300
+	_voice_frame(voice, msec, true)
+	var hitch_bytes: int = roundi(0.3 * REAL_VOICE_BYTES_PER_SECOND)
+	_expect(voice.dropped_sends == 0 and fake.last_packet >= hitch_bytes and voice.sent[-1] == fake.last_packet,
+		"300 ms without frames leave whole in one packet (%d B, dropped %d)" % [fake.last_packet, voice.dropped_sends])
+	_expect(_total(voice.sent) == fake.produced(), "...and nothing recorded so far is lost")
+	msec = _voice_frames(voice, msec, 1000)
+	var sent: int = voice.sent.size()
+	msec += 1000
+	_voice_frame(voice, msec, true)
+	_expect(fake.last_packet > SteamVoice.MAX_PACKET_BYTES and voice.dropped_sends == 1 and voice.sent.size() == sent,
+		"A second without frames (%d B, over MAX_PACKET_BYTES) is one packet lost, counted once (dropped %d)" % [
+			fake.last_packet, voice.dropped_sends])
+	_voice_frames(voice, msec, 200)
+	_expect(voice.sent.size() > sent and voice.dropped_sends == 1, "...and the voice after it goes out again")
+	voice.clear_peers()
+	_expect(voice.dropped_sends == 0, "clear_peers() puts dropped_sends back to 0")
+	_free_voice(voice)
+	voice = TestVoice.new()
+	_expect(voice.take_send_budget(5000, SteamVoice.MAX_PACKET_BYTES) and not voice.send_budget_ready(5000),
+		"The largest packet empties the send budget")
+	voice.clear_peers()
+	_expect(voice.send_budget_ready(5000) and voice.take_send_budget(5000, SteamVoice.MAX_PACKET_BYTES),
+		"clear_peers() refills the send budget at once")
+	voice.free()
+
+
+## A voice with push-to-talk over a ClockedSteam recording a chunk every
+## `chunk_msec` (REAL_VOICE_BYTES_PER_SECOND). Free it with _free_voice().
+func _clocked_voice(chunk_msec: int) -> TestVoice:
+	var voice := TestVoice.new()
+	var fake := ClockedSteam.new()
+	fake.chunk_msec = chunk_msec
+	fake.chunk_bytes = roundi(REAL_VOICE_BYTES_PER_SECOND * chunk_msec / 1000.0)
+	voice.backend = fake
+	voice.override_steam_session = 1
+	voice.enabled = true
+	voice.ptt = true
+	return voice
+
+
+## One frame at `msec`, for the voice and its ClockedSteam alike.
+func _voice_frame(voice: TestVoice, msec: int, held: bool) -> void:
+	(voice.backend as ClockedSteam).now_msec = msec
+	voice.override_clock_msec = msec
+	voice.tick(held)
+
+
+## `duration_msec` of frames at 60 a second with the key held, after `msec`;
+## returns the last frame's clock.
+func _voice_frames(voice: TestVoice, msec: int, duration_msec: int) -> int:
+	var last: int = msec
+	for frame: int in range(1, 1 + roundi(duration_msec * 60 / 1000.0)):
+		last = msec + roundi(frame * 1000.0 / 60.0)
+		_voice_frame(voice, last, true)
+	return last
 
 
 ## `seconds` of open mic at VOICE_FPS on the test's clock, getVoice() handing

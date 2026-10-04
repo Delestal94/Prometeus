@@ -4,7 +4,10 @@ extends SceneTree
 ## Proximity voice (N-212), first slice. The promise that matters most: with
 ## the general switch off, the microphone is never opened, whatever key is
 ## held. Then push-to-talk, open mic, LAN without voice (N-212.4), muting a
-## crewmate and the packet-size guard. Steam is a fake that counts calls.
+## crewmate and the packet-size guard. Steam is a fake that counts calls; the
+## voice runs on a clock the test steps a frame at a time (60 a second), so
+## its send budget (N-212, looked at before every getVoice()) refills as in a
+## game and a frame with voice collects it.
 
 # The fake mirrors GodotSteam's camelCase API, so its names can't be snake_case.
 # gdlint: disable=function-name
@@ -36,8 +39,12 @@ class FakeSteam extends Object:
 # gdlint: enable=function-name
 
 
+## A frame at 60 a second, in msec, on the voice's clock (override_clock_msec).
+const FRAME_MSEC: int = 17
+
 var failures: int = 0
 var received: Array = []
+var clock_msec: int = 1000
 
 
 func _initialize() -> void:
@@ -61,52 +68,52 @@ func _run() -> void:
 	settings.voice_chat_enabled = false
 	settings.voice_push_to_talk = false
 	for i: int in 5:
-		voice.tick(true)
+		_tick(voice, true)
 	_expect(fake.starts == 0 and fake.gets == 0, "Voice off: neither holding the key nor open mic records")
 	_expect(not voice.talking, "Voice off: never marked as talking")
 
 	# --- push-to-talk: records only while held ---
 	settings.voice_chat_enabled = true
 	settings.voice_push_to_talk = true
-	voice.tick(false)
+	_tick(voice, false)
 	_expect(fake.starts == 0, "Push-to-talk: nothing recorded before the key is held")
-	voice.tick(true)
-	voice.tick(true)
+	_tick(voice, true)
+	_tick(voice, true)
 	_expect(fake.starts == 1 and voice.talking, "Push-to-talk: holding the key opens the microphone once")
 	_expect(fake.gets == 2, "While talking, the recorded voice is collected every frame")
-	voice.tick(false)
+	_tick(voice, false)
 	_expect(fake.stops == 1 and not voice.talking, "Releasing the key closes the microphone")
 	_expect(fake.gets == 3, "The tail of the phrase is still collected after releasing the key")
 	for i: int in voice.DRAIN_FRAMES + 3:
-		voice.tick(false)
+		_tick(voice, false)
 	_expect(fake.gets == 2 + voice.DRAIN_FRAMES, "Collecting stops a few frames after releasing the key")
 
 	# --- turning the general switch off mid-sentence closes it too ---
-	voice.tick(true)
+	_tick(voice, true)
 	settings.voice_chat_enabled = false
-	voice.tick(true)
+	_tick(voice, true)
 	_expect(fake.stops == 2 and not voice.talking, "Switching voice off while talking stops recording")
 
 	# --- open mic, and LAN without voice (N-212.4) ---
 	settings.voice_chat_enabled = true
 	settings.voice_push_to_talk = false
-	voice.tick(false)
+	_tick(voice, false)
 	_expect(voice.talking, "Open mic records without holding a key")
 	voice.override_steam_session = 0
-	voice.tick(true)
+	_tick(voice, true)
 	_expect(not voice.talking, "Outside a Steam session (LAN/ENet) the microphone closes")
 	var starts_before: int = fake.starts
-	voice.tick(true)
+	_tick(voice, true)
 	_expect(fake.starts == starts_before, "LAN never opens the microphone")
 	voice.override_steam_session = 1
-	voice.tick(false)
+	_tick(voice, false)
 	voice.backend = null
-	voice.tick(true)
+	_tick(voice, true)
 	_expect(not voice.talking, "Without GodotSteam (CI, a build without Steam) there is no voice")
 	voice.backend = fake
-	voice.tick(false)
+	_tick(voice, false)
 	settings.voice_push_to_talk = true
-	voice.tick(false)
+	_tick(voice, false)
 
 	# --- receiving: muted crewmates and oversized packets are dropped ---
 	voice.receive_packet(2, PackedByteArray([9, 9, 9]))
@@ -130,6 +137,7 @@ func _run() -> void:
 
 	voice.backend = null
 	voice.override_steam_session = -1
+	voice.override_clock_msec = -1
 	settings.voice_chat_enabled = original_enabled
 	settings.voice_push_to_talk = original_ptt
 	fake.free()
@@ -138,6 +146,13 @@ func _run() -> void:
 	if failures == 0:
 		print("PASS: proximity voice records only when switched on, over Steam, and drops muted or oversized packets")
 	quit(failures)
+
+
+## One frame of the voice, a frame's time after the last one.
+func _tick(voice: Node, held: bool) -> void:
+	clock_msec += FRAME_MSEC
+	voice.override_clock_msec = clock_msec
+	voice.tick(held)
 
 
 func _expect(condition: bool, description: String) -> void:

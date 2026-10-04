@@ -49,24 +49,35 @@ const MAX_PACKET_BYTES: int = 2048
 const FALLBACK_SAMPLE_RATE: int = 24000
 ## What this peer sends at most, whatever its frame rate (N-212): every
 ## frame's getVoice() would otherwise be an RPC, and the host relays each
-## one (see the top). Steam hands out a packet per ~20 ms of speech (about 50
-## a second) and its compressed speech is a few KB a second, so a voice stays
-## under both; what goes over is a dropped syllable, counted in
-## `dropped_sends`. These are what a bandwidth budget should count.
+## one (see the top). ASSUMED, not yet measured with real Steam: that Steam
+## hands out a packet per ~20 ms of speech (about 50 a second) and that its
+## compressed speech is a few KB a second, so a voice stays under both.
+## The budget is looked at before getVoice() (send_budget_ready()): Steam
+## keeps what it recorded until it is asked, so a frame without budget
+## leaves it there and it goes out later in one bigger packet. What is lost
+## is a packet taken from Steam that is over MAX_PACKET_BYTES or over the
+## bytes left, counted in `dropped_sends`. These are what a bandwidth budget
+## should count.
 const VOICE_SEND_PACKETS_PER_SECOND: float = 60.0
 const VOICE_SEND_BYTES_PER_SECOND: float = 8192.0
 ## The send budget's burst: a tenth of a second of packets, and room for one
 ## packet of MAX_PACKET_BYTES (or one that size could never leave).
 const VOICE_SEND_PACKET_BURST: float = 6.0
 const VOICE_SEND_BYTE_BURST: float = 2048.0
+## The bytes send_budget_ready() wants left before Steam is asked: about one
+## ~20 ms packet of compressed speech (ASSUMED, not measured with real
+## Steam). Asking with less would most likely take out a packet the bytes
+## can't cover, and lose it; waiting loses nothing.
+const VOICE_SEND_MIN_PACKET_BYTES: int = 64
 ## Steam keeps handing out recorded voice for a moment after
 ## stopVoiceRecording(); drain it this many frames so the end of a phrase is
 ## sent instead of arriving stale at the start of the next one.
 const DRAIN_FRAMES: int = 12
 ## Packets decoded per peer: each costs a decoder call before anything can
-## judge it, so a peer flooding the voice channel is cut here. Steam hands out
-## a packet per ~20 ms of speech at most (about 50 a second, however fast the
-## sender's frames are), so this is more than twice what a real voice needs.
+## judge it, so a peer flooding the voice channel is cut here. A capped
+## sender sends at most VOICE_SEND_PACKETS_PER_SECOND, however fast its
+## frames are (and Steam is ASSUMED, not measured, to hand out about 50 a
+## second, one per ~20 ms of speech), so this is twice what a voice needs.
 ## Its own budget, not RpcGuard's: voice must never spend the one that lets
 ## go of a box.
 const VOICE_PACKETS_PER_SECOND: float = 120.0
@@ -90,9 +101,10 @@ var override_clock_msec: int = -1
 ## The input action held to talk (push-to-talk).
 var talk_action: StringName = &"voice_talk"
 var talking: bool = false
-## Packets recorded here that never left: larger than MAX_PACKET_BYTES, or
-## over the send budget. If it climbs while someone simply talks, the caps
-## are too tight for Steam's real voice.
+## Packets taken from Steam that never left: larger than MAX_PACKET_BYTES, or
+## over the send bytes left (a frame without budget doesn't ask Steam, and
+## loses nothing). If it climbs while someone simply talks, the caps are too
+## tight for Steam's real voice. clear_peers() puts it back to 0.
 var dropped_sends: int = 0
 
 var _muted: Dictionary = {}  # peer_id -> true
@@ -160,13 +172,19 @@ func peer_volume(peer_id: int) -> float:
 	return float(_peer_volume.get(peer_id, 1.0))
 
 
-## Forget everything per-peer when a session ends; peer ids are reused.
+## Forget everything per-peer when a session ends; peer ids are reused. The
+## send budget and `dropped_sends` start over too: the next session counts
+## its own.
 func clear_peers() -> void:
 	_muted.clear()
 	_peer_volume.clear()
 	_voice_tokens.clear()
 	_voice_bytes.clear()
 	_voice_token_msec.clear()
+	dropped_sends = 0
+	_send_packets = VOICE_SEND_PACKET_BURST
+	_send_bytes = VOICE_SEND_BYTE_BURST
+	_send_msec = -1
 
 
 ## Takes one packet of `bytes` from `peer_id`'s decode budget at `now_msec`
@@ -193,15 +211,28 @@ func take_voice_packet(peer_id: int, now_msec: int, bytes: int = 0) -> bool:
 ## bytes (VOICE_SEND_BYTE_BURST, at VOICE_SEND_BYTES_PER_SECOND) can't cover
 ## it, so a big packet held back never costs the smaller ones after it.
 func take_send_budget(now_msec: int, bytes: int) -> bool:
-	var since: int = now_msec - _send_msec if _send_msec >= 0 else 0
-	_send_msec = now_msec
-	_send_packets = _refilled(_send_packets, since, VOICE_SEND_PACKETS_PER_SECOND, VOICE_SEND_PACKET_BURST)
-	_send_bytes = _refilled(_send_bytes, since, VOICE_SEND_BYTES_PER_SECOND, VOICE_SEND_BYTE_BURST)
+	_refill_send_budget(now_msec)
 	if _send_packets < 1.0 or _send_bytes < bytes:
 		return false
 	_send_packets -= 1.0
 	_send_bytes -= bytes
 	return true
+
+
+## Whether this peer's send budget, refilled to `now_msec` and spending
+## nothing, has a packet left and at least VOICE_SEND_MIN_PACKET_BYTES.
+## Looked at before getVoice(): while it says no, the voice stays in Steam
+## (see VOICE_SEND_PACKETS_PER_SECOND) instead of being taken and lost.
+func send_budget_ready(now_msec: int) -> bool:
+	_refill_send_budget(now_msec)
+	return _send_packets >= 1.0 and _send_bytes >= VOICE_SEND_MIN_PACKET_BYTES
+
+
+func _refill_send_budget(now_msec: int) -> void:
+	var since: int = now_msec - _send_msec if _send_msec >= 0 else 0
+	_send_msec = now_msec
+	_send_packets = _refilled(_send_packets, since, VOICE_SEND_PACKETS_PER_SECOND, VOICE_SEND_PACKET_BURST)
+	_send_bytes = _refilled(_send_bytes, since, VOICE_SEND_BYTES_PER_SECOND, VOICE_SEND_BYTE_BURST)
 
 
 ## A token bucket's `level` after `since_msec` more: refilled at `rate` a
@@ -231,6 +262,11 @@ func _set_talking(value: bool) -> void:
 func _send_pending_voice() -> void:
 	if backend == null or not backend.has_method(&"getVoice"):
 		return
+	# The budget before getVoice(): taking the voice out of Steam without
+	# budget to send it would lose it, leaving it there loses nothing.
+	var now: int = _now_msec()
+	if not send_budget_ready(now):
+		return
 	var result: Variant = backend.call(&"getVoice")
 	if not result is Dictionary:
 		return
@@ -247,7 +283,9 @@ func _send_pending_voice() -> void:
 		return
 	if written < buffer.size():
 		buffer = buffer.slice(0, written)
-	if not take_send_budget(_now_msec(), buffer.size()):
+	# All or nothing: a packet over the bytes left is lost (Steam no longer
+	# has it); one within them spends a packet and its bytes.
+	if not take_send_budget(now, buffer.size()):
 		dropped_sends += 1
 		return
 	_send_packet(buffer)
