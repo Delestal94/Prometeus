@@ -1,6 +1,6 @@
 """Paint the printed cardboard atlases for the delivery boxes.
 
-    D:/Programas/comfy-venv/Scripts/python.exe art/tools/make_cargo_textures.py
+    D:/Programas/comfy-venv/Scripts/python.exe art/tools/make_cargo_textures.py [--label-only]
 
 Everything is drawn with PIL (no generation), so a box's print is exact and
 repeatable: the same brand (docs/direccion-visual.md section 3: INK #1e2235,
@@ -420,28 +420,147 @@ def tape(w: int, h: int) -> Image.Image:
     return img.filter(ImageFilter.GaussianBlur(0.5))
 
 
-def shipping_label() -> Image.Image:
-    w, h = 512, 320
-    img = Image.new("RGB", (w, h), (252, 246, 232))
-    d = ImageDraw.Draw(img)
-    d.rectangle([0, 0, w, 54], fill=INK)
-    d.text((18, 8), "TAKE MY PACKAGE", font=font(FONT_TITLE, 34), fill=TAPE)
-    d.text((w - 150, 16), "EXPRESS 24H", font=font(FONT_TEXT, 22, 900), fill=(252, 246, 232))
-    small = font(FONT_TEXT, 17, 900)
-    d.text((18, 66), "PARA:", font=small, fill=INK)
-    d.text((18, 158), "CONTENIDO DECLARADO:", font=small, fill=INK)
-    for y in (98, 124):
-        d.line([(80, y), (w - 170, y)], fill=(150, 140, 125), width=2)
+# The courier label (512x320 once saved). package_shipping_label.gd places its
+# Label3D texts on this geometry, in texture px of the saved 512x320 image.
+LABEL_W, LABEL_H = 512, 320
+LABEL_SCALE = 4                      # painted at 2048x1280, saved with LANCZOS
+PAPER = (252, 246, 232)
+LABEL_RED = (214, 70, 62)
+LABEL_RULES_Y = (98, 124)            # "PARA / TO" rules: recipient, then "De: sender"
+LABEL_RULES_X = (80, 342)
+LABEL_PARTIES_ZONE = (81, 80, 341, 136)    # Label3D block centred at u=211, v=102, <=260 px wide
+LABEL_CONTENTS_ZONE = (87, 158, 385, 234)  # Label3D at u~236 v~195, 480*0.62 px wide, left aligned
+LABEL_ROUTE_BOX = (362, 66, 494, 150)
+LABEL_PRIORITY_BOX = (362, 246, 494, 306)
+LABEL_BARCODE = (18, 246, 300, 52)   # x, y, w, h
+
+
+def paper(w: int, h: int, color: tuple, seed: int) -> Image.Image:
+    """Label stock: near-flat cream with a faint grain and a few fibres."""
+    rng = np.random.default_rng(seed)
+    fine = rng.normal(0.0, 1.0, (h, w)).astype(np.float32)
+    blotch = np.array(Image.fromarray((rng.random((max(h // 160, 2), max(w // 160, 2))) * 255).astype(np.uint8))
+                      .resize((w, h), Image.BICUBIC), np.float32) / 255.0 - 0.5
+    shade = 1.0 + fine * 0.01 + blotch * 0.04
+    arr = np.clip(np.array(color, np.float32) * shade[..., None], 0, 255).astype(np.uint8)
+    out = Image.fromarray(arr, "RGB")
+    draw = ImageDraw.Draw(out, "RGBA")
+    r = random.Random(seed)
+    for _ in range(w * h // 9000):
+        x0, y0 = r.uniform(0, w), r.uniform(0, h)
+        a = r.uniform(0, math.pi)
+        length = r.uniform(6, 22)
+        draw.line([(x0, y0), (x0 + math.cos(a) * length, y0 + math.sin(a) * length)],
+                  fill=(120, 100, 70, r.randint(8, 18)), width=2)
+    return out
+
+
+def bilingual(draw, x, y, es, en, size, en_ratio=0.8, gap=0.12, stacked=True, s=1):
+    """International-label heading: the Spanish word in heavy ink, its English
+    pair lighter and smaller, under it (stacked) or after it on the same
+    baseline. x, y in painted px; size in saved px. Returns the bbox in saved px."""
+    f_es = font(FONT_TEXT, int(size * s), 900)
+    f_en = font(FONT_TEXT, int(size * en_ratio * s), 650)
+    b_es = draw.textbbox((x, y), es, font=f_es)
+    draw.text((x, y), es, font=f_es, fill=INK + (255,))
+    if stacked:
+        b0 = draw.textbbox((0, 0), en, font=f_en)
+        pos = (x, b_es[3] + size * gap * s - b0[1])
+    else:
+        pos = (b_es[2] + size * 0.3 * s, y + f_es.getmetrics()[0] - f_en.getmetrics()[0])
+    draw.text(pos, en, font=f_en, fill=INK + (225,))
+    b_en = draw.textbbox(pos, en, font=f_en)
+    return (min(b_es[0], b_en[0]) / s, min(b_es[1], b_en[1]) / s, max(b_es[2], b_en[2]) / s, max(b_es[3], b_en[3]) / s)
+
+
+def _overlaps(a, b) -> bool:
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
+def shipping_label(seed: int = 417) -> Image.Image:
+    """Courier label with ES/EN headings, like an international waybill.
+    Painted at 2048x1280 on an ink layer, printed onto paper stock
+    (print_ink), worn at the edges and saved at 512x320. The geometry is the
+    LABEL_* constants (package_shipping_label.gd depends on it), checked here."""
+    S = LABEL_SCALE
+    w, h = LABEL_W * S, LABEL_H * S
+    base = edge_wear(paper(w, h, PAPER, seed), 0.12)
+    ink = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ink)
+
+    def P(*v):
+        return [c * S for c in v]
+
+    cream = PAPER + (255,)
+    headings = {}
+
+    # Header bar: brand in tape yellow, service in paper white (already English).
+    d.rectangle(P(0, 0, LABEL_W, 54), fill=INK + (255,))
+    d.text(P(18, 8), "TAKE MY PACKAGE", font=font(FONT_TITLE, 34 * S), fill=TAPE + (255,))
+    # Right-aligned on the route/priority boxes' right edge (x=494).
+    service = "EXPRESS 24H"
+    f_sv = fit_font(d, service, FONT_TEXT, 150 * S, 22 * S, 900)
+    sb = d.textbbox((0, 0), service, font=f_sv)
+    sx = LABEL_ROUTE_BOX[2] * S - sb[2]
+    sy = 27 * S - (sb[1] + sb[3]) / 2
+    d.text((sx, sy), service, font=f_sv, fill=cream)
+    headings["service"] = tuple(c / S for c in d.textbbox((sx, sy), service, font=f_sv))
+
+    # PARA / TO, stacked left of the rules so the rules keep their full length.
+    headings["para_to"] = bilingual(d, 18 * S, 84 * S, "PARA", "TO:", 16, en_ratio=0.9, s=S)
+    for y in LABEL_RULES_Y:
+        d.line(P(LABEL_RULES_X[0], y, LABEL_RULES_X[1], y), fill=(150, 140, 125, 255), width=2 * S)
+
+    # Declared contents: one line between the second rule and the Label3D.
+    es, en = "CONTENIDO DECLARADO", "/ DECLARED CONTENTS:"
+    size = 15
+    while size > 10:
+        f_es = font(FONT_TEXT, size * S, 900)
+        f_en = font(FONT_TEXT, int(size * 0.8 * S), 650)
+        width = (d.textlength(es, font=f_es) + size * 0.3 * S + d.textlength(en, font=f_en)) / S
+        if width <= LABEL_RULES_X[1] - 18:
+            break
+        size -= 1
+    headings["contents"] = bilingual(d, 18 * S, 136 * S, es, en, size, stacked=False, s=S)
+
     # Route/zone box, the big letter a sorter reads from across the depot.
-    d.rectangle([w - 150, 66, w - 18, 150], outline=INK, width=4)
-    text_center(d, w - 84, 96, "RUTA", font(FONT_TEXT, 16, 900), INK)
-    text_center(d, w - 84, 128, "R-7", font(FONT_TITLE, 36), INK)
-    d.line([(0, 234), (w, 234)], fill=INK, width=3)
-    barcode(d, 18, 246, 300, 52, 7, INK)
-    d.text((18, 298), "TMP 0417 2291 AR", font=font(FONT_TEXT, 15, 800), fill=INK)
-    d.rectangle([w - 150, 246, w - 18, 306], fill=(214, 70, 62))
-    text_center(d, w - 84, 276, "PRIORIDAD", font(FONT_TITLE, 24), (252, 246, 232))
-    return img
+    x0, y0, x1, y1 = LABEL_ROUTE_BOX
+    cx = (x0 + x1) / 2
+    d.rectangle(P(x0, y0, x1, y1), outline=INK + (255,), width=4 * S)
+    text_center(d, cx * S, 84 * S, "RUTA", font(FONT_TEXT, 15 * S, 900), INK + (255,))
+    text_center(d, cx * S, 99 * S, "ROUTE", font(FONT_TEXT, 11 * S, 650), INK + (225,))
+    text_center(d, cx * S, 128 * S, "R-7", font(FONT_TITLE, 34 * S), INK + (255,))
+
+    d.line(P(0, 234, LABEL_W, 234), fill=INK + (255,), width=3 * S)
+    bx, by, bw, bh = LABEL_BARCODE
+    barcode(d, bx * S, by * S, bw * S, bh * S, 7, INK + (255,))
+    d.text(P(18, 298), "TMP 0417 2291 AR", font=font(FONT_TEXT, 15 * S, 800), fill=INK + (255,))
+
+    x0, y0, x1, y1 = LABEL_PRIORITY_BOX
+    cx = (x0 + x1) / 2
+    d.rectangle(P(x0, y0, x1, y1), fill=LABEL_RED + (255,))
+    f_pr = fit_font(d, "PRIORIDAD", FONT_TITLE, (x1 - x0 - 16) * S, 24 * S)
+    text_center(d, cx * S, 268 * S, "PRIORIDAD", f_pr, cream)
+    text_center(d, cx * S, 290 * S, "PRIORITY", font(FONT_TEXT, 12 * S, 800), cream)
+
+    # Geometry check against what package_shipping_label.gd assumes.
+    pt, ct = headings["para_to"], headings["contents"]
+    print("label: PARA/TO heading   x %.0f-%.0f  y %.0f-%.0f" % (pt[0], pt[2], pt[1], pt[3]))
+    print("label: PARA rules        y %s  x %d->%d" % (LABEL_RULES_Y, *LABEL_RULES_X))
+    print("label: CONTENTS heading  x %.0f-%.0f  y %.0f-%.0f (%d px)" % (ct[0], ct[2], ct[1], ct[3], size))
+    print("label: Label3D zones     parties %s  contents %s" % (LABEL_PARTIES_ZONE, LABEL_CONTENTS_ZONE))
+    print("label: route box %s  priority box %s  barcode %s" % (LABEL_ROUTE_BOX, LABEL_PRIORITY_BOX, LABEL_BARCODE))
+    sv = headings.pop("service")
+    print("label: EXPRESS 24H       x %.0f-%.0f  y %.0f-%.0f" % (sv[0], sv[2], sv[1], sv[3]))
+    assert sv[2] < 500, "EXPRESS 24H runs off the right edge"
+    assert pt[2] < LABEL_RULES_X[0] - 2, "PARA / TO runs into the rules"
+    assert LABEL_RULES_Y[1] + 4 <= ct[1] and ct[3] <= 156, "contents heading off its band"
+    for name, box in headings.items():
+        for zone in (LABEL_PARTIES_ZONE, LABEL_CONTENTS_ZONE):
+            assert not _overlaps(box, zone), "%s heading overlaps the Label3D zone %s" % (name, zone)
+
+    img = print_ink(base, ink, seed)
+    return img.resize((LABEL_W, LABEL_H), Image.LANCZOS)
 
 
 # --- Atlas ----------------------------------------------------------------------
@@ -496,13 +615,23 @@ def build_variant(variant: str, index: int) -> dict:
     return {"dims": [W, D, H], "trap": VARIANTS[variant]["trap"], "texture": str(out.relative_to(ROOT)).replace("\\", "/"), "regions": regions}
 
 
-def main() -> None:
-    layout = {name: build_variant(name, i) for i, name in enumerate(VARIANTS)}
-    LAYOUT_OUT.write_text(json.dumps(layout, indent=2), encoding="utf-8")
-    print("wrote", LAYOUT_OUT.relative_to(ROOT))
+def write_label() -> None:
     LABEL_OUT.parent.mkdir(parents=True, exist_ok=True)
     shipping_label().save(LABEL_OUT, optimize=True)
     print("wrote", LABEL_OUT.relative_to(ROOT))
+
+
+def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--label-only", action="store_true",
+                        help="repaint only the shipping label; leave art/cargo/*.png and cargo_layout.json alone")
+    args = parser.parse_args()
+    if not args.label_only:
+        layout = {name: build_variant(name, i) for i, name in enumerate(VARIANTS)}
+        LAYOUT_OUT.write_text(json.dumps(layout, indent=2), encoding="utf-8")
+        print("wrote", LAYOUT_OUT.relative_to(ROOT))
+    write_label()
 
 
 if __name__ == "__main__":
