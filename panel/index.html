@@ -6,312 +6,478 @@
 <title>Sala de control · Take My Package</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: barra fija arriba con pestañas; el home es la franja de decisiones + la grilla de pilares.
-   Cada vista es una sección; un cajón lateral muestra el detalle de un pilar. */
+/* Layout: barra fija con pestañas. Inicio = saludo con resumen y 4 números, decisiones, la cinta de
+   paquetes (el trabajo en curso) y los pilares. Un cajón lateral muestra detalle y el glosario. */
 :root {
-  --bg: #f3f4f1; --surface: #ffffff; --sunk: #eceee9; --ink: #15191b; --muted: #61696c; --line: #dcdfd9;
-  --tape: #e2a300; --tape-ink: #7a5700; --tape-soft: #fbefcc;
-  --live: #1d9a54; --live-soft: #dcf3e5; --warn: #b86e00; --warn-soft: #fbead0;
-  --bad: #cc3f35; --bad-soft: #fbe1de; --info: #3561cf; --info-soft: #e1e8fb;
+  --bg: #f4f3ef; --surface: #ffffff; --sunk: #ecebe6; --ink: #17191a; --muted: #686d6e; --line: #e0dfd9;
+  --tape: #e4a50a; --tape-ink: #845d00; --tape-soft: #fcf0cf; --kraft: #c9a173; --kraft-soft: #f3e6d4;
+  --live: #1e9b55; --live-soft: #ddf3e6; --warn: #b96f00; --warn-soft: #fbecd2;
+  --bad: #cf4036; --bad-soft: #fbe2df; --info: #3a63d0; --info-soft: #e2e9fb;
+  --shadow: 0 1px 2px rgb(30 25 15 / .05), 0 4px 16px rgb(30 25 15 / .05);
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --r: 10px; color-scheme: light;
+  --r: 14px; color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0f1112; --surface: #171a1b; --sunk: #131516; --ink: #eceeea; --muted: #959d9b; --line: #282d2e;
-  --tape: #f0b52c; --tape-ink: #f0b52c; --tape-soft: #33290f;
-  --live: #3fcf7c; --live-soft: #12301f; --warn: #f0a33a; --warn-soft: #36260c;
-  --bad: #ff6a5d; --bad-soft: #3a1714; --info: #85a2ff; --info-soft: #18213d; color-scheme: dark; } }
+  --bg: #111213; --surface: #191b1c; --sunk: #141516; --ink: #eeeeea; --muted: #9aa09e; --line: #2a2d2e;
+  --tape: #f2b42e; --tape-ink: #f2b42e; --tape-soft: #33290f; --kraft: #b48b5e; --kraft-soft: #2a2219;
+  --live: #43d17f; --live-soft: #123020; --warn: #f2a43c; --warn-soft: #36270d;
+  --bad: #ff6c5f; --bad-soft: #3b1815; --info: #8aa6ff; --info-soft: #19223e;
+  --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 20px rgb(0 0 0 / .25); color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --bg: #0f1112; --surface: #171a1b; --sunk: #131516; --ink: #eceeea; --muted: #959d9b; --line: #282d2e;
-  --tape: #f0b52c; --tape-ink: #f0b52c; --tape-soft: #33290f;
-  --live: #3fcf7c; --live-soft: #12301f; --warn: #f0a33a; --warn-soft: #36260c;
-  --bad: #ff6a5d; --bad-soft: #3a1714; --info: #85a2ff; --info-soft: #18213d; color-scheme: dark; }
+  --bg: #111213; --surface: #191b1c; --sunk: #141516; --ink: #eeeeea; --muted: #9aa09e; --line: #2a2d2e;
+  --tape: #f2b42e; --tape-ink: #f2b42e; --tape-soft: #33290f; --kraft: #b48b5e; --kraft-soft: #2a2219;
+  --live: #43d17f; --live-soft: #123020; --warn: #f2a43c; --warn-soft: #36270d;
+  --bad: #ff6c5f; --bad-soft: #3b1815; --info: #8aa6ff; --info-soft: #19223e;
+  --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 20px rgb(0 0 0 / .25); color-scheme: dark; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }
-body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--f-body); -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--ink); font: 14.5px/1.55 var(--f-body); -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--tape); outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--tape); outline-offset: 2px; border-radius: 6px; }
+h1, h2, h3, h4 { font-family: var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -0.015em; }
+h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; line-height: 1.1; }
+h2 { font-size: 24px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 700; }
+h4 { font-size: 14.5px; font-weight: 700; }
+p { margin: 0; }
 .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
-h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
-h2 { font-size: 22px; }
-h3 { font-size: 16px; }
-.eyebrow { font: 500 11px/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.small { font-size: 12.5px; }
+.eyebrow { font: 500 11px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+.ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic.sm { width: 15px; height: 15px; }
+.ic.lg { width: 26px; height: 26px; }
 
 /* barra */
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-.bar-in { max-width: 1280px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 16px 24px; align-items: center; flex-wrap: wrap; }
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-mark { width: 26px; height: 26px; border-radius: 6px; background: var(--tape); position: relative; flex: none; }
-.brand-mark::after { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 4px; background: var(--ink); opacity: .85; }
-.brand b { font: 700 16px/1 var(--f-display); }
-.brand span { display: block; font: 500 11px/1.2 var(--f-mono); color: var(--muted); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1280px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 12px 22px; align-items: center; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-mark { width: 30px; height: 30px; border-radius: 7px; background: var(--kraft); position: relative; flex: none; box-shadow: inset 0 -3px 0 rgb(0 0 0 / .12); }
+.brand-mark::after { content: ""; position: absolute; left: 12px; top: 0; bottom: 0; width: 6px; background: var(--tape); }
+.brand b { font: 800 16px/1 var(--f-display); display: block; }
+.brand span { display: block; font: 500 11px/1.3 var(--f-mono); color: var(--muted); }
 nav { display: flex; gap: 2px; flex-wrap: wrap; }
-nav a { text-decoration: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+nav a { text-decoration: none; padding: 7px 11px; border-radius: 8px; color: var(--muted); font-weight: 500; }
 nav a:hover { color: var(--ink); background: var(--sunk); }
 nav a[aria-current="page"] { color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
-.live { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.tools { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.livepill { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); padding: 5px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; display: inline-block; }
-.dot.on { background: var(--live); box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 60%, transparent); animation: pulse 2s infinite; }
+.dot.on { background: var(--live); animation: pulse 2s infinite; }
 .dot.err { background: var(--bad); }
-@keyframes pulse { 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-.icon-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 4px 9px; cursor: pointer; font-size: 12px; }
-.icon-btn:hover { border-color: var(--muted); }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.iconbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 11px; cursor: pointer; font-size: 12.5px; }
+.iconbtn:hover { border-color: var(--muted); }
 
-main { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; display: grid; gap: 28px; }
-section[data-view] { display: grid; gap: 28px; }
-main, section[data-view] { grid-template-columns: minmax(0, 1fr); }
-.list .side { display: grid; gap: 4px; justify-items: end; }
-.head { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.lede { max-width: 70ch; color: var(--muted); margin: 6px 0 0; }
-
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
-.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font: 500 11.5px/1.6 var(--f-mono);
-  background: var(--sunk); color: var(--muted); white-space: nowrap; }
-.chip.live { background: var(--live-soft); color: var(--live); }
-.chip.warn { background: var(--warn-soft); color: var(--warn); }
-.chip.bad { background: var(--bad-soft); color: var(--bad); }
-.chip.info { background: var(--info-soft); color: var(--info); }
+main { max-width: 1280px; margin: 0 auto; padding: 28px 20px 72px; display: grid; gap: 36px; grid-template-columns: minmax(0, 1fr); }
+section[data-view] { display: grid; gap: 36px; grid-template-columns: minmax(0, 1fr); }
+.block { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.block-h { display: flex; align-items: end; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.block-h p { max-width: 68ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+.q { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 600 11px/1 var(--f-body); cursor: pointer; vertical-align: 2px; margin-left: 4px; padding: 0; }
+.q:hover { color: var(--ink); border-color: var(--muted); }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font: 500 11.5px/1.7 var(--f-body); background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.chip.live { background: var(--live-soft); color: var(--live); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--info); }
 .chip.tape { background: var(--tape-soft); color: var(--tape-ink); }
-.id { font: 500 12px var(--f-mono); color: var(--muted); white-space: nowrap; }
+.id { font: 500 11.5px var(--f-mono); color: var(--muted); white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-weight: 500; font-size: 13px; text-decoration: none; white-space: nowrap; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn:hover { opacity: .88; }
 
-/* franja de decisiones */
-.decide { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
-.list { list-style: none; margin: 0; padding: 0; }
-.list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 11px 16px; border-top: 1px solid var(--line); }
-.list li:first-child { border-top: 0; }
-.list .t { min-width: 0; }
-.list .t small { display: block; color: var(--muted); font-size: 12px; }
-.list a.go { font-size: 12px; color: var(--info); text-decoration: none; white-space: nowrap; }
-.list a.go:hover { text-decoration: underline; }
-.panel-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px 10px; }
-.count { font: 700 13px var(--f-mono); padding: 1px 8px; border-radius: 6px; background: var(--tape); color: #1b1400; }
-.count.zero { background: var(--sunk); color: var(--muted); }
-.empty { padding: 4px 16px 16px; color: var(--muted); }
-.stripe { width: 3px; align-self: stretch; border-radius: 2px; background: var(--line); }
-.stripe.bad { background: var(--bad); } .stripe.warn { background: var(--warn); } .stripe.info { background: var(--info); } .stripe.tape { background: var(--tape); }
+/* intro y saludo */
+.intro { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; padding: 18px 20px; align-items: start; background: var(--tape-soft); border-color: color-mix(in srgb, var(--tape) 45%, var(--line)); }
+.intro ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.hero { display: grid; gap: 22px; }
+.hero .sum { font-size: 17px; max-width: 72ch; color: var(--muted); }
+.hero .sum b { color: var(--ink); font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.tile { text-align: left; cursor: pointer; padding: 16px 18px; display: grid; gap: 6px; align-content: start; border: 1px solid var(--line); transition: transform .15s, border-color .15s; }
+.tile:hover { transform: translateY(-2px); border-color: var(--muted); }
+.tile .top { display: flex; align-items: center; justify-content: space-between; }
+.tile .bub { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; }
+.tile .n { font: 800 40px/1 var(--f-display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.tile .l { font-weight: 600; }
+.tile .s { font-size: 12.5px; color: var(--muted); }
+.t-live .bub { background: var(--live-soft); color: var(--live); } .t-tape .bub { background: var(--tape-soft); color: var(--tape-ink); }
+.t-info .bub { background: var(--info-soft); color: var(--info); } .t-bad .bub { background: var(--bad-soft); color: var(--bad); }
 
-/* ahora mismo */
-.now { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
-.now-card { flex: 0 0 auto; min-width: 220px; max-width: 280px; padding: 12px 14px; display: grid; gap: 6px; }
-.now-card.running { border-color: color-mix(in srgb, var(--live) 45%, var(--line)); }
-.now-card .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
-.agents-mini { display: flex; flex-wrap: wrap; gap: 4px; }
+/* decisiones */
+.decisions { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.dcard { padding: 16px 18px; display: grid; gap: 10px; align-content: start; position: relative; border-top: 4px solid var(--pc, var(--tape)); }
+.dcard .who { display: flex; align-items: center; gap: 8px; color: var(--pc, var(--muted)); font-size: 12.5px; font-weight: 600; }
+.dcard .qtxt { font: 700 16.5px/1.3 var(--f-display); }
+.dcard .meta { font-size: 12.5px; color: var(--muted); }
+.dcard .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.happy { padding: 22px; display: flex; gap: 14px; align-items: center; color: var(--live); }
+.att { list-style: none; margin: 0; padding: 0; }
+.att li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); }
+.att li:first-child { border-top: 0; }
+.att .ibub { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; }
+.att .bad { background: var(--bad-soft); color: var(--bad); } .att .warn { background: var(--warn-soft); color: var(--warn); } .att .info { background: var(--info-soft); color: var(--info); }
+.att small { display: block; color: var(--muted); font-size: 12.5px; }
+.att a.go { font-size: 12.5px; color: var(--info); text-decoration: none; white-space: nowrap; }
+
+/* la cinta */
+.belt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; position: relative; padding: 18px 0 8px; }
+.belt::before { content: ""; position: absolute; left: 12px; right: 12px; top: 44px; height: 12px; border-radius: 6px;
+  background: repeating-linear-gradient(90deg, var(--sunk) 0 14px, color-mix(in srgb, var(--line) 80%, var(--muted)) 14px 16px); background-size: 32px 12px; animation: belt 2.4s linear infinite; opacity: .9; }
+@keyframes belt { to { background-position: 32px 0; } }
+.stage { padding: 0 10px; display: grid; gap: 10px; align-content: start; position: relative; min-width: 0; }
+.stage-h { display: flex; align-items: center; gap: 8px; z-index: 1; background: var(--bg); justify-self: start; padding: 4px 10px 4px 4px; border-radius: 999px; border: 1px solid var(--line); }
+.stage-h .ibub { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); }
+.stage-h b { font: 700 13.5px var(--f-display); }
+.stage-h .count { font: 600 12px var(--f-mono); color: var(--muted); }
+.stage > p { font-size: 12px; color: var(--muted); margin-top: 18px; min-height: 2.6em; }
+.pkg { position: relative; background: var(--kraft-soft); border: 1px solid color-mix(in srgb, var(--kraft) 55%, var(--line)); border-radius: 10px; padding: 14px 12px 10px; display: grid; gap: 5px; min-width: 0; }
+.pkg::before { content: ""; position: absolute; top: -1px; left: 50%; width: 34px; height: 9px; transform: translateX(-50%); background: color-mix(in srgb, var(--tape) 75%, transparent); border-radius: 0 0 3px 3px; pointer-events: none; }
+.pkg > * { position: relative; }
+.pkg .r1 { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.pkg .tt { font-weight: 600; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.pkg .by { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); min-width: 0; }
+.pkg .by span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pkg.red { border-color: var(--bad); }
+.pkg a { text-decoration: none; }
+.pkg a:hover .tt { text-decoration: underline; }
+.more { font-size: 12.5px; color: var(--muted); padding: 2px 4px; }
+.empty-st { font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: 12px; text-align: center; }
 
 /* pilares */
-.pillars { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.pillar { text-align: left; padding: 16px; display: grid; gap: 12px; cursor: pointer; align-content: start; transition: border-color .15s, transform .15s; }
-.pillar:hover { border-color: var(--muted); transform: translateY(-1px); }
-.pillar .top { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
-.pillar p { margin: 0; color: var(--muted); font-size: 13px; }
-.health { display: inline-flex; align-items: center; gap: 6px; font: 500 11.5px var(--f-mono); color: var(--muted); white-space: nowrap; }
-.meter { display: grid; gap: 5px; }
-.meter .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
-.meter .lbl b { color: var(--ink); font: 500 12px var(--f-mono); }
+.pillars { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.pillar { text-align: left; padding: 18px; display: grid; gap: 14px; cursor: pointer; align-content: start; transition: transform .15s, border-color .15s; position: relative; overflow: hidden; }
+.pillar::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--pc); }
+.pillar:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--pc) 50%, var(--line)); }
+.pillar .top { display: flex; gap: 12px; align-items: center; }
+.pbub { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--pc) 15%, var(--surface)); color: var(--pc); flex: none; }
+.pillar .top h3 { flex: 1; min-width: 0; }
+.pillar .about { color: var(--muted); font-size: 13px; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.status.live { background: var(--live-soft); color: var(--live); } .status.warn { background: var(--warn-soft); color: var(--warn); }
+.status.bad { background: var(--bad-soft); color: var(--bad); } .status.idle { background: var(--sunk); color: var(--muted); }
+.prog { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.ring { width: 64px; height: 64px; }
+.ring .bg { fill: none; stroke: var(--sunk); stroke-width: 7; }
+.ring .fg { fill: none; stroke-width: 7; stroke-linecap: round; }
+.ring text { font: 700 14px var(--f-display); fill: var(--ink); }
+.prog .lines { display: grid; gap: 8px; font-size: 13px; }
+.mbar { display: grid; gap: 4px; }
+.mbar .l { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
+.mbar .l b { color: var(--ink); font: 500 12px var(--f-mono); }
 .track { height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden; display: flex; }
 .track i { display: block; height: 100%; }
-.track .d { background: var(--ink); } .track .p { background: var(--tape); } .track .b { background: var(--bad); }
-.stats { display: flex; flex-wrap: wrap; gap: 6px; }
-.pillar .next { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; }
-.pillar .next li { display: flex; gap: 8px; min-width: 0; }
-.pillar .next li span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.agent-dots { display: flex; gap: 4px; flex-wrap: wrap; }
-.agent-dot { font: 500 11px var(--f-mono); padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
-.agent-dot.on { border-color: var(--live); color: var(--live); background: var(--live-soft); }
+.nowline { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--sunk); }
+.nowline.live { background: var(--live-soft); }
+.nowline .ic { margin-top: 2px; }
+.pillar .foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.avs { display: flex; flex-wrap: wrap; gap: 5px; }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 700 10.5px var(--f-body); background: color-mix(in srgb, var(--pc, var(--muted)) 16%, var(--surface)); color: var(--pc, var(--muted)); border: 2px solid var(--surface); flex: none; position: relative; }
+.av.on { box-shadow: 0 0 0 2px var(--live); }
+.av.on::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 50%; background: var(--live); border: 2px solid var(--surface); }
+.av.lg { width: 40px; height: 40px; font-size: 13px; }
+.see { font-size: 12.5px; color: var(--muted); display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
 
 /* cajón */
 .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .35); z-index: 20; }
-.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); z-index: 21; background: var(--bg); border-left: 1px solid var(--line);
-  overflow-y: auto; padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px 40px; display: grid; gap: 22px; align-content: start; }
-.drawer .close { position: sticky; top: 0; justify-self: end; }
-.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-.tasks li { background: var(--surface); padding: 9px 12px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 13px; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(580px, 100%); z-index: 21; background: var(--bg); border-left: 1px solid var(--line); overflow-y: auto; padding: calc(env(safe-area-inset-top, 0px) + 18px) 22px 48px; display: grid; gap: 24px; align-content: start; box-shadow: -10px 0 40px rgb(0 0 0 / .15); }
+.drawer .close { justify-self: end; position: sticky; top: 0; z-index: 2; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.rows li { padding: 10px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 13px; border-top: 1px solid var(--line); }
+.rows li:first-child { border-top: 0; }
+.rows li small { display: block; color: var(--muted); font-size: 12px; }
+.gl dt { font: 700 15px var(--f-display); display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+.gl dd { margin: 4px 0 0 28px; color: var(--muted); }
+.gl .hl { animation: hl 1.6s ease-out; border-radius: 6px; }
+@keyframes hl { from { background: var(--tape-soft); } to { background: transparent; } }
 
 /* flujo */
-.flow-wrap { overflow-x: auto; padding: 8px; }
-.flow { display: block; min-width: 1100px; width: 100%; height: auto; }
-.flow .node rect { fill: var(--surface); stroke: var(--line); }
-.flow .node.k-doc rect { fill: var(--sunk); stroke-dasharray: 4 3; }
+.flow-wrap { overflow-x: auto; padding: 10px; }
+.flow { display: block; min-width: 1120px; width: 100%; height: auto; }
+.flow .node rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.flow .node.k-doc rect { fill: var(--kraft-soft); stroke: color-mix(in srgb, var(--kraft) 60%, var(--line)); }
 .flow .node.k-people rect { fill: var(--tape-soft); stroke: var(--tape); }
 .flow .node.k-gate rect { fill: var(--ink); stroke: var(--ink); }
 .flow .node.k-gate text { fill: var(--bg); }
-.flow .node.on rect { stroke: var(--live); stroke-width: 2; }
+.flow .node.k-gate use { color: var(--bg); }
+.flow .node.on rect { stroke: var(--live); stroke-width: 2.5; }
 .flow .node text { fill: var(--ink); font: 600 12.5px var(--f-body); }
-.flow .node text.sub { fill: var(--muted); font: 400 10.5px var(--f-mono); }
-.flow .node.k-gate text.sub { fill: color-mix(in srgb, var(--bg) 70%, transparent); }
-.flow .edge { fill: none; stroke: var(--line); stroke-width: 1.5; }
-.flow .edge.on { stroke: var(--live); stroke-width: 2; stroke-dasharray: 6 6; animation: flow 1s linear infinite; }
-.flow .edge-lbl { fill: var(--muted); font: 400 10px var(--f-mono); }
-.flow .col { fill: var(--muted); font: 500 10.5px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; }
+.flow .node text.sub { fill: var(--muted); font: 400 10.5px var(--f-body); }
+.flow .node.k-gate text.sub { fill: color-mix(in srgb, var(--bg) 72%, transparent); }
+.flow .node use { color: var(--muted); }
+.flow .node.on use { color: var(--live); }
+.flow .edge { fill: none; stroke: color-mix(in srgb, var(--line) 60%, var(--muted)); stroke-width: 1.5; }
+.flow .edge.on { stroke: var(--live); stroke-width: 2.2; stroke-dasharray: 6 6; animation: flow 1s linear infinite; }
+.flow .edge-lbl { fill: var(--muted); font: 400 10.5px var(--f-body); }
+.flow .col-n { fill: var(--tape-ink); font: 700 12px var(--f-mono); }
+.flow .col { fill: var(--ink); font: 700 13px var(--f-display); }
 @keyframes flow { to { stroke-dashoffset: -12; } }
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; counter-reset: s; }
-.steps li { counter-increment: s; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
-.steps li::before { content: counter(s); font: 500 11px var(--f-mono); color: var(--tape-ink); }
-.steps li b { font-weight: 600; }
+.explain { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.explain .card { padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.explain .card .h { display: flex; align-items: center; gap: 8px; }
+.explain .card .h span { font: 700 12px var(--f-mono); color: var(--tape-ink); }
+.explain .card p { font-size: 13px; color: var(--muted); }
+.steps { list-style: none; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0; }
+.steps li { padding: 0 12px 0 0; display: grid; gap: 6px; align-content: start; position: relative; }
+.steps li .n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); position: relative; z-index: 1; }
+.steps li::after { content: ""; position: absolute; top: 17px; left: 34px; right: 0; height: 2px; background: var(--line); }
+.steps li:last-child::after { display: none; }
+.steps li b { font-weight: 600; font-size: 13.5px; }
 .steps li span { color: var(--muted); font-size: 12.5px; }
 
-/* agentes */
-.agent-group { display: grid; gap: 10px; }
-.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
-.agent { padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
-.agent .row { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
-.agent b { font: 600 13.5px var(--f-mono); }
-.agent p { margin: 0; color: var(--muted); font-size: 12.5px; }
-.agent.on { border-color: var(--live); }
-
-/* rutinas */
-.timeline { padding: 8px 0; overflow-x: auto; }
-.tl { min-width: 860px; display: grid; grid-template-columns: 230px minmax(0, 1fr) 150px; }
-.tl > div { padding: 9px 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; min-width: 0; }
-.tl .hdr { border-top: 0; font: 500 11px var(--f-mono); color: var(--muted); }
-.tl .name { flex-direction: column; align-items: start; gap: 2px; }
-.tl .name b { font-weight: 600; font-size: 13px; }
-.tl .name small { color: var(--muted); font: 400 11px var(--f-mono); }
-.lane { position: relative; height: 24px; width: 100%; }
-.lane .axis { position: absolute; left: 0; right: 0; top: 11px; height: 1px; background: var(--line); }
-.lane .tick { position: absolute; top: 6px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; border: 1.5px solid var(--muted); background: var(--surface); }
+/* horarios */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tl-group { display: grid; gap: 8px; }
+.tl-wrap { overflow-x: auto; }
+.tl { min-width: 880px; display: grid; grid-template-columns: 270px minmax(0, 1fr) 180px; }
+.tl > div { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tl .hdr { border-top: 0; padding-block: 10px 4px; }
+.tl .name b { font-weight: 600; font-size: 13.5px; display: block; }
+.tl .name small { color: var(--muted); font-size: 12px; display: block; line-height: 1.35; }
+.tl .name .ic { align-self: flex-start; margin-top: 3px; color: var(--muted); }
+.lane { position: relative; height: 26px; flex: 1; }
+.lane .axis { position: absolute; left: 0; right: 0; top: 12px; height: 2px; border-radius: 1px; background: var(--sunk); }
+.lane .tick { position: absolute; top: 6px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--line) 50%, var(--muted)); background: var(--surface); }
 .lane .tick.done { background: var(--ink); border-color: var(--ink); }
-.lane .tick.miss { border-color: var(--bad); }
+.lane .tick.miss { border-color: var(--bad); background: var(--bad-soft); }
 .lane .tick.run { background: var(--live); border-color: var(--live); animation: pulse 2s infinite; }
-.lane .nowline { position: absolute; top: -9px; bottom: -9px; width: 2px; background: var(--tape); }
-.hours { position: relative; height: 14px; width: 100%; }
-.lane, .hours { flex: 1; }
+.lane .tick.off { opacity: .35; }
+.lane .now { position: absolute; top: -10px; bottom: -10px; width: 2px; background: var(--tape); border-radius: 1px; }
+.hours { position: relative; height: 16px; flex: 1; font: 500 11px var(--f-mono); color: var(--muted); }
 .hours span { position: absolute; transform: translateX(-50%); }
+.tk { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--line) 50%, var(--muted)); background: var(--surface); }
+.tk.done { background: var(--ink); border-color: var(--ink); } .tk.miss { border-color: var(--bad); background: var(--bad-soft); } .tk.run { background: var(--live); border-color: var(--live); }
+.tk.nowk { width: 3px; height: 14px; border: 0; border-radius: 1px; background: var(--tape); }
+
+/* equipo */
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.agent { padding: 14px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-content: start; }
+.agent .info { display: grid; gap: 4px; min-width: 0; }
+.agent b { font: 700 15px var(--f-display); }
+.agent .tech { font: 400 11.5px var(--f-mono); color: var(--muted); }
+.agent p { color: var(--muted); font-size: 13px; }
+.agent .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.agent.on { border-color: var(--live); }
+.pill-h { display: flex; align-items: center; gap: 12px; }
 
 /* actividad */
 .feed { list-style: none; margin: 0; padding: 0; }
-.feed li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 9px 16px; border-top: 1px solid var(--line); font-size: 13px; }
+.feed li { display: grid; grid-template-columns: 48px 30px minmax(0, 1fr); gap: 10px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: 13px; align-items: start; }
 .feed li:first-child { border-top: 0; }
-.feed time { color: var(--muted); font: 400 12px var(--f-mono); }
+.feed li.day { display: block; background: var(--sunk); padding: 8px 18px; }
+.feed time { color: var(--muted); font: 400 12px var(--f-mono); padding-top: 5px; }
+.feed .fi { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--sunk); color: var(--muted); }
+.feed .fi.live { background: var(--live-soft); color: var(--live); } .feed .fi.info { background: var(--info-soft); color: var(--info); } .feed .fi.tape { background: var(--tape-soft); color: var(--tape-ink); }
+.feed .tx { padding-top: 4px; min-width: 0; overflow-wrap: anywhere; }
+.feed a { text-decoration: none; color: var(--info); }
 .two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.panel-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 18px 10px; }
+.flat { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); }
 
-/* token */
-.tokenbox { padding: 16px; display: grid; gap: 10px; max-width: 560px; }
-.tokenbox input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: 13px var(--f-mono); }
-.tokenbox .row { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--bg); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
-.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.tokenbox { padding: 18px; display: grid; gap: 10px; max-width: 600px; }
+.tokenbox input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font: 13px var(--f-mono); }
+.tokenbox .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 footer { color: var(--muted); font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
 
-@media (max-width: 900px) { .decide, .two { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 560px) { .bar-in { padding: 10px 16px; } main { padding: 18px 16px 48px; } .live { margin-left: 0; flex-wrap: wrap; }
-  .list li { padding: 10px 12px; grid-template-columns: auto minmax(0, 1fr); } .list li > :nth-child(3) { grid-column: 2; justify-items: start; justify-self: start; } .chip { white-space: normal; } }
+@media (max-width: 1000px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two { grid-template-columns: minmax(0, 1fr); }
+  .belt { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 24px; } .belt::before { display: none; } .stage > p { margin-top: 0; min-height: 0; } }
+@media (max-width: 560px) { .bar-in { padding: 10px 16px; } main { padding: 20px 16px 56px; } .tools { margin-left: 0; }
+  .belt { grid-template-columns: minmax(0, 1fr); } .stage { padding: 0; } .intro { grid-template-columns: minmax(0, 1fr); } .intro > .ic { display: none; }
+  .att li { padding: 12px; } .tile { padding: 14px; } .tile .n { font-size: 32px; } .steps li::after { display: none; } .steps { gap: 14px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-diseno" viewBox="0 0 24 24"><path d="M9 18h6M10 21.5h4M12 2.5a6.8 6.8 0 0 0-4 12.3V17h8v-2.2a6.8 6.8 0 0 0-4-12.3z"/></symbol>
+  <symbol id="i-sistemas" viewBox="0 0 24 24"><ellipse cx="9" cy="7" rx="6" ry="2.6"/><path d="M3 7v4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V7"/><path d="M9 16.4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-4c0-1.3-2.2-2.4-5-2.6"/><path d="M9 13.6v2.8"/></symbol>
+  <symbol id="i-mundo" viewBox="0 0 24 24"><path d="M2.5 6h11.5v10.5H2.5zM14 9.5h4.2l3.3 3.6v3.4H14"/><circle cx="6.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/></symbol>
+  <symbol id="i-arte" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1.2"/><circle cx="10" cy="7.3" r="1.2"/><circle cx="14.8" cy="7.3" r="1.2"/></symbol>
+  <symbol id="i-audio" viewBox="0 0 24 24"><path d="M3 12h1.5M7 8.5v7M11 4.5v15M15 8v8M19 10v4M21.5 12H21"/></symbol>
+  <symbol id="i-ui" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2.5"/><path d="M3 8.5h18M11 12l5.5 2.2-2.3.8-.8 2.3z"/></symbol>
+  <symbol id="i-red" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18.5" r="2.5"/><circle cx="19" cy="18.5" r="2.5"/><path d="M12 7.5v4.5M12 12l-5.3 4.6M12 12l5.3 4.6"/></symbol>
+  <symbol id="i-calidad" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-produccion" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M8.5 10h7M8.5 14h7M8.5 18h4"/></symbol>
+  <symbol id="i-lanzamiento" viewBox="0 0 24 24"><path d="M5.5 14.5c-1.2 1-1.8 3.6-1.8 5.8 2.2 0 4.8-.6 5.8-1.8"/><path d="M9 15 7 13c1-4.5 5-9 12.5-10-1 7.5-5.5 11.5-10.5 12z"/><circle cx="14.5" cy="9.5" r="1.6"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9M7.5 5.2l9 4.6"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2.5 12h4.2l2.4-6 4.2 12 2.4-6h5.8"/></symbol>
+  <symbol id="i-ask" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 17.2h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8 5.7-5.8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.4h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16.2 14.1c2.7.3 4.8 2.6 4.8 5.9"/></symbol>
+  <symbol id="i-gate" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-merge" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="12" r="2"/><path d="M6 7v10M6 7c0 4 4 5 10 5"/></symbol>
+  <symbol id="i-pr" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M6 7v10M18 17V9a3 3 0 0 0-3-3h-4M13 3.8 10.8 6 13 8.2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11.5l-2.2 4 2.2 4H5"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9.5 3h5M10 3v6l-5.5 9.5A1.6 1.6 0 0 0 5.9 21h12.2a1.6 1.6 0 0 0 1.4-2.5L14 9V3"/><path d="M7.5 15h9"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .4-8 6 6 0 0 0-11.5 1.6A3.2 3.2 0 0 0 7 18z"/></symbol>
+  <symbol id="i-pc" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="m13 9.5-9 9 2 2 9-9"/><path d="m10.5 7 4-4 6.5 6.5-4 4z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/><circle cx="12" cy="3.5" r="1"/></symbol>
+</svg>
+
 <header class="bar">
   <div class="bar-in">
-    <div class="brand"><div class="brand-mark" aria-hidden="true"></div><div><b>Take My Package</b><span>sala de control</span></div></div>
+    <a class="brand" href="#inicio"><div class="brand-mark" aria-hidden="true"></div><div><b>Take My Package</b><span>sala de control</span></div></a>
     <nav aria-label="Vistas">
-      <a href="#pilares">Pilares</a><a href="#flujo">Flujo</a><a href="#rutinas">Rutinas</a><a href="#agentes">Agentes</a><a href="#actividad">Actividad</a>
+      <a href="#inicio">Inicio</a><a href="#flujo">Cómo trabajan</a><a href="#rutinas">Horarios</a><a href="#agentes">El equipo</a><a href="#actividad">Actividad</a>
     </nav>
-    <div class="live"><span id="live-dot" class="dot"></span><span id="live-txt">conectando…</span>
-      <button class="icon-btn" id="theme-btn" type="button" title="Cambiar tema">tema</button>
-      <button class="icon-btn" id="token-btn" type="button" title="Token de GitHub para refrescar más seguido">token</button></div>
+    <div class="tools">
+      <span class="livepill" title="Cada cuánto se actualiza: botón de la llave"><span id="live-dot" class="dot"></span><span id="live-txt">conectando…</span></span>
+      <button class="iconbtn" id="help-btn" type="button"><svg class="ic sm"><use href="#i-ask"/></svg>¿Qué significa?</button>
+      <button class="iconbtn" id="theme-btn" type="button" aria-label="Cambiar tema claro u oscuro" title="Tema claro u oscuro"><svg class="ic sm"><use href="#i-theme"/></svg></button>
+      <button class="iconbtn" id="token-btn" type="button" aria-label="Token de GitHub" title="Actualizar más seguido"><svg class="ic sm"><use href="#i-key"/></svg></button>
+    </div>
   </div>
 </header>
 
 <main>
-  <section class="panel tokenbox" id="tokenbox" hidden>
-    <h3>Refrescar más seguido</h3>
-    <p class="muted" style="margin:0">Sin token, GitHub deja 60 consultas por hora y el panel se actualiza cada 4 minutos (y no consulta con la pestaña oculta). Con un token
-      <em>fine-grained</em> de solo lectura sobre repos públicos, cada 20 segundos. Queda guardado solo en este navegador.</p>
+  <section class="card tokenbox" id="tokenbox" hidden>
+    <h3>Que se actualice más seguido</h3>
+    <p class="muted">GitHub deja 60 consultas por hora sin identificarse, así que la página se actualiza cada 4 minutos (y no
+      consulta con la pestaña escondida). Con un token de GitHub de <b>solo lectura</b> se actualiza cada 20 segundos. Queda guardado
+      solo en este navegador.</p>
     <label for="token-in" class="eyebrow">Token de GitHub</label>
     <input id="token-in" type="password" autocomplete="off" placeholder="github_pat_…">
     <div class="row"><button class="btn" id="token-save" type="button">Guardar</button><button class="btn ghost" id="token-clear" type="button">Quitar</button>
-      <a class="go muted" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crear token en GitHub ↗</a></div>
+      <a class="small muted" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crear uno en GitHub (sin permisos extra) ↗</a></div>
   </section>
 
-  <!-- PILARES (home) -->
-  <section data-view="pilares">
-    <div class="head">
-      <div><div class="eyebrow" id="today"></div><h2>Pilares del juego</h2>
-        <p class="lede">Cómo viene cada parte del desarrollo, qué agentes la están trabajando ahora y qué necesita una decisión de ustedes.</p></div>
-      <div class="stats" id="global-stats"></div>
-    </div>
-
-    <div class="decide">
-      <div class="panel">
-        <div class="panel-h"><h3>Para decidir</h3><span class="count" id="decide-count">0</span></div>
-        <ul class="list" id="decide-list"></ul>
+  <!-- INICIO -->
+  <section data-view="inicio">
+    <div class="card intro" id="intro" hidden>
+      <svg class="ic lg" style="color:var(--tape-ink)"><use href="#i-box"/></svg>
+      <div>
+        <h3>Así se lee esta página</h3>
+        <p class="muted" style="margin-top:4px">Un equipo de agentes de Claude trabaja en el juego solo, a toda hora. Acá ven en vivo qué están haciendo y qué necesitan de ustedes.</p>
+        <ol class="small">
+          <li><b>Esperan su decisión</b>: cosas que solo ustedes pueden resolver. Las rutinas no avanzan ahí hasta que respondan.</li>
+          <li><b>La cinta</b>: cada paquete es un cambio en camino, desde que una rutina lo toma hasta que entra al juego.</li>
+          <li><b>Pilares</b>: cómo viene cada parte del juego. Tocá una para ver el detalle.</li>
+        </ol>
+        <p class="small muted" style="margin-top:8px">¿Una palabra rara? El botón <b>¿Qué significa?</b> de arriba, o el <b>?</b> al lado de cada título.</p>
       </div>
-      <div class="panel">
-        <div class="panel-h"><h3>Atención</h3><span class="count" id="attn-count">0</span></div>
-        <ul class="list" id="attn-list"></ul>
+      <button class="iconbtn" id="intro-close" type="button">Entendido</button>
+    </div>
+
+    <div class="hero">
+      <div style="display:grid;gap:10px">
+        <div class="eyebrow" id="today"></div>
+        <h1 id="greet">Hola</h1>
+        <p class="sum" id="summary">Cargando lo que está pasando…</p>
       </div>
+      <div class="tiles" id="tiles"></div>
     </div>
 
-    <div style="display:grid;gap:10px">
-      <div class="head"><h3>Ahora mismo</h3><span class="muted" style="font-size:12px" id="now-sub"></span></div>
-      <div class="now" id="now"></div>
+    <div class="block" id="b-decide">
+      <div class="block-h"><div><h2>Esperan su decisión <button class="q" data-term="decide" type="button" aria-label="Qué es">?</button></h2>
+        <p class="muted" style="margin-top:4px">Temas que solo ustedes pueden resolver (alcance, precio, borrar algo). Mientras tanto, las rutinas siguen con una suposición y no tocan eso.</p></div></div>
+      <div class="decisions" id="decide"></div>
     </div>
 
-    <div class="pillars" id="pillars"></div>
+    <div class="block" id="b-belt">
+      <div class="block-h"><div><h2>La cinta <button class="q" data-term="pr" type="button" aria-label="Qué es">?</button></h2>
+        <p class="muted" style="margin-top:4px">Cada paquete es un cambio al juego en camino. Avanza de izquierda a derecha: una rutina lo toma, lo prueba y entra solo si las pruebas dan bien.</p></div></div>
+      <div class="belt" id="belt"></div>
+    </div>
+
+    <div class="block" id="b-att">
+      <div class="block-h"><div><h2>Para mirar</h2><p class="muted" style="margin-top:4px">Cosas que se trabaron o que no pasaron cuando debían. Normalmente se arreglan solas; si se repiten, conviene mirar.</p></div></div>
+      <div class="card"><ul class="att" id="att"></ul></div>
+    </div>
+
+    <div class="block" id="b-pillars">
+      <div class="block-h"><div><h2>Pilares del juego <button class="q" data-term="pilar" type="button" aria-label="Qué es">?</button></h2>
+        <p class="muted" style="margin-top:4px">Las diez partes de hacer un juego. El círculo es cuánto está hecho del juego actual; la barra, la expansión (recién empieza). Tocá una para ver quién trabaja ahí y qué falta.</p></div></div>
+      <div class="pillars" id="pillars"></div>
+    </div>
   </section>
 
   <!-- FLUJO -->
   <section data-view="flujo" hidden>
-    <div><h2>Cómo se pasan el trabajo</h2>
-      <p class="lede">Ninguna rutina habla con otra: se comunican por archivos del repo y por PRs. Las que observan dejan hallazgos por escrito,
-        <span class="mono">planificador-tareas</span> los vuelve tareas, las que construyen toman una tarea y abren un PR, y CI es la única compuerta a main.
-        En verde, lo que está pasando ahora.</p></div>
-    <div class="panel flow-wrap"><svg class="flow" id="flow" viewBox="0 0 1270 550" role="img" aria-label="Diagrama del flujo entre rutinas, documentos, tareas, PRs y CI"></svg></div>
-    <div style="display:grid;gap:10px">
-      <h3>Adentro de una corrida de construcción</h3>
-      <p class="lede" style="margin:0">Un subagente no puede lanzar otro: la sesión de la rutina orquesta y le pasa a cada agente el contexto completo de la tarea.</p>
-      <ol class="steps">
-        <li class="panel"><b>Mira lo roto</b><span>main rojo, PRs propios rojos o con conflicto, freno de mano PAUSA</span></li>
-        <li class="panel"><b>Reclama una tarea</b><span>rama <span class="mono">nacho/ID-*</span> o <span class="mono">exp/D-*</span> con <span class="mono">chore: claim</span></span></li>
-        <li class="panel"><b>Constructor del área</b><span>camión, tramos, mundo, jugador, trampas, red, progresión o UI</span></li>
-        <li class="panel"><b>Verifica</b><span><span class="mono">ejecutor-tests</span> con filtro, <span class="mono">revisor-visual</span> si hay pantalla, <span class="mono">cazador-bugs</span> si falla</span></li>
-        <li class="panel"><b>Cierra el cambio</b><span>test con encabezado, tareas al día, aviso si tocó lo del otro</span></li>
-        <li class="panel"><b>PR con auto-merge</b><span><span class="mono">vigilante-ci</span> lo sigue hasta verde</span></li>
-        <li class="panel"><b>CI y main</b><span>lint, tests headless y par de red: los 3 checks requeridos</span></li>
+    <div class="block">
+      <h1>Cómo trabajan</h1>
+      <p class="muted" style="font-size:16px;max-width:72ch">Nadie se habla directo. Unos <b>miran</b> el juego y anotan lo que encuentran; el planificador lo convierte en <b>tareas</b>;
+        otros <b>construyen</b> una tarea por vez y la mandan como PR; las <b>pruebas automáticas</b> deciden si entra al juego. En verde, lo que está pasando ahora mismo.</p>
+    </div>
+    <div class="card flow-wrap"><svg class="flow" id="flow" viewBox="0 0 1280 560" role="img" aria-label="Diagrama: rutinas que observan, documentos, planificador, listas de tareas, rutinas que construyen, PR, pruebas y juego"></svg></div>
+    <div class="explain">
+      <div class="card"><div class="h"><svg class="ic"><use href="#i-eye"/></svg><span>1</span><h4>Miran</h4></div><p>QA juega solo, la auditoría revisa el código, la revisión le hace la contra a lo hecho.</p></div>
+      <div class="card"><div class="h"><svg class="ic"><use href="#i-pencil"/></svg><span>2</span><h4>Anotan</h4></div><p>Dejan lo que vieron por escrito en el repo: bugs, informes, planes.</p></div>
+      <div class="card"><div class="h"><svg class="ic"><use href="#i-produccion"/></svg><span>3</span><h4>Planifican</h4></div><p>El planificador convierte lo anotado en tareas con prioridad. Lo que solo ustedes deciden, se lo pregunta.</p></div>
+      <div class="card"><div class="h"><svg class="ic"><use href="#i-list"/></svg><span>4</span><h4>Listas</h4></div><p>Dos listas: el juego actual (tareas N-) y la expansión (1000 tareas D-).</p></div>
+      <div class="card"><div class="h"><svg class="ic"><use href="#i-hammer"/></svg><span>5</span><h4>Construyen</h4></div><p>Cada rutina toma una tarea, llama a los especialistas y propone el cambio como PR.</p></div>
+      <div class="card"><div class="h"><svg class="ic"><use href="#i-gate"/></svg><span>6</span><h4>Prueban</h4></div><p>Las pruebas automáticas (CI) son la única puerta. Si pasan, el cambio entra solo al juego.</p></div>
+    </div>
+    <div class="block">
+      <h2>Adentro de una tarea</h2>
+      <p class="muted" style="max-width:72ch">Lo que hace una rutina de construcción desde que arranca hasta que el cambio entra. Los especialistas no se llaman entre sí: la rutina coordina y le pasa a cada uno lo que necesita.</p>
+      <ol class="steps card" style="padding:20px">
+        <li><span class="n"><svg class="ic sm"><use href="#i-alert"/></svg></span><b>Mira lo roto</b><span>Si algo quedó rojo, arreglarlo va primero.</span></li>
+        <li><span class="n"><svg class="ic sm"><use href="#i-flag"/></svg></span><b>Reserva la tarea</b><span>Crea una rama con su ID para que nadie más la tome.</span></li>
+        <li><span class="n"><svg class="ic sm"><use href="#i-hammer"/></svg></span><b>Llama al especialista</b><span>Mecánico del camión, economista, interfaz…</span></li>
+        <li><span class="n"><svg class="ic sm"><use href="#i-flask"/></svg></span><b>Prueba</b><span>Corre los tests y, si se ve en pantalla, saca capturas.</span></li>
+        <li><span class="n"><svg class="ic sm"><use href="#i-pr"/></svg></span><b>Abre el PR</b><span>Con un aviso si tocó archivos de Slatex.</span></li>
+        <li><span class="n"><svg class="ic sm"><use href="#i-gate"/></svg></span><b>Espera el CI</b><span>El vigilante lo sigue hasta que dé verde.</span></li>
+        <li><span class="n"><svg class="ic sm"><use href="#i-play"/></svg></span><b>Entra al juego</b><span>Se mezcla solo en main.</span></li>
       </ol>
     </div>
   </section>
 
-  <!-- RUTINAS -->
+  <!-- HORARIOS -->
   <section data-view="rutinas" hidden>
-    <div><h2>Rutinas</h2>
-      <p class="lede">Las 14 de la nube y las 2 de la PC, en tu hora local. Una rama <span class="mono">exp/</span> se atribuye al carril que arrancó justo antes de crearla. Punto negro: corrió y dejó rastro en GitHub. Rojo: le tocaba y no se vio actividad. Verde: trabajando ahora.</p></div>
-    <div class="panel timeline"><div class="tl" id="tl"></div></div>
+    <div class="block">
+      <h1>Horarios <button class="q" data-term="rutina" type="button" aria-label="Qué es">?</button></h1>
+      <p class="muted" style="font-size:16px;max-width:72ch">Cada rutina es una sesión de Claude que arranca sola a su hora. Esta es la agenda de hoy, en tu hora local.</p>
+      <div class="legend"><span><i class="tk done"></i>corrió y se vio trabajo</span><span><i class="tk run"></i>trabajando ahora</span><span><i class="tk miss"></i>le tocaba y no se vio nada</span><span><i class="tk"></i>todavía no le toca</span><span><i class="tk nowk"></i>ahora</span></div>
+    </div>
+    <div id="tl" style="display:grid;gap:22px"></div>
   </section>
 
-  <!-- AGENTES -->
+  <!-- EQUIPO -->
   <section data-view="agentes" hidden>
-    <div><h2>Agentes</h2>
-      <p class="lede">Los subagentes de <span class="mono">.claude/agents/</span>, agrupados por pilar. Modelo y esfuerzo vienen fijos en cada uno. En verde, los que una rutina tiene en uso ahora.</p></div>
-    <div id="agents" style="display:grid;gap:26px"></div>
+    <div class="block">
+      <h1>El equipo <button class="q" data-term="agente" type="button" aria-label="Qué es">?</button></h1>
+      <p class="muted" style="font-size:16px;max-width:72ch">Especialistas de Claude, cada uno con un rol fijo. No arrancan solos: los llama una rutina cuando su tarea lo necesita. Con el punto verde, los que están trabajando ahora.</p>
+    </div>
+    <div id="agents" style="display:grid;gap:30px"></div>
   </section>
 
   <!-- ACTIVIDAD -->
   <section data-view="actividad" hidden>
-    <div><h2>Actividad</h2><p class="lede">Lo último que pasó en el repo, atribuido a la rutina que lo hizo.</p></div>
+    <div class="block"><h1>Actividad</h1><p class="muted" style="font-size:16px">Lo último que pasó en el repo, con quién lo hizo.</p></div>
     <div class="two">
-      <div class="panel"><div class="panel-h"><h3>Eventos</h3></div><ul class="feed" id="feed"></ul></div>
+      <div class="card"><div class="panel-h"><h3>Qué pasó</h3></div><ul class="feed" id="feed"></ul></div>
       <div style="display:grid;gap:16px">
-        <div class="panel"><div class="panel-h"><h3>PRs abiertos</h3><span class="count" id="pr-count">0</span></div><ul class="list" id="prs"></ul></div>
-        <div class="panel"><div class="panel-h"><h3>CI</h3></div><ul class="list" id="runs"></ul></div>
-        <div class="panel"><div class="panel-h"><h3>Avisos entre ustedes</h3></div><ul class="list" id="notes"></ul></div>
+        <div class="card"><div class="panel-h"><h3>Pruebas automáticas <button class="q" data-term="ci" type="button" aria-label="Qué es">?</button></h3></div><ul class="rows flat" id="runs"></ul></div>
+        <div class="card"><div class="panel-h"><h3>Avisos entre ustedes <button class="q" data-term="aviso" type="button" aria-label="Qué es">?</button></h3></div><ul class="rows flat" id="notes"></ul></div>
       </div>
     </div>
   </section>
 
-  <footer><span id="foot-data"></span><span id="foot-rate"></span><a href="https://github.com/Delestal94/Prometeus" target="_blank" rel="noopener">repo ↗</a></footer>
+  <footer><span id="foot-data"></span><span id="foot-rate"></span><a href="https://github.com/Delestal94/Prometeus" target="_blank" rel="noopener">repo en GitHub ↗</a></footer>
 </main>
 
 <div class="scrim" id="scrim" hidden></div>
-<aside class="drawer" id="drawer" hidden aria-modal="true" role="dialog"></aside>
+<aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true"></aside>
 
 <script>
 "use strict";
@@ -320,27 +486,102 @@ const API = "https://api.github.com/repos/" + REPO;
 const GH = "https://github.com/" + REPO;
 const S = { data: null, events: [], pulls: [], runs: [], issues: [], issuesLoaded: false, ok: false, err: "", lastPoll: 0, rate: null, tick: 0 };
 
+// ---------- textos para humanos ----------
+const PC = { diseno: "#8a5cf5", sistemas: "#c99a10", mundo: "#c4733a", arte: "#e0588f", audio: "#2ea3c6", ui: "#4f6ef7", red: "#139a8e", calidad: "#3aa45c", produccion: "#738098", lanzamiento: "#e5484d" };
+const AG = {
+  "abogado-del-diablo": ["Abogado del diablo", "Le busca la vuelta a lo ya hecho: qué sobra, qué no se entiende, qué no va a vender."],
+  "animador": ["Animador", "Anima al personaje, los animales, las puertas y la interfaz."],
+  "artista-conceptual": ["Ilustrador", "Genera imágenes: arte conceptual, texturas, íconos y cápsulas de Steam."],
+  "artista-shaders": ["Artista de materiales", "Escribe los shaders: cómo se ven el suelo, el cielo y los materiales."],
+  "artista-vfx": ["Artista de efectos", "Partículas y efectos: polvo, humo, chispas, confeti."],
+  "auditor-integral": ["Auditor general", "Revisa todo el proyecto y marca lo más importante para arreglar."],
+  "auditor-red": ["Auditor de red", "Revisa que el multijugador se vea igual para todos."],
+  "cazador-bugs": ["Cazador de bugs", "Cuando algo falla, encuentra la causa exacta."],
+  "constructor-camion": ["Mecánico del camión", "Manejo, física, fallas y tablero del camión."],
+  "constructor-jugador": ["Programador del jugador", "Movimiento, cámara y cómo se agarran y cuidan las cajas."],
+  "constructor-mundo": ["Constructor del mundo", "Depósito, casas, clima, animales y decorado."],
+  "constructor-progresion": ["Economista", "Plata, cartas, desbloqueos, eventos y puntaje."],
+  "constructor-red": ["Programador de red", "Conexión entre jugadores, Steam, lobbies e invitaciones."],
+  "constructor-tramos": ["Constructor de rutas", "Los tramos de ruta: curvas, puentes, barro, obras."],
+  "constructor-trampas": ["Diseñador de trampas", "Las trampas de los paquetes: frágil, explosiva, líquida…"],
+  "constructor-ui": ["Diseñador de interfaz", "Menús, HUD, tutorial y mando."],
+  "critico-diseno": ["Crítico de diseño", "Evalúa ideas antes de construirlas."],
+  "director-arte": ["Director de arte", "Revisa que todos los assets peguen entre sí."],
+  "disenador-audio": ["Diseñador de sonido", "Sonidos, mezcla y música."],
+  "documentador": ["Documentador", "Mantiene la documentación igual al código."],
+  "ejecutor-tests": ["Corredor de tests", "Corre las pruebas automáticas y resume el resultado."],
+  "empaquetador-release": ["Empaquetador", "Arma el ejecutable para jugar o subir a Steam."],
+  "escritor-tests": ["Escritor de tests", "Escribe pruebas nuevas para lo que se cambió."],
+  "estratega-steam": ["Estratega de Steam", "Página de Steam, precio, fechas y marketing."],
+  "guardian-dominios": ["Guardián de dominios", "Avisa si un cambio pisa archivos del otro."],
+  "ingeniero-ci": ["Ingeniero de CI", "Mantiene las pruebas automáticas rápidas y confiables."],
+  "localizador": ["Traductor", "Textos e idiomas del juego."],
+  "modelador-blender": ["Modelador 3D", "Crea modelos 3D low-poly en Blender."],
+  "perfilador-rendimiento": ["Perfilador", "Mide y mejora los FPS y la memoria."],
+  "planificador-tareas": ["Planificador", "Convierte lo que se encontró en tareas ordenadas."],
+  "probador-qa": ["Probador", "Juega el juego completo solo y anota errores."],
+  "pulidor-jugabilidad": ["Pulidor", "Ajusta tiempos, números y respuesta para que se sienta mejor."],
+  "revisor-gdscript": ["Revisor de código", "Revisa el código buscando bugs y malas prácticas."],
+  "revisor-visual": ["Revisor visual", "Saca capturas y mira cómo se ve."],
+  "vigilante-ci": ["Vigilante del CI", "Sigue cada PR hasta que las pruebas den verde."],
+  "Plan": ["Arquitecto", "Planifica los cambios grandes antes de construir."],
+};
+const RT = {
+  "Construcción A": "Arregla y suma cosas al juego actual, una tarea por hora.",
+  "Construcción B": "Igual que la A, empezando por lo heredado de Slatex.",
+  "QA (juego actual)": "Juega el juego armado solo y anota lo que se rompe.",
+  "QA expansión A y B": "Prueba lo nuevo de la expansión y anota bugs.",
+  "Auditoría integral": "Revisa todo el proyecto y propone hasta 3 tareas.",
+  "Revisión (la contra)": "Le hace la contra a lo hecho y trae lo que hay que decidir.",
+  "Mantenimiento": "Pone la documentación al día.",
+  "Lanzamiento": "Página de Steam, calendario y dependencias.",
+  "Sesión de arte (PC)": "Crea o mejora un modelo o una imagen con Blender y ComfyUI.",
+  "Build y rendimiento (PC)": "Arma el ejecutable de Windows y mide FPS con la placa de video.",
+};
+const ST = { abierta: ["", "por hacer"], hecha: ["live", "hecha"], decide: ["tape", "a decidir"], pausada: ["", "en pausa"], bloqueada: ["bad", "trabada"] };
+const GLOSS = [
+  ["pilar", "i-calidad", "Pilar", "Una de las diez partes de hacer un juego (arte, red, interfaz…). Agrupa tareas y especialistas."],
+  ["agente", "i-bot", "Agente (especialista)", "Un Claude con un rol fijo, como el Mecánico del camión. No arranca solo: lo llama una rutina."],
+  ["rutina", "i-clock", "Rutina", "Una sesión de Claude que arranca sola a una hora fija, en la nube o en la PC de Nacho. Toma trabajo y lo entrega como PR."],
+  ["tarea", "i-list", "Tareas N-, S- y D-", "N- son del juego actual (lista de Nacho), S- las heredadas de Slatex, D- las de la expansión (distritos, galpón, flota…)."],
+  ["carril", "i-arrow", "Carril", "Cada uno de los 5 desarrolladores de la expansión tiene su zona: arquitectura, galpón, pedidos, mapa, red."],
+  ["reserva", "i-flag", "Tomar (reservar) una tarea", "Antes de trabajar, la rutina crea una rama con el ID de la tarea, así otra no toma la misma."],
+  ["pr", "i-pr", "PR (pull request)", "El paquete de cambios que una rutina propone sumar al juego. En la cinta, cada paquete es un PR o una tarea tomada."],
+  ["ci", "i-flask", "CI (pruebas automáticas)", "GitHub corre todas las pruebas con cada PR. Si dan verde, el cambio entra solo. Es la única puerta: nadie revisa a mano."],
+  ["main", "i-play", "main / entró al juego", "main es la versión oficial del juego. Que un cambio entró quiere decir que ya está en main."],
+  ["decide", "i-ask", "Decide el usuario (⏸)", "Algo que solo ustedes pueden resolver. Se contesta en el issue de GitHub; mientras tanto las rutinas usan una suposición y no tocan ese tema."],
+  ["trabada", "i-alert", "Trabada", "Una rutina lo intentó tres veces y no pudo. Queda anotado el motivo."],
+  ["rastro", "i-clock", "Sin rastro", "A una rutina le tocaba correr y no se vio nada en GitHub. Puede que no hubiera trabajo, que el cupo estuviera agotado o que se haya caído."],
+  ["aviso", "i-chat", "Aviso", "Una nota que deja quien toca archivos del otro, para que el otro se entere de qué cambió."],
+  ["modelo", "i-bot", "Opus y Sonnet", "Modelos de Claude. Opus piensa más (arquitectura, red, auditorías); Sonnet es más rápido para lo común."],
+  ["esfuerzo", "i-pulse", "Esfuerzo", "Cuánto razona un especialista antes de actuar: low, medium, high, xhigh."],
+  ["expansion", "i-mundo", "Expansión", "El juego grande que viene: distritos en un mapa, galpón, pedidos, empleados y flota. Son 1000 tareas y recién empieza."],
+];
+
 // ---------- utilidades ----------
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
-function ago(t) {
-  if (!t) return "—";
-  const s = Math.round((Date.now() - new Date(t)) / 1000);
-  if (s < 0) return "en " + dur(-s);
-  if (s < 50) return "recién";
-  return "hace " + dur(s);
-}
+const icon = (id, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
 function dur(s) {
   if (s < 60) return s + " s";
   const m = Math.round(s / 60); if (m < 60) return m + " min";
   const h = Math.floor(m / 60), mm = m % 60; if (h < 24) return h + " h" + (mm && h < 6 ? " " + mm + " min" : "");
-  return Math.round(h / 24) + " d";
+  const d = Math.round(h / 24); return d + (d === 1 ? " día" : " días");
 }
+function ago(t) { if (!t) return "—"; const s = Math.round((Date.now() - new Date(t)) / 1000); if (s < 0) return "en " + dur(-s); if (s < 50) return "recién"; return "hace " + dur(s); }
 const hhmm = (d) => d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 const TASK_RE = /\b([NSD]-\d{3,4}(?:\.\d+)?)\b/;
+const IDX = { tasks: new Map(), pillar: new Map(), agents: new Map(), routines: [] };
+const agName = (a) => AG[a]?.[0] || a.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
+const agLine = (a) => AG[a]?.[1] || IDX.agents.get(a)?.summary || "";
+const initials = (s) => (s.split(/\s+/).filter((w) => w.length > 2).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || s.slice(0, 2)).toUpperCase();
+const agPillar = (a) => IDX.agents.get(a)?.pillar || "produccion";
+const av = (a, on, cls = "") => `<span class="av ${cls}${on ? " on" : ""}" style="--pc:${PC[agPillar(a)]}" title="${esc(agName(a))}${on ? " · trabajando: " + esc(on) : ""}">${esc(initials(agName(a)))}</span>`;
+const pTitle = (k) => IDX.pillar.get(k)?.title || "";
+const cap1 = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
-// ---------- cron (minuto hora díaMes mes díaSemana, UTC) ----------
+// ---------- cron (UTC) ----------
 function cronField(f, min, max) {
   const set = new Set();
   for (const part of f.split(",")) {
@@ -359,14 +600,12 @@ function cronDay(c, d) {
   const a = c.dom.has(d.getUTCDate()), b = c.dow.has(d.getUTCDay());
   return c.anyDom && c.anyDow ? true : c.anyDom ? b : c.anyDow ? a : a || b;
 }
-function cronFires(c, from, to) { // horarios entre from y to (Date)
-  const out = []; const d = new Date(from); d.setUTCSeconds(0, 0);
-  const day = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+function cronFires(c, from, to) {
+  const out = []; const day = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+  const hs = [...c.h].sort((x, y) => x - y), ms = [...c.m].sort((x, y) => x - y);
   for (; day <= to; day.setUTCDate(day.getUTCDate() + 1)) {
     if (!cronDay(c, day)) continue;
-    for (const h of [...c.h].sort((x, y) => x - y)) for (const m of [...c.m].sort((x, y) => x - y)) {
-      const t = new Date(day); t.setUTCHours(h, m); if (t >= from && t <= to) out.push(t);
-    }
+    for (const h of hs) for (const m of ms) { const t = new Date(day); t.setUTCHours(h, m); if (t >= from && t <= to) out.push(t); }
   }
   return out;
 }
@@ -382,26 +621,24 @@ async function gh(path) {
   if (rem !== null) S.rate = { remaining: +rem, limit: +r.headers.get("x-ratelimit-limit"), reset: +r.headers.get("x-ratelimit-reset") * 1000 };
   if (r.status === 304 && c) return c.data;
   if (r.status === 401) { store.set("tmp-token", null); throw new Error("el token no sirve: lo quité"); }
-  if (r.status === 403 || r.status === 429) throw new Error("GitHub frenó las consultas hasta las " + (S.rate ? hhmm(new Date(S.rate.reset)) : "—"));
+  if (r.status === 403 || r.status === 429) throw new Error("GitHub pidió una pausa hasta las " + (S.rate ? hhmm(new Date(S.rate.reset)) : "—"));
   if (!r.ok) throw new Error("GitHub respondió " + r.status);
   const data = await r.json(); const etag = r.headers.get("etag"); if (etag) etags[url] = { etag, data };
   return data;
 }
-function interval() { return store.get("tmp-token") ? 20000 : 240000; }
-
+const interval = () => (store.get("tmp-token") ? 20000 : 240000);
 async function poll() {
   clearTimeout(poll.t);
-  if (document.hidden) { poll.t = setTimeout(poll, interval()); return; } // pestaña oculta: no gasta consultas
+  if (document.hidden) { poll.t = setTimeout(poll, interval()); return; }
   S.tick++;
   try {
-    if (S.rate && S.rate.remaining < 4 && Date.now() < S.rate.reset) throw new Error("GitHub frenó las consultas hasta las " + hhmm(new Date(S.rate.reset)));
+    if (S.rate && S.rate.remaining < 4 && Date.now() < S.rate.reset) throw new Error("GitHub pidió una pausa hasta las " + hhmm(new Date(S.rate.reset)));
     const prevTop = S.events[0]?.id;
     const pages = S.tick > 1 ? [1] : store.get("tmp-token") ? [1, 2, 3] : [1, 2];
     const [runs, ...evPages] = await Promise.all([gh("/actions/runs?per_page=60"), ...pages.map((n) => gh("/events?per_page=100&page=" + n).catch(() => []))]);
     const byId = new Map([...evPages.flat(), ...S.events].map((e) => [e.id, e]));
     S.events = [...byId.values()].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 600);
     S.runs = runs.workflow_runs || [];
-    const changed = S.events[0]?.id !== prevTop;
     const fresh = S.events.filter((e) => !prevTop || Number(e.id) > Number(prevTop));
     const need = (t) => S.tick === 1 || fresh.some((e) => e.type === t);
     const jobs = [];
@@ -409,42 +646,41 @@ async function poll() {
     if (need("IssuesEvent") || need("IssueCommentEvent") || S.tick % 6 === 0) jobs.push(gh("/issues?state=open&per_page=60").then((i) => { S.issues = i.filter((x) => !x.pull_request); S.issuesLoaded = true; }));
     await Promise.all(jobs);
     S.ok = true; S.err = ""; S.lastPoll = Date.now();
-    if (changed || jobs.length || S.tick === 1) render();
-  } catch (e) { S.ok = false; S.err = e.message || String(e); render(); }
+  } catch (e) { S.ok = false; S.err = e.message || String(e); }
+  render();
   poll.t = setTimeout(poll, interval());
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - S.lastPoll > interval()) poll(); });
 async function loadData() {
-  try { const r = await fetch("data.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) { S.data = await r.json(); index(); render(); } }
-  catch { /* sin data.json: queda lo en vivo */ }
+  try { const r = await fetch("data.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) { S.data = await r.json(); index(); render(); } } catch {}
   setTimeout(loadData, 300000);
 }
 
 // ---------- modelo ----------
-const IDX = { tasks: new Map(), pillar: new Map(), agents: new Map(), routines: [] };
 function index() {
   const d = S.data; IDX.tasks.clear();
-  for (const t of d.tasks) IDX.tasks.set(t.id, { ...t, kind: "N" });
-  for (const t of d.expansion.tasks || []) IDX.tasks.set(t.id, { ...t, kind: "D", agents: t.agent ? [t.agent] : [] });
+  for (const t of d.tasks) IDX.tasks.set(t.id, t);
+  for (const t of d.expansion.tasks || []) IDX.tasks.set(t.id, { ...t, agents: t.agent ? [t.agent] : [] });
   IDX.agents = new Map(d.agents.map((a) => [a.name, a]));
   IDX.pillar = new Map(d.pillars.map((p) => [p.key, p]));
   IDX.routines = d.routines.map((r) => ({ ...r, cronP: r.cron ? parseCron(r.cron) : null, re: r.branch ? new RegExp(r.branch) : null }));
 }
 const taskOf = (s) => { const m = TASK_RE.exec(s || ""); return m ? IDX.tasks.get(m[1]) || IDX.tasks.get(m[1].split(".")[0]) || { id: m[1] } : null; };
+const prByNum = (n) => S.pulls.find((p) => p.number === n);
 function branchOf(e) {
+  if (!e) return "";
   if (e.type === "PushEvent") return (e.payload.ref || "").replace("refs/heads/", "");
   if (e.type === "CreateEvent" || e.type === "DeleteEvent") return e.payload.ref_type === "branch" ? e.payload.ref : "";
   if (e.type === "PullRequestEvent") return e.payload.pull_request?.head?.ref || prByNum(e.payload.number)?.head?.ref || "";
   return "";
 }
-const prByNum = (n) => S.pulls.find((p) => p.number === n);
 const OWN = new Map();
-function attribute() {
+function attribute() { // una rama exp/ es del carril que arrancó justo antes de crearla
   const lanes = IDX.routines.filter((r) => r.lane && r.cronP);
   for (const e of S.events) {
     if (e.type !== "CreateEvent" || e.payload.ref_type !== "branch" || !e.payload.ref.startsWith("exp/") || OWN.has(e.payload.ref)) continue;
     const t = new Date(e.created_at); let best = null, bestT = 0;
-    for (const r of lanes) { const f = cronFires(r.cronP, new Date(+t - 3600e3), t).pop(); if (f && +f > bestT) { best = r; bestT = +f; } }
+    for (const r of lanes) { const f = cronFires(r.cronP, new Date(+t - 3 * 3600e3), t).pop(); if (f && +f > bestT) { best = r; bestT = +f; } }
     if (best) OWN.set(e.payload.ref, best);
   }
 }
@@ -455,15 +691,15 @@ function routineOfBranch(b) {
 }
 const latestRun = (branch) => S.runs.find((r) => r.head_branch === branch && r.name === "Tests");
 function prState(p) {
-  if (p.merged_at) return { k: "merged", label: "mezclado", cls: "" };
-  if (p.state === "closed") return { k: "closed", label: "cerrado", cls: "" };
+  if (p.merged_at) return { k: "merged", label: "en el juego", cls: "live" };
+  if (p.state === "closed") return { k: "closed", label: "descartado", cls: "" };
   const run = latestRun(p.head.ref);
-  if (!run) return { k: "wait", label: "sin CI", cls: "warn" };
-  if (run.status !== "completed") return { k: "ci", label: "CI corriendo", cls: "info", run };
-  if (run.conclusion === "success") return { k: "green", label: "verde", cls: "live", run };
-  return { k: "red", label: "rojo", cls: "bad", run };
+  if (!run) return { k: "wait", label: "esperando pruebas", cls: "" };
+  if (run.status !== "completed") return { k: "ci", label: "probándose", cls: "info", run };
+  if (run.conclusion === "success") return { k: "green", label: "pasó las pruebas", cls: "live", run };
+  return { k: "red", label: "falló una prueba", cls: "bad", run };
 }
-
+const eventsCover = (t) => !!t && S.events.length > 0 && new Date(S.events[S.events.length - 1].created_at) <= t;
 function routineStatus(r, now = new Date()) {
   const branchEvents = S.events.filter((e) => routineOfBranch(branchOf(e)) === r);
   const lastAct = branchEvents[0] ? new Date(branchEvents[0].created_at) : null;
@@ -471,205 +707,268 @@ function routineStatus(r, now = new Date()) {
   const last = prevs[prevs.length - 1] || null;
   const next = r.cronP ? cronFires(r.cronP, now, new Date(+now + 33 * 864e5))[0] : null;
   const openPRs = S.pulls.filter((p) => p.state === "open" && routineOfBranch(p.head.ref) === r);
-  const sinceLast = last ? now - last : Infinity;
-  const running = !r.paused && !S.data?.paused && last && sinceLast < 75 * 60e3 && lastAct && lastAct >= new Date(+last - 120e3);
+  const running = !r.paused && !S.data?.paused && last && now - last < 75 * 60e3 && lastAct && lastAct >= new Date(+last - 120e3);
   const workBranch = running ? branchOf(branchEvents[0]) : "";
   return { lastAct, last, next, openPRs, running, workBranch, task: running ? taskOf(workBranch) : null };
 }
-function activeAgents() { // nombre -> motivo
+const knownAgents = (t) => (t?.agents || []).filter((a) => IDX.agents.has(a));
+function activeAgents() {
   const map = new Map(); if (!S.data) return map;
   for (const r of IDX.routines) {
     const st = routineStatus(r); if (!st.running) continue;
-    const t = st.task; const known = (t?.agents || []).filter((a) => IDX.agents.has(a));
-    for (const a of (known.length ? known : r.agents).slice(0, 3)) if (IDX.agents.has(a) && !map.has(a)) map.set(a, r.name + (t?.id ? " · " + t.id : ""));
+    const k = knownAgents(st.task);
+    for (const a of (k.length ? k : r.agents).slice(0, 3)) if (IDX.agents.has(a) && !map.has(a)) map.set(a, r.name + (st.task?.id ? " · " + st.task.id : ""));
   }
-  for (const run of S.runs) if (run.status !== "completed" && run.event === "pull_request" && routineOfBranch(run.head_branch) && run.name === "Tests") {
-    if (!map.has("vigilante-ci")) map.set("vigilante-ci", "CI de " + run.head_branch);
-  }
+  if (S.runs.some((run) => run.status !== "completed" && run.event === "pull_request" && run.name === "Tests" && routineOfBranch(run.head_branch))) map.set("vigilante-ci", "siguiendo las pruebas de un PR");
   return map;
 }
-const pillarOfTask = (t) => t?.pillar || null;
-const eventsCover = (t) => !!t && S.events.length > 0 && new Date(S.events[S.events.length - 1].created_at) <= t;
-
-// ---------- render ----------
-function render() {
-  const dot = $("#live-dot"), txt = $("#live-txt");
-  dot.className = "dot " + (S.ok ? "on" : S.err ? "err" : "");
-  txt.textContent = S.ok ? "en vivo · " + ago(S.lastPoll) : S.err || "conectando…";
-  $("#today").textContent = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
-  if (S.data) $("#foot-data").textContent = "Datos del repo: commit " + S.data.commit + ", " + ago(S.data.generated);
-  $("#foot-rate").textContent = S.rate ? "GitHub: " + S.rate.remaining + "/" + S.rate.limit + " consultas" + (store.get("tmp-token") ? " (con token)" : " (sin token)") : "";
-  if (!S.data) { $("#pillars").innerHTML = '<p class="muted">Cargando los datos del repo…</p>'; return; }
-  attribute(); const act = activeAgents();
-  renderDecide(); renderNow(act); renderPillars(act); renderFlow(); renderTimeline(); renderAgents(act); renderActivity();
-  if (openPillar) renderDrawer(openPillar, act);
-}
-
 function decisions() {
   const out = [], seen = new Set();
   for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "decide-usuario"))) {
     const t = taskOf(i.title); if (t) seen.add(t.id);
-    out.push({ id: t?.id || "#" + i.number, title: i.title.replace(/^[A-Z]-[\d.]+\s*·\s*decidir:\s*/i, ""), pillar: pillarOfTask(IDX.tasks.get(t?.id)), url: i.html_url, sub: "issue #" + i.number + " · abierto " + ago(i.created_at) + (i.comments ? " · " + i.comments + " comentarios" : ""), cta: "Responder" });
+    out.push({ id: t?.id || "#" + i.number, q: i.title.replace(/^[A-Z]-[\d.]+\s*·\s*decidir:\s*/i, ""), pillar: IDX.tasks.get(t?.id)?.pillar, url: i.html_url, since: i.created_at, comments: i.comments, issue: true });
   }
-  const all = [...S.data.tasks, ...(S.data.expansion.tasks || [])].filter((t) => t.status === "decide" && !seen.has(t.id));
-  for (const t of all) out.push({ id: t.id, title: t.title, pillar: t.pillar, url: t.id.startsWith("D-") ? GH + "/tree/main/docs/expansion-distritos/detalle" : GH + "/blob/main/" + (t.path || "docs/tareas-nacho.md"), sub: S.issuesLoaded ? "sin issue todavía · rige el supuesto mientras tanto" : "en pausa hasta que decidan", cta: "Ver tarea" });
+  for (const t of [...S.data.tasks, ...(S.data.expansion.tasks || [])].filter((t) => t.status === "decide" && !seen.has(t.id)))
+    out.push({ id: t.id, q: t.title, pillar: t.pillar, url: t.id.startsWith("D-") ? GH + "/tree/main/docs/expansion-distritos/detalle" : GH + "/blob/main/" + (t.path || "docs/tareas"), issue: false });
   return out;
 }
 function attention() {
   const out = [];
-  if (S.data.paused) out.push({ lvl: "bad", t: "Freno de mano puesto: las rutinas no trabajan", sub: ".claude/rutinas/PAUSA está en main", url: GH + "/blob/main/.claude/rutinas/PAUSA" });
-  if (S.data.budget) out.push({ lvl: "warn", t: "Presupuesto en " + S.data.budget + ": algunas rutinas no corren", sub: ".claude/rutinas/PRESUPUESTO (regla 1 bis del README de rutinas)", url: GH + "/blob/main/.claude/rutinas/PRESUPUESTO" });
+  if (S.data.paused) out.push({ lvl: "bad", ic: "i-alert", t: "Freno de mano puesto: las rutinas no trabajan", sub: "Alguien commiteó .claude/rutinas/PAUSA. Se saca borrándolo.", url: GH + "/blob/main/.claude/rutinas/PAUSA" });
+  if (S.data.budget) out.push({ lvl: "warn", ic: "i-pulse", t: "Modo " + S.data.budget + ": algunas rutinas no corren para ahorrar cupo", sub: "Lo indica .claude/rutinas/PRESUPUESTO.", url: GH + "/blob/main/.claude/rutinas/PRESUPUESTO" });
   const mainRun = S.runs.find((r) => r.head_branch === "main" && r.name === "Tests" && r.event === "push" && r.status === "completed");
-  if (mainRun && mainRun.conclusion !== "success") out.push({ lvl: "bad", t: "main está rojo", sub: mainRun.display_title + " · " + ago(mainRun.updated_at), url: mainRun.html_url });
-  for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "rutina-caida"))) out.push({ lvl: "bad", t: i.title, sub: "issue #" + i.number + " · " + ago(i.updated_at), url: i.html_url });
+  if (mainRun && mainRun.conclusion !== "success") out.push({ lvl: "bad", ic: "i-alert", t: "La versión oficial (main) tiene una prueba rota", sub: "Las rutinas lo arreglan primero. Último cambio: " + mainRun.display_title, url: mainRun.html_url });
+  for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "rutina-caida"))) out.push({ lvl: "bad", ic: "i-pc", t: "Una rutina de la PC se cayó", sub: i.title + " · " + ago(i.updated_at), url: i.html_url });
   for (const p of S.pulls.filter((p) => p.state === "open")) {
-    const st = prState(p); const age = (Date.now() - new Date(p.created_at)) / 36e5;
-    if (st.k === "red") out.push({ lvl: "bad", t: "PR #" + p.number + " rojo", sub: p.title + " · " + ago(st.run.updated_at), url: p.html_url });
-    else if (age > 6) out.push({ lvl: "warn", t: "PR #" + p.number + " abierto hace " + dur(age * 3600 | 0), sub: p.title, url: p.html_url });
+    const st = prState(p), age = (Date.now() - new Date(p.created_at)) / 36e5;
+    if (st.k === "red") out.push({ lvl: "bad", ic: "i-flask", t: "Un cambio no pasó las pruebas", sub: p.title + " · la rutina lo intenta arreglar (hasta 3 veces)", url: p.html_url });
+    else if (age > 6) out.push({ lvl: "warn", ic: "i-clock", t: "Un cambio lleva " + dur(age * 3600 | 0) + " esperando", sub: p.title, url: p.html_url });
   }
-  for (const t of S.data.tasks.filter((t) => t.status === "bloqueada")) out.push({ lvl: "warn", t: t.id + " bloqueada", sub: t.title, url: GH + "/blob/main/" + (t.path || "docs/tareas-nacho.md") });
-  for (const b of S.data.expansion.bugs || []) out.push({ lvl: "warn", t: "Bug de la expansión: " + b, sub: "docs/expansion-distritos/bugs/", url: GH + "/tree/main/docs/expansion-distritos/bugs" });
-  for (const r of IDX.routines) { // le tocaba hace más de 70 min y no dejó rastro
-    if (r.paused || !r.cronP || !eventsCover(routineStatus(r).last)) continue;
+  for (const t of S.data.tasks.filter((t) => t.status === "bloqueada")) out.push({ lvl: "warn", ic: "i-alert", t: "Tarea trabada: " + t.title, sub: t.id + " · se intentó 3 veces", url: GH + "/blob/main/" + (t.path || "docs/tareas") });
+  for (const b of S.data.expansion.bugs || []) out.push({ lvl: "warn", ic: "i-alert", t: "Bug en la expansión", sub: b, url: GH + "/tree/main/docs/expansion-distritos/bugs" });
+  for (const r of IDX.routines) {
+    if (r.paused || !r.cronP || r.cron.split(" ")[1] === "*") continue;
     const st = routineStatus(r);
-    if (st.last && Date.now() - st.last > 70 * 60e3 && Date.now() - st.last < 26 * 36e5 && (!st.lastAct || st.lastAct < st.last) && r.cron.split(" ")[1] !== "*") {
-      out.push({ lvl: "info", t: r.name + " no dejó rastro", sub: "le tocaba " + ago(st.last) + " · puede que no haya encontrado trabajo", url: GH + "/blob/main/.claude/rutinas/" + r.file });
-    }
+    if (!eventsCover(st.last)) continue;
+    if (Date.now() - st.last > 75 * 60e3 && Date.now() - st.last < 26 * 36e5 && (!st.lastAct || st.lastAct < st.last))
+      out.push({ lvl: "info", ic: "i-clock", t: r.name + " no dejó rastro", sub: "Le tocaba " + ago(st.last) + ". Puede que no hubiera trabajo o que faltara cupo.", url: GH + "/blob/main/.claude/rutinas/" + r.file });
   }
   return out;
 }
-function pillarChip(key) { const p = IDX.pillar.get(key); return p ? '<span class="chip">' + esc(p.title) + "</span>" : ""; }
-function renderDecide() {
-  const d = decisions(), a = attention();
-  $("#decide-count").textContent = d.length; $("#decide-count").className = "count" + (d.length ? "" : " zero");
-  $("#decide-list").innerHTML = d.length ? d.map((x) => '<li><span class="id">' + esc(x.id) + '</span><span class="t">' + esc(x.title) + "<small>" + esc(x.sub) + "</small></span>" +
-    '<span class="side">' + pillarChip(x.pillar) + '<a class="go" href="' + esc(x.url) + '" target="_blank" rel="noopener">' + x.cta + " ↗</a></span></li>").join("")
-    : '<li class="empty">Nada esperando una decisión.</li>';
-  $("#attn-count").textContent = a.length; $("#attn-count").className = "count" + (a.length ? "" : " zero");
-  $("#attn-list").innerHTML = a.length ? a.slice(0, 12).map((x) => '<li><span class="stripe ' + x.lvl + '"></span><span class="t">' + esc(x.t) + "<small>" + esc(x.sub) + '</small></span><a class="go" href="' + esc(x.url) + '" target="_blank" rel="noopener">Abrir ↗</a></li>').join("")
-    : '<li class="empty">Todo en orden: main verde, sin PRs rojos ni rutinas caídas.</li>';
+
+// ---------- render ----------
+let openKind = null, openKey = null;
+function render() {
+  $("#live-dot").className = "dot " + (S.ok ? "on" : S.err ? "err" : "");
+  $("#live-txt").textContent = S.ok ? "en vivo · " + ago(S.lastPoll) : S.err || "conectando…";
+  const now = new Date();
+  $("#today").textContent = now.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }) + " · " + hhmm(now);
+  if (S.data) $("#foot-data").textContent = "Datos del repo: " + ago(S.data.generated) + " (commit " + S.data.commit + ")";
+  $("#foot-rate").textContent = S.rate ? "Consultas a GitHub: " + S.rate.remaining + " de " + S.rate.limit + (store.get("tmp-token") ? " (con token)" : " (sin token)") : "";
+  if (!S.data) return;
+  attribute();
+  const act = activeAgents();
+  renderHero(act); renderDecide(); renderBelt(); renderAtt(); renderPillars(act);
+  renderFlow(); renderTimeline(); renderAgents(act); renderActivity();
+  if (openKind === "pillar") renderPillarDrawer(openKey, act);
 }
 
-function renderNow(act) {
-  const rs = IDX.routines.map((r) => ({ r, st: routineStatus(r) }));
-  const running = rs.filter((x) => x.st.running);
-  const upcoming = rs.filter((x) => !x.st.running && x.st.next && !x.r.paused).sort((a, b) => a.st.next - b.st.next).slice(0, Math.max(3, 6 - running.length));
-  $("#now-sub").textContent = running.length ? running.length + " rutina" + (running.length > 1 ? "s" : "") + " trabajando · " + act.size + " agentes en uso" : "Ninguna rutina trabajando en este momento";
-  const card = ({ r, st }) => {
-    const t = st.task; const known = (t?.agents || []).filter((a) => IDX.agents.has(a)); const agents = (known.length ? known : r.agents).slice(0, 3);
-    return '<div class="panel now-card' + (st.running ? " running" : "") + '"><div class="row"><b>' + esc(r.name) + "</b>" +
-      (st.running ? '<span class="chip live"><span class="dot on"></span>trabajando</span>' : '<span class="chip">' + (st.next ? "a las " + hhmm(st.next) : "—") + "</span>") + "</div>" +
-      (st.running ? '<div style="font-size:13px">' + (t?.id ? '<span class="id">' + esc(t.id) + "</span> " + esc(t.title || st.workBranch) : '<span class="mono muted">' + esc(st.workBranch) + "</span>") + "</div>"
-        : '<div class="muted" style="font-size:12.5px">' + esc(r.laneTitle || r.produces) + "</div>") +
-      '<div class="agents-mini">' + agents.map((a) => '<span class="agent-dot' + (st.running ? " on" : "") + '">' + esc(a) + "</span>").join("") + "</div>" +
-      '<div class="muted" style="font-size:11.5px">' + (st.running ? "empezó " + ago(st.last) : "en " + dur(Math.max(0, (st.next - Date.now()) / 1000 | 0))) + " · " + (r.kind === "pc" ? "PC" : "nube") + (r.model ? " · " + r.model : "") + "</div></div>";
-  };
-  $("#now").innerHTML = running.map(card).join("") + upcoming.map(card).join("");
+function renderHero(act) {
+  const h = new Date().getHours();
+  $("#greet").textContent = h < 6 ? "Buenas noches" : h < 13 ? "Buen día" : h < 20 ? "Buenas tardes" : "Buenas noches";
+  const running = IDX.routines.filter((r) => routineStatus(r).running);
+  const dec = decisions().length, att = attention().length;
+  const merged = S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5).length;
+  const names = running.map((r) => "<b>" + esc(r.name) + "</b>");
+  const list = (a) => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " y " + a[a.length - 1];
+  let sum = running.length ? "Ahora mismo trabaja" + (running.length > 1 ? "n " : " ") + list(names) + (act.size ? ", con " + act.size + " especialista" + (act.size > 1 ? "s" : "") : "") + ". "
+    : "Ninguna rutina está trabajando en este momento" + (S.ok ? "" : " (o no se puede ver: GitHub pidió una pausa)") + ". ";
+  sum += dec ? "Hay <b>" + dec + " " + (dec > 1 ? "decisiones" : "decisión") + "</b> esperando por ustedes" : "No hay nada esperando por ustedes";
+  sum += merged ? " y entraron <b>" + merged + " cambio" + (merged > 1 ? "s" : "") + "</b> al juego en las últimas 24 horas." : ".";
+  $("#summary").innerHTML = sum;
+  const tiles = [
+    ["b-belt", "t-live", "i-pulse", running.length, running.length === 1 ? "rutina trabajando" : "rutinas trabajando", act.size + " especialistas en uso"],
+    ["b-decide", "t-tape", "i-ask", dec, dec === 1 ? "decisión para ustedes" : "decisiones para ustedes", "las rutinas esperan su respuesta"],
+    ["b-belt", "t-info", "i-check", merged, merged === 1 ? "cambio entró hoy" : "cambios entraron hoy", "en las últimas 24 horas"],
+    ["b-att", att ? "t-bad" : "t-live", "i-alert", att, att === 1 ? "cosa para mirar" : "cosas para mirar", att ? "trabas o rutinas sin rastro" : "todo en orden"],
+  ];
+  $("#tiles").innerHTML = tiles.map(([to, cls, ic, n, l, s]) => `<button class="card tile ${cls}" type="button" data-to="${to}"><div class="top"><span class="bub">${icon(ic)}</span></div><span class="n">${n}</span><span class="l">${l}</span><span class="s">${s}</span></button>`).join("");
+}
+
+function renderDecide() {
+  const d = decisions();
+  $("#decide").innerHTML = d.length ? d.map((x) => {
+    const p = x.pillar && IDX.pillar.get(x.pillar);
+    const meta = x.issue ? "Esperando hace " + ago(x.since).replace("hace ", "") + (x.comments ? " · " + x.comments + " comentario" + (x.comments > 1 ? "s" : "") : "")
+      : S.issuesLoaded ? "Todavía sin pregunta en GitHub · rige una suposición" : "En pausa hasta que decidan";
+    return `<article class="card dcard" style="--pc:${p ? PC[p.key] : "var(--tape)"}">
+      <div class="who">${p ? icon("i-" + p.key, "sm") + esc(p.title) : icon("i-ask", "sm") + "General"}</div>
+      <div class="qtxt">${esc(cap1(x.q))}</div>
+      <div class="meta">${esc(meta)}</div>
+      <div class="row"><span class="id">${esc(x.id)}</span><a class="btn${x.issue ? "" : " ghost"}" href="${esc(x.url)}" target="_blank" rel="noopener">${x.issue ? "Responder en GitHub" : "Ver la tarea"} ↗</a></div></article>`;
+  }).join("") : `<div class="card happy">${icon("i-check", "lg")}<div><b>Nada esperando por ustedes.</b><p class="muted small">Cuando una rutina necesite una decisión, aparece acá.</p></div></div>`;
+}
+
+function prPkg(p, st, when) {
+  const t = taskOf(p.head.ref), r = routineOfBranch(p.head.ref);
+  const title = p.title.replace(/^\w+(\([^)]*\))?:\s*/, "").replace(/\s*\((?:[NSD]-[\d.]+[^)]*)\)\s*$/, "");
+  return pkg({ id: t?.id || "#" + p.number, title: cap1(title), by: r ? r.name : p.user.login, t: when || ago(p.created_at), pillar: t?.pillar, url: p.html_url, red: st.k === "red", stLabel: st.k === "red" ? "falló una prueba" : st.k === "wait" ? "esperando pruebas" : "" });
+}
+function pkg(o) {
+  const c = o.pillar ? PC[o.pillar] : "var(--muted)";
+  const inner = `<div class="r1"><span class="id">${esc(o.id || "")}</span>${o.pillar ? `<span style="color:${c}" title="${esc(pTitle(o.pillar))}">${icon("i-" + o.pillar, "sm")}</span>` : ""}</div>
+    <div class="tt">${esc(o.title)}</div>${o.stLabel ? `<span class="chip ${o.red ? "bad" : ""}" style="justify-self:start">${esc(o.stLabel)}</span>` : ""}
+    <div class="by">${icon(/PC/.test(o.by) ? "i-pc" : "i-bot", "sm")}<span>${esc(o.by)} · ${esc(o.t)}</span></div>`;
+  return `<div class="pkg${o.red ? " red" : ""}">${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener" style="display:grid;gap:5px">${inner}</a>` : inner}</div>`;
+}
+function belt() {
+  const prBranches = new Set(S.pulls.map((p) => p.head.ref));
+  const deleted = new Set(S.events.filter((e) => e.type === "DeleteEvent").map((e) => e.payload.ref));
+  const res = [], seen = new Set();
+  for (const e of S.events) {
+    if (e.type !== "CreateEvent" || e.payload.ref_type !== "branch") continue;
+    const b = e.payload.ref; if (seen.has(b) || prBranches.has(b) || deleted.has(b) || Date.now() - new Date(e.created_at) > 4 * 36e5) continue;
+    const r = routineOfBranch(b); if (!r) continue; seen.add(b);
+    const t = taskOf(b);
+    res.push(pkg({ id: t?.id, title: t?.title || b, by: r.name, t: "empezó " + ago(e.created_at), pillar: t?.pillar }));
+  }
+  const open = S.pulls.filter((p) => p.state === "open").map((p) => ({ p, st: prState(p) }));
+  const merged = S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5).sort((a, b) => new Date(b.merged_at) - new Date(a.merged_at));
+  return [
+    { ic: "i-flag", title: "Tomada", hint: "Una rutina la reservó y está trabajando en ella.", items: res },
+    { ic: "i-flask", title: "Probándose", hint: "Abrió el PR y las pruebas automáticas están corriendo.", items: open.filter((x) => x.st.k !== "green").map(({ p, st }) => prPkg(p, st)) },
+    { ic: "i-check", title: "Lista", hint: "Pasó las pruebas. Entra sola en unos minutos.", items: open.filter((x) => x.st.k === "green").map(({ p, st }) => prPkg(p, st)) },
+    { ic: "i-play", title: "En el juego", hint: "Ya entró a la versión oficial (últimas 24 horas).", items: merged.map((p) => prPkg(p, prState(p), "entró " + ago(p.merged_at))), cap: 5 },
+  ];
+}
+function renderBelt() {
+  $("#belt").innerHTML = belt().map((s) => {
+    const cap = s.cap || 6, items = s.items.slice(0, cap);
+    return `<div class="stage"><div class="stage-h"><span class="ibub">${icon(s.ic, "sm")}</span><b>${s.title}</b><span class="count">${s.items.length}</span></div><p>${s.hint}</p>
+      ${items.join("") || `<div class="empty-st">Vacío</div>`}${s.items.length > cap ? `<div class="more">y ${s.items.length - cap} más</div>` : ""}</div>`;
+  }).join("");
+}
+function renderAtt() {
+  const a = attention();
+  $("#att").innerHTML = a.length ? a.slice(0, 10).map((x) => `<li><span class="ibub ${x.lvl}">${icon(x.ic, "sm")}</span><span>${esc(x.t)}<small>${esc(x.sub)}</small></span><a class="go" href="${esc(x.url)}" target="_blank" rel="noopener">Abrir ↗</a></li>`).join("")
+    : `<li><span class="ibub" style="background:var(--live-soft);color:var(--live)">${icon("i-check", "sm")}</span><span>Todo en orden<small>La versión oficial pasa las pruebas y no hay nada trabado.</small></span><span></span></li>`;
 }
 
 function pillarStats(key, act) {
   const n = S.data.tasks.filter((t) => t.pillar === key), d = (S.data.expansion.tasks || []).filter((t) => t.pillar === key);
   const cnt = (arr, s) => arr.filter((t) => t.status === s).length;
-  const prs = S.pulls.filter((p) => p.state === "open" && pillarOfTask(taskOf(p.head.ref)) === key);
-  const merged24 = S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5 && pillarOfTask(taskOf(p.head.ref)) === key);
-  const p = IDX.pillar.get(key);
+  const ofPillar = (p) => taskOf(p.head.ref)?.pillar === key;
   const agents = S.data.agents.filter((a) => a.pillar === key).map((a) => a.name);
-  return { n, d, prs, merged24, agents, on: agents.filter((a) => act.has(a)),
+  return { n, d, agents, on: agents.filter((a) => act.has(a)),
+    prs: S.pulls.filter((p) => p.state === "open" && ofPillar(p)), merged24: S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5 && ofPillar(p)),
     nOpen: cnt(n, "abierta"), nDone: cnt(n, "hecha"), nDecide: cnt(n, "decide") + cnt(d, "decide"), nPaused: cnt(n, "pausada"), nBlocked: cnt(n, "bloqueada") + cnt(d, "bloqueada"),
-    dDone: cnt(d, "hecha"), dTotal: d.length, title: p.title, about: p.about };
+    dDone: cnt(d, "hecha"), dTotal: d.length };
 }
 function health(s) {
-  if (s.nBlocked || s.prs.some((p) => prState(p).k === "red")) return ["bad", "trabado"];
-  if (s.nDecide) return ["warn", "espera decisión"];
-  if (s.on.length || s.prs.length) return ["live", "en movimiento"];
-  if (s.nOpen + (s.dTotal - s.dDone) === 0) return ["", "sin pendientes"];
-  return ["", "en espera"];
+  if (s.nBlocked || s.prs.some((p) => prState(p).k === "red")) return ["bad", "Trabado", "Hay una tarea trabada o un cambio que no pasa las pruebas."];
+  if (s.on.length) return ["live", "Trabajando", "Un especialista de este pilar está trabajando ahora."];
+  if (s.nDecide) return ["warn", "Espera decisión", "Algo de este pilar espera que ustedes decidan."];
+  if (s.prs.length) return ["live", "En camino", "Hay cambios de este pilar probándose."];
+  return ["idle", "Tranquilo", "Nada en curso ahora mismo."];
 }
-function bar(done, paused, blocked, total) {
-  if (!total) return '<div class="track"></div>';
-  const w = (x) => (100 * x / total).toFixed(2) + "%";
-  return '<div class="track" role="img" aria-label="' + done + " de " + total + ' hechas"><i class="d" style="width:' + w(done) + '"></i><i class="p" style="width:' + w(paused) + '"></i><i class="b" style="width:' + w(blocked) + '"></i></div>';
+function ring(p, color) {
+  const r = 25, c = 2 * Math.PI * r, v = Math.max(0, Math.min(1, p));
+  return `<svg class="ring" viewBox="0 0 64 64" role="img" aria-label="${Math.round(v * 100)}% hecho"><circle class="bg" cx="32" cy="32" r="${r}"/><circle class="fg" cx="32" cy="32" r="${r}" stroke="${color}" stroke-dasharray="${(c * v).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle">${Math.round(v * 100)}%</text></svg>`;
 }
+const track = (done, total, color) => `<div class="track"><i style="width:${total ? (100 * done / total).toFixed(2) : 0}%;background:${color}"></i></div>`;
 function renderPillars(act) {
-  const all = S.data.pillars.map((p) => ({ key: p.key, s: pillarStats(p.key, act) }));
-  const nT = S.data.tasks, dT = S.data.expansion.tasks || [];
-  const open = nT.filter((t) => t.status === "abierta").length, dDone = dT.filter((t) => t.status === "hecha").length;
-  const openPR = S.pulls.filter((p) => p.state === "open").length, merged = S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5).length;
-  $("#global-stats").innerHTML = '<span class="chip">' + open + " tareas abiertas</span>" + '<span class="chip">expansión ' + dDone + "/" + dT.length + "</span>" +
-    '<span class="chip info">' + openPR + " PRs abiertos</span>" + '<span class="chip live">' + merged + " mezclados en 24 h</span>";
-  $("#pillars").innerHTML = all.map(({ key, s }) => {
-    const [hc, hl] = health(s);
-    const nTot = s.nOpen + s.nDone + s.nDecide + s.nPaused;
-    const next = s.n.filter((t) => t.status === "abierta").sort((a, b) => (a.prio || "Z").localeCompare(b.prio || "Z")).slice(0, 3);
-    return '<article class="panel pillar" tabindex="0" role="button" aria-label="Ver detalle de ' + esc(s.title) + '" data-pillar="' + key + '"><div class="top"><h3>' + esc(s.title) + '</h3><span class="health"><span class="dot ' + (hc === "live" ? "on" : "") + '" style="' + (hc && hc !== "live" ? "background:var(--" + hc + ")" : "") + '"></span>' + hl + "</span></div>" +
-      "<p>" + esc(s.about) + "</p>" +
-      '<div class="meter"><div class="lbl"><span>Juego actual</span><b>' + s.nDone + "/" + nTot + "</b></div>" + bar(s.nDone, s.nDecide + s.nPaused, s.nBlocked, nTot) + "</div>" +
-      (s.dTotal ? '<div class="meter"><div class="lbl"><span>Expansión</span><b>' + s.dDone + "/" + s.dTotal + "</b></div>" + bar(s.dDone, s.d.filter((t) => t.status === "decide").length, s.d.filter((t) => t.status === "bloqueada").length, s.dTotal) + "</div>" : "") +
-      '<div class="stats">' + (s.nOpen ? '<span class="chip">' + s.nOpen + " abiertas</span>" : "") + (s.nDecide ? '<span class="chip tape">' + s.nDecide + " para decidir</span>" : "") +
-      (s.prs.length ? '<span class="chip info">' + s.prs.length + " PR</span>" : "") + (s.merged24.length ? '<span class="chip live">+' + s.merged24.length + " hoy</span>" : "") +
-      (s.nPaused ? '<span class="chip">' + s.nPaused + " en pausa</span>" : "") + (s.nBlocked ? '<span class="chip bad">' + s.nBlocked + " bloqueadas</span>" : "") + "</div>" +
-      (next.length ? '<ul class="next">' + next.map((t) => '<li><span class="id">' + esc(t.id) + "</span><span>" + esc(t.title) + "</span></li>").join("") + "</ul>" : "") +
-      '<div class="agent-dots">' + s.agents.filter((a) => a !== "claude" && a !== "Plan").map((a) => '<span class="agent-dot' + (act.has(a) ? " on" : "") + '" title="' + esc(act.get(a) || "") + '">' + esc(a) + "</span>").join("") + "</div></article>";
+  $("#pillars").innerHTML = S.data.pillars.map((p) => {
+    const s = pillarStats(p.key, act), c = PC[p.key], [hc, hl, hd] = health(s);
+    const nTot = s.nOpen + s.nDone + s.nDecide + s.nPaused + s.nBlocked;
+    const next = s.n.filter((t) => t.status === "abierta").sort((a, b) => (a.prio || "Z").localeCompare(b.prio || "Z"))[0];
+    let line;
+    if (s.on.length) line = `<div class="nowline live">${icon("i-pulse", "sm")}<span><b>Ahora:</b> ${s.on.map((a) => esc(agName(a))).join(", ")} <span class="muted">(${esc(act.get(s.on[0]))})</span></span></div>`;
+    else if (s.prs.length) line = `<div class="nowline">${icon("i-flask", "sm")}<span>${s.prs.length} cambio${s.prs.length > 1 ? "s" : ""} probándose</span></div>`;
+    else if (s.nDecide) line = `<div class="nowline">${icon("i-ask", "sm")}<span>${s.nDecide} ${s.nDecide > 1 ? "decisiones esperan" : "decisión espera"} por ustedes</span></div>`;
+    else if (next) line = `<div class="nowline">${icon("i-arrow", "sm")}<span><b>Lo próximo:</b> ${esc(next.title)}</span></div>`;
+    else line = `<div class="nowline">${icon("i-check", "sm")}<span>Sin pendientes en el juego actual</span></div>`;
+    return `<article class="card pillar" style="--pc:${c}" tabindex="0" role="button" aria-label="Ver detalle de ${esc(p.title)}" data-pillar="${p.key}">
+      <div class="top"><span class="pbub">${icon("i-" + p.key)}</span><h3>${esc(p.title)}</h3><span class="status ${hc}" title="${hd}">${hc === "live" ? '<span class="dot on"></span>' : ""}${hl}</span></div>
+      <p class="about">${esc(p.about)}</p>
+      <div class="prog">${ring(nTot ? s.nDone / nTot : 0, c)}<div class="lines">
+        <div><b>${s.nDone} de ${nTot}</b> <span class="muted">tareas del juego actual hechas</span></div>
+        ${s.dTotal ? `<div class="mbar"><div class="l"><span>Expansión</span><b>${s.dDone} / ${s.dTotal}</b></div>${track(s.dDone, s.dTotal, c)}</div>` : `<div class="muted small">Sin tareas en la expansión</div>`}
+      </div></div>
+      ${line}
+      <div class="foot"><span class="avs">${s.agents.map((a) => av(a, act.get(a))).join("")}</span><span class="see">Ver detalle ${icon("i-arrow", "sm")}</span></div>
+    </article>`;
   }).join("");
 }
 
-// ---------- cajón de pilar ----------
-let openPillar = null;
-function openDrawer(key) { openPillar = key; $("#drawer").hidden = false; $("#scrim").hidden = false; renderDrawer(key, activeAgents()); $("#drawer .close")?.focus(); }
-function closeDrawer() { openPillar = null; $("#drawer").hidden = true; $("#scrim").hidden = true; }
-function taskRow(t) {
-  const st = { abierta: ["", "abierta"], hecha: ["live", "hecha"], decide: ["tape", "decidir"], pausada: ["", "en pausa"], bloqueada: ["bad", "bloqueada"] }[t.status] || ["", t.status];
-  return '<li><span class="id">' + esc(t.id) + "</span><span>" + esc(t.title) + (t.agents?.length ? '<br><span class="muted mono" style="font-size:11px">' + esc(t.agents.slice(0, 3).join(" · ")) + "</span>" : "") + '</span><span class="chip ' + st[0] + '">' + st[1] + "</span></li>";
+// ---------- cajón ----------
+function openDrawer(kind, key) {
+  openKind = kind; openKey = key; $("#drawer").hidden = false; $("#scrim").hidden = false; document.body.style.overflow = "hidden";
+  if (kind === "pillar") renderPillarDrawer(key, activeAgents()); else renderGlossary(key);
+  $("#drawer .close")?.focus();
 }
-function renderDrawer(key, act) {
-  const s = pillarStats(key, act);
+function closeDrawer() { openKind = openKey = null; $("#drawer").hidden = true; $("#scrim").hidden = true; document.body.style.overflow = ""; }
+const closeBtn = () => `<button class="iconbtn close" type="button">${icon("i-x", "sm")}Cerrar</button>`;
+function taskRow(t) {
+  const st = ST[t.status] || ["", t.status];
+  const ag = knownAgents(t).slice(0, 2).map((a) => agName(a)).join(", ");
+  return `<li><span class="id">${esc(t.id)}</span><span>${esc(t.title)}${ag ? `<small>${esc(ag)}</small>` : ""}</span><span class="chip ${st[0]}">${st[1]}</span></li>`;
+}
+function renderPillarDrawer(key, act) {
+  const p = IDX.pillar.get(key), s = pillarStats(key, act), c = PC[key];
   const order = { decide: 0, bloqueada: 1, abierta: 2, pausada: 3, hecha: 4 };
   const nList = s.n.filter((t) => t.status !== "hecha").sort((a, b) => order[a.status] - order[b.status]);
-  const dOpen = s.d.filter((t) => t.status !== "hecha");
-  const groups = {}; for (const t of dOpen) groups[t.group] = (groups[t.group] || 0) + 1;
-  const gName = (g) => (S.data.expansion.groups.find((x) => x.n === g) || {}).title || g;
-  $("#drawer").innerHTML = '<button class="icon-btn close" type="button">Cerrar</button>' +
-    '<div><div class="eyebrow">Pilar</div><h2>' + esc(s.title) + '</h2><p class="lede">' + esc(s.about) + "</p></div>" +
-    '<div style="display:grid;gap:8px"><h3>Agentes</h3><div class="agent-dots">' + s.agents.map((a) => '<span class="agent-dot' + (act.has(a) ? " on" : "") + '">' + esc(a) + (act.has(a) ? " · " + esc(act.get(a)) : "") + "</span>").join("") + "</div></div>" +
-    '<div style="display:grid;gap:8px"><h3>PRs abiertos</h3>' + (s.prs.length ? '<ul class="tasks">' + s.prs.map((p) => { const st = prState(p); return '<li><span class="id">#' + p.number + '</span><a href="' + esc(p.html_url) + '" target="_blank" rel="noopener">' + esc(p.title) + '</a><span class="chip ' + st.cls + '">' + st.label + "</span></li>"; }).join("") + "</ul>" : '<p class="muted" style="margin:0">Ninguno.</p>') + "</div>" +
-    '<div style="display:grid;gap:8px"><h3>Juego actual · pendientes</h3>' + (nList.length ? '<ul class="tasks">' + nList.map(taskRow).join("") + "</ul>" : '<p class="muted" style="margin:0">Nada pendiente.</p>') + "</div>" +
-    (s.dTotal ? '<div style="display:grid;gap:8px"><h3>Expansión · ' + s.dDone + " de " + s.dTotal + ' hechas</h3><ul class="tasks">' + Object.entries(groups).sort().map(([g, c]) => '<li><span class="id">G' + g + "</span><span>" + esc(gName(g)) + '</span><span class="chip">' + c + " por hacer</span></li>").join("") + "</ul>" +
-      '<ul class="tasks">' + dOpen.slice(0, 8).map(taskRow).join("") + "</ul></div>" : "") +
-    (s.merged24.length ? '<div style="display:grid;gap:8px"><h3>Mezclado en 24 h</h3><ul class="tasks">' + s.merged24.map((p) => '<li><span class="id">#' + p.number + '</span><a href="' + esc(p.html_url) + '" target="_blank" rel="noopener">' + esc(p.title) + '</a><span class="chip live">' + ago(p.merged_at) + "</span></li>").join("") + "</ul></div>" : "");
+  const groups = {}; for (const t of s.d) { const g = (groups[t.group] ||= { done: 0, total: 0 }); g.total++; if (t.status === "hecha") g.done++; }
+  const gName = (g) => ((S.data.expansion.groups.find((x) => x.n === g) || {}).title || g).replace(/^Grupo \d+\s*\S\s*/, "");
+  const scroll = $("#drawer").scrollTop;
+  $("#drawer").innerHTML = closeBtn() + `
+    <div style="display:flex;gap:14px;align-items:center;--pc:${c}"><span class="pbub" style="width:52px;height:52px">${icon("i-" + key, "lg")}</span><div><div class="eyebrow">Pilar</div><h2>${esc(p.title)}</h2></div></div>
+    <p class="muted">${esc(p.about)}</p>
+    <div style="display:grid;gap:10px"><h3>Quiénes trabajan acá</h3><ul class="rows">${s.agents.map((a) => `<li>${av(a, act.get(a))}<span><b>${esc(agName(a))}</b>${act.has(a) ? ` <span class="chip live">trabajando · ${esc(act.get(a))}</span>` : ""}<small>${esc(agLine(a))}</small></span><span class="id">${esc(IDX.agents.get(a)?.model || "")}</span></li>`).join("")}</ul></div>
+    ${s.prs.length ? `<div style="display:grid;gap:10px"><h3>Cambios en camino</h3><div style="display:grid;gap:8px">${s.prs.map((p) => prPkg(p, prState(p))).join("")}</div></div>` : ""}
+    <div style="display:grid;gap:10px"><h3>Juego actual: lo que falta</h3>${nList.length ? `<ul class="rows">${nList.map(taskRow).join("")}</ul>` : `<p class="muted">Nada pendiente.${s.nDone ? " " + s.nDone + " tareas hechas." : ""}</p>`}</div>
+    ${s.dTotal ? `<div style="display:grid;gap:10px"><h3>Expansión: ${s.dDone} de ${s.dTotal} hechas</h3><ul class="rows">${Object.entries(groups).sort().map(([g, v]) => `<li><span class="id">${g}</span><span>${esc(gName(g))}<div style="margin-top:6px">${track(v.done, v.total, c)}</div></span><span class="id">${v.done}/${v.total}</span></li>`).join("")}</ul></div>` : ""}
+    ${s.merged24.length ? `<div style="display:grid;gap:10px"><h3>Entró al juego hoy</h3><div style="display:grid;gap:8px">${s.merged24.map((p) => prPkg(p, prState(p), "entró " + ago(p.merged_at))).join("")}</div></div>` : ""}`;
+  $("#drawer").scrollTop = scroll;
   $("#drawer .close").onclick = closeDrawer;
+}
+function renderGlossary(term) {
+  $("#drawer").innerHTML = closeBtn() + `<div><div class="eyebrow">Glosario</div><h2>¿Qué significa?</h2><p class="muted" style="margin-top:6px">Las palabras que aparecen en esta página, en criollo.</p></div>
+    <dl class="gl" style="margin:0">${GLOSS.map(([k, ic, t, d]) => `<div id="g-${k}"><dt>${icon(ic, "sm")}${esc(t)}</dt><dd>${esc(d)}</dd></div>`).join("")}</dl>`;
+  $("#drawer .close").onclick = closeDrawer;
+  if (term) { const el = $("#g-" + term); if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("hl"); } }
 }
 
 // ---------- flujo ----------
-const NW = 180, NH = 40;
+const NW = 186, NH = 46;
 const FLOW = {
-  cols: [[20, "Observan"], [230, "Dejan por escrito"], [440, "Planifican"], [650, "Listas de tareas"], [860, "Construyen"], [1070, "Compuerta"]],
+  cols: [[20, "1", "Miran"], [232, "2", "Anotan"], [444, "3", "Planifican"], [656, "4", "Listas"], [868, "5", "Construyen"], [1080, "6", "Prueban"]],
   nodes: [
-    { id: "qa", x: 20, y: 60, t: "QA", s: "diario · juego actual", r: ["QA (juego actual)"] },
-    { id: "qaexp", x: 20, y: 112, t: "QA expansión", s: "01:00 y 13:00", r: ["QA expansión A y B"] },
-    { id: "aud", x: 20, y: 164, t: "Auditoría integral", s: "día por medio", r: ["Auditoría integral"] },
-    { id: "rev", x: 20, y: 216, t: "Revisión · la contra", s: "lunes", r: ["Revisión (la contra)"] },
-    { id: "mant", x: 20, y: 268, t: "Mantenimiento", s: "jueves", r: ["Mantenimiento"] },
-    { id: "lanz", x: 20, y: 320, t: "Lanzamiento", s: "día 1 del mes", r: ["Lanzamiento"] },
-    { id: "pcb", x: 20, y: 372, t: "Build y FPS (PC)", s: "diaria, GPU real", r: ["Build y rendimiento (PC)"] },
-    { id: "d_qa", x: 230, y: 86, t: "qa-recorrido.md", s: "+ bugs/ de la expansión", k: "doc" },
-    { id: "d_aud", x: 230, y: 190, t: "docs/auditorias/", s: "integral y revisión", k: "doc" },
-    { id: "d_mkt", x: 230, y: 294, t: "docs/marketing/", s: "Steam, calendario", k: "doc" },
-    { id: "d_pc", x: 230, y: 372, t: "rendimiento-pc.md", s: "FPS y capturas", k: "doc" },
-    { id: "plan", x: 440, y: 200, t: "planificador-tareas", s: "hallazgos → tareas" },
-    { id: "people", x: 440, y: 400, t: "Nacho y Slatex", s: "deciden los ⏸", k: "people" },
-    { id: "tn", x: 650, y: 150, t: "docs/tareas/", s: "N- y S-, una por archivo", k: "doc" },
-    { id: "te", x: 650, y: 290, t: "expansion-distritos/", s: "1000 tareas D-", k: "doc" },
-    { id: "cons", x: 860, y: 150, t: "Construcción A", s: "cada hora · N-/S-", r: ["Construcción A", "Construcción B"] },
-    { id: "dev", x: 860, y: 240, t: "Desarrolladores 1–5", s: "cada hora · 5 carriles", r: ["Desarrollador 1", "Desarrollador 2", "Desarrollador 3", "Desarrollador 4", "Desarrollador 5"] },
-    { id: "arte", x: 860, y: 330, t: "Sesión de arte (PC)", s: "cada 2 h · Blender, ComfyUI", r: ["Sesión de arte (PC)"] },
-    { id: "pr", x: 1070, y: 150, t: "PR + auto-merge", s: "vigilante-ci lo sigue" },
-    { id: "ci", x: 1070, y: 240, t: "CI", s: "lint · tests · par de red", k: "gate" },
-    { id: "main", x: 1070, y: 330, t: "main", s: "lo que juega el equipo", k: "gate" },
+    { id: "qa", x: 20, y: 64, t: "QA", s: "juega solo, todos los días", ic: "i-eye", r: ["QA (juego actual)"] },
+    { id: "qaexp", x: 20, y: 120, t: "QA expansión", s: "prueba lo nuevo, 2 por día", ic: "i-eye", r: ["QA expansión A y B"] },
+    { id: "aud", x: 20, y: 176, t: "Auditoría", s: "revisa todo, día por medio", ic: "i-eye", r: ["Auditoría integral"] },
+    { id: "rev", x: 20, y: 232, t: "Revisión", s: "la contra, los lunes", ic: "i-eye", r: ["Revisión (la contra)"] },
+    { id: "mant", x: 20, y: 288, t: "Mantenimiento", s: "docs al día, los jueves", ic: "i-eye", r: ["Mantenimiento"] },
+    { id: "lanz", x: 20, y: 344, t: "Lanzamiento", s: "Steam, una vez por mes", ic: "i-lanzamiento", r: ["Lanzamiento"] },
+    { id: "pcb", x: 20, y: 400, t: "Build en la PC", s: "FPS reales, todos los días", ic: "i-pc", r: ["Build y rendimiento (PC)"] },
+    { id: "d_qa", x: 232, y: 92, t: "Bugs encontrados", s: "qa-recorrido.md", k: "doc", ic: "i-file" },
+    { id: "d_aud", x: 232, y: 204, t: "Informes", s: "docs/auditorias/", k: "doc", ic: "i-file" },
+    { id: "d_mkt", x: 232, y: 316, t: "Plan de Steam", s: "docs/marketing/", k: "doc", ic: "i-file" },
+    { id: "d_pc", x: 232, y: 400, t: "FPS y capturas", s: "rendimiento-pc.md", k: "doc", ic: "i-file" },
+    { id: "plan", x: 444, y: 204, t: "Planificador", s: "lo anotado → tareas", ic: "i-produccion" },
+    { id: "people", x: 444, y: 420, t: "Nacho y Slatex", s: "deciden lo ⏸", k: "people", ic: "i-users" },
+    { id: "tn", x: 656, y: 150, t: "Tareas del juego", s: "N- y S-", k: "doc", ic: "i-list" },
+    { id: "te", x: 656, y: 300, t: "Tareas expansión", s: "1000 tareas D-", k: "doc", ic: "i-list" },
+    { id: "cons", x: 868, y: 150, t: "Construcción", s: "juego actual, cada hora", ic: "i-hammer", r: ["Construcción A", "Construcción B"] },
+    { id: "dev", x: 868, y: 240, t: "Desarrolladores 1–5", s: "expansión, cada 2–3 h", ic: "i-hammer", r: ["Desarrollador 1", "Desarrollador 2", "Desarrollador 3", "Desarrollador 4", "Desarrollador 5"] },
+    { id: "arte", x: 868, y: 330, t: "Sesión de arte", s: "en la PC, cada 2 h", ic: "i-arte", r: ["Sesión de arte (PC)"] },
+    { id: "pr", x: 1080, y: 150, t: "PR", s: "el cambio propuesto", ic: "i-pr" },
+    { id: "ci", x: 1080, y: 240, t: "Pruebas (CI)", s: "la única puerta", k: "gate", ic: "i-flask" },
+    { id: "main", x: 1080, y: 330, t: "El juego (main)", s: "versión oficial", k: "gate", ic: "i-play" },
   ],
   edges: [
     ["qa", "d_qa"], ["qaexp", "d_qa"], ["aud", "d_aud"], ["rev", "d_aud"], ["mant", "d_aud"], ["lanz", "d_mkt"], ["pcb", "d_pc"],
     ["d_qa", "plan"], ["d_aud", "plan"], ["d_mkt", "plan"], ["d_pc", "plan"],
-    ["plan", "tn"], ["plan", "te"], ["plan", "people", "issue decide-usuario"], ["people", "plan", "responden"],
+    ["plan", "tn"], ["plan", "te"], ["plan", "people", "pregunta"], ["people", "plan", "responden"],
     ["tn", "cons"], ["te", "dev"], ["tn", "arte"], ["te", "arte"],
     ["cons", "pr"], ["dev", "pr"], ["arte", "pr"], ["pr", "ci"], ["ci", "main"],
   ],
@@ -682,128 +981,144 @@ function renderFlow() {
   if (ciOn) { on.add("ci"); on.add("pr"); }
   const decideN = decisions().length; if (decideN) on.add("people");
   const N = Object.fromEntries(FLOW.nodes.map((n) => [n.id, n]));
-  let svg = FLOW.cols.map(([x, l]) => '<text class="col" x="' + x + '" y="30">' + l + "</text>").join("");
+  let svg = FLOW.cols.map(([x, n, l]) => `<text class="col-n" x="${x}" y="32">${n}</text><text class="col" x="${x + 16}" y="32">${l}</text>`).join("");
   for (const [a, b, lbl] of FLOW.edges) {
     const A = N[a], B = N[b]; let d, lx, ly, anchor = "middle";
-    if (A.x === B.x) { // vertical: ida y vuelta en dos carriles
-      const off = a === "people" ? 130 : a === "plan" ? 50 : NW / 2;
+    if (A.x === B.x) {
+      const off = a === "people" ? 136 : a === "plan" ? 50 : NW / 2;
       const [y1, y2] = A.y < B.y ? [A.y + NH, B.y] : [A.y, B.y + NH];
       d = `M${A.x + off},${y1} L${B.x + off},${y2}`; lx = A.x + off + 6; ly = (y1 + y2) / 2 + (a === "people" ? 14 : -4); anchor = "start";
-    } else {
-      const x1 = A.x + NW, y1 = A.y + NH / 2, x2 = B.x, y2 = B.y + NH / 2, mx = (x1 + x2) / 2;
-      d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`; lx = mx; ly = (y1 + y2) / 2 - 6;
-    }
+    } else { const x1 = A.x + NW, y1 = A.y + NH / 2, x2 = B.x, y2 = B.y + NH / 2, mx = (x1 + x2) / 2; d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`; lx = mx; ly = (y1 + y2) / 2 - 6; }
     const active = on.has(a) && (on.has(b) || ["pr", "ci", "main", "d_qa", "d_aud", "d_mkt", "d_pc", "people"].includes(b));
-    svg += '<path class="edge' + (active ? " on" : "") + '" d="' + d + '" marker-end="url(#arr)"/>';
-    if (lbl) svg += '<text class="edge-lbl" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '">' + esc(lbl) + "</text>";
+    svg += `<path class="edge${active ? " on" : ""}" d="${d}" marker-end="url(#arr)"/>`;
+    if (lbl) svg += `<text class="edge-lbl" x="${lx}" y="${ly}" text-anchor="${anchor}">${esc(lbl)}</text>`;
   }
-  svg += '<path class="edge" d="M' + (1070 + NW / 2) + "," + (330 + NH) + " C" + (1070 + NW / 2) + ",540 " + (20 + NW / 2) + ",540 " + (20 + NW / 2) + "," + (372 + NH) + '" marker-end="url(#arr)"/>' +
-    '<text class="edge-lbl" x="640" y="512" text-anchor="middle">cada main nuevo lo vuelven a mirar</text>';
+  svg += `<path class="edge" d="M${1080 + NW / 2},${330 + NH} C${1080 + NW / 2},550 ${20 + NW / 2},550 ${20 + NW / 2},${400 + NH}" marker-end="url(#arr)"/><text class="edge-lbl" x="640" y="526" text-anchor="middle">cada versión nueva la vuelven a mirar</text>`;
   for (const n of FLOW.nodes) {
     const sub = n.id === "people" && decideN ? decideN + " decisiones esperando" : n.s;
-    svg += '<g class="node k-' + (n.k || "r") + (on.has(n.id) ? " on" : "") + '"><rect x="' + n.x + '" y="' + n.y + '" width="' + NW + '" height="' + NH + '" rx="8"/>' +
-      '<text x="' + (n.x + 12) + '" y="' + (n.y + 17) + '">' + esc(n.t) + '</text><text class="sub" x="' + (n.x + 12) + '" y="' + (n.y + 31) + '">' + esc(sub) + "</text></g>";
+    svg += `<g class="node k-${n.k || "r"}${on.has(n.id) ? " on" : ""}"><rect x="${n.x}" y="${n.y}" width="${NW}" height="${NH}" rx="10"/>
+      <use href="#${n.ic}" x="${n.x + 11}" y="${n.y + 13}" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="${n.x + 40}" y="${n.y + 20}">${esc(n.t)}</text><text class="sub" x="${n.x + 40}" y="${n.y + 35}">${esc(sub)}</text></g>`;
   }
-  $("#flow").innerHTML = '<defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--muted)"/></marker></defs>' + svg;
+  $("#flow").innerHTML = `<defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--muted)"/></marker></defs>` + svg;
 }
 
-// ---------- rutinas ----------
+// ---------- horarios ----------
 function renderTimeline() {
   const now = new Date(), from = new Date(now); from.setHours(0, 0, 0, 0); const to = new Date(+from + 864e5);
   const pos = (t) => (100 * (t - from) / 864e5).toFixed(3) + "%";
-  let h = '<div class="hdr">Rutina</div><div class="hdr"><div class="hours">' + [0, 3, 6, 9, 12, 15, 18, 21, 24].map((x) => '<span style="left:' + (100 * x / 24) + '%">' + String(x).padStart(2, "0") + "</span>").join("") + '</div></div><div class="hdr">Próxima · última actividad</div>';
-  for (const r of IDX.routines) {
-    const st = routineStatus(r);
-    const fires = r.cronP ? cronFires(r.cronP, from, to) : [];
-    const ticks = fires.map((f) => {
-      let cls = "";
-      if (f <= now) {
-        const end = new Date(+f + 75 * 60e3);
-        const hit = S.events.some((e) => routineOfBranch(branchOf(e)) === r && new Date(e.created_at) >= new Date(+f - 120e3) && new Date(e.created_at) <= end);
-        const covered = eventsCover(f);
-        cls = st.running && +f === +st.last ? "run" : hit ? "done" : covered && now - f > 75 * 60e3 && !r.paused ? "miss" : "";
-      }
-      return '<span class="tick ' + cls + '" style="left:' + pos(f) + '" title="' + hhmm(f) + '"></span>';
+  const groups = [
+    ["Expansión", "Cinco desarrolladores, cada uno en su carril, cada 2 o 3 horas.", (r) => r.lane],
+    ["Juego actual", "Arreglos y mejoras del juego que ya se juega.", (r) => /^Construcción/.test(r.name)],
+    ["Control y revisión", "Los que miran, prueban y ordenan.", (r) => !r.lane && !/^Construcción/.test(r.name) && r.kind !== "pc"],
+    ["En la PC de Nacho", "Lo que necesita Blender, ComfyUI o la placa de video. Solo corre con la PC prendida.", (r) => r.kind === "pc"],
+  ];
+  const hours = `<div class="hours">${[0, 3, 6, 9, 12, 15, 18, 21, 24].map((x) => `<span style="left:${100 * x / 24}%">${String(x).padStart(2, "0")}</span>`).join("")}</div>`;
+  $("#tl").innerHTML = groups.map(([title, sub, f]) => {
+    const rs = IDX.routines.filter(f); if (!rs.length) return "";
+    const rows = rs.map((r) => {
+      const st = routineStatus(r);
+      const ticks = (r.cronP ? cronFires(r.cronP, from, to) : []).map((t) => {
+        let cls = "";
+        if (r.paused) cls = "off";
+        else if (t <= now) {
+          const hit = S.events.some((e) => routineOfBranch(branchOf(e)) === r && new Date(e.created_at) >= new Date(+t - 120e3) && new Date(e.created_at) <= new Date(+t + 75 * 60e3));
+          cls = st.running && +t === +st.last ? "run" : hit ? "done" : eventsCover(t) && now - t > 75 * 60e3 ? "miss" : "";
+        }
+        return `<span class="tick ${cls}" style="left:${pos(t)}" title="${hhmm(t)}"></span>`;
+      }).join("");
+      const desc = r.lane ? (r.laneTitle || "") : RT[r.name] || r.produces;
+      const right = st.running ? `<span class="chip live"><span class="dot on"></span>trabajando</span><span class="small muted">${st.task?.id ? esc(st.task.id) + " · " : ""}empezó ${ago(st.last)}</span>`
+        : r.paused ? `<span class="chip">pausada</span>` : `<span class="small"><b>${st.next ? hhmm(st.next) : "—"}</b> <span class="muted">${st.next ? "(" + ago(st.next) + ")" : ""}</span></span><span class="small muted">${st.lastAct ? "trabajó " + ago(st.lastAct) : "sin actividad reciente"}</span>`;
+      return `<div class="name">${icon(r.kind === "pc" ? "i-pc" : "i-cloud", "sm")}<span><b>${esc(r.name)}</b><small>${esc(desc)}${r.model ? " · " + esc(r.model) : ""}</small></span></div>
+        <div><div class="lane"><div class="axis"></div>${ticks}<div class="now" style="left:${pos(now)}"></div></div></div>
+        <div style="flex-direction:column;align-items:start;gap:3px">${right}</div>`;
     }).join("");
-    h += '<div class="name"><b>' + esc(r.name) + (r.paused ? ' <span class="chip">pausada</span>' : "") + "</b><small>" + esc((r.kind === "pc" ? "PC · " : "nube · ") + (r.model ? r.model + " · " : "") + r.file) + "</small></div>" +
-      '<div><div class="lane"><div class="axis"></div>' + ticks + '<div class="nowline" style="left:' + pos(now) + '"></div></div></div>' +
-      '<div style="flex-direction:column;align-items:start;gap:2px;font-size:12px"><span>' + (st.running ? '<span class="chip live">trabajando</span>' : r.paused ? "—" : st.next ? hhmm(st.next) + ' <span class="muted">(' + ago(st.next) + ")</span>" : "—") + '</span><span class="muted">' + (st.lastAct ? ago(st.lastAct) : "sin rastro reciente") + (st.openPRs.length ? " · " + st.openPRs.length + " PR" : "") + "</span></div>";
-  }
-  $("#tl").innerHTML = h;
+    return `<div class="tl-group"><div><h3>${title}</h3><p class="muted small">${sub}</p></div><div class="card tl-wrap"><div class="tl"><div class="hdr"></div><div class="hdr">${hours}</div><div class="hdr small muted">Próxima vez</div>${rows}</div></div></div>`;
+  }).join("");
 }
 
-// ---------- agentes ----------
+// ---------- equipo ----------
 function renderAgents(act) {
-  const usedBy = (a) => [...new Set(IDX.routines.filter((r) => r.agents.includes(a)).map((r) => r.name.replace(/ \d$/, " 1–5")))];
+  const usedBy = (a) => [...new Set(IDX.routines.filter((r) => r.agents.includes(a)).map((r) => r.lane ? "Desarrolladores" : r.name))];
   $("#agents").innerHTML = S.data.pillars.map((p) => {
     const list = S.data.agents.filter((a) => a.pillar === p.key); if (!list.length) return "";
-    return '<div class="agent-group"><div class="head"><h3>' + esc(p.title) + '</h3><span class="muted" style="font-size:12px">' + esc(p.about) + '</span></div><div class="agent-grid">' + list.map((a) => {
-      const u = usedBy(a.name);
-      return '<div class="panel agent' + (act.has(a.name) ? " on" : "") + '"><div class="row"><b>' + esc(a.name) + "</b>" + (act.has(a.name) ? '<span class="chip live"><span class="dot on"></span>en uso</span>' : "") + "</div>" +
-        '<div class="stats"><span class="chip ' + (a.model === "Opus" ? "info" : "") + '">' + esc(a.model) + " · " + esc(a.effort) + "</span>" + (a.pc ? '<span class="chip tape">necesita PC</span>' : "") + (a.readonly ? '<span class="chip">solo lectura</span>' : "") + "</div>" +
-        "<p>" + esc(a.summary) + "</p>" + (act.has(a.name) ? '<p style="color:var(--live)">' + esc(act.get(a.name)) + "</p>" : "") +
-        (u.length ? '<p class="mono" style="font-size:11px">' + esc(u.slice(0, 4).join(" · ")) + (u.length > 4 ? " +" + (u.length - 4) : "") + "</p>" : "") + "</div>";
-    }).join("") + "</div></div>";
+    return `<div class="block" style="--pc:${PC[p.key]}"><div class="pill-h"><span class="pbub">${icon("i-" + p.key)}</span><div><h3>${esc(p.title)}</h3><p class="muted small">${esc(p.about)}</p></div></div>
+      <div class="agent-grid">${list.map((a) => {
+        const u = usedBy(a.name), on = act.get(a.name);
+        return `<div class="card agent${on ? " on" : ""}">${av(a.name, on, "lg")}<div class="info"><b>${esc(agName(a.name))}</b><span class="tech">${esc(a.name)}</span>
+          <p>${esc(agLine(a.name))}</p>${on ? `<span class="chip live" style="justify-self:start"><span class="dot on"></span>${esc(on)}</span>` : ""}
+          <div class="chips"><span class="chip ${a.model === "Opus" ? "info" : ""}" title="${a.model === "Opus" ? "Modelo que piensa más" : "Modelo más rápido"}">${esc(a.model)} · ${esc(a.effort || "—")}</span>${a.pc ? `<span class="chip tape" title="Necesita Blender o ComfyUI">necesita la PC</span>` : ""}${a.readonly ? `<span class="chip" title="Revisa pero no cambia nada">solo mira</span>` : ""}</div>
+          ${u.length ? `<p class="small" style="margin-top:4px">Lo llaman: ${esc(u.slice(0, 3).join(", "))}${u.length > 3 ? " y " + (u.length - 3) + " más" : ""}</p>` : ""}</div></div>`;
+      }).join("")}</div></div>`;
   }).join("");
 }
 
 // ---------- actividad ----------
 function describe(e) {
-  const b = branchOf(e), r = routineOfBranch(b), who = r ? r.name : b === "main" ? "main" : e.actor.login;
-  const t = taskOf(b); const tt = t?.id ? '<span class="id">' + esc(t.id) + "</span> " : "";
+  const b = branchOf(e), r = routineOfBranch(b), who = esc(r ? r.name : b === "main" ? "main" : e.actor.login);
+  const t = taskOf(b), tt = t?.title ? `<b>${esc(t.title)}</b> <span class="id">${esc(t.id)}</span>` : `<span class="id">${esc(b)}</span>`;
   switch (e.type) {
-    case "CreateEvent": return e.payload.ref_type === "branch" ? "<b>" + esc(who) + "</b> reclamó " + tt + '<span class="mono muted">' + esc(b) + "</span>" : null;
-    case "DeleteEvent": return null;
-    case "PushEvent": return b === "main" ? "Se mezcló a <b>main</b>" : "<b>" + esc(who) + "</b> subió cambios a " + tt + '<span class="mono muted">' + esc(b) + "</span>";
+    case "CreateEvent": return e.payload.ref_type === "branch" ? ["tape", "i-flag", `<b>${who}</b> tomó ${tt}`] : null;
+    case "PushEvent": return b === "main" ? ["live", "i-play", "Entró un cambio a la versión oficial"] : ["", "i-pulse", `<b>${who}</b> avanzó en ${tt}`];
     case "PullRequestEvent": {
-      const p = prByNum(e.payload.number); const title = p ? esc(p.title) : "#" + e.payload.number;
-      const verb = { opened: "abrió", merged: "mezcló", closed: p?.merged_at ? "mezcló" : "cerró", reopened: "reabrió", synchronize: "actualizó" }[e.payload.action] || e.payload.action;
-      return "<b>" + esc(who) + "</b> " + verb + ' <a href="' + GH + "/pull/" + e.payload.number + '" target="_blank" rel="noopener">PR #' + e.payload.number + "</a> · " + title;
+      const p = prByNum(e.payload.number), title = p ? esc(p.title) : "#" + e.payload.number;
+      const merged = e.payload.action === "merged" || (e.payload.action === "closed" && p?.merged_at);
+      const verb = merged ? "metió al juego" : { opened: "propuso", closed: "descartó", reopened: "reabrió" }[e.payload.action] || e.payload.action;
+      return [merged ? "live" : "info", merged ? "i-merge" : "i-pr", `<b>${who}</b> ${verb} <a href="${GH}/pull/${e.payload.number}" target="_blank" rel="noopener">${title}</a>`];
     }
-    case "IssuesEvent": return "Issue " + (e.payload.action === "opened" ? "abierto" : e.payload.action === "closed" ? "cerrado" : e.payload.action) + ': <a href="' + esc(e.payload.issue.html_url) + '" target="_blank" rel="noopener">' + esc(e.payload.issue.title) + "</a>";
-    case "IssueCommentEvent": return "Comentario en " + '<a href="' + esc(e.payload.comment.html_url) + '" target="_blank" rel="noopener">#' + e.payload.issue.number + "</a> · " + esc(e.payload.issue.title);
+    case "IssuesEvent": return ["tape", "i-ask", `Pregunta ${e.payload.action === "opened" ? "nueva" : e.payload.action === "closed" ? "respondida" : e.payload.action}: <a href="${esc(e.payload.issue.html_url)}" target="_blank" rel="noopener">${esc(e.payload.issue.title)}</a>`];
+    case "IssueCommentEvent": return ["", "i-chat", `Comentario en <a href="${esc(e.payload.comment.html_url)}" target="_blank" rel="noopener">${esc(e.payload.issue.title)}</a>`];
     default: return null;
   }
 }
 function renderActivity() {
-  $("#feed").innerHTML = S.events.map((e) => { const d = describe(e); return d ? "<li><time>" + hhmm(new Date(e.created_at)) + "</time><span>" + d + "</span></li>" : ""; }).join("") || '<li class="empty">Sin eventos todavía.</li>';
-  const open = S.pulls.filter((p) => p.state === "open");
-  $("#pr-count").textContent = open.length; $("#pr-count").className = "count" + (open.length ? "" : " zero");
-  $("#prs").innerHTML = open.map((p) => { const st = prState(p), r = routineOfBranch(p.head.ref);
-    return '<li><span class="id">#' + p.number + '</span><span class="t"><a href="' + esc(p.html_url) + '" target="_blank" rel="noopener">' + esc(p.title) + "</a><small>" + esc((r ? r.name : p.user.login) + " · " + ago(p.created_at)) + '</small></span><span class="chip ' + st.cls + '">' + st.label + "</span></li>"; }).join("") || '<li class="empty">Ninguno.</li>';
+  const items = []; let lastDay = "";
+  for (const e of S.events) {
+    const d = describe(e); if (!d) continue;
+    const dt = new Date(e.created_at), day = dt.toLocaleDateString("es-AR", { weekday: "long", day: "numeric" });
+    if (day !== lastDay) { items.push(`<li class="day"><span class="eyebrow">${esc(day)}</span></li>`); lastDay = day; }
+    items.push(`<li><time>${hhmm(dt)}</time><span class="fi ${d[0]}">${icon(d[1], "sm")}</span><span class="tx">${d[2]}</span></li>`);
+    if (items.length > 120) break;
+  }
+  $("#feed").innerHTML = items.join("") || `<li class="day"><span class="muted">Todavía no hay eventos.</span></li>`;
   $("#runs").innerHTML = S.runs.filter((r) => r.name === "Tests").slice(0, 8).map((r) => {
-    const cls = r.status !== "completed" ? "info" : r.conclusion === "success" ? "live" : "bad";
-    const lbl = r.status !== "completed" ? "corriendo" : r.conclusion === "success" ? "verde" : r.conclusion === "cancelled" ? "cancelado" : "rojo";
-    return '<li><span class="id">' + hhmm(new Date(r.created_at)) + '</span><span class="t"><a href="' + esc(r.html_url) + '" target="_blank" rel="noopener">' + esc(r.display_title) + '</a><small class="mono">' + esc(r.head_branch) + '</small></span><span class="chip ' + cls + '">' + lbl + "</span></li>";
-  }).join("") || '<li class="empty">Sin corridas.</li>';
-  $("#notes").innerHTML = (S.data.notes || []).slice(0, 6).map((n) => '<li><span class="id">' + esc(n.date.slice(5)) + '</span><span class="t"><a href="' + GH + "/blob/main/docs/avisos/" + esc(n.file) + '" target="_blank" rel="noopener">' + esc(n.title) + "</a></span><span></span></li>").join("");
+    const [cls, lbl] = r.status !== "completed" ? ["info", "corriendo"] : r.conclusion === "success" ? ["live", "pasó"] : r.conclusion === "cancelled" ? ["", "cancelada"] : ["bad", "falló"];
+    const who = r.head_branch === "main" ? "versión oficial" : routineOfBranch(r.head_branch)?.name || r.head_branch;
+    return `<li><span class="id">${hhmm(new Date(r.created_at))}</span><span><a href="${esc(r.html_url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(r.display_title)}</a><small>${esc(who)}</small></span><span class="chip ${cls}">${lbl}</span></li>`;
+  }).join("") || `<li><span></span><span class="muted">Sin datos todavía.</span><span></span></li>`;
+  $("#notes").innerHTML = (S.data.notes || []).slice(0, 6).map((n) => `<li><span class="id">${esc(n.date.slice(8))}/${esc(n.date.slice(5, 7))}</span><span><a href="${GH}/blob/main/docs/avisos/${esc(n.file)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(n.title)}</a></span><span></span></li>`).join("");
 }
 
-// ---------- vistas, tema, token ----------
+// ---------- vistas, tema, token, ayuda ----------
 function route() {
-  const v = (location.hash || "#pilares").slice(1);
-  const known = [...document.querySelectorAll("section[data-view]")].map((s) => s.dataset.view);
-  const view = known.includes(v) ? v : "pilares";
+  const v = (location.hash || "#inicio").slice(1);
+  const views = [...document.querySelectorAll("section[data-view]")].map((s) => s.dataset.view);
+  const view = views.includes(v) ? v : "inicio";
   for (const s of document.querySelectorAll("section[data-view]")) s.hidden = s.dataset.view !== view;
   for (const a of document.querySelectorAll("nav a")) if (a.getAttribute("href") === "#" + view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
 }
-window.addEventListener("hashchange", route);
-$("#pillars").addEventListener("click", (e) => { const b = e.target.closest("[data-pillar]"); if (b) openDrawer(b.dataset.pillar); });
-$("#pillars").addEventListener("keydown", (e) => { const b = e.target.closest("[data-pillar]"); if (b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDrawer(b.dataset.pillar); } });
+window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
+document.addEventListener("click", (e) => {
+  const q = e.target.closest("[data-term]"); if (q) { openDrawer("gloss", q.dataset.term); return; }
+  const t = e.target.closest("[data-to]"); if (t) { $("#" + t.dataset.to)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  const p = e.target.closest("[data-pillar]"); if (p && !e.target.closest("a")) openDrawer("pillar", p.dataset.pillar);
+});
+$("#pillars").addEventListener("keydown", (e) => { const b = e.target.closest("[data-pillar]"); if (b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDrawer("pillar", b.dataset.pillar); } });
 $("#scrim").addEventListener("click", closeDrawer);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && openPillar) closeDrawer(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && openKind) closeDrawer(); });
+$("#help-btn").onclick = () => openDrawer("gloss");
 function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
 applyTheme(store.get("tmp-theme"));
-$("#theme-btn").onclick = () => {
-  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  const next = cur === "dark" ? "light" : "dark"; applyTheme(next); store.set("tmp-theme", next);
-};
+$("#theme-btn").onclick = () => { const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); const n = cur === "dark" ? "light" : "dark"; applyTheme(n); store.set("tmp-theme", n); };
 $("#token-btn").onclick = () => { $("#tokenbox").hidden = !$("#tokenbox").hidden; $("#token-in").value = store.get("tmp-token") || ""; };
-$("#token-save").onclick = () => { const v = $("#token-in").value.trim(); store.set("tmp-token", v || null); $("#tokenbox").hidden = true; S.tick = 0; poll(); };
+$("#token-save").onclick = () => { store.set("tmp-token", $("#token-in").value.trim() || null); $("#tokenbox").hidden = true; S.tick = 0; poll(); };
 $("#token-clear").onclick = () => { store.set("tmp-token", null); $("#token-in").value = ""; $("#tokenbox").hidden = true; };
+if (!store.get("tmp-intro-ok")) $("#intro").hidden = false;
+$("#intro-close").onclick = () => { $("#intro").hidden = true; store.set("tmp-intro-ok", "1"); };
 
 route(); loadData(); poll();
-setInterval(() => { if (S.data) { attribute(); const act = activeAgents(); renderNow(act); renderTimeline(); } $("#live-txt").textContent = S.ok ? "en vivo · " + ago(S.lastPoll) : S.err || "conectando…"; }, 15000);
+setInterval(() => { if (S.data && !document.hidden) render(); }, 20000);
 </script>
 </body>
 </html>
