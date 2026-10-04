@@ -81,6 +81,7 @@ del mapa.
 **Hecho cuando:** el test pasa.
 
 ### D-0206 · Guardado de empresa versionado — A · Opus 5.5 · xhigh · Aviso: sí (`modules/persistence/`) · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `company_save.gd` (`CompanySave`: `save`/`load_into`/`migrate` sobre `SafeJson`, `user://saves/company/<slot>.json`, versión 1, `MIGRATIONS` vacía); `test_company_save`. Engancharlo al cierre del día y al menú queda para D-0203/D-0214.
 **Depende de:** D-0202
 **Qué:** `scripts/core/company/company_save.gd`. Usa `SafeJson` (`modules/persistence/safe_json.gd`) como
 `CrewProgression`.
@@ -88,10 +89,10 @@ del mapa.
   `MIGRATIONS = {1: Callable}` (se aplica en orden, del save viejo al nuevo).
 - **Escritura atómica:** escribir en `.tmp` y renombrar.
 - **Cuándo guarda:** al `SUMMARY` del día y al salir al menú. Nunca a mitad de día en F1 (D-0236 lo amplía).
-- [ ] **D-0206.1** Guardar y cargar con `CompanyState.to_dict/from_dict`.
-- [ ] **D-0206.2** Migración de prueba v1 → v2 (agrega un campo con valor por defecto) dentro del test,
+- [x] **D-0206.1** Guardar y cargar con `CompanyState.to_dict/from_dict`.
+- [x] **D-0206.2** Migración de prueba v1 → v2 (agrega un campo con valor por defecto) dentro del test,
   sin dejarla en el código de producción.
-- [ ] **D-0206.3** `test_company_save`:
+- [x] **D-0206.3** `test_company_save`:
   - ida y vuelta igual;
   - un archivo corrupto no rompe y devuelve una empresa nueva con aviso;
   - un save v1 migra;
