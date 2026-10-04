@@ -36,7 +36,8 @@ func _run() -> void:
 	_expect(not music.playing, "The world is heard first when entering the level")
 	_expect(not (music.stream as AudioStreamOggVorbis).loop, "The song can finish instead of looping forever")
 	var full_level: float = music.stream.get_length() - music_script.FADE_IN_SECONDS - music_script.FADE_OUT_SECONDS
-	_expect(full_level >= 15.0, "The phrase plays at full level for 15 s or more between its fades (%.1f s)" % full_level)
+	_expect(full_level >= 15.0,
+		"The phrase plays at full level for 15 s or more between its fades (%.1f s)" % full_level)
 	# N-408: the first phrase comes in as the menu's theme fades under the
 	# loading screen, not after 20-35 s of silence.
 	music.call(&"_process", 1.4)
