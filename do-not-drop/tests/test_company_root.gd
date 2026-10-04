@@ -7,6 +7,8 @@ extends SceneTree
 ## - there is one slab per data/zones/*.tres (nine) and a shed with its floor and
 ##   three walls, all with collision;
 ## - the local player stands inside the shed, on the floor;
+## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
+##   and holds its stock (a client would wait for the host's snapshot instead);
 ## - the main menu knows the scene, the --mode=company flag and has the button.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -26,6 +28,12 @@ func _run() -> void:
 	await process_frame
 	await physics_frame
 	_expect(bool(state.call(&"is_active")), "Entering the root switches the company on")
+	var net: CompanyNet = level.get_node_or_null(^"CompanyNet") as CompanyNet
+	_expect(net != null and net == level.get(&"net"), "The root has its CompanyNet child (D-2003)")
+	if net != null:
+		var stock: Inventory = state.call(&"stock")
+		_expect(net.inventory.to_dict() == stock.to_dict() and not net.awaiting_snapshot(),
+			"Solo counts as host: CompanyNet starts from the company's stock, not waiting for a snapshot")
 
 	var zone_files: int = 0
 	for file: String in DirAccess.get_files_at("res://data/zones/"):

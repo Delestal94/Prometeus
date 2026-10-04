@@ -41,6 +41,7 @@ Todos en `scripts/core/company/company_tuning.gd` o en los `.tres`, nunca suelto
 | Reputación inicial | 50 (0-100) |
 | Proveedor | 1 camión por día a las 08:30 con lo pedido el día anterior; espera 3 h de juego en la dársena |
 | Palet | hasta 24 unidades de un mismo producto |
+| En la mano | hasta 4 unidades de un mismo producto (`HAND_MAX_UNITS`, D-2003; lo ajusta el picking, D-0609) |
 
 ## Calidad del armado → trampa (base de D-0709 y D-0710)
 

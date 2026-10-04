@@ -35,6 +35,7 @@ Si se pasa: lista de culpables, en orden.
 **Hecho cuando:** los números están medidos y anotados con commit y fecha.
 
 ### D-2003 · Eventos de negocio por RPC confiable con número de secuencia — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `company_net.gd` (`CompanyNet`, hijo de `CompanyRoot`): `_request` / `_apply_event` con `seq` / `_rejected`, `units_take`, `units_store` y `snapshot_request`; protocolo 29; `test_company_net`. Snapshot en D-2004.
 **Depende de:** D-2001, D-0210, D-0211
 **Qué:** `scripts/core/company/company_net.gd` (hijo de `CompanyWorld`), con un solo RPC
 `_apply_event(seq: int, kind: StringName, data: Dictionary)` (reliable, host → todos) y un RPC
