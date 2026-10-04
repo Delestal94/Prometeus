@@ -21,7 +21,7 @@
 | D-0111 | ✅ Definir el corte vertical F1 exacto (contenido, pantallas, qué queda gris) y su criterio de cierre medible | planificador-tareas | high | `diseno/corte-vertical.md` con lista cerrada y benchmark de cierre |
 | D-0112 | Pasada de `critico-diseno` a toda la expansión contra la capacidad del equipo; recortes propuestos | critico-diseno | high | informe en `diseno/critica-alcance.md` con lista de recortes |
 | D-0113 | ✅ Recortes los aplica D-0112, sin tocar nada de lo que nombró el usuario | — | — | decidido |
-| D-0114 | Tabla de distritos definitiva (orden, vehículo, peligros, desbloqueo, cantidad de casas, largo de ruta en minutos) | critico-diseno | medium | `diseno/distritos.md` reemplaza la tabla del README |
+| D-0114 | ✅ Tabla de distritos definitiva (orden, vehículo, peligros, desbloqueo, cantidad de casas, largo de ruta en minutos) | critico-diseno | medium | `diseno/distritos.md` reemplaza la tabla del README |
 | D-0115 | Tabla de vehículos definitiva (asientos, carga, velocidad, quién maneja, qué trampa amplifica) | critico-diseno | medium | `diseno/flota.md` |
 | D-0116 | ✅ Catálogo inicial de productos: 40 productos con tamaño, peso, fragilidad, temperatura, precio y distrito | constructor-progresion | medium | `diseno/catalogo-productos.md` con los 40 |
 | D-0117 | ✅ Modelo económico en papel: ingresos por pedido, costos, sueldos, precios de máquinas; curva de 20 días | constructor-progresion | high | `diseno/economia.md` con hoja y curva; `sim_economy` (D-0540) la reproduce |

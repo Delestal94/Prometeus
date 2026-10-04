@@ -115,6 +115,7 @@ en las tablas de grupo lo que se recorte.
 **Hecho cuando:** el issue está abierto.
 
 ### D-0114 · Tabla de distritos definitiva — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/distritos.md`: 9 zonas con vehículos, peligros, casas, ruta, clima, envío y apertura.
 **Depende de:** D-0101
 **Qué:** `diseno/distritos.md`. Por distrito:
 - vehículos permitidos y peligros (los existentes por nombre de clase: `ChasingDog`, `MudSpot`,

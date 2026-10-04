@@ -55,6 +55,8 @@ montañas). No hay pantallas de carga entre zonas.
 | 7 | **Nieve** (pueblo de esquí y cumbre) | 4x4 con cadenas, avioneta con esquís | hielo, frío en la carga, avalanchas, ventisca | **equipo**: cadenas + abrigo |
 | 8 | **Volcán** | 4x4 hasta la base; avioneta (paracaídas) a la cumbre | calor, lava, ceniza, temblores | **equipo**: traje térmico + cajas térmicas, y hito final |
 
+La tabla definitiva (casas por salida, largo de ruta, clima, envío) está en [diseno/distritos.md](diseno/distritos.md).
+
 ## Fases (el orden importa más que el número de tareas)
 
 | Fase | Objetivo | Grupos (núcleo primero) |
