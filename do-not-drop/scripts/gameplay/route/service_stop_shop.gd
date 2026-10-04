@@ -21,10 +21,10 @@ class_name ServiceStopShop
 ## Autoloads are looked up by path, not by name: this script is loaded through
 ## a chain that a test may compile before the autoloads exist. The network and
 ## the vote are typed by their module classes (NetSession, CoopVote: neither
-## names an autoload). CrewProgression, RunManager and VehicleFaults stay plain
-## nodes: their scripts name autoloads, so typing them here would compile them
-## before the autoloads exist (see PackageAutoloads, N-224.4). The stop stays a
-## plain node too: ServiceStop preloads this script.
+## names an autoload), the stop and its counter by ServiceStop and ServiceCounter.
+## CrewProgression, RunManager and VehicleFaults stay plain nodes: their scripts
+## name autoloads, so typing them here would compile them before the autoloads
+## exist (see PackageAutoloads, N-224.4).
 
 ## Stamped on every offer, so the depot panel and other stops leave them alone.
 const VENUE: StringName = &"service_stop"
@@ -104,9 +104,9 @@ func vote_is_mine() -> bool:
 ## Whether the crew is shopping here: the truck in the lay-by or a player
 ## within CREW_REACH of the counter.
 func crew_at_station() -> bool:
-	var stop: Node = get_parent()
+	var stop: ServiceStop = _stop()
 	var truck: Node3D = get_tree().get_first_node_in_group(&"vehicle") as Node3D
-	if stop != null and truck != null and bool(stop.call(&"in_bay", truck.global_position)):
+	if stop != null and truck != null and stop.in_bay(truck.global_position):
 		return true
 	var counter: Node3D = _counter()
 	if counter == null:
@@ -120,10 +120,10 @@ func crew_at_station() -> bool:
 ## Whether this peer's own player has walked away from the counter (further
 ## than `reach`): its open panel closes then.
 func local_player_away(reach: float) -> bool:
-	var counter: Node3D = _counter()
-	if counter == null or not counter.has_method(&"local_player"):
+	var counter: ServiceCounter = _counter()
+	if counter == null:
 		return false
-	var player: Node3D = counter.call(&"local_player") as Node3D
+	var player: Node3D = counter.local_player() as Node3D
 	return player != null and player.global_position.distance_to(counter.global_position) > reach
 
 
@@ -198,7 +198,7 @@ func open_for_crew(peer: int = 0) -> void:
 	if votes == null:
 		return
 	if not vote_is_mine():
-		votes.call(&"open_shop", offers())
+		votes.open(offers())
 	elif peer > 0:
 		votes.send_state_to(peer)
 
@@ -250,7 +250,7 @@ func _hand_over(id: StringName, amount: int) -> bool:
 		if manager != null:
 			manager.call(&"consume_care_supply", id, -amount)
 		return false
-	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults")
+	var faults: Node = _faults()
 	if faults == null:
 		return false
 	faults.call(&"stock_spares", _spares() + 1)
@@ -274,7 +274,7 @@ func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 func _reopen_vote() -> void:
 	var votes: CoopVote = _votes()
 	if votes != null and not votes.active and _run_going() and crew_at_station():
-		votes.call(&"open_shop", offers())
+		votes.open(offers())
 
 
 ## The station goes (Endless culls it behind the truck): a vote still open on
@@ -342,8 +342,13 @@ func _kit_start() -> Dictionary:
 
 
 func _spares() -> int:
-	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults") if is_inside_tree() else null
+	var faults: Node = _faults()
 	return int(faults.get(&"spares")) if faults != null else 0
+
+
+## The truck's faults (the node in the group `vehicle_faults`), null outside the tree.
+func _faults() -> Node:
+	return get_tree().get_first_node_in_group(&"vehicle_faults") if is_inside_tree() else null
 
 
 func _run_going() -> bool:
@@ -372,15 +377,20 @@ func _network() -> NetSession:
 	return _autoload(&"NetworkManager") as NetSession
 
 
-## The ShopVoteManager autoload as the vote class it extends; `open_shop` is the
-## game's own (ShopVoteManager has no class name), so it stays a call by name.
+## The ShopVoteManager autoload as the vote class it extends: its `open_shop` is
+## only `open`, so the module's own method is called.
 func _votes() -> CoopVote:
 	return _autoload(&"ShopVoteManager") as CoopVote
 
 
-func _counter() -> Node3D:
-	var stop: Node = get_parent()
-	return stop.get(&"counter") as Node3D if stop != null else null
+## The station this counter belongs to (its parent), null for anything else.
+func _stop() -> ServiceStop:
+	return get_parent() as ServiceStop
+
+
+func _counter() -> ServiceCounter:
+	var stop: ServiceStop = _stop()
+	return stop.counter if stop != null else null
 
 
 func _autoload(autoload_name: StringName) -> Node:

@@ -47,7 +47,8 @@ const COSMETIC_AT := Vector3(23.0, 0.1, 6.5)
 var ground_y: float = -0.3
 ## Anchor for N-311: a Marker3D, also in the group &"hidden_cosmetic_spot".
 var hidden_cosmetic_spot: Marker3D
-var counter: Node
+## The counter the crew walks up to (ServiceCounter: the shop reads its `local_player()`).
+var counter: ServiceCounter
 var shop: Node
 
 
@@ -61,7 +62,7 @@ func _ready() -> void:
 	add_child(shop)
 	counter = COUNTER.new()
 	counter.name = "Counter"
-	counter.set(&"shop", shop)
+	counter.shop = shop
 	counter.position = Vector3(16.2, ground_y + 1.15, -1.2)
 	add_child(counter)
 	hidden_cosmetic_spot = Marker3D.new()
