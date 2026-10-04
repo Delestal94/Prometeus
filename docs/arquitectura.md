@@ -122,6 +122,7 @@ marca: `UiTheme`, `RoutePlanner`, los tramos con modelos, `RouteDresser`, `Route
 | `GameSettings` | Preferencias locales persistentes de controles, audio y cámara. Extiende `SettingsStore` (módulo `settings_store`): el archivo, el idioma, las teclas y los buses viven ahí. | Registrado |
 | `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. | **No existe aún** — el flujo de menú/nivel hoy lo maneja `main_menu.gd` + `get_tree().change_scene_to_file()`, sin autoload propio. |
 | `UnlockManager` | Progreso meta local, desbloqueos y elecciones de uniforme/vehículo/pintura; guarda JSON versionado en `user://unlock_progress.json`. | Registrado |
+| `CompanyState` | Estado persistente del modo Empresa (plata, día, reloj, reputación, bloqueos, flota, empleados, layout, stock); `is_active()` es falso fuera de ese modo. Sus números están en `CompanyTuning` (`company_tuning.gd`). Detalle en la sección 10. | Registrado (D-0202); el guardado es D-0206 |
 | `AudioManager` | Reproducción centralizada de música/SFX. | **No existe aún** — la música y los efectos dinámicos actuales viven en scripts de presentación. |
 
 Ninguno de estos conoce los detalles internos de los otros — se comunican por señales

@@ -17,9 +17,13 @@ extends SceneTree
 ##   RunManager, CrewProgression, RescueHook and VehicleFaults, which name the
 ##   EventBus autoload, so they failed to compile and /root/RunManager ran with
 ##   no script (N-919.2). Those scripts must still compile here.
+## - It reaches CompanyState statically too (the _COMPANY const, D-0202.3): the
+##   company autoload sits after UnlockManager and must not drag a UI class or
+##   another autoload into a --script tree, so the autoloads survive it.
 
 const _HOUSE := preload("res://scripts/gameplay/route/delivery_house.gd")
 const _DEPOT := preload("res://scripts/gameplay/depot/depot.gd")
+const _COMPANY := preload("res://scripts/core/company/company_state.gd")
 const EVENT_BUS_USERS: Array[String] = [
 	"res://scripts/core/run_manager.gd",
 	"res://scripts/core/crew_progression.gd",
@@ -75,8 +79,22 @@ func _run() -> void:
 		"The RunManager autoload keeps its script (got %s)"
 		% (run_manager.get_script() if run_manager != null else "no node"))
 
+	# --- the company autoload keeps its script and the others survive it ---
+	var company_script: Script = _COMPANY
+	_expect(company_script != null and company_script.can_instantiate(),
+		"company_state.gd compiles in a --script run that names it")
+	for autoload_name: StringName in [&"EventBus", &"NetworkManager", &"UnlockManager",
+			&"CompanyState", &"ProximityVoice", &"RunTelemetry"]:
+		var autoload: Node = root.get_node_or_null(NodePath(autoload_name))
+		_expect(autoload != null and autoload.get_script() != null,
+			"The %s autoload keeps its script when CompanyState is named" % autoload_name)
+	var company: Node = root.get_node_or_null(^"CompanyState")
+	_expect(company != null and not company.is_active(),
+		"CompanyState is inactive in a plain --script run")
+
 	if _failures == 0:
-		print("PASS: HUD and RunManager keep their scripts in a --script run; care card EDGE_MARGIN matches the HUD's")
+		print("PASS: HUD, RunManager and CompanyState keep their scripts in a --script run; "
+			+ "care card EDGE_MARGIN matches the HUD's")
 	quit(_failures)
 
 

@@ -2,8 +2,8 @@ class_name Inventory
 extends RefCounted
 ## Stock of the company by product and location (expansion D-0211).
 ##
-## Pure data, no node and no autoload: the host owns the one instance (D-0202's
-## CompanyState will hold it) and the clients only mirror it (D-0619). Units
+## Pure data, no node and no autoload: the host owns the one instance (CompanyState
+## stores it in its to_dict() form, D-0202) and the clients only mirror it (D-0619). Units
 ## are never created or destroyed except by receive() (supplier delivery) and
 ## consume() (delivered or broken), so a move can never duplicate or lose one.
 ##

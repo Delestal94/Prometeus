@@ -18,6 +18,7 @@
 **Hecho cuando:** la sección existe, y `auditor-red` la leyó sin hallazgos de autoridad.
 
 ### D-0202 · Autoload `CompanyState` y `company_tuning.gd` — A · Opus 5.5 · xhigh · Aviso: sí (`project.godot` autoloads) · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `company_state.gd` (autoload tras `UnlockManager`), `company_tuning.gd` (`class_name CompanyTuning`, todos los números de supuestos.md); `Order`, `Pallet` y `ProductDefinition` leen de ahí; `test_company_state` y `test_hud_script_loads` ampliado.
 **Depende de:** D-0201
 **Qué:**
 - `scripts/core/company/company_state.gd`, autoload `CompanyState` registrado después de
@@ -30,10 +31,10 @@
 - `scripts/core/company/company_tuning.gd` con **todos** los números de [supuestos.md](supuestos.md)
   como `const`.
 - No nombrar `Hud` ni clases de UI (lección N-919).
-- [ ] **D-0202.1** Autoload y tuning.
-- [ ] **D-0202.2** `test_company_state`: `new_company` → plata 500, día 1, reputación 50. `to_dict` →
+- [x] **D-0202.1** Autoload y tuning.
+- [x] **D-0202.2** `test_company_state`: `new_company` → plata 500, día 1, reputación 50. `to_dict` →
   `from_dict` devuelve lo mismo. `is_active()` falso al arrancar Entrega.
-- [ ] **D-0202.3** Extender `test_hud_script_loads` para que un `--script` que nombra `CompanyState` no pierda autoloads.
+- [x] **D-0202.3** Extender `test_hud_script_loads` para que un `--script` que nombra `CompanyState` no pierda autoloads.
 **Hecho cuando:** los dos tests pasan y la batería de CI sigue verde.
 
 ### D-0203 · `DayCycle`: apertura, operación y cierre — A · Opus 5.5 · high · Aviso: sí (`event_bus.gd`) · F0

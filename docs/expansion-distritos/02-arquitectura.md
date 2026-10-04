@@ -9,7 +9,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-0201 | ✅ Documento de arquitectura de la expansión (capas: empresa persistente → día → entrega; quién es autoridad) | Plan | xhigh | sección "Expansión" en `docs/arquitectura.md` con diagrama |
-| D-0202 | Autoload `CompanyState` (plata, día, reputación, desbloqueos, flota, empleados) separado de `RunManager` | constructor-progresion | xhigh | autoload compila; test `test_company_state` crea, modifica y serializa |
+| D-0202 | ✅ Autoload `CompanyState` (plata, día, reputación, desbloqueos, flota, empleados) separado de `RunManager` | constructor-progresion | xhigh | autoload compila; test `test_company_state` crea, modifica y serializa |
 | D-0203 | `DayCycle`: estados del día (apertura, operación, cierre) con señales en `EventBus` | constructor-progresion | high | test `test_day_cycle` recorre los tres estados y emite las señales |
 | D-0204 | ✅ Recurso `ProductDefinition` (.tres): id, malla, tamaño, peso, fragilidad, temperatura, precio | constructor-negocio | medium | 5 productos de prueba cargan; test valida campos |
 | D-0205 | ✅ Recurso `DistrictDefinition` (.tres): id, escena, vehículos permitidos, peligros, condición de desbloqueo | constructor-mundo | medium | Barrio Centro y Campo definidos; test los carga |

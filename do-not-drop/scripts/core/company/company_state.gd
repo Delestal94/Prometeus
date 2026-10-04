@@ -1,0 +1,171 @@
+extends Node
+## Persistent state of the company ("Modo Empresa", expansion D-0202).
+##
+## Layer 1 of docs/arquitectura.md section 10: money, day, clock, reputation,
+## opened gates, fleet, employees, milestones, shed layout and stock. The host
+## owns it (a client holds a mirror fed by the host's snapshot, D-0219 / D-2001)
+## and no RPC lives here. It is simulation only: no node besides this autoload,
+## no UI class and no other autoload (lesson N-919, so a --script run can name
+## it). Delivery and Endless ignore it: is_active() stays false until
+## new_company() or from_dict() switches it on, and reset() switches it off.
+##
+## Money of the company lives here; CrewProgression.team_money stays the money
+## of Delivery and Endless (S8). The file format and slots are D-0206.
+
+var money: int = CompanyTuning.STARTING_MONEY
+var day: int = CompanyTuning.STARTING_DAY
+## Game minutes since midnight (08:00 = 480).
+var clock_minutes: int = CompanyTuning.DAY_START_MIN
+var reputation: float = CompanyTuning.STARTING_REPUTATION
+## zone id -> reputation 0-100 in that zone.
+var district_reputation: Dictionary = {}
+var opened_gates: Array[StringName] = []
+var fleet: Array[Dictionary] = []
+var employees: Array[Dictionary] = []
+var milestones_done: Array[StringName] = []
+## Shed layout: one entry per placed piece.
+var layout: Array[Dictionary] = []
+## Stock, in the Inventory.to_dict() form (use stock() / store_stock()).
+var inventory: Dictionary = {}
+var company_name: String = ""
+
+var _active: bool = false
+
+
+func _init() -> void:
+	_set_defaults()
+
+
+## True only while a company is loaded: false at boot and outside Company mode.
+func is_active() -> bool:
+	return _active
+
+
+## Starts a fresh company with the starting money, day, clock and reputation.
+func new_company(new_name: String = "") -> void:
+	_set_defaults()
+	company_name = new_name
+	_active = true
+
+
+## Back to the boot state: defaults and inactive. Call it on leaving Company mode.
+func reset() -> void:
+	_set_defaults()
+	_active = false
+
+
+## Everything a save or a snapshot needs. Deep copy: changing it changes nothing here.
+func to_dict() -> Dictionary:
+	return {
+		"company_name": company_name,
+		"money": money,
+		"day": day,
+		"clock_minutes": clock_minutes,
+		"reputation": reputation,
+		"district_reputation": district_reputation.duplicate(true),
+		"opened_gates": opened_gates.duplicate(),
+		"fleet": fleet.duplicate(true),
+		"employees": employees.duplicate(true),
+		"milestones_done": milestones_done.duplicate(),
+		"layout": layout.duplicate(true),
+		"inventory": inventory.duplicate(true),
+	}
+
+
+## Loads what to_dict() wrote, also after a JSON round trip (ids come back as
+## String, numbers as float). A missing or malformed field takes its default and
+## numbers are clamped to their range. An empty dictionary loads nothing and
+## returns false; otherwise the company becomes active and it returns true.
+func from_dict(data: Dictionary) -> bool:
+	if data.is_empty():
+		return false
+	_set_defaults()
+	company_name = str(data.get("company_name", ""))
+	money = int(_num(data.get("money"), CompanyTuning.STARTING_MONEY))
+	day = maxi(int(_num(data.get("day"), CompanyTuning.STARTING_DAY)), 1)
+	clock_minutes = clampi(
+		int(_num(data.get("clock_minutes"), CompanyTuning.DAY_START_MIN)),
+		0,
+		CompanyTuning.MINUTES_PER_DAY - 1
+	)
+	reputation = _clamp_reputation(_num(data.get("reputation"), CompanyTuning.STARTING_REPUTATION))
+	var by_zone: Variant = data.get("district_reputation", {})
+	if by_zone is Dictionary:
+		for zone: Variant in by_zone:
+			if _is_id(zone) and _is_num(by_zone[zone]):
+				district_reputation[StringName(zone)] = _clamp_reputation(float(by_zone[zone]))
+	opened_gates = _ids(data.get("opened_gates", []))
+	milestones_done = _ids(data.get("milestones_done", []))
+	fleet = _entries(data.get("fleet", []))
+	employees = _entries(data.get("employees", []))
+	layout = _entries(data.get("layout", []))
+	var saved_stock: Variant = data.get("inventory", {})
+	if saved_stock is Dictionary:
+		var stock_in := Inventory.new()
+		stock_in.from_dict(saved_stock)
+		inventory = stock_in.to_dict()
+	_active = true
+	return true
+
+
+## A copy of the stock as an Inventory, ready to use. Writes go back through
+## store_stock(): the dictionary is the stored form, not a live view.
+func stock() -> Inventory:
+	var result := Inventory.new()
+	result.from_dict(inventory)
+	return result
+
+
+func store_stock(stock_in: Inventory) -> void:
+	inventory = stock_in.to_dict()
+
+
+func _set_defaults() -> void:
+	money = CompanyTuning.STARTING_MONEY
+	day = CompanyTuning.STARTING_DAY
+	clock_minutes = CompanyTuning.DAY_START_MIN
+	reputation = CompanyTuning.STARTING_REPUTATION
+	district_reputation = {}
+	opened_gates = []
+	fleet = []
+	employees = []
+	milestones_done = []
+	layout = []
+	inventory = Inventory.new().to_dict()
+	company_name = ""
+
+
+func _clamp_reputation(value: float) -> float:
+	return clampf(value, CompanyTuning.REPUTATION_MIN, CompanyTuning.REPUTATION_MAX)
+
+
+## Only an int or a float counts as a number; anything else (null, String, Array)
+## takes the fallback instead of breaking the load.
+static func _num(raw: Variant, fallback: float) -> float:
+	return float(raw) if _is_num(raw) else fallback
+
+
+static func _is_num(raw: Variant) -> bool:
+	return typeof(raw) == TYPE_INT or typeof(raw) == TYPE_FLOAT
+
+
+static func _is_id(raw: Variant) -> bool:
+	return typeof(raw) == TYPE_STRING or typeof(raw) == TYPE_STRING_NAME
+
+
+static func _ids(raw: Variant) -> Array[StringName]:
+	var result: Array[StringName] = []
+	if raw is Array:
+		for item: Variant in raw:
+			if _is_id(item):
+				result.append(StringName(item))
+	return result
+
+
+static func _entries(raw: Variant) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if raw is Array:
+		for item: Variant in raw:
+			if item is Dictionary:
+				result.append((item as Dictionary).duplicate(true))
+	return result
