@@ -12,8 +12,9 @@ extends Node3D
 ## No vehicle, no route and no run: Delivery and Endless ignore all of this
 ## (level_base.gd / level_endless.gd are untouched).
 ##
-## Its "CompanyNet" child carries the business events (D-2003): it starts from
-## the company's stock and, until stations exist, refuses every units request.
+## Its "CompanyNet" child carries the business events (D-2003): on the host it
+## starts from the company's stock and, until stations exist, refuses every units
+## request; on a client it holds the events until the host's snapshot (D-2004).
 
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
@@ -44,10 +45,7 @@ var _world: Node3D
 
 
 func _ready() -> void:
-	var state: Node = get_node_or_null(^"/root/CompanyState")
-	if state != null and not state.call(&"is_active"):
-		state.call(&"new_company")
-	_add_net(state)
+	_add_net(get_node_or_null(^"/root/CompanyState"))
 	_world = Node3D.new()
 	_world.name = "World"
 	add_child(_world)
@@ -72,14 +70,23 @@ static func load_zones() -> Array[ZoneDefinition]:
 	return found
 
 
-## Same name on every peer, so its RPCs reach the same node. The stock is the
-## company's (CompanyState.stock(): a copy that the events keep up to date).
+## Same name on every peer, so its RPCs reach the same node. The host (solo
+## counts) switches the company on if none is loaded and hands CompanyNet its
+## stock (CompanyState.stock(): a copy the events keep up to date). A client
+## writes nothing (rule 1 of red-autoridad.md): an empty stock, and every event
+## held until the host's snapshot puts the real one in place (D-2004).
 func _add_net(state: Node) -> void:
 	net = CompanyNet.new()
 	net.name = "CompanyNet"
-	if state != null:
-		net.inventory = state.call(&"stock")
 	add_child(net)
+	if not net.is_host():
+		net.wait_for_snapshot()
+		return
+	if state == null:
+		return
+	if not state.call(&"is_active"):
+		state.call(&"new_company")
+	net.inventory = state.call(&"stock")
 
 
 func _add_environment() -> void:

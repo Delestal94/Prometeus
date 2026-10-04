@@ -24,6 +24,10 @@ extends Node
 ## snapshot_request. A task that adds an action appends its kind to REQUEST_KINDS (and to
 ## CRITICAL_KINDS when losing it leaves a player stuck, rule 8), checks it in
 ## _handle_request() and applies its event in _apply_state().
+##
+## A host rule that reacts to a business fact listens to event_applied, never to
+## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
+## made there is refused (it would number its event before the one being applied).
 
 ## Every peer, the host too, right after an event changed the state here. Presentation (HUD,
 ## sounds, the units in a player's hands) listens to this; the simulation never needs it to.
@@ -87,6 +91,8 @@ var player_origin: Callable = Callable()
 var seq: int = 0
 
 var _next_rid: int = 0
+## True while an event changes the state here (_apply_state()): no request or event may start.
+var _applying: bool = false
 ## Client: events that came after a skipped number, {seq: [kind, data]}, until a snapshot.
 var _held: Dictionary = {}
 var _awaiting_snapshot: bool = false
@@ -98,22 +104,36 @@ var _snapshot_granted: Dictionary = {}
 ## a leaver held there when its player node is already gone (last_known_position()).
 var _last_origin: Dictionary = {}
 
-## Product ids found in the catalog (only hits: a flood of made-up ids can't grow it).
+## Product ids of the catalog, read once from PRODUCTS_DIR ({StringName: true}).
 static var _known_products: Dictionary = {}
+static var _catalog_read: bool = false
 
 
 func _ready() -> void:
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_disconnected):
 		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	set_process(_awaiting_snapshot)
+
+
+## Client: while it waits for a snapshot, asks again every SNAPSHOT_INTERVAL_MSEC (one lost,
+## dropped by the host's limit, or never sent).
+func _process(_delta: float) -> void:
+	poll_snapshot(Time.get_ticks_msec())
 
 
 ## Asks the host for `kind` with `data` and returns the request id a refusal will carry
 ## (request_rejected), 0 when there is nobody to ask (no tree, or a connection not up). On the
-## host, and playing solo, it goes through the same checks at once. Nothing changes here until
+## host, and playing solo, it goes through the same checks at once, as this peer's own
+## request (also when called while handling another peer's RPC). Nothing changes here until
 ## the host's event comes back (rule 1: no prediction). The actor is whoever sends it: a peer
-## field in `data` means nothing.
+## field in `data` means nothing. Called while an event is being applied (a stock_changed
+## listener), it is refused with an error and returns 0.
 func request(kind: StringName, data: Dictionary = {}) -> int:
 	if not is_inside_tree():
+		return 0
+	if _applying:
+		push_error("CompanyNet: request %s while an event is applied; listen to event_applied"
+			% kind)
 		return 0
 	var host: bool = is_host()
 	if not host and not _connected_client():
@@ -122,7 +142,7 @@ func request(kind: StringName, data: Dictionary = {}) -> int:
 	var sent: Dictionary = data.duplicate()
 	sent["rid"] = _next_rid
 	if host:
-		_request(kind, sent)
+		_take_request(multiplayer.get_unique_id(), kind, sent)
 	else:
 		_request.rpc_id(HOST_ID, kind, sent)
 	return _next_rid
@@ -152,18 +172,16 @@ static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> 
 	return origin.distance_to(spot) <= Interactable.REMOTE_REACH + slack
 
 
-## A product id that came over the network names a product of the catalog
-## (data/products/<id>.tres). Only a plain identifier is looked up: no path walking.
+## A product id that came over the network names a product of the catalog: exactly the
+## name of one of its files (case included), never a path.
 static func product_exists(product: StringName) -> bool:
-	if _known_products.has(product):
-		return true
-	var id: String = String(product)
-	if not id.is_valid_ascii_identifier():
-		return false
-	if not ResourceLoader.exists(PRODUCTS_DIR + id + ".tres"):
-		return false
-	_known_products[product] = true
-	return true
+	if not _catalog_read:
+		_catalog_read = true
+		# ResourceLoader lists exported files by their original names (no .remap).
+		for file: String in ResourceLoader.list_directory(PRODUCTS_DIR):
+			if file.ends_with(".tres") or file.ends_with(".res"):
+				_known_products[StringName(file.get_basename())] = true
+	return _known_products.has(product)
 
 
 ## Host: where `peer` stood at its last units request, null if it never made one (D-2006).
@@ -185,12 +203,34 @@ func grant_snapshot(peer: int, now_msec: int) -> bool:
 	return true
 
 
+## Client, joining (CompanyRoot): its stock is not the host's until the snapshot comes, so
+## every event is held until resume_after_snapshot(). The host sends that snapshot once this
+## peer is ready (D-2004); only if it hasn't come within SNAPSHOT_INTERVAL_MSEC is it asked for.
+func wait_for_snapshot() -> void:
+	_start_waiting()
+	_snapshot_asked_msec = Time.get_ticks_msec()
+
+
+## Client: while waiting for a snapshot, asks for one if SNAPSHOT_INTERVAL_MSEC passed since
+## the last time (or it never asked). `now_msec` is Time.get_ticks_msec() (_process), or a
+## clock a test drives. True when it asked.
+func poll_snapshot(now_msec: int) -> bool:
+	if not _awaiting_snapshot or is_host():
+		return false
+	if _snapshot_asked_msec >= 0 and now_msec - _snapshot_asked_msec < SNAPSHOT_INTERVAL_MSEC:
+		return false
+	_snapshot_asked_msec = now_msec
+	return request(SNAPSHOT_REQUEST) > 0
+
+
 ## Client, for D-2004: a snapshot taken at `snapshot_seq` is in place here. Events up to it are
 ## in the snapshot and dropped; those held since the gap are applied in order. If one is still
-## missing, the rest stay held and a snapshot is asked for again.
+## missing, the rest stay held and a snapshot is asked for again at once.
 func resume_after_snapshot(snapshot_seq: int) -> void:
 	seq = snapshot_seq
 	_awaiting_snapshot = false
+	_snapshot_asked_msec = -1
+	set_process(false)
 	var pending: Dictionary = _held
 	_held = {}
 	var numbers: Array = pending.keys()
@@ -205,9 +245,10 @@ func awaiting_snapshot() -> bool:
 	return _awaiting_snapshot
 
 
-## Host: one request, from a peer or from the host itself (request()). Dropped silently when
-## it reaches a client, is over the sender's budget, malformed, of an unknown kind or without
-## an int rid; refused with a reason (_rejected) when the game says no.
+## Host: a request from another peer. Dropped silently when it reaches a client or the
+## sender is over its budget; the rest is _take_request()'s, on behalf of the sender. The
+## host's own requests skip this (request() calls _take_request() directly), so one made
+## while handling another peer's RPC is still the host's.
 @rpc("any_peer", "call_local", "reliable")
 func _request(kind: StringName, data: Dictionary) -> void:
 	if not is_host():
@@ -217,11 +258,17 @@ func _request(kind: StringName, data: Dictionary) -> void:
 		if CRITICAL_KINDS.has(kind)
 		else RpcGuard.allow_request(self)
 	)
-	if not budget_left or not RpcGuard.name_ok(kind) or not RpcGuard.dict_ok(data):
+	if budget_left:
+		_take_request(RpcGuard.sender(self), kind, data)
+
+
+## Host: a request made by `peer`. Dropped silently when malformed, of an unknown kind or
+## without an int rid; refused with a reason (_rejected) when the game says no.
+func _take_request(peer: int, kind: StringName, data: Dictionary) -> void:
+	if not RpcGuard.name_ok(kind) or not RpcGuard.dict_ok(data):
 		return
 	if not REQUEST_KINDS.has(kind) or typeof(data.get("rid")) != TYPE_INT:
 		return
-	var peer: int = RpcGuard.sender(self)
 	var reason: StringName = _handle_request(peer, kind, data)
 	if reason != &"":
 		_refuse(peer, int(data["rid"]), reason)
@@ -278,8 +325,8 @@ func _take_units(peer: int, data: Dictionary) -> StringName:
 		return REASON_HANDS_BUSY
 	if inventory.count(product, hands) + qty > CompanyTuning.HAND_MAX_UNITS:
 		return REASON_HANDS_FULL
-	_publish(&"units_moved", {"product": product, "qty": qty, "from": from, "to": hands})
-	return &""
+	var moved: Dictionary = {"product": product, "qty": qty, "from": from, "to": hands}
+	return &"" if _publish(&"units_moved", moved) else REASON_BAD_DATA
 
 
 ## Host, section 2 row 6: units from the sender's hands into a station that takes them (a
@@ -302,22 +349,27 @@ func _store_units(peer: int, data: Dictionary) -> StringName:
 	var capacity: int = _as_int(station.get("capacity"))
 	if capacity > 0 and _units_at(to) + qty > capacity:
 		return REASON_NO_ROOM
-	_publish(&"units_moved", {"product": product, "qty": qty, "from": hands, "to": to})
-	return &""
+	var moved: Dictionary = {"product": product, "qty": qty, "from": hands, "to": to}
+	return &"" if _publish(&"units_moved", moved) else REASON_BAD_DATA
 
 
 ## Host: the one way an event happens. Numbers it, applies it here first, sends it to every
 ## ready peer but this one (rule 2: rpc_id, never .rpc(), which would also reach peers whose
 ## world isn't up; those get the snapshot, D-2004) and only then tells the presentation, so an
-## event a listener publishes in turn goes out after this one.
-func _publish(kind: StringName, data: Dictionary) -> void:
+## event a listener publishes in turn goes out after this one. False, with nothing sent, when
+## the state doesn't take it or another event is being applied right now.
+func _publish(kind: StringName, data: Dictionary) -> bool:
+	if _applying:
+		push_error("CompanyNet: %s event published while another is applied" % kind)
+		return false
 	if not _apply_state(kind, data):
 		push_error("CompanyNet: the host could not apply its own %s event %s" % [kind, data])
-		return
+		return false
 	seq += 1
 	for peer: int in _event_targets():
 		_apply_event.rpc_id(peer, seq, kind, data)
 	event_applied.emit(seq, kind, data)
+	return true
 
 
 ## Client: an event from the host, in order or held (section 3).
@@ -331,43 +383,43 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 	if not _apply_state(kind, data):
 		# This copy no longer matches the host's: only a snapshot puts it right.
 		push_warning("CompanyNet: event %d (%s) does not fit this peer's state" % [event_seq, kind])
-		_awaiting_snapshot = true
-		_ask_snapshot()
+		_start_waiting()
+		poll_snapshot(Time.get_ticks_msec())
 		return
 	event_applied.emit(seq, kind, data)
 
 
 ## The one place an event changes state, with the same code on every peer (rule 6: no game
-## rule is checked again, only that the data fits). False when it doesn't.
+## rule is checked again, only that the data fits). False when it doesn't. While it runs
+## (Inventory signals fire inside it) no request or event may start: _applying.
 func _apply_state(kind: StringName, data: Dictionary) -> bool:
-	if inventory == null:
+	if inventory == null or not EVENT_KINDS.has(kind):
 		return false
+	_applying = true
+	var applied: bool = false
 	match kind:
 		&"units_moved":
-			return inventory.move(
+			applied = inventory.move(
 				_as_id(data.get("product")),
 				_as_int(data.get("qty")),
 				_as_id(data.get("from")),
 				_as_id(data.get("to"))
 			)
-	return false
+	_applying = false
+	return applied
 
 
 func _hold(event_seq: int, kind: StringName, data: Dictionary) -> void:
 	if _held.size() >= MAX_HELD_EVENTS:
 		_held.erase(_held.keys().min())
 	_held[event_seq] = [kind, data]
+	_start_waiting()
+	poll_snapshot(Time.get_ticks_msec())
+
+
+func _start_waiting() -> void:
 	_awaiting_snapshot = true
-	_ask_snapshot()
-
-
-## Client: asks for a snapshot, at most once per SNAPSHOT_INTERVAL_MSEC.
-func _ask_snapshot() -> void:
-	var now: int = Time.get_ticks_msec()
-	if _snapshot_asked_msec >= 0 and now - _snapshot_asked_msec < SNAPSHOT_INTERVAL_MSEC:
-		return
-	_snapshot_asked_msec = now
-	request(SNAPSHOT_REQUEST)
+	set_process(true)
 
 
 ## Host: tells the requester why nothing happened. The host's own request hears it here at once

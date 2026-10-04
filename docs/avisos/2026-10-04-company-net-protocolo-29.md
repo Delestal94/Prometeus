@@ -17,8 +17,9 @@
   - `_rejected(rid: int, reason: StringName)`: `@rpc("authority", "call_remote", "reliable")`, host → solo el
     que pidió. No cambia estado.
   Todos en el canal 0. `_snapshot` (D-2004) todavía no existe: cuando llegue, sube el protocolo otra vez.
-- **`scripts/gameplay/company_root.gd`**: la raíz del modo Empresa suma un hijo `CompanyNet` que arranca con el
-  stock de `CompanyState`. Entrega y Endless no cambian.
+- **`scripts/gameplay/company_root.gd`**: la raíz del modo Empresa suma un hijo `CompanyNet`. En el host (y
+  jugando solo) arranca la empresa si no hay una y le pasa el stock de `CompanyState`; en un cliente no toca
+  `CompanyState` y espera el snapshot del host (D-2004). Entrega y Endless no cambian.
 - **`scripts/core/company/company_tuning.gd`**: `HAND_MAX_UNITS = 4` (unidades de un producto en la mano).
 - Tests: `test_company_net` (nuevo, dos peers ENet en un proceso) y `test_company_root` (el hijo nuevo).
 
