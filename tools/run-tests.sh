@@ -6,6 +6,7 @@
 #
 #   tools/run-tests.sh                 # the whole suite
 #   tools/run-tests.sh depot traps     # only tests whose name contains one of these
+#   tools/run-tests.sh company         # the districts expansion's tests (see below)
 #   tools/run-tests.sh -v ...          # also print the log of every failure
 #   SHARD=1/4 tools/run-tests.sh       # only the 2nd quarter (CI splits the suite)
 #
@@ -13,7 +14,16 @@
 # default: half the cores, at most 6), TEST_TIMEOUT (seconds per test, 300),
 # SLOW_TEST_TIMEOUT (seconds for the SLOW_TESTS below, twice TEST_TIMEOUT),
 # REPORT_FILE (optional CSV path for per-test status and duration),
-# SHARD (i/n: run only every n-th test from the i-th, 0-based).
+# SHARD (i/n: run only every n-th test from the i-th, 0-based),
+# TESTS_PROJECT (another Godot project dir; tools/test-run-tests.sh uses it).
+#
+# Filter "company" is the districts expansion (docs/expansion-distritos/,
+# D-2014): it keeps every test whose name starts with one of the
+# EXPANSION_PREFIXES below, plus anything that just contains "company". A new
+# expansion test is named after one of them (test_company_* if in doubt); a
+# prefix added here must not catch a test of the current game (test_world_seed,
+# test_order_balancer...: tools/test-run-tests.sh checks it on the real tree).
+# With only "company" and no expansion test yet, it says so and exits 0.
 #
 # Not run here, on purpose: render_*.gd and check_*.gd need a real display and
 # someone looking at the images -- that's the revisor-visual agent's job.
@@ -21,7 +31,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PROJECT="$ROOT/do-not-drop"
+PROJECT="${TESTS_PROJECT:-$ROOT/do-not-drop}"
 VERBOSE=0
 FILTERS=()
 for arg in "$@"; do
@@ -63,6 +73,24 @@ WORK="$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/tmp-tests-$$")"
 mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
+# Name prefixes (after "test_") of the expansion's tests, for filter "company":
+# the convention of docs/expansion-distritos/detalle/F0-20-red-y-ci.md (D-2014)
+# plus the names its tasks already give their tests and modules.
+EXPANSION_PREFIXES=(
+	company_ zone_ fleet_ product_ box_ packed_box gate district_ inventory
+	order_book order_golden order_queue world_cells day_cycle day_clock
+	game_clock road_graph build_grid expansion_ economy_golden milestones_data
+	vehicle_definitions event_bus_company reference_bike reference_boat
+	reference_plane reference_cart reference_truck_4x4
+)
+is_expansion_test() {
+	local prefix
+	for prefix in "${EXPANSION_PREFIXES[@]}"; do
+		case "$1" in "test_$prefix"*) return 0 ;; esac
+	done
+	return 1
+}
+
 # The tests: every test_*.gd, each portable module's own tests
 # (modules/<name>/tests/, docs/modulos.md) and the route smoke check,
 # filtered by name.
@@ -74,11 +102,16 @@ for file in "$PROJECT"/tests/test_*.gd "$PROJECT"/modules/*/tests/test_*.gd "$PR
 		keep=0
 		for filter in "${FILTERS[@]}"; do
 			case "$name" in *"$filter"*) keep=1 ;; esac
+			[ "$filter" = company ] && is_expansion_test "$name" && keep=1
 		done
 		[ $keep -eq 1 ] || continue
 	fi
 	TESTS+=("${file#"$PROJECT"/}")
 done
+if [ ${#TESTS[@]} -eq 0 ] && [ "${FILTERS[*]-}" = company ]; then
+	echo "Tests: 0/0 PASS  (la expansión todavía no tiene tests: filtro company vacío)"
+	exit 0
+fi
 if [ ${#TESTS[@]} -eq 0 ]; then
 	echo "run-tests: ningún test coincide con: ${FILTERS[*]}" >&2
 	exit 2
