@@ -152,6 +152,10 @@ valen; sombras y FPS no. Builds, FPS y luz real: `pc-build.md`; capturas de tien
 
 ## Los triggers de la nube
 
+Si cambia el horario de una rutina o se suma una, actualizá también `ROUTINES` en
+`tools/panel/build_data.py` (cron en UTC): la sala de control (`panel/README.md`) calcula de ahí qué rutina
+le toca y cuál no dejó rastro, y su workflow falla con una fila de esta tabla sin horario.
+
 Los crea la conversación principal con la skill `schedule`. El prompt de cada uno es una línea:
 `Leé .claude/rutinas/<archivo>.md de origin/main y seguilo al pie de la letra.` (construcción suma
 `Prioridad: nacho` o `Prioridad: slatex`; desarrollador, `Carril: N`). La API de triggers elige el

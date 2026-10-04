@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sala de control · Take My Package</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: barra fija arriba con pestañas; el home es la franja de decisiones + la grilla de pilares.
+   Cada vista es una sección; un cajón lateral muestra el detalle de un pilar. */
+:root {
+  --bg: #f3f4f1; --surface: #ffffff; --sunk: #eceee9; --ink: #15191b; --muted: #61696c; --line: #dcdfd9;
+  --tape: #e2a300; --tape-ink: #7a5700; --tape-soft: #fbefcc;
+  --live: #1d9a54; --live-soft: #dcf3e5; --warn: #b86e00; --warn-soft: #fbead0;
+  --bad: #cc3f35; --bad-soft: #fbe1de; --info: #3561cf; --info-soft: #e1e8fb;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 10px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1112; --surface: #171a1b; --sunk: #131516; --ink: #eceeea; --muted: #959d9b; --line: #282d2e;
+  --tape: #f0b52c; --tape-ink: #f0b52c; --tape-soft: #33290f;
+  --live: #3fcf7c; --live-soft: #12301f; --warn: #f0a33a; --warn-soft: #36260c;
+  --bad: #ff6a5d; --bad-soft: #3a1714; --info: #85a2ff; --info-soft: #18213d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1112; --surface: #171a1b; --sunk: #131516; --ink: #eceeea; --muted: #959d9b; --line: #282d2e;
+  --tape: #f0b52c; --tape-ink: #f0b52c; --tape-soft: #33290f;
+  --live: #3fcf7c; --live-soft: #12301f; --warn: #f0a33a; --warn-soft: #36260c;
+  --bad: #ff6a5d; --bad-soft: #3a1714; --info: #85a2ff; --info-soft: #18213d; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--f-body); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--tape); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; }
+.eyebrow { font: 500 11px/1 var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* barra */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1280px; margin: 0 auto; padding: 10px 20px; display: flex; gap: 16px 24px; align-items: center; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 26px; height: 26px; border-radius: 6px; background: var(--tape); position: relative; flex: none; }
+.brand-mark::after { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 4px; background: var(--ink); opacity: .85; }
+.brand b { font: 700 16px/1 var(--f-display); }
+.brand span { display: block; font: 500 11px/1.2 var(--f-mono); color: var(--muted); }
+nav { display: flex; gap: 2px; flex-wrap: wrap; }
+nav a { text-decoration: none; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+nav a:hover { color: var(--ink); background: var(--sunk); }
+nav a[aria-current="page"] { color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.live { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; display: inline-block; }
+.dot.on { background: var(--live); box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 60%, transparent); animation: pulse 2s infinite; }
+.dot.err { background: var(--bad); }
+@keyframes pulse { 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.icon-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 4px 9px; cursor: pointer; font-size: 12px; }
+.icon-btn:hover { border-color: var(--muted); }
+
+main { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; display: grid; gap: 28px; }
+section[data-view] { display: grid; gap: 28px; }
+main, section[data-view] { grid-template-columns: minmax(0, 1fr); }
+.list .side { display: grid; gap: 4px; justify-items: end; }
+.head { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lede { max-width: 70ch; color: var(--muted); margin: 6px 0 0; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font: 500 11.5px/1.6 var(--f-mono);
+  background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.chip.live { background: var(--live-soft); color: var(--live); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.info { background: var(--info-soft); color: var(--info); }
+.chip.tape { background: var(--tape-soft); color: var(--tape-ink); }
+.id { font: 500 12px var(--f-mono); color: var(--muted); white-space: nowrap; }
+
+/* franja de decisiones */
+.decide { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; padding: 11px 16px; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.list .t { min-width: 0; }
+.list .t small { display: block; color: var(--muted); font-size: 12px; }
+.list a.go { font-size: 12px; color: var(--info); text-decoration: none; white-space: nowrap; }
+.list a.go:hover { text-decoration: underline; }
+.panel-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px 10px; }
+.count { font: 700 13px var(--f-mono); padding: 1px 8px; border-radius: 6px; background: var(--tape); color: #1b1400; }
+.count.zero { background: var(--sunk); color: var(--muted); }
+.empty { padding: 4px 16px 16px; color: var(--muted); }
+.stripe { width: 3px; align-self: stretch; border-radius: 2px; background: var(--line); }
+.stripe.bad { background: var(--bad); } .stripe.warn { background: var(--warn); } .stripe.info { background: var(--info); } .stripe.tape { background: var(--tape); }
+
+/* ahora mismo */
+.now { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.now-card { flex: 0 0 auto; min-width: 220px; max-width: 280px; padding: 12px 14px; display: grid; gap: 6px; }
+.now-card.running { border-color: color-mix(in srgb, var(--live) 45%, var(--line)); }
+.now-card .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.agents-mini { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* pilares */
+.pillars { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.pillar { text-align: left; padding: 16px; display: grid; gap: 12px; cursor: pointer; align-content: start; transition: border-color .15s, transform .15s; }
+.pillar:hover { border-color: var(--muted); transform: translateY(-1px); }
+.pillar .top { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.pillar p { margin: 0; color: var(--muted); font-size: 13px; }
+.health { display: inline-flex; align-items: center; gap: 6px; font: 500 11.5px var(--f-mono); color: var(--muted); white-space: nowrap; }
+.meter { display: grid; gap: 5px; }
+.meter .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.meter .lbl b { color: var(--ink); font: 500 12px var(--f-mono); }
+.track { height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden; display: flex; }
+.track i { display: block; height: 100%; }
+.track .d { background: var(--ink); } .track .p { background: var(--tape); } .track .b { background: var(--bad); }
+.stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.pillar .next { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; }
+.pillar .next li { display: flex; gap: 8px; min-width: 0; }
+.pillar .next li span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.agent-dot { font: 500 11px var(--f-mono); padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.agent-dot.on { border-color: var(--live); color: var(--live); background: var(--live-soft); }
+
+/* cajón */
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .35); z-index: 20; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); z-index: 21; background: var(--bg); border-left: 1px solid var(--line);
+  overflow-y: auto; padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px 40px; display: grid; gap: 22px; align-content: start; }
+.drawer .close { position: sticky; top: 0; justify-self: end; }
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.tasks li { background: var(--surface); padding: 9px 12px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 13px; }
+
+/* flujo */
+.flow-wrap { overflow-x: auto; padding: 8px; }
+.flow { display: block; min-width: 1100px; width: 100%; height: auto; }
+.flow .node rect { fill: var(--surface); stroke: var(--line); }
+.flow .node.k-doc rect { fill: var(--sunk); stroke-dasharray: 4 3; }
+.flow .node.k-people rect { fill: var(--tape-soft); stroke: var(--tape); }
+.flow .node.k-gate rect { fill: var(--ink); stroke: var(--ink); }
+.flow .node.k-gate text { fill: var(--bg); }
+.flow .node.on rect { stroke: var(--live); stroke-width: 2; }
+.flow .node text { fill: var(--ink); font: 600 12.5px var(--f-body); }
+.flow .node text.sub { fill: var(--muted); font: 400 10.5px var(--f-mono); }
+.flow .node.k-gate text.sub { fill: color-mix(in srgb, var(--bg) 70%, transparent); }
+.flow .edge { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.flow .edge.on { stroke: var(--live); stroke-width: 2; stroke-dasharray: 6 6; animation: flow 1s linear infinite; }
+.flow .edge-lbl { fill: var(--muted); font: 400 10px var(--f-mono); }
+.flow .col { fill: var(--muted); font: 500 10.5px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; }
+@keyframes flow { to { stroke-dashoffset: -12; } }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; counter-reset: s; }
+.steps li { counter-increment: s; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.steps li::before { content: counter(s); font: 500 11px var(--f-mono); color: var(--tape-ink); }
+.steps li b { font-weight: 600; }
+.steps li span { color: var(--muted); font-size: 12.5px; }
+
+/* agentes */
+.agent-group { display: grid; gap: 10px; }
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.agent { padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+.agent .row { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+.agent b { font: 600 13.5px var(--f-mono); }
+.agent p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.agent.on { border-color: var(--live); }
+
+/* rutinas */
+.timeline { padding: 8px 0; overflow-x: auto; }
+.tl { min-width: 860px; display: grid; grid-template-columns: 230px minmax(0, 1fr) 150px; }
+.tl > div { padding: 9px 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tl .hdr { border-top: 0; font: 500 11px var(--f-mono); color: var(--muted); }
+.tl .name { flex-direction: column; align-items: start; gap: 2px; }
+.tl .name b { font-weight: 600; font-size: 13px; }
+.tl .name small { color: var(--muted); font: 400 11px var(--f-mono); }
+.lane { position: relative; height: 24px; width: 100%; }
+.lane .axis { position: absolute; left: 0; right: 0; top: 11px; height: 1px; background: var(--line); }
+.lane .tick { position: absolute; top: 6px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; border: 1.5px solid var(--muted); background: var(--surface); }
+.lane .tick.done { background: var(--ink); border-color: var(--ink); }
+.lane .tick.miss { border-color: var(--bad); }
+.lane .tick.run { background: var(--live); border-color: var(--live); animation: pulse 2s infinite; }
+.lane .nowline { position: absolute; top: -9px; bottom: -9px; width: 2px; background: var(--tape); }
+.hours { position: relative; height: 14px; width: 100%; }
+.lane, .hours { flex: 1; }
+.hours span { position: absolute; transform: translateX(-50%); }
+
+/* actividad */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 9px 16px; border-top: 1px solid var(--line); font-size: 13px; }
+.feed li:first-child { border-top: 0; }
+.feed time { color: var(--muted); font: 400 12px var(--f-mono); }
+.two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+
+/* token */
+.tokenbox { padding: 16px; display: grid; gap: 10px; max-width: 560px; }
+.tokenbox input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: 13px var(--f-mono); }
+.tokenbox .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--bg); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 500; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+footer { color: var(--muted); font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
+
+@media (max-width: 900px) { .decide, .two { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .bar-in { padding: 10px 16px; } main { padding: 18px 16px 48px; } .live { margin-left: 0; flex-wrap: wrap; }
+  .list li { padding: 10px 12px; grid-template-columns: auto minmax(0, 1fr); } .list li > :nth-child(3) { grid-column: 2; justify-items: start; justify-self: start; } .chip { white-space: normal; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"></div><div><b>Take My Package</b><span>sala de control</span></div></div>
+    <nav aria-label="Vistas">
+      <a href="#pilares">Pilares</a><a href="#flujo">Flujo</a><a href="#rutinas">Rutinas</a><a href="#agentes">Agentes</a><a href="#actividad">Actividad</a>
+    </nav>
+    <div class="live"><span id="live-dot" class="dot"></span><span id="live-txt">conectando…</span>
+      <button class="icon-btn" id="theme-btn" type="button" title="Cambiar tema">tema</button>
+      <button class="icon-btn" id="token-btn" type="button" title="Token de GitHub para refrescar más seguido">token</button></div>
+  </div>
+</header>
+
+<main>
+  <section class="panel tokenbox" id="tokenbox" hidden>
+    <h3>Refrescar más seguido</h3>
+    <p class="muted" style="margin:0">Sin token, GitHub deja 60 consultas por hora y el panel se actualiza cada 4 minutos (y no consulta con la pestaña oculta). Con un token
+      <em>fine-grained</em> de solo lectura sobre repos públicos, cada 20 segundos. Queda guardado solo en este navegador.</p>
+    <label for="token-in" class="eyebrow">Token de GitHub</label>
+    <input id="token-in" type="password" autocomplete="off" placeholder="github_pat_…">
+    <div class="row"><button class="btn" id="token-save" type="button">Guardar</button><button class="btn ghost" id="token-clear" type="button">Quitar</button>
+      <a class="go muted" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crear token en GitHub ↗</a></div>
+  </section>
+
+  <!-- PILARES (home) -->
+  <section data-view="pilares">
+    <div class="head">
+      <div><div class="eyebrow" id="today"></div><h2>Pilares del juego</h2>
+        <p class="lede">Cómo viene cada parte del desarrollo, qué agentes la están trabajando ahora y qué necesita una decisión de ustedes.</p></div>
+      <div class="stats" id="global-stats"></div>
+    </div>
+
+    <div class="decide">
+      <div class="panel">
+        <div class="panel-h"><h3>Para decidir</h3><span class="count" id="decide-count">0</span></div>
+        <ul class="list" id="decide-list"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>Atención</h3><span class="count" id="attn-count">0</span></div>
+        <ul class="list" id="attn-list"></ul>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:10px">
+      <div class="head"><h3>Ahora mismo</h3><span class="muted" style="font-size:12px" id="now-sub"></span></div>
+      <div class="now" id="now"></div>
+    </div>
+
+    <div class="pillars" id="pillars"></div>
+  </section>
+
+  <!-- FLUJO -->
+  <section data-view="flujo" hidden>
+    <div><h2>Cómo se pasan el trabajo</h2>
+      <p class="lede">Ninguna rutina habla con otra: se comunican por archivos del repo y por PRs. Las que observan dejan hallazgos por escrito,
+        <span class="mono">planificador-tareas</span> los vuelve tareas, las que construyen toman una tarea y abren un PR, y CI es la única compuerta a main.
+        En verde, lo que está pasando ahora.</p></div>
+    <div class="panel flow-wrap"><svg class="flow" id="flow" viewBox="0 0 1270 550" role="img" aria-label="Diagrama del flujo entre rutinas, documentos, tareas, PRs y CI"></svg></div>
+    <div style="display:grid;gap:10px">
+      <h3>Adentro de una corrida de construcción</h3>
+      <p class="lede" style="margin:0">Un subagente no puede lanzar otro: la sesión de la rutina orquesta y le pasa a cada agente el contexto completo de la tarea.</p>
+      <ol class="steps">
+        <li class="panel"><b>Mira lo roto</b><span>main rojo, PRs propios rojos o con conflicto, freno de mano PAUSA</span></li>
+        <li class="panel"><b>Reclama una tarea</b><span>rama <span class="mono">nacho/ID-*</span> o <span class="mono">exp/D-*</span> con <span class="mono">chore: claim</span></span></li>
+        <li class="panel"><b>Constructor del área</b><span>camión, tramos, mundo, jugador, trampas, red, progresión o UI</span></li>
+        <li class="panel"><b>Verifica</b><span><span class="mono">ejecutor-tests</span> con filtro, <span class="mono">revisor-visual</span> si hay pantalla, <span class="mono">cazador-bugs</span> si falla</span></li>
+        <li class="panel"><b>Cierra el cambio</b><span>test con encabezado, tareas al día, aviso si tocó lo del otro</span></li>
+        <li class="panel"><b>PR con auto-merge</b><span><span class="mono">vigilante-ci</span> lo sigue hasta verde</span></li>
+        <li class="panel"><b>CI y main</b><span>lint, tests headless y par de red: los 3 checks requeridos</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- RUTINAS -->
+  <section data-view="rutinas" hidden>
+    <div><h2>Rutinas</h2>
+      <p class="lede">Las 14 de la nube y las 2 de la PC, en tu hora local. Una rama <span class="mono">exp/</span> se atribuye al carril que arrancó justo antes de crearla. Punto negro: corrió y dejó rastro en GitHub. Rojo: le tocaba y no se vio actividad. Verde: trabajando ahora.</p></div>
+    <div class="panel timeline"><div class="tl" id="tl"></div></div>
+  </section>
+
+  <!-- AGENTES -->
+  <section data-view="agentes" hidden>
+    <div><h2>Agentes</h2>
+      <p class="lede">Los subagentes de <span class="mono">.claude/agents/</span>, agrupados por pilar. Modelo y esfuerzo vienen fijos en cada uno. En verde, los que una rutina tiene en uso ahora.</p></div>
+    <div id="agents" style="display:grid;gap:26px"></div>
+  </section>
+
+  <!-- ACTIVIDAD -->
+  <section data-view="actividad" hidden>
+    <div><h2>Actividad</h2><p class="lede">Lo último que pasó en el repo, atribuido a la rutina que lo hizo.</p></div>
+    <div class="two">
+      <div class="panel"><div class="panel-h"><h3>Eventos</h3></div><ul class="feed" id="feed"></ul></div>
+      <div style="display:grid;gap:16px">
+        <div class="panel"><div class="panel-h"><h3>PRs abiertos</h3><span class="count" id="pr-count">0</span></div><ul class="list" id="prs"></ul></div>
+        <div class="panel"><div class="panel-h"><h3>CI</h3></div><ul class="list" id="runs"></ul></div>
+        <div class="panel"><div class="panel-h"><h3>Avisos entre ustedes</h3></div><ul class="list" id="notes"></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <footer><span id="foot-data"></span><span id="foot-rate"></span><a href="https://github.com/Delestal94/Prometeus" target="_blank" rel="noopener">repo ↗</a></footer>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-modal="true" role="dialog"></aside>
+
+<script>
+"use strict";
+const REPO = "Delestal94/Prometeus";
+const API = "https://api.github.com/repos/" + REPO;
+const GH = "https://github.com/" + REPO;
+const S = { data: null, events: [], pulls: [], runs: [], issues: [], issuesLoaded: false, ok: false, err: "", lastPoll: 0, rate: null, tick: 0 };
+
+// ---------- utilidades ----------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
+function ago(t) {
+  if (!t) return "—";
+  const s = Math.round((Date.now() - new Date(t)) / 1000);
+  if (s < 0) return "en " + dur(-s);
+  if (s < 50) return "recién";
+  return "hace " + dur(s);
+}
+function dur(s) {
+  if (s < 60) return s + " s";
+  const m = Math.round(s / 60); if (m < 60) return m + " min";
+  const h = Math.floor(m / 60), mm = m % 60; if (h < 24) return h + " h" + (mm && h < 6 ? " " + mm + " min" : "");
+  return Math.round(h / 24) + " d";
+}
+const hhmm = (d) => d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+const TASK_RE = /\b([NSD]-\d{3,4}(?:\.\d+)?)\b/;
+
+// ---------- cron (minuto hora díaMes mes díaSemana, UTC) ----------
+function cronField(f, min, max) {
+  const set = new Set();
+  for (const part of f.split(",")) {
+    let [range, step] = part.split("/"); step = step ? +step : 1;
+    let [a, b] = range === "*" ? [min, max] : range.split("-").map(Number); if (b === undefined) b = step > 1 ? max : a;
+    for (let v = a; v <= b; v += step) set.add(v);
+  }
+  return set;
+}
+function parseCron(c) {
+  const [m, h, dom, mon, dow] = c.split(/\s+/);
+  return { m: cronField(m, 0, 59), h: cronField(h, 0, 23), dom: cronField(dom, 1, 31), mon: cronField(mon, 1, 12), dow: cronField(dow, 0, 6), anyDom: dom === "*", anyDow: dow === "*" };
+}
+function cronDay(c, d) {
+  if (!c.mon.has(d.getUTCMonth() + 1)) return false;
+  const a = c.dom.has(d.getUTCDate()), b = c.dow.has(d.getUTCDay());
+  return c.anyDom && c.anyDow ? true : c.anyDom ? b : c.anyDow ? a : a || b;
+}
+function cronFires(c, from, to) { // horarios entre from y to (Date)
+  const out = []; const d = new Date(from); d.setUTCSeconds(0, 0);
+  const day = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  for (; day <= to; day.setUTCDate(day.getUTCDate() + 1)) {
+    if (!cronDay(c, day)) continue;
+    for (const h of [...c.h].sort((x, y) => x - y)) for (const m of [...c.m].sort((x, y) => x - y)) {
+      const t = new Date(day); t.setUTCHours(h, m); if (t >= from && t <= to) out.push(t);
+    }
+  }
+  return out;
+}
+
+// ---------- GitHub ----------
+const etags = {};
+async function gh(path) {
+  const url = API + path, headers = { Accept: "application/vnd.github+json" };
+  const tok = store.get("tmp-token"); if (tok) headers.Authorization = "Bearer " + tok;
+  const c = etags[url]; if (c) headers["If-None-Match"] = c.etag;
+  const r = await fetch(url, { headers, cache: "no-store" });
+  const rem = r.headers.get("x-ratelimit-remaining");
+  if (rem !== null) S.rate = { remaining: +rem, limit: +r.headers.get("x-ratelimit-limit"), reset: +r.headers.get("x-ratelimit-reset") * 1000 };
+  if (r.status === 304 && c) return c.data;
+  if (r.status === 401) { store.set("tmp-token", null); throw new Error("el token no sirve: lo quité"); }
+  if (r.status === 403 || r.status === 429) throw new Error("GitHub frenó las consultas hasta las " + (S.rate ? hhmm(new Date(S.rate.reset)) : "—"));
+  if (!r.ok) throw new Error("GitHub respondió " + r.status);
+  const data = await r.json(); const etag = r.headers.get("etag"); if (etag) etags[url] = { etag, data };
+  return data;
+}
+function interval() { return store.get("tmp-token") ? 20000 : 240000; }
+
+async function poll() {
+  clearTimeout(poll.t);
+  if (document.hidden) { poll.t = setTimeout(poll, interval()); return; } // pestaña oculta: no gasta consultas
+  S.tick++;
+  try {
+    if (S.rate && S.rate.remaining < 4 && Date.now() < S.rate.reset) throw new Error("GitHub frenó las consultas hasta las " + hhmm(new Date(S.rate.reset)));
+    const prevTop = S.events[0]?.id;
+    const pages = S.tick > 1 ? [1] : store.get("tmp-token") ? [1, 2, 3] : [1, 2];
+    const [runs, ...evPages] = await Promise.all([gh("/actions/runs?per_page=60"), ...pages.map((n) => gh("/events?per_page=100&page=" + n).catch(() => []))]);
+    const byId = new Map([...evPages.flat(), ...S.events].map((e) => [e.id, e]));
+    S.events = [...byId.values()].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 600);
+    S.runs = runs.workflow_runs || [];
+    const changed = S.events[0]?.id !== prevTop;
+    const fresh = S.events.filter((e) => !prevTop || Number(e.id) > Number(prevTop));
+    const need = (t) => S.tick === 1 || fresh.some((e) => e.type === t);
+    const jobs = [];
+    if (need("PullRequestEvent") || S.tick % 3 === 0) jobs.push(gh("/pulls?state=all&sort=updated&direction=desc&per_page=60").then((p) => (S.pulls = p)));
+    if (need("IssuesEvent") || need("IssueCommentEvent") || S.tick % 6 === 0) jobs.push(gh("/issues?state=open&per_page=60").then((i) => { S.issues = i.filter((x) => !x.pull_request); S.issuesLoaded = true; }));
+    await Promise.all(jobs);
+    S.ok = true; S.err = ""; S.lastPoll = Date.now();
+    if (changed || jobs.length || S.tick === 1) render();
+  } catch (e) { S.ok = false; S.err = e.message || String(e); render(); }
+  poll.t = setTimeout(poll, interval());
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - S.lastPoll > interval()) poll(); });
+async function loadData() {
+  try { const r = await fetch("data.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) { S.data = await r.json(); index(); render(); } }
+  catch { /* sin data.json: queda lo en vivo */ }
+  setTimeout(loadData, 300000);
+}
+
+// ---------- modelo ----------
+const IDX = { tasks: new Map(), pillar: new Map(), agents: new Map(), routines: [] };
+function index() {
+  const d = S.data; IDX.tasks.clear();
+  for (const t of d.tasks) IDX.tasks.set(t.id, { ...t, kind: "N" });
+  for (const t of d.expansion.tasks || []) IDX.tasks.set(t.id, { ...t, kind: "D", agents: t.agent ? [t.agent] : [] });
+  IDX.agents = new Map(d.agents.map((a) => [a.name, a]));
+  IDX.pillar = new Map(d.pillars.map((p) => [p.key, p]));
+  IDX.routines = d.routines.map((r) => ({ ...r, cronP: r.cron ? parseCron(r.cron) : null, re: r.branch ? new RegExp(r.branch) : null }));
+}
+const taskOf = (s) => { const m = TASK_RE.exec(s || ""); return m ? IDX.tasks.get(m[1]) || IDX.tasks.get(m[1].split(".")[0]) || { id: m[1] } : null; };
+function branchOf(e) {
+  if (e.type === "PushEvent") return (e.payload.ref || "").replace("refs/heads/", "");
+  if (e.type === "CreateEvent" || e.type === "DeleteEvent") return e.payload.ref_type === "branch" ? e.payload.ref : "";
+  if (e.type === "PullRequestEvent") return e.payload.pull_request?.head?.ref || prByNum(e.payload.number)?.head?.ref || "";
+  return "";
+}
+const prByNum = (n) => S.pulls.find((p) => p.number === n);
+const OWN = new Map();
+function attribute() {
+  const lanes = IDX.routines.filter((r) => r.lane && r.cronP);
+  for (const e of S.events) {
+    if (e.type !== "CreateEvent" || e.payload.ref_type !== "branch" || !e.payload.ref.startsWith("exp/") || OWN.has(e.payload.ref)) continue;
+    const t = new Date(e.created_at); let best = null, bestT = 0;
+    for (const r of lanes) { const f = cronFires(r.cronP, new Date(+t - 3600e3), t).pop(); if (f && +f > bestT) { best = r; bestT = +f; } }
+    if (best) OWN.set(e.payload.ref, best);
+  }
+}
+function routineOfBranch(b) {
+  if (!b) return null;
+  if (OWN.has(b)) return OWN.get(b);
+  return IDX.routines.find((r) => r.re && r.re.test(b) && !r.paused) || IDX.routines.find((r) => r.re && r.re.test(b)) || null;
+}
+const latestRun = (branch) => S.runs.find((r) => r.head_branch === branch && r.name === "Tests");
+function prState(p) {
+  if (p.merged_at) return { k: "merged", label: "mezclado", cls: "" };
+  if (p.state === "closed") return { k: "closed", label: "cerrado", cls: "" };
+  const run = latestRun(p.head.ref);
+  if (!run) return { k: "wait", label: "sin CI", cls: "warn" };
+  if (run.status !== "completed") return { k: "ci", label: "CI corriendo", cls: "info", run };
+  if (run.conclusion === "success") return { k: "green", label: "verde", cls: "live", run };
+  return { k: "red", label: "rojo", cls: "bad", run };
+}
+
+function routineStatus(r, now = new Date()) {
+  const branchEvents = S.events.filter((e) => routineOfBranch(branchOf(e)) === r);
+  const lastAct = branchEvents[0] ? new Date(branchEvents[0].created_at) : null;
+  const prevs = r.cronP ? cronFires(r.cronP, new Date(now - 32 * 864e5), now) : [];
+  const last = prevs[prevs.length - 1] || null;
+  const next = r.cronP ? cronFires(r.cronP, now, new Date(+now + 33 * 864e5))[0] : null;
+  const openPRs = S.pulls.filter((p) => p.state === "open" && routineOfBranch(p.head.ref) === r);
+  const sinceLast = last ? now - last : Infinity;
+  const running = !r.paused && !S.data?.paused && last && sinceLast < 75 * 60e3 && lastAct && lastAct >= new Date(+last - 120e3);
+  const workBranch = running ? branchOf(branchEvents[0]) : "";
+  return { lastAct, last, next, openPRs, running, workBranch, task: running ? taskOf(workBranch) : null };
+}
+function activeAgents() { // nombre -> motivo
+  const map = new Map(); if (!S.data) return map;
+  for (const r of IDX.routines) {
+    const st = routineStatus(r); if (!st.running) continue;
+    const t = st.task; const known = (t?.agents || []).filter((a) => IDX.agents.has(a));
+    for (const a of (known.length ? known : r.agents).slice(0, 3)) if (IDX.agents.has(a) && !map.has(a)) map.set(a, r.name + (t?.id ? " · " + t.id : ""));
+  }
+  for (const run of S.runs) if (run.status !== "completed" && run.event === "pull_request" && routineOfBranch(run.head_branch) && run.name === "Tests") {
+    if (!map.has("vigilante-ci")) map.set("vigilante-ci", "CI de " + run.head_branch);
+  }
+  return map;
+}
+const pillarOfTask = (t) => t?.pillar || null;
+const eventsCover = (t) => !!t && S.events.length > 0 && new Date(S.events[S.events.length - 1].created_at) <= t;
+
+// ---------- render ----------
+function render() {
+  const dot = $("#live-dot"), txt = $("#live-txt");
+  dot.className = "dot " + (S.ok ? "on" : S.err ? "err" : "");
+  txt.textContent = S.ok ? "en vivo · " + ago(S.lastPoll) : S.err || "conectando…";
+  $("#today").textContent = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  if (S.data) $("#foot-data").textContent = "Datos del repo: commit " + S.data.commit + ", " + ago(S.data.generated);
+  $("#foot-rate").textContent = S.rate ? "GitHub: " + S.rate.remaining + "/" + S.rate.limit + " consultas" + (store.get("tmp-token") ? " (con token)" : " (sin token)") : "";
+  if (!S.data) { $("#pillars").innerHTML = '<p class="muted">Cargando los datos del repo…</p>'; return; }
+  attribute(); const act = activeAgents();
+  renderDecide(); renderNow(act); renderPillars(act); renderFlow(); renderTimeline(); renderAgents(act); renderActivity();
+  if (openPillar) renderDrawer(openPillar, act);
+}
+
+function decisions() {
+  const out = [], seen = new Set();
+  for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "decide-usuario"))) {
+    const t = taskOf(i.title); if (t) seen.add(t.id);
+    out.push({ id: t?.id || "#" + i.number, title: i.title.replace(/^[A-Z]-[\d.]+\s*·\s*decidir:\s*/i, ""), pillar: pillarOfTask(IDX.tasks.get(t?.id)), url: i.html_url, sub: "issue #" + i.number + " · abierto " + ago(i.created_at) + (i.comments ? " · " + i.comments + " comentarios" : ""), cta: "Responder" });
+  }
+  const all = [...S.data.tasks, ...(S.data.expansion.tasks || [])].filter((t) => t.status === "decide" && !seen.has(t.id));
+  for (const t of all) out.push({ id: t.id, title: t.title, pillar: t.pillar, url: t.id.startsWith("D-") ? GH + "/tree/main/docs/expansion-distritos/detalle" : GH + "/blob/main/docs/tareas-nacho.md", sub: S.issuesLoaded ? "sin issue todavía · rige el supuesto mientras tanto" : "en pausa hasta que decidan", cta: "Ver tarea" });
+  return out;
+}
+function attention() {
+  const out = [];
+  if (S.data.paused) out.push({ lvl: "bad", t: "Freno de mano puesto: las rutinas no trabajan", sub: ".claude/rutinas/PAUSA está en main", url: GH + "/blob/main/.claude/rutinas/PAUSA" });
+  const mainRun = S.runs.find((r) => r.head_branch === "main" && r.name === "Tests" && r.event === "push" && r.status === "completed");
+  if (mainRun && mainRun.conclusion !== "success") out.push({ lvl: "bad", t: "main está rojo", sub: mainRun.display_title + " · " + ago(mainRun.updated_at), url: mainRun.html_url });
+  for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "rutina-caida"))) out.push({ lvl: "bad", t: i.title, sub: "issue #" + i.number + " · " + ago(i.updated_at), url: i.html_url });
+  for (const p of S.pulls.filter((p) => p.state === "open")) {
+    const st = prState(p); const age = (Date.now() - new Date(p.created_at)) / 36e5;
+    if (st.k === "red") out.push({ lvl: "bad", t: "PR #" + p.number + " rojo", sub: p.title + " · " + ago(st.run.updated_at), url: p.html_url });
+    else if (age > 6) out.push({ lvl: "warn", t: "PR #" + p.number + " abierto hace " + dur(age * 3600 | 0), sub: p.title, url: p.html_url });
+  }
+  for (const t of S.data.tasks.filter((t) => t.status === "bloqueada")) out.push({ lvl: "warn", t: t.id + " bloqueada", sub: t.title, url: GH + "/blob/main/docs/tareas-nacho.md" });
+  for (const b of S.data.expansion.bugs || []) out.push({ lvl: "warn", t: "Bug de la expansión: " + b, sub: "docs/expansion-distritos/bugs/", url: GH + "/tree/main/docs/expansion-distritos/bugs" });
+  for (const r of IDX.routines) { // le tocaba hace más de 70 min y no dejó rastro
+    if (r.paused || !r.cronP || !eventsCover(routineStatus(r).last)) continue;
+    const st = routineStatus(r);
+    if (st.last && Date.now() - st.last > 70 * 60e3 && Date.now() - st.last < 26 * 36e5 && (!st.lastAct || st.lastAct < st.last) && r.cron.split(" ")[1] !== "*") {
+      out.push({ lvl: "info", t: r.name + " no dejó rastro", sub: "le tocaba " + ago(st.last) + " · puede que no haya encontrado trabajo", url: GH + "/blob/main/.claude/rutinas/" + r.file });
+    }
+  }
+  return out;
+}
+function pillarChip(key) { const p = IDX.pillar.get(key); return p ? '<span class="chip">' + esc(p.title) + "</span>" : ""; }
+function renderDecide() {
+  const d = decisions(), a = attention();
+  $("#decide-count").textContent = d.length; $("#decide-count").className = "count" + (d.length ? "" : " zero");
+  $("#decide-list").innerHTML = d.length ? d.map((x) => '<li><span class="id">' + esc(x.id) + '</span><span class="t">' + esc(x.title) + "<small>" + esc(x.sub) + "</small></span>" +
+    '<span class="side">' + pillarChip(x.pillar) + '<a class="go" href="' + esc(x.url) + '" target="_blank" rel="noopener">' + x.cta + " ↗</a></span></li>").join("")
+    : '<li class="empty">Nada esperando una decisión.</li>';
+  $("#attn-count").textContent = a.length; $("#attn-count").className = "count" + (a.length ? "" : " zero");
+  $("#attn-list").innerHTML = a.length ? a.slice(0, 12).map((x) => '<li><span class="stripe ' + x.lvl + '"></span><span class="t">' + esc(x.t) + "<small>" + esc(x.sub) + '</small></span><a class="go" href="' + esc(x.url) + '" target="_blank" rel="noopener">Abrir ↗</a></li>').join("")
+    : '<li class="empty">Todo en orden: main verde, sin PRs rojos ni rutinas caídas.</li>';
+}
+
+function renderNow(act) {
+  const rs = IDX.routines.map((r) => ({ r, st: routineStatus(r) }));
+  const running = rs.filter((x) => x.st.running);
+  const upcoming = rs.filter((x) => !x.st.running && x.st.next && !x.r.paused).sort((a, b) => a.st.next - b.st.next).slice(0, Math.max(3, 6 - running.length));
+  $("#now-sub").textContent = running.length ? running.length + " rutina" + (running.length > 1 ? "s" : "") + " trabajando · " + act.size + " agentes en uso" : "Ninguna rutina trabajando en este momento";
+  const card = ({ r, st }) => {
+    const t = st.task; const known = (t?.agents || []).filter((a) => IDX.agents.has(a)); const agents = (known.length ? known : r.agents).slice(0, 3);
+    return '<div class="panel now-card' + (st.running ? " running" : "") + '"><div class="row"><b>' + esc(r.name) + "</b>" +
+      (st.running ? '<span class="chip live"><span class="dot on"></span>trabajando</span>' : '<span class="chip">' + (st.next ? "a las " + hhmm(st.next) : "—") + "</span>") + "</div>" +
+      (st.running ? '<div style="font-size:13px">' + (t?.id ? '<span class="id">' + esc(t.id) + "</span> " + esc(t.title || st.workBranch) : '<span class="mono muted">' + esc(st.workBranch) + "</span>") + "</div>"
+        : '<div class="muted" style="font-size:12.5px">' + esc(r.laneTitle || r.produces) + "</div>") +
+      '<div class="agents-mini">' + agents.map((a) => '<span class="agent-dot' + (st.running ? " on" : "") + '">' + esc(a) + "</span>").join("") + "</div>" +
+      '<div class="muted" style="font-size:11.5px">' + (st.running ? "empezó " + ago(st.last) : "en " + dur(Math.max(0, (st.next - Date.now()) / 1000 | 0))) + " · " + (r.kind === "pc" ? "PC" : "nube") + (r.model ? " · " + r.model : "") + "</div></div>";
+  };
+  $("#now").innerHTML = running.map(card).join("") + upcoming.map(card).join("");
+}
+
+function pillarStats(key, act) {
+  const n = S.data.tasks.filter((t) => t.pillar === key), d = (S.data.expansion.tasks || []).filter((t) => t.pillar === key);
+  const cnt = (arr, s) => arr.filter((t) => t.status === s).length;
+  const prs = S.pulls.filter((p) => p.state === "open" && pillarOfTask(taskOf(p.head.ref)) === key);
+  const merged24 = S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5 && pillarOfTask(taskOf(p.head.ref)) === key);
+  const p = IDX.pillar.get(key);
+  const agents = S.data.agents.filter((a) => a.pillar === key).map((a) => a.name);
+  return { n, d, prs, merged24, agents, on: agents.filter((a) => act.has(a)),
+    nOpen: cnt(n, "abierta"), nDone: cnt(n, "hecha"), nDecide: cnt(n, "decide") + cnt(d, "decide"), nPaused: cnt(n, "pausada"), nBlocked: cnt(n, "bloqueada") + cnt(d, "bloqueada"),
+    dDone: cnt(d, "hecha"), dTotal: d.length, title: p.title, about: p.about };
+}
+function health(s) {
+  if (s.nBlocked || s.prs.some((p) => prState(p).k === "red")) return ["bad", "trabado"];
+  if (s.nDecide) return ["warn", "espera decisión"];
+  if (s.on.length || s.prs.length) return ["live", "en movimiento"];
+  if (s.nOpen + (s.dTotal - s.dDone) === 0) return ["", "sin pendientes"];
+  return ["", "en espera"];
+}
+function bar(done, paused, blocked, total) {
+  if (!total) return '<div class="track"></div>';
+  const w = (x) => (100 * x / total).toFixed(2) + "%";
+  return '<div class="track" role="img" aria-label="' + done + " de " + total + ' hechas"><i class="d" style="width:' + w(done) + '"></i><i class="p" style="width:' + w(paused) + '"></i><i class="b" style="width:' + w(blocked) + '"></i></div>';
+}
+function renderPillars(act) {
+  const all = S.data.pillars.map((p) => ({ key: p.key, s: pillarStats(p.key, act) }));
+  const nT = S.data.tasks, dT = S.data.expansion.tasks || [];
+  const open = nT.filter((t) => t.status === "abierta").length, dDone = dT.filter((t) => t.status === "hecha").length;
+  const openPR = S.pulls.filter((p) => p.state === "open").length, merged = S.pulls.filter((p) => p.merged_at && Date.now() - new Date(p.merged_at) < 864e5).length;
+  $("#global-stats").innerHTML = '<span class="chip">' + open + " tareas abiertas</span>" + '<span class="chip">expansión ' + dDone + "/" + dT.length + "</span>" +
+    '<span class="chip info">' + openPR + " PRs abiertos</span>" + '<span class="chip live">' + merged + " mezclados en 24 h</span>";
+  $("#pillars").innerHTML = all.map(({ key, s }) => {
+    const [hc, hl] = health(s);
+    const nTot = s.nOpen + s.nDone + s.nDecide + s.nPaused;
+    const next = s.n.filter((t) => t.status === "abierta").sort((a, b) => (a.prio || "Z").localeCompare(b.prio || "Z")).slice(0, 3);
+    return '<article class="panel pillar" tabindex="0" role="button" aria-label="Ver detalle de ' + esc(s.title) + '" data-pillar="' + key + '"><div class="top"><h3>' + esc(s.title) + '</h3><span class="health"><span class="dot ' + (hc === "live" ? "on" : "") + '" style="' + (hc && hc !== "live" ? "background:var(--" + hc + ")" : "") + '"></span>' + hl + "</span></div>" +
+      "<p>" + esc(s.about) + "</p>" +
+      '<div class="meter"><div class="lbl"><span>Juego actual</span><b>' + s.nDone + "/" + nTot + "</b></div>" + bar(s.nDone, s.nDecide + s.nPaused, s.nBlocked, nTot) + "</div>" +
+      (s.dTotal ? '<div class="meter"><div class="lbl"><span>Expansión</span><b>' + s.dDone + "/" + s.dTotal + "</b></div>" + bar(s.dDone, s.d.filter((t) => t.status === "decide").length, s.d.filter((t) => t.status === "bloqueada").length, s.dTotal) + "</div>" : "") +
+      '<div class="stats">' + (s.nOpen ? '<span class="chip">' + s.nOpen + " abiertas</span>" : "") + (s.nDecide ? '<span class="chip tape">' + s.nDecide + " para decidir</span>" : "") +
+      (s.prs.length ? '<span class="chip info">' + s.prs.length + " PR</span>" : "") + (s.merged24.length ? '<span class="chip live">+' + s.merged24.length + " hoy</span>" : "") +
+      (s.nPaused ? '<span class="chip">' + s.nPaused + " en pausa</span>" : "") + (s.nBlocked ? '<span class="chip bad">' + s.nBlocked + " bloqueadas</span>" : "") + "</div>" +
+      (next.length ? '<ul class="next">' + next.map((t) => '<li><span class="id">' + esc(t.id) + "</span><span>" + esc(t.title) + "</span></li>").join("") + "</ul>" : "") +
+      '<div class="agent-dots">' + s.agents.filter((a) => a !== "claude" && a !== "Plan").map((a) => '<span class="agent-dot' + (act.has(a) ? " on" : "") + '" title="' + esc(act.get(a) || "") + '">' + esc(a) + "</span>").join("") + "</div></article>";
+  }).join("");
+}
+
+// ---------- cajón de pilar ----------
+let openPillar = null;
+function openDrawer(key) { openPillar = key; $("#drawer").hidden = false; $("#scrim").hidden = false; renderDrawer(key, activeAgents()); $("#drawer .close")?.focus(); }
+function closeDrawer() { openPillar = null; $("#drawer").hidden = true; $("#scrim").hidden = true; }
+function taskRow(t) {
+  const st = { abierta: ["", "abierta"], hecha: ["live", "hecha"], decide: ["tape", "decidir"], pausada: ["", "en pausa"], bloqueada: ["bad", "bloqueada"] }[t.status] || ["", t.status];
+  return '<li><span class="id">' + esc(t.id) + "</span><span>" + esc(t.title) + (t.agents?.length ? '<br><span class="muted mono" style="font-size:11px">' + esc(t.agents.slice(0, 3).join(" · ")) + "</span>" : "") + '</span><span class="chip ' + st[0] + '">' + st[1] + "</span></li>";
+}
+function renderDrawer(key, act) {
+  const s = pillarStats(key, act);
+  const order = { decide: 0, bloqueada: 1, abierta: 2, pausada: 3, hecha: 4 };
+  const nList = s.n.filter((t) => t.status !== "hecha").sort((a, b) => order[a.status] - order[b.status]);
+  const dOpen = s.d.filter((t) => t.status !== "hecha");
+  const groups = {}; for (const t of dOpen) groups[t.group] = (groups[t.group] || 0) + 1;
+  const gName = (g) => (S.data.expansion.groups.find((x) => x.n === g) || {}).title || g;
+  $("#drawer").innerHTML = '<button class="icon-btn close" type="button">Cerrar</button>' +
+    '<div><div class="eyebrow">Pilar</div><h2>' + esc(s.title) + '</h2><p class="lede">' + esc(s.about) + "</p></div>" +
+    '<div style="display:grid;gap:8px"><h3>Agentes</h3><div class="agent-dots">' + s.agents.map((a) => '<span class="agent-dot' + (act.has(a) ? " on" : "") + '">' + esc(a) + (act.has(a) ? " · " + esc(act.get(a)) : "") + "</span>").join("") + "</div></div>" +
+    '<div style="display:grid;gap:8px"><h3>PRs abiertos</h3>' + (s.prs.length ? '<ul class="tasks">' + s.prs.map((p) => { const st = prState(p); return '<li><span class="id">#' + p.number + '</span><a href="' + esc(p.html_url) + '" target="_blank" rel="noopener">' + esc(p.title) + '</a><span class="chip ' + st.cls + '">' + st.label + "</span></li>"; }).join("") + "</ul>" : '<p class="muted" style="margin:0">Ninguno.</p>') + "</div>" +
+    '<div style="display:grid;gap:8px"><h3>Juego actual · pendientes</h3>' + (nList.length ? '<ul class="tasks">' + nList.map(taskRow).join("") + "</ul>" : '<p class="muted" style="margin:0">Nada pendiente.</p>') + "</div>" +
+    (s.dTotal ? '<div style="display:grid;gap:8px"><h3>Expansión · ' + s.dDone + " de " + s.dTotal + ' hechas</h3><ul class="tasks">' + Object.entries(groups).sort().map(([g, c]) => '<li><span class="id">G' + g + "</span><span>" + esc(gName(g)) + '</span><span class="chip">' + c + " por hacer</span></li>").join("") + "</ul>" +
+      '<ul class="tasks">' + dOpen.slice(0, 8).map(taskRow).join("") + "</ul></div>" : "") +
+    (s.merged24.length ? '<div style="display:grid;gap:8px"><h3>Mezclado en 24 h</h3><ul class="tasks">' + s.merged24.map((p) => '<li><span class="id">#' + p.number + '</span><a href="' + esc(p.html_url) + '" target="_blank" rel="noopener">' + esc(p.title) + '</a><span class="chip live">' + ago(p.merged_at) + "</span></li>").join("") + "</ul></div>" : "");
+  $("#drawer .close").onclick = closeDrawer;
+}
+
+// ---------- flujo ----------
+const NW = 180, NH = 40;
+const FLOW = {
+  cols: [[20, "Observan"], [230, "Dejan por escrito"], [440, "Planifican"], [650, "Listas de tareas"], [860, "Construyen"], [1070, "Compuerta"]],
+  nodes: [
+    { id: "qa", x: 20, y: 60, t: "QA", s: "diario · juego actual", r: ["QA (juego actual)"] },
+    { id: "qaexp", x: 20, y: 112, t: "QA expansión", s: "01:00 y 13:00", r: ["QA expansión A y B"] },
+    { id: "aud", x: 20, y: 164, t: "Auditoría integral", s: "día por medio", r: ["Auditoría integral"] },
+    { id: "rev", x: 20, y: 216, t: "Revisión · la contra", s: "lunes", r: ["Revisión (la contra)"] },
+    { id: "mant", x: 20, y: 268, t: "Mantenimiento", s: "jueves", r: ["Mantenimiento"] },
+    { id: "lanz", x: 20, y: 320, t: "Lanzamiento", s: "día 1 del mes", r: ["Lanzamiento"] },
+    { id: "pcb", x: 20, y: 372, t: "Build y FPS (PC)", s: "diaria, GPU real", r: ["Build y rendimiento (PC)"] },
+    { id: "d_qa", x: 230, y: 86, t: "qa-recorrido.md", s: "+ bugs/ de la expansión", k: "doc" },
+    { id: "d_aud", x: 230, y: 190, t: "docs/auditorias/", s: "integral y revisión", k: "doc" },
+    { id: "d_mkt", x: 230, y: 294, t: "docs/marketing/", s: "Steam, calendario", k: "doc" },
+    { id: "d_pc", x: 230, y: 372, t: "rendimiento-pc.md", s: "FPS y capturas", k: "doc" },
+    { id: "plan", x: 440, y: 200, t: "planificador-tareas", s: "hallazgos → tareas" },
+    { id: "people", x: 440, y: 400, t: "Nacho y Slatex", s: "deciden los ⏸", k: "people" },
+    { id: "tn", x: 650, y: 150, t: "tareas-nacho.md", s: "N- y S- heredadas", k: "doc" },
+    { id: "te", x: 650, y: 290, t: "expansion-distritos/", s: "1000 tareas D-", k: "doc" },
+    { id: "cons", x: 860, y: 150, t: "Construcción A", s: "cada hora · N-/S-", r: ["Construcción A", "Construcción B"] },
+    { id: "dev", x: 860, y: 240, t: "Desarrolladores 1–5", s: "cada hora · 5 carriles", r: ["Desarrollador 1", "Desarrollador 2", "Desarrollador 3", "Desarrollador 4", "Desarrollador 5"] },
+    { id: "arte", x: 860, y: 330, t: "Sesión de arte (PC)", s: "cada 2 h · Blender, ComfyUI", r: ["Sesión de arte (PC)"] },
+    { id: "pr", x: 1070, y: 150, t: "PR + auto-merge", s: "vigilante-ci lo sigue" },
+    { id: "ci", x: 1070, y: 240, t: "CI", s: "lint · tests · par de red", k: "gate" },
+    { id: "main", x: 1070, y: 330, t: "main", s: "lo que juega el equipo", k: "gate" },
+  ],
+  edges: [
+    ["qa", "d_qa"], ["qaexp", "d_qa"], ["aud", "d_aud"], ["rev", "d_aud"], ["mant", "d_aud"], ["lanz", "d_mkt"], ["pcb", "d_pc"],
+    ["d_qa", "plan"], ["d_aud", "plan"], ["d_mkt", "plan"], ["d_pc", "plan"],
+    ["plan", "tn"], ["plan", "te"], ["plan", "people", "issue decide-usuario"], ["people", "plan", "responden"],
+    ["tn", "cons"], ["te", "dev"], ["tn", "arte"], ["te", "arte"],
+    ["cons", "pr"], ["dev", "pr"], ["arte", "pr"], ["pr", "ci"], ["ci", "main"],
+  ],
+};
+function renderFlow() {
+  const running = new Set(IDX.routines.filter((r) => routineStatus(r).running).map((r) => r.name));
+  const ciOn = S.runs.some((r) => r.status !== "completed" && r.name === "Tests");
+  const on = new Set(FLOW.nodes.filter((n) => n.r?.some((x) => running.has(x))).map((n) => n.id));
+  if (on.has("cons") || on.has("dev") || on.has("arte")) on.add("pr");
+  if (ciOn) { on.add("ci"); on.add("pr"); }
+  const decideN = decisions().length; if (decideN) on.add("people");
+  const N = Object.fromEntries(FLOW.nodes.map((n) => [n.id, n]));
+  let svg = FLOW.cols.map(([x, l]) => '<text class="col" x="' + x + '" y="30">' + l + "</text>").join("");
+  for (const [a, b, lbl] of FLOW.edges) {
+    const A = N[a], B = N[b]; let d, lx, ly, anchor = "middle";
+    if (A.x === B.x) { // vertical: ida y vuelta en dos carriles
+      const off = a === "people" ? 130 : a === "plan" ? 50 : NW / 2;
+      const [y1, y2] = A.y < B.y ? [A.y + NH, B.y] : [A.y, B.y + NH];
+      d = `M${A.x + off},${y1} L${B.x + off},${y2}`; lx = A.x + off + 6; ly = (y1 + y2) / 2 + (a === "people" ? 14 : -4); anchor = "start";
+    } else {
+      const x1 = A.x + NW, y1 = A.y + NH / 2, x2 = B.x, y2 = B.y + NH / 2, mx = (x1 + x2) / 2;
+      d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`; lx = mx; ly = (y1 + y2) / 2 - 6;
+    }
+    const active = on.has(a) && (on.has(b) || ["pr", "ci", "main", "d_qa", "d_aud", "d_mkt", "d_pc", "people"].includes(b));
+    svg += '<path class="edge' + (active ? " on" : "") + '" d="' + d + '" marker-end="url(#arr)"/>';
+    if (lbl) svg += '<text class="edge-lbl" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '">' + esc(lbl) + "</text>";
+  }
+  svg += '<path class="edge" d="M' + (1070 + NW / 2) + "," + (330 + NH) + " C" + (1070 + NW / 2) + ",540 " + (20 + NW / 2) + ",540 " + (20 + NW / 2) + "," + (372 + NH) + '" marker-end="url(#arr)"/>' +
+    '<text class="edge-lbl" x="640" y="512" text-anchor="middle">cada main nuevo lo vuelven a mirar</text>';
+  for (const n of FLOW.nodes) {
+    const sub = n.id === "people" && decideN ? decideN + " decisiones esperando" : n.s;
+    svg += '<g class="node k-' + (n.k || "r") + (on.has(n.id) ? " on" : "") + '"><rect x="' + n.x + '" y="' + n.y + '" width="' + NW + '" height="' + NH + '" rx="8"/>' +
+      '<text x="' + (n.x + 12) + '" y="' + (n.y + 17) + '">' + esc(n.t) + '</text><text class="sub" x="' + (n.x + 12) + '" y="' + (n.y + 31) + '">' + esc(sub) + "</text></g>";
+  }
+  $("#flow").innerHTML = '<defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="var(--muted)"/></marker></defs>' + svg;
+}
+
+// ---------- rutinas ----------
+function renderTimeline() {
+  const now = new Date(), from = new Date(now); from.setHours(0, 0, 0, 0); const to = new Date(+from + 864e5);
+  const pos = (t) => (100 * (t - from) / 864e5).toFixed(3) + "%";
+  let h = '<div class="hdr">Rutina</div><div class="hdr"><div class="hours">' + [0, 3, 6, 9, 12, 15, 18, 21, 24].map((x) => '<span style="left:' + (100 * x / 24) + '%">' + String(x).padStart(2, "0") + "</span>").join("") + '</div></div><div class="hdr">Próxima · última actividad</div>';
+  for (const r of IDX.routines) {
+    const st = routineStatus(r);
+    const fires = r.cronP ? cronFires(r.cronP, from, to) : [];
+    const ticks = fires.map((f) => {
+      let cls = "";
+      if (f <= now) {
+        const end = new Date(+f + 75 * 60e3);
+        const hit = S.events.some((e) => routineOfBranch(branchOf(e)) === r && new Date(e.created_at) >= new Date(+f - 120e3) && new Date(e.created_at) <= end);
+        const covered = eventsCover(f);
+        cls = st.running && +f === +st.last ? "run" : hit ? "done" : covered && now - f > 75 * 60e3 && !r.paused ? "miss" : "";
+      }
+      return '<span class="tick ' + cls + '" style="left:' + pos(f) + '" title="' + hhmm(f) + '"></span>';
+    }).join("");
+    h += '<div class="name"><b>' + esc(r.name) + (r.paused ? ' <span class="chip">pausada</span>' : "") + "</b><small>" + esc((r.kind === "pc" ? "PC · " : "nube · ") + (r.model ? r.model + " · " : "") + r.file) + "</small></div>" +
+      '<div><div class="lane"><div class="axis"></div>' + ticks + '<div class="nowline" style="left:' + pos(now) + '"></div></div></div>' +
+      '<div style="flex-direction:column;align-items:start;gap:2px;font-size:12px"><span>' + (st.running ? '<span class="chip live">trabajando</span>' : r.paused ? "—" : st.next ? hhmm(st.next) + ' <span class="muted">(' + ago(st.next) + ")</span>" : "—") + '</span><span class="muted">' + (st.lastAct ? ago(st.lastAct) : "sin rastro reciente") + (st.openPRs.length ? " · " + st.openPRs.length + " PR" : "") + "</span></div>";
+  }
+  $("#tl").innerHTML = h;
+}
+
+// ---------- agentes ----------
+function renderAgents(act) {
+  const usedBy = (a) => [...new Set(IDX.routines.filter((r) => r.agents.includes(a)).map((r) => r.name.replace(/ \d$/, " 1–5")))];
+  $("#agents").innerHTML = S.data.pillars.map((p) => {
+    const list = S.data.agents.filter((a) => a.pillar === p.key); if (!list.length) return "";
+    return '<div class="agent-group"><div class="head"><h3>' + esc(p.title) + '</h3><span class="muted" style="font-size:12px">' + esc(p.about) + '</span></div><div class="agent-grid">' + list.map((a) => {
+      const u = usedBy(a.name);
+      return '<div class="panel agent' + (act.has(a.name) ? " on" : "") + '"><div class="row"><b>' + esc(a.name) + "</b>" + (act.has(a.name) ? '<span class="chip live"><span class="dot on"></span>en uso</span>' : "") + "</div>" +
+        '<div class="stats"><span class="chip ' + (a.model === "Opus" ? "info" : "") + '">' + esc(a.model) + " · " + esc(a.effort) + "</span>" + (a.pc ? '<span class="chip tape">necesita PC</span>' : "") + (a.readonly ? '<span class="chip">solo lectura</span>' : "") + "</div>" +
+        "<p>" + esc(a.summary) + "</p>" + (act.has(a.name) ? '<p style="color:var(--live)">' + esc(act.get(a.name)) + "</p>" : "") +
+        (u.length ? '<p class="mono" style="font-size:11px">' + esc(u.slice(0, 4).join(" · ")) + (u.length > 4 ? " +" + (u.length - 4) : "") + "</p>" : "") + "</div>";
+    }).join("") + "</div></div>";
+  }).join("");
+}
+
+// ---------- actividad ----------
+function describe(e) {
+  const b = branchOf(e), r = routineOfBranch(b), who = r ? r.name : b === "main" ? "main" : e.actor.login;
+  const t = taskOf(b); const tt = t?.id ? '<span class="id">' + esc(t.id) + "</span> " : "";
+  switch (e.type) {
+    case "CreateEvent": return e.payload.ref_type === "branch" ? "<b>" + esc(who) + "</b> reclamó " + tt + '<span class="mono muted">' + esc(b) + "</span>" : null;
+    case "DeleteEvent": return null;
+    case "PushEvent": return b === "main" ? "Se mezcló a <b>main</b>" : "<b>" + esc(who) + "</b> subió cambios a " + tt + '<span class="mono muted">' + esc(b) + "</span>";
+    case "PullRequestEvent": {
+      const p = prByNum(e.payload.number); const title = p ? esc(p.title) : "#" + e.payload.number;
+      const verb = { opened: "abrió", merged: "mezcló", closed: p?.merged_at ? "mezcló" : "cerró", reopened: "reabrió", synchronize: "actualizó" }[e.payload.action] || e.payload.action;
+      return "<b>" + esc(who) + "</b> " + verb + ' <a href="' + GH + "/pull/" + e.payload.number + '" target="_blank" rel="noopener">PR #' + e.payload.number + "</a> · " + title;
+    }
+    case "IssuesEvent": return "Issue " + (e.payload.action === "opened" ? "abierto" : e.payload.action === "closed" ? "cerrado" : e.payload.action) + ': <a href="' + esc(e.payload.issue.html_url) + '" target="_blank" rel="noopener">' + esc(e.payload.issue.title) + "</a>";
+    case "IssueCommentEvent": return "Comentario en " + '<a href="' + esc(e.payload.comment.html_url) + '" target="_blank" rel="noopener">#' + e.payload.issue.number + "</a> · " + esc(e.payload.issue.title);
+    default: return null;
+  }
+}
+function renderActivity() {
+  $("#feed").innerHTML = S.events.map((e) => { const d = describe(e); return d ? "<li><time>" + hhmm(new Date(e.created_at)) + "</time><span>" + d + "</span></li>" : ""; }).join("") || '<li class="empty">Sin eventos todavía.</li>';
+  const open = S.pulls.filter((p) => p.state === "open");
+  $("#pr-count").textContent = open.length; $("#pr-count").className = "count" + (open.length ? "" : " zero");
+  $("#prs").innerHTML = open.map((p) => { const st = prState(p), r = routineOfBranch(p.head.ref);
+    return '<li><span class="id">#' + p.number + '</span><span class="t"><a href="' + esc(p.html_url) + '" target="_blank" rel="noopener">' + esc(p.title) + "</a><small>" + esc((r ? r.name : p.user.login) + " · " + ago(p.created_at)) + '</small></span><span class="chip ' + st.cls + '">' + st.label + "</span></li>"; }).join("") || '<li class="empty">Ninguno.</li>';
+  $("#runs").innerHTML = S.runs.filter((r) => r.name === "Tests").slice(0, 8).map((r) => {
+    const cls = r.status !== "completed" ? "info" : r.conclusion === "success" ? "live" : "bad";
+    const lbl = r.status !== "completed" ? "corriendo" : r.conclusion === "success" ? "verde" : r.conclusion === "cancelled" ? "cancelado" : "rojo";
+    return '<li><span class="id">' + hhmm(new Date(r.created_at)) + '</span><span class="t"><a href="' + esc(r.html_url) + '" target="_blank" rel="noopener">' + esc(r.display_title) + '</a><small class="mono">' + esc(r.head_branch) + '</small></span><span class="chip ' + cls + '">' + lbl + "</span></li>";
+  }).join("") || '<li class="empty">Sin corridas.</li>';
+  $("#notes").innerHTML = (S.data.notes || []).slice(0, 6).map((n) => '<li><span class="id">' + esc(n.date.slice(5)) + '</span><span class="t"><a href="' + GH + "/blob/main/docs/avisos/" + esc(n.file) + '" target="_blank" rel="noopener">' + esc(n.title) + "</a></span><span></span></li>").join("");
+}
+
+// ---------- vistas, tema, token ----------
+function route() {
+  const v = (location.hash || "#pilares").slice(1);
+  const known = [...document.querySelectorAll("section[data-view]")].map((s) => s.dataset.view);
+  const view = known.includes(v) ? v : "pilares";
+  for (const s of document.querySelectorAll("section[data-view]")) s.hidden = s.dataset.view !== view;
+  for (const a of document.querySelectorAll("nav a")) if (a.getAttribute("href") === "#" + view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+}
+window.addEventListener("hashchange", route);
+$("#pillars").addEventListener("click", (e) => { const b = e.target.closest("[data-pillar]"); if (b) openDrawer(b.dataset.pillar); });
+$("#pillars").addEventListener("keydown", (e) => { const b = e.target.closest("[data-pillar]"); if (b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openDrawer(b.dataset.pillar); } });
+$("#scrim").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && openPillar) closeDrawer(); });
+function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+applyTheme(store.get("tmp-theme"));
+$("#theme-btn").onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark"; applyTheme(next); store.set("tmp-theme", next);
+};
+$("#token-btn").onclick = () => { $("#tokenbox").hidden = !$("#tokenbox").hidden; $("#token-in").value = store.get("tmp-token") || ""; };
+$("#token-save").onclick = () => { const v = $("#token-in").value.trim(); store.set("tmp-token", v || null); $("#tokenbox").hidden = true; S.tick = 0; poll(); };
+$("#token-clear").onclick = () => { store.set("tmp-token", null); $("#token-in").value = ""; $("#tokenbox").hidden = true; };
+
+route(); loadData(); poll();
+setInterval(() => { if (S.data) { attribute(); const act = activeAgents(); renderNow(act); renderTimeline(); } $("#live-txt").textContent = S.ok ? "en vivo · " + ago(S.lastPoll) : S.err || "conectando…"; }, 15000);
+</script>
+</body>
+</html>
