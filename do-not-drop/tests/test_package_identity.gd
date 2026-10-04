@@ -1,10 +1,32 @@
 extends SceneTree
 ## Every trap ships in its own printed, openable box with its own contents
 ## (data/contents/*.tres), sized like its collider.
+## Also guards the shipping label art (N-327.2): the regenerated bilingual
+## tx_cargo_shipping_label_512.png must load at 512x320, match
+## PackageShippingLabel.ASPECT (else the paper is drawn stretched) and keep the
+## recipient/sender block (PARTIES_CENTER_UV) inside the texture, so the text
+## does not land off the paper if the PNG is replaced with another size.
+
+const ShippingLabel := preload("res://scripts/gameplay/package/package_shipping_label.gd")
 
 var failures := 0
 
+func _expect_label_texture() -> void:
+	var tex: Texture2D = ShippingLabel.TEXTURE
+	_expect(tex != null, "shipping label texture loads")
+	if tex == null:
+		return
+	var w: int = tex.get_width()
+	var h: int = tex.get_height()
+	_expect(w == 512 and h == 320, "shipping label texture is 512x320 (got %dx%d)" % [w, h])
+	_expect(is_equal_approx(float(h) / float(w), ShippingLabel.ASPECT),
+		"shipping label texture aspect matches ASPECT")
+	var c: Vector2 = ShippingLabel.PARTIES_CENTER_UV
+	_expect(c.x >= 0.0 and c.x < w and c.y >= 0.0 and c.y < h,
+		"parties block centre lies inside the label texture")
+
 func _initialize() -> void:
+	_expect_label_texture()
 	var fixtures: Array[Dictionary] = [
 		{"trap": "fragile", "content": "porcelain_vase", "size": Vector3(0.65, 0.65, 0.65)},
 		{"trap": "noisy", "content": "hen", "size": Vector3(0.65, 0.65, 0.65)},
