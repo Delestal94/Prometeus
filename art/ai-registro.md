@@ -10,7 +10,7 @@ Script: `art/tools/comfy_generate.py`.
 | Fecha | Archivo | Semilla | Uso | Prompt |
 |---|---|---|---|---|
 | 2026-09-23 | `art/concept/menu/menu_bg_seed11.png` → `assets/ui/backgrounds/tx_ui_menu_background_1920.png` | 11 | Fondo del menú principal (en el juego) | ver `art/concept/menu/prompt.txt` |
-| 2026-09-23 | `assets/ui/backgrounds/tx_ui_boot_splash_1920.png` | 11 | Splash de arranque: el mismo fondo + título en texto (Arial Black, no generado) | idem |
+| 2026-09-23 (rehecho 2026-10-04, N-328) | `assets/ui/backgrounds/tx_ui_boot_splash_1920.png` | 11 | Splash de arranque: el mismo fondo seed 11 + el wordmark de S-306 (`assets/ui/logo/tx_ui_logo_wordmark_2048.png`, no generado) en la posición del menú, sin subtítulo; compuesto por `art/tools/make_boot_splash.py` (Pillow, sin IA nueva) | idem |
 | 2026-09-23 | `art/concept/icons/app_icon_seed8.png` → `icon.png`, `assets/ui/icons/tx_ui_app_icon_1024.png`, `app_icon.ico` | 8 | Ícono de la app y del .exe | ver `art/concept/icons/prompts.txt` |
 | 2026-09-23 | `art/concept/icons/trap_*_seed9.png` → `assets/ui/icons/tx_ui_trap_*_256.png` | 9 | Íconos originales de las primeras 4 trampas | idem |
 | 2026-09-27 | `assets/ui/icons/tx_ui_trap_liquid_256.png` | — (ChatGPT imagegen) | Ícono HUD de la trampa Líquido | Caja ámbar low-poly con botella de vidrio volcada y líquido turquesa derramándose; mismo ángulo, volumen y paleta que los cuatro íconos de referencia; fondo transparente, sin texto. |

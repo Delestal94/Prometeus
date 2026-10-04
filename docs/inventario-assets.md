@@ -38,8 +38,8 @@
 
 | Asset | Archivo | Estado | Notas |
 |---|---|---|---|
-| Fondo del menú principal | `ui/backgrounds/tx_ui_menu_background_1920.png` | ✅ | Integrado en `main_menu.gd` (2026-09-23) con tinte oscuro encima. |
-| Splash de arranque | `ui/backgrounds/tx_ui_boot_splash_1920.png` | ✅ | `project.godot` → `boot_splash/*`, modo Cover. Reemplaza el logo de Godot. |
+| Fondo del menú principal | `ui/backgrounds/tx_ui_menu_background_1920.png` | ✅ | Integrado en `main_menu.gd` (2026-09-23), sin tinte (solo la tarjeta del menú lleva un esmerilado propio); también es la base del splash. |
+| Splash de arranque | `ui/backgrounds/tx_ui_boot_splash_1920.png` | ✅ | `project.godot` → `boot_splash/*`, modo Cover. Reemplaza el logo de Godot. Sale de `art/tools/make_boot_splash.py`: fondo del menú + logo real (wordmark S-306) donde lo pone el menú (630×315 en (96, 72)), sin subtítulo (N-328, 2026-10-04). |
 | Ícono de la app | `icon.png`, `ui/icons/tx_ui_app_icon_1024.png` | ✅ | `config/icon`. |
 | Ícono del .exe | `ui/icons/app_icon.ico` | ✅ | `export_presets.cfg` → `application/icon`. |
 | Íconos de trampa (×7) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy,liquid,explosive,hostile}_256.png` | ✅ | Un ícono low-poly transparente por trampa; en el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
