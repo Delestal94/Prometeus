@@ -60,3 +60,6 @@ do-not-drop/.claude/
 
 # Python bytecode (Blender imports lowpoly_kit.py)
 __pycache__/
+
+# Panel: data.json se genera en CI (tools/panel/build_data.py)
+/panel/data.json
