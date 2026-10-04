@@ -1,7 +1,7 @@
 # Arquitectura del proyecto — Take My Package
 
 > Basado en: `docs/requerimientos-tecnicos.md` y `docs/plan-desarrollo.md`.
-> Última actualización: 2026-09-23
+> Última actualización: 2026-10-04
 > Objetivo: arquitectura modular, reutilizable y con buenas prácticas profesionales,
 > pensada para que agregar contenido (trampas, vehículos, tramos) no requiera tocar
 > el código central, y para que la IA pueda asistirte trabajando sobre piezas
@@ -339,6 +339,127 @@ recibe estados como Resources/objetos y dispara señales `state_entered`/`state_
   largas.
 - **Nombres de señales en pasado** (`package_ruined`, no `ruin_package`) — convención
   estándar de Godot para distinguir señales (hechos) de métodos (órdenes).
+
+---
+
+## 10. Modo Empresa (la expansión)
+
+> D-0201. Es el contrato de arquitectura del modo nuevo; lo detallan `docs/expansion-distritos/`
+> (qué reutiliza el juego actual: `diseno/reutilizacion.md`; el corte vertical: `diseno/corte-vertical.md`).
+> **Regla de oro (S1):** Entrega y Endless no cambian de comportamiento. Todo lo de esta sección se
+> **agrega** (clases nuevas, señales al final, campos con valor por defecto); ningún test actual se toca
+> salvo para sumarle un caso.
+
+### 10.1 Capas
+
+```
+CompanyState   (autoload, persistente)   plata, día, reloj, reputación, bloqueos abiertos, flota, layout
+   └─ DayCycle  (nodo del mundo)          OPENING → OPERATING → CLOSING → SUMMARY → día siguiente
+        └─ WorldCells (módulo)            qué celdas de 256 m están cargadas alrededor de jugadores y vehículos
+             └─ salidas                   un vehículo + las cajas que lleva, fuera del galpón
+```
+
+| Capa | Vive en | Dura | Quién la escribe |
+|---|---|---|---|
+| `CompanyState` | `scripts/core/company/company_state.gd` (autoload, se registra después de `UnlockManager`) | toda la empresa; se guarda en `user://saves/company/<slot>.json` | solo el host |
+| `DayCycle` | `scripts/core/company/day_cycle.gd` (hijo de `CompanyWorld`, no autoload) | un día (08:00-20:00 de juego, 1 h = 90 s) | solo el host |
+| `WorldCells` | `modules/world_cells/` (genérico, sin nombrar nada del juego) | mientras el mundo está abierto | cada peer carga lo suyo; el trazado del mapa es fijo y el mismo para todos |
+| Salida | vehículo y cajas del mundo | desde el portón hasta volver al galpón | host (vehículo) y el que carga cada caja |
+
+- `CompanyState.is_active()` es falso fuera del modo Empresa: Entrega y Endless lo ignoran. La plata de la
+  empresa vive ahí; `CrewProgression.team_money` sigue siendo la de Entrega y Endless (S8).
+- `RunManager` **no** arranca en modo Empresa: una salida no es una corrida, el día lo lleva `DayCycle`.
+- El mundo es **un solo mapa continuo** (≤ 6 × 6 km, sin origen flotante, sin pantallas de carga después de
+  la inicial): `docs/decisiones/2026-10-04-mapa-continuo.md`. `RouteStreamer` se conserva para Endless.
+- Entrada: botón "Empresa" del menú o `--autostart-company [--slot=<n>]`
+  (`docs/decisiones/2026-10-04-flag-modo-empresa.md`); la escena raíz es `CompanyWorld` y se suma al final de
+  `NetworkManager.LEVEL_SCENES`.
+
+### 10.2 Autoridad (quién manda en cada estado)
+
+**El host es dueño de todo el estado del negocio.** Un cliente nunca escribe estado: manda una
+**petición** (`_request(kind, data)`, `@rpc("any_peer")` pasando por `RpcGuard`), el host la valida y, si
+es válida, la aplica y difunde un **evento** (`_apply_event(seq, kind, data)`, reliable, host → todos) que
+cambia `Inventory`, `OrderBook` o `CompanyState` igual en todos los peers. Una petición inválida se rechaza
+sin cambiar nada. Nada de estado de negocio viaja en un `MultiplayerSynchronizer` por tick.
+
+| Estado | Dueño | Cómo viaja |
+|---|---|---|
+| plata, día, reloj | host | evento; el reloj lo emite el host (D-0219) |
+| stock (`Inventory`) | host | evento |
+| pedidos (`OrderBook`) | host | evento |
+| layout del galpón | host | evento |
+| bloqueos abiertos | host | evento; un bloqueo abierto no se vuelve a cerrar |
+| cajas sueltas (posición) | host | el sincronizador de `DeliveryPackage`, como hoy |
+| caja en mano | el que la lleva | predicción local (N-218), el host valida al soltar |
+| vehículos | host | como hoy (el host simula todos; como máximo 2 lejos del galpón en F1-F3) |
+
+- Cada evento lleva un número de secuencia `seq`. Un hueco en `seq` pide un snapshot al host
+  (`CompanyState.to_dict()` + inventario + pedidos + layout + bloqueos); el mismo snapshot entra al que se
+  suma a mitad de día.
+- La tabla completa por acción del corte vertical (tomar, colocar, encintar, despachar, comprar…) es D-2001;
+  esta sección fija el principio y D-2001 lo baja a las 20 acciones.
+- Cualquier cambio de RPC o replicación sube `PROTOCOL_VERSION` como dice `convenciones-godot.md` §6.
+
+### 10.3 Señales nuevas en `EventBus`
+
+Se agregan **al final** de `event_bus.gd`, sin reordenar las existentes (D-0215). Las señales son hechos,
+en pasado, y las emite el host; los clientes las reciben del evento de red.
+
+| Señal | La emite | Cuándo |
+|---|---|---|
+| `company_day_started(day)` | `DayCycle` | arranca un día |
+| `company_day_closing(day)` | `DayCycle` | llegan las 20:00 (o termina la última salida) |
+| `company_day_summary(day, summary)` | `DayCycle` | pantalla de cierre |
+| `order_added`, `order_packed`, `order_delivered` | `OrderBook` | entra, se arma o se entrega un pedido |
+| `supply_arrived`, `box_sealed` | galpón | llega el camión del proveedor; se encinta una caja |
+| `gate_opened(gate_id)`, `milestone_reached(id)` | `CompanyState` | se abre un bloqueo; se cumple un hito |
+| `money_changed(amount, reason)` | `CompanyState` | cualquier movimiento de plata |
+
+La UI y el audio escuchan estas señales; la simulación nunca depende de que alguien las escuche
+(separación simulación/presentación, `convenciones-godot.md`).
+
+### 10.4 Carpetas nuevas
+
+| Carpeta | Qué tiene |
+|---|---|
+| `scripts/core/company/` | `CompanyState`, `company_tuning.gd` (todos los números, como `const`), `DayCycle`, `company_net.gd`, guardado |
+| `scripts/gameplay/business/` | `ProductDefinition`, `Inventory`, `Order`, `OrderBook`, `Pallet`, armado de cajas |
+| `scripts/gameplay/districts/` | `CompanyWorld`, bloqueos, registro de zonas |
+| `scripts/gameplay/fleet/` | `VehicleDefinition` y vehículos nuevos |
+| `data/products/`, `zones/`, `vehicles/`, `boxes/`, `suppliers/`, `gates/` | recursos `.tres`; agregar uno suma contenido sin tocar código |
+| `scenes/company/` | `company_world.tscn` y lo que cuelga de él |
+| `modules/` | lo genérico y portable: `world_cells`, `day_clock`, `inventory`, `order_queue`, `build_grid` (D-0220 lo cierra) |
+
+Un script que no sabe de cajas, camión ni HUD va a un módulo con su `module.cfg` y su test, y el juego lo
+conecta desde un adaptador chico; `python tools/check_modules.py` lo comprueba.
+
+### 10.5 Flujo de una caja, del palet a la puerta
+
+```
+camión del proveedor (08:30) ──► Pallet (hasta 24 unidades de un producto)
+   │  descarga con zorra o autoelevador
+   ▼
+estante con hueco etiquetado ── Inventory (host): unidades por producto y ubicación, con reservas
+   │  picking a mano: el jugador toma unidades (petición → host → evento)
+   ▼
+mesa de armado ── caja en grilla de celdas de 0,2 m: productos, relleno, cinta, etiqueta, sellos
+   │  calidad Q (0-100) y trampa calculadas por el host
+   ▼
+caja armada = DeliveryPackage (con la trampa del producto de mayor dificultad)
+   │  se deja en la zona de despacho: queda asociada a la salida y al pedido (OrderBook)
+   ▼
+vehículo ── sale por el portón, maneja por el mapa continuo hasta la casa
+   ▼
+DeliveryHouse ── timbre; compara contenido contra el pedido, daño y plazo
+   ▼
+cobro ── CompanyState.money (+ propinas, − penalidades) y reputación; resumen al cierre del día
+```
+
+- **Simulación y presentación van separadas:** `Inventory`, `OrderBook`, `CompanyState` y `DayCycle` son
+  datos y reglas sin nodos de escena, testeables en headless; el galpón, las cajas y el HUD solo los leen.
+- **Números:** viven en `company_tuning.gd` y en los `.tres` (precios del producto, costo de caja), nunca
+  sueltos en el código (`docs/expansion-distritos/detalle/supuestos.md`).
 
 ---
 
