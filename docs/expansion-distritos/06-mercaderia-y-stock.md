@@ -11,7 +11,7 @@
 | D-0601 | Camión de proveedor NPC que entra al patio, se estaciona en la dársena y espera | constructor-mundo | high | bot: camión llega y estaciona sin chocar en 10 corridas |
 | D-0602 | Calendario de entregas de proveedores (horario y contenido por día) | constructor-negocio | medium | test con calendario de 3 días |
 | D-0603 | Pedido a proveedor desde el portapapeles o el tablero (qué y cuánto) | constructor-ui | high | test de UI: pedir palet y que llegue al día siguiente |
-| D-0604 | Palet como objeto físico con N cajas de producto | constructor-negocio | high | palet aparece en la caja del camión con su contenido |
+| D-0604 | ✅ Palet como objeto físico con N cajas de producto | constructor-negocio | high | palet aparece en la caja del camión con su contenido |
 | D-0605 | Descargar palet con la zorra (transpaleta manual) | constructor-jugador | high | jugador mueve un palet del camión al piso (test de interacción) |
 | D-0606 | Descargar con el autoelevador existente (`depot_forklift.gd`) manejado por un jugador | constructor-camion | xhigh | jugador maneja el autoelevador y deja un palet en un rack |
 | D-0607 | Abrir palet: las cajas del producto pasan a ser tomables | constructor-negocio | medium | test |
