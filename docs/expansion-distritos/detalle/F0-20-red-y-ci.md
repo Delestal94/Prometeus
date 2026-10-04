@@ -142,7 +142,7 @@ de la expansión.
 **Hecho cuando:** `tools/run-tests.sh company` corre los tests de la expansión que ya existan.
 
 ### D-2015 · Tests afectados en el `pre-push` — A · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `tools/affected-tests.sh` (lo llama el hook) suma el filtro `company` cuando cambian las carpetas de la expansión; `tools/test-affected-tests.sh` lo prueba en CI.
+**[x] Hecho (2026-10-04, PR #294)** — `tools/affected-tests.sh` (lo llama el hook) suma el filtro `company` cuando cambian las carpetas de la expansión; `tools/test-affected-tests.sh` lo prueba en CI.
 **Depende de:** D-2014
 **Qué:** el hook `pre-push` decide qué tests corren según las carpetas tocadas. Agregar el mapeo
 `scripts/core/company/`, `scripts/gameplay/business|districts|fleet/`, `data/products|zones|vehicles|boxes|suppliers|gates/`
