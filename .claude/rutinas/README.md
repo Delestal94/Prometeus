@@ -22,7 +22,7 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 
 | Rutina | Archivo | Cuándo (hora Argentina) | Rama | Qué produce |
 |---|---|---|---|---|
-| Desarrollador 1-5 | `desarrollador.md` (`Carril: 1`…`5`, expansión `docs/expansion-distritos/`) | cada hora, escalonados: :02, :14, :26, :38, :50 | `exp/D-xxxx-*` | una tarea `D-` → un PR |
+| Desarrollador 1-5 | `desarrollador.md` (`Carril: 1`…`5`, expansión `docs/expansion-distritos/`) | carriles 2-4 cada 2 h (:14, :26, :38, alternados); 1 y 5 cada 3 h (:02, :50) | `exp/D-xxxx-*` | una tarea `D-` → un PR |
 | Construcción A | `construccion.md` (prioridad `nacho`: `N-xxx` primero) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
 | Construcción B ⏸ | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | pausada desde 2026-10-04: su cupo pasó a los desarrolladores | idem | una tarea → un PR |
 | QA (juego actual) | `qa.md` | todos los días 09:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
@@ -44,7 +44,7 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Juzgar ideas antes de construirlas | revisión (lunes, antes de que construcción tome tareas `xhigh` o mecánicas nuevas) | `critico-diseno` |
 | Hacerle la contra a lo hecho | revisión (lunes) | `abogado-del-diablo`, `director-arte` |
 | Planificar | todas las que registran hallazgos | `planificador-tareas`, `guardian-dominios` |
-| Construir la expansión (`D-xxxx`) | desarrollador 1-5 (cada hora, escalonados) | los de la tabla de carriles de `desarrollador.md` |
+| Construir la expansión (`D-xxxx`) | desarrollador 1-5 (cada 2 o 3 h, escalonados) | los de la tabla de carriles de `desarrollador.md` |
 | Construir código | construcción (1 por hora) | `constructor-tramos`, `constructor-mundo`, `constructor-camion`, `constructor-jugador`, `constructor-trampas`, `constructor-red`, `constructor-progresion`, `constructor-ui` |
 | Sonido, efectos, animación por código, shaders | construcción | `disenador-audio`, `artista-vfx`, `animador`, `artista-shaders` |
 | Assets con Blender o ComfyUI, música regenerada, capturas de tienda y tráiler | sesión de arte (PC, cada 2 h) | `modelador-blender`, `artista-conceptual`, `artista-shaders`, `artista-vfx`, `animador`, `disenador-audio` |
