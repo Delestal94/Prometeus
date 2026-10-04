@@ -8,7 +8,8 @@ tools/setup-hooks.sh
 
 Activa el hook `pre-push`: antes de cada `git push` corre `tools/check_modules.py`, el lint y
 los tests afectados por lo que se sube (los tests que cambiaron y los que nombran un `.gd`
-cambiado por archivo o por `class_name`; si son más de 25, solo los que cambiaron). Si algo
+cambiado por archivo o por `class_name`; si son más de 25, solo los que cambiaron; y el filtro
+`company` si tocaste carpetas de la expansión, `tools/affected-tests.sh`). Si algo
 falla, no se sube nada. La batería completa queda para CI; `FULL_TESTS=1 git push` la corre
 también acá. Si el push solo trae cambios de documentación, el hook no corre los tests. GitHub Actions corre los tests headless y los
 checks de red en cada push a `main` y en cada PR, incluidos los cambios que solo tocan
