@@ -11,7 +11,7 @@ class_name ServiceCounter
 ## Only while a run is going: before the truck leaves, the depot sells.
 
 ## The ServiceStopShop this counter opens (ServiceStop hangs it).
-var shop: Node
+var shop: ServiceStopShop
 
 
 func _ready() -> void:
@@ -33,7 +33,7 @@ func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
 	var peer: int = int(player.get_multiplayer_authority())
-	shop.call(&"open_for_crew", peer)
+	shop.open_for_crew(peer)
 	if multiplayer.multiplayer_peer == null or peer == multiplayer.get_unique_id():
 		_open_locally()
 	else:
