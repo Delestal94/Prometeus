@@ -51,6 +51,8 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Pulir y balancear | construcción (tareas de revisión y QA) + QA de los domingos (simuladores) | `pulidor-jugabilidad`, `probador-qa` |
 | Primera partida y tutorial | revisión, semana 1 del mes → construcción | `pulidor-jugabilidad`, `constructor-ui` |
 | Accesibilidad | revisión, semana 2 del mes → construcción | `director-arte`, `constructor-ui` |
+| Idiomas y textos (traducciones, glosario, textos que no entran) | revisión, semana 2 del mes → construcción | `localizador`, `revisor-visual` |
+| Incidentes del proceso (postmortems) | auditoría (diaria): `docs/postmortems/` cuando `main` quedó roja > 1 h, cayó una rutina o hubo un revert | `auditor-integral`, `planificador-tareas` |
 | Red y plataforma | construcción (PRs de red) + mantenimiento (jueves) + revisión, semana 3 | `constructor-red`, `auditor-red` |
 | Rendimiento | QA (si hay leak) + revisión, semana 4 + build de la PC (diaria, FPS con GPU) | `perfilador-rendimiento` |
 | Verificar cada cambio | construcción | `ejecutor-tests`, `escritor-tests`, `cazador-bugs`, `revisor-gdscript`, `revisor-visual` |
@@ -74,6 +76,25 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 
 1. **Freno de mano**: si existe `.claude/rutinas/PAUSA` en `origin/main`, terminá la corrida sin hacer
    nada. Para pausar todo: commitear ese archivo (con el motivo adentro); para reanudar, borrarlo.
+1 bis. **Presupuesto** (cupo del plan, antes de que se agote; la regla 13 es para cuando ya se agotó): si
+   existe `.claude/rutinas/PRESUPUESTO` en `origin/main`, su primera palabra es el nivel (`ahorro` o
+   `minimo`; sin archivo, normal). Si tu rutina no corre en ese nivel, terminá sin hacer nada, como con
+   `PAUSA`. Lo pone y lo saca el usuario (un commit, con el motivo adentro); la auditoría lo recomienda en
+   "Para el usuario" cuando ve corridas cortadas por cupo.
+
+   | Rutina | normal | `ahorro` | `minimo` |
+   |---|---|---|---|
+   | Construcción A | ✔ | ✔ | solo §1 (`main` rojo, PRs rojos o con conflicto) y bugs "bloquea" |
+   | Desarrollador, carriles 1 y 5 | ✔ | ✔ | — |
+   | Desarrollador, carriles 2, 3 y 4 | ✔ | — | — |
+   | QA juego actual | ✔ | ✔ | ✔ |
+   | QA expansión A (13:00) / B (01:00) | ✔ | A sí, B no | — |
+   | Auditoría integral | ✔ | ✔ | solo el latido (§1.5), sin agentes; PR solo si hay alarma |
+   | Revisión, mantenimiento, lanzamiento | ✔ | ✔ | — |
+   | Sesión de arte (PC) | ✔ | solo 00:30, 06:30, 12:30 y 18:30 | — |
+   | Build y rendimiento (PC) | ✔ | ✔ | ✔ |
+
+   El latido de la auditoría no cuenta como caída a una rutina que el presupuesto deja afuera.
 2. **Sesión**:
    ```bash
    git fetch origin

@@ -32,7 +32,11 @@ tareas. Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
    Cada alarma es un hallazgo **P1** del pilar 3 que va directo al informe y a **"Para el usuario"**
    (una rutina caída casi siempre se arregla fuera del repo: la PC, un trigger, el cupo). No genera
    tarea salvo que la causa esté en el repo. QA no tiene alarma: sin hallazgos no abre PR. Sumá también
-   los `decide-usuario` abiertos hace más de 7 días, en una línea cada uno.
+   los `decide-usuario` abiertos hace más de 7 días, en una línea cada uno. Con
+   `.claude/rutinas/PRESUPUESTO` puesto, las rutinas que su nivel deja afuera (regla 1 bis del README) no
+   dan alarma. Si en la ventana hubo corridas cortadas por cupo (regla 13: PRs `(partial)` por límite, reservas
+   abandonadas en serie, huecos de varias horas en todas las rutinas a la vez) y no hay `PRESUPUESTO`,
+   recomendá en "Para el usuario" ponerlo en `ahorro`.
 
 ## 2. Dos pasadas en paralelo
 
@@ -51,7 +55,11 @@ de lo ya conocido:
   1. `docs/auditorias/AAAA-MM-DD-integral.md`: commit auditado, pilar del día, los hallazgos de las dos
      pasadas sin duplicados (formato del agente, recortado a lo esencial), la matriz impacto/esfuerzo,
      el top 3, las preguntas para el usuario y la línea "Sin cambios".
-  2. **`planificador-tareas`** con los hallazgos, bajo estas reglas:
+  2. **Postmortem** por cada incidente de la ventana que cumpla lo de `docs/postmortems/README.md`
+     (`main` rojo más de 1 h, rutina caída, regresión que llegó a `main`, revert, corrida trabada):
+     `docs/postmortems/AAAA-MM-DD-<tema>.md` con su plantilla, y el link en el informe. Sus acciones
+     entran al paso siguiente como hallazgos P1. Si ya existe uno para ese incidente, se completa.
+  3. **`planificador-tareas`** con los hallazgos, bajo estas reglas:
      - **Máximo 3 tareas nuevas por corrida**, en orden P0 → P1 → P2. P3 queda solo en el informe (si
        un P3 aparece en 3 informes seguidos, sube a P2).
      - P0 → al principio de `tareas-nacho.md`, en la sección **"QA — bugs abiertos"** si es un bug,
@@ -61,9 +69,9 @@ de lo ya conocido:
        agente que ya no existe) se arreglan directo en este PR.
      - Nada contra decisiones del usuario (ver reglas del agente): van a "Preguntas para el usuario".
      - Cada tarea lleva "Origen: auditoría integral AAAA-MM-DD, A-<id>".
-  3. Todo va a `tareas-nacho.md` (lo del dominio de Slatex como `S-xxx` en "Heredadas de Slatex", nunca a
+  4. Todo va a `tareas-nacho.md` (lo del dominio de Slatex como `S-xxx` en "Heredadas de Slatex", nunca a
      `tareas-slatex.md`); aviso en `docs/avisos/` si se agregaron tareas de su dominio.
-  4. PR `docs: daily audit AAAA-MM-DD — pillar <n>` con auto-merge. Cuerpo: top 3, tareas creadas
+  5. PR `docs: daily audit AAAA-MM-DD — pillar <n>` con auto-merge. Cuerpo: top 3, tareas creadas
      (IDs) y **"Para el usuario"** con las preguntas y las tareas ⏸, una por línea.
 
 ## 4. Límites

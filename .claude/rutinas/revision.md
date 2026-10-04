@@ -28,7 +28,9 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
    - semana 1 — **primera partida**: `pulidor-jugabilidad` en modo "pasada de primera partida" (solo
      informe: pedile que no aplique cambios, la rutina de construcción los toma como tareas);
    - semana 2 — **accesibilidad y opciones**: `director-arte` con foco en su punto 7 más las opciones de
-     `ui/options_panel.gd` (subtítulos o texto para lo que solo suena, remapeo, color, sacudida);
+     `ui/options_panel.gd` (subtítulos o texto para lo que solo suena, remapeo, color, sacudida), y
+     **`localizador`** en modo informe sobre los textos nuevos del mes (glosario, inglés que suena traducido,
+     textos que no entran);
    - semana 3 — **red sin mirar un diff**: `auditor-red` sobre el flujo completo (crear sala, join tardío,
      desconexiones, host que se va) para encontrar lo que ningún PR tocó;
    - semana 4 — **rendimiento**: `perfilador-rendimiento` en modo medición (sin cambios) sobre endless y

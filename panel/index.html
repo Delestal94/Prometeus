@@ -518,6 +518,7 @@ function decisions() {
 function attention() {
   const out = [];
   if (S.data.paused) out.push({ lvl: "bad", t: "Freno de mano puesto: las rutinas no trabajan", sub: ".claude/rutinas/PAUSA está en main", url: GH + "/blob/main/.claude/rutinas/PAUSA" });
+  if (S.data.budget) out.push({ lvl: "warn", t: "Presupuesto en " + S.data.budget + ": algunas rutinas no corren", sub: ".claude/rutinas/PRESUPUESTO (regla 1 bis del README de rutinas)", url: GH + "/blob/main/.claude/rutinas/PRESUPUESTO" });
   const mainRun = S.runs.find((r) => r.head_branch === "main" && r.name === "Tests" && r.event === "push" && r.status === "completed");
   if (mainRun && mainRun.conclusion !== "success") out.push({ lvl: "bad", t: "main está rojo", sub: mainRun.display_title + " · " + ago(mainRun.updated_at), url: mainRun.html_url });
   for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "rutina-caida"))) out.push({ lvl: "bad", t: i.title, sub: "issue #" + i.number + " · " + ago(i.updated_at), url: i.html_url });

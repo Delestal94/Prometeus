@@ -92,6 +92,14 @@ try {
         # Hand brake: same file the cloud routines honour.
         git cat-file -e origin/main:.claude/rutinas/PAUSA 2>$null
         if ($LASTEXITCODE -eq 0) { Write-Log 'PAUSA on origin/main: skipped'; exit 0 }
+        # Budget level (README rule 1 bis): the art session skips at "minimo" and only runs every
+        # 6 hours at "ahorro"; the build always runs. Checked here so Claude is not even started.
+        $budget = (git show origin/main:.claude/rutinas/PRESUPUESTO 2>$null | Select-Object -First 1)
+        if ($budget) { $budget = ($budget.Trim() -split '\s+')[0].ToLower() }
+        if ($Rutina -eq 'arte' -and $budget -eq 'minimo') { Write-Log 'PRESUPUESTO minimo: art session skipped'; exit 0 }
+        if ($Rutina -eq 'arte' -and $budget -eq 'ahorro' -and ((Get-Date).Hour % 6) -ne 0) {
+            Write-Log 'PRESUPUESTO ahorro: art session only at 00, 06, 12 and 18 h'; exit 0
+        }
 
         # Start from a clean origin/main; ignored files (.godot import cache, builds/) survive.
         git reset --quiet --hard

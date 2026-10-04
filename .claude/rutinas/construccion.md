@@ -82,6 +82,7 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
    | Red y Steam (`network_manager`, `proximity_voice`, relays, sincronizadores, lobby, logros, nube) | `constructor-red` (y siempre `auditor-red` después) |
    | Economía, progresión, eventos, puntaje, campaña | `constructor-progresion` |
    | UI, HUD, menús, tutorial y tips de primera vez (`scripts/ui/`) | `constructor-ui` |
+   | Textos, traducciones y glosario (`translations/`, `docs/glosario.md`) | `localizador` |
    | Sonido y música (`synth_audio*`, `tools/audio/`) | `disenador-audio` |
    | Partículas y efectos | `artista-vfx` (sin ComfyUI) |
    | Animación por código, `PlayerAnimator` | `animador` (sin Blender) |
