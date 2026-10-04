@@ -10,8 +10,9 @@ el día que se quiere jugar con amigos. La lanza el Programador de tareas
 
 1. `git switch --detach origin/main` y anotá el commit. Si ese commit ya tiene fila en
    `docs/rendimiento-pc.md` (no entró nada desde ayer), terminá sin hacer nada.
-2. **CI de main**: `gh run list --branch main --workflow tests.yml --limit 1`. Si está rojo, la build no
-   se hace: terminá (la construcción arregla main primero). La batería de tests no se corre acá: ya la
+2. **CI de main**: el run del SHA que anotaste, según la regla 16 del README. Si está rojo o sin
+   verificar, la build no se hace: terminá (la construcción arregla main primero; un commit sin run lo
+   prueba `main-head-tests.yml` y la próxima corrida lo toma). La batería de tests no se corre acá: ya la
    corrió CI sobre ese commit.
 
 ## 2. Tres pasadas, en este orden (una GPU, de a una)

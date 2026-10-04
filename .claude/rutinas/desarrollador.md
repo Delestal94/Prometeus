@@ -27,7 +27,7 @@ contexto completo de la tarea (no ven el tuyo).
 
 ## 1. Primero lo que está roto
 
-1. **`main` rojo** (`tests.yml` del último commit). Si lo rompió un PR `exp/` mezclado, arreglarlo es la
+1. **`main` rojo** (el run del SHA de HEAD, regla 16 del README). Si lo rompió un PR `exp/` mezclado, arreglarlo es la
    tarea del **carril 5**. Los otros carriles lo arreglan solo si el commit rojo tiene más de 1 h. Rama
    `exp/fix-main-<tema>`, con `cazador-bugs`.
 2. **Tus PRs `exp/` abiertos** (los de los grupos de tu carril):
