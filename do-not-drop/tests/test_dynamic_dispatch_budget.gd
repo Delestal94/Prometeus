@@ -106,6 +106,9 @@ const BUDGETS: Dictionary = {
 	# The depot's order draw (N-224.4) reads the traps as TrapDefinition (id, difficulty) and the boxes as
 	# DeliveryPackage (trap_definition): what is not one (a null slot) is skipped, as before. Nothing by name.
 	"res://scripts/gameplay/traps/order_balancer.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The balance trap reads and rights the box through Node3D (global_basis, global_transform): a
+	# package that is not one is skipped as null, as before. Nothing by name (N-224.4).
+	"res://scripts/gameplay/traps/balance_trap_behavior.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The trailer tool (N-902) drives the real level: level_base.gd, route.gd,
 	# vehicle.gd and package_mount_point.gd by preload (no class name), the
 	# camera, segments, deer crossing, house, player and boxes by class. The one

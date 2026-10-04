@@ -132,7 +132,10 @@ func _measure_direction(package: Node, context: Dictionary) -> Vector2:
 		return tilt_dir
 	var right: Vector3 = context.get("truck_right", Vector3.RIGHT)
 	var forward: Vector3 = context.get("truck_forward", Vector3.FORWARD)
-	var up: Vector3 = (package.get(&"global_basis") as Basis).y
+	var body := package as Node3D
+	if body == null:
+		return tilt_dir
+	var up: Vector3 = body.global_basis.y
 	var lean := Vector2(up.dot(right), up.dot(forward))
 	return lean.normalized() if lean.length() > 0.002 else Vector2.ZERO
 
@@ -140,14 +143,18 @@ func _measure_direction(package: Node, context: Dictionary) -> Vector2:
 func _measure_tilt(package: Node) -> float:
 	if package == null:
 		return tilt_degrees
-	var up: Vector3 = (package.get(&"global_basis") as Basis).y
+	var body := package as Node3D
+	if body == null:
+		return tilt_degrees
+	var up: Vector3 = body.global_basis.y
 	return rad_to_deg(up.angle_to(Vector3.UP))
 
 
 func _apply_correction(package: Node, delta: float, strength: float = 1.0) -> void:
-	if package == null or tilt_degrees <= 0.01:
+	var body := package as Node3D
+	if body == null or tilt_degrees <= 0.01:
 		return
-	var basis: Basis = package.get(&"global_basis") as Basis
+	var basis: Basis = body.global_basis
 	var axis: Vector3 = basis.y.cross(Vector3.UP)
 	if axis.length_squared() < 0.000001:
 		return
@@ -155,6 +162,5 @@ func _apply_correction(package: Node, delta: float, strength: float = 1.0) -> vo
 	# but never instantly undo a real slam.
 	var step: float = minf(deg_to_rad(_correction_degrees_per_second * strength * delta), deg_to_rad(tilt_degrees))
 	var corrected: Basis = Basis(axis.normalized(), step) * basis
-	var transform: Transform3D = package.get(&"global_transform") as Transform3D
-	package.set(&"global_transform", Transform3D(corrected.orthonormalized(), transform.origin))
+	body.global_transform = Transform3D(corrected.orthonormalized(), body.global_transform.origin)
 	tilt_degrees = _measure_tilt(package)
