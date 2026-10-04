@@ -37,6 +37,7 @@ done
 case "$script" in
 	*"$FAKE_FAIL"*) echo "ERROR: 100% broken in $script"; echo "ERROR: second line"; exit 1 ;;
 	*"$FAKE_HANG"*) sleep 5; exit 0 ;;
+	*"${FAKE_HIDDEN:-/no-match/}"*) echo "SCRIPT ERROR: Invalid access in $script"; echo "PASS"; exit 0 ;;
 esac
 echo "PASS"
 EOF
@@ -73,6 +74,20 @@ code=$?
 expect "$code" "a passing suite exits 0 with GITHUB_ACTIONS (got $code)"
 ! grep -q '::error' "$WORK/out"
 expect $? "no annotation when everything passes"
+
+# A test that exits 0 with a runtime SCRIPT ERROR (N-924): passes but is listed;
+# with STRICT_SCRIPT_ERRORS=1 it fails.
+FILTERS=(test_rpc_guard)
+run env FAKE_HIDDEN=test_rpc_guard STRICT_SCRIPT_ERRORS=
+code=$?
+expect "$code" "a hidden SCRIPT ERROR passes by default (got $code)"
+grep -q '^  pasaron con SCRIPT ERROR.*test_rpc_guard' "$WORK/out"
+expect $? "the hidden SCRIPT ERROR is listed"
+run env FAKE_HIDDEN=test_rpc_guard STRICT_SCRIPT_ERRORS=1
+code=$?
+expect $(( code == 0 )) "STRICT_SCRIPT_ERRORS=1 fails a hidden SCRIPT ERROR (got $code)"
+grep -q '^FAIL test_rpc_guard (exit 0)' "$WORK/out"
+expect $? "the strict failure names the test"
 
 # Filter "company" on a fake project: the expansion's prefixes, also in a
 # module, and nothing of the current game's with a look-alike name.
