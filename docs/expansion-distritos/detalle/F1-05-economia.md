@@ -36,3 +36,20 @@ Números nuevos en `CompanyTuning`: `CONDITION_BONUS_MIN_QUALITY = 90`, `CONDITI
 `diseno/economia.md`; la cotización coincide con el `pay` de `Order.make`; desglose con `urgent` y `fragile`;
 ids desconocidos no suman; bono por estado con y sin tardanza.
 **Hecho cuando:** el test pasa.
+
+### D-0503 · Costo de compra de mercadería — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `SupplierPurchase` (`scripts/gameplay/business/supplier_purchase.gd`): `cost`, `pallet_cost`, `can_order` y `receive` (recibe el palet y cobra con motivo `supplier`); `test_supplier_purchase`.
+**Depende de:** D-0501, D-0604
+**Qué:** funciones estáticas sin nodos. El precio unitario es `ProductDefinition.buy_price` (20 a 80).
+- `cost(product, qty, products)` = unidades × `buy_price`; producto desconocido o cantidad ≤ 0 cuesta 0.
+- `pallet_cost(pallet, products)` y `can_order(wallet, pallets, products)`: al hacer el pedido solo se
+  comprueba que la plata alcanza para todo; no se cobra nada.
+- `receive(wallet, inventory, pallet, products)`: `Pallet.receive` y, si entró, `charge(costo, &"supplier")`.
+  Palet inválido, repetido o de producto desconocido: `false` y no se cobra.
+**Decisión:** se cobra al **recibir** (cuando el camión descarga), con `charge` y no `spend`: la mercadería ya
+está en el galpón, así que el saldo puede quedar en rojo; qué pasa entonces es D-0510. Un palet que nunca
+llega no cuesta.
+**Test** `test_supplier_purchase`: 10 lámparas a 50 cuestan 500; recibir baja el saldo 500 y `ledger_total(&"supplier")`
+da -500; las unidades quedan en `pallet:<id>`; recibir dos veces o un palet inválido no cobra; `can_order`
+mira el pedido entero; recibir sin saldo lo deja en rojo.
+**Hecho cuando:** el test pasa.
