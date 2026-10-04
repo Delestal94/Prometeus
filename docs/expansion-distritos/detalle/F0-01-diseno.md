@@ -163,7 +163,7 @@ esperado según D-0117. Los primeros 5 enseñan el bucle (D-0412).
 **Hecho cuando:** 30 filas, y cada distrito tiene su hito de desbloqueo.
 
 ### D-0119 · Qué se reutiliza y qué se reemplaza — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/reutilizacion.md`: 28 sistemas (igual / envuelto / reemplazado) con archivo:línea, archivo nuevo y tarea; decisión del flag `--autostart-company`.
+**[x] Hecho (2026-10-04, PR #305)** — `diseno/reutilizacion.md`: 28 sistemas (igual / envuelto / reemplazado) con archivo:línea, archivo nuevo y tarea; decisión del flag `--autostart-company`.
 **Depende de:** —
 **Qué:** `diseno/reutilizacion.md`. Por sistema, cómo se usa en modo Empresa (igual / envuelto /
 reemplazado) y con qué archivo nuevo:
