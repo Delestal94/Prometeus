@@ -2,10 +2,10 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_host_gone_tally.gd
 ##
 ## N-222: a client whose host drops mid-run keeps what it saw of the run.
-## - RunTally.of() counts the doors that got their box, the boxes still intact
-##   and the distance and time, from RunManager's own record.
-## - RunTally.has_unfinished_run() is false before a run starts
-##   (run_tally.gd).
+## - RunTally.count() counts the doors that got their box, the boxes still
+##   intact and the distance and time, from RunManager's own record.
+## - RunTally.unfinished() is false before a run starts and once results are
+##   in (run_tally.gd).
 ## - In the real level, losing the host during a run puts the tally on the
 ##   disconnect screen (hud_pause.gd), in this peer's language; the level stops
 ##   its copy of the run (level_common.gd) and no results cover the screen.
@@ -45,7 +45,7 @@ func _run() -> void:
 
 	# --- nothing to keep without a run ---
 	run.reset_run()
-	_expect(not RUN_TALLY.has_unfinished_run(run), "No run started: nothing to tally")
+	_expect(_tally(run).is_empty(), "No run started: nothing to tally")
 
 	# --- a run two doors in, one box broken ---
 	run.start_run()
@@ -69,12 +69,12 @@ func _run() -> void:
 		&"c": {"state": ITrapBehavior.TrapState.RUINED},
 		&"d": {"state": ITrapBehavior.TrapState.OK},
 	})
-	var tally: Dictionary = RUN_TALLY.of(run)
+	var tally: Dictionary = _tally(run)
 	var houses: String = "%d/%d" % [int(tally["houses_delivered"]), int(tally["houses_expected"])]
 	_expect(houses == "2/4", "Two of four doors (one missed, one lost) got their box (got %s)" % houses)
 	var boxes: String = "%d/%d" % [int(tally["cargo_intact"]), int(tally["cargo_total"])]
 	_expect(boxes == "2/4", "Two of four boxes intact (got %s)" % boxes)
-	_expect(RUN_TALLY.has_unfinished_run(run), "A started run without results is unfinished")
+	_expect(not _tally(run).is_empty(), "A started run without results is unfinished")
 	_expect(not bool(tally["endless"]), "A delivery run isn't tallied as Endless")
 
 	TranslationServer.set_locale("en")
@@ -104,9 +104,11 @@ func _run() -> void:
 
 	# --- Endless reads in meters ---
 	run.set(&"current_mode", &"endless")
-	var endless: String = RUN_TALLY.describe(RUN_TALLY.of(run))
+	var endless: String = RUN_TALLY.describe(_tally(run))
 	_expect(endless.contains("250") and endless != spanish, "Endless has its own line, in meters (got '%s')" % endless)
 
+	run.set(&"results", {"score": 1})
+	_expect(_tally(run).is_empty(), "Once results are in, the run isn't unfinished")
 	run.reset_run()
 	# Same level for the second half: loading it takes ~15 s.
 	await _results_stay_when_the_host_leaves(level)
@@ -224,3 +226,11 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+## RunTally over RunManager's record, as the disconnect screen reads it (hud_pause.gd): {} without an
+## unfinished run.
+func _tally(run: Node) -> Dictionary:
+	if not RUN_TALLY.unfinished(run.get(&"results"), float(run.get(&"elapsed_seconds"))):
+		return {}
+	return RUN_TALLY.count(run.get(&"deliveries"), run.get(&"cargo"), run.get(&"current_mode") == &"endless",
+			int(run.get(&"expected_houses")), float(run.get(&"current_distance")), float(run.get(&"elapsed_seconds")))
