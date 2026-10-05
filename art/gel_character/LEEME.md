@@ -31,6 +31,7 @@ independientes.
 | `concept/generate_guided.py` | Reproduce el estudio img2img local; no genera ni modifica modelos del juego. |
 | `referencias.md` | Referencias externas y límites de qué se estudia sin copiar. |
 | `measure_reference.py` | Reproduce máscara, caja corporal y muestras RGB; requiere Pillow y NumPy. |
+| `referencia/silueta_mascara.png` | Máscara binaria rellena que genera `measure_reference.py`; entrada estable de la comparación 3D. |
 | `annotate_reference.py` | Dibuja `referencia/proporciones.png` sobre la foto sin reescalarla; requiere Pillow ≥ 10.1. |
 
 ## Construcción reproducible actual
@@ -49,6 +50,7 @@ Desde la raíz, con Blender en `PATH` (5.2.2 LTS comprobado):
 ```powershell
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/build_gel_body.py
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/test_gel_body_source.py
+blender --background --factory-startup --python-exit-code 1 --python art/gel_character/compare_delgada_silhouette.py
 python -m unittest discover -s art/gel_character -p "test_*.py"
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod0.glb --gel-body
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod1.glb --gel-body
@@ -62,6 +64,12 @@ sobrescribe y guarda `gel_body.blend`, `gel_body_spec.json`, un reporte y tres G
 en `do-not-drop/assets/models/characters/gel/`. El cuerpo de autoría y LOD1 tienen
 quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
 suprime ramas anatómicas. Los límites son 6000/2500/800 triángulos.
+
+`compare_delgada_silhouette.py` reconstruye LOD0, aplica la pose frontal medida,
+proyecta sus triángulos sobre `referencia/silueta_mascara.png` y exige IoU ≥ 0,84.
+Guarda el valor y una superposición cian/magenta en `review_bloque_b/`. La puerta
+compara forma, no material; cabeza, cuello, hombros y botas conservan además sus
+medidas físicas y las pruebas de superficie cerrada, una sola pieza y animación.
 
 La axila de LOD1 reconstruye loops cruzados de quads y los proyecta a la
 superficie curva de LOD0; LOD2 se deriva de esa superficie corregida. Tras los

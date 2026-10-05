@@ -1,5 +1,25 @@
 # Evidencia en curso, no aprobación B
 
+## S-311.10: silueta Delgada cerrada, 2026-10-04
+
+El preset base ahora sigue las medidas frontales de la referencia: cuello y
+hombros más estrechos, cadera y piernas ajustadas, brazos algo más cortos y
+botas separadas hacia afuera. La comparación geométrica reproducible proyecta
+LOD0 en la pose frontal medida y obtiene IoU 0,849524 contra
+`referencia/silueta_mascara.png`, por encima de la puerta 0,84. El reporte y la
+superposición están en `delgada_silhouette_report.json` y
+`delgada_silhouette_overlay.png`.
+
+Los tres GLB siguen siendo una sola superficie cerrada, con 4704/2248/794
+triángulos y 53 estados estáticos válidos por LOD. La puerta animada recorrió
+405 combinaciones de LOD, clip, instante y grosor: cero contactos y cero caras
+invertidas. La regresion de fuente del caso Run/grosor que motivo el ultimo
+ajuste también pasa. El master conserva SHA256
+`14763003da303779d38725530d78bc7a71baa83318d5b892ed5c5e610e3bb178`.
+
+Esto cierra solamente S-311.10. No aprueba material, UV, el preset Flaca ni la
+comparación final renderizada en Godot del bloque E.
+
 ## Estado actual: deformación A90 y exportación endurecidas, 2026-10-03
 
 Esta sección sustituye los estados históricos de abajo. El pulgar descansa ahora

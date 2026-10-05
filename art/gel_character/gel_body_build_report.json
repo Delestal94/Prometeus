@@ -13,7 +13,7 @@
       "TurnInPlace": 0.8
     },
     "maximum_rotation_error_radians": 0.0,
-    "maximum_bone_length_error_m": 2.1932447341610484e-07,
+    "maximum_bone_length_error_m": 2.1405298589183275e-07,
     "maximum_unreachable_endpoint_m": 0.0,
     "maximum_unreachable_endpoint_by_clip": {
       "Idle": {
@@ -53,47 +53,47 @@
         "time_s": 0.0
       }
     },
-    "maximum_chain_attachment_error_m": 3.6010283153040923e-07,
-    "maximum_ankle_goal_error_m": 3.281923299096659e-07,
-    "maximum_interaction_grip_error_m": 7.027283979983089e-07,
-    "maximum_pelvis_adjustment_m": 0.004948377557560151,
+    "maximum_chain_attachment_error_m": 3.21326533747432e-07,
+    "maximum_ankle_goal_error_m": 3.8955094961176366e-07,
+    "maximum_interaction_grip_error_m": 7.731391055031327e-07,
+    "maximum_pelvis_adjustment_m": 0.0,
     "endpoint_measurement": "baked keyframes; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous interpolation certification",
     "foot_joint_height_ranges_m": {
       "Idle": [
-        0.15999877452850342,
-        0.15999965369701385
+        0.15999889373779297,
+        0.1599997729063034
       ],
       "Walk": [
-        0.15999053418636322,
-        0.3047597408294678
+        0.15999072790145874,
+        0.30475983023643494
       ],
       "Stroll": [
         0.15999923646450043,
-        0.2303147315979004
+        0.23031498491764069
       ],
       "Run": [
-        0.15998519957065582,
-        0.392810583114624
+        0.15998533368110657,
+        0.3928107023239136
       ],
       "Jump": [
         0.15996667742729187,
-        0.33997175097465515
+        0.3399718999862671
       ],
       "PickUpPackage": [
-        0.1599692553281784,
-        0.15999948978424072
+        0.15996919572353363,
+        0.1599995642900467
       ],
       "PickUpHigh": [
-        0.1599969118833542,
-        0.15999940037727356
+        0.159996896982193,
+        0.15999945998191833
       ],
       "Sit": [
-        -0.05750616639852524,
-        0.0025010444223880768
+        -0.05750609189271927,
+        0.002501110080629587
       ],
       "TurnInPlace": [
-        0.15999826788902283,
-        0.24696138501167297
+        0.15999841690063477,
+        0.2469615489244461
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -105,54 +105,54 @@
       "vertices": 2354,
       "measured_proportions": {
         "height_m": 1.7399998903779352,
-        "head_diameter_m": 0.4815237522125244,
-        "arm_shoulder_to_hand_m": 0.6825470566749573,
-        "torso_waist_width_m": 0.4259108752012253,
-        "foot_width_m": 0.2606042046099901,
+        "head_diameter_m": 0.4815080761909485,
+        "arm_shoulder_to_hand_m": 0.6501228451728821,
+        "torso_waist_width_m": 0.4198180288076401,
+        "foot_width_m": 0.2615305706858635,
         "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.2505808658897877,
+        "foot_depth_m": 0.26198745518922806,
         "flat_sole_vertices": 39,
-        "flat_sole_depth_m": 0.20600426569581032
+        "flat_sole_depth_m": 0.21038570441305637
       },
       "triangles": 4704,
-      "geometry_sha256": "2a2d8b22d16f86edcfe5a88fb8a8b6f4affd6acaa7e121a9b2288ea3d05a2bdd",
-      "morph_sha256": "e41dc83b4cf940e7e8daa153fe6c28d57ea1dfae1f8523f3d19de4653e76f84f"
+      "geometry_sha256": "0536b1744181292b789339849cc1441fe4963baab7f82fe413239f9ecd184bf7",
+      "morph_sha256": "cc2dc3035c7f4847a79c9f0f3551218ba8109e6dc9e70e92ddfcac3bfb7473c1"
     },
     {
       "name": "GelBodyLOD1",
       "vertices": 1126,
       "measured_proportions": {
         "height_m": 1.7399998903779352,
-        "head_diameter_m": 0.4796769320964813,
-        "arm_shoulder_to_hand_m": 0.6822004556655884,
-        "torso_waist_width_m": 0.4253242164850235,
-        "foot_width_m": 0.2581904027611017,
+        "head_diameter_m": 0.479563444852829,
+        "arm_shoulder_to_hand_m": 0.6498072385787964,
+        "torso_waist_width_m": 0.42673784494400024,
+        "foot_width_m": 0.25846492499113083,
         "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.2505808658897877,
+        "foot_depth_m": 0.26198745518922806,
         "flat_sole_vertices": 12,
-        "flat_sole_depth_m": 0.15655286610126495
+        "flat_sole_depth_m": 0.15885205892845988
       },
       "triangles": 2248,
-      "geometry_sha256": "c3a26a3318ea7407da875bb7e090a26ea65e294392aa34b7e9c77ccdc667e8ae",
-      "morph_sha256": "48ee418ba3b16d448d503de8eb1034f3158844b06017f394657a4ba94e02ca0f"
+      "geometry_sha256": "d53c5d412cf70daa22d8c5316f98863de2d5036eaa5ac85fd4b0d92afeaf4757",
+      "morph_sha256": "a06828f23eea5d04a6b01aa46fbf33f34c5f16cb8f95ff25fdf7c41ee1a749d7"
     },
     {
       "name": "GelBodyLOD2",
       "vertices": 399,
       "measured_proportions": {
         "height_m": 1.7399998903779352,
-        "head_diameter_m": 0.4796769320964813,
-        "arm_shoulder_to_hand_m": 0.681035840511322,
-        "torso_waist_width_m": 0.40377236902713776,
-        "foot_width_m": 0.2581904027611017,
+        "head_diameter_m": 0.479563444852829,
+        "arm_shoulder_to_hand_m": 0.648615026473999,
+        "torso_waist_width_m": 0.4119207412004471,
+        "foot_width_m": 0.25846492499113083,
         "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.23389817029237747,
+        "foot_depth_m": 0.26198745518922806,
         "flat_sole_vertices": 12,
-        "flat_sole_depth_m": 0.15655286610126495
+        "flat_sole_depth_m": 0.15885205892845988
       },
       "triangles": 794,
-      "geometry_sha256": "d185a5933692c3f7586a61106cd48a11e7e9f2c5af6f41afed372fd7e9f82411",
-      "morph_sha256": "9410cc5154c23a2341eea7b6f9ead3f56dfd05a24af8c541781ba67ab6beba5b"
+      "geometry_sha256": "b8174f8d4d1042e1358e3dad685417c884ae3b8408d8f2243a9f429a134e5f94",
+      "morph_sha256": "fa7f8d965354f63187dd5352c48d1597f39916410939ddf67c724c12817e38d9"
     }
   ]
 }

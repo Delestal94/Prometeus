@@ -28,7 +28,29 @@ JOINTS = ('pelvis', 'chest', 'neck', 'head') + tuple(
 LOD_LEVELS = (2, 1, 0)
 BUDGETS = (6000, 2500, 800)
 ARM_SHOULDER_X = .225
-ARM_LENGTH_SCALE = 1.124
+ARM_LENGTH_SCALE = 1.07
+DELGADA_FOOT_OUTSET = .045
+DELGADA_CAGE = {
+    'pelvis': ((0., 0., .70), (.195, .140)),
+    'belly': ((0., 0., .86), (.203, .150)),
+    'chest': ((0., 0., 1.09), (.190, .140)),
+    'neck': ((0., 0., 1.275), (.095, .095)),
+    'head': ((0., 0., 1.485), (.235, .235)),
+    'crown': ((0., 0., 1.57), (.20, .20)),
+    'head_top': ((0., 0., 1.65), (.13, .13)),
+    'shoulder': ((.225, 0., 1.105), (.075, .085)),
+    'elbow': ((.46, 0., 1.105), (.064, .063)),
+    'wrist': ((.66, 0., 1.105), (.055, .056)),
+    'hand': ((.735, 0., 1.105), (.078, .073)),
+    'hand_tip': ((.82, 0., 1.105), (.060, .060)),
+    'thumb': ((.735, -.09, 1.130), (.039, .038)),
+    'thumb_tip': ((.760, -.14, 1.140), (.031, .030)),
+    'hip': ((.13, 0., .67), (.105, .090)),
+    'knee': ((.145, 0., .375), (.085, .078)),
+    'ankle': ((.145, 0., .16), (.080, .070)),
+    'heel': ((.145, -.025, .105), (.100, .145)),
+    'toe': ((.145, -.205, .10), (.085, .145)),
+}
 _LOD_CACHE = {}
 
 
@@ -146,27 +168,33 @@ def make_body(level, *, source=None, rig=None, clip_actions=None):
         if parent is not None:
             edges.append((parent, i))
         return i
-    pelvis = node((0, 0, .70), (.18, .135))
-    belly = node((0, 0, .86), (.20, .145), pelvis)
-    chest = node((0, 0, 1.09), (.20, .14), belly)
-    neck = node((0, 0, 1.275), (.12, .105), chest)
-    head = node((0, 0, 1.485), (.235, .235), neck)
-    crown = node((0, 0, 1.57), (.20, .20), head)
-    node((0, 0, 1.65), (.13, .13), crown)
+    def cage(name, side=1):
+        point, radius = DELGADA_CAGE[name]
+        x, y, z = point
+        if name in ('elbow', 'wrist', 'hand', 'hand_tip', 'thumb', 'thumb_tip'):
+            x = arm_x(x)
+        return (side*x, y, z), radius
+    pelvis = node(*cage('pelvis'))
+    belly = node(*cage('belly'), pelvis)
+    chest = node(*cage('chest'), belly)
+    neck = node(*cage('neck'), chest)
+    head = node(*cage('head'), neck)
+    crown = node(*cage('crown'), head)
+    node(*cage('head_top'), crown)
     for s in (-1, 1):
-        shoulder = node((s*.225, 0, 1.105), (.102, .092), chest)
-        elbow = node((s*arm_x(.46), 0, 1.105), (.064, .063), shoulder)
-        wrist = node((s*arm_x(.66), 0, 1.105), (.055, .056), elbow)
-        hand = node((s*arm_x(.735), 0, 1.105), (.078, .073), wrist)
-        node((s*arm_x(.82), 0, 1.105), (.060, .060), hand)
+        shoulder = node(*cage('shoulder', s), chest)
+        elbow = node(*cage('elbow', s), shoulder)
+        wrist = node(*cage('wrist', s), elbow)
+        hand = node(*cage('hand', s), wrist)
+        node(*cage('hand_tip', s), hand)
         # A neutral arms-down thumb points forward, not into the thick thigh.
-        thumb = node((s*arm_x(.735), -.09, 1.130), (.039, .038), hand)
-        node((s*arm_x(.760), -.14, 1.140), (.031, .030), thumb)
-        hip = node((s*.13, 0, .635), (.09, .086), pelvis)
-        knee = node((s*.145, 0, .375), (.072, .075), hip)
-        ankle = node((s*.145, 0, .16), (.065, .063), knee)
-        heel = node((s*.145, -.025, .105), (.100, .145), ankle)
-        node((s*.145, -.205, .10), (.085, .145), heel)
+        thumb = node(*cage('thumb', s), hand)
+        node(*cage('thumb_tip', s), thumb)
+        hip = node(*cage('hip', s), pelvis)
+        knee = node(*cage('knee', s), hip)
+        ankle = node(*cage('ankle', s), knee)
+        heel = node(*cage('heel', s), ankle)
+        node(*cage('toe', s), heel)
     mesh = bpy.data.meshes.new('GelQuadCage')
     mesh.from_pydata(coords, edges, [])
     obj = bpy.data.objects.new('GelBodyLOD'+str(2-level), mesh)
@@ -194,6 +222,12 @@ def make_body(level, *, source=None, rig=None, clip_actions=None):
         # A broad, genuinely flat sole, not a tangential sphere contact.
         if p.z < .08:
             p.z = .025
+        # Keep the sewn ankle branch straight, then ease only the visible boot
+        # outward before rigging to match the photographed stance.
+        if p.z < .30:
+            t = max(0., min(1., (.30-p.z)/.16))
+            fade = t*t*(3-2*t)
+            p.x += math.copysign(DELGADA_FOOT_OUTSET*fade, p.x)
     low = min(v.co.z for v in obj.data.vertices)
     high = max(v.co.z for v in obj.data.vertices)
     scale = 1.74/(high-low)
@@ -384,14 +418,20 @@ def morph_delta(p, name):
     leg = 1-smooth(.54,.76,z)
     head = smooth(1.25,1.36,z)
     hand = arm*smooth(arm_x(.62),arm_x(.74),abs(x))
-    foot = 1-smooth(.14,.25,z)
+    foot = 1-smooth(.14,.42,z)
     torso = (1-arm)*(1-leg)*(1-head)
     # Smoothly split the two leg centerlines through the crotch. A signed step
     # at x=0 folds center seam triangles even when each leg radius is positive.
-    center = Vector((.145*math.tanh(x/.10)*leg, 0, z*(1-arm)+1.105*arm))
+    leg_x = DELGADA_CAGE['knee'][0][0]
+    center = Vector((leg_x*math.tanh(x/.10)*leg, 0,
+                     z*(1-arm)+1.105*arm))
     amount = 0.
     if name == 'general_thickness':
-        amount = .30*(1-head)
+        # Foot width has its own control. Keep the planted boot and ankle
+        # transition out of general swelling so running cannot fold the cuff.
+        ankle_clearance = smooth(.34, .46, z)
+        crotch = smooth(.52, .62, z)*(1-smooth(.72, .82, z))
+        amount = .30*(1-head)*(1-foot)*ankle_clearance*(1-.45*crotch)
         center.x = center.x*(1-arm)+x*arm
         # Thickness preserves limb axes: X along arms, Y along the boot.
         # Foot length belongs to foot_size; swelling it here makes the toe
@@ -415,7 +455,8 @@ def morph_delta(p, name):
         center = Vector((math.copysign(arm_x(.735), x), 0, 1.105))
     elif name == 'foot_size':
         amount = .15*foot
-        center = Vector((math.copysign(.145, x), -.06, 0))
+        foot_x = DELGADA_CAGE['heel'][0][0]+DELGADA_FOOT_OUTSET
+        center = Vector((math.copysign(foot_x, x), -.06, 0))
     elif name == 'head_shape':
         return Vector((-x*.08, -y*.08, (z-1.485)*.08))*head
     elif name == 'neck_thickness':
@@ -467,15 +508,15 @@ def anatomical_rest():
         def p(x,y,z): return (sign*arm_x(x),y,z)
         for name, start, end, parent in (
             # Keep the derived shoulder inside its surface, below the arm
-            # centerline, without shortening the connected grip chain.
+            # centerline, with clearance for the thick A90 extreme.
             ('upper_arm',(sign*.30,0,1.05),p(.46,0,1.105),'chest'),
             ('forearm',p(.46,0,1.105),p(.66,0,1.105),'upper_arm.'+side),
             ('hand',p(.66,0,1.105),p(.82,0,1.105),'forearm.'+side),
             ('thumb',p(.735,-.09,1.130),p(.760,-.14,1.140),'hand.'+side),
             ('grip',p(.735,-.04,1.105),p(.735,-.12,1.105),'hand.'+side),
-            ('thigh',p(.13,0,.635),p(.145,0,.375),'pelvis'),
-            ('shin',p(.145,0,.375),p(.145,0,.16),'thigh.'+side),
-            ('foot',p(.145,0,.16),p(.145,-.14,.105),'shin.'+side)):
+            ('thigh',p(*DELGADA_CAGE['hip'][0]),p(*DELGADA_CAGE['knee'][0]),'pelvis'),
+            ('shin',p(*DELGADA_CAGE['knee'][0]),p(*DELGADA_CAGE['ankle'][0]),'thigh.'+side),
+            ('foot',p(*DELGADA_CAGE['ankle'][0]),p(.145,-.14,.105),'shin.'+side)):
             bones[name+'.'+side] = (start,end,parent)
     return bones
 
@@ -565,7 +606,8 @@ def assign_weights(obj, rig, *, reference=None):
         if zone == 'foot':
             # Preserve the planted sole and forward toe as a foot, rather than
             # bending the lower boot back toward the vertical shin capsule.
-            shin_blend = max(0., min(1., (p.z-.14)/.07))*.25
+            shin_blend = (0. if p.y <= -.12 else
+                          max(0., min(1., (p.z-.14)/.07))*.25)
             obj.vertex_groups['foot.'+side].add([vertex.index], 1-shin_blend, 'REPLACE')
             if shin_blend:
                 obj.vertex_groups['shin.'+side].add([vertex.index], shin_blend, 'REPLACE')
@@ -886,7 +928,7 @@ def main():
             'foot_depth_design_m': .28, 'foot_depth_source': 'profile design, not inferred from frontal JPG',
             'reference_shape_targets': {'torso_waist_width_m': [.40,.43],
                 'foot_width_m': .57*(1.74/3.68), 'neck_visible_height_m': .11*(1.74/3.68)},
-            'reference_pose': f'static diagnostic A-pose, arms 15 degrees from vertical; {len(animation_report["durations"])} source-timed clips adapted to gel limb proportions',
+            'reference_pose': f'measured static front pose: upper arm 100 degrees, forearm -25 degrees, hand 20 degrees; {len(animation_report["durations"])} source-timed clips adapted to gel limb proportions',
             'morph_amplitudes': dict(zip(MORPHS,(.30,.18,.15,.12,.14,.18,.18,.15,.15,.08,.15)))}
     OUT.mkdir(parents=True, exist_ok=True)
     report = {'source_sha256':source_hash, 'animations':animation_report, 'lods':[]}

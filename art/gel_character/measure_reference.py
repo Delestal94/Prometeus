@@ -41,6 +41,31 @@ def main():
     top, left = points.min(axis=0)
     bottom, right = points.max(axis=0)
     height = int(bottom - top + 1)
+    component = np.zeros(mask.shape, dtype=bool)
+    component[points[:, 0], points[:, 1]] = True
+    outside = np.zeros(mask.shape, dtype=bool)
+    queue = deque()
+    for x in range(mask.shape[1]):
+        for y in (0, mask.shape[0]-1):
+            if not component[y, x] and not outside[y, x]:
+                outside[y, x] = True
+                queue.append((y, x))
+    for y in range(mask.shape[0]):
+        for x in (0, mask.shape[1]-1):
+            if not component[y, x] and not outside[y, x]:
+                outside[y, x] = True
+                queue.append((y, x))
+    while queue:
+        y, x = queue.popleft()
+        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            ny, nx = y+dy, x+dx
+            if (0 <= ny < mask.shape[0] and 0 <= nx < mask.shape[1]
+                    and not component[ny, nx] and not outside[ny, nx]):
+                outside[ny, nx] = True
+                queue.append((ny, nx))
+    silhouette = ~outside
+    Image.fromarray((silhouette*255).astype(np.uint8)).save(
+        source.with_name('silueta_mascara.png'))
     # Head diameter is the mean of manually identified 284 x 280 px landmarks.
     diameter = 282
     rois = {
@@ -57,9 +82,11 @@ def main():
     result = {"source_size": [pixels.shape[1], pixels.shape[0]],
               "body_bbox_inclusive": [int(left), int(top), int(right), int(bottom)],
               "body_height_px": height, "head_diameter_px": diameter,
-              "height_in_heads": round(height / diameter, 2), "samples": samples}
+              "height_in_heads": round(height / diameter, 2),
+              "silhouette_area_px": int(silhouette.sum()), "samples": samples}
     assert result["source_size"] == [832, 1248], "Reference dimensions changed"
     assert result["body_bbox_inclusive"] == [148, 98, 676, 1135], "Re-measure reference"
+    assert result["silhouette_area_px"] == 299222, "Re-measure silhouette"
     expected_rgb = {
         "head": [222, 221, 226], "torso": [220, 219, 225],
         "leg": [230, 227, 233], "head_rim": [206, 207, 219],

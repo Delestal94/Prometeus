@@ -127,7 +127,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.9** (`9bf1593`) `art/gel_character/build_gel_body.py`: script reproducible headless que parte del rig
   de `art/rounded_character` (mismos nombres de huesos) y genera el cuerpo base con sus morphs. Reemplaza
   al candidato (que queda como historia en git).
-- [ ] **S-311.10** Cuerpo base = preset **Delgada**: calca la silueta de la referencia con las medidas del
+- [x] **S-311.10** (`3579eac`) Cuerpo base = preset **Delgada**: calca la silueta de la referencia con las medidas del
   ítem 2. Malla única cerrada (watertight), sin partes sueltas: la transparencia muestra cualquier
   costura interna.
 - [x] **S-311.11** (`9bf1593`) Morphs de proporción (shape keys exportados como blend shapes del glTF), cada uno con
@@ -163,6 +163,12 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > 17 necesita el preset Flaca completo de C.9/11/18 verificados en `9bf1593`,
 > con revisión independiente PASS,53muestras porLOD y4/4testsGodot. No se marca
 > como terminado todo B ni se certifican combinaciones continuas no muestreadas.
+
+> Cierre S-311.10 (2026-10-04): la silueta frontal rasterizada desde LOD0 logra
+> IoU 0,849524 contra la máscara binaria reproducible de la referencia (umbral
+> 0,84). Los tres GLB conservan una sola superficie cerrada y pasan 53 estados
+> estáticos por LOD; 405 muestras animadas terminan sin contactos ni caras
+> invertidas. No cierra material, UV, Flaca ni la comparación renderizada de E.
 
 > Corrección posterior de preparación: se guardan/exportan los once morphs a cero
 > (Delgada), con regresiones de autoría, defaults GLB y carga Godot. No cambia la

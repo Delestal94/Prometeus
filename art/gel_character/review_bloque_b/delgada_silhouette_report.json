@@ -1,0 +1,32 @@
+{
+  "reference": "art/gel_character/referencia/referencia_frente.jpg",
+  "reference_box_px": [
+    148,
+    98,
+    676,
+    1135
+  ],
+  "scale_px_per_m": 596.551724137931,
+  "pose": {
+    "upper_arm_degrees": 100,
+    "forearm_degrees": -25,
+    "hand_degrees": 20
+  },
+  "minimum_iou": 0.84,
+  "iou": 0.8495239981677953,
+  "intersection_px": 274488,
+  "union_px": 323108,
+  "reference_area_px": 299222,
+  "model_area_px": 298374,
+  "measured_proportions": {
+    "height_m": 1.7399998903779352,
+    "head_diameter_m": 0.4815080761909485,
+    "arm_shoulder_to_hand_m": 0.6501228451728821,
+    "torso_waist_width_m": 0.4198180288076401,
+    "foot_width_m": 0.2615305706858635,
+    "foot_forward_reach_m": 0.19561457633972168,
+    "foot_depth_m": 0.26198745518922806,
+    "flat_sole_vertices": 39,
+    "flat_sole_depth_m": 0.21038570441305637
+  }
+}
