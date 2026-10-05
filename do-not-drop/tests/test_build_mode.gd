@@ -42,7 +42,8 @@ func _run() -> void:
 	_expect(mode.last_refusal == &"already_active" and _entered == 1, "second enter changes nothing")
 
 	# 12 x 8 cells: 13 vertical + 9 horizontal lines, 2 points each.
-	_expect(mode.grid_lines().size() == (13 + 9) * 2, "grid has a line per cell border (got %d)" % mode.grid_lines().size())
+	var count: int = mode.grid_lines().size()
+	_expect(count == (13 + 9) * 2, "grid has a line per cell border (got %d)" % count)
 	mode.set_grid_visible(false)
 	_expect(mode.grid_lines().is_empty(), "hidden grid draws nothing")
 	mode.set_grid_visible(true)
