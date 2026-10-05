@@ -1,5 +1,22 @@
 # Evidencia en curso, no aprobación B
 
+## S-311.12: topología de autoría medible, 2026-10-05
+
+LOD0 y LOD1 conservan respectivamente 2352/1124 quads. La nueva puerta
+`validate_gel_topology.py` detecta loops cerrados bilaterales alrededor de
+hombros, codos, muñecas, caderas, rodillas y tobillos, además del loop de cuello.
+Dentro de esas zonas la valencia máxima es 5. Al recorrer Basis y los 22 extremos
+individuales, el peor percentil 90 de relación entre aristas es 3,358550 frente
+al límite 3,5; los outliers de puntas y ramificaciones siguen cubiertos por las
+pruebas de contacto y orientación.
+
+El informe `topology_report.json` valida además 243 estados por LOD: Basis, cada
+extremo individual y las 220 combinaciones de extremos por pares. Las 486
+muestras terminan sin caras degeneradas/reorientadas ni autointersecciones. Esto
+es una compuerta finita reproducible, no una afirmación matemática sobre cada
+punto del continuo de once morphs. LOD2 sigue siendo la simplificación triangular
+derivada y queda bajo sus puertas de morfología, pose y silueta existentes.
+
 ## S-311.10: silueta Delgada cerrada, 2026-10-04
 
 El preset base ahora sigue las medidas frontales de la referencia: cuello y
