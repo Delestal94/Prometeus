@@ -53,3 +53,14 @@ llega no cuesta.
 da -500; las unidades quedan en `pallet:<id>`; recibir dos veces o un palet inválido no cobra; `can_order`
 mira el pedido entero; recibir sin saldo lo deja en rojo.
 **Hecho cuando:** el test pasa.
+
+### D-0504 · Costo de materiales de embalaje — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-05, PR pendiente)** — `PackagingSupplies` (`scripts/gameplay/business/packaging_supplies.gd`): relleno, cinta, etiqueta y sellos se cobran al hacerse, con motivo `packaging`; `test_packaging_supplies`.
+**Depende de:** D-0501, D-0212
+**Qué:** funciones estáticas sin nodos sobre un `PackedBox` y la billetera (`CompanyState`). La caja vacía ya la cobra `BoxDispenser` (motivo `boxes`); esto es el resto. Precios en `CompanyTuning`: relleno 1 por celda, cinta 1, etiqueta 0, sello 0.
+- `pad(box, cells, wallet)`: rellena hasta `cells` celdas libres y cobra solo las que rellenó; todo o nada si no alcanza la plata. Devuelve cuántas rellenó.
+- `tape`, `label`, `stamp`: cobran su precio y marcan la caja; repetir cinta o sello, o una etiqueta/sello vacío, devuelve `false` sin cobrar.
+- `used_cost(box)`: lo que ya gastaron los insumos de esa caja (para el resumen D-0508).
+**Decisión:** se cobra cada paso al hacerlo (no al cerrar la caja), con `spend` y no `charge`: sin plata no se puede seguir embalando, a diferencia de la mercadería ya descargada (D-0503). Una caja abandonada solo cuesta lo usado. Los pasos de la mesa (relleno D-0705, cinta D-0706, etiqueta D-0707) llaman a esta clase.
+**Test** `test_packaging_supplies`: rellenar 3 celdas cobra 3; pedir de más se limita a las libres; cinta se cobra una vez; etiqueta y sello rechazan repetidos y vacíos; con 2 de saldo, 3 celdas no entran (la caja y el saldo no cambian) y 2 sí; el libro suma `packaging` y `used_cost` coincide.
+**Hecho cuando:** el test pasa.
