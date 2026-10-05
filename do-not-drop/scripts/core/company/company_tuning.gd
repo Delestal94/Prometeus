@@ -57,6 +57,15 @@ const WAREHOUSE_GRID_M: float = 1.0
 ## Selling a placed object gives back this share of its price.
 const PLACEABLE_REFUND_RATIO: float = 0.5
 
+# --- Build mode (D-0901) ---
+## Height of the build camera above the floor, in meters, at zoom 1.
+const BUILD_CAMERA_HEIGHT_M: float = 14.0
+## Zoom limits (multiplier of the camera height; lower is closer).
+const BUILD_ZOOM_MIN: float = 0.5
+const BUILD_ZOOM_MAX: float = 1.5
+## Pitch of the build camera in degrees (90 = straight down).
+const BUILD_CAMERA_PITCH_DEG: float = 70.0
+
 # --- Products and pricing ---
 ## What the supplier charges per unit goes in each product's .tres, in this range.
 const BUY_PRICE_MIN: int = 20

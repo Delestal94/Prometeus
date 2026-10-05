@@ -8,7 +8,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0901 | Modo construcción: activar, cámara elevada, grilla visible | constructor-negocio | high | test de entrada/salida del modo |
+| D-0901 | ✅ Modo construcción: activar, cámara elevada, grilla visible | constructor-negocio | high | test de entrada/salida del modo |
 | D-0902 | Colocar un objeto comprado con previsualización verde/roja | constructor-negocio | high | test: choque bloquea la colocación |
 | D-0903 | Rotar, mover y vender objetos colocados | constructor-negocio | medium | test de las 3 acciones |
 | D-0904 | ✅ Objetos colocables iniciales: mesa de armado, estante, heladera, zona de despacho | constructor-negocio | medium | 4 objetos `.tres` |

@@ -4,6 +4,17 @@
 > el resto sigue en la tabla de [09-galpon-construible.md](../09-galpon-construible.md) y se detalla
 > cuando le toque a un carril. Números de [supuestos.md](supuestos.md).
 
+### D-0901 · Modo construcción: activar, cámara elevada, grilla visible — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-05, PR pendiente)** — `BuildMode` (`scripts/gameplay/business/build_mode.gd`): estado, cámara elevada y líneas de grilla como datos; `test_build_mode`. El adaptador con nodos (dibujar la grilla, mover la cámara, tecla) queda para D-0917/D-0943.
+**Depende de:** D-0904 (la celda `WAREHOUSE_GRID_M`); la validación de choque llega con D-0225/D-0902
+**Qué:** `class_name BuildMode` (`RefCounted`, sin nodos ni autoloads):
+- `enter(size, can_build)`: refusa con `last_refusal` (`already_active`, `empty_floor`, `busy`); si entra, grilla visible, zoom 1, foco al centro, señal `entered`.
+- `exit()`, `pan(delta)` (el foco no sale del piso), `zoom_by(amount)` (entre `BUILD_ZOOM_MIN` y `BUILD_ZOOM_MAX`), `set_grid_visible()`.
+- `camera_pose()`: posición elevada (`BUILD_CAMERA_HEIGHT_M × zoom`) e inclinación `BUILD_CAMERA_PITCH_DEG`.
+- `grid_lines()`: pares de puntos (metros) de cada línea de la grilla, borde incluido.
+**Test** `test_build_mode`: entrar/salir con señales, las tres negativas, líneas de grilla (13+9 en 12×8), pan y zoom acotados, cámara más alta al alejar.
+**Hecho cuando:** el test pasa.
+
 ### D-0904 · Objetos colocables iniciales — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `PlaceableDefinition` (`scripts/gameplay/business/placeable_definition.gd`) + 4 `.tres` en `data/placeables/` (mesa de armado, estante, heladera, zona de despacho); `test_placeable_definitions`.
 **Depende de:** nada que falte (solo datos; la grilla de colocación D-0225 y el layout D-0620 los usan, no al revés)
