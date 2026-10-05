@@ -17,6 +17,8 @@ extends Node3D
 ## request; on a client it holds the events until the host's snapshot (D-2004), which
 ## also loads the host's company into this peer's CompanyState.
 
+## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
+const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 ## The shed, in meters: centered on the origin, inside the industrial park.
@@ -45,12 +47,12 @@ var net: CompanyNet
 var _world: Node3D
 ## Client: the CompanyState node the host's snapshot writes into, and what it held before (its
 ## to_dict(), or {} when no company was on), put back on leaving (_exit_tree()).
-var _mirrored_state: Node
+var _mirrored_state: COMPANY_STATE
 var _own_company: Dictionary = {}
 
 
 func _ready() -> void:
-	_add_net(get_node_or_null(^"/root/CompanyState"))
+	_add_net(get_node_or_null(^"/root/CompanyState") as COMPANY_STATE)
 	_world = Node3D.new()
 	_world.name = "World"
 	add_child(_world)
@@ -82,7 +84,7 @@ static func load_zones() -> Array[ZoneDefinition]:
 ## held until the host's snapshot puts the real one, and the host's company, in
 ## place (D-2004); what the client's CompanyState held before comes back when it
 ## leaves. Both hand CompanyNet the state: the host's goes in the snapshot.
-func _add_net(state: Node) -> void:
+func _add_net(state: COMPANY_STATE) -> void:
 	net = CompanyNet.new()
 	net.name = "CompanyNet"
 	net.company = state
@@ -90,14 +92,14 @@ func _add_net(state: Node) -> void:
 	if not net.is_host():
 		if state != null:
 			_mirrored_state = state
-			_own_company = state.call(&"to_dict") if state.call(&"is_active") else {}
+			_own_company = state.to_dict() if state.is_active() else {}
 		net.wait_for_snapshot()
 		return
 	if state == null:
 		return
-	if not state.call(&"is_active"):
-		state.call(&"new_company")
-	net.inventory = state.call(&"stock")
+	if not state.is_active():
+		state.new_company()
+	net.inventory = state.stock()
 
 
 ## A client leaves the host's company behind: its CompanyState goes back to what it had before
@@ -106,9 +108,9 @@ func _exit_tree() -> void:
 	if _mirrored_state == null or not is_instance_valid(_mirrored_state):
 		return
 	if _own_company.is_empty():
-		_mirrored_state.call(&"reset")
+		_mirrored_state.reset()
 	else:
-		_mirrored_state.call(&"from_dict", _own_company)
+		_mirrored_state.from_dict(_own_company)
 	_mirrored_state = null
 
 
