@@ -414,6 +414,12 @@ const BUDGETS: Dictionary = {
 	# The nickname (N-224.4): of() reads the component as PlayerNickname. The UnlockManager lookups stay by
 	# path (the profile is only there for the local player).
 	"res://scripts/gameplay/player/player_nickname.gd": {"call": 1, "callv": 0, "get": 0, "root": 2},
+	# The main menu (N-224.4) holds its four panels as ProgressPanel, TutorialPanel, CosmeticsPanel and
+	# LeaderboardPanel (open()). Nothing left by name.
+	"res://scripts/ui/main_menu.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The company root (N-224.4) runs the CompanyState autoload through its script (COMPANY_STATE: to_dict,
+	# is_active, new_company, stock, reset, from_dict). The one /root/ lookup is the null-safe autoload lookup.
+	"res://scripts/gameplay/company_root.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

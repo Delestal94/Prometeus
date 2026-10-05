@@ -102,10 +102,10 @@ const PAGE_PARENT: Dictionary = {
 var _status_label: Label
 var _address_field: LineEdit
 var _options: OptionsPanel
-var _progress: Control
-var _tutorial: Control
-var _cosmetics: Control
-var _leaderboard: Control
+var _progress: ProgressPanel
+var _tutorial: TutorialPanel
+var _cosmetics: CosmeticsPanel
+var _leaderboard: LeaderboardPanel
 var _play_button: Button
 var _cancel_button: Button
 var _page_title: Label
@@ -524,19 +524,19 @@ func _open_options() -> void:
 
 
 func _open_progress() -> void:
-	_progress.call(&"open")
+	_progress.open()
 
 
 func _open_tutorial() -> void:
-	_tutorial.call(&"open")
+	_tutorial.open()
 
 
 func _open_cosmetics() -> void:
-	_cosmetics.call(&"open")
+	_cosmetics.open()
 
 
 func _open_leaderboard() -> void:
-	_leaderboard.call(&"open")
+	_leaderboard.open()
 
 
 func _quit_game() -> void:
