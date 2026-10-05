@@ -175,6 +175,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa.
 
 ### D-0213 · De `PackedBox` a `DeliveryPackage` con su trampa — A · Opus 5.5 · xhigh · Aviso: sí (`package.gd`, `package_content.gd`, de Slatex) · F0
+**[x] Hecho (2026-10-05, PR pendiente)** — `box_to_package.gd` (`BoxToPackage.build`): trampa y contenido del producto más difícil, absorción por relleno, metadata `packed_box`/`order_id`/`loose_box`; `test_box_to_package`. Sin cambios en `package.gd`.
 **Depende de:** D-0212, D-0109
 **Qué:** `scripts/gameplay/business/box_to_package.gd`. Instancia `scenes/gameplay/package/package.tscn`
 (como `Depot.PACKAGE_SCENE`) y configura:
