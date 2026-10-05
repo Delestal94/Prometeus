@@ -3,7 +3,7 @@
   "height_m": 1.74,
   "head_diameter_m": 0.47282608695652173,
   "arm_shoulder_to_hand_target_m": 0.6803400000000001,
-  "arm_length_scale": 1.124,
+  "arm_length_scale": 1.07,
   "proportion_tolerance_relative": 0.05,
   "proportion_measurement": "head width above z=1.32; maximum hand x minus fixed shoulder x=0.225, base mesh meters",
   "morph_names": [
@@ -102,7 +102,7 @@
     "foot_width_m": 0.26951086956521736,
     "neck_visible_height_m": 0.05201086956521739
   },
-  "reference_pose": "static diagnostic A-pose, arms 15 degrees from vertical; 9 source-timed clips adapted to gel limb proportions",
+  "reference_pose": "measured static front pose: upper arm 100 degrees, forearm -25 degrees, hand 20 degrees; 9 source-timed clips adapted to gel limb proportions",
   "morph_amplitudes": {
     "general_thickness": 0.3,
     "belly": 0.18,

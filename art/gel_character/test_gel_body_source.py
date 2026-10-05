@@ -202,12 +202,20 @@ class SourceBodyTests(unittest.TestCase):
                 check(morph)
         for clip in ('PickUpPackage', 'PickUpHigh'):
             rig.animation_data.action = bpy.data.actions[clip]
-            for time in (.42, 7/12, 1.2):
+            for time in (.4, .42, 7/12, 1.2):
                 frame = time*bpy.context.scene.render.fps
                 bpy.context.scene.frame_set(int(frame), subframe=frame-int(frame))
                 bpy.context.view_layer.update()
                 with self.subTest(clip=clip, time=time):
                     check('general_thickness')
+        rig.animation_data.action = bpy.data.actions['Run']
+        for time in (0., 1/12, 1/6, 1/3):
+            frame = time*bpy.context.scene.render.fps
+            bpy.context.scene.frame_set(int(frame), subframe=frame-int(frame))
+            bpy.context.view_layer.update()
+            for morph in ('general_thickness', 'leg_thickness'):
+                with self.subTest(clip='Run', time=time, morph=morph):
+                    check(morph)
 
     def test_forward_thumb_has_meaningful_nonfolding_closure(self):
         """Anterior thumbs must really deform the mitten, not be dummy joints."""
@@ -364,6 +372,32 @@ class SourceBodyTests(unittest.TestCase):
                     grown = vertex.co + body.morph_delta(vertex.co, 'foot_size')
                     self.assertGreater(grown.x, 0, 'Enlarged boots must retain the center gap')
             mesh.free()
+
+    def test_delgada_front_sections_match_reference(self):
+        """The base cage must match the measured neck and shoulder silhouette."""
+        import build_gel_body as body
+
+        obj = body.make_body(2)
+
+        def horizontal_span(z):
+            crossings = []
+            for edge in obj.data.edges:
+                a, b = (obj.data.vertices[index].co for index in edge.vertices)
+                if min(a.z, b.z) <= z <= max(a.z, b.z) and a.z != b.z:
+                    crossings.append(a.x + (b.x-a.x)*(z-a.z)/(b.z-a.z))
+            self.assertTrue(crossings, z)
+            return max(crossings)-min(crossings)
+
+        # Pixel rows from referencia_frente.jpg converted with H=1038 px,
+        # height=1.74 m. A 15% window allows the smooth 3D transition while
+        # rejecting the former visibly over-wide neck and shoulders.
+        for name, row, target_pixels in (
+                ('neck', 383, 192), ('shoulders', 425, 305)):
+            z = (1135-row)*(1.74/1038)
+            target = target_pixels*(1.74/1038)
+            measured = horizontal_span(z)
+            self.assertLessEqual(abs(measured/target-1), .15,
+                                 (name, measured, target))
 
     def test_lod2_flat_sole_survives_collapse(self):
         """Plane-error collapse must not erase or fold the flat sole boundary."""
