@@ -135,7 +135,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   de piernas, tamaño de manos, tamaño de pies, forma de cabeza (esfera ↔ ovalada), grosor de cuello. Lo
   que es **largo** (alto, piernas, brazos, torso, cuello, tamaño de cabeza) va por huesos (ítem 20), no
   por morph.
-- [ ] **S-311.12** Topología para deformar y para morphs: quads, loops en hombros, codos, muñecas,
+- [x] **S-311.12** (`2a5291b`) Topología para deformar y para morphs: quads, loops en hombros, codos, muñecas,
   cadera, rodillas, tobillos y cuello; densidad pareja para que la deformación por vértice (bloque F) se
   vea lisa y ninguna combinación de morphs cruce la malla consigo misma.
 - [ ] **S-311.13** Manos manopla con pulgar separado como en la foto (sin dedos, hueso de pulgar para
@@ -169,6 +169,14 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > 0,84). Los tres GLB conservan una sola superficie cerrada y pasan 53 estados
 > estáticos por LOD; 405 muestras animadas terminan sin contactos ni caras
 > invertidas. No cierra material, UV, Flaca ni la comparación renderizada de E.
+
+> Cierre S-311.12 (2026-10-05): LOD0/LOD1 mantienen 2352/1124 quads, loops
+> cerrados bilaterales en las seis articulaciones de extremidades y loop de
+> cuello; valencia máxima 5 en zonas de flexión y percentil 90 de aspecto
+> 3,358550 ≤ 3,5 bajo los extremos individuales. Un barrido adicional de 243
+> estados por LOD (Basis, extremos simples y por pares) termina sin cruces ni
+> caras degeneradas/reorientadas. Es evidencia finita reproducible; LOD2 sigue
+> cubierto por sus puertas derivadas y el continuo matemático no se sobredeclara.
 
 > Corrección posterior de preparación: se guardan/exportan los once morphs a cero
 > (Delgada), con regresiones de autoría, defaults GLB y carga Godot. No cambia la
