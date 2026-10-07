@@ -212,7 +212,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.19** (`30e561b`) Recurso `GelBodyProportions` (`scripts/gameplay/player/gel/`): cada parámetro con
   nombre, rango y valor por defecto (el de Delgada). Largos por hueso: alto total (0,85-1,20), largo de
   piernas, de brazos, de torso y de cuello, tamaño de cabeza. Formas por morph: los del ítem 11.
-- [ ] **S-311.20** `gel_body_shaper.gd`: aplica los morphs y ajusta el largo de los huesos en el
+- [x] **S-311.20** (`02e986a`) `gel_body_shaper.gd`: aplica los morphs y ajusta el largo de los huesos en el
   `Skeleton3D` (pose de reposo) sin romper los clips. Se calcula solo al cambiar las proporciones; costo
   por frame cero (medido).
 - [ ] **S-311.21** Presets como `.tres`: **Delgada** (la de la imagen), **Flaca** (≈6 cabezas, brazos y
