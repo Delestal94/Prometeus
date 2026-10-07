@@ -19,6 +19,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 from gel_body_topology import topology_report
+from gel_body_shape import assert_shape_report, shape_report
 
 OUT = ROOT / 'do-not-drop/assets/models/characters/gel'
 MORPHS = ('general_thickness', 'belly', 'chest', 'shoulders', 'hips',
@@ -32,6 +33,8 @@ BUDGETS = (6000, 2500, 800)
 ARM_SHOULDER_X = .225
 ARM_LENGTH_SCALE = 1.07
 DELGADA_FOOT_OUTSET = .045
+DELGADA_MITT_VERTICAL_SCALE = 1.25
+DELGADA_BOOT_VERTICAL_SCALE = .965
 DELGADA_CAGE = {
     'pelvis': ((0., 0., .70), (.195, .140)),
     'belly': ((0., 0., .86), (.203, .150)),
@@ -238,6 +241,20 @@ def make_body(level, *, source=None, rig=None, clip_actions=None):
         v.co.z -= low*scale
     if level == 1:
         rebuild_axilla(obj)
+    # Broaden the frontal mitten silhouette without changing Skin's distant
+    # branch solve (which would also perturb the neck/shoulder loop layout).
+    for vertex in obj.data.vertices:
+        start, end = arm_x(.66), arm_x(.72)
+        amount = max(0., min(1., (abs(vertex.co.x)-start)/(end-start)))
+        amount = amount*amount*(3-2*amount)
+        vertex.co.z = 1.105 + (vertex.co.z-1.105) * (
+            1 + (DELGADA_MITT_VERTICAL_SCALE-1)*amount)
+        # Compress only the lower boot/shin envelope toward the planted sole.
+        # This meets the photographed boot height without moving the ankle bone
+        # or widening the inner edge into the opposite side during Run.
+        amount = max(0., min(1., (.40-vertex.co.z)/.15))
+        amount = amount*amount*(3-2*amount)
+        vertex.co.z *= 1 + (DELGADA_BOOT_VERTICAL_SCALE-1)*amount
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
@@ -952,6 +969,8 @@ def main():
             'triangles':sum(len(f.vertices)-2 for f in obj.data.polygons),
             'geometry_sha256':hashlib.sha256(repr(topology).encode()).hexdigest(),
             'morph_sha256':hashlib.sha256(repr([[tuple(v.co) for v in key.data] for key in obj.data.shape_keys.key_blocks]).encode()).hexdigest()}
+        entry['body_shape'] = shape_report(obj, index)
+        assert_shape_report(entry['body_shape'])
         if index < 2:
             entry['authoring_topology'] = topology_report(obj, MORPHS, morph_delta)
         report['lods'].append(entry)

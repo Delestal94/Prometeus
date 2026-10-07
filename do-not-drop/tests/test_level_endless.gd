@@ -68,8 +68,11 @@ func _initialize() -> void:
 			"If the run isn't going anymore, it's because a real end condition fired, not because it silently stalled")
 		var reason: String = str(results.get("reason", ""))
 		if reason.begins_with("HUD_RUN_STUCK"):
-			_expect(absf(van.engine_force) > 0.0,
-				"A run cut as stuck needs the accelerator held (engine_force %.1f)" % van.engine_force)
+			# finish_run() stops the simulation, so _drive() clears engine_force on
+			# the next physics frame. The retained input is the stable proof that
+			# the deterministic driver was still holding the accelerator.
+			_expect(absf(van.throttle_input()) > 0.0,
+				"A run cut as stuck needs the accelerator held (throttle %.1f)" % van.throttle_input())
 		_expect(float(level.get(&"distance_traveled")) > 0.0,
 			"Even an early stuck-abort covered some real distance first, not zero (got %.1f m)" % float(level.get(&"distance_traveled")))
 

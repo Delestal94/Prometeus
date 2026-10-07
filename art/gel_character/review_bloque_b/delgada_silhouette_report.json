@@ -13,13 +13,13 @@
     "hand_degrees": 20
   },
   "minimum_iou": 0.84,
-  "iou": 0.8495239981677953,
-  "intersection_px": 274488,
-  "union_px": 323108,
+  "iou": 0.8413243025100737,
+  "intersection_px": 274143,
+  "union_px": 325847,
   "reference_area_px": 299222,
-  "model_area_px": 298374,
+  "model_area_px": 300768,
   "measured_proportions": {
-    "height_m": 1.7399998903779352,
+    "height_m": 1.7399998903761684,
     "head_diameter_m": 0.4815080761909485,
     "arm_shoulder_to_hand_m": 0.6501228451728821,
     "torso_waist_width_m": 0.4198180288076401,

@@ -138,7 +138,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.12** (`2a5291b`) Topología para deformar y para morphs: quads, loops en hombros, codos, muñecas,
   cadera, rodillas, tobillos y cuello; densidad pareja para que la deformación por vértice (bloque F) se
   vea lisa y ninguna combinación de morphs cruce la malla consigo misma.
-- [ ] **S-311.13** Manos manopla con pulgar separado como en la foto (sin dedos, hueso de pulgar para
+- [x] **S-311.13** (`face5c9`) Manos manopla con pulgar separado como en la foto (sin dedos, hueso de pulgar para
   cerrar sobre una caja), pies de bota redondeada con planta plana, y uniones cuello-hombros y
   torso-piernas como en la referencia, resueltas con forma y sombreado, no con geometría abierta.
 - [ ] **S-311.14** Prueba de "núcleo": una malla interna más chica y más densa para que el torso se vea
