@@ -10,7 +10,7 @@ extends Resource
 const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	{
 		&"name": &"total_height",
-		&"display_name": "Alto total",
+		&"label_key": "UI_GEL_PROPORTION_TOTAL_HEIGHT",
 		&"driver": &"bone",
 		&"minimum": 0.85,
 		&"maximum": 1.20,
@@ -18,7 +18,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"leg_length",
-		&"display_name": "Largo de piernas",
+		&"label_key": "UI_GEL_PROPORTION_LEG_LENGTH",
 		&"driver": &"bone",
 		&"minimum": 0.75,
 		&"maximum": 1.25,
@@ -26,7 +26,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"arm_length",
-		&"display_name": "Largo de brazos",
+		&"label_key": "UI_GEL_PROPORTION_ARM_LENGTH",
 		&"driver": &"bone",
 		&"minimum": 0.75,
 		&"maximum": 1.25,
@@ -34,7 +34,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"torso_length",
-		&"display_name": "Largo de torso",
+		&"label_key": "UI_GEL_PROPORTION_TORSO_LENGTH",
 		&"driver": &"bone",
 		&"minimum": 0.75,
 		&"maximum": 1.25,
@@ -42,7 +42,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"neck_length",
-		&"display_name": "Largo de cuello",
+		&"label_key": "UI_GEL_PROPORTION_NECK_LENGTH",
 		&"driver": &"bone",
 		&"minimum": 0.75,
 		&"maximum": 1.25,
@@ -50,7 +50,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"head_size",
-		&"display_name": "Tamaño de cabeza",
+		&"label_key": "UI_GEL_PROPORTION_HEAD_SIZE",
 		&"driver": &"bone",
 		&"minimum": 0.75,
 		&"maximum": 1.25,
@@ -58,7 +58,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"general_thickness",
-		&"display_name": "Grosor general",
+		&"label_key": "UI_GEL_PROPORTION_GENERAL_THICKNESS",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -66,7 +66,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"belly",
-		&"display_name": "Panza",
+		&"label_key": "UI_GEL_PROPORTION_BELLY",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -74,7 +74,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"chest",
-		&"display_name": "Pecho",
+		&"label_key": "UI_GEL_PROPORTION_CHEST",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -82,7 +82,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"shoulders",
-		&"display_name": "Hombros",
+		&"label_key": "UI_GEL_PROPORTION_SHOULDERS",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -90,7 +90,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"hips",
-		&"display_name": "Cadera",
+		&"label_key": "UI_GEL_PROPORTION_HIPS",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -98,7 +98,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"arm_thickness",
-		&"display_name": "Grosor de brazos",
+		&"label_key": "UI_GEL_PROPORTION_ARM_THICKNESS",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -106,7 +106,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"leg_thickness",
-		&"display_name": "Grosor de piernas",
+		&"label_key": "UI_GEL_PROPORTION_LEG_THICKNESS",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -114,7 +114,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"hand_size",
-		&"display_name": "Tamaño de manos",
+		&"label_key": "UI_GEL_PROPORTION_HAND_SIZE",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -122,7 +122,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"foot_size",
-		&"display_name": "Tamaño de pies",
+		&"label_key": "UI_GEL_PROPORTION_FOOT_SIZE",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -130,7 +130,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"head_shape",
-		&"display_name": "Forma de cabeza",
+		&"label_key": "UI_GEL_PROPORTION_HEAD_SHAPE",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,
@@ -138,7 +138,7 @@ const PARAMETER_DEFINITIONS: Array[Dictionary] = [
 	},
 	{
 		&"name": &"neck_thickness",
-		&"display_name": "Grosor de cuello",
+		&"label_key": "UI_GEL_PROPORTION_NECK_THICKNESS",
 		&"driver": &"morph",
 		&"minimum": -1.0,
 		&"maximum": 1.0,

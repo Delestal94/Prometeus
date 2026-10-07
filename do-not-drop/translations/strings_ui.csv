@@ -1169,3 +1169,20 @@ HUD_TOWN_DISTANCE,%s · %d m por calles,%s · %d m along streets
 HUD_TOWN_CONTROLS,F1–F3: Barrio · F4–F6: Centro · F7: plaza · E: interactuar / bajar · WASD: mover · Esc: mouse,F1–F3: Neighborhood · F4–F6: Center · F7: square · E: interact / leave seat · WASD: move · Esc: mouse
 HUD_TOWN_DAMAGED,DAÑADO,DAMAGED
 HUD_TOWN_MISSING,SIN CAJA,NO PACKAGE
+UI_GEL_PROPORTION_TOTAL_HEIGHT,Alto total,Total height
+UI_GEL_PROPORTION_LEG_LENGTH,Largo de piernas,Leg length
+UI_GEL_PROPORTION_ARM_LENGTH,Largo de brazos,Arm length
+UI_GEL_PROPORTION_TORSO_LENGTH,Largo de torso,Torso length
+UI_GEL_PROPORTION_NECK_LENGTH,Largo de cuello,Neck length
+UI_GEL_PROPORTION_HEAD_SIZE,Tamaño de cabeza,Head size
+UI_GEL_PROPORTION_GENERAL_THICKNESS,Grosor general,Overall thickness
+UI_GEL_PROPORTION_BELLY,Panza,Belly
+UI_GEL_PROPORTION_CHEST,Pecho,Chest
+UI_GEL_PROPORTION_SHOULDERS,Hombros,Shoulders
+UI_GEL_PROPORTION_HIPS,Cadera,Hips
+UI_GEL_PROPORTION_ARM_THICKNESS,Grosor de brazos,Arm thickness
+UI_GEL_PROPORTION_LEG_THICKNESS,Grosor de piernas,Leg thickness
+UI_GEL_PROPORTION_HAND_SIZE,Tamaño de manos,Hand size
+UI_GEL_PROPORTION_FOOT_SIZE,Tamaño de pies,Foot size
+UI_GEL_PROPORTION_HEAD_SHAPE,Forma de cabeza,Head shape
+UI_GEL_PROPORTION_NECK_THICKNESS,Grosor de cuello,Neck thickness

@@ -53,19 +53,19 @@ func _run() -> void:
 
 
 func _check_definitions(proportions: Resource, definitions: Array[Dictionary]) -> void:
-	var seen_display_names: Dictionary = {}
+	var seen_label_keys: Dictionary = {}
 	for index: int in definitions.size():
 		var definition: Dictionary = definitions[index]
 		var parameter_name: StringName = definition.get(&"name", &"")
-		var display_name: String = definition.get(&"display_name", "")
+		var label_key: String = definition.get(&"label_key", "")
 		var driver: StringName = definition.get(&"driver", &"")
 		var minimum: float = definition.get(&"minimum", NAN)
 		var maximum: float = definition.get(&"maximum", NAN)
 		var default_value: float = definition.get(&"default", NAN)
 
-		_expect(not display_name.is_empty(), "%s has a display name" % parameter_name)
-		_expect(not seen_display_names.has(display_name), "%s has a unique display name" % parameter_name)
-		seen_display_names[display_name] = true
+		_expect(label_key.begins_with("UI_GEL_PROPORTION_"), "%s has a translation key" % parameter_name)
+		_expect(not seen_label_keys.has(label_key), "%s has a unique translation key" % parameter_name)
+		seen_label_keys[label_key] = true
 		var expected_driver: StringName = &"bone" if index < BONE_NAMES.size() else &"morph"
 		_expect(driver == expected_driver, "%s has the expected driver" % parameter_name)
 		_expect(
