@@ -68,7 +68,10 @@ func _check_definitions(proportions: Resource, definitions: Array[Dictionary]) -
 		seen_display_names[display_name] = true
 		var expected_driver: StringName = &"bone" if index < BONE_NAMES.size() else &"morph"
 		_expect(driver == expected_driver, "%s has the expected driver" % parameter_name)
-		_expect(minimum < default_value and default_value < maximum, "%s default lies inside its range" % parameter_name)
+		_expect(
+			minimum < default_value and default_value < maximum,
+			"%s default lies inside its range" % parameter_name
+		)
 		_expect(
 			is_equal_approx(float(proportions.get(parameter_name)), default_value),
 			"%s starts at the Delgada default" % parameter_name
@@ -129,7 +132,10 @@ func _check_helpers(proportions: Resource, definitions: Array[Dictionary]) -> vo
 		)
 
 	definitions[0][&"default"] = 99.0
-	_expect(GelProportions.definition_for(&"total_height")[&"default"] == 1.0, "callers cannot mutate the shared contract")
+	_expect(
+		GelProportions.definition_for(&"total_height")[&"default"] == 1.0,
+		"callers cannot mutate the shared contract"
+	)
 
 
 func _definition_names(definitions: Array[Dictionary]) -> Array[StringName]:
