@@ -50,6 +50,7 @@ Desde la raíz, con Blender en `PATH` (5.2.2 LTS comprobado):
 ```powershell
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/build_gel_body.py
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/test_gel_body_source.py
+blender --background --factory-startup --python-exit-code 1 --python art/gel_character/validate_gel_topology.py
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/compare_delgada_silhouette.py
 python -m unittest discover -s art/gel_character -p "test_*.py"
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod0.glb --gel-body
@@ -85,6 +86,15 @@ cinco tiempos explícitos, cierre del pulgar y los casos gruesos de A90/recogida
 LOD2 conserva posiciones, morphs y pesos exactos de vértices de LOD1, con
 compuertas de 53 muestras estáticas y 52 poses durante la simplificación.
 Estas pruebas finitas no certifican todas las poses ni el continuo de morphs.
+
+`validate_gel_topology.py` certifica la malla de autoría de LOD0 y LOD1: todos
+los rostros son quads, cada zona de hombro, codo, muñeca, cadera, rodilla y
+tobillo conserva loops cerrados en ambos lados, y el cuello conserva al menos
+uno. La puerta limita a cinco la valencia dentro de las zonas de flexión y a
+3,5 el percentil 90 de relación entre aristas de cada quad bajo los 22 extremos
+individuales. Su barrido pesado añade Basis y los 220 extremos por pares: 243
+estados por LOD. Es cobertura finita reproducible, no una prueba matemática del
+continuo completo de once controles.
 
 El rig de exportación conserva 20 nombres y los nueve clips actuales, incluido
 `Run` agregado en main por N-115. Los reposos nuevos

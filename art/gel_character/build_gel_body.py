@@ -18,6 +18,8 @@ from mathutils.bvhtree import BVHTree
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
+from gel_body_topology import topology_report
+
 OUT = ROOT / 'do-not-drop/assets/models/characters/gel'
 MORPHS = ('general_thickness', 'belly', 'chest', 'shoulders', 'hips',
           'arm_thickness', 'leg_thickness', 'hand_size', 'foot_size',
@@ -945,11 +947,14 @@ def main():
             export_vertex_color='ACTIVE', export_extras=True)
         topology = [(tuple(v.co),) for v in obj.data.vertices]
         topology.extend(tuple(f.vertices) for f in obj.data.polygons)
-        report['lods'].append({'name':obj.name,'vertices':len(obj.data.vertices),
+        entry = {'name':obj.name,'vertices':len(obj.data.vertices),
             'measured_proportions': measured_proportions(obj),
             'triangles':sum(len(f.vertices)-2 for f in obj.data.polygons),
             'geometry_sha256':hashlib.sha256(repr(topology).encode()).hexdigest(),
-            'morph_sha256':hashlib.sha256(repr([[tuple(v.co) for v in key.data] for key in obj.data.shape_keys.key_blocks]).encode()).hexdigest()})
+            'morph_sha256':hashlib.sha256(repr([[tuple(v.co) for v in key.data] for key in obj.data.shape_keys.key_blocks]).encode()).hexdigest()}
+        if index < 2:
+            entry['authoring_topology'] = topology_report(obj, MORPHS, morph_delta)
+        report['lods'].append(entry)
     for obj in objects[1:]:
         obj.hide_render = True
     bpy.context.scene.frame_start = 0

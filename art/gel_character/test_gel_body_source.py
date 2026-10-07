@@ -373,6 +373,17 @@ class SourceBodyTests(unittest.TestCase):
                     self.assertGreater(grown.x, 0, 'Enlarged boots must retain the center gap')
             mesh.free()
 
+    def test_joint_topology_contract(self):
+        """Authoring LODs need closed rings and even morphable joint density."""
+        import build_gel_body as body
+        from gel_body_topology import assert_topology_report, topology_report
+
+        for level in (2, 1):
+            obj = body.make_body(level)
+            report = topology_report(obj, body.MORPHS, body.morph_delta)
+            with self.subTest(level=level):
+                assert_topology_report(report)
+
     def test_delgada_front_sections_match_reference(self):
         """The base cage must match the measured neck and shoulder silhouette."""
         import build_gel_body as body
