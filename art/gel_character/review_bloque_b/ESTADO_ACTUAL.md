@@ -1,5 +1,31 @@
 # Evidencia en curso, no aprobación B
 
+## S-311.13: manoplas, botas y uniones cerradas, 2026-10-07
+
+La forma neutral exportada tiene manoplas sin dedos con pulgar anterior separado
+y deformable. LOD0/LOD1 miden 0,1777/0,1772 m de largo; el ancho frontal queda en
+0,1450/0,1722 m, dentro del margen de 15 % respecto a 0,39 D × 0,35 D. El pulgar
+sobresale al menos 0,0222 m hacia delante y las cinco muestras de cierre entre
+−45° y +45° terminan sin contactos ni caras invertidas.
+
+Las botas miden 0,2615/0,2585 m de ancho y 0,2408 m de alto frente a las bandas
+de referencia 0,2411–0,2979 m y 0,1844–0,2411 m. Conservan 39/12 vértices por
+lado en la planta plana; el LOD distante conserva 12. La compresión vertical no
+mueve el hueso del tobillo ni ensancha el borde interior: la regresión de `Run`
+con `leg_thickness=+1` pasa en los tres LOD.
+
+Las superficies siguen cerradas, manifold y de una sola pieza, con todas las
+caras suaves. Los percentiles 95 de ángulo entre caras son 26,83°/40,93° en
+cuello-hombros y 26,91°/51,35° en torso-piernas para LOD0/LOD1; los máximos son
+53,08°/62,49° y 39,95°/58,66°. La puerta limita p95 a 30°/55° y el máximo a 65°.
+
+Verificación: 16 pruebas Blender PASS; 84 pruebas Python PASS (20 skips que
+requieren Blender se ejecutaron aparte); 486 estados de topología/morph PASS;
+53 estados por cada GLB y 405 muestras animadas PASS, sin contactos ni inversión.
+Silueta Delgada IoU 0,841324 ≥ 0,84. Se mantienen 4704/2248/794 triángulos,
+20 huesos, 11 morphs y 9 clips. Esto cierra S-311.13, no material, UV, núcleo,
+Flaca completo ni la aprobación visual final del bloque E.
+
 ## S-311.12: topología de autoría medible, 2026-10-05
 
 LOD0 y LOD1 conservan respectivamente 2352/1124 quads. La nueva puerta

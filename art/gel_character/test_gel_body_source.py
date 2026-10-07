@@ -384,6 +384,28 @@ class SourceBodyTests(unittest.TestCase):
             with self.subTest(level=level):
                 assert_topology_report(report)
 
+    def test_mitten_boot_and_transition_shape_contract(self):
+        """Neutral weighted sources match the photographed extremity shapes."""
+        import bpy
+        import build_gel_body as body
+        from gel_body_shape import assert_shape_report, shape_report
+
+        bpy.ops.wm.open_mainfile(filepath=str(
+            body.ROOT/'art/rounded_character/personaje_redondeado.blend'))
+        if bpy.context.object and bpy.context.object.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+        source = next(obj for obj in bpy.data.objects if obj.type == 'ARMATURE')
+        for obj in list(bpy.data.objects):
+            if obj != source:
+                bpy.data.objects.remove(obj, do_unlink=True)
+        rig = body.create_rig(source)
+        for lod_index, level in enumerate((2, 1)):
+            obj = body.make_body(level)
+            body.assign_weights(obj, rig)
+            report = shape_report(obj, lod_index)
+            with self.subTest(lod=lod_index):
+                assert_shape_report(report)
+
     def test_delgada_front_sections_match_reference(self):
         """The base cage must match the measured neck and shoulder silhouette."""
         import build_gel_body as body

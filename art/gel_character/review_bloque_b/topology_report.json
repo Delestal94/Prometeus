@@ -37,7 +37,7 @@
             "minimum_loop_vertices": 16,
             "nearest_loop_distance_m": 0.006682498735189446,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.6142609418048135
+            "morph_extremes_edge_aspect_p90": 2.7140481544911754
           },
           "hip": {
             "closed_loops": 6,
@@ -49,16 +49,16 @@
           "knee": {
             "closed_loops": 16,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.010856609791517258,
+            "nearest_loop_distance_m": 0.012694444507360458,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 1.2628538323278757
+            "morph_extremes_edge_aspect_p90": 1.2760971349087213
           },
           "ankle": {
             "closed_loops": 12,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.008987430632114407,
+            "nearest_loop_distance_m": 0.003072870112955567,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.7402650116465996
+            "morph_extremes_edge_aspect_p90": 2.6519407943339828
           },
           "neck": {
             "closed_loops": 1,
@@ -106,7 +106,7 @@
             "minimum_loop_vertices": 14,
             "nearest_loop_distance_m": 0.033997182423727845,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 3.358549141459749
+            "morph_extremes_edge_aspect_p90": 3.0943895175726572
           },
           "hip": {
             "closed_loops": 2,
@@ -118,16 +118,16 @@
           "knee": {
             "closed_loops": 8,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.010955795645713806,
+            "nearest_loop_distance_m": 0.012802353927067356,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.4769225326657365
+            "morph_extremes_edge_aspect_p90": 2.4769226308327625
           },
           "ankle": {
             "closed_loops": 6,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.012949092430727838,
+            "nearest_loop_distance_m": 0.018095873147249225,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.501285421362383
+            "morph_extremes_edge_aspect_p90": 2.532544274241284
           },
           "neck": {
             "closed_loops": 1,

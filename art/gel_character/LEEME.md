@@ -81,6 +81,18 @@ intercambio local pecho-brazo de menos de un punto porcentual corrige los
 pliegues de recogida sin cambiar los demás propietarios. El pulgar apunta hacia
 delante y realmente deforma la manopla, evitando invadir el muslo en A90 grueso.
 
+`gel_body_shape.py` añade la puerta reproducible de S-311.13. Mide las regiones
+ponderadas de mano, pulgar y pie en cada lado: largo y ancho frontal de manopla,
+saliente del pulgar, ancho/alto de bota y vértices de planta. También exige una
+sola superficie cerrada, todas las caras con sombreado suave y limita los
+ángulos entre caras en las transiciones cuello-hombros y torso-piernas de los
+LOD de autoría. La manopla se ensancha sólo después de construir la superficie,
+para no perturbar los loops del cuello. La bota conserva la planta y el tobillo
+probados y comprime suavemente su perfil vertical hacia la medida de referencia.
+LOD2 hereda la forma; su reducción admite hasta 7 % de diferencia bilateral,
+mientras LOD0/LOD1 conservan 5 %. Es una medición finita de la malla neutral y
+no sustituye la revisión del material del bloque E.
+
 Las regresiones cubren siete poses A0/A30/A60/A75/A80/A85/A90, nueve clips en
 cinco tiempos explícitos, cierre del pulgar y los casos gruesos de A90/recogida.
 LOD2 conserva posiciones, morphs y pesos exactos de vértices de LOD1, con
