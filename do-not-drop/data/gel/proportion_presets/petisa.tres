@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GelBodyProportions" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_body_proportions.gd" id="1_proportions"]
+
+[resource]
+script = ExtResource("1_proportions")
+total_height = 0.85
+leg_length = 0.78
+arm_length = 0.9
+torso_length = 0.9
+head_size = 0.95
+general_thickness = 0.15
+leg_thickness = 0.1
+foot_size = 0.1

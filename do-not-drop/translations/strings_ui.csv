@@ -1186,3 +1186,10 @@ UI_GEL_PROPORTION_HAND_SIZE,Tamaño de manos,Hand size
 UI_GEL_PROPORTION_FOOT_SIZE,Tamaño de pies,Foot size
 UI_GEL_PROPORTION_HEAD_SHAPE,Forma de cabeza,Head shape
 UI_GEL_PROPORTION_NECK_THICKNESS,Grosor de cuello,Neck thickness
+UI_GEL_PRESET_DELGADA,Delgada,Slim
+UI_GEL_PRESET_FLACA,Flaca,Skinny
+UI_GEL_PRESET_RELLENA,Rellena,Plump
+UI_GEL_PRESET_PETISA,Petisa,Short
+UI_GEL_PRESET_CABEZONA,Cabezona,Big-headed
+UI_GEL_PRESET_LARGUIRUCHA,Larguirucha,Lanky
+UI_GEL_PROPORTION_RANDOM,Al azar,Random
