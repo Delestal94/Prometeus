@@ -215,7 +215,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.20** (`02e986a`) `gel_body_shaper.gd`: aplica los morphs y ajusta el largo de los huesos en el
   `Skeleton3D` (pose de reposo) sin romper los clips. Se calcula solo al cambiar las proporciones; costo
   por frame cero (medido).
-- [ ] **S-311.21** Presets como `.tres`: **Delgada** (la de la imagen), **Flaca** (≈6 cabezas, brazos y
+- [x] **S-311.21** (`f4695a4`) Presets como `.tres`: **Delgada** (la de la imagen), **Flaca** (≈6 cabezas, brazos y
   piernas ~30 % más finos, cuello visible), y cuatro más para mostrar el rango (Rellena, Petisa,
   Cabezona, Larguirucha). Botón "al azar" que solo sortea combinaciones que se ven bien (límites entre
   parámetros, por ejemplo cabeza grande con cuello muy fino no).
