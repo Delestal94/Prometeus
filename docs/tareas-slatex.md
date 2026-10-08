@@ -221,7 +221,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   parámetros, por ejemplo cabeza grande con cuello muy fino no).
 - [x] **S-311.22** (`ebfdcd8`) Editor en la personalización: elegir preset y ajustar cada slider, con teclado, mouse
   y gamepad; maniquí de gelatina girable que se actualiza en vivo; restaurar preset y deshacer.
-- [ ] **S-311.23** Guardado en el perfil y replicación compacta (cada parámetro cuantizado a un byte); el
+- [x] **S-311.23** (`0744a52`) Guardado en el perfil y replicación compacta (cada parámetro cuantizado a un byte); el
   host limita los valores a los rangos. Test de red: cada par ve las proporciones del otro.
 - [ ] **S-311.24** Juego justo: la cápsula de colisión, la altura de la cámara y el alcance **no cambian**
   con las proporciones; lo visual se acomoda (IK de pies al piso, manos a la caja, volante y pedales: estos
