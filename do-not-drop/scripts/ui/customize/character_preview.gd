@@ -9,6 +9,7 @@ const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_cha
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 const GelShaper = preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
+const GelGrounding = preload("res://scripts/gameplay/player/gel/gel_foot_grounding.gd")
 
 enum Framing { FACE, BODY }
 
@@ -39,6 +40,7 @@ var _shot_tween: Tween
 var _bounce_tween: Tween
 var _dragging: bool = false
 var _gel_shaper: GelBodyShaper = GelShaper.new()
+var _gel_grounding: Node3D
 
 
 func _ready() -> void:
@@ -178,6 +180,10 @@ func _build_studio(viewport: SubViewport) -> void:
 	gel_mannequin.visible = false
 	world.add_child(gel_mannequin)
 	_gel_shaper.setup(gel_mannequin)
+	_gel_grounding = GelGrounding.new()
+	_gel_grounding.name = "GelFootGrounding"
+	world.add_child(_gel_grounding)
+	_gel_grounding.setup(gel_mannequin)
 	var gel_animation: AnimationPlayer = PlayerAppearance.find_animation_player(gel_mannequin)
 	if gel_animation != null and gel_animation.has_animation(&"Idle"):
 		gel_animation.get_animation(&"Idle").loop_mode = Animation.LOOP_LINEAR
