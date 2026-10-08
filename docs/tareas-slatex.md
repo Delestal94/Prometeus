@@ -223,7 +223,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   y gamepad; maniquí de gelatina girable que se actualiza en vivo; restaurar preset y deshacer.
 - [x] **S-311.23** (`0744a52`) Guardado en el perfil y replicación compacta (cada parámetro cuantizado a un byte); el
   host limita los valores a los rangos. Test de red: cada par ve las proporciones del otro.
-- [ ] **S-311.24** Juego justo: la cápsula de colisión, la altura de la cámara y el alcance **no cambian**
+- [x] **S-311.24** (`be6b7f7`) Juego justo: la cápsula de colisión, la altura de la cámara y el alcance **no cambian**
   con las proporciones; lo visual se acomoda (IK de pies al piso, manos a la caja, volante y pedales: estos
   dos son de Nacho, aviso).
 - [ ] **S-311.25** Animación con cualquier proporción: la zancada y la velocidad del clip salen del largo
