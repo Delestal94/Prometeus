@@ -40,6 +40,7 @@ const PICKUP_BLEND_LIBRARY: StringName = &"pickup_blend"
 const TURN_STEP_ABOVE: float = 1.5
 const TURN_STEP_BELOW: float = 0.8
 const TURN_RATE_SMOOTHING: float = 10.0
+const GelMotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
 ## Under this ground speed (m/s) the player stands (Idle), over it walks.
 const IDLE_BELOW_SPEED: float = 0.3
 ## Clips that loop (the glTF importer drops Blender's loop flag).
@@ -63,6 +64,9 @@ var _turn_yaw: float = 0.0
 var _anim_lock_until_msec: int = 0
 var _jump_airborne: bool = false
 var _jump_landing_elapsed: float = -1.0
+## Visual stride only. Delgada and the current rounded player stay at 1.0;
+## the gel appearance supplies its replicated leg-length factor.
+var _leg_length_factor: float = 1.0
 
 
 func _init(player: Player, animation_player: AnimationPlayer, face: Node) -> void:
@@ -144,6 +148,10 @@ func release_lock() -> void:
 	_anim_lock_until_msec = 0
 
 
+func set_leg_length_factor(value: float) -> void:
+	_leg_length_factor = clampf(value, GelMotionFit.MIN_LENGTH_FACTOR, GelMotionFit.MAX_LENGTH_FACTOR)
+
+
 ## Samples the jump clip from the real ascent and landing instead of playing
 ## a crouch after leaving the floor.
 func update_jump(delta: float, ground_speed: float) -> void:
@@ -199,12 +207,18 @@ func animate() -> void:
 			_face.call(&"blink")
 		_seen_jump_time = _player.jump_anim_time
 	elif clip == Player.ANIM_RUN:
-		anim_player.speed_scale = clampf(_player.locomotion_speed / RUN_AUTHORED_SPEED, RUN_MIN_SCALE, 1.3)
+		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
+			_player.locomotion_speed, RUN_AUTHORED_SPEED, _leg_length_factor, RUN_MIN_SCALE, 1.3
+		)
 	elif clip == Player.ANIM_WALK:
-		anim_player.speed_scale = clampf(_player.locomotion_speed / WALK_AUTHORED_SPEED, 0.5,
-				RUN_FALLBACK_MAX_SCALE if run_fallback else 1.5)
+		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
+			_player.locomotion_speed, WALK_AUTHORED_SPEED, _leg_length_factor, 0.5,
+			RUN_FALLBACK_MAX_SCALE if run_fallback else 1.5
+		)
 	elif clip == Player.ANIM_STROLL:
-		anim_player.speed_scale = clampf(_player.locomotion_speed / STROLL_AUTHORED_SPEED, 0.2, 1.6)
+		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
+			_player.locomotion_speed, STROLL_AUTHORED_SPEED, _leg_length_factor, 0.2, 1.6
+		)
 	else:
 		anim_player.speed_scale = 1.0
 
