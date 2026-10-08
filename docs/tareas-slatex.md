@@ -229,7 +229,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.25** Animación con cualquier proporción: la zancada y la velocidad del clip salen del largo
   de pierna (pies sin patinar), las manos llegan a la caja con cualquier largo de brazo y la cabeza no
   atraviesa el techo del camión ni la puerta. Hecho en `e275895`.
-- [ ] **S-311.26** `test_gel_proportions.gd`: extremos de cada parámetro + 50 combinaciones al azar (semilla
+- [x] **S-311.26** (`7d16299`) `test_gel_proportions.gd`: extremos de cada parámetro + 50 combinaciones al azar (semilla
   fija) — pies en el piso (±2 cm), manos en la caja al cargar, cara ni enterrada ni flotando, ragdoll
   estable, ropa y pelo sin atravesar el cuerpo (cuando existan los bloques H y J).
 
