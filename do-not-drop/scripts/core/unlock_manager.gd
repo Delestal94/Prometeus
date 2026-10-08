@@ -13,9 +13,11 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 3: Peso creciente and Ruidoso joined the gradual trap curve. Loading an
 ## older profile grants every unlock its existing progress already earns.
 ## 4: first-time trap tutorial cards persist in seen_tips.
-const PROFILE_VERSION := 4
+## 5: the editable gelatin body proportions persist with the appearance.
+const PROFILE_VERSION := 5
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const NICKNAME = preload("res://scripts/core/nickname.gd")
+const GEL_PROPORTIONS = preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (NetworkManager.color_slot(), N-226), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -77,6 +79,7 @@ var selected_truck: StringName = &"classic"
 var selected_paint: StringName = &"white"
 var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
 var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
+var gel_proportions: Dictionary = GEL_PROPORTIONS.default_dictionary()
 ## What the player typed to be called by (N-606.1), cleaned; empty = the game
 ## hands out a funny one (Nickname.resolve). Travels with the appearance.
 var nickname: String = ""
@@ -230,6 +233,15 @@ func set_nickname(text: String) -> void:
 	progress_changed.emit()
 
 
+func set_gel_proportions(values: Dictionary) -> void:
+	var sanitized: Dictionary = GEL_PROPORTIONS.sanitized_dictionary(values)
+	if sanitized == gel_proportions:
+		return
+	gel_proportions = sanitized
+	save_profile()
+	progress_changed.emit()
+
+
 func progress_summary() -> Dictionary:
 	return {
 		"score": total_score,
@@ -262,6 +274,7 @@ func _profile_fields() -> Dictionary:
 		"selected_paint": selected_paint,
 		"selected_eyes": selected_eyes,
 		"selected_mouth": selected_mouth,
+		"gel_proportions": gel_proportions,
 		"nickname": nickname,
 	}
 
@@ -278,6 +291,7 @@ func _read_profile(parsed: Dictionary, version: int) -> void:
 	selected_paint = StringName(parsed.get("selected_paint", &"white"))
 	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
 	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
+	gel_proportions = GEL_PROPORTIONS.sanitized_dictionary(Dictionary(parsed.get("gel_proportions", {})))
 	nickname = NICKNAME.clean(str(parsed.get("nickname", "")))
 
 
@@ -301,6 +315,7 @@ func _reset_fields() -> void:
 	selected_paint = &"white"
 	selected_eyes = FaceCatalog.DEFAULT_EYES
 	selected_mouth = FaceCatalog.DEFAULT_MOUTH
+	gel_proportions = GEL_PROPORTIONS.default_dictionary()
 	nickname = ""
 
 

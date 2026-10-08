@@ -4,8 +4,8 @@ extends Control
 ## left (turn it by dragging or with the right stick), and on the right the
 ## choices as picture cards in tabs -- face, uniform and, from the main menu,
 ## the truck. Every pick is saved at once (UnlockManager) and reaches the local
-## player live (player.gd follows progress_changed; face, uniform and nickname
-## replicate from there), so the same screen serves the depot's lockers:
+## player live (player.gd and PlayerGelProportionSync follow progress_changed;
+## face, body, uniform and nickname replicate from there), so the same screen serves the depot's lockers:
 ## DepotPanel opens it in Mode.DEPOT, without the truck (that's the workshop).
 ## Full keyboard and gamepad; the cards update in place, so the stage is never
 ## rebuilt and keeps the turn the player gave it.
@@ -53,6 +53,7 @@ var _page_grids: Dictionary = {}
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_proportions.apply_dictionary(UnlockManager.gel_proportions)
 	_build()
 	_sync()
 
@@ -559,6 +560,7 @@ func _sync() -> void:
 
 func _show_proportions(value: GelBodyProportions) -> void:
 	preview.show_proportions(value)
+	UnlockManager.set_gel_proportions(value.as_dictionary())
 
 
 ## The shirt the others will see: the automatic team colour is this peer's

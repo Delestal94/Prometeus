@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_carry.gd" id="3_carry"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_seat_pose.gd" id="4_seat_pose"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_nickname.gd" id="5_nickname"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_proportion_sync.gd" id="6_gel_proportions"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -12,6 +13,11 @@ height = 1.7
 
 [sub_resource type="SphereShape3D" id="Shape_probe"]
 radius = 1.0
+
+[sub_resource type="SceneReplicationConfig" id="Repl_gel_proportions"]
+properties/0/path = NodePath(".:packet")
+properties/0/spawn = true
+properties/0/replication_mode = 2
 
 [sub_resource type="SceneReplicationConfig" id="Repl_player"]
 properties/0/path = NodePath(".:net_position")
@@ -73,6 +79,12 @@ script = ExtResource("4_seat_pose")
 
 [node name="PlayerNickname" type="Node" parent="."]
 script = ExtResource("5_nickname")
+
+[node name="GelProportions" type="Node" parent="."]
+script = ExtResource("6_gel_proportions")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="GelProportions"]
+replication_config = SubResource("Repl_gel_proportions")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_interval = 0.0333

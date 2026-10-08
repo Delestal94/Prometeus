@@ -39,12 +39,15 @@ extends Node
 ## re-anchors; before, for the rest of the drive), and from a second after
 ## the switch the client's mean error grows by less than 15 cm over the one
 ## before it.
+## S-311.23: the two profiles use different gel bodies; the host sees the
+## client's 17-byte packet and the client sees the host's host-owned packet.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
 const CLIENT_COSMETIC: StringName = &"mint_uniform"
 const CLIENT_NICKNAME: String = "Ana"
 const NEWS_DESK: Script = preload("res://scripts/presentation/newspaper/news_desk.gd")
+const GEL_PROPORTIONS: Script = preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 ## N-235.2: the joiner loads its level with ENet's polling blocked, and the
 ## host drops it if that outlasts NetworkManager's load budget (45 s). A load
 ## within this margin of the budget prints a WARNING (35 s today), a sign the
@@ -90,11 +93,13 @@ func _ready() -> void:
 	_host = "--host" in OS.get_cmdline_user_args()
 	# Deliberately different local profiles: order difficulty must come from
 	# the host through the handshake, never from the joiner's save.
-	get_node(^"/root/UnlockManager").set(&"completed_runs", 6 if _host else 0)
+	var profile: Node = get_node(^"/root/UnlockManager")
+	profile.set(&"completed_runs", 6 if _host else 0)
+	profile.set(&"gel_proportions", _gel_values(_host))
 	if not _host:
 		# Starter cosmetic, but deliberately not the automatic team colour.
-		get_node(^"/root/UnlockManager").set(&"selected_cosmetic", CLIENT_COSMETIC)
-		get_node(^"/root/UnlockManager").set(&"nickname", CLIENT_NICKNAME)
+		profile.set(&"selected_cosmetic", CLIENT_COSMETIC)
+		profile.set(&"nickname", CLIENT_NICKNAME)
 		var bus: Node = get_node(^"/root/EventBus")
 		bus.connect(&"newspaper_ready", func(paper: Dictionary) -> void:
 			_paper = paper
@@ -150,6 +155,14 @@ func _run_host() -> void:
 		return
 	rpc_id(_client_peer_id, &"_client_check_order", _order_ids(), int(_network.get(&"world_completed_runs")))
 	await _wait_for_report(&"order")
+	var expected_client: PackedByteArray = GEL_PROPORTIONS.packet_from_dictionary(_gel_values(false))
+	var client_body: Node = client_player.get_node(^"GelProportions")
+	var proportions_arrived: bool = await _wait_until(func() -> bool:
+		return client_body.get(&"packet") == expected_client)
+	_expect(proportions_arrived, "host sees the client's quantized gel proportions")
+	rpc_id(_client_peer_id, &"_client_check_gel_proportions",
+		GEL_PROPORTIONS.packet_from_dictionary(_gel_values(true)))
+	await _wait_for_report(&"gel_proportions")
 
 	# N-235: admitted and loaded, both ends drop a silent peer within the
 	# session timeout, not the 45 s load budget -- once the host's settle
@@ -696,6 +709,14 @@ func _client_check_order(host_order: Array, host_completed_runs: int) -> void:
 	_report(&"order", ok, "client uses the host's progression and posts the same order")
 
 
+@rpc("authority", "call_remote", "reliable")
+func _client_check_gel_proportions(expected_host: PackedByteArray) -> void:
+	var host_player: Player = _player(1)
+	var arrived: bool = host_player != null and await _wait_until(func() -> bool:
+		return host_player.get_node(^"GelProportions").get(&"packet") == expected_host)
+	_report(&"gel_proportions", arrived, "client sees the host's quantized gel proportions")
+
+
 ## Sent the frame the host moved a resting box. The new pose has to get here,
 ## and right behind it the box's full rate: a woken throttle sends every tick
 ## for its settle window, a stuck one only every rest_interval. Counting the
@@ -892,6 +913,15 @@ func _order_ids() -> Array:
 	for order: Dictionary in depot.get(&"orders"):
 		result.append(StringName(order.package_id))
 	return result
+
+
+func _gel_values(host: bool) -> Dictionary:
+	var values: Dictionary = GEL_PROPORTIONS.default_dictionary()
+	values[&"total_height"] = 0.91 if host else 1.18
+	values[&"head_size"] = 1.17 if host else 0.82
+	values[&"general_thickness"] = 0.64 if host else -0.72
+	values[&"belly"] = -0.35 if host else 0.48
+	return values
 
 
 func _wait_for_report(stage: StringName) -> bool:
