@@ -219,7 +219,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   piernas ~30 % más finos, cuello visible), y cuatro más para mostrar el rango (Rellena, Petisa,
   Cabezona, Larguirucha). Botón "al azar" que solo sortea combinaciones que se ven bien (límites entre
   parámetros, por ejemplo cabeza grande con cuello muy fino no).
-- [ ] **S-311.22** Editor en la personalización: elegir preset y ajustar cada slider, con teclado, mouse
+- [x] **S-311.22** (`ebfdcd8`) Editor en la personalización: elegir preset y ajustar cada slider, con teclado, mouse
   y gamepad; maniquí de gelatina girable que se actualiza en vivo; restaurar preset y deshacer.
 - [ ] **S-311.23** Guardado en el perfil y replicación compacta (cada parámetro cuantizado a un byte); el
   host limita los valores a los rangos. Test de red: cada par ve las proporciones del otro.

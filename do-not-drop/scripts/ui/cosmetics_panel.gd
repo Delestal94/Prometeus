@@ -15,11 +15,12 @@ const NICKNAME = preload("res://scripts/core/nickname.gd")
 const PLAYER_SCRIPT = preload("res://scripts/gameplay/player/player.gd")
 const CharacterPreview = preload("res://scripts/ui/customize/character_preview.gd")
 const Swatch = preload("res://scripts/ui/customize/customize_swatch.gd")
+const GelEditor = preload("res://scripts/ui/customize/gel_proportion_editor.gd")
 
 signal closed
 
 enum Mode { MENU, DEPOT }
-enum Page { FACE, UNIFORM, TRUCK }
+enum Page { FACE, BODY, UNIFORM, TRUCK }
 
 ## Card heights by kind: faces are small and many, shirts and vans few and big
 ## (and room for a two-line "earned at..." under them).
@@ -39,6 +40,8 @@ var preview: CharacterPreview
 var _nickname_edit: LineEdit
 var _random_button: Button
 var _done_button: Button
+var _proportions := GelBodyProportions.new()
+var _proportion_editor: GelProportionEditor
 var _tabs: Array[Button] = []
 var _pages: Array[Control] = []
 ## Every card, with metas "kind" (eyes, mouth, uniform, truck, paint) and "choice".
@@ -233,7 +236,7 @@ func _build_editor(parent: HBoxContainer) -> void:
 	rule.custom_minimum_size = Vector2(0, 2)
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(rule)
-	var pages: Array[Page] = [Page.FACE, Page.UNIFORM]
+	var pages: Array[Page] = [Page.FACE, Page.BODY, Page.UNIFORM]
 	if mode == Mode.MENU:
 		pages.append(Page.TRUCK)
 	for each: Page in pages:
@@ -253,13 +256,19 @@ func _build_editor(parent: HBoxContainer) -> void:
 		_page_grids[each] = []
 		match each:
 			Page.FACE: _build_face_page(contents)
+			Page.BODY: _build_body_page(contents)
 			Page.UNIFORM: _build_uniform_page(contents)
 			Page.TRUCK: _build_truck_page(contents)
 
 
 ## A tab: muted text, ink with an ink underline when it's the open one.
 func _tab_button(bar: HBoxContainer, which: Page) -> Button:
-	var labels: Dictionary = {Page.FACE: "UI_COSM_FACE", Page.UNIFORM: "UI_COSM_UNIFORM", Page.TRUCK: "UI_TRUCK"}
+	var labels: Dictionary = {
+		Page.FACE: "UI_COSM_FACE",
+		Page.BODY: "UI_COSM_BODY",
+		Page.UNIFORM: "UI_COSM_UNIFORM",
+		Page.TRUCK: "UI_TRUCK",
+	}
 	var tab := Button.new()
 	tab.name = "Tab_%s" % Page.keys()[which].to_lower()
 	tab.text = tr(labels[which])
@@ -351,6 +360,14 @@ func _build_face_page(contents: VBoxContainer) -> void:
 	var mouths: GridContainer = _grid(contents, Page.FACE, 8)
 	for id: StringName in Catalog.MOUTHS:
 		_card(mouths, "mouth", id, Swatch.new().setup(Swatch.Kind.MOUTH, id), tr(String(Catalog.MOUTHS[id])))
+
+
+func _build_body_page(contents: VBoxContainer) -> void:
+	_section(contents, tr("UI_GEL_EDITOR_TITLE"), tr("UI_GEL_EDITOR_HINT"))
+	_proportion_editor = GelEditor.new().setup(_proportions)
+	_proportion_editor.name = "GelProportionEditor"
+	_proportion_editor.proportions_changed.connect(_show_proportions)
+	contents.add_child(_proportion_editor)
 
 
 func _build_uniform_page(contents: VBoxContainer) -> void:
@@ -536,6 +553,12 @@ func _sync() -> void:
 	if is_instance_valid(_nickname_edit) and not _nickname_edit.has_focus():
 		_nickname_edit.text = UnlockManager.nickname
 	preview.show_look(_shirt_color(), UnlockManager.selected_eyes, UnlockManager.selected_mouth)
+	if page == Page.BODY:
+		preview.show_proportions(_proportions)
+
+
+func _show_proportions(value: GelBodyProportions) -> void:
+	preview.show_proportions(value)
 
 
 ## The shirt the others will see: the automatic team colour is this peer's
@@ -563,6 +586,10 @@ func _show_page(which: Page, instant: bool = false) -> void:
 		var shown: bool = _page_of(index) == which
 		_pages[index].visible = shown
 		_tabs[index].set_pressed_no_signal(shown)
+	if which == Page.BODY:
+		preview.show_proportions(_proportions)
+	else:
+		preview.show_character()
 	preview.set_framing(CharacterPreview.Framing.FACE if which == Page.FACE else CharacterPreview.Framing.BODY,
 			instant)
 	_wire_focus()
@@ -575,6 +602,8 @@ func _page_of(index: int) -> Page:
 
 ## The card to land on in the open page: the picked one, else the first.
 func _page_entry() -> Control:
+	if page == Page.BODY and is_instance_valid(_proportion_editor):
+		return _proportion_editor.focus_entry()
 	var first: Control = null
 	for grid: GridContainer in _page_grids.get(page, []):
 		for child: Node in grid.get_children():
@@ -612,6 +641,10 @@ func _wire_focus() -> void:
 		_link(_tabs[index], {&"focus_neighbor_bottom": entry, &"focus_neighbor_left":
 				_tabs[index - 1] if index > 0 else _nickname_edit,
 				&"focus_neighbor_right": _tabs[index + 1] if index + 1 < _tabs.size() else _tabs[index]})
+	if page == Page.BODY and is_instance_valid(_proportion_editor):
+		_proportion_editor.wire_focus(tab, _done_button, _nickname_edit)
+		_link(_done_button, {&"focus_neighbor_left": _proportion_editor.focus_last()})
+		return
 	for g: int in grids.size():
 		var grid: GridContainer = grids[g]
 		var cards: Array[Node] = _cards_in(grid)
@@ -620,10 +653,14 @@ func _wire_focus() -> void:
 			var card: Control = cards[index]
 			var column: int = index % columns
 			var up: Control = cards[index - columns] if index >= columns else _row_above(grids, g, column, tab)
-			var down: Control = cards[index + columns] if index + columns < cards.size() else _row_below(grids, g, column)
+			var down: Control = (
+				cards[index + columns] if index + columns < cards.size() else _row_below(grids, g, column)
+			)
 			_link(card, {
 				&"focus_neighbor_left": cards[index - 1] if column > 0 else _nickname_edit,
-				&"focus_neighbor_right": cards[index + 1] if column < columns - 1 and index + 1 < cards.size() else card,
+				&"focus_neighbor_right": (
+					cards[index + 1] if column < columns - 1 and index + 1 < cards.size() else card
+				),
 				&"focus_neighbor_top": up,
 				&"focus_neighbor_bottom": down,
 			})

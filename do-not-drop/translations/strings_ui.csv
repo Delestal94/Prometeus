@@ -356,6 +356,7 @@ UI_APPEARANCE,Apariencia,Appearance
 UI_BACK,Volver,Back
 UI_CANCEL,Cancelar,Cancel
 UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved automatically
+UI_COSM_BODY,Cuerpo,Body
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face
 UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.
@@ -1193,3 +1194,8 @@ UI_GEL_PRESET_PETISA,Petisa,Short
 UI_GEL_PRESET_CABEZONA,Cabezona,Big-headed
 UI_GEL_PRESET_LARGUIRUCHA,Larguirucha,Lanky
 UI_GEL_PROPORTION_RANDOM,Al azar,Random
+UI_GEL_EDITOR_TITLE,Proporciones de gelatina,Gel proportions
+UI_GEL_EDITOR_HINT,Elegí una base y ajustá cada parte. Los cambios se ven al instante.,Choose a base and tune every part. Changes appear instantly.
+UI_GEL_EDITOR_PRESET,Base,Preset
+UI_GEL_EDITOR_RESTORE,Restaurar base,Restore preset
+UI_GEL_EDITOR_UNDO,Deshacer,Undo
