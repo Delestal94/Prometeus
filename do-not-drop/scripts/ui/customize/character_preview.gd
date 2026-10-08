@@ -6,7 +6,9 @@ extends SubViewportContainer
 ## character. Presentation only, nothing here is saved or replicated.
 
 const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
+const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const GelShaper = preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 
 enum Framing { FACE, BODY }
 
@@ -26,6 +28,7 @@ const SHOT_TIME: float = 0.4
 ## The face on the model, for the panel and the tests.
 var face: Node
 var mannequin: Node3D
+var gel_mannequin: Node3D
 var framing: Framing = Framing.BODY
 var _camera: Camera3D
 var _yaw: float = REST_YAW
@@ -35,6 +38,7 @@ var _height: float
 var _shot_tween: Tween
 var _bounce_tween: Tween
 var _dragging: bool = false
+var _gel_shaper: GelBodyShaper = GelShaper.new()
 
 
 func _ready() -> void:
@@ -60,6 +64,22 @@ func _ready() -> void:
 func show_look(shirt: Color, eyes: StringName, mouth: StringName) -> void:
 	PlayerAppearance.tint_shirt(mannequin, shirt)
 	face.call(&"set_expression", eyes, mouth)
+
+
+## Shows the editable gel body and applies only when its values changed.
+func show_proportions(proportions: GelBodyProportions) -> void:
+	mannequin.visible = false
+	gel_mannequin.visible = true
+	_gel_shaper.apply(proportions)
+
+
+func show_character() -> void:
+	mannequin.visible = true
+	gel_mannequin.visible = false
+
+
+func proportion_application_count() -> int:
+	return _gel_shaper.application_count
 
 
 ## A quick squash and stretch: "that changed".
@@ -96,6 +116,7 @@ func _process(delta: float) -> void:
 	if not is_zero_approx(stick):
 		_yaw += stick * STICK_TURN * delta
 	mannequin.rotation.y = _yaw
+	gel_mannequin.rotation.y = _yaw
 	_place_camera()
 
 
@@ -152,6 +173,15 @@ func _build_studio(viewport: SubViewport) -> void:
 	if animation != null and animation.has_animation(&"Idle"):
 		animation.get_animation(&"Idle").loop_mode = Animation.LOOP_LINEAR
 		animation.play(&"Idle")
+	gel_mannequin = GEL_SCENE.instantiate() as Node3D
+	gel_mannequin.name = "GelMannequin"
+	gel_mannequin.visible = false
+	world.add_child(gel_mannequin)
+	_gel_shaper.setup(gel_mannequin)
+	var gel_animation: AnimationPlayer = PlayerAppearance.find_animation_player(gel_mannequin)
+	if gel_animation != null and gel_animation.has_animation(&"Idle"):
+		gel_animation.get_animation(&"Idle").loop_mode = Animation.LOOP_LINEAR
+		gel_animation.play(&"Idle")
 
 
 ## A soft round contact shadow: the character stands on something.
