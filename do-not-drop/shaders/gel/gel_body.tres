@@ -10,5 +10,7 @@ shader_parameter/center_opacity = 0.24
 shader_parameter/edge_opacity = 0.78
 shader_parameter/edge_density = 0.38
 shader_parameter/fresnel_power = 2.4
+shader_parameter/refraction_strength = 0.018
+shader_parameter/refraction_mix = 0.9
 shader_parameter/roughness = 0.16
 shader_parameter/specular = 0.72

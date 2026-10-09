@@ -4,8 +4,9 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27 also verifies that the preview uses the GL Compatibility gel shader
-## with a transparent centre and a denser Fresnel edge.
+## S-311.27-28 also verify that the preview uses the GL Compatibility gel shader
+## with a transparent centre, a denser Fresnel edge and normal-displaced screen
+## refraction.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
@@ -146,10 +147,21 @@ func _check_gel_material(preview: Control) -> void:
 	var center: float = material.get_shader_parameter(&"center_opacity")
 	var edge: float = material.get_shader_parameter(&"edge_opacity")
 	var density: float = material.get_shader_parameter(&"edge_density")
+	var refraction_strength: float = material.get_shader_parameter(&"refraction_strength")
+	var refraction_mix: float = material.get_shader_parameter(&"refraction_mix")
 	_expect(center > 0.0 and center < edge and edge <= 1.0,
 		"the gel centre is transparent and the Fresnel edge is denser")
 	_expect(density > 0.0 and density <= 1.0,
 		"the Fresnel edge also carries extra colour density")
+	_expect(refraction_strength > 0.0 and refraction_mix > 0.0,
+		"the shared gel material enables background refraction")
+	var shader_code: String = material.shader.code
+	_expect(
+		shader_code.contains("hint_screen_texture")
+		and shader_code.contains("SCREEN_UV")
+		and shader_code.contains("NORMAL.xy"),
+		"GL Compatibility refraction reads the screen and displaces it by the normal"
+	)
 
 
 func _action_has_joy_motion(action: StringName) -> bool:
