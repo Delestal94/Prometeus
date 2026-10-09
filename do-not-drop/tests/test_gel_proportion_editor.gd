@@ -4,9 +4,12 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
+## S-311.27 also verifies that the preview uses the GL Compatibility gel shader
+## with a transparent centre and a denser Fresnel edge.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
+const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 
 var _failures: int = 0
 
@@ -35,6 +38,7 @@ func _run() -> void:
 	_expect(editor != null and editor.is_visible_in_tree(), "the Body tab shows the proportion editor")
 	_expect(preview.get(&"gel_mannequin").visible, "the Body tab shows the gel mannequin")
 	_expect(not preview.get(&"mannequin").visible, "the rounded mannequin is hidden on the Body tab")
+	_check_gel_material(preview)
 	if editor == null:
 		panel.free()
 		quit(_failures)
@@ -129,6 +133,23 @@ func _check_mouse_rotation(preview: Control) -> void:
 	preview.call(&"_gui_input", drag)
 	preview.call(&"_process", 0.0)
 	_expect(not is_equal_approx(gel.rotation.y, before), "mouse drag turns the gel mannequin")
+
+
+func _check_gel_material(preview: Control) -> void:
+	var gel: Node3D = preview.get(&"gel_mannequin")
+	var mesh: MeshInstance3D = PlayerAppearance.find_mesh_instance(gel)
+	var material: ShaderMaterial = mesh.material_override as ShaderMaterial if mesh != null else null
+	_expect(material == GEL_MATERIAL,
+		"the gel preview uses the shared GL Compatibility material")
+	if material == null:
+		return
+	var center: float = material.get_shader_parameter(&"center_opacity")
+	var edge: float = material.get_shader_parameter(&"edge_opacity")
+	var density: float = material.get_shader_parameter(&"edge_density")
+	_expect(center > 0.0 and center < edge and edge <= 1.0,
+		"the gel centre is transparent and the Fresnel edge is denser")
+	_expect(density > 0.0 and density <= 1.0,
+		"the Fresnel edge also carries extra colour density")
 
 
 func _action_has_joy_motion(action: StringName) -> bool:
