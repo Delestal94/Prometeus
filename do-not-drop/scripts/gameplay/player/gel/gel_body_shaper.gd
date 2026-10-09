@@ -47,6 +47,7 @@ func apply(proportions: GelBodyProportions) -> bool:
 	for parameter_name: StringName in BONE_LENGTHS:
 		_apply_bone_length(BONE_LENGTHS[parameter_name], float(values[parameter_name]))
 	_apply_head_size(float(values[&"head_size"]))
+	_fit_head_attachments(float(values[&"head_size"]))
 	_apply_morphs(values)
 	_skeleton.force_update_all_bone_transforms()
 	_last_values = values.duplicate(true)
@@ -86,6 +87,23 @@ func _apply_head_size(factor: float) -> void:
 	var rest: Transform3D = _skeleton.get_bone_rest(head)
 	rest.basis = rest.basis.scaled_local(Vector3.ONE * factor)
 	_skeleton.set_bone_rest(head, rest)
+
+
+## BoneAttachment3D follows the head pose but Godot removes the rest scale from
+## its transform. Restore that visual scale explicitly so faces and, later,
+## hair/hat attachments neither sink into nor float away from resized heads.
+func _fit_head_attachments(factor: float) -> void:
+	for child: Node in _skeleton.get_children():
+		if not child is BoneAttachment3D or (child as BoneAttachment3D).bone_name != &"head":
+			continue
+		# BoneAttachment3D rewrites its own transform from the skeleton every
+		# update, so scale the attached visuals from their cached authoring size.
+		for visual: Node in child.get_children():
+			if not visual is Node3D:
+				continue
+			if not visual.has_meta(&"gel_head_base_scale"):
+				visual.set_meta(&"gel_head_base_scale", (visual as Node3D).scale)
+			(visual as Node3D).scale = (visual.get_meta(&"gel_head_base_scale") as Vector3) * factor
 
 
 func _apply_morphs(values: Dictionary) -> void:
