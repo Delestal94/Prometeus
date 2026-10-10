@@ -237,8 +237,8 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 - [x] **S-311.27** (`15cf4c9`) `shaders/gel/gel_body.gdshader` (con `artista-shaders`) para GL Compatibility:
   transparencia con fresnel, bordes más densos y centro más transparente (criterios 5 y 6).
-- [ ] **S-311.28** Refracción del fondo desplazada por la normal (`hint_screen_texture`). Comprobar que
-  funciona en GL Compatibility; si no, reflejo falso con el mismo aspecto. Documentar cuál quedó.
+- [x] **S-311.28** (`8bea552`) Refracción del fondo desplazada por la normal (`hint_screen_texture`),
+  comprobada en GL Compatibility. Quedó la lectura real de pantalla; no fue necesario el reflejo falso.
 - [ ] **S-311.29** Reflejos de estudio nítidos como los de la foto (criterio 4): especular de rugosidad
   baja + matcap o cubemap chico de "ventana", para que se vean aunque el cielo sea oscuro.
 - [ ] **S-311.30** Absorción por grosor (Beer-Lambert aproximado con el mapa del ítem 15): más color y

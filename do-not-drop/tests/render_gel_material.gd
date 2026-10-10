@@ -4,8 +4,8 @@ extends SceneTree
 ## --script res://tests/render_gel_material.gd
 ##
 ## Visual proof for block D. It renders the real LOD0 gel body with the shared
-## runtime material from the front and at three quarters. Later D items reuse
-## these same views so refraction, highlights and transparency remain comparable.
+## runtime material from the front and at three quarters. A high-contrast grid
+## behind the body makes S-311.28 screen-space refraction directly visible.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
@@ -28,10 +28,10 @@ func _run() -> void:
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	await _save(output_path.path_join("s311_27_fresnel_front.png"))
+	await _save(output_path.path_join("s311_28_refraction_front.png"))
 	_gel.rotation.y = deg_to_rad(-32.0)
-	await _save(output_path.path_join("s311_27_fresnel_three_quarter.png"))
-	print("PASS: gel Fresnel material captures at ", output_path)
+	await _save(output_path.path_join("s311_28_refraction_three_quarter.png"))
+	print("PASS: gel refraction captures at ", output_path)
 	quit(0)
 
 
@@ -63,6 +63,7 @@ func _build_stage() -> void:
 	floor_material.roughness = 0.82
 	floor.material_override = floor_material
 	root.add_child(floor)
+	_build_refraction_backdrop()
 	_gel = GEL_SCENE.instantiate() as Node3D
 	root.add_child(_gel)
 	var mesh: MeshInstance3D = PlayerAppearance.find_mesh_instance(_gel)
@@ -82,6 +83,27 @@ func _build_stage() -> void:
 	_camera.look_at(Vector3(0.0, 0.86, 0.0))
 	_camera.fov = 31.0
 	_camera.make_current()
+
+
+func _build_refraction_backdrop() -> void:
+	_add_backdrop_box(Vector3(4.0, 3.0, 0.06), Vector3(0.0, 1.15, 0.86), Color("31516a"))
+	for x: float in [-0.9, -0.45, 0.0, 0.45, 0.9]:
+		_add_backdrop_box(Vector3(0.045, 2.65, 0.08), Vector3(x, 1.15, 0.79), Color("f2d6ad"))
+	for y: float in [0.45, 0.9, 1.35, 1.8]:
+		_add_backdrop_box(Vector3(3.5, 0.045, 0.08), Vector3(0.0, y, 0.78), Color("9dcbe0"))
+
+
+func _add_backdrop_box(size: Vector3, position: Vector3, color: Color) -> void:
+	var instance := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	instance.mesh = box
+	instance.position = position
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.78
+	instance.material_override = material
+	root.add_child(instance)
 
 
 func _save(path: String) -> void:
