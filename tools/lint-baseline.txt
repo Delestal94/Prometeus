@@ -45,7 +45,6 @@ do-not-drop/scripts/presentation/wildlife_animal.gd|max-line-length 6
 do-not-drop/scripts/presentation/windshield_rain.gd|max-line-length 2
 do-not-drop/scripts/tools/trailer_camera.gd|max-line-length 4
 do-not-drop/scripts/tools/trailer_shot.gd|max-line-length 10
-do-not-drop/scripts/ui/cosmetics_panel.gd|max-line-length 2
 do-not-drop/scripts/ui/depot_panel.gd|max-line-length 3
 do-not-drop/scripts/ui/hud/hud_cargo_panel.gd|max-line-length 2
 do-not-drop/scripts/ui/hud/hud_pause.gd|max-line-length 3
