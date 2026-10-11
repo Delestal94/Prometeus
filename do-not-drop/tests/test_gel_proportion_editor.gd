@@ -4,9 +4,9 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27-29 also verify that the preview uses the GL Compatibility gel shader
+## S-311.27-30 also verify that the preview uses the GL Compatibility gel shader
 ## with a transparent centre, a denser Fresnel edge, normal-displaced screen
-## refraction and a procedural studio-window reflection.
+## refraction, a procedural studio-window reflection and thickness absorption.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
@@ -153,6 +153,11 @@ func _check_gel_material(preview: Control) -> void:
 	var specular: float = material.get_shader_parameter(&"specular")
 	var studio_strength: float = material.get_shader_parameter(&"studio_reflection_strength")
 	var studio_softness: float = material.get_shader_parameter(&"studio_reflection_softness")
+	var thickness_map: Texture2D = material.get_shader_parameter(&"thickness_map") as Texture2D
+	var thickness_decode: float = material.get_shader_parameter(&"thickness_decode_meters")
+	var absorption: float = material.get_shader_parameter(&"absorption_coefficient")
+	var absorption_color: float = material.get_shader_parameter(&"absorption_color_mix")
+	var absorption_opacity: float = material.get_shader_parameter(&"absorption_opacity")
 	_expect(center > 0.0 and center < edge and edge <= 1.0,
 		"the gel centre is transparent and the Fresnel edge is denser")
 	_expect(density > 0.0 and density <= 1.0,
@@ -163,6 +168,12 @@ func _check_gel_material(preview: Control) -> void:
 		"the studio reflection uses a crisp low-roughness specular surface")
 	_expect(studio_strength > 0.0 and studio_softness > 0.0,
 		"the shared gel material enables its procedural studio matcap")
+	_expect(thickness_map != null and thickness_map.get_width() == 1024,
+		"the shared gel material loads the baked base-body thickness map")
+	_expect(thickness_decode == 2.0 and absorption > 0.0,
+		"the thickness map is decoded in metres for Beer-Lambert absorption")
+	_expect(absorption_color > 0.0 and absorption_opacity > 0.0,
+		"thicker gel gains colour and opacity")
 	var shader_code: String = material.shader.code
 	_expect(
 		shader_code.contains("hint_screen_texture")
@@ -176,6 +187,12 @@ func _check_gel_material(preview: Control) -> void:
 		and shader_code.contains("studio_ribbon_width")
 		and shader_code.contains("EMISSION"),
 		"the studio window and ribbon stay visible against a dark sky"
+	)
+	_expect(
+		shader_code.contains("texture(thickness_map, UV).r")
+		and shader_code.contains("exp(-absorption_coefficient * thickness_meters)")
+		and shader_code.contains("thickness_absorption * absorption_opacity"),
+		"the shader attenuates transmission and raises opacity from baked thickness"
 	)
 
 
