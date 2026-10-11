@@ -4,9 +4,9 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27-28 also verify that the preview uses the GL Compatibility gel shader
-## with a transparent centre, a denser Fresnel edge and normal-displaced screen
-## refraction.
+## S-311.27-29 also verify that the preview uses the GL Compatibility gel shader
+## with a transparent centre, a denser Fresnel edge, normal-displaced screen
+## refraction and a procedural studio-window reflection.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
@@ -149,18 +149,33 @@ func _check_gel_material(preview: Control) -> void:
 	var density: float = material.get_shader_parameter(&"edge_density")
 	var refraction_strength: float = material.get_shader_parameter(&"refraction_strength")
 	var refraction_mix: float = material.get_shader_parameter(&"refraction_mix")
+	var roughness: float = material.get_shader_parameter(&"roughness")
+	var specular: float = material.get_shader_parameter(&"specular")
+	var studio_strength: float = material.get_shader_parameter(&"studio_reflection_strength")
+	var studio_softness: float = material.get_shader_parameter(&"studio_reflection_softness")
 	_expect(center > 0.0 and center < edge and edge <= 1.0,
 		"the gel centre is transparent and the Fresnel edge is denser")
 	_expect(density > 0.0 and density <= 1.0,
 		"the Fresnel edge also carries extra colour density")
 	_expect(refraction_strength > 0.0 and refraction_mix > 0.0,
 		"the shared gel material enables background refraction")
+	_expect(roughness <= 0.1 and specular >= 0.85,
+		"the studio reflection uses a crisp low-roughness specular surface")
+	_expect(studio_strength > 0.0 and studio_softness > 0.0,
+		"the shared gel material enables its procedural studio matcap")
 	var shader_code: String = material.shader.code
 	_expect(
 		shader_code.contains("hint_screen_texture")
 		and shader_code.contains("SCREEN_UV")
 		and shader_code.contains("NORMAL.xy"),
 		"GL Compatibility refraction reads the screen and displaces it by the normal"
+	)
+	_expect(
+		shader_code.contains("matcap_uv")
+		and shader_code.contains("window_reflection")
+		and shader_code.contains("studio_ribbon_width")
+		and shader_code.contains("EMISSION"),
+		"the studio window and ribbon stay visible against a dark sky"
 	)
 
 
