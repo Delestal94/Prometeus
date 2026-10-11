@@ -241,8 +241,9 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   comprobada en GL Compatibility. Quedó la lectura real de pantalla; no fue necesario el reflejo falso.
 - [x] **S-311.29** (`a05dafc`) Reflejos de estudio nítidos como los de la foto (criterio 4): especular
   de rugosidad baja + matcap procedural chico de ventana y cinta, visibles aunque el cielo sea oscuro.
-- [ ] **S-311.30** Absorción por grosor (Beer-Lambert aproximado con el mapa del ítem 15): más color y
-  menos transparencia donde hay más gelatina.
+- [x] **S-311.30** (`33d459a`) Absorción por grosor (Beer-Lambert aproximado con el mapa base del ítem
+  15): más color y menos transparencia donde hay más gelatina. La corrección del mapa para morphs sigue
+  pendiente en S-311.15 y no se da por cerrada aquí.
 - [ ] **S-311.31** Luz trasera / subsurface falso: a contraluz la gelatina brilla (wrap lighting +
   back-light), sin pasadas extra.
 - [ ] **S-311.32** Motas y burbujas internas (criterio 7): ruido 3D en espacio del objeto, que se mueve
