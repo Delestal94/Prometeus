@@ -4,8 +4,8 @@ extends SceneTree
 ## --script res://tests/render_gel_material.gd
 ##
 ## Visual proof for block D. It renders the real LOD0 gel body with the shared
-## runtime material from the front and at three quarters. S-311.30 adds narrow
-## backdrop bars so the thicker torso must hide more background than the limbs.
+## runtime material from the front and at three quarters. S-311.31 adds a cool
+## rear key so the silhouette must glow without a second material pass.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
@@ -28,10 +28,10 @@ func _run() -> void:
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	await _save(output_path.path_join("s311_30_thickness_absorption_front.png"))
+	await _save(output_path.path_join("s311_31_back_light_front.png"))
 	_gel.rotation.y = deg_to_rad(-32.0)
-	await _save(output_path.path_join("s311_30_thickness_absorption_three_quarter.png"))
-	print("PASS: gel thickness-absorption captures at ", output_path)
+	await _save(output_path.path_join("s311_31_back_light_three_quarter.png"))
+	print("PASS: gel back-light captures at ", output_path)
 	quit(0)
 
 
@@ -48,6 +48,7 @@ func _build_stage() -> void:
 	for setup: Array in [
 		[Vector3(-34.0, -28.0, 0.0), Color("fff0d6"), 0.7],
 		[Vector3(-18.0, 145.0, 0.0), Color("b8d9ff"), 0.25],
+		[Vector3(10.0, 0.0, 0.0), Color("9fddff"), 1.4],
 	]:
 		var light := DirectionalLight3D.new()
 		light.rotation_degrees = setup[0]

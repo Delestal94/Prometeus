@@ -1,9 +1,10 @@
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
-// S-311.27-30: GL Compatibility gelatin with a clear centre, a denser Fresnel
+// S-311.27-31: GL Compatibility gelatin with a clear centre, a denser Fresnel
 // edge, real screen-space refraction, studio highlights and Beer-Lambert-style
-// absorption driven by the baked base-body thickness map.
+// absorption driven by the baked base-body thickness map. Wrapped diffuse and
+// back-light transmission add a single-pass fake subsurface glow.
 
 group_uniforms gel;
 uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
@@ -20,6 +21,11 @@ uniform float refraction_mix : hint_range(0.0, 1.0) = 0.9;
 group_uniforms surface;
 uniform float roughness : hint_range(0.0, 1.0) = 0.08;
 uniform float specular : hint_range(0.0, 1.0) = 0.9;
+
+group_uniforms subsurface_backlight;
+uniform float subsurface_wrap : hint_range(0.0, 1.0) = 0.42;
+uniform float backlight_strength : hint_range(0.0, 3.0) = 1.35;
+uniform float backlight_power : hint_range(1.0, 8.0) = 2.4;
 
 group_uniforms thickness_absorption;
 uniform sampler2D thickness_map : repeat_disable, filter_linear;
@@ -87,4 +93,21 @@ void fragment() {
 	SPECULAR = specular;
 	float surface_alpha = gel_color.a * mix(center_opacity, edge_opacity, fresnel);
 	ALPHA = clamp(surface_alpha + thickness_absorption * absorption_opacity, 0.0, 1.0);
+}
+
+void light() {
+	float normal_light = dot(NORMAL, LIGHT);
+	float wrapped_light = clamp(
+		(normal_light + subsurface_wrap) / (1.0 + subsurface_wrap),
+		0.0,
+		1.0
+	);
+	float back_light = pow(clamp(-normal_light, 0.0, 1.0), backlight_power);
+	vec3 half_vector = normalize(LIGHT + VIEW);
+	float specular_power = mix(128.0, 8.0, roughness);
+	float specular_lobe = pow(clamp(dot(NORMAL, half_vector), 0.0, 1.0), specular_power);
+	vec3 wrapped_diffuse = ALBEDO * LIGHT_COLOR * wrapped_light;
+	vec3 back_scatter = gel_color.rgb * LIGHT_COLOR * back_light * backlight_strength;
+	DIFFUSE_LIGHT += (wrapped_diffuse + back_scatter) * ATTENUATION;
+	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * specular * ATTENUATION;
 }
