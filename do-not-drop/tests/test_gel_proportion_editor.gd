@@ -4,9 +4,10 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27-30 also verify that the preview uses the GL Compatibility gel shader
+## S-311.27-31 also verify that the preview uses the GL Compatibility gel shader
 ## with a transparent centre, a denser Fresnel edge, normal-displaced screen
-## refraction, a procedural studio-window reflection and thickness absorption.
+## refraction, a procedural studio-window reflection, thickness absorption and
+## single-pass wrapped back lighting.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
@@ -151,6 +152,9 @@ func _check_gel_material(preview: Control) -> void:
 	var refraction_mix: float = material.get_shader_parameter(&"refraction_mix")
 	var roughness: float = material.get_shader_parameter(&"roughness")
 	var specular: float = material.get_shader_parameter(&"specular")
+	var subsurface_wrap: float = material.get_shader_parameter(&"subsurface_wrap")
+	var backlight_strength: float = material.get_shader_parameter(&"backlight_strength")
+	var backlight_power: float = material.get_shader_parameter(&"backlight_power")
 	var studio_strength: float = material.get_shader_parameter(&"studio_reflection_strength")
 	var studio_softness: float = material.get_shader_parameter(&"studio_reflection_softness")
 	var thickness_map: Texture2D = material.get_shader_parameter(&"thickness_map") as Texture2D
@@ -166,6 +170,12 @@ func _check_gel_material(preview: Control) -> void:
 		"the shared gel material enables background refraction")
 	_expect(roughness <= 0.1 and specular >= 0.85,
 		"the studio reflection uses a crisp low-roughness specular surface")
+	_expect(subsurface_wrap > 0.0 and subsurface_wrap <= 1.0,
+		"the gel wraps direct light around its silhouette")
+	_expect(backlight_strength > 0.0 and backlight_power > 1.0,
+		"the gel enables focused fake subsurface transmission at back-light")
+	_expect(material.next_pass == null,
+		"the fake subsurface glow stays in the shared material's single pass")
 	_expect(studio_strength > 0.0 and studio_softness > 0.0,
 		"the shared gel material enables its procedural studio matcap")
 	_expect(thickness_map != null and thickness_map.get_width() == 1024,
@@ -193,6 +203,13 @@ func _check_gel_material(preview: Control) -> void:
 		and shader_code.contains("exp(-absorption_coefficient * thickness_meters)")
 		and shader_code.contains("thickness_absorption * absorption_opacity"),
 		"the shader attenuates transmission and raises opacity from baked thickness"
+	)
+	_expect(
+		shader_code.contains("void light()")
+		and shader_code.contains("wrapped_light")
+		and shader_code.contains("back_scatter")
+		and shader_code.contains("DIFFUSE_LIGHT"),
+		"the same shader pass adds wrapped diffuse and light-driven back scatter"
 	)
 
 
