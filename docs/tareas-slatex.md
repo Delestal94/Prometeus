@@ -239,8 +239,8 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   transparencia con fresnel, bordes más densos y centro más transparente (criterios 5 y 6).
 - [x] **S-311.28** (`8bea552`) Refracción del fondo desplazada por la normal (`hint_screen_texture`),
   comprobada en GL Compatibility. Quedó la lectura real de pantalla; no fue necesario el reflejo falso.
-- [ ] **S-311.29** Reflejos de estudio nítidos como los de la foto (criterio 4): especular de rugosidad
-  baja + matcap o cubemap chico de "ventana", para que se vean aunque el cielo sea oscuro.
+- [x] **S-311.29** (`a05dafc`) Reflejos de estudio nítidos como los de la foto (criterio 4): especular
+  de rugosidad baja + matcap procedural chico de ventana y cinta, visibles aunque el cielo sea oscuro.
 - [ ] **S-311.30** Absorción por grosor (Beer-Lambert aproximado con el mapa del ítem 15): más color y
   menos transparencia donde hay más gelatina.
 - [ ] **S-311.31** Luz trasera / subsurface falso: a contraluz la gelatina brilla (wrap lighting +
