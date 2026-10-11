@@ -1,6 +1,7 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
 
 [ext_resource type="Shader" path="res://shaders/gel/gel_body.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://assets/textures/characters/gel/thickness.png" id="2_thickness"]
 
 [resource]
 render_priority = 0
@@ -14,6 +15,11 @@ shader_parameter/refraction_strength = 0.018
 shader_parameter/refraction_mix = 0.9
 shader_parameter/roughness = 0.08
 shader_parameter/specular = 0.9
+shader_parameter/thickness_map = ExtResource("2_thickness")
+shader_parameter/thickness_decode_meters = 2.0
+shader_parameter/absorption_coefficient = 2.4
+shader_parameter/absorption_color_mix = 0.62
+shader_parameter/absorption_opacity = 0.34
 shader_parameter/studio_reflection_color = Color(1, 0.97, 0.92, 1)
 shader_parameter/studio_reflection_strength = 1.1
 shader_parameter/studio_reflection_softness = 0.008

@@ -4,8 +4,8 @@ extends SceneTree
 ## --script res://tests/render_gel_material.gd
 ##
 ## Visual proof for block D. It renders the real LOD0 gel body with the shared
-## runtime material from the front and at three quarters. S-311.29 uses a dark
-## studio so the procedural window panels and limb ribbon must carry themselves.
+## runtime material from the front and at three quarters. S-311.30 adds narrow
+## backdrop bars so the thicker torso must hide more background than the limbs.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
@@ -28,10 +28,10 @@ func _run() -> void:
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	await _save(output_path.path_join("s311_29_studio_reflection_front.png"))
+	await _save(output_path.path_join("s311_30_thickness_absorption_front.png"))
 	_gel.rotation.y = deg_to_rad(-32.0)
-	await _save(output_path.path_join("s311_29_studio_reflection_three_quarter.png"))
-	print("PASS: gel studio-reflection captures at ", output_path)
+	await _save(output_path.path_join("s311_30_thickness_absorption_three_quarter.png"))
+	print("PASS: gel thickness-absorption captures at ", output_path)
 	quit(0)
 
 
@@ -87,6 +87,9 @@ func _build_stage() -> void:
 
 func _build_dark_studio_backdrop() -> void:
 	_add_backdrop_box(Vector3(4.0, 3.0, 0.06), Vector3(0.0, 1.15, 0.86), Color("111a25"))
+	_add_backdrop_box(Vector3(0.09, 2.55, 0.04), Vector3(-0.28, 1.18, 0.81), Color("aacbe6"))
+	_add_backdrop_box(Vector3(0.09, 2.55, 0.04), Vector3(0.28, 1.18, 0.81), Color("d7b9a3"))
+	_add_backdrop_box(Vector3(2.4, 0.07, 0.04), Vector3(0.0, 1.02, 0.80), Color("79b99d"))
 
 
 func _add_backdrop_box(size: Vector3, position: Vector3, color: Color) -> void:
