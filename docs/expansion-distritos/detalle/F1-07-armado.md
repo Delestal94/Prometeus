@@ -63,8 +63,8 @@ conoce los tres, 8 celdas ocupadas sin solaparse, y `NO_SPOT` para un producto g
 pedido en la caja de la mesa y la cobra con `PackagingSupplies.label` (gratis hoy, `LABEL_COST = 0`; repetir el
 mismo pedido no cobra). Sin caja o con pedido sin casa no cambia nada.
 Decisión: la calle es una clave de traducción (`WORLD_STREET_<ZONA>`, una por zona, con `WORLD_STREET_MAIN` de
-reserva) y el número es el de la casa, hasta que D-0312 dé nombre a cada calle. La clave no está en el CSV
-todavía: lo hace D-0312 junto con las calles.
+reserva) y el número es el de la casa, hasta que D-0312 dé nombre a cada calle. Las tres claves están en
+`strings_world.csv` (Calle Central, Camino Rural, Calle Principal); D-0312 las reemplaza por calles reales.
 **Test** `test_packing_station`: calle y número del pedido, zona desconocida, pedido sin casa o sin id, caja
 sin etiquetar tras un rechazo, cobro, el mismo pedido gratis, y reetiquetar para otro.
 **Hecho cuando:** el test pasa (la etiqueta muestra calle y número del pedido).
