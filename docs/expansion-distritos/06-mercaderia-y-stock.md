@@ -27,7 +27,7 @@
 | D-0617 | Heladera/cámara de frío como estantería especial | constructor-mundo | medium | test |
 | D-0618 | Camión del proveedor se va a una hora; si no se descargó, se lleva lo que quede (o cobra demora) | constructor-negocio | medium | test |
 | D-0619 | Replicación del stock y de los palets en red | auditor-red | xhigh | test de red: 2 peers ven el mismo stock tras 50 movimientos |
-| D-0620 | Layout inicial del depósito actual adaptado: dársena, zona de recepción, racks, armado, despacho | constructor-mundo | xhigh | captura aérea con zonas rotuladas; `test_depot_*` verdes |
+| D-0620 | ✅ Layout inicial del depósito actual adaptado: dársena, zona de recepción, racks, armado, despacho | constructor-mundo | xhigh | captura aérea con zonas rotuladas; `test_depot_*` verdes |
 
 ## Ampliación
 

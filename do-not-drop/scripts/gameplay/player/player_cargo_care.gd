@@ -32,6 +32,9 @@ const EDGE_MARGIN: int = 40
 ## pause, results, the depot and crew panels -- must always paint over them
 ## (N-237: at layer 7 the tutorial drew on top of Options).
 const CARD_LAYER: int = 0
+## The group CompanyRoot puts its players in (Modo Empresa: no vehicle, no delivery run). Kept local, as
+## EDGE_MARGIN is: naming CompanyRoot here would pull it into every script that reaches Player.
+const COMPANY_GROUP: StringName = &"company_crew"
 var player: Player
 var card: CareCard
 ## The depot's practice card (CarePractice), until this profile has done it.
@@ -73,7 +76,9 @@ func _ready() -> void:
 	_root.add_child(card)
 	card.visible = false
 	var profile: UnlockProfile = _profile()
-	if CarePractice.pending(profile):
+	# The practice is for the depot before a delivery run: the company's shed has no vehicle to
+	# leave in ("get in the driver's seat"), its players are in COMPANY_GROUP (CompanyRoot).
+	if CarePractice.pending(profile) and not player.is_in_group(COMPANY_GROUP):
 		practice = CarePractice.new()
 		practice.profile = profile
 		practice.set_anchors_preset(Control.PRESET_CENTER_RIGHT)

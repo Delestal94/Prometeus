@@ -4,8 +4,10 @@ extends SceneTree
 ## Root scene of the Modo Empresa (expansion D-0214, company_root.gd,
 ## scenes/gameplay/company_root.tscn, main_menu.gd --mode=company):
 ## - it loads and builds with no errors, switching the company on (CompanyState);
-## - there is one slab per data/zones/*.tres (nine) and a shed with its floor and
-##   three walls, all with collision;
+## - there is one slab per data/zones/*.tres (nine), the zone names are small enough not to fill the
+##   player's view (a blurred stripe in the first capture), and a shed (CompanyShed, D-0911) with its
+##   floor and walls with collision, open at the dock and the exit; the furnishing is
+##   test_company_default_layout's;
 ## - the local player stands inside the shed, on the floor;
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
@@ -80,9 +82,19 @@ func _run() -> void:
 	_expect(slabs == zone_files and slabs == 9, "One slab per zone .tres (%d slabs, %d files)" % [slabs, zone_files])
 
 	var shed: Node = level.get_node(^"World/Shed")
-	for part: String in ["Floor", "WallBack", "WallLeft", "WallRight"]:
-		_expect(shed.get_node_or_null(NodePath(part)) is StaticBody3D, "The shed has %s" % part)
+	_expect(shed is CompanyShed and shed == level.get(&"shed"), "The shed is a CompanyShed (D-0911)")
+	_expect(CompanyRoot.SHED_SIZE == WarehouseStages.floor_size_m(0), "The shed is the starting stage's floor")
+	# Walls are split around the dock (south) and exit (north) gates; the sides are whole.
+	for part: String in ["Floor", "WallBackLeft", "WallBackRight", "WallFrontLeft", "WallFrontRight",
+			"WallLeft", "WallRight"]:
+		_expect(shed.get_node_or_null(NodePath("Shell/" + part)) is StaticBody3D, "The shed has %s" % part)
 
+	for child: Node in level.get_node(^"World").get_children():
+		if child.name.begins_with("Zone_"):
+			var name_label: Label3D = child.get_node_or_null(^"Name") as Label3D
+			_expect(name_label != null and name_label.pixel_size * name_label.font_size < 20.0,
+				"%s's name is not a giant sign (letters %.0f m)" % [child.name,
+				name_label.pixel_size * name_label.font_size if name_label != null else -1.0])
 	var player: Node3D = level.get(&"player")
 	_expect(player != null and player.is_inside_tree(), "The local player is in the scene")
 	if player != null:

@@ -54,3 +54,14 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - `to_dict` / `from_dict` tolerante. El camión que entra a la dársena es D-0601; la pantalla de pedido, D-0603.
 **Test** `test_supplier_schedule`: calendario de 3 días, fusión de pedidos y palets, estados del camión, pedidos inválidos, ida y vuelta JSON.
 **Hecho cuando:** el test pasa con un calendario de 3 días.
+
+### D-0620 · Layout inicial del depósito actual adaptado: dársena, recepción, racks, armado, despacho — A · Opus 5.5 · xhigh · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — es D-0911 visto desde el stock: `data/shed/default_shed.tres` (`DefaultShed`) y `CompanyShed`; `test_company_default_layout`. Detalle completo en [F1-09-galpon.md](F1-09-galpon.md).
+**Depende de:** D-0608 (estantes con huecos), D-0604 (palet), D-0602 (calendario), D-0904, D-0214
+**Qué:** las zonas del depósito actual (dársena, recepción, racks, armado, despacho) como objetos colocables de D-0904 sobre la grilla de la etapa chica, con modelos del depósito (`sm_env_depot_packing_table`, `sm_env_depot_pallet_wrapped`) o cajas grises:
+- **Dársena y recepción** junto al portón sur: el primer pedido del calendario de proveedores (`SupplierSchedule`, llega el día 1) aparece como dos palets sellados (`pallet:d1_milk_canister_1`, `pallet:d1_wedding_cake_1`) en la zona de recepción.
+- **Racks**: tres estantes al muro oeste con los 8 productos de ambiente en sus huecos etiquetados (6 unidades cada uno; la etiqueta del hueco muestra la cantidad, la parte de dibujo de D-0611) y dos huecos vacíos etiquetados para lo frío.
+- **Armado**: dos mesas (`PackingStation` por mesa) con dispensador de cajas; **despacho**: la zona pintada junto a la salida.
+- Cada zona lleva su nombre pintado en el piso (`WORLD_SHED_ZONE_*`); la captura aérea con zonas rotuladas es la de `revisor-visual` sobre `company_root.tscn`.
+**Test** `test_company_default_layout` (y los `test_company_*` de la expansión verdes); los `test_depot_*` no se tocan: el depósito de Entrega no cambia.
+**Hecho cuando:** captura aérea con zonas rotuladas y los tests verdes.

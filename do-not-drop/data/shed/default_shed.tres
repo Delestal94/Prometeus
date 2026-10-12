@@ -1,0 +1,116 @@
+[gd_resource type="Resource" script_class="DefaultShed" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/default_shed.gd" id="1_shed"]
+
+[resource]
+script = ExtResource("1_shed")
+stage = 0
+pieces = Array[Dictionary]([{
+"id": "shelf",
+"turns": 1,
+"uid": "shelf_1",
+"x": 0,
+"z": 0
+}, {
+"id": "shelf",
+"turns": 1,
+"uid": "shelf_2",
+"x": 0,
+"z": 2
+}, {
+"id": "shelf",
+"turns": 1,
+"uid": "shelf_3",
+"x": 0,
+"z": 4
+}, {
+"id": "assembly_table",
+"turns": 3,
+"uid": "table_1",
+"x": 11,
+"z": 2
+}, {
+"id": "assembly_table",
+"turns": 3,
+"uid": "table_2",
+"x": 11,
+"z": 4
+}, {
+"id": "dispatch_zone",
+"turns": 0,
+"uid": "dispatch_1",
+"x": 7,
+"z": 0
+}])
+shelf_stock = Array[Dictionary]([{
+"product": "porcelain_vase",
+"qty": 6,
+"shelf": "shelf_1",
+"slot": 0
+}, {
+"product": "antique_lamp",
+"qty": 6,
+"shelf": "shelf_1",
+"slot": 1
+}, {
+"product": "glass_tower",
+"qty": 6,
+"shelf": "shelf_1",
+"slot": 2
+}, {
+"product": "sourdough",
+"qty": 6,
+"shelf": "shelf_1",
+"slot": 3
+}, {
+"product": "hen",
+"qty": 6,
+"shelf": "shelf_2",
+"slot": 0
+}, {
+"product": "puppy",
+"qty": 6,
+"shelf": "shelf_2",
+"slot": 1
+}, {
+"product": "raccoon_cage",
+"qty": 6,
+"shelf": "shelf_2",
+"slot": 2
+}, {
+"product": "fireworks_crate",
+"qty": 6,
+"shelf": "shelf_2",
+"slot": 3
+}, {
+"product": "wedding_cake",
+"qty": 0,
+"shelf": "shelf_3",
+"slot": 0
+}, {
+"product": "milk_canister",
+"qty": 0,
+"shelf": "shelf_3",
+"slot": 1
+}])
+first_order = Array[Dictionary]([{
+"product": "milk_canister",
+"qty": 12
+}, {
+"product": "wedding_cake",
+"qty": 6
+}])
+pallet_spots = Array[Vector2]([Vector2(2.6, 6.5), Vector2(2.6, 5.4)])
+zones = Array[Dictionary]([{
+"label_at": Vector2(3.0, 4.2),
+"rect": Rect2i(2, 5, 2, 3),
+"role": &"reception"
+}, {
+"label_at": Vector2(1.0, 6.5),
+"rect": Rect2i(0, 0, 2, 6),
+"role": &"storage"
+}, {
+"label_at": Vector2(9.6, 3.5),
+"rect": Rect2i(9, 2, 3, 4),
+"role": &"assembly"
+}])

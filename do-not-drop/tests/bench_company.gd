@@ -28,9 +28,10 @@ const SUMMARY_KEYS: Array[String] = [
 const DRIVE_NOT_AVAILABLE: String = "drive: not_available (no vehicle in the company world yet, D-2011.1)"
 ## Eye height of the camera over the shed floor, meters.
 const EYE_HEIGHT: float = 1.7
-## The loop the camera walks, as half extents (x, z) around the shed's centre: well inside the
-## walls (the shed is 48 x 32 m). It starts and ends at the player's spawn (0, 10), by the door.
-const WALK_HALF: Vector2 = Vector2(18.0, 10.0)
+## The loop the camera walks, as half extents (x, z) around the shed's centre: down the middle aisle
+## of the furnished shed (12 x 8 m, D-0911), clear of the shelves, tables and pallets. It starts and
+## ends at the player's spawn (0, 2.6), on the dock floor.
+const WALK_HALF: Vector2 = Vector2(2.6, 1.3)
 ## The share of the stage spent walking the loop; the rest is the look out of the door.
 const WALK_FRACTION: float = 0.8
 ## How far ahead along the loop the camera looks, meters.
