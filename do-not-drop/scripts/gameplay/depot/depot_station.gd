@@ -47,7 +47,7 @@ func _open_locally() -> void:
 
 
 func _run_started() -> bool:
-	var manager: Node = get_node_or_null(^"/root/RunManager")
+	var manager: Node = PackageAutoloads.run_manager(self)
 	if manager == null:
 		return false
 	return bool(manager.get(&"is_running")) or not (manager.get(&"results") as Dictionary).is_empty()

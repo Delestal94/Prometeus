@@ -117,8 +117,10 @@ func locked_traps(player_count: int = -1) -> Array[StringName]:
 			locked.append(trap_id)
 	var crew_size := player_count
 	if crew_size < 0:
-		var network := get_node_or_null(^"/root/NetworkManager") if is_inside_tree() else null
-		crew_size = Array(network.get(&"peer_ids")).size() if network != null else 1
+		var network: NetSession = null
+		if is_inside_tree():
+			network = get_node_or_null(^"/root/NetworkManager") as NetSession
+		crew_size = network.peer_ids.size() if network != null else 1
 	# Same count as RoutePlanner.crew_house_count(): never under two houses (N-119).
 	var required_boxes := mini(maxi(crew_size - 1, 2), MAX_DELIVERY_HOUSES)
 	return _ensure_trap_capacity(locked, required_boxes)

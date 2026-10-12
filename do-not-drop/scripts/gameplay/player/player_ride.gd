@@ -5,8 +5,8 @@ extends RefCounted
 ## `_vehicle`, `net_position`, `net_in_vehicle`) and the masks stay on the Player, which keeps thin wrappers for
 ## what tests and the other player components call.
 ##
-## The truck is by name on purpose (vehicle.gd has no class name and tests put plain-Node fakes with `carries`
-## in the "vehicle" group).
+## The truck's `carries` is asked by name on purpose (vehicle.gd has no class name and tests put plain-Node
+## fakes with `carries` in the "vehicle" group). The session is typed (NetSession: pose_net_sim()).
 
 
 static func find_vehicle(p: Player) -> Node3D:
@@ -97,9 +97,9 @@ static func push_net_pose(p: Player) -> void:
 		return
 	if p._net_smoother == null:
 		p._net_smoother = NetPoseSmoother.new()
-		var network: Node = p.get_node_or_null(^"/root/NetworkManager")
-		if network != null and network.has_method(&"pose_net_sim"):
-			p._net_smoother.configure_sim(network.call(&"pose_net_sim"))
+		var network: NetSession = p.get_node_or_null(^"/root/NetworkManager") as NetSession
+		if network != null:
+			p._net_smoother.configure_sim(network.pose_net_sim())
 	var head: Vector3 = p._head.rotation
 	p._net_smoother.push(p.net_time / 1000.0, Transform3D(Basis(Vector3.UP, p.net_yaw), p.net_position),
 			NetPoseSmoother.local_now(), p.net_in_vehicle,
