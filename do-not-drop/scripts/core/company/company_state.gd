@@ -109,9 +109,9 @@ func from_dict(data: Dictionary) -> bool:
 	milestones_done = _ids(data.get("milestones_done", []))
 	fleet = _entries(data.get("fleet", []))
 	employees = _entries(data.get("employees", []))
-	layout = _entries(data.get("layout", []))
 	warehouse_stage = clampi(int(_num(data.get("warehouse_stage"), 0)), 0,
 			CompanyTuning.WAREHOUSE_STAGE_IDS.size() - 1)
+	layout = BuildLayoutSave.sanitize(data.get("layout", []), warehouse_stage)
 	var saved_stock: Variant = data.get("inventory", {})
 	if saved_stock is Dictionary:
 		var stock_in := Inventory.new()
