@@ -76,3 +76,16 @@ sin etiquetar tras un rechazo, cobro, el mismo pedido gratis, y reetiquetar para
 Decisión: el tipo de sello es el id que ya usa `required_seals` (FRÁGIL = `fragile`, ESTE LADO ARRIBA = `no_bend`, FRÍO = `cold`), para no mantener dos listas. La penalidad de sello faltante en la calidad es D-0709; el cobro/rechazo en la puerta, D-0712.
 **Test** `test_box_seals`: requeridos del pedido, caja sin sellos falla la puerta, sellar uno a uno, rechazos sin cambios, JSON.
 **Hecho cuando:** el test pasa (el sello queda en la caja y la puerta lo valida).
+
+### D-0709 · Calidad del armado — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `AssemblyQuality` (`scripts/gameplay/business/assembly_quality.gd`) y los números en `CompanyTuning`; `test_assembly_quality`.
+**Depende de:** D-0212 (`PackedBox`), D-0506 (`OrderPenalties.matches_order`), D-0708 (`BoxSeals.missing`)
+**Qué:** `AssemblyQuality.score(box, order, products)` devuelve la calidad de 0 a 100 y `breakdown()` los puntos perdidos por motivo (`content`, `gaps`, `seals`, `closure`). Parte de 100 y resta, según [supuestos.md](supuestos.md):
+- −40 si el contenido no coincide con el pedido;
+- −30 × fracción de celdas de la caja vacías y sin relleno (`PackedBox.free_ratio()`), ×1,5 si algún producto es frágil;
+- −15 por cada sello requerido que falte;
+- −10 (una sola vez) si falta la cinta o la etiqueta.
+Caja nula: 0. Nunca sale de 0-100. D-0710 usa este número para la intensidad de la trampa y D-0502 para el bono por condición.
+Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto es un "o"); `products` solo se lee para `fragile` y un id que no está cuenta como no frágil.
+**Test** `test_assembly_quality`: 6 cajas de calidad conocida (perfecta 100, sin sello 85, frágil con hueco sin relleno 68,3, la misma rellena 100, sin cinta ni etiqueta 90, contenido equivocado 30), el desglose y la caja nula.
+**Hecho cuando:** el test pasa con 6 cajas de calidad conocida.

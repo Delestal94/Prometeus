@@ -122,6 +122,17 @@ const ORDER_ITEMS_MAX: int = 3
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
 const LATE_PENALTY: float = 0.25
+## Packing quality 0-100 (D-0709, AssemblyQuality): starts at QUALITY_MAX and loses these.
+const QUALITY_MAX: float = 100.0
+## Contents that do not match the order.
+const QUALITY_WRONG_CONTENT: float = 40.0
+## Times the share of the box left empty and unpadded; multiplied when a product is fragile.
+const QUALITY_GAP_WEIGHT: float = 30.0
+const QUALITY_GAP_FRAGILE_FACTOR: float = 1.5
+## Per required seal the box lacks.
+const QUALITY_MISSING_SEAL: float = 15.0
+## Once, when the box has no tape or no label.
+const QUALITY_UNSEALED: float = 10.0
 ## A box delivered in at least this packing quality (0-100, D-0709) earns the condition
 ## bonus: this share of the pay on top (D-0502).
 const CONDITION_BONUS_MIN_QUALITY: float = 90.0
