@@ -7,11 +7,11 @@ extends SceneTree
 ##   (compress/mode=2), con mipmaps y con el remap marcado "vram_texture".
 ##   Falla si alguien agrega una textura nueva a esas carpetas sin pasarla por
 ##   la herramienta (se veria con parpadeo de lejos y ocuparia 4x de VRAM).
-## - Hay al menos 14 texturas (las 10 de detalle, las 3 de terreno y la
+## - Hay al menos 13 texturas (las 10 de detalle, las 2 de terreno y la
 ##   etiqueta del courier) y todas cargan como Texture2D.
 
 const TextureImport3D = preload("res://scripts/tools/texture_import_3d.gd")
-const MIN_TEXTURES: int = 14
+const MIN_TEXTURES: int = 13
 
 var _failures: int = 0
 
