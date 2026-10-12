@@ -187,3 +187,8 @@ const ABSORPTION_UNPADDED: float = 1.0
 const ABSORPTION_FULL_PADDING: float = 0.6
 ## More free cells than this without padding adds the Balance trap (low intensity).
 const OVERSIZED_FREE_RATIO: float = 0.5
+## Trap intensity from packing quality (D-0710, BoxTrap): 1 - quality / 100, read as low below
+## TRAP_INTENSITY_MID, high from TRAP_INTENSITY_HIGH. A loose box adds Balance at this intensity.
+const TRAP_INTENSITY_MID: float = 0.1
+const TRAP_INTENSITY_HIGH: float = 0.25
+const TRAP_LOOSE_BOX_INTENSITY: float = 0.3

@@ -10,8 +10,8 @@ extends RefCounted
 ## - impact_absorption: lerp(ABSORPTION_UNPADDED, ABSORPTION_FULL_PADDING, protection),
 ##   protection = padded share of the free cells (1 when products fill the box);
 ## - metadata: META_PACKED_BOX (to_dict()), META_ORDER_ID and, when more than
-##   OVERSIZED_FREE_RATIO of the box is empty without padding, META_LOOSE_BOX
-##   (D-0710 adds the low Balance trap from it).
+##   OVERSIZED_FREE_RATIO of the box is empty without padding, META_LOOSE_BOX;
+##   given an order, also META_TRAP_PLAN (BoxTrap.plan, D-0710).
 ## Adds only: no signature of package.gd or package_content.gd changes. The
 ## UnlockManager script is preloaded, never named (lesson N-919).
 
@@ -23,12 +23,15 @@ const TRAP_PATH: String = "res://data/traps/%s.tres"
 const META_PACKED_BOX: StringName = &"packed_box"
 const META_ORDER_ID: StringName = &"order_id"
 const META_LOOSE_BOX: StringName = &"loose_box"
+const META_TRAP_PLAN: StringName = &"trap_plan"
 
 
 ## A new, not yet added DeliveryPackage for the box, or null if the box holds no
 ## known product. products maps id -> ProductDefinition; an id missing there is
-## loaded from data/products/<id>.tres.
-static func build(box: PackedBox, products: Dictionary = {}) -> DeliveryPackage:
+## loaded from data/products/<id>.tres. With an order, the package also carries its BoxTrap plan.
+static func build(
+	box: PackedBox, products: Dictionary = {}, order: Dictionary = {}
+) -> DeliveryPackage:
 	var main: ProductDefinition = ruling_product(box, products)
 	if main == null:
 		return null
@@ -46,6 +49,8 @@ static func build(box: PackedBox, products: Dictionary = {}) -> DeliveryPackage:
 	package.set_meta(META_ORDER_ID, box.label_order_id)
 	if is_loose(box):
 		package.set_meta(META_LOOSE_BOX, true)
+	if not order.is_empty():
+		package.set_meta(META_TRAP_PLAN, BoxTrap.plan(box, order, products))
 	return package
 
 

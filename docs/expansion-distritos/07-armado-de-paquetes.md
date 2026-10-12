@@ -19,7 +19,7 @@
 | ✅ D-0707 | Etiqueta de envío impresa con dirección del pedido (reusa `package_shipping_label.gd`) | constructor-negocio | medium | etiqueta muestra calle y número del pedido |
 | ✅ D-0708 | Sellos (FRÁGIL, ESTE LADO ARRIBA, FRÍO) | constructor-negocio | medium | sello queda en la caja y la puerta lo valida |
 | ✅ D-0709 | Cálculo de calidad del armado (contenido correcto, hueco, protección, sellos) 0-100 | constructor-negocio | high | test con 6 cajas de calidad conocida |
-| D-0710 | Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
+| ✅ D-0710 | Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
 | D-0711 | Caja armada sigue siendo `DeliveryPackage`: se lleva, se cuida y se entrega como hoy | constructor-trampas | xhigh | tests de paquete actuales verdes |
 | D-0712 | Error de contenido (falta un producto o sobra) detectable al cerrar o en la puerta | constructor-negocio | medium | test de los dos momentos |
 | D-0713 | Balanza de control: peso esperado vs. real | constructor-negocio | medium | test |

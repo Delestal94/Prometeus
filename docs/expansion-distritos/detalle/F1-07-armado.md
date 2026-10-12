@@ -89,3 +89,10 @@ Caja nula: 0. Nunca sale de 0-100. D-0710 usa este número para la intensidad de
 Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto es un "o"); `products` solo se lee para `fragile` y un id que no está cuenta como no frágil.
 **Test** `test_assembly_quality`: 6 cajas de calidad conocida (perfecta 100, sin sello 85, frágil con hueco sin relleno 68,3, la misma rellena 100, sin cinta ni etiqueta 90, contenido equivocado 30), el desglose y la caja nula.
 **Hecho cuando:** el test pasa con 6 cajas de calidad conocida.
+
+### D-0710 · Calidad → trampa y su intensidad — A · Sonnet 5.5 · xhigh · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
+**Depende de:** D-0709 (`AssemblyQuality`), D-0213 (`BoxToPackage`), D-0109
+**Qué:** la trampa que viaja sigue siendo la del producto más difícil; el armado solo mueve la intensidad (`diseno/armado-y-trampas.md` §5). Números en `CompanyTuning` (`TRAP_INTENSITY_MID` 0,1, `TRAP_INTENSITY_HIGH` 0,25, `TRAP_LOOSE_BOX_INTENSITY` 0,3).
+**Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo.
+
