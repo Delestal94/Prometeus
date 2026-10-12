@@ -183,6 +183,7 @@ func _build_studio(viewport: SubViewport) -> void:
 	var gel_mesh: MeshInstance3D = PlayerAppearance.find_mesh_instance(gel_mannequin)
 	if gel_mesh != null:
 		gel_mesh.material_override = GEL_MATERIAL
+	PlayerAppearance.set_gel_look(gel_mannequin, Color(0.78, 0.82, 0.92), 1.0, 1.0)
 	_gel_shaper.setup(gel_mannequin)
 	_gel_grounding = GelGrounding.new()
 	_gel_grounding.name = "GelFootGrounding"

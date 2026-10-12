@@ -28,6 +28,7 @@ o `FAILED`.
 **Hecho cuando:** el test pasa.
 
 ### D-0303 · Módulo `world_cells`: cargar el mapa por celdas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/`) · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `modules/world_cells/` (`WorldCellGrid` + `WorldCellStreamer`, con `module.cfg` y test propio) y su adaptador `CompanyCells`; `test_world_cells` y `test_company_cells`.
 **Depende de:** D-0220, D-0301
 **Qué:** `modules/world_cells/` (portable, sin nombres del juego), con `module.cfg` y `tests/`.
 - **Grilla:** celdas de 256 m. Cada celda es una escena `cell_<x>_<z>.tscn` o se arma desde datos. Se
@@ -39,7 +40,7 @@ o `FAILED`.
 - **Adaptador** en `scripts/gameplay/districts/company_cells.gd`.
 **Test del módulo:** con 3 anclas falsas moviéndose, el set de celdas cargadas es el esperado en cada
 paso, y una celda nunca se carga y descarga en el mismo segundo.
-**Test del juego** `test_world_cells_company`: manejar del galpón a Centro no deja frames > 50 ms por la
+**Test del juego** `test_company_cells`: manejar del galpón a Centro no deja frames > 50 ms por la
 carga (medido con el reloj del motor en headless) ni huérfanos al volver.
 **Hecho cuando:** los dos tests pasan y CI corre el módulo en `portability-check.sh`.
 
@@ -143,7 +144,7 @@ coinciden para 10 pedidos generados.
 **Depende de:** D-0303, D-0214
 **Qué:** el modo Empresa usa la pantalla de carga (N-407/N-408) **una sola vez**, al entrar. Después, todo
 es streaming de celdas (D-0303). Medir el peor frame al cruzar 10 celdas seguidas.
-**Test:** ampliar `test_loading_no_freeze` con el modo Empresa. `test_world_cells_company` mide que el peor
+**Test:** ampliar `test_loading_no_freeze` con el modo Empresa. `test_company_cells` mide que el peor
 frame es < 50 ms.
 **Hecho cuando:** los dos pasan.
 

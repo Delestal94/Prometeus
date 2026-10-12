@@ -252,7 +252,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.33** (`427eaad`) Orden de transparencia y sombras: sin brazos que desaparecen detrás del torso ni
   agujeros al girar (prepasada de profundidad o dos pasadas cara trasera / delantera); proyecta sombra
   suave, un poco más clara que la de un opaco, y recibe sombra. Captura girando 360°.
-- [ ] **S-311.34** Color, opacidad y brillo por jugador con `instance uniform`: un solo material para
+- [x] **S-311.34** (`8a79db6d`) Color, opacidad y brillo por jugador con `instance uniform`: un solo material para
   todos, sin duplicarlo por instancia.
 - [ ] **S-311.35** Variante "opaca lechosa" para la calidad baja de las opciones y para quien la elija en
   accesibilidad: mismo look sin transparencia ni lectura de pantalla.

@@ -71,7 +71,7 @@ Y además, medido en la misma corrida:
 | Sin fugas | huérfanos 0 y objetos que crecen < 2 % entre el día 2 y el 10 | D-2013 |
 | Un solo jugador completa el día | el mismo bot con 1 jugador cierra con ganancia > 0 | D-2016 |
 | Par y trío en red | `net_pair` y `net_trio` en modo Empresa sin desincronización | D-2017 |
-| Ningún frame > 50 ms al manejar de Centro a Campo por la carga de celdas | `test_world_cells_company` | D-0303 |
+| Ningún frame > 50 ms al manejar de Centro a Campo por la carga de celdas | `test_company_cells` | D-0303 |
 | Tests viejos de Entrega y Endless siguen verdes | CI completo | — |
 
 Mientras alguna tarea del §2 no exista, el bot la **simula con un stub marcado** y el hueco queda como
