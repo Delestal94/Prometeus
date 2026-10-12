@@ -39,6 +39,7 @@ func _ready() -> void:
 	EventBus.house_delivery_recorded.connect(_on_house_delivery_subtitle)
 	EventBus.house_refused_package.connect(_on_house_refused_subtitle)
 	EventBus.cargo_animal_alert.connect(_on_animal_subtitle)
+	EventBus.cargo_animal_ended.connect(_on_animal_ended_subtitle)
 	EventBus.run_started.connect(_on_run_started_subtitle)
 
 
@@ -248,7 +249,7 @@ const SUB_WEATHER: Array = [20, 6.0]
 const SUB_ANIMAL_PRIORITY: int = 70
 const SUB_ANIMAL_SECONDS: Vector2 = Vector2(2.0, 4.0)
 ## The animals' cry by kind (cargo_animal_alert), the customer's reaction by
-## outcome (house_delivery_recorded; a missed or lost door has no reaction).
+## outcome (house_delivery_recorded; a missed or lost door rings nothing).
 const ANIMAL_SUBTITLES: Dictionary = {
 	&"gull": "HUD_SUB_GULL", &"dog": "HUD_SUB_DOG", &"bees": "HUD_SUB_BEES",
 }
@@ -257,8 +258,9 @@ const CLIENT_SUBTITLES: Dictionary = {
 	&"delivered_at_risk": "HUD_SUB_CLIENT_GROAN",
 	&"delivered_ruined": "HUD_SUB_CLIENT_GROAN",
 }
-## Outcomes where nobody rang the bell: the box was lost on the road.
-const SILENT_OUTCOMES: Array[StringName] = [&"lost"]
+## Outcomes with no real bell: the box was lost on the road, or the deadline closed
+## the door (RunManager.force_resolve_if_missed) with nobody ringing.
+const SILENT_OUTCOMES: Array[StringName] = [&"lost", &"missed"]
 
 
 ## Another player's horn, with the way to the truck. Your own you press.
@@ -284,7 +286,8 @@ func _on_house_refused_subtitle(house_index: int, _expected_label: String) -> vo
 	if not GameSettings.sound_subtitles:
 		return
 	_push_doorbell(house_index)
-	_subtitles.push(StringName("client_%d" % house_index), tr("HUD_SUB_CLIENT_REFUSE"), int(SUB_CLIENT[0]), float(SUB_CLIENT[1]))
+	_subtitles.push(StringName("client_%d" % house_index), tr("HUD_SUB_CLIENT_REFUSE"),
+		int(SUB_CLIENT[0]), float(SUB_CLIENT[1]))
 
 
 func _push_doorbell(house_index: int) -> void:
@@ -294,16 +297,23 @@ func _push_doorbell(house_index: int) -> void:
 			door = house as Node3D
 			break
 	_subtitles.push(StringName("doorbell_%d" % house_index),
-		_with_arrow(tr("HUD_SUB_DOORBELL") % (house_index + 1), _arrow_to(door)), int(SUB_DOORBELL[0]), float(SUB_DOORBELL[1]))
+		_with_arrow(tr("HUD_SUB_DOORBELL") % (house_index + 1), _arrow_to(door)),
+		int(SUB_DOORBELL[0]), float(SUB_DOORBELL[1]))
 
 
 ## The cry, bark or buzz that warns an animal is going for a box; it lives as
 ## long as the warning (clamped), the box is on the truck so no arrow.
 func _on_animal_subtitle(kind: StringName, _package_id: StringName, warn_seconds: float, _act_seconds: float) -> void:
-	if not GameSettings.sound_subtitles or not ANIMAL_SUBTITLES.has(kind):
+	if not GameSettings.sound_subtitles or not ANIMAL_SUBTITLES.has(kind) or warn_seconds <= 0.0:
 		return
 	_subtitles.push(StringName("animal_%s" % kind), tr(ANIMAL_SUBTITLES[kind]), SUB_ANIMAL_PRIORITY,
 		clampf(warn_seconds, SUB_ANIMAL_SECONDS.x, SUB_ANIMAL_SECONDS.y))
+
+
+## The animal is gone: its cry is not news any more.
+func _on_animal_ended_subtitle(kind: StringName, _package_id: StringName, _outcome: StringName, _peer_id: int) -> void:
+	if _subtitles.remove(StringName("animal_%s" % kind)):
+		render_interaction_prompt()
 
 
 ## Weather has no event of its own: the sky builds its rain and its sound at

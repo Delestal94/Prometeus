@@ -37,6 +37,8 @@ func push(key: StringName, text: String, priority: int, seconds: float) -> void:
 ## Ages every entry; true when the visible lines changed (something expired, or
 ## a pushed entry now shows), so the caller redraws only then.
 func tick(delta: float) -> bool:
+	if _entries.is_empty() and _shown.is_empty():
+		return false
 	var kept: Array[Dictionary] = []
 	for entry: Dictionary in _entries:
 		entry["left"] = float(entry["left"]) - delta
@@ -63,6 +65,8 @@ func lines() -> PackedStringArray:
 
 ## True when lines() differs from what the caller last drew.
 func sync_shown() -> bool:
+	if _entries.is_empty() and _shown.is_empty():
+		return false
 	var now: String = "\n".join(lines())
 	if now == _shown:
 		return false
@@ -76,6 +80,15 @@ func is_empty() -> bool:
 
 func size() -> int:
 	return _entries.size()
+
+
+## Drops one entry by key (its sound ended). True if the visible lines changed.
+func remove(key: StringName) -> bool:
+	for i: int in range(_entries.size()):
+		if _entries[i]["key"] == key:
+			_entries.remove_at(i)
+			break
+	return sync_shown()
 
 
 ## Drops everything (the option was turned off). True if something was showing.

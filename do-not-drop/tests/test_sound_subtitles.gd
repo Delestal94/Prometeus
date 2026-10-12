@@ -96,12 +96,12 @@ func _run() -> void:
 	hud.prompts.refresh_sound_subtitle(5.0)
 	bus.house_delivery_recorded.emit(0, &"delivered_at_risk", &"p2")
 	hud.prompts.refresh_sound_subtitle(0.0)
-	_expect(_text(hud).contains(hud.prompts.tr("HUD_SUB_CLIENT_GROAN")), "A dented delivery also groans (got '%s')" % _text(hud))
+	_expect(_text(hud).contains(hud.prompts.tr("HUD_SUB_CLIENT_GROAN")),
+		"A dented delivery also groans (got '%s')" % _text(hud))
 	hud.prompts.refresh_sound_subtitle(5.0)
 	bus.house_delivery_recorded.emit(1, &"missed", &"")
 	hud.prompts.refresh_sound_subtitle(0.0)
-	_expect(_text(hud) == hud.prompts.tr("HUD_SUB_DOORBELL") % 2,
-		"Ringing with no box is just the bell (got '%s')" % _text(hud))
+	_expect(_text(hud).is_empty(), "A door closed by its deadline rang nothing (got '%s')" % _text(hud))
 	hud.prompts.refresh_sound_subtitle(5.0)
 	bus.house_delivery_recorded.emit(1, &"lost", &"p3")
 	hud.prompts.refresh_sound_subtitle(0.0)
@@ -123,6 +123,14 @@ func _run() -> void:
 	bus.cargo_animal_alert.emit(&"unicorn", &"box", 3.0, 4.0)
 	hud.prompts.refresh_sound_subtitle(0.0)
 	_expect(_text(hud).is_empty(), "An animal with no sound of its own shows nothing (got '%s')" % _text(hud))
+	bus.cargo_animal_alert.emit(&"gull", &"box", 0.0, 4.0)
+	hud.prompts.refresh_sound_subtitle(0.0)
+	_expect(_text(hud).is_empty(), "An alert with no warning time shows nothing (got '%s')" % _text(hud))
+	bus.cargo_animal_alert.emit(&"gull", &"box", 3.0, 4.0)
+	hud.prompts.refresh_sound_subtitle(0.0)
+	bus.cargo_animal_ended.emit(&"gull", &"box", &"scared", other)
+	hud.prompts.refresh_sound_subtitle(0.0)
+	_expect(_text(hud).is_empty(), "The animal leaving takes its subtitle away (got '%s')" % _text(hud))
 
 	# --- the rain ---
 	bus.run_started.emit(&"test_route", [])
@@ -147,7 +155,8 @@ func _run() -> void:
 	_expect(lines[0] == hud.prompts.tr("HUD_SUB_DOG"), "The animal outranks the rest (got '%s')" % lines[0])
 	_expect(lines[1] == horn_text, "The horn comes before the bell (got '%s')" % lines[1])
 	hud.prompts.refresh_sound_subtitle(1.6)
-	_expect(not _text(hud).contains(horn_text), "The horn expired after 1.5 s while the bell stays (got '%s')" % _text(hud))
+	_expect(not _text(hud).contains(horn_text),
+		"The horn expired after 1.5 s while the bell stays (got '%s')" % _text(hud))
 	_expect(_text(hud).contains(bell_one(hud)), "The bell lasts longer than the horn (got '%s')" % _text(hud))
 	hud.prompts.refresh_sound_subtitle(5.0)
 	_expect(_text(hud).is_empty(), "All of it expired (got '%s')" % _text(hud))
@@ -167,7 +176,7 @@ func _run() -> void:
 	# --- turning the option off clears the queue ---
 	settings.sound_subtitles = false
 	hud.prompts.refresh_sound_subtitle(0.0)
-	_expect(not _text(hud).contains(horn_text), "Turning subtitles off clears the queue (got '%s'" % _text(hud))
+	_expect(not _text(hud).contains(horn_text), "Turning subtitles off clears the queue (got '%s')" % _text(hud))
 
 	# --- the arrow, from the point in the camera's space ---
 	var arrow_script: GDScript = load("res://scripts/ui/hud/sound_subtitle_queue.gd")
