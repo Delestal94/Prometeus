@@ -30,7 +30,7 @@ static func sanitize(raw: Variant, stage: int) -> Array[Dictionary]:
 	return kept
 
 
-## `{id: String, x: int, z: int, turns: 0-3}` from a saved entry, or {} when it is not one.
+## `{id: String, x: int, z: int, turns: 0-3[, uid: String]}` from a saved entry, or {} when it is not one.
 static func _normalized(item: Variant) -> Dictionary:
 	if not item is Dictionary:
 		return {}
@@ -43,12 +43,16 @@ static func _normalized(item: Variant) -> Dictionary:
 	if not (_is_num(x) and _is_num(z)):
 		return {}
 	var turns: Variant = entry.get("turns", 0)
-	return {
+	var piece: Dictionary = {
 		"id": str(id),
 		"x": int(x),
 		"z": int(z),
 		"turns": posmod(int(turns) if _is_num(turns) else 0, 4),
 	}
+	var uid: String = str(entry.get("uid", ""))
+	if uid != "":
+		piece["uid"] = uid  # the piece's name in the shed (D-0911): its stock is stored under it
+	return piece
 
 
 static func _is_num(raw: Variant) -> bool:

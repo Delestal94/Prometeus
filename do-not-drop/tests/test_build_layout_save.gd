@@ -73,8 +73,8 @@ func _test_drops_invalid() -> void:
 
 func _test_turns() -> void:
 	var kept: Array[Dictionary] = BuildLayoutSave.sanitize([
-		{"id": "shelf", "x": 0, "z": 0, "turns": 5},
-		{"id": "shelf", "x": 0, "z": 3},
+		{"id": "shelf", "x": 0, "z": 0, "turns": 5, "uid": "shelf_1"},
+		{"id": "shelf", "x": 0, "z": 3, "uid": ""},
 		{"id": "shelf", "x": 4, "z": 3, "turns": -1},
 	], 0)
 	_expect(kept.size() == 3, "all three fit")
@@ -82,6 +82,8 @@ func _test_turns() -> void:
 		_expect(kept[0]["turns"] == 1, "turns 5 folds to 1")
 		_expect(kept[1]["turns"] == 0, "missing turns is 0")
 		_expect(kept[2]["turns"] == 3, "turns -1 folds to 3")
+		_expect(kept[0].get("uid") == "shelf_1" and not kept[1].has("uid"),
+			"a uid is kept (D-0911), an empty one is not written")
 
 
 func _test_stage_decides_grid() -> void:
