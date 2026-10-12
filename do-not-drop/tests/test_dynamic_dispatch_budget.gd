@@ -427,6 +427,28 @@ const BUDGETS: Dictionary = {
 	# refused ends the session with no server_disconnected). Naming the NetworkManager autoload instead would
 	# break the --script tests that compile this class before the autoloads exist (N-919).
 	"res://scripts/gameplay/company_root.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
+	# The crew list (N-224.4) reads the truck's driver_peer_id through vehicle.gd by preload (no class name; what is
+	# not a truck is skipped). Three .get left in build_entries(): the players' cosmetic_id, carried_package and
+	# tended_package, because test_crew_panel stands in plain nodes with those properties and `as Player` would
+	# drop them (every row would come out team-coloured and boxless).
+	"res://scripts/ui/hud/crew_panel.gd": {"call": 0, "callv": 0, "get": 3, "root": 0},
+	# Riding (N-224.4): the session as NetSession (pose_net_sim; the has_method check goes). Two .call left: the
+	# truck's `carries`, because vehicle.gd has no class name and tests put plain-Node fakes with that method in
+	# the "vehicle" group (`as` a typed truck would drop them). The /root/ lookup is the null-safe NetworkManager
+	# accessor.
+	"res://scripts/gameplay/player/player_ride.gd": {"call": 2, "callv": 0, "get": 0, "root": 1},
+	# A depot station (N-224.4) finds RunManager through PackageAutoloads. Two .get left: RunManager's is_running
+	# and results, by name because preloading run_manager.gd compiles it before the autoloads exist (see
+	# package_autoloads.gd). The /root/ lookup is the null-safe EventBus handle: it emits by name because a test
+	# may replace EventBus with a plain Node.
+	"res://scripts/gameplay/depot/depot_station.gd": {"call": 0, "callv": 0, "get": 2, "root": 1},
+	# The newspaper study (N-224.4) holds its face as the character_face.gd type (setup, set_expression,
+	# _process) by preload. Nothing left by name.
+	"res://scripts/tools/newspaper_concept/render_newspaper_concept.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The profile (N-224.4) counts the crew through the session as NetSession (peer_ids). The three /root/ lookups
+	# are the null-safe accessors: EventBus twice (run_ended is connected by name and unlock_earned emitted by
+	# name, because a test may replace EventBus with a plain Node) and NetworkManager.
+	"res://scripts/core/unlock_manager.gd": {"call": 0, "callv": 0, "get": 0, "root": 3},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
