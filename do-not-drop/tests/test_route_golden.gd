@@ -24,6 +24,9 @@ extends SceneTree
 ## shadows built from a model's bounds are counted but not signed, and a
 ## mesh with a resource_path (file or sub-resource of one) is signed as "from file" without size or
 ## vertices. Meshes built by code (empty resource_path) still sign their aabb and vertices.
+## N-971: a segment's MergedGeometry (batch_dressing) folds the meshes of its instanced .glb files in with the
+## boxes built by code: only the surfaces with a RouteSegment._material() are signed (_merged_mesh()), so a new
+## .glb in a bridge, tunnel or chicane leaves the hash alone.
 ## tests/data/route_golden.txt was generated with the original single-file route.gd.
 ## The file was written on Linux (CI): on Windows ~77 lines differ from it by the last digit of a
 ## coordinate (a 4-decimal rounding that lands the other way: libm's sin/cos/pow differ in the last
@@ -227,7 +230,10 @@ func _node_line(route: Node3D, node: Node) -> String:
 			parts.append("hidden")
 	if node is MeshInstance3D:
 		var mesh_node := node as MeshInstance3D
-		parts.append("mesh{%s}" % _mesh(mesh_node.mesh))
+		if String(node.name).begins_with("MergedGeometry") and node.get_parent() is RouteSegment:
+			parts.append("mesh{%s}" % _merged_mesh(mesh_node.mesh))
+		else:
+			parts.append("mesh{%s}" % _mesh(mesh_node.mesh))
 		parts.append("shadow=%d" % mesh_node.cast_shadow)
 	if node is MultiMeshInstance3D and batched_art:
 		parts.append("multimesh{n=%d batched}" % (node as MultiMeshInstance3D).multimesh.instance_count)
@@ -278,6 +284,32 @@ func _mesh(mesh: Mesh) -> String:
 				total += vertex
 			text += " [verts=%d sum(%s)]" % [vertices.size(), _vec(total)]
 	return text
+
+
+## N-971: DressingBatcher.merge_segment_geometry() (batch_dressing) folds a segment's loose meshes into
+## one code-built ArrayMesh, a surface per material: the boxes RouteSegment._box() builds and, alike, the
+## meshes inside every .glb the segment instanced (_model() / _art(): the bridge post, deck, water...).
+## Only the boxes' surfaces (RouteSegment._material()) are route generation: those are signed (their own
+## aabb and vertices); the art's surfaces are left out, not even counted, so a new .glb leaves the hash alone.
+func _merged_mesh(mesh: Mesh) -> String:
+	var code_materials: Array = RouteSegment._materials.values()
+	var bounds := AABB()
+	var text: String = ""
+	var signed: int = 0
+	var found: bool = false
+	for surface: int in range(mesh.get_surface_count()):
+		if not code_materials.has(mesh.surface_get_material(surface)):
+			continue
+		var vertices: PackedVector3Array = mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]
+		var total := Vector3.ZERO
+		for vertex: Vector3 in vertices:
+			bounds = bounds.expand(vertex) if found else AABB(vertex, Vector3.ZERO)
+			found = true
+			total += vertex
+		text += " [verts=%d sum(%s)]" % [vertices.size(), _vec(total)]
+		signed += 1
+	return "%s merged aabb(%s %s) code_surfaces=%d%s" % [
+		mesh.get_class(), _vec(bounds.position), _vec(bounds.size), signed, text]
 
 
 func _meta(node: Node, batched_art: bool = false) -> String:
