@@ -340,13 +340,22 @@ HUD_STATE_AT_RISK,EN RIESGO !,AT RISK !
 HUD_STATE_OK,OK ✓,OK ✓
 HUD_STATE_RUINED,ARRUINADA ✕,RUINED ✕
 HUD_SUB_BALANCE,[carga crujiendo],[cargo creaking]
+HUD_SUB_BEES,[zumbido de abejas],[bees buzzing]
+HUD_SUB_CLIENT_CHEER,[el cliente festeja],[the customer cheers]
+HUD_SUB_CLIENT_GROAN,[el cliente se queja],[the customer groans]
+HUD_SUB_CLIENT_REFUSE,[el cliente gruñe: no es su caja],[the customer grumbles: wrong box]
 HUD_SUB_DEFAULT,[la carga cruje],[the cargo creaks]
+HUD_SUB_DOG,[ladrido de perro],[dog barking]
+HUD_SUB_DOORBELL,[timbre de la casa %d],[doorbell at house %d]
 HUD_SUB_EXPLOSIVE,[tictac acelerando],"[ticking, faster]"
 HUD_SUB_FRAGILE,[vidrio que cruje],[glass creaking]
+HUD_SUB_GULL,[graznido de gaviota],[gull screeching]
 HUD_SUB_GROWING_WEIGHT,[madera que cruje],[wood creaking]
+HUD_SUB_HORN,[bocina de %s],[horn from %s]
 HUD_SUB_HOSTILE,[siseo amenazante],[menacing hiss]
 HUD_SUB_LIQUID,[líquido agitándose],[liquid sloshing]
 HUD_SUB_NOISY,[gruñido],[growling]
+HUD_SUB_RAIN,[lluvia],[rain]
 HUD_THE_CARGO,LA CARGA,THE CARGO
 HUD_TODAYS_ROUTE,Ruta de hoy: %s,Today's route: %s
 HUD_UNLOCKED,¡Desbloqueaste %s!,You unlocked %s!

@@ -633,7 +633,7 @@ func _process(delta: float) -> void:
 	cargo.refresh_risk_vignette(delta)
 	cargo.refresh_ruin_impact(delta)
 	cargo.refresh_state_pulses()
-	prompts.refresh_sound_subtitle()
+	prompts.refresh_sound_subtitle(delta)
 	notices.refresh_deadline()
 	notices.refresh_bomb_code()
 	notices.process_notices(delta)

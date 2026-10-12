@@ -3,6 +3,8 @@ extends Node
 ## Context-sensitive teaching: interaction/lid prompts, role hints, the
 ## keyboard/gamepad cheat sheet and sound subtitles.
 
+const SubtitleQueue = preload("res://scripts/ui/hud/sound_subtitle_queue.gd")
+
 ## Set by Hud before this is added as its child.
 var hud: Hud
 ## The session under this level ended (the host left, N-222; HudPause sets
@@ -19,6 +21,10 @@ var _hint_override_seconds: float = 0.0
 var _hint_shown_text: String = ""
 var _hint_shown_color: Color = Color(0.0, 0.0, 0.0, 0.0)
 var _sound_subtitle: String = ""
+## The subtitles that come and go with the world's sounds (N-965): horn,
+## doorbell and the customer, animals, rain. The trap's standing one above stays
+## apart, on top.
+var _subtitles := SubtitleQueue.new()
 var _role: int = Hud.Role.ON_FOOT
 
 
@@ -29,6 +35,11 @@ func _ready() -> void:
 	EventBus.carry_changed.connect(_on_carry_changed)
 	EventBus.package_lid_hint_changed.connect(_on_lid_hint_changed)
 	EventBus.tutorial_tip_requested.connect(_on_tutorial_tip_requested)
+	EventBus.horn_honked.connect(_on_horn_honked)
+	EventBus.house_delivery_recorded.connect(_on_house_delivery_subtitle)
+	EventBus.house_refused_package.connect(_on_house_refused_subtitle)
+	EventBus.cargo_animal_alert.connect(_on_animal_subtitle)
+	EventBus.run_started.connect(_on_run_started_subtitle)
 
 
 func refresh_shortcuts(delta: float = 0.0) -> void:
@@ -166,6 +177,7 @@ func render_interaction_prompt() -> void:
 		lines.append(tr("HUD_PROMPT_INSIDE") % _lid_inside)
 	if not _sound_subtitle.is_empty():
 		lines.append(_sound_subtitle)
+	lines.append_array(_subtitles.lines())
 	hud.interaction_label.text = "\n".join(lines)
 	hud.interaction_icon.texture = UiTheme.action_icon(action_id)
 	hud.interaction_icon.visible = hud.interaction_icon.texture != null
@@ -194,8 +206,11 @@ func _action_id_for_prompt(prompt: String) -> StringName:
 	return &""
 
 
-func refresh_sound_subtitle() -> void:
+## Every frame (Hud._process): the at-risk trap's standing subtitle, and the
+## queue's expiry by `delta`.
+func refresh_sound_subtitle(delta: float = 0.0) -> void:
 	var subtitle: String = ""
+	var queue_changed: bool = _subtitles.tick(delta) if GameSettings.sound_subtitles else _subtitles.clear()
 	if GameSettings.sound_subtitles:
 		var package_id: StringName = hud.cargo.local_package_id()
 		if int(RunManager.cargo.get(package_id, {}).get("state", 0)) != ITrapBehavior.TrapState.AT_RISK:
@@ -219,7 +234,98 @@ func refresh_sound_subtitle() -> void:
 			}.get(trap_key, "HUD_SUB_DEFAULT"))
 	if subtitle != _sound_subtitle:
 		_sound_subtitle = subtitle
+		queue_changed = true
+	if queue_changed:
 		render_interaction_prompt()
+
+
+## What each sound with a game meaning shows, by what announces it (N-965,
+## inventory in docs/tareas/N-965.md): priority and seconds on screen.
+const SUB_HORN: Array = [50, 1.5]
+const SUB_DOORBELL: Array = [45, 2.5]
+const SUB_CLIENT: Array = [40, 2.5]
+const SUB_WEATHER: Array = [20, 6.0]
+const SUB_ANIMAL_PRIORITY: int = 70
+const SUB_ANIMAL_SECONDS: Vector2 = Vector2(2.0, 4.0)
+## The animals' cry by kind (cargo_animal_alert), the customer's reaction by
+## outcome (house_delivery_recorded; a missed or lost door has no reaction).
+const ANIMAL_SUBTITLES: Dictionary = {
+	&"gull": "HUD_SUB_GULL", &"dog": "HUD_SUB_DOG", &"bees": "HUD_SUB_BEES",
+}
+const CLIENT_SUBTITLES: Dictionary = {
+	&"delivered_ok": "HUD_SUB_CLIENT_CHEER",
+	&"delivered_at_risk": "HUD_SUB_CLIENT_GROAN",
+	&"delivered_ruined": "HUD_SUB_CLIENT_GROAN",
+}
+## Outcomes where nobody rang the bell: the box was lost on the road.
+const SILENT_OUTCOMES: Array[StringName] = [&"lost"]
+
+
+## Another player's horn, with the way to the truck. Your own you press.
+func _on_horn_honked(peer_id: int) -> void:
+	if not GameSettings.sound_subtitles or peer_id == NetworkManager.local_id():
+		return
+	var truck: Node3D = get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	var text: String = _with_arrow(tr("HUD_SUB_HORN") % (tr("UI_PLAYER_N") % peer_id), _arrow_to(truck))
+	_subtitles.push(&"horn", text, int(SUB_HORN[0]), float(SUB_HORN[1]))
+
+
+## The bell at that door and, after it, how the customer took the box.
+func _on_house_delivery_subtitle(house_index: int, outcome: StringName, _package_id: StringName) -> void:
+	if not GameSettings.sound_subtitles or outcome in SILENT_OUTCOMES:
+		return
+	_push_doorbell(house_index)
+	if CLIENT_SUBTITLES.has(outcome):
+		_subtitles.push(StringName("client_%d" % house_index), tr(CLIENT_SUBTITLES[outcome]),
+			int(SUB_CLIENT[0]), float(SUB_CLIENT[1]))
+
+
+func _on_house_refused_subtitle(house_index: int, _expected_label: String) -> void:
+	if not GameSettings.sound_subtitles:
+		return
+	_push_doorbell(house_index)
+	_subtitles.push(StringName("client_%d" % house_index), tr("HUD_SUB_CLIENT_REFUSE"), int(SUB_CLIENT[0]), float(SUB_CLIENT[1]))
+
+
+func _push_doorbell(house_index: int) -> void:
+	var door: Node3D = null
+	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
+		if house is Node3D and int(house.get(&"house_index")) == house_index:
+			door = house as Node3D
+			break
+	_subtitles.push(StringName("doorbell_%d" % house_index),
+		_with_arrow(tr("HUD_SUB_DOORBELL") % (house_index + 1), _arrow_to(door)), int(SUB_DOORBELL[0]), float(SUB_DOORBELL[1]))
+
+
+## The cry, bark or buzz that warns an animal is going for a box; it lives as
+## long as the warning (clamped), the box is on the truck so no arrow.
+func _on_animal_subtitle(kind: StringName, _package_id: StringName, warn_seconds: float, _act_seconds: float) -> void:
+	if not GameSettings.sound_subtitles or not ANIMAL_SUBTITLES.has(kind):
+		return
+	_subtitles.push(StringName("animal_%s" % kind), tr(ANIMAL_SUBTITLES[kind]), SUB_ANIMAL_PRIORITY,
+		clampf(warn_seconds, SUB_ANIMAL_SECONDS.x, SUB_ANIMAL_SECONDS.y))
+
+
+## Weather has no event of its own: the sky builds its rain and its sound at
+## the start of the route (route_sky.gd, node "RainSound"), so as the run starts
+## the rain is told once.
+func _on_run_started_subtitle(_route_id: StringName, _players: Array) -> void:
+	if not GameSettings.sound_subtitles:
+		return
+	if not get_tree().root.find_children("RainSound", "AudioStreamPlayer", true, false).is_empty():
+		_subtitles.push(&"weather", tr("HUD_SUB_RAIN"), int(SUB_WEATHER[0]), float(SUB_WEATHER[1]))
+
+
+func _with_arrow(text: String, arrow: String) -> String:
+	return text if arrow.is_empty() else "%s %s" % [arrow, text]
+
+
+## Which way `target` is from this player's view; "" without a camera or target.
+func _arrow_to(target: Node3D) -> String:
+	var camera: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
+	if camera == null or target == null:
+		return ""
+	return SubtitleQueue.arrow(camera.global_transform.affine_inverse() * target.global_position)
 
 
 func _on_lid_hint_changed(action: String, inside: String) -> void:
