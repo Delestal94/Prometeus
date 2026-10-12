@@ -21,7 +21,8 @@ const SAVED_KEYS: Array[StringName] = [
 	&"master_volume", &"music_volume", &"effects_volume", &"voice_volume", &"preferred_fov",
 	&"camera_shake_scale", &"impact_effects", &"look_sensitivity", &"invert_look_y", &"fullscreen",
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
-	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log", &"last_join_address",
+	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log",
+	&"last_join_address",
 	&"newspaper_mode",
 ]
 
