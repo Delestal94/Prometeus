@@ -73,7 +73,7 @@ func _build() -> void:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(shade)
 	var title := Label.new()
-	title.text = "PING"
+	title.text = tr("UI_PING_TITLE")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_override(&"font", load(UiTheme.DISPLAY_FONT_PATH))
 	title.add_theme_font_size_override(&"font_size", 20)

@@ -736,7 +736,7 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	interaction_prompt = ""
 	interaction_label.text = ""
 	if is_endless:
-		section_label.text = "ENDLESS"
+		section_label.text = tr("HUD_SECTION_ENDLESS")
 		distance_label.text = tr("HUD_ZERO_METERS")
 
 
