@@ -418,8 +418,11 @@ static func _add_rock(root: Node3D, path: String, base: Vector3, top_y: float, r
 ## Darker than the forest's dry rocks: wet stone by the water. In full sun
 ## the shared rock material read almost white next to the falls
 ## (render_river.gd, 2026-09-28); at 0.62 they went almost black against the
-## light (2026-09-29). One darkened copy per source material.
-const WET_TINT: float = 0.74
+## light (2026-09-29). The forest rock's own albedo came down to the old wet
+## tone (N-331.7, 2026-10-12), so the tint went from 0.74 to 0.9: a little
+## darker than the dry rock, not the near-black of 0.62. One darkened copy
+## per source material.
+const WET_TINT: float = 0.9
 static var _wet_materials: Dictionary = {}
 
 
