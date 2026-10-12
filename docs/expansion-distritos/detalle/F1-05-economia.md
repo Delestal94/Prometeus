@@ -86,3 +86,13 @@ acá solo se recibe la lista.
 el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77); tope de reputación; reputación en
 `CompanyState` dentro de su rango.
 **Hecho cuando:** el test pasa.
+
+### D-0507 · Propinas — A · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `OrderTips` (`scripts/gameplay/business/order_tips.gd`): 15 % de la paga base por entrega perfecta en la primera mitad de la ventana, +1 de reputación; `test_order_tips`.
+**Depende de:** D-0501, D-0506
+**Qué:** `OrderTips.assess(order, verdict, now_min)` devuelve `{tip, reputation}`; `apply(company, result)` cobra con motivo `tip` y suma la reputación.
+- Propina solo si `OrderPenalties.assess` no encontró fallas (`kinds` vacío) y se entregó dentro de `TIP_FAST_WINDOW_SHARE` (0,5) de la ventana del pedido.
+- El monto es `TIP_RATE` (0,15) de la paga base. Los tres números van en `CompanyTuning`.
+**Decisión:** la propina es plata aparte de la paga (entra como `earn`, no se suma al precio del pedido), así el ledger la muestra por separado en el resumen de D-0508.
+**Test** `test_order_tips`: rápida, justo a la mitad, lenta, antes de existir el pedido, cada penalidad la cancela, billetera y reputación.
+**Hecho cuando:** el test pasa.

@@ -14,7 +14,7 @@
 | D-0504 | ✅ Costo de materiales de embalaje (cajas, cinta, relleno, etiquetas) | constructor-progresion | medium | test: armar una caja consume insumos |
 | D-0505 | ✅ Sin combustible ni energía; el costo operativo es el mantenimiento (D-0527) | — | — | decidido |
 | D-0506 | ✅ Penalidades: rotura, producto equivocado, tarde, caja mal etiquetada | constructor-progresion | high | test por tipo |
-| D-0507 | Propinas por entrega perfecta y rápida | constructor-progresion | low | test |
+| D-0507 | ✅ Propinas por entrega perfecta y rápida | constructor-progresion | low | test |
 | D-0508 | Resumen financiero del cierre del día (ingresos, costos, ganancia) | constructor-ui | high | captura y test de los números |
 | D-0509 | Gastos fijos diarios (alquiler del galpón, luz) | constructor-progresion | medium | test |
 | D-0510 | Quiebra: qué pasa con saldo negativo N días (préstamo forzado, reinicio, aviso) | constructor-progresion | medium | test del caso |

@@ -114,6 +114,11 @@ const MISLABEL_PAY_LOSS: float = 0.15
 const MISLABEL_REPUTATION: float = -1.0
 ## One delivery never costs more reputation than this, however many products broke.
 const PENALTY_REPUTATION_CAP: float = -10.0
+## A perfect delivery (no penalty) made within this share of the delivery window tips this share
+## of the order's base pay and earns a little reputation (D-0507).
+const TIP_FAST_WINDOW_SHARE: float = 0.5
+const TIP_RATE: float = 0.15
+const TIP_REPUTATION: float = 1.0
 
 # --- Supplier ---
 ## One truck a day, at 08:30, with what was ordered the day before.
