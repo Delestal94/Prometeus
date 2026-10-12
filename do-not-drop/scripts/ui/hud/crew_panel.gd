@@ -29,6 +29,8 @@ const INVITE_LAN: StringName = &"lan"
 const INVITE_NO_LAN: StringName = &"no_lan"
 const INVITE_STEAM: StringName = &"steam"
 const INVITE_GUEST: StringName = &"guest"
+## The truck (vehicle.gd has no class name): its driver_peer_id.
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 
 ## Set by Hud right after it creates this panel.
 var hud: Hud
@@ -88,10 +90,10 @@ func in_depot() -> bool:
 ## Rebuilds the list from the live game when something changed.
 func refresh() -> void:
 	_dirty = false
-	var truck: Node = get_tree().get_first_node_in_group(&"vehicle")
+	var truck: VehicleScript = get_tree().get_first_node_in_group(&"vehicle") as VehicleScript
 	var entries: Array[Dictionary] = build_entries(NetworkManager.peer_ids, _players_by_peer(),
 			NetworkManager.local_id(), NetworkManager.is_online(),
-			int(truck.get(&"driver_peer_id")) if truck != null else 0)
+			truck.driver_peer_id if truck != null else 0)
 	var invite: Dictionary = invite_info(NetworkManager.is_online(), NetworkManager.is_host(),
 			NetworkManager.active_transport == NetworkManager.Transport.STEAM, NetworkManager.lan_address())
 	var signature: String = str([entries, invite, TranslationServer.get_locale()])
@@ -120,7 +122,9 @@ func render(entries: Array[Dictionary], invite: Dictionary) -> void:
 ## One dictionary per connected player, in roster order:
 ## peer_id, name (the crew colour, how the game calls them), is_local,
 ## is_host, color (the shirt they wear), uniform (its name), driving, has_box.
-## `players` maps peer id -> the Player node (missing while it still spawns).
+## `players` maps peer id -> the Player node (missing while it still spawns); its
+## cosmetic_id and boxes stay read by name (`.get`): the tests stand in plain
+## nodes, and `as Player` would drop them.
 static func build_entries(peer_ids: Array, players: Dictionary, local_id: int, online: bool,
 		driver_peer_id: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []

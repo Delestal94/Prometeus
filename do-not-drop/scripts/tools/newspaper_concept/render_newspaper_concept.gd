@@ -37,7 +37,7 @@ const READING_TILT_DEGREES: float = 28.0
 var world: Node3D
 var camera: Camera3D
 var chief: Node3D
-var face: BoneAttachment3D
+var face: Face
 var skeleton: Skeleton3D
 var paper: Node3D
 var paper_page: SubViewport
@@ -121,7 +121,7 @@ func _run() -> void:
 	if animate:
 		await _hold(2.5)
 	await _read_stories(reading_camera)
-	face.call(&"set_expression", &"worried", &"surprised")
+	face.set_expression(&"worried", &"surprised")
 	_camera_at(Vector3(-0.65, 1.56, -1.9), Vector3(0, 1.28, 0.48), 30)
 	if animate:
 		await _lower_paper_slowly()
@@ -130,7 +130,7 @@ func _run() -> void:
 	await _save("09_reaccion")
 	if animate:
 		await _hold(1.0)
-	face.call(&"set_expression", &"sleepy", &"pout")
+	face.set_expression(&"sleepy", &"pout")
 	_camera_at(Vector3(-0.7, 1.72, -3.5), Vector3(-0.68, 1.15, 0.18), 43)
 	_results_card()
 	await _save("10_resultados")
@@ -275,8 +275,8 @@ func _build_chief() -> void:
 	Appearance.tint_shirt(chief, Color("7fa6c9"))
 	skeleton = Appearance.find_skeleton(chief)
 	face = Face.new()
-	face.call(&"setup", chief, skeleton, 1)
-	face.call(&"set_expression", &"sleepy", &"smile")
+	face.setup(chief, skeleton, 1)
+	face.set_expression(&"sleepy", &"smile")
 	face.set_process(false)
 	_add_moustache()
 	var animation: AnimationPlayer = Appearance.find_animation_player(chief)
@@ -831,7 +831,7 @@ func _capture_motion_frame() -> void:
 	# Fixed frame count, independent of render speed. Encode the PNG sequence
 	# at 30 fps for a reproducible animatic, without recording setup frames.
 	motion_time += 1.0 / 30.0
-	face.call(&"_process", 1.0 / 30.0)
+	face._process(1.0 / 30.0)
 	chief.position.y = 0.48 + sin(motion_time * 1.65) * 0.0025
 	if motion_time <= 4.5:
 		var settle: float = 1.0 - smoothstep(3.8, 4.5, motion_time)
