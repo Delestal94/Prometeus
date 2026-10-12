@@ -104,3 +104,14 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Decisión:** dársena al sur y salida al norte, centradas, para que el recorrido camión → estantes → mesas → salida cruce el galpón a lo largo y no dependa de la etapa; los tamaños salen de lo que pasa un autoelevador (4 m) y una persona con carro (2 m).
 **Test** `test_warehouse_stages`: en las cuatro etapas las zonas están dentro del piso, no se pisan entre sí, tocan su muro, los huecos alinean con ellas; colocar encima es rojo con `fixed_area`; al lado es verde.
 **Hecho cuando:** el test pasa.
+
+### D-0907 · Caminos libres: validación de que se puede llegar a cada estación — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `WalkReachability` (`scripts/gameplay/business/walk_reachability.gd`) + `BuildPlacement.entry_areas` y razón `blocks_path`; `apply_to` deja la dársena y la salida como entradas; `test_walk_reachability`. El adaptador con nodos (mostrar el motivo en rojo) queda para D-0917/D-0943.
+**Depende de:** D-0902 (`BuildPlacement`), D-0906 (dársena y salida)
+**Qué:**
+- Inundación 4-vecinos sobre la grilla desde las celdas de la dársena y la salida. Las celdas cubiertas por piezas con `blocks_walking` no se pisan; la zona de despacho (no bloquea) sí.
+- Una pieza que bloquea se alcanza desde una celda libre alcanzada que toque uno de sus lados; una que no bloquea, desde una de sus celdas.
+- `BuildPlacement.preview` (y con él colocar, mover y girar) da `blocks_path` en rojo si, con la pieza puesta, alguna pieza queda sin camino o la dársena queda cortada de la salida. Sin `entry_areas` no se comprueba nada.
+**Decisión:** el chequeo es sobre la grilla y no sobre el navmesh: es determinista, corre en headless y en red da lo mismo en todos los clientes; D-0908 rehornea el navmesh con la misma grilla. Si el layout ya estaba roto, cualquier colocación da rojo hasta arreglarlo moviendo la pieza (mover ignora la pieza misma).
+**Test** `test_walk_reachability`: una fila de mesas de lado a lado cierra el paso y la última es roja; con un hueco es verde; cuatro heladeras encierran la del medio; la zona de despacho no estorba; `place()` rojo no cobra.
+**Hecho cuando:** el test pasa.
