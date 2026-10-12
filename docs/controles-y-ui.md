@@ -141,7 +141,7 @@ si llegan varios, `hud_notices.gd` conserva la cola y enseña primero el de mayo
 | Capa | Zona | Contenido | Movimiento |
 |---|---|---|---|
 | **Crítico** | Arriba, centro | Tu caja en riesgo (incluida la cuenta del explosivo) o el evento de ruta con su cuenta regresiva | Grande, con pulso suave |
-| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete, abrir/cerrar/ver la tapa y subtítulos opcionales de sonidos de trampas | Un solo bloque estable |
+| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete, abrir/cerrar/ver la tapa y subtítulos opcionales de sonidos: la trampa en riesgo y, en cola (hasta 3, por prioridad, con vencimiento), la bocina de otro jugador, el timbre y el cliente, los animales y la lluvia (N-965) | Un solo bloque estable |
 | **Información** | Esquinas | Velocidad, tiempo, distancia, estado de la carga, sesión, dinero cuando corresponde y avisos breves | Chico y quieto |
 
 La barra de atajos respeta **Ayudas de controles: siempre / al principio / nunca**. En
