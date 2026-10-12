@@ -422,9 +422,10 @@ const BUDGETS: Dictionary = {
 	"res://scripts/ui/main_menu.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The company root (N-224.4) runs the CompanyState autoload through its script (COMPANY_STATE: to_dict,
 	# is_active, new_company, stock, reset, from_dict). Two /root/ lookups: the null-safe CompanyState
-	# lookup and, on a client, NetworkManager's session_failed (D-2005: a handshake that times out or is
-	# refused ends the session with no server_disconnected). Naming the NetworkManager autoload instead would
-	# break the --script tests that compile this class before the autoloads exist (N-919).
+	# lookup and NetworkManager, kept as a NetSession: its steam_presence (D-2009) and, on a client, its
+	# session_failed (D-2005: a handshake that times out or is refused ends the session with no
+	# server_disconnected). Naming the NetworkManager autoload instead would break the --script tests that
+	# compile this class before the autoloads exist (N-919).
 	"res://scripts/gameplay/company_root.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# The crew list (N-224.4) reads the truck's driver_peer_id through vehicle.gd by preload (no class name; what is
 	# not a truck is skipped). Three .get left in build_entries(): the players' cosmetic_id, carried_package and
