@@ -111,6 +111,7 @@ no está hecha, anotar la ruta en su tarea.
 **Hecho cuando:** la ruta figura en la configuración de Auto-Cloud documentada.
 
 ### D-2011 · `bench_company` en CI — A · Opus 5.5 · high · Aviso: sí (`.github/workflows/`) · F0
+**[~] Parcial (2026-10-12, PR pendiente)** — `tests/bench_company.gd` abre `company_root.tscn` (save en `user://bench_company`, se borra), recorre el galpón con una cámara por un camino fijo (vuelta a x ±18, z ±10 desde `SPAWN` y barrido por la puerta hacia las losas de zonas) e imprime `BENCH_COMPANY key=value` (objects, nodes, draw_calls, physics_bodies, frame_ms p50/p95, memory_static_kb) y `BENCH_COMPANY_OK`; paso informativo "Measure company world performance" en `tests.yml` (`|| true`); `test_company_bench`. Falta D-2011.1.
 **Depende de:** D-0214
 **Qué:** `tests/bench_company.gd`, como `bench_drive`.
 - **Qué hace:** arranca el mundo de la empresa, recorre el galpón con la cámara por un camino fijo de
@@ -119,6 +120,8 @@ no está hecha, anotar la ruta en su tarea.
   memoria estática.
 - **CI:** paso nuevo en `tests.yml` junto a "Measure rendered performance". Solo informa, no falla
   (los FPS de CI no valen).
+- [x] **D-2011.0** Recorrido del galpón, resumen y paso de CI.
+- [ ] **D-2011.1** Etapa de manejo 30 s hacia Barrio Centro (`_stage_drive()` hoy imprime `drive: not_available`): cuando el mundo de la empresa tenga vehículo y calle (D-0304, D-1501).
 **Hecho cuando:** CI imprime los números en un PR y la PC los puede repetir.
 
 ### D-2012 · Presupuesto de rendimiento — A · Opus 5.5 · medium · Aviso: no · F0
