@@ -58,6 +58,15 @@ func _process(_delta: float) -> void:
 		_write_company()
 
 
+## Leaving the world, the clock unhooks from its CompanyNet: no anchor lands here any more and
+## snapshots go without its part (a client keeps the anchor it had). attach() hooks it back.
+func _exit_tree() -> void:
+	if _has_net() and net.clock == self:
+		net.clock = null
+		net.remove_snapshot_part(SNAPSHOT_KEY)
+	net = null
+
+
 ## Hooks this clock to `company_net`, on every peer before its world is up (like any snapshot
 ## part): its clock_anchor events land in apply_anchor() and its snapshot carries the anchor.
 ## `company_state` is the CompanyState node the host writes the minute into (null: none). False,
@@ -91,7 +100,7 @@ func start(minute: float = float(CompanyTuning.DAY_START_MIN)) -> bool:
 func pause() -> bool:
 	if _clock.paused:
 		return false
-	return _set_pace(minute_now(), _clock.speed, true)
+	return _set_pace(_anchor_minute(), _clock.speed, true)
 
 
 ## Host: a stopped clock runs again from where it stopped. False, sending nothing, on a client or
@@ -99,7 +108,7 @@ func pause() -> bool:
 func resume() -> bool:
 	if not _clock.paused:
 		return false
-	return _set_pace(minute_now(), _clock.speed, false)
+	return _set_pace(_anchor_minute(), _clock.speed, false)
 
 
 ## Host: from now on the clock runs `speed` game minutes per real second (DEFAULT_SPEED is S3's
@@ -108,7 +117,7 @@ func resume() -> bool:
 func set_speed(speed: float) -> bool:
 	if not is_finite(speed) or speed < 0.0 or speed > MAX_SPEED or is_equal_approx(speed, _clock.speed):
 		return false
-	return _set_pace(minute_now(), speed, _clock.paused)
+	return _set_pace(_anchor_minute(), speed, _clock.paused)
 
 
 ## The game minute now, minutes since midnight with their fraction (any peer).
@@ -131,9 +140,12 @@ func current_speed() -> float:
 	return _clock.speed
 
 
-## The anchor as it travels, moved to now: {minute, speed, paused}.
+## The anchor as it travels, moved to now: {minute, speed, paused}, the minute never past
+## MAX_MINUTE (_anchor_minute()).
 func anchor() -> Dictionary:
-	return _clock.to_dict(_now())
+	var data: Dictionary = _clock.to_dict(_now())
+	data["minute"] = _anchor_minute()
+	return data
 
 
 ## Every peer, the host too: the host's clock_anchor (CompanyNet._apply_state()) or its snapshot's
@@ -158,6 +170,12 @@ func _set_pace(minute: float, speed: float, paused: bool) -> bool:
 	if _has_net():
 		return net.publish(CompanyNet.CLOCK_ANCHOR, next)
 	return apply_anchor(next)
+
+
+## The minute an anchor taken now carries: minute_now(), held at MAX_MINUTE so a clock left
+## running that long can still be paused and its snapshot still passes anchor_ok() everywhere.
+func _anchor_minute() -> float:
+	return minf(minute_now(), MAX_MINUTE)
 
 
 ## Host: the anchor a snapshot carries, moved to the moment it is taken (the joiner takes its own

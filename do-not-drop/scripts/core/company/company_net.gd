@@ -69,6 +69,9 @@ const CRITICAL_KINDS: Array[StringName] = []
 const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## Event kinds every peer applies.
 const EVENT_KINDS: Array[StringName] = [&"units_moved", CLOCK_ANCHOR]
+## Event kinds the host may send with publish(), without a request: its own rules (the day's
+## clock). An event a request leads to (units_moved) only comes from _handle_request()'s checks.
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -215,10 +218,10 @@ func request(kind: StringName, data: Dictionary = {}) -> int:
 ## Host: an event no request led to, decided by the host's own rules (the clock's pace, D-0219;
 ## later the day's orders and phases). It takes the same path as one a request led to: applied
 ## here first, numbered, sent to every ready peer, then event_applied. False, with nothing sent,
-## on a client, for a kind not in EVENT_KINDS, while another event is applied or when the state
-## here doesn't take it.
+## on a client, for a kind not in HOST_EVENT_KINDS, while another event is applied or when the
+## state here doesn't take it.
 func publish(kind: StringName, data: Dictionary) -> bool:
-	if not is_host() or not EVENT_KINDS.has(kind):
+	if not is_host() or not HOST_EVENT_KINDS.has(kind):
 		return false
 	return _publish(kind, data)
 
@@ -297,6 +300,13 @@ func add_snapshot_part(key: String, take: Callable, put: Callable) -> bool:
 		return false
 	_parts[key] = [take, put]
 	return true
+
+
+## Takes back the part under `key` (its owner left the world: GameClock._exit_tree()). Snapshots
+## from now on go without it; a client applying one keeps what that part last put there. False
+## when there is no such part (the keys CompanyNet fills itself are never parts).
+func remove_snapshot_part(key: String) -> bool:
+	return _parts.erase(key)
 
 
 ## Host: the business state as a snapshot carries it (section 3), as plain data:
@@ -654,7 +664,10 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				_as_id(data.get("to"))
 			)
 		CLOCK_ANCHOR:
-			applied = clock != null and is_instance_valid(clock) and clock.apply_anchor(data)
+			if clock == null or not is_instance_valid(clock):
+				push_warning("CompanyNet: a clock_anchor event but no clock here (GameClock.attach())")
+			else:
+				applied = clock.apply_anchor(data)
 	_applying = false
 	return applied
 

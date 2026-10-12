@@ -15,7 +15,9 @@
   `modules/day_clock/tests/test_day_clock.gd`; filas nuevas en `docs/modulos.md`.
 - **`scripts/core/company/company_net.gd`**: agregados, sin cambiar firmas: constante `CLOCK_ANCHOR`
   (sumada a `EVENT_KINDS`), variable `clock: GameClock`, función `publish(kind, data)` (host: un evento que
-  no vino de un pedido; mismo camino que `_publish`) y el caso `clock_anchor` en `_apply_state()`. RPCs
+  no vino de un pedido, solo de `HOST_EVENT_KINDS` = `[clock_anchor]`; mismo camino que `_publish`),
+  `remove_snapshot_part(key)` (el reloj saca su parte al salir del árbol) y el caso `clock_anchor` en
+  `_apply_state()` (con un `push_warning` si llega sin reloj). RPCs
   iguales: `_apply_event` sigue `@rpc("authority", "call_local", "reliable")`, canal 0.
 - **`scripts/core/company/game_clock.gd`** (nuevo, `class_name GameClock`, adaptador del módulo): el host
   cambia la marcha con `start(minute)`, `pause()`, `resume()` y `set_speed()`; cada cambio sale **una vez**

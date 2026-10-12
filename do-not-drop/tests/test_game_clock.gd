@@ -8,8 +8,11 @@ extends SceneTree
 ##   start() runs it at S3's pace (90 real seconds per game hour), as one clock_anchor event when
 ##   there is a CompanyNet; it writes the whole minute into CompanyState.clock_minutes as it runs;
 ##   pause, a new speed while stopped and resume move it as said; a minute two days past the
-##   close is still an anchor (the company keeps a day's last minute). A CompanyNet without a
-##   clock refuses a clock_anchor, and a clock attaches to one CompanyNet only once.
+##   close is still an anchor (the company keeps a day's last minute); a clock run past
+##   MAX_MINUTE still pauses and its snapshot part still passes DayClock.anchor_ok(). publish()
+##   sends only the host's own kinds (units_moved is refused). A CompanyNet without a clock
+##   refuses a clock_anchor (with a warning), a clock attaches to one CompanyNet only once, and
+##   one that leaves the tree unhooks itself and its snapshot part (another can attach).
 ## - A host and a client as two ENet peers in one process (each with its CompanyNet, GameClock and
 ##   CompanyState on its own SceneMultiplayer): the host opens the day at 08:00 and runs 30 s
 ##   alone; the client joins and gets the anchor in the snapshot, moved to the moment it was
@@ -24,6 +27,9 @@ extends SceneTree
 ##   refuses a minute or speed out of range, and a malformed anchor (event or snapshot part)
 ##   changes nothing. Only the host's CompanyState gets the running minute; the client's keeps
 ##   the one its snapshot brought.
+## - The host's clock leaves its world: the next snapshot goes without the clock part and the
+##   client applies it (no waiting for another), keeping the anchor it had.
+## Expected in the log: CompanyNet's warning for the clock_anchor applied with no clock.
 
 const PORT: int = 24641
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
@@ -95,6 +101,7 @@ func _run() -> void:
 		await _check_resume_and_speed()
 		await _check_client_cannot()
 		_check_bad_anchors()
+		await _check_host_clock_leaves()
 
 	_client_peer.close()
 	server.close()
@@ -178,12 +185,41 @@ func _check_solo() -> void:
 	_expect(clock.start(3000.0) and int(state.get(&"clock_minutes")) == CompanyTuning.MINUTES_PER_DAY - 1,
 		"A clock left running two days past the close still takes its anchor; the company keeps"
 		+ " the last minute of a day (got %s)" % state.get(&"clock_minutes"))
+	var seq_before: int = net.seq
+	var moved: Dictionary = {"product": &"hen", "qty": 1, "from": &"dock", "to": &"hands:1"}
+	_expect(not net.publish(&"units_moved", moved) and not net.publish(&"made_up", {})
+		and net.seq == seq_before,
+		"publish() refuses units_moved and unknown kinds: only HOST_EVENT_KINDS (seq %d)" % net.seq)
+	await _check_minute_cap(net, clock)
 	var bare := CompanyNet.new()
 	_expect(not bare._apply_state(CompanyNet.CLOCK_ANCHOR, clock.anchor()),
 		"A CompanyNet without a clock refuses a clock_anchor")
 	bare.free()
+	clock.free()
+	_expect(net.clock == null and not net.snapshot().has(GameClock.SNAPSHOT_KEY)
+		and not net.remove_snapshot_part(GameClock.SNAPSHOT_KEY),
+		"A clock that leaves the tree unhooks itself and its snapshot part (keys %s)" % [net.snapshot().keys()])
+	var again: GameClock = _add_clock(side, net, state)
+	_expect(net.clock == again and net.snapshot().has(GameClock.SNAPSHOT_KEY),
+		"...and another clock can attach to that CompanyNet")
 	side.free()
 	state.free()
+
+
+## A clock left running past MAX_MINUTE: the host can still pause it and the snapshot part (the
+## anchor moved to now) is still one every peer takes.
+func _check_minute_cap(net: CompanyNet, clock: GameClock) -> void:
+	_expect(clock.start(GameClock.MAX_MINUTE - 1.0), "The clock starts a minute before MAX_MINUTE")
+	_now += 60_000
+	var part: Variant = net.snapshot().get(GameClock.SNAPSHOT_KEY)
+	_expect(clock.minute_now() > GameClock.MAX_MINUTE
+		and DayClock.anchor_ok(part, GameClock.MAX_MINUTE, GameClock.MAX_SPEED),
+		"Run past MAX_MINUTE (%.1f), its snapshot part still passes anchor_ok (got %s)"
+		% [clock.minute_now(), part])
+	_expect(clock.pause() and clock.is_paused()
+		and is_equal_approx(clock.minute_now(), GameClock.MAX_MINUTE),
+		"...and the host can still pause it, at MAX_MINUTE (got %.1f)" % clock.minute_now())
+	await process_frame
 
 
 func _check_without_net() -> void:
@@ -340,6 +376,21 @@ func _check_bad_anchors() -> void:
 		"A snapshot part that isn't an anchor is refused")
 	_expect(_client_clock.anchor() == anchor and is_equal_approx(_client_clock.minute_now(), minute),
 		"...and none of them changed the client's clock (%.2f)" % _client_clock.minute_now())
+
+
+## The host's clock leaves its world: snapshots go without it and the client still takes them.
+func _check_host_clock_leaves() -> void:
+	var anchor: Dictionary = _client_clock.anchor()
+	_host_clock.free()
+	_expect(_host_net.clock == null and not _host_net.snapshot().has(GameClock.SNAPSHOT_KEY),
+		"The host's clock left: no clock on its CompanyNet and none in its snapshot")
+	_expect(_host_net.send_snapshot(_client_id), "The host sends a snapshot without the clock part")
+	var restored: bool = await _wait_for(func() -> bool:
+		return _restored.size() == 2 and not _client_net.awaiting_snapshot())
+	_expect(restored, "The client applies it and waits for no other (restored %s, waiting %s)"
+		% [_restored, _client_net.awaiting_snapshot()])
+	_expect(_client_clock.anchor() == anchor,
+		"...keeping the anchor it had (got %s, had %s)" % [_client_clock.anchor(), anchor])
 
 
 ## Host and client read the same minute at the same simulated tick, within one game minute.
