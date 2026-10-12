@@ -28,18 +28,42 @@ func _run() -> void:
 		"items": [{"product": &"porcelain_vase", "qty": 1}],
 		"requirements": [&"fragile"],
 	}
-	_expect_near(AssemblyQuality.score(_box(&"S", VASE, true, true, true), order, products), 100.0, "perfect box")
-	_expect_near(AssemblyQuality.score(_box(&"S", VASE, true, true, false), order, products), 85.0, "missing seal")
+	_expect_near(
+		AssemblyQuality.score(_box(&"S", VASE, true, true, true), order, products),
+		100.0,
+		"perfect box"
+	)
+	_expect_near(
+		AssemblyQuality.score(_box(&"S", VASE, true, true, false), order, products),
+		85.0,
+		"missing seal"
+	)
 	var loose: PackedBox = _box(&"M", VASE, true, true, true)
 	_expect_near(
-		AssemblyQuality.score(loose, order, products), 100.0 - 30.0 * 1.5 * 19.0 / 27.0, "unpadded fragile gaps"
+		AssemblyQuality.score(loose, order, products),
+		100.0 - 30.0 * 1.5 * 19.0 / 27.0,
+		"unpadded fragile gaps"
 	)
 	loose.fill_free_cells(19)
 	_expect_near(AssemblyQuality.score(loose, order, products), 100.0, "padded gaps cost nothing")
-	_expect_near(AssemblyQuality.score(_box(&"S", VASE, false, false, true), order, products), 90.0, "no tape, no label")
-	_expect_near(AssemblyQuality.score(_box(&"S", VASE, true, false, true), order, products), 90.0, "no label alone")
-	_expect_near(AssemblyQuality.score(_box(&"S", HEN, true, true, false), order, products), 30.0, "wrong content")
-	var parts: Dictionary = AssemblyQuality.breakdown(_box(&"S", HEN, true, true, false), order, products)
+	_expect_near(
+		AssemblyQuality.score(_box(&"S", VASE, false, false, true), order, products),
+		90.0,
+		"no tape, no label"
+	)
+	_expect_near(
+		AssemblyQuality.score(_box(&"S", VASE, true, false, true), order, products),
+		90.0,
+		"no label alone"
+	)
+	_expect_near(
+		AssemblyQuality.score(_box(&"S", HEN, true, true, false), order, products),
+		30.0,
+		"wrong content"
+	)
+	var parts: Dictionary = AssemblyQuality.breakdown(
+		_box(&"S", HEN, true, true, false), order, products
+	)
 	_expect_near(parts["content"], 40.0, "breakdown: content")
 	_expect_near(parts["gaps"], 15.0, "breakdown: gaps")
 	_expect_near(parts["seals"], 15.0, "breakdown: seals")
@@ -51,7 +75,9 @@ func _run() -> void:
 	quit(_failures)
 
 
-func _box(size: StringName, product: ProductDefinition, taped: bool, labeled: bool, sealed: bool) -> PackedBox:
+func _box(
+	size: StringName, product: ProductDefinition, taped: bool, labeled: bool, sealed: bool
+) -> PackedBox:
 	var box := PackedBox.new(size)
 	box.place(product, Vector3i.ZERO)
 	box.taped = taped
