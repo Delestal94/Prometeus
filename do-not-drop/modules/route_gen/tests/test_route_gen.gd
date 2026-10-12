@@ -476,6 +476,12 @@ func _test_sliced_conform(scene: Node3D) -> void:
 	_expect(slicer.frames_waited >= meshes,
 		"conform_all() gave the frame back along the way (%d frames)" % slicer.frames_waited)
 	_expect(is_equal_approx(other.conform_progress, 1.0), "conform_progress ends at 1")
+	# The workers never ask the terrain node for its transform (reading it can refresh
+	# the cached transforms up the tree while the main thread works on it): the job brings it.
+	var probe: Dictionary = other.call(&"_conform_prepare", right.get_node("Board"), false)
+	var terrain_global: Transform3D = other.global_transform
+	_expect(probe.terrain_global == terrain_global and probe.terrain_inverse == terrain_global.affine_inverse(),
+		"A conform job carries the terrain's own transform and its inverse")
 	# With no slicer it is conform_geometry() over the roots.
 	var plain := Node3D.new()
 	scene.add_child(plain)
