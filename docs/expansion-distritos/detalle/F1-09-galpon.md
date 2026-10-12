@@ -115,3 +115,14 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Decisión:** el chequeo es sobre la grilla y no sobre el navmesh: es determinista, corre en headless y en red da lo mismo en todos los clientes; D-0908 rehornea el navmesh con la misma grilla. Si el layout ya estaba roto, cualquier colocación da rojo hasta arreglarlo moviendo la pieza (mover ignora la pieza misma).
 **Test** `test_walk_reachability`: una fila de mesas de lado a lado cierra el paso y la última es roja; con un hueco es verde; cuatro heladeras encierran la del medio; la zona de despacho no estorba; `place()` rojo no cobra.
 **Hecho cuando:** el test pasa.
+
+### D-0908 · Navmesh que se rehornea al colocar objetos (para empleados) — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `WalkNavigation` (`scripts/gameplay/business/walk_navigation.gd`) + `BuildPlacement.navigation` y `rebake_navigation()`; `test_walk_navigation`. El adaptador que lo cree y se lo dé a `BuildPlacement` queda para D-0917; quien lo consume son los empleados (D-1011).
+**Depende de:** D-0907 (misma grilla de 4 vecinos)
+**Qué:**
+- `WalkNavigation.rebake(size, layout)` arma un `AStarGrid2D` sin diagonales con las celdas de `WalkReachability.blocked_cells` como sólidas y sube `version` (quien guardó un camino compara la versión para saber que quedó viejo).
+- `find_path(from, to)` devuelve las celdas del camino (vacío si no hay) y `find_path_to_rect(from, rect)` el más corto hasta una celda que toque un lado de una estación.
+- `BuildPlacement` rehornea después de colocar, mover, girar y vender (solo si el cambio se aplicó); `rebake_navigation(state)` sirve también tras cargar un guardado.
+**Decisión:** grilla A* en vez de `NavigationMesh` del motor: es determinista, corre en headless y da el mismo camino en todos los peers; coincide con D-0907 (si hay camino, es alcanzable). Si F2 necesita evitación entre empleados (D-1011), se apoya en esto y no en el navmesh del motor.
+**Test** `test_walk_navigation`: una mesa sobre la línea recta alarga el camino y no lo cruza; girar, mover y vender rehornean (y vender devuelve el camino corto); una colocación rechazada no rehornea; la zona de despacho no cambia nada; el camino a una estación termina a su lado.
+**Hecho cuando:** el test pasa.

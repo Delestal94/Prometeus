@@ -7,6 +7,7 @@ extends RefCounted
 ## only when the preview is green. `rotate_piece()`, `move_piece()` and `sell_piece()` (D-0903)
 ## act on a piece already in the layout: the same checks, ignoring the piece itself.
 ## A piece that would wall off a station or cut the dock from the exit is red too (D-0907).
+## The employees' walking grid follows every change that sticks (`navigation`, D-0908).
 ## The world adapter draws the footprint with `preview_color()`.
 ## Fixed areas that can never be covered (loading dock, exit: D-0906) arrive as `fixed_blocked`
 ## rectangles in grid cells. Nothing here names autoloads or UI classes (N-919).
@@ -29,6 +30,9 @@ var fixed_blocked: Array[Rect2i] = []
 ## Areas people walk in from (loading dock, exit; D-0907). A piece that would leave one of them
 ## cut off from the others, or wall off a placed piece, is red. Empty: no walking check.
 var entry_areas: Array[Rect2i] = []
+## Walking navigation to keep in step with the layout (D-0908): rebaked after every change that
+## sticks. Null: nothing to rebake.
+var navigation: WalkNavigation = null
 
 
 func _init(size: Vector2i = Vector2i(12, 8)) -> void:
@@ -71,6 +75,8 @@ func place(state: Object, def: PlaceableDefinition, x: int, z: int, turns: int =
 	if not PlaceableShop.buy(state, def, x, z, turns, free):
 		result["ok"] = false
 		result["reason"] = REASON_NO_MONEY
+	else:
+		rebake_navigation(state)
 	return result
 
 
@@ -95,7 +101,16 @@ func move_piece(state: Object, index: int, x: int, z: int) -> Dictionary:
 ## Sells the piece at `index` (partial refund, PlaceableShop.sell). Returns the money given
 ## back, or -1 when the index is not valid.
 func sell_piece(state: Object, index: int) -> int:
-	return PlaceableShop.sell(state, index)
+	var refund: int = PlaceableShop.sell(state, index)
+	if refund >= 0:
+		rebake_navigation(state)
+	return refund
+
+
+## D-0908: rebuilds `navigation` from the current layout (also for a layout loaded or set by hand).
+func rebake_navigation(state: Object) -> void:
+	if navigation != null:
+		navigation.rebake(grid_size, state.layout)
 
 
 ## D-0907: the layout with the piece at (x, z) still lets people walk to every piece.
@@ -125,6 +140,7 @@ func _reposition(state: Object, index: int, x: int, z: int, turns: int) -> Dicti
 		piece["x"] = x
 		piece["z"] = z
 		piece["turns"] = turns
+		rebake_navigation(state)
 	return result
 
 
