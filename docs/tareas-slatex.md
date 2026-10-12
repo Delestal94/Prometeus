@@ -249,7 +249,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.32** (`39e09bc`) Motas y burbujas internas (criterio 7): ruido 3D en espacio del objeto,
   que se mueve con el cuerpo y no con la cámara; densidad y tamaño como en la foto, sin estirarse con
   las proporciones.
-- [ ] **S-311.33** Orden de transparencia y sombras: sin brazos que desaparecen detrás del torso ni
+- [x] **S-311.33** (`427eaad`) Orden de transparencia y sombras: sin brazos que desaparecen detrás del torso ni
   agujeros al girar (prepasada de profundidad o dos pasadas cara trasera / delantera); proyecta sombra
   suave, un poco más clara que la de un opaco, y recibe sombra. Captura girando 360°.
 - [ ] **S-311.34** Color, opacidad y brillo por jugador con `instance uniform`: un solo material para

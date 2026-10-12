@@ -4,8 +4,8 @@ extends SceneTree
 ## --script res://tests/render_gel_material.gd
 ##
 ## Visual proof for block D. It renders the real LOD0 gel body with the shared
-## runtime material from the front and at three quarters. S-311.32 verifies that
-## fine motes and bubble rims remain visible on the body from both views.
+## runtime material through a full turn. S-311.33 verifies stable self-overlap,
+## a soft translucent shadow on the floor and received directional shadows.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
@@ -28,10 +28,8 @@ func _run() -> void:
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	await _save(output_path.path_join("s311_32_internal_bubbles_front.png"))
-	_gel.rotation.y = deg_to_rad(-32.0)
-	await _save(output_path.path_join("s311_32_internal_bubbles_three_quarter.png"))
-	print("PASS: gel internal-inclusion captures at ", output_path)
+	await _save_turntable(output_path.path_join("s311_33_transparency_shadow_turntable.png"))
+	print("PASS: gel transparency and shadow turntable at ", output_path)
 	quit(0)
 
 
@@ -45,15 +43,21 @@ func _build_stage() -> void:
 	environment.environment.ambient_light_energy = 0.2
 	environment.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	root.add_child(environment)
-	for setup: Array in [
-		[Vector3(-34.0, -28.0, 0.0), Color("fff0d6"), 0.7],
+	var light_setups: Array[Array] = [
+		[Vector3(-48.0, 150.0, 0.0), Color("fff0d6"), 0.7],
 		[Vector3(-18.0, 145.0, 0.0), Color("b8d9ff"), 0.25],
 		[Vector3(10.0, 0.0, 0.0), Color("9fddff"), 1.4],
-	]:
+	]
+	for index: int in light_setups.size():
+		var setup: Array = light_setups[index]
 		var light := DirectionalLight3D.new()
 		light.rotation_degrees = setup[0]
 		light.light_color = setup[1]
 		light.light_energy = setup[2]
+		light.shadow_enabled = index == 0
+		if light.shadow_enabled:
+			light.shadow_opacity = 0.72
+			light.directional_shadow_max_distance = 8.0
 		root.add_child(light)
 	var floor := MeshInstance3D.new()
 	var floor_mesh := PlaneMesh.new()
@@ -73,6 +77,7 @@ func _build_stage() -> void:
 		quit(1)
 		return
 	mesh.material_override = GEL_MATERIAL
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var animation: AnimationPlayer = PlayerAppearance.find_animation_player(_gel)
 	if animation != null and animation.has_animation(&"Idle"):
 		animation.play(&"Idle")
@@ -80,8 +85,8 @@ func _build_stage() -> void:
 		animation.pause()
 	_camera = Camera3D.new()
 	root.add_child(_camera)
-	_camera.position = Vector3(0.0, 0.92, -3.15)
-	_camera.look_at(Vector3(0.0, 0.86, 0.0))
+	_camera.position = Vector3(0.0, 1.18, -3.65)
+	_camera.look_at(Vector3(0.0, 0.74, 0.0))
 	_camera.fov = 31.0
 	_camera.make_current()
 
@@ -106,11 +111,22 @@ func _add_backdrop_box(size: Vector3, position: Vector3, color: Color) -> void:
 	root.add_child(instance)
 
 
-func _save(path: String) -> void:
-	for _frame: int in range(8):
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var error: Error = root.get_texture().get_image().save_png(path)
+func _save_turntable(path: String) -> void:
+	var sheet := Image.create_empty(1920, 960, false, Image.FORMAT_RGBA8)
+	for index: int in 8:
+		_gel.rotation.y = deg_to_rad(float(index) * -45.0)
+		var frame: Image = await _capture()
+		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
+		var destination := Vector2i((index % 4) * 480, (index / 4) * 480)
+		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), destination)
+	var error: Error = sheet.save_png(path)
 	if error != OK:
 		push_error("Cannot save %s (got %d)" % [path, error])
 		quit(1)
+
+
+func _capture() -> Image:
+	for _frame: int in range(8):
+		await process_frame
+	await RenderingServer.frame_post_draw
+	return root.get_texture().get_image()
