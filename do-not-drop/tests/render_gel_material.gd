@@ -4,8 +4,8 @@ extends SceneTree
 ## --script res://tests/render_gel_material.gd
 ##
 ## Visual proof for block D. It renders the real LOD0 gel body with the shared
-## runtime material from the front and at three quarters. S-311.31 adds a cool
-## rear key so the silhouette must glow without a second material pass.
+## runtime material from the front and at three quarters. S-311.32 verifies that
+## fine motes and bubble rims remain visible on the body from both views.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
@@ -28,10 +28,10 @@ func _run() -> void:
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	await _save(output_path.path_join("s311_31_back_light_front.png"))
+	await _save(output_path.path_join("s311_32_internal_bubbles_front.png"))
 	_gel.rotation.y = deg_to_rad(-32.0)
-	await _save(output_path.path_join("s311_31_back_light_three_quarter.png"))
-	print("PASS: gel back-light captures at ", output_path)
+	await _save(output_path.path_join("s311_32_internal_bubbles_three_quarter.png"))
+	print("PASS: gel internal-inclusion captures at ", output_path)
 	quit(0)
 
 

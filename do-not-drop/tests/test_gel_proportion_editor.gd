@@ -4,10 +4,10 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27-31 also verify that the preview uses the GL Compatibility gel shader
+## S-311.27-32 also verify that the preview uses the GL Compatibility gel shader
 ## with a transparent centre, a denser Fresnel edge, normal-displaced screen
 ## refraction, a procedural studio-window reflection, thickness absorption and
-## single-pass wrapped back lighting.
+## single-pass wrapped back lighting plus object-space internal inclusions.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
@@ -155,6 +155,9 @@ func _check_gel_material(preview: Control) -> void:
 	var subsurface_wrap: float = material.get_shader_parameter(&"subsurface_wrap")
 	var backlight_strength: float = material.get_shader_parameter(&"backlight_strength")
 	var backlight_power: float = material.get_shader_parameter(&"backlight_power")
+	var inclusion_density: float = material.get_shader_parameter(&"inclusion_density")
+	var inclusion_scale: float = material.get_shader_parameter(&"inclusion_scale")
+	var inclusion_contrast: float = material.get_shader_parameter(&"inclusion_contrast")
 	var studio_strength: float = material.get_shader_parameter(&"studio_reflection_strength")
 	var studio_softness: float = material.get_shader_parameter(&"studio_reflection_softness")
 	var thickness_map: Texture2D = material.get_shader_parameter(&"thickness_map") as Texture2D
@@ -174,6 +177,10 @@ func _check_gel_material(preview: Control) -> void:
 		"the gel wraps direct light around its silhouette")
 	_expect(backlight_strength > 0.0 and backlight_power > 1.0,
 		"the gel enables focused fake subsurface transmission at back-light")
+	_expect(inclusion_density > 0.0 and inclusion_density < 0.25,
+		"the gel keeps its internal inclusions sparse")
+	_expect(inclusion_scale >= 32.0 and inclusion_contrast > 0.0 and inclusion_contrast <= 0.15,
+		"internal motes stay fine and low contrast")
 	_expect(material.next_pass == null,
 		"the fake subsurface glow stays in the shared material's single pass")
 	_expect(studio_strength > 0.0 and studio_softness > 0.0,
@@ -210,6 +217,12 @@ func _check_gel_material(preview: Control) -> void:
 		and shader_code.contains("back_scatter")
 		and shader_code.contains("DIFFUSE_LIGHT"),
 		"the same shader pass adds wrapped diffuse and light-driven back scatter"
+	)
+	_expect(
+		shader_code.contains("object_noise_3d(model_position * inclusion_scale)")
+		and shader_code.contains("bubble_outer - bubble_inner")
+		and not shader_code.contains("SCREEN_UV * inclusion_scale"),
+		"motes and bubble rims use 3D object space instead of camera or screen space"
 	)
 
 
