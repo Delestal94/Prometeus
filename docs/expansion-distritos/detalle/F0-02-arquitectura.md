@@ -38,6 +38,7 @@
 **Hecho cuando:** los dos tests pasan y la batería de CI sigue verde.
 
 ### D-0203 · `DayCycle`: apertura, operación y cierre — A · Opus 5.5 · high · Aviso: sí (`event_bus.gd`) · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `day_cycle.gd` (`DayCycle`, hijo del mundo): fases como hechos del host (evento `day_phase` de `CompanyNet`, parte `day_cycle` del snapshot, `PROTOCOL_VERSION` 32), señales `company_day_*` emitidas al aplicar en cada peer, galpón congelado como minuto propio (`shed_minute()`, no el reloj pausado), cableado en `company_root.gd` (`GameClock` + `DayCycle` en todos los peers; el host abre el día); `test_day_cycle` (solo + dos peers ENet). Falta: el área del galpón para `crew_in_shed` y `trips_out` (D-0319), guardar al `SUMMARY` (D-0206) y la pantalla de cierre.
 **Depende de:** D-0202, D-0219
 **Qué:** `scripts/core/company/day_cycle.gd` (nodo hijo del mundo, no autoload).
 - **Estados** `OPENING` (08:00, 5 s reales: aparece el proveedor) → `OPERATING` → `CLOSING` (20:00 o

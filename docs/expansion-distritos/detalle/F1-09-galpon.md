@@ -74,3 +74,22 @@ colocada es una entrada de `layout`: `{id, x, z, turns}`. Si la celda está libr
 **Test** `test_placeable_shop`: comprar cobra y registra; sin plata no cambia nada; `free` no cobra; vender
 devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devuelve -1 sin cambios.
 **Hecho cuando:** el test pasa.
+
+### D-0905 · Etapas del galpón que amplían la grilla — A · Sonnet 5.5 · xhigh · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `WarehouseStages` (`scripts/gameplay/business/warehouse_stages.gd`) + `CompanyState.warehouse_stage` (en el save) + constantes en `CompanyTuning`; `test_warehouse_stages`. El adaptador con nodos (rehacer paredes y piso desde `wall_rects()` sin recargar el nivel) queda para D-0917/D-0943.
+**Depende de:** D-0901 (`BuildMode.grid_size`), D-0902 (`BuildPlacement.grid_size`), D-0920 (billetera). El tope por progresión es D-0436 (llega como `unlocked_stage`).
+**Qué:** cuatro etapas, grilla en celdas y precio de la mejora **hacia** esa etapa (`CompanyTuning.WAREHOUSE_STAGE_*`):
+
+| Etapa | Id | Grilla | Precio |
+|---|---|---|---|
+| 0 | `small` | 12×8 | 0 (inicial) |
+| 1 | `medium` | 18×12 | 1500 |
+| 2 | `large` | 24×16 | 6000 |
+| 3 | `logistics_center` | 32×20 | 20000 |
+
+- `expand(state, unlocked_stage = -1)`: cobra (`warehouse_expand` en el libro) y sube `state.warehouse_stage`; rechaza con `no_money`, `max_stage` o `locked` sin tocar nada.
+- Todas las etapas crecen desde la esquina (0, 0): las piezas ya colocadas no se mueven ni se pierden.
+- `wall_rects(stage)`: 4 segmentos de pared pegados por fuera del piso. `apply_to(stage, placement, mode)`: cambia `grid_size` de `BuildPlacement` y `BuildMode`.
+**Decisión:** crece desde la esquina y no desde el centro para no migrar el layout guardado; precios ×4 por etapa como supuesto de balance (se ajustan solo en `CompanyTuning`, junto con D-0117).
+**Test** `test_warehouse_stages`: etapas crecientes y con precio creciente, cobro y libro, layout intacto, grilla nueva acepta un lugar antes fuera del piso, tres rechazos, paredes fuera del piso, ida y vuelta por JSON y tope del valor guardado.
+**Hecho cuando:** ampliar cambia grilla y paredes sin recargar el nivel (la parte de datos pasa el test; el adaptador de nodos va con D-0917).

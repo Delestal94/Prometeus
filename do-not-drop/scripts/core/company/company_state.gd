@@ -27,6 +27,8 @@ var employees: Array[Dictionary] = []
 var milestones_done: Array[StringName] = []
 ## Shed layout: one entry per placed piece.
 var layout: Array[Dictionary] = []
+## Shed stage, an index of CompanyTuning.WAREHOUSE_STAGE_IDS (D-0905): sets the floor size.
+var warehouse_stage: int = 0
 ## Stock, in the Inventory.to_dict() form (use stock() / store_stock()).
 var inventory: Dictionary = {}
 var company_name: String = ""
@@ -74,6 +76,7 @@ func to_dict() -> Dictionary:
 		"employees": employees.duplicate(true),
 		"milestones_done": milestones_done.duplicate(),
 		"layout": layout.duplicate(true),
+		"warehouse_stage": warehouse_stage,
 		"inventory": inventory.duplicate(true),
 		"ledger": ledger.duplicate(true),
 	}
@@ -107,6 +110,8 @@ func from_dict(data: Dictionary) -> bool:
 	fleet = _entries(data.get("fleet", []))
 	employees = _entries(data.get("employees", []))
 	layout = _entries(data.get("layout", []))
+	warehouse_stage = clampi(int(_num(data.get("warehouse_stage"), 0)), 0,
+			CompanyTuning.WAREHOUSE_STAGE_IDS.size() - 1)
 	var saved_stock: Variant = data.get("inventory", {})
 	if saved_stock is Dictionary:
 		var stock_in := Inventory.new()
@@ -240,6 +245,7 @@ func _set_defaults() -> void:
 	employees = []
 	milestones_done = []
 	layout = []
+	warehouse_stage = 0
 	inventory = Inventory.new().to_dict()
 	ledger = []
 	company_name = ""

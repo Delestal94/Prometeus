@@ -29,6 +29,10 @@ extends SceneTree
 ##   loads the main menu, which shows that summary once, all without an engine error;
 ## - a client whose session fails with no server_disconnected (NetworkManager.session_failed, a
 ##   handshake that times out) does the same: summary, its own company back, world stopped, menu.
+## - the same with a live GameClock and DayCycle in both worlds (D-0203): the host opens the day, the
+##   client follows it; after the host leaves, and even once the client's session is an offline
+##   one (where CompanyNet.is_host() is true), the client's DayCycle moves nothing: its net.seq and
+##   its phase stay as they were, though the OPENING time is long over.
 ## Expected in the log: CompanySave's warnings for the corrupt slot it replaces and the newer file
 ## it doesn't overwrite, and CompanyRoot's warning that it could not save over the newer one.
 
@@ -39,6 +43,7 @@ const DIR: String = "user://test_company_host_leaves"
 const SLOT: String = "host"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const MAIN_MENU: String = "res://scenes/ui/main_menu.tscn"
+const LIVE_PORT: int = 24646
 const CLOCK_MID_DAY: int = 11 * 60 + 15
 
 var _failures: int = 0
@@ -52,6 +57,20 @@ class NetOnlyRoot extends CompanyRoot:
 
 	func _ready() -> void:
 		_start_company(company_state)
+
+	## No GameClock or DayCycle (D-0203): this test keeps the minute in the company itself, and a
+	## running clock would write its own over it.
+	func _add_day(_state: Node) -> void:
+		pass
+
+
+## The same root with its GameClock and DayCycle (_add_day() kept) and the host's day opened.
+class LiveDayRoot extends CompanyRoot:
+	var company_state: Node
+
+	func _ready() -> void:
+		_start_company(company_state)
+		_open_company_day.call_deferred()
 
 
 ## Engine errors (not warnings) logged while the host leaves.
@@ -91,6 +110,8 @@ func _run() -> void:
 	await _check_host_leaves()
 	CompanyInterruptedDay.take_pending()
 	await _check_session_failed()
+	CompanyInterruptedDay.take_pending()
+	await _check_live_day_host_leaves()
 	CompanyInterruptedDay.take_pending()
 	RpcGuard.reset()
 	_clean()
@@ -471,6 +492,75 @@ func _check_host_leaves() -> void:
 		"...and nobody holds anything in the save")
 	reloaded.free()
 
+	_close_menu()
+	_end(host_side, client_side, [server, client], [host_state, client_state])
+	await process_frame
+
+
+## Host and client with a live day; the host leaves; the client's DayCycle must not take over.
+func _check_live_day_host_leaves() -> void:
+	var host_side := Node.new()
+	host_side.name = "LiveHostSide"
+	root.add_child(host_side)
+	var client_side := Node.new()
+	client_side.name = "LiveClientSide"
+	root.add_child(client_side)
+	set_multiplayer(SceneMultiplayer.new(), host_side.get_path())
+	set_multiplayer(SceneMultiplayer.new(), client_side.get_path())
+	var server := ENetMultiplayerPeer.new()
+	_expect(server.create_server(LIVE_PORT, 2) == OK, "The test hosts a live day on localhost:%d" % LIVE_PORT)
+	host_side.multiplayer.multiplayer_peer = server
+	var host_state: Node = _new_state()
+	host_state.call(&"new_company", "Live SRL")
+	var host_root := LiveDayRoot.new()
+	host_root.name = "CompanyRoot"
+	host_root.company_state = host_state
+	host_root.save_slot = "live"
+	host_root.save_dir = DIR
+	host_side.add_child(host_root)
+	await process_frame
+	await process_frame
+	_expect(host_root.day_cycle.phase() == DayCycle.Phase.OPENING and host_root.day_cycle.current_day() == 1,
+		"The host's world opens its day (got %s)" % host_root.day_cycle.phase_name())
+	var client := ENetMultiplayerPeer.new()
+	_expect(client.create_client("127.0.0.1", LIVE_PORT) == OK, "The client starts joining")
+	client_side.multiplayer.multiplayer_peer = client
+	var client_state: Node = _new_state()
+	client_state.call(&"new_company", "Mine")
+	var client_root := LiveDayRoot.new()
+	client_root.name = "CompanyRoot"
+	client_root.company_state = client_state
+	client_side.add_child(client_root)
+	var connected: bool = await _wait_for(func() -> bool:
+		return host_side.multiplayer.get_peers().size() == 1 \
+			and client_side.multiplayer.get_peers().has(1))
+	_expect(connected, "The client connects to the host")
+	if not connected:
+		_end(host_side, client_side, [server, client], [host_state, client_state])
+		return
+	host_root.net.send_snapshot(client_side.multiplayer.get_unique_id())
+	var cycle: DayCycle = client_root.day_cycle
+	var followed: bool = await _wait_for(func() -> bool:
+		return cycle.phase() == DayCycle.Phase.OPENING and not client_root.net.awaiting_snapshot())
+	_expect(followed, "The client's day cycle follows the host's (got %s)" % cycle.phase_name())
+	# The OPENING time is long over for this client: were it the host, its next poll would move on.
+	cycle.ticks = func() -> int: return Time.get_ticks_msec() + 60_000
+	var seq: int = client_root.net.seq
+
+	server.close()
+	host_side.multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	host_root.queue_free()
+	var in_menu: bool = await _wait_for(func() -> bool:
+		return current_scene != null and current_scene.scene_file_path == MAIN_MENU)
+	_expect(in_menu and client_root.process_mode == Node.PROCESS_MODE_DISABLED,
+		"The client's world stops when the host leaves")
+	# Its session is now an offline one, where CompanyNet.is_host() is true.
+	client_side.multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	for _i: int in range(40):
+		await process_frame
+	_expect(client_root.net.seq == seq and cycle.phase() == DayCycle.Phase.OPENING,
+		"...and its day cycle moves nothing (seq %d of %d, phase %s)"
+		% [client_root.net.seq, seq, cycle.phase_name()])
 	_close_menu()
 	_end(host_side, client_side, [server, client], [host_state, client_state])
 	await process_frame

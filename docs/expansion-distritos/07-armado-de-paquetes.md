@@ -17,7 +17,7 @@
 | ✅ D-0705 | Relleno (papel, burbuja, espuma) llena el hueco libre y da protección | constructor-negocio | high | test: % de hueco libre baja con relleno |
 | ✅ D-0706 | Cerrar con cinta (gesto de pasar el dispensador) | constructor-jugador | medium | test: caja sin cinta no se puede despachar |
 | ✅ D-0707 | Etiqueta de envío impresa con dirección del pedido (reusa `package_shipping_label.gd`) | constructor-negocio | medium | etiqueta muestra calle y número del pedido |
-| D-0708 | Sellos (FRÁGIL, ESTE LADO ARRIBA, FRÍO) | constructor-negocio | medium | sello queda en la caja y la puerta lo valida |
+| ✅ D-0708 | Sellos (FRÁGIL, ESTE LADO ARRIBA, FRÍO) | constructor-negocio | medium | sello queda en la caja y la puerta lo valida |
 | D-0709 | Cálculo de calidad del armado (contenido correcto, hueco, protección, sellos) 0-100 | constructor-negocio | high | test con 6 cajas de calidad conocida |
 | D-0710 | Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
 | D-0711 | Caja armada sigue siendo `DeliveryPackage`: se lleva, se cuida y se entrega como hoy | constructor-trampas | xhigh | tests de paquete actuales verdes |

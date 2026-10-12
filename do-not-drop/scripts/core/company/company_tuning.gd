@@ -29,6 +29,10 @@ const MINUTES_PER_DAY: int = 24 * 60
 const SECONDS_PER_GAME_HOUR: float = 90.0
 ## OPENING state of DayCycle (D-0203): real seconds before the day operates.
 const OPENING_REAL_SECONDS: float = 5.0
+## S4: the frozen shed freezes or thaws at most once in this many real seconds (DayCycle, D-0203), so
+## a player standing on the shed's door line can't send an event per frame. Shorter than a walk
+## through the door; long enough that nobody gains by dancing on the line.
+const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
@@ -56,6 +60,14 @@ const STAMP_COST: int = 0
 const WAREHOUSE_GRID_M: float = 1.0
 ## Selling a placed object gives back this share of its price.
 const PLACEABLE_REFUND_RATIO: float = 0.5
+
+# --- Warehouse stages (D-0905) ---
+## Shed stages, small to large: grid size in cells (X x Z) and what the upgrade INTO each stage
+## costs (the first one is the starting shed, free). Same index in all three arrays.
+const WAREHOUSE_STAGE_IDS: Array[StringName] = [&"small", &"medium", &"large", &"logistics_center"]
+const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
+	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
+const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
 
 # --- Build mode (D-0901) ---
 ## Height of the build camera above the floor, in meters, at zoom 1.
