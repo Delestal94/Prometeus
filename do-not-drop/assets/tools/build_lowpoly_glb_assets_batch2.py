@@ -110,15 +110,8 @@ def sign(kind):
 
 # --- Road furniture ---------------------------------------------------------
 
-def guardrail():
-    clear()
-    for x in (-1.9, 0.0, 1.9):
-        cube("GuardrailPost", (x, 0, 0.4), (0.1, 0.1, 0.8), "metal")
-    cube("GuardrailBeam", (0, 0.07, 0.62), (4.0, 0.06, 0.3), "guardrail", 0.015)
-    cube("GuardrailReflector", (0, 0.105, 0.62), (0.12, 0.01, 0.08), "danger")
-    done(os.path.join(PROPS, "sm_env_prop_guardrail.glb"))
-
-
+# guardrail() lives in build_lowpoly_refined.py (group "guardrail", N-332): this
+# batch must never write sm_env_prop_guardrail.glb again.
 # bridge_railing() moved to build_route_pieces.py (N-325, group "bridge").
 
 

@@ -39,7 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
-from lowpoly_kit import (ROOT, blob, circle_points, clear, cone, cube, cylinder, export,  # noqa: E402
+from lowpoly_kit import (PALETTE, ROOT, blob, circle_points, clear, cone, cube, cylinder, export,  # noqa: E402
                          flat_poly, gable_roof, jitter, mat, move_new, slab, squash_bottom,
                          triangle_count)
 
@@ -746,17 +746,154 @@ def half_disc(cx, cz, radius, sides=10):
     return [(cx + math.cos(math.pi * k / sides) * radius, cz + math.sin(math.pi * k / sides) * radius) for k in range(sides + 1)]
 
 
+# The guardrail (N-332): 4 m along X (-2..+2), origin at the centre of its
+# base, the road side (reflectors, beam face) on Blender +Y = Godot -Z.
+# route_signage.gd lays one every 4 m a quarter turn round, so posts at
+# x +-1 keep a 2 m spacing along a whole run and the splice (bolts) sits on
+# the +X end, where the next section starts. Runs are cut every 0.8 m so
+# bake_vertex_ao.py's 1 m subdivision has nothing left to cut. Rebuild and
+# bake (from the repo root):
+#
+#   blender --background --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py -- guardrail
+#   blender --background --factory-startup --python do-not-drop/assets/tools/bake_vertex_ao.py -- \
+#       do-not-drop/assets/models/environment/props/sm_env_prop_guardrail.glb
+def _srgb(hex_code):
+    out = []
+    for i in (0, 2, 4):
+        c = int(hex_code[i:i + 2], 16) / 255.0
+        out.append(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4)
+    return (out[0], out[1], out[2], 1.0)
+
+
+# Galvanised steel, mid grey: the kit's "guardrail" (linear 0.55) read as
+# pale plastic next to the road. Dotted names keep LowpolyMaterials' key
+# ("guardrail") and leave the shared palette entry -- the bridge railing,
+# the vehicles' bumpers -- as it was.
+PALETTE.update({
+    "guardrail.galvanized": _srgb("9aa29e"),
+    "guardrail.post": _srgb("6c7471"),
+    "guardrail.bolt": _srgb("3b403f"),
+})
+
+GUARDRAIL_RINGS = 5
+# W-beam centre line (y, z), bottom lip to top lip: two rounded crests
+# toward the road, the bolting valley between them, lips curled back.
+W_BEAM = [(0.004, 0.462), (0.020, 0.452), (0.046, 0.470), (0.070, 0.500), (0.080, 0.522),
+          (0.076, 0.548), (0.048, 0.572), (0.022, 0.580), (0.022, 0.620), (0.048, 0.628),
+          (0.076, 0.652), (0.080, 0.678), (0.070, 0.700), (0.046, 0.730), (0.020, 0.748), (0.004, 0.738)]
+W_THICK = 0.014
+VALLEY_FRONT = 0.022 + W_THICK / 2.0
+
+
+def _shell(line, thickness):
+    """A centre line (y, z) as a closed outline `thickness` thick."""
+    front, back = [], []
+    count = len(line)
+    for i, (y, z) in enumerate(line):
+        a = line[max(i - 1, 0)]
+        b = line[min(i + 1, count - 1)]
+        dy, dz = b[0] - a[0], b[1] - a[1]
+        length = math.hypot(dy, dz)
+        ny, nz = dz / length, -dy / length  # right of the walk up = toward +Y
+        front.append((y + ny * thickness / 2.0, z + nz * thickness / 2.0))
+        back.append((y - ny * thickness / 2.0, z - nz * thickness / 2.0))
+    return front + list(reversed(back))
+
+
+def _sweep(name, outline, axis, start, end, material, rings=1, caps=(True, True)):
+    """A 2D outline swept along `axis` ("x": outline is (y, z); "y": (x, z);
+    "z": (x, y)) from start to end, cut into `rings` runs."""
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+
+    def place(a, b, t):
+        if axis == "x":
+            return (t, a, b)
+        if axis == "y":
+            return (a, t, b)
+        return (a, b, t)
+
+    loops = []
+    for i in range(rings + 1):
+        t = start + (end - start) * i / rings
+        loops.append([bm.verts.new(place(a, b, t)) for a, b in outline])
+    n = len(outline)
+    for i in range(rings):
+        for j in range(n):
+            k = (j + 1) % n
+            bm.faces.new([loops[i][j], loops[i][k], loops[i + 1][k], loops[i + 1][j]])
+    if caps[0]:
+        bm.faces.new(list(reversed(loops[0])))
+    if caps[1]:
+        bm.faces.new(loops[-1])
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.data.materials.append(mat(material))
+    return obj
+
+
+def _chamfered(cx, cy, half_x, half_y, chamfer):
+    return [(cx - half_x + chamfer, cy - half_y), (cx + half_x - chamfer, cy - half_y),
+            (cx + half_x, cy - half_y + chamfer), (cx + half_x, cy + half_y - chamfer),
+            (cx + half_x - chamfer, cy + half_y), (cx - half_x + chamfer, cy + half_y),
+            (cx - half_x, cy + half_y - chamfer), (cx - half_x, cy - half_y + chamfer)]
+
+
+def _frustum(name, bottom, top, z0, z1, material):
+    """Two outlines of the same count (x, y) at z0 and z1: a cap with a chamfered top."""
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+    low = [bm.verts.new((x, y, z0)) for x, y in bottom]
+    high = [bm.verts.new((x, y, z1)) for x, y in top]
+    n = len(low)
+    for j in range(n):
+        k = (j + 1) % n
+        bm.faces.new([low[j], low[k], high[k], high[j]])
+    bm.faces.new(list(reversed(low)))
+    bm.faces.new(high)
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.data.materials.append(mat(material))
+    return obj
+
+
+def _bolt(x, z, y=VALLEY_FRONT):
+    # Hex head on the beam face; its back is inside the steel, so no back cap.
+    head = [(x + math.cos(i * math.tau / 6) * 0.014, z + math.sin(i * math.tau / 6) * 0.014) for i in range(6)]
+    _sweep("SpliceBolt", head, "y", y - 0.004, y + 0.01, "guardrail.bolt", caps=(False, True))
+
+
 def guardrail():
     clear()
-    # W-beam: the double-wave steel profile, swept 4 m along X.
-    outer = [(0.0, 0.47), (0.08, 0.5), (0.08, 0.56), (0.035, 0.6), (0.08, 0.64), (0.08, 0.7), (0.0, 0.73)]
-    inner = [(y - 0.014, z) for y, z in outer]
-    flat_poly("WBeam", outer + list(reversed(inner)), -2.0, 4.0, "guardrail", plane="yz")
-    for x in (-1.9, 0.0, 1.9):
-        cube("GuardrailPost", (x, -0.12, 0.4), (0.1, 0.14, 0.8), "metal")
-        cube("PostFlange", (x, -0.12, 0.4), (0.16, 0.03, 0.8), "metal")
-        cube("Spacer", (x, -0.04, 0.6), (0.1, 0.12, 0.2), "metal")
-        cube("Reflector", (x, 0.085, 0.6), (0.1, 0.01, 0.07), "reflector")
+    _sweep("WBeam", _shell(W_BEAM, W_THICK), "x", -2.0, 2.0, "guardrail.galvanized", rings=GUARDRAIL_RINGS)
+    post_y, post_top = -0.13, 0.78
+    hw, hd, ft, wt = 0.05, 0.075, 0.018, 0.012
+    # I-section post: flanges facing the road and the field, web across.
+    section = [(-hw, -hd), (hw, -hd), (hw, -hd + ft), (wt, -hd + ft), (wt, hd - ft), (hw, hd - ft),
+               (hw, hd), (-hw, hd), (-hw, hd - ft), (-wt, hd - ft), (-wt, -hd + ft), (-hw, -hd + ft)]
+    for x in (-1.0, 1.0):
+        _sweep("GuardrailPost", [(x + a, post_y + b) for a, b in section], "z", 0.0, post_top,
+               "guardrail.post", caps=(False, True))
+        # Cap plate, chamfered round its top edge.
+        _frustum("PostCap", _chamfered(x, post_y, 0.062, 0.088, 0.018), _chamfered(x, post_y, 0.05, 0.076, 0.014),
+                 post_top, post_top + 0.026, "guardrail.post")
+        # Blockout from the post's front flange to the back of the beam's valley.
+        _sweep("Spacer", _chamfered(x, 0.6, 0.05, 0.1, 0.016), "y", post_y + hd, VALLEY_FRONT - W_THICK + 0.002,
+               "guardrail.post")
+        # Reflector on the post bolt, standing proud of both crests.
+        cube("ReflectorBracket", (x, 0.057, 0.6), (0.03, 0.07, 0.03), "guardrail.bolt")
+        cube("Reflector", (x, 0.098, 0.6), (0.1, 0.014, 0.07), "reflector")
+    # Splice on the +X end: the next section's beam laps over this one here.
+    for x in (1.73, 1.81, 1.89, 1.97):
+        _bolt(x, 0.6)
     done(os.path.join(PROPS, "sm_env_prop_guardrail.glb"))
 
 
@@ -933,6 +1070,8 @@ GROUPS = {
     # build_street_props.py (N-140, 2026-09-27); their functions here stay as reference.
     "props": lambda: (guardrail(), [roadside(k) for k in ("hay_bale", "pallet", "fire_hydrant", "bus_stop",
                                                         "road_barrier", "bench")]),
+    # Only the guardrail (N-332), without rewriting the other props.
+    "guardrail": guardrail,
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
