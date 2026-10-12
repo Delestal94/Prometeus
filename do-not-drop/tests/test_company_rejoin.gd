@@ -5,9 +5,9 @@ extends SceneTree
 ## scripts/core/company/company_net.gd and floor_bundles.gd; contract
 ## docs/expansion-distritos/diseno/red-autoridad.md, row 7 and "Un peer se va"):
 ## - FloorBundles alone: floor:<n> locations, positions_ok() refuses a "floor" that isn't a
-##   Dictionary, ids that aren't floor:<n> text or are too long, values that aren't finite
-##   Vector3s and more than MAX_BUNDLES; next_free() skips a bundle that holds units without a
-##   position (a saved floor:0) and one with a position;
+##   Dictionary, ids that aren't floor:<n> text (n an integer >= 0) or are too long, values that
+##   aren't finite Vector3s and more than MAX_BUNDLES; next_free() skips a bundle that holds units
+##   without a position (a saved floor:0) and one with a position; prune() forgets emptied ones;
 ## - a client's apply_snapshot() takes the host's "floor" part, refuses a malformed one without
 ##   changing anything (no company_state_restored) and reads a snapshot without it as no bundles;
 ##   a units_moved into floor:<n> without a finite Vector3 `pos` doesn't apply;
@@ -15,6 +15,11 @@ extends SceneTree
 ##   holds saved units without a position and is not reused), an empty hand is refused with
 ##   not_enough, and a leaver holding two products leaves one bundle per product at its last
 ##   known position, or at the origin when there is none;
+## - solo, with player nodes (no player_origin): a drop out of reach and a leaver land at the
+##   player's body, not its reach origin; with its player gone a drop is measured from its last
+##   known position, and refused (out_of_reach) with none; a leave while an event is applied waits
+##   for the next frame (where it stood kept until then); units consumed from a bundle leave no
+##   position behind once the next event applies;
 ## - two ENet peers in one process (a host and a client, each a CompanyNet): the client takes 2
 ##   hens into its hands, both peers mirror it; its player goes and it disconnects: on the host
 ##   its hands are empty and floor:1 holds the 2 hens where it last stood, floor:0 untouched, the
@@ -26,6 +31,8 @@ extends SceneTree
 ##   refused, and a NaN or out-of-world pos is dropped in silence, all changing nothing; storing
 ##   into a floor bundle is refused (no_station); with its request budget spent a drop still goes
 ##   through (critical reserve) while a take is dropped;
+## - back under the same peer id (NetworkManager.peer_returned(id, id), Steam), with no leave
+##   before: what it held goes onto the floor where its player is; from another id, nothing;
 ## - a peer that leaves the roster (NetworkManager.peer_removed) with its player still there
 ##   drops at the player's position, not its last request's; its later disconnect adds nothing;
 ##   a third client that joins sees every bundle where the host has it. No engine error.
@@ -69,6 +76,12 @@ class ErrorCatcher extends Logger:
 		return out
 
 
+## A player for CompanyNet's own lookup (no player_origin): its reach origin is at its chest.
+class FakePlayer extends Node3D:
+	func reach_origin() -> Vector3:
+		return global_position + Vector3(0.0, 1.5, 0.0)
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -78,6 +91,7 @@ func _run() -> void:
 	_check_floor_bundles()
 	_check_snapshot_floor()
 	_check_solo()
+	await _check_solo_feet()
 
 	var host_side := Node.new()
 	host_side.name = "HostSide"
@@ -103,6 +117,7 @@ func _run() -> void:
 		if second > 1:
 			await _check_drops(second)
 			await _check_critical_drop(second)
+			await _check_same_id_return(second)
 			await _check_roster_leave(host_side, client_side, second)
 
 	var errors: Array[String] = _catcher.take()
@@ -354,13 +369,13 @@ func _check_roster_leave(host_side: Node, client_side: Node, peer: int) -> void:
 	if network == null:
 		return
 	network.emit_signal(&"peer_removed", peer)
-	var three: StringName = FloorBundles.location(3)
+	var four: StringName = FloorBundles.location(4)
 	_expect(_host_net.inventory.count(&"hen", hands) == 0
-		and _host_net.inventory.count(&"hen", three) == 2
-		and _host_net.floor_bundles.position_of(three) == Vector3(4.0, 0.0, 4.0)
+		and _host_net.inventory.count(&"hen", four) == 2
+		and _host_net.floor_bundles.position_of(four) == Vector3(4.0, 0.0, 4.0)
 		and _host_net.seq == seq + 1,
-		"Off the roster with its player still there, its hens go to floor:3 at the player"
-		+ " (at %s), not its last take" % [_host_net.floor_bundles.position_of(three)])
+		"Off the roster with its player still there, its hens go to floor:4 at the player"
+		+ " (at %s), not its last take" % [_host_net.floor_bundles.position_of(four)])
 	_client_peer.close()
 	var gone: bool = await _wait_for(func() -> bool:
 		return not host_side.multiplayer.get_peers().has(peer))
@@ -374,10 +389,11 @@ func _check_roster_leave(host_side: Node, client_side: Node, peer: int) -> void:
 	var expected: Dictionary = {
 		FloorBundles.location(1): Vector3(2.0, 0.0, 1.0),
 		FloorBundles.location(2): Vector3(1.0, 0.0, 1.0),
-		three: Vector3(4.0, 0.0, 4.0),
+		FloorBundles.location(3): Vector3(3.0, 0.0, 3.0),
+		four: Vector3(4.0, 0.0, 4.0),
 	}
 	_expect(third > 1 and _client_net.floor_bundles.to_dict() == expected,
-		"A third client sees the 3 bundles where the host has them (got %s)"
+		"A third client sees the 4 bundles where the host has them (got %s)"
 		% [_client_net.floor_bundles.to_dict()])
 
 
@@ -396,6 +412,9 @@ func _check_floor_bundles() -> void:
 		[{&"shelf:a_0": Vector3.ZERO}, "a shelf id"],
 		[{7: Vector3.ZERO}, "an int id"],
 		[{"floor:" + "9".repeat(40): Vector3.ZERO}, "a 46-character id"],
+		[{&"floor:abc": Vector3.ZERO}, "floor:abc"],
+		[{&"floor:-1": Vector3.ZERO}, "floor:-1"],
+		[{&"floor:": Vector3.ZERO}, "floor: without a number"],
 		[{&"floor:1": Vector2.ZERO}, "a Vector2"],
 		[{&"floor:1": [1.0, 0.0, 2.0]}, "an Array position"],
 		[{&"floor:1": Vector3(INF, 0.0, 0.0)}, "an infinite position"],
@@ -418,6 +437,11 @@ func _check_floor_bundles() -> void:
 	_expect(bundles.apply_move(stock, &"hen", 2, &"floor:1", &"dock", null)
 		and bundles.position_of(&"floor:1") == null and bundles.next_free(stock) == &"floor:1",
 		"Emptied, floor:1 is forgotten and free again")
+	stock.receive(&"hen", 1, &"floor:1")
+	bundles.from_dict({&"floor:1": Vector3.ONE, &"floor:5": Vector3.ONE})
+	bundles.prune(stock)
+	_expect(bundles.to_dict() == {&"floor:1": Vector3.ONE},
+		"prune() forgets a bundle that holds nothing (got %s)" % [bundles.to_dict()])
 
 
 ## A client CompanyNet out of the tree: the snapshot's "floor" part.
@@ -513,6 +537,108 @@ func _check_solo() -> void:
 	_expect(solo.inventory.total_units() == total + 4,
 		"Leavers' hands only move: the total is what was there (%d)" % solo.inventory.total_units())
 	solo.free()
+
+
+## Solo with player nodes found by CompanyNet itself: body, not reach origin; no player; a
+## leave mid-event; units consumed from the floor.
+func _check_solo_feet() -> void:
+	var solo := CompanyNet.new()
+	solo.name = "SoloFeet"
+	root.add_child(solo)
+	solo.stations = func(id: StringName) -> Dictionary: return _stations().get(id, {})
+	solo.inventory.receive(&"hen", 6, &"pallet:p1")
+	var me: FakePlayer = _add_player(1, Vector3(1.0, 0.0, 0.0))
+	var leaver: FakePlayer = _add_player(7, Vector3(6.0, 0.0, 6.0))
+	solo.request(&"units_take", {"station": &"pallet_hen", "product": &"hen", "qty": 2})
+	solo.drop(&"hen", 1, Vector3(20.0, 0.0, 0.0))
+	_expect(solo.floor_bundles.position_of(&"floor:0") == Vector3(1.0, 0.0, 0.0),
+		"A drop out of reach lands at the player's body, not its reach origin (at %s)"
+		% [solo.floor_bundles.position_of(&"floor:0")])
+	solo.inventory.receive(&"puppy", 1, &"hands:7")
+	solo._on_peer_disconnected(7)
+	_expect(solo.floor_bundles.position_of(&"floor:1") == Vector3(6.0, 0.0, 6.0),
+		"A leaver's units land at its body (at %s)" % [solo.floor_bundles.position_of(&"floor:1")])
+	me.free()
+	leaver.free()
+	solo.drop(&"hen", 1, Vector3(1.5, 0.0, 0.0))
+	_expect(solo.floor_bundles.position_of(&"floor:2") == Vector3(1.5, 0.0, 0.0),
+		"With its player gone a drop is measured from its last known position (at %s)"
+		% [solo.floor_bundles.position_of(&"floor:2")])
+	var refusals: Array = []
+	solo.request_rejected.connect(func(rid: int, reason: StringName) -> void:
+		refusals.append([rid, reason]))
+	solo._last_origin.erase(1)
+	solo.inventory.receive(&"hen", 1, &"hands:1")
+	var seq: int = solo.seq
+	var rid: int = solo.drop(&"hen", 1, Vector3.ZERO)
+	_expect(refusals == [[rid, CompanyNet.REASON_OUT_OF_REACH]] and solo.seq == seq,
+		"With no player and no known position a drop is refused with out_of_reach (%s)"
+		% [refusals])
+
+	solo.inventory.receive(&"hen", 1, &"hands:9")
+	solo._last_origin[9] = Vector3(7.0, 0.0, 7.0)
+	solo._applying = true
+	solo._on_peer_disconnected(9)
+	var waited: bool = solo.inventory.count(&"hen", &"hands:9") == 1 and solo.seq == seq
+	waited = waited and solo.last_known_position(9) == Vector3(7.0, 0.0, 7.0)
+	solo._applying = false
+	_expect(waited, "A leave while an event is applied waits, keeping where it stood")
+	var dropped: bool = await _wait_for(func() -> bool:
+		return solo.inventory.count(&"hen", &"hands:9") == 0)
+	_expect(dropped and solo.floor_bundles.position_of(&"floor:3") == Vector3(7.0, 0.0, 7.0)
+		and solo.last_known_position(9) == null,
+		"...and lets go on the next frame (floor:3 at %s)"
+		% [solo.floor_bundles.position_of(&"floor:3")])
+
+	solo.inventory.consume(&"hen", 1, &"floor:0")
+	solo._last_origin[1] = Vector3(2.0, 0.0, 0.0)
+	solo.drop(&"hen", 1, Vector3(2.0, 0.0, 0.0))
+	_expect(solo.floor_bundles.position_of(&"floor:0") == null
+		and solo.floor_bundles.position_of(&"floor:4") == Vector3(2.0, 0.0, 0.0)
+		and solo.floor_bundles.next_free(solo.inventory) == &"floor:0",
+		"Units consumed from floor:0 leave no position once the next event applies (%s)"
+		% [solo.floor_bundles.to_dict()])
+	solo.free()
+
+
+func _add_player(peer: int, at: Vector3) -> FakePlayer:
+	var player := FakePlayer.new()
+	player.name = "Player%d" % peer
+	root.add_child(player)
+	player.position = at
+	player.set_multiplayer_authority(peer)
+	player.add_to_group(Interactable.player_group)
+	return player
+
+
+## Steam may hand a returning peer its old id: NetworkManager.peer_returned(id, id), with no
+## peer_removed nor disconnect before it. What it held still goes onto the floor.
+func _check_same_id_return(peer: int) -> void:
+	var hands: StringName = CompanyNet.hands_location(peer)
+	_client_net.request(&"units_take", {"station": &"pallet_hen", "product": &"hen", "qty": 1})
+	var taken: bool = await _wait_for(func() -> bool:
+		return _client_net.inventory.count(&"hen", hands) == 1)
+	_positions[peer] = Vector3(3.0, 0.0, 3.0)
+	var network: Node = root.get_node_or_null(^"/root/NetworkManager")
+	_expect(taken and network != null and network.has_signal(&"peer_returned"),
+		"The client holds a hen and NetworkManager is there to say it came back")
+	if network == null:
+		return
+	var seq: int = _host_net.seq
+	network.emit_signal(&"peer_returned", peer, peer + 1)
+	_expect(_host_net.seq == seq and _host_net.inventory.count(&"hen", hands) == 1,
+		"Back from another id, nothing is let go here (the ghost's peer_removed does it)")
+	network.emit_signal(&"peer_returned", peer, peer)
+	var three: StringName = FloorBundles.location(3)
+	_expect(_host_net.inventory.count(&"hen", hands) == 0 and _host_net.seq == seq + 1
+		and _host_net.inventory.count(&"hen", three) == 1
+		and _host_net.floor_bundles.position_of(three) == Vector3(3.0, 0.0, 3.0),
+		"Back under the same id, its hen goes to floor:3 where its player is (at %s)"
+		% [_host_net.floor_bundles.position_of(three)])
+	var arrived: bool = await _wait_for(func() -> bool:
+		return _client_net.inventory.count(&"hen", three) == 1)
+	_expect(arrived and _same(), "...on both peers")
+	_positions[peer] = Vector3(1.0, 0.0, 1.0)
 
 
 func _same() -> bool:

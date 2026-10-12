@@ -13,7 +13,7 @@
 | D-2003 | ✅ Sincronización por eventos en vez de por tick para stock y pedidos | constructor-red | xhigh | test de red |
 | D-2004 | ✅ Join tardío al galpón: el que entra recibe el estado completo | constructor-red | xhigh | test de join tardío a mitad de día |
 | D-2005 | ✅ Desconexión del host a mitad de día: guarda y vuelve al menú con resultados (N-222) | constructor-red | high | test |
-| D-2006 | Cliente desconectado vuelve y recupera su lugar | constructor-red | high | test |
+| D-2006 | ✅ Cliente desconectado vuelve y recupera su lugar | constructor-red | high | test |
 | D-2007 | ✅ `RpcGuard` en todos los RPC nuevos | constructor-red | medium | test N-238 extendido |
 | D-2008 | ✅ `PROTOCOL_VERSION` nuevo para la expansión | constructor-red | low | número subido según §6 |
 | D-2009 | Steam: lobby con nombre de empresa y día | constructor-red | medium | test en build |

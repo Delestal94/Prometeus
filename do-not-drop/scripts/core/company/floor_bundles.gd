@@ -32,7 +32,7 @@ static func is_floor(where: StringName) -> bool:
 
 
 ## Bundle positions that came over the network (rule 5): a Dictionary of at most MAX_BUNDLES
-## floor:<n> ids, as text up to MAX_ID_LENGTH, each to a finite Vector3.
+## floor:<n> ids (text up to MAX_ID_LENGTH, n an integer >= 0), each to a finite Vector3.
 static func positions_ok(value: Variant) -> bool:
 	if not value is Dictionary or (value as Dictionary).size() > MAX_BUNDLES:
 		return false
@@ -41,6 +41,9 @@ static func positions_ok(value: Variant) -> bool:
 		if typeof(id) != TYPE_STRING and typeof(id) != TYPE_STRING_NAME:
 			return false
 		if String(id).length() > MAX_ID_LENGTH or not String(id).begins_with(PREFIX):
+			return false
+		var n: String = String(id).trim_prefix(PREFIX)
+		if not n.is_valid_int() or n.to_int() < 0:
 			return false
 		var pos: Variant = bundles[id]
 		if not (pos is Vector3 and RpcGuard.finite_vec3(pos)):
@@ -81,6 +84,14 @@ func apply_move(stock: Inventory, product: StringName, qty: int, from: StringNam
 	if is_floor(from) and stock.contents_at(from).is_empty():
 		_at.erase(from)
 	return true
+
+
+## Forgets every bundle that holds nothing in `stock` any more, however it was emptied (a move
+## out, or units consumed from the floor): no ghost bundle is left to draw or to take.
+func prune(stock: Inventory) -> void:
+	for where: StringName in _at.keys():
+		if stock.contents_at(where).is_empty():
+			_at.erase(where)
 
 
 ## The lowest floor:<n> that holds nothing in `stock` and has no position: where a new bundle

@@ -112,7 +112,7 @@ const FLOOR_PREFIX: String = FloorBundles.PREFIX
 ## its feet instead. Never a refusal: letting go always empties the hand (row 7).
 const DROP_REACH: float = 2.0
 ## Where the product catalog lives: an id in a request must name one of its files.
-const PRODUCTS_DIR: String = "res://data/products/"
+const PRODUCTS_DIR: String = CompanyAsk.PRODUCTS_DIR
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 const REASON_NO_STATION: StringName = &"no_station"
@@ -189,23 +189,19 @@ var _rx_total: int = 0
 var _rx_size: int = 0
 var _rx_chunks: Dictionary = {}
 
-## Product ids of the catalog, read once from PRODUCTS_DIR ({StringName: true}).
-static var _known_products: Dictionary = {}
-static var _catalog_read: bool = false
-
-
 func _ready() -> void:
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_disconnected):
 		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and network.has_signal(&"peer_level_ready"):
-		if not network.is_connected(&"peer_level_ready", _on_peer_level_ready):
-			network.connect(&"peer_level_ready", _on_peer_level_ready)
 	# A leaver lets go (D-2006): peer_removed comes with its player still there, and before a
-	# dropped ghost's peer_disconnected (N-221).
-	if network != null and network.has_signal(&"peer_removed"):
-		if not network.is_connected(&"peer_removed", _on_peer_removed):
-			network.connect(&"peer_removed", _on_peer_removed)
+	# dropped ghost's peer_disconnected (N-221); peer_returned for one back under the same id.
+	var hooks: Dictionary = {
+		&"peer_level_ready": _on_peer_level_ready, &"peer_removed": _on_peer_removed,
+		&"peer_returned": _on_peer_returned,
+	}
+	for hook: StringName in hooks:
+		if network != null and network.has_signal(hook) and not network.is_connected(hook, hooks[hook]):
+			network.connect(hook, hooks[hook])
 	# Peers already up when this world came up won't fire peer_level_ready again. Deferred: the
 	# owner hands over the stock and the company right after adding this node.
 	_snapshot_ready_peers.call_deferred()
@@ -287,15 +283,9 @@ static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> 
 
 
 ## A product id that came over the network names a product of the catalog: exactly the
-## name of one of its files (case included), never a path.
+## name of one of its files (case included), never a path (CompanyAsk.product_exists()).
 static func product_exists(product: StringName) -> bool:
-	if not _catalog_read:
-		_catalog_read = true
-		# ResourceLoader lists exported files by their original names (no .remap).
-		for file: String in ResourceLoader.list_directory(PRODUCTS_DIR):
-			if file.ends_with(".tres") or file.ends_with(".res"):
-				_known_products[StringName(file.get_basename())] = true
-	return _known_products.has(product)
+	return CompanyAsk.product_exists(product)
 
 
 ## Host: where `peer` stood at its last units request, null if it never made one or it left
@@ -613,7 +603,7 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 ## Reserved units may be taken too: a reservation is per product and stays where it is (who
 ## may put a reserved unit in which box is checked at box_place, D-0807 / D-0703).
 func _take_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = _units_ask(data)
+	var ask: Dictionary = CompanyAsk.at_station(data)
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
 	if problem != &"":
@@ -637,7 +627,7 @@ func _take_units(peer: int, data: Dictionary) -> StringName:
 ## shelf slot labeled for that product, with room, D-0608). A floor bundle is no such station
 ## (no_station): letting go on the floor is units_drop, a bundle of its own.
 func _store_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = _units_ask(data)
+	var ask: Dictionary = CompanyAsk.at_station(data)
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
 	if problem != &"":
@@ -661,24 +651,24 @@ func _store_units(peer: int, data: Dictionary) -> StringName:
 
 
 ## Host, section 2 row 7 (D-2006): units from the sender's hands into a new floor bundle at
-## `pos`, or at its feet when `pos` is over DROP_REACH from where the host sees it (never refused
-## for distance). Refused for bad data, units not in the hand (not_enough, also for another
-## product) or no player to measure from (out_of_reach, as at a station).
+## `pos`, or at its feet (_feet_of()) when `pos` is over DROP_REACH plus the reach slack from them
+## (never refused for distance). Refused for bad data, units not in the hand (not_enough, also
+## for another product) or no idea where the player is (out_of_reach, as at a station).
 func _drop_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = _drop_ask(data)
+	var ask: Dictionary = CompanyAsk.drop(data)
 	if ask.is_empty():
 		return REASON_BAD_DATA
-	var origin: Variant = _origin_of(peer)
-	if not (origin is Vector3 and RpcGuard.finite_vec3(origin)):
+	var feet: Variant = _feet_of(peer)
+	if feet == null:
 		return REASON_OUT_OF_REACH
-	_last_origin[peer] = origin
+	_last_origin[peer] = feet
 	var product: StringName = ask["product"]
 	var qty: int = ask["qty"]
 	if inventory.count(product, hands_location(peer)) < qty:
 		return REASON_NOT_ENOUGH
 	var pos: Vector3 = ask["pos"]
-	if pos.distance_to(origin) > DROP_REACH:
-		pos = origin
+	if pos.distance_to(feet) > DROP_REACH + NetStats.reach_slack(multiplayer.multiplayer_peer, peer):
+		pos = feet
 	return &"" if _drop_from_hands(peer, product, qty, pos) else REASON_BAD_DATA
 
 
@@ -694,17 +684,28 @@ func _drop_from_hands(peer: int, product: StringName, qty: int, pos: Vector3) ->
 
 ## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second
 ## finds empty hands). What it held goes onto the floor, one units_moved per product into a new
-## bundle where its player stands (its node), else last_known_position(), else the origin.
+## bundle at its feet (_feet_of()), else the origin. Mid-event it waits for the next frame.
 func _let_go(peer: int) -> void:
+	if _applying:
+		_let_go.call_deferred(peer)
+		return
 	var held: Dictionary = {}
-	if is_host() and peer != multiplayer.get_unique_id() and inventory != null and not _applying:
+	if is_host() and peer != multiplayer.get_unique_id() and inventory != null:
 		held = inventory.contents_at(hands_location(peer))
-	var pos: Variant = _origin_of(peer) if not held.is_empty() else null
-	if not (pos is Vector3 and RpcGuard.finite_vec3(pos)):
-		pos = _last_origin.get(peer, Vector3.ZERO)
+	var pos: Variant = _feet_of(peer) if not held.is_empty() else null
 	for product: StringName in held:
-		_drop_from_hands(peer, product, int(held[product]), pos)
+		if not _drop_from_hands(peer, product, int(held[product]), pos if pos != null else Vector3.ZERO):
+			push_error("CompanyNet: what peer %d held (%s) could not be dropped" % [peer, product])
 	_last_origin.erase(peer)
+
+
+## Host: where `peer`'s player stands, its body (not its reach origin) or player_origin's value,
+## if known and finite; else where it stood at its last units request; else null.
+func _feet_of(peer: int) -> Variant:
+	var body: Variant = _origin_of(peer, false)
+	if body is Vector3 and RpcGuard.finite_vec3(body):
+		return body
+	return _last_origin.get(peer)
 
 
 ## Host: the one way an event happens. Numbers it, applies it here first, sends it to every
@@ -766,6 +767,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
 			else:
 				applied = day_cycle.apply_phase(data)
+	if applied:
+		floor_bundles.prune(inventory)
 	_applying = false
 	return applied
 
@@ -855,42 +858,6 @@ func _connected_client() -> bool:
 	)
 
 
-## The station, product and quantity of a units request, checked (rule 5: plain, bounded, a
-## product of the catalog), or {} when any is missing, of the wrong type or out of range.
-static func _units_ask(data: Dictionary) -> Dictionary:
-	var station: Variant = data.get("station")
-	var ask: Dictionary = _units_of(data)
-	if ask.is_empty() or not _is_id(station) or String(station).is_empty():
-		return {}
-	ask["station"] = StringName(station)
-	return ask
-
-
-## The product, quantity and position of a units_drop, checked like _units_ask() plus a
-## finite Vector3 `pos`, or {} when any doesn't fit.
-static func _drop_ask(data: Dictionary) -> Dictionary:
-	var pos: Variant = data.get("pos")
-	var ask: Dictionary = _units_of(data)
-	if ask.is_empty() or not (pos is Vector3 and RpcGuard.finite_vec3(pos)):
-		return {}
-	ask["pos"] = pos
-	return ask
-
-
-## {product, qty} of a units request: a product of the catalog and an int in
-## 1..PALLET_MAX_UNITS. {} otherwise.
-static func _units_of(data: Dictionary) -> Dictionary:
-	var product: Variant = data.get("product")
-	var qty: Variant = data.get("qty")
-	if not (_is_id(product) and typeof(qty) == TYPE_INT):
-		return {}
-	if int(qty) < 1 or int(qty) > CompanyTuning.PALLET_MAX_UNITS:
-		return {}
-	if not product_exists(StringName(product)):
-		return {}
-	return {"product": StringName(product), "qty": int(qty)}
-
-
 ## The station a checked request names, as the owner describes it (`stations`), or {} when it
 ## is unknown or the description is unusable. A floor bundle with a position here is its own
 ## station (row 5): its id is its location and its spot is where it lies.
@@ -930,12 +897,14 @@ func _station_problem(peer: int, ask: Dictionary, station: Dictionary) -> String
 	return &""
 
 
-func _origin_of(peer: int) -> Variant:
+## Where `peer`'s player is: its reach_origin() when `reach`, else its body's position;
+## player_origin's value when set. Null when that peer has no player.
+func _origin_of(peer: int, reach: bool = true) -> Variant:
 	if player_origin.is_valid():
 		return player_origin.call(peer)
 	for player: Node in get_tree().get_nodes_in_group(Interactable.player_group):
 		if player.get_multiplayer_authority() == peer and player is Node3D:
-			if player.has_method(&"reach_origin"):
+			if reach and player.has_method(&"reach_origin"):
 				return player.call(&"reach_origin")
 			return (player as Node3D).global_position
 	return null
@@ -959,6 +928,13 @@ func _on_peer_removed(peer: int) -> void:
 	_let_go(peer)
 
 
+## Host: `id` is back (NetworkManager.peer_returned). Back under the same id (Steam may hand it out
+## again) it never left the roster, so what it held is let go here.
+func _on_peer_returned(id: int, previous_id: int) -> void:
+	if id == previous_id:
+		_let_go(id)
+
+
 ## Host: `peer`'s world is up and it gets events from now on (is_peer_ready()); the snapshot
 ## brings it to the current seq first.
 func _on_peer_level_ready(peer: int) -> void:
@@ -976,7 +952,7 @@ func _snapshot_ready_peers() -> void:
 
 
 static func _is_id(value: Variant) -> bool:
-	return typeof(value) == TYPE_STRING or typeof(value) == TYPE_STRING_NAME
+	return CompanyAsk.is_id(value)
 
 
 static func _snapshot_name_ok(value: Variant) -> bool:

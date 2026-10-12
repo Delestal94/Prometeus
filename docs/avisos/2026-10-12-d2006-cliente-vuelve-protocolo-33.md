@@ -13,11 +13,16 @@
   (`any_peer`, `reliable`, canal 0, valida remitente y presupuesto). Lo nuevo y público: `UNITS_DROP`,
   `FLOOR_PREFIX`, `DROP_REACH`, `floor_bundles` y `drop(product, qty, pos)`; `SNAPSHOT_KEYS` suma `"floor"`
   (una parte de `add_snapshot_part()` ya no puede usar esa clave). Al irse un peer (`NetworkManager.peer_removed`,
-  conectado por camino, o `multiplayer.peer_disconnected`) el host suelta lo que tenía en `hands:<peer>`
-  en el piso, donde estaba su jugador. `units_take` acepta un bulto `floor:<n>` como estación; `units_store`
+  `multiplayer.peer_disconnected` o `NetworkManager.peer_returned(id, id)` si vuelve con el mismo id; las de
+  `NetworkManager` conectadas por camino) el host suelta lo que tenía en `hands:<peer>` en el piso, a los pies
+  de su jugador (`global_position`, no `reach_origin()`). `units_take` acepta un bulto `floor:<n>` como estación; `units_store`
   en un bulto se rechaza con `no_station`. Nada de lo que ya existía cambió de firma.
 - **`scripts/core/company/floor_bundles.gd`** (nuevo, `class_name FloorBundles`, datos puros): dónde está
   cada bulto del piso, igual en todos los peers.
+- **`scripts/core/company/company_ask.gd`** (nuevo, `class_name CompanyAsk`, solo estáticas): las
+  validaciones de datos de las peticiones de unidades y el catálogo de productos, sacadas de
+  `company_net.gd` (que tiene el tope de 1000 líneas de gdlint). `CompanyNet.product_exists()` y
+  `CompanyNet.PRODUCTS_DIR` siguen y delegan ahí.
 - Contrato actualizado: `docs/expansion-distritos/diseno/red-autoridad.md` §7.
 - Tests: `test_company_rejoin` (nuevo); `test_company_late_join` cambia la clave de su parte de prueba
   (`floor` → `tables`).

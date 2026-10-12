@@ -220,31 +220,38 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 
 - **`units_drop`** (fila 7, protocolo 33), **crítica** (`CRITICAL_KINDS`): `{product, qty, pos: Vector3, rid}`,
   la arma `CompanyNet.drop(product, qty, pos)`. El host valida producto (del catálogo) y `qty` (entero,
-  `1..PALLET_MAX_UNITS`) como en `units_take`; `pos` `Vector3` finito (un `NaN` o fuera del mundo no pasa
-  `dict_ok` y se descarta en silencio; otro tipo es `bad_data`); que la mano tenga esa cantidad de ese
-  producto (`not_enough`, también si tiene otro) y que haya un jugador desde donde medir (`out_of_reach`,
-  como en una estación). Si `pos` está a más de `DROP_REACH` = 2 m de donde el host ve al jugador, suelta a
-  sus pies (`_origin_of`): nunca rechaza por distancia. Anota esa posición en `_last_origin`.
+  `1..PALLET_MAX_UNITS`) como en `units_take` (`CompanyAsk`, `scripts/core/company/company_ask.gd`: las
+  validaciones de datos de las peticiones de unidades y el catálogo, separadas de `company_net.gd`); `pos`
+  `Vector3` finito (un `NaN` o fuera del mundo no pasa `dict_ok` y se descarta en silencio; otro tipo es
+  `bad_data`); que la mano tenga esa cantidad de ese producto (`not_enough`, también si tiene otro).
+- **Los pies del jugador** (`_feet_of`): la posición del **cuerpo** (`global_position` del nodo del
+  jugador, no su `reach_origin()`; con `player_origin` puesto, su valor) y, si el nodo ya no está, la última
+  que se anotó en `_last_origin`. Solo si no hay ninguna de las dos se rechaza con `out_of_reach`. Si `pos`
+  está a más de `DROP_REACH` = 2 m más `NetStats.reach_slack()` de los pies, suelta ahí: nunca rechaza por
+  distancia. Anota los pies en `_last_origin`.
 - **Bultos en el piso**: cada soltada es un bulto nuevo, `floor:<n>` con el `n` libre más bajo (sin unidades
   y sin posición: el `floor:0` que deja un guardado, `CompanyRoot.SAVED_HANDS_LOCATION`, no se pisa). El
   evento es `units_moved {product, qty, from: hands:<peer>, to: floor:<n>, pos}`; en cada peer
   `FloorBundles` (`scripts/core/company/floor_bundles.gd`, `CompanyNet.floor_bundles`) anota la posición al
-  aplicarlo y la borra cuando el bulto queda vacío. Un `units_moved` hacia `floor:` sin `pos` `Vector3`
-  finito no se aplica. **Decisión:** no se suma a un bulto que ya está (cada soltada es uno nuevo), y las
+  aplicarlo y, después de cada evento aplicado, olvida todo bulto que quedó vacío (`prune()`: también si en
+  el futuro un evento consume unidades del piso, no queda un bulto fantasma). Un `units_moved` hacia
+  `floor:` sin `pos` `Vector3` finito no se aplica. **Decisión:** no se suma a un bulto que ya está (cada soltada es uno nuevo), y las
   posiciones viven en una clase de datos aparte y no en `CompanyNet`, que quedó cerca del tope de 1000
   líneas de gdlint.
 - **Tomar un bulto** (fila 5): la estación de `units_take` puede ser el propio `floor:<n>` si tiene
   posición; el alcance se mide hasta ahí. Guardar en un bulto con `units_store` se rechaza con
   `no_station` (soltar es `units_drop`).
 - **Un peer se va**: el host, en `NetworkManager.peer_removed` (llega con el jugador todavía en pie y antes
-  del `peer_disconnected` de un fantasma que suelta, N-221) o en `multiplayer.peer_disconnected` (lo que
-  llegue primero; el segundo encuentra las manos vacías), publica un `units_moved` por producto de
-  `hands:<peer>` a un bulto nuevo, en la posición del nodo del jugador si sigue, si no
-  `last_known_position(peer)` y si no el origen; después olvida `_last_origin[peer]`. Solo en el host. El
-  que vuelve (con otro peer id) recibe el snapshot de D-2004 con el piso así.
+  del `peer_disconnected` de un fantasma que suelta, N-221), en `multiplayer.peer_disconnected` (lo que
+  llegue primero; el segundo encuentra las manos vacías) o en `NetworkManager.peer_returned(id, id)` (Steam
+  le devuelve el mismo id al que vuelve y no hubo ni `peer_removed` ni desconexión), publica un
+  `units_moved` por producto de `hands:<peer>` a un bulto nuevo, en sus pies (`_feet_of`) y si no en el
+  origen; después olvida `_last_origin[peer]`. Solo en el host. Si llega mientras se aplica un evento, se
+  difiere al frame siguiente (sin olvidar dónde estaba); si un evento no se puede publicar, `push_error`.
+  El que vuelve recibe el snapshot de D-2004 con el piso así.
 - **Snapshot**: clave propia `floor` (en `SNAPSHOT_KEYS`), `{floor:<n>: Vector3}`. El cliente la valida antes
   de tocar nada (`FloorBundles.positions_ok()`: diccionario de a lo sumo `MAX_BUNDLES` = 4096 entradas, ids
-  de texto que empiezan con `floor:` de hasta 32 caracteres, `Vector3` finitos) y reemplaza las suyas; un
+  de texto `floor:<n>` de hasta 32 caracteres con `n` entero ≥ 0, `Vector3` finitos) y reemplaza las suyas; un
   snapshot sin la clave deja el piso sin posiciones.
 - Test: `test_company_rejoin` (y `test_company_late_join` usa otra clave para su parte de prueba).
 - **Pendiente:**
@@ -252,5 +259,6 @@ petición: el host lo detecta o lo decide solo y emite el evento.
     `company_state_restored` (D-0611);
   - guardar las posiciones con el día (D-0206): un día cargado trae los `floor:<n>` sin posición y no se
     pueden tomar hasta que el guardado las lleve (lo mismo vale para las manos que D-2005 deja en `floor:0`);
-  - `company_net.gd` quedó en 991 de las 1000 líneas que permite gdlint: la próxima acción tiene que sacar
-    algo a otra clase (por ejemplo, las validaciones de unidades).
+  - `company_net.gd` quedó en 967 de las 1000 líneas que permite gdlint (ya salieron `FloorBundles` y
+    `CompanyAsk`): la próxima acción grande tiene que sacar algo más a otra clase;
+  - el margen de `reach_slack()` en `DROP_REACH` depende del RTT y no tiene test propio.
