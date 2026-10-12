@@ -127,8 +127,12 @@ fi
 # These also get SLOW_TEST_TIMEOUT: test_route_fuzz takes 80-115 s on a normal
 # CI runner and went past the 120 s limit whenever the runner was slower;
 # test_route_lookup_cache (~105 s) did the same on main in run 36815889169 (N-240).
+# test_route_fuzz grew to 165-197 s and hit 240 s in run 38259618848 (#398): its second
+# half is test_route_fuzz_late, kept right after it so the round-robin SHARD deal puts
+# the two on different runners.
 SLOW_TESTS=(
 	test_route_fuzz
+	test_route_fuzz_late
 	test_route_lookup_cache
 	test_vehicle_stress
 	test_roadside_stories

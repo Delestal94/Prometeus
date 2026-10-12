@@ -11,12 +11,19 @@ extends SceneTree
 ##    MAX_STEP in the ground under the road, and a road that reaches the goal
 ##    without a gap.
 ##
+## Building a route is ~95% of the time (5-6 s each here, 8-10 s on a CI runner), so
+## the 20 are split over two scripts that CI deals to different shards: this one
+## does pass 1 and seeds 1..FIRST_HALF, test_route_fuzz_late.gd the rest.
+## Together they were 165-197 s in one process, against a 240 s limit (#398).
+##
 ## Every failure names its seed and house count, to rebuild it with
 ## NetworkManager.world_seed.
 
 const Route = preload("res://scripts/gameplay/route/route.gd")
 const SEEDS: int = 500
 const BUILT_SEEDS: int = 20
+## How many of them this script builds (1..FIRST_HALF); test_route_fuzz_late.gd builds the rest.
+const FIRST_HALF: int = 10
 ## Asphalt is 12 m wide.
 const ROAD_HALF_WIDTH: float = 6.0
 const ROAD_WIDTH: float = 12.0
@@ -37,20 +44,34 @@ var _failures: int = 0
 var _failed_seeds: Array[String] = []
 
 
+## The first and last built seed (1..BUILT_SEEDS) this script builds.
+func _built_seeds() -> Vector2i:
+	return Vector2i(1, FIRST_HALF)
+
+
+## Whether this script walks the 2000 planned roads (pass 1).
+func _runs_plans() -> bool:
+	return true
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
 
 func _run() -> void:
-	for seed_value: int in range(1, SEEDS + 1):
-		for houses: int in range(1, 5):
-			_check_plan(seed_value, houses)
-	for seed_value: int in range(1, BUILT_SEEDS + 1):
+	var planned: int = 0
+	if _runs_plans():
+		for seed_value: int in range(1, SEEDS + 1):
+			for houses: int in range(1, 5):
+				_check_plan(seed_value, houses)
+		planned = SEEDS * 4
+	var built: Vector2i = _built_seeds()
+	for seed_value: int in range(built.x, built.y + 1):
 		await _check_built(seed_value * 7919, 1 + seed_value % 4)
 	if not _failed_seeds.is_empty():
 		push_error("Seeds to reproduce: %s" % ", ".join(_failed_seeds.slice(0, 30)))
 	if _failures == 0:
-		print("PASS: %d planned roads never cross themselves; %d built routes keep houses, yards and trees off the road, the ground smooth and the goal reachable" % [SEEDS * 4, BUILT_SEEDS])
+		print("PASS: %d planned roads never cross themselves; %d built routes (seeds %d..%d of %d) keep houses, yards and trees off the road, the ground smooth and the goal reachable" % [planned, built.y - built.x + 1, built.x, built.y, BUILT_SEEDS])
 	quit(_failures)
 
 
