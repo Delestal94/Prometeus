@@ -92,7 +92,9 @@ func _run() -> void:
 	box.apply_impact(7.0)
 	plain.apply_impact(7.0)
 	_expect(is_equal_approx(box.integrity, plain.integrity) and box.integrity < box.integrity_max,
-		"A hit damages the box package as it does a common one (box %.1f, common %.1f)" % [box.integrity, plain.integrity])
+		"A hit damages the box package as it does a common one (box %.1f, common %.1f)"
+		% [box.integrity, plain.integrity]
+	)
 	_expect(box.run_state() == plain.run_state(), "Same trap state after the hit")
 	for _i: int in 4:
 		box.apply_impact(7.0)
