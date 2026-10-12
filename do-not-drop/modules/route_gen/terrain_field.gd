@@ -867,18 +867,24 @@ func _conform_prepare(node: MeshInstance3D, ignore_rivers: bool) -> Dictionary:
 		surface.create_from(source, index)
 		surfaces.append(surface.commit_to_arrays())
 	var node_global: Transform3D = node.global_transform
+	# The terrain's own transforms are read here too: a worker that asked the
+	# node (global_transform) would walk and refresh its cached transform and its
+	# ancestors' while the main thread keeps working on the same tree.
+	var terrain_global: Transform3D = global_transform
 	return {"node": node, "source": source, "surfaces": surfaces, "ignore_rivers": ignore_rivers,
-		"node_global": node_global, "node_inverse": node_global.affine_inverse()}
+		"node_global": node_global, "node_inverse": node_global.affine_inverse(),
+		"terrain_global": terrain_global, "terrain_inverse": terrain_global.affine_inverse()}
 
 
 ## Moves the vertices of the job's surfaces onto the ground. Reads the scene's
-## data only through the job. `cache` takes the samples it has to work out;
+## data only through the job (no node is asked anything: it runs on worker
+## threads). `cache` takes the samples it has to work out;
 ## `shared_read` says _samples may be read but never written to (a worker).
 func _conform_warp(job: Dictionary, cache: Dictionary, shared_read: bool) -> void:
 	var node_global: Transform3D = job.node_global
 	var node_inverse: Transform3D = job.node_inverse
-	var terrain_global: Transform3D = global_transform
-	var terrain_inverse: Transform3D = terrain_global.affine_inverse()
+	var terrain_global: Transform3D = job.terrain_global
+	var terrain_inverse: Transform3D = job.terrain_inverse
 	var ignore_rivers: bool = job.ignore_rivers
 	for arrays: Array in job.surfaces:
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
