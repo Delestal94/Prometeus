@@ -256,7 +256,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   todos, sin duplicarlo por instancia.
 - [x] **S-311.35** (`56c07255`) Variante "opaca lechosa" para la calidad baja de las opciones y para quien la elija en
   accesibilidad: mismo look sin transparencia ni lectura de pantalla.
-- [ ] **S-311.36** Capturas en todos los contextos con `revisor-visual`: día, atardecer, noche con
+- [x] **S-311.36** (`1eb61f2f`) Capturas en todos los contextos con `revisor-visual`: día, atardecer, noche con
   linternas, lluvia, niebla, interior del camión, depósito, pantalla de resultados.
 - [ ] **S-311.37** Costo medido con `perfilador-rendimiento`: 4 personajes con proporciones distintas en
   pantalla contra el personaje de hoy; dentro del presupuesto del ítem 7.
