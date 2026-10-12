@@ -6,6 +6,8 @@ extends SceneTree
 ## - products wait on the table up to STAGING_SLOTS and can be taken back;
 ## - put_in_box() moves a staged product into the box's grid, and refuses (changing
 ##   nothing) with no box, an unstaged product or a spot that does not fit;
+## - three products fit in one box at PackedBox.first_fit() spots without overlapping, and the
+##   box knows its content (D-0703);
 ## - take_box() frees the table; to_dict() survives a JSON round trip.
 
 var _failures: int = 0
@@ -19,6 +21,7 @@ func _run() -> void:
 	_test_box()
 	_test_staging()
 	_test_put_in_box()
+	_test_three_products()
 	_test_round_trip()
 	quit(_failures)
 
@@ -73,6 +76,34 @@ func _test_put_in_box() -> void:
 	_expect(table.staged.is_empty(), "it left the table")
 	_expect(table.box.contents() == {&"mug": 1}, "the box knows its content")
 	_expect(not table.put_in_box(mug, Vector3i.ZERO), "the same unit cannot go in twice")
+
+
+func _test_three_products() -> void:
+	var table: PackingStation = PackingStation.make(&"t1")
+	table.start_box(&"M")
+	var mug: ProductDefinition = _product(&"mug", Vector3i(1, 1, 2))
+	var vase: ProductDefinition = _product(&"vase", Vector3i(2, 2, 1))
+	var book: ProductDefinition = _product(&"book", Vector3i(2, 1, 1))
+	for p: ProductDefinition in [mug, vase, book]:
+		table.stage_product(p.id)
+	var box: PackedBox = table.box
+	for p: ProductDefinition in [mug, vase, book]:
+		var spot: Vector3i = box.first_fit(p)
+		_expect(spot != PackedBox.NO_SPOT, "%s has a spot" % p.id)
+		_expect(table.put_in_box(p, spot), "%s goes in at its first fit" % p.id)
+	_expect(table.staged.is_empty(), "the three left the table")
+	_expect(box.contents() == {&"mug": 1, &"vase": 1, &"book": 1}, "the box knows its three products")
+	_expect(box.first_fit(mug) != box.first_fit(book), "a taken spot is not offered again")
+	var occupied: int = 0
+	for item: Dictionary in box.items:
+		var c: Vector3i = item["cells"]
+		occupied += c.x * c.y * c.z
+	_expect(occupied == 8 and box.grid.size() == 8, "cells taken match the products (no overlap)")
+	_expect(box.first_fit(_product(&"wardrobe", Vector3i(4, 1, 1))) == PackedBox.NO_SPOT, "too big: no spot")
+	_expect(box.first_fit(null) == PackedBox.NO_SPOT, "null product: no spot")
+	var full: PackedBox = PackedBox.new(&"M")
+	full.fill_free_cells(full.total_cells())
+	_expect(full.first_fit(_product(&"mug", Vector3i.ONE)) == PackedBox.NO_SPOT, "full box: no spot")
 
 
 func _test_round_trip() -> void:
