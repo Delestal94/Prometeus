@@ -15,7 +15,6 @@ const DELIVERY_MAX_SPEED: float = 1.5
 const HOUSE_STOP_RADIUS: float = 18.0
 ## route.gd has no class name: typed through its script
 ## so a rename fails to compile instead of at run time (N-224).
-const RouteScript = preload("res://scripts/gameplay/route/route.gd")
 @onready var route: RouteScript = $World/Route
 ## The HUD redraws its progress bar and hint at this rate, not every physics
 ## tick (N-223); the run's own logic below still runs every tick. Keep it under
