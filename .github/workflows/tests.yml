@@ -53,6 +53,9 @@ jobs:
       - name: pre-push picks the affected tests (fake tree)
         run: bash tools/test-affected-tests.sh
 
+      - name: Hooks know the owner of each folder (file_domain)
+        run: bash tools/test-file-domain.sh
+
   # The suite split across four runners (SHARD in run-tests.sh): one runner
   # took ~21 min, a quarter each takes ~6. "Tests headless (Godot 4.7.2)"
   # below is the single check branch protection requires.

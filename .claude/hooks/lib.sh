@@ -52,7 +52,12 @@ file_domain() {
 		do-not-drop/scenes/gameplay/vehicle/*|do-not-drop/scripts/gameplay/vehicle/*|\
 		do-not-drop/scenes/gameplay/route/*|do-not-drop/scripts/gameplay/route/*|\
 		do-not-drop/scripts/gameplay/depot/*|\
-		do-not-drop/scripts/presentation/vehicle_presentation.gd|docs/tareas-nacho.md|docs/tareas/*)
+		do-not-drop/scripts/presentation/vehicle_presentation.gd|docs/tareas-nacho.md|docs/tareas/*|\
+		do-not-drop/scripts/core/company/*|do-not-drop/scripts/gameplay/business/*|\
+		do-not-drop/scripts/gameplay/districts/*|do-not-drop/scripts/gameplay/fleet/*|\
+		do-not-drop/scenes/company/*|do-not-drop/data/products/*|do-not-drop/data/zones/*|\
+		do-not-drop/data/vehicles/*|do-not-drop/data/boxes/*|do-not-drop/data/suppliers/*|\
+		do-not-drop/data/gates/*|do-not-drop/data/order_requirements/*|do-not-drop/data/placeables/*)
 			echo nacho ;;
 		do-not-drop/scenes/gameplay/player/*|do-not-drop/scripts/gameplay/player/*|\
 		do-not-drop/scenes/gameplay/package/*|do-not-drop/scripts/gameplay/package/*|\

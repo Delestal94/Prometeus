@@ -263,6 +263,7 @@ juego, con adaptador.
 **Hecho cuando:** el test pasa y `auditor-red` lo revisó.
 
 ### D-0220 · Carpetas y módulos — A · Opus 5.5 · medium · Aviso: sí (`docs/arquitectura.md`, `.claude/hooks/lib.sh`) · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `README.md` en las carpetas que faltaban; tabla "Qué va a `modules/`" en `docs/arquitectura.md` §10.4; las carpetas de la expansión son de Nacho en `file_domain` y en `colaboracion-equipo.md` (cierra D-0144); `tools/test-file-domain.sh` en CI.
 **Depende de:** D-0201
 **Qué:** crear las carpetas con un `README.md` de 3 líneas cada una:
 - `scripts/core/company/`, `scripts/gameplay/business/`, `scripts/gameplay/districts/`,

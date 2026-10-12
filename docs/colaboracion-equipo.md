@@ -35,6 +35,11 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
   compartida).
 - Secciones de `docs/direccion-visual.md` y `docs/especificaciones-visuales.md`
   relacionadas a vehículo/ambientación (filas que le tocan en su propia lista).
+- La expansión (modo Empresa, `docs/expansion-distritos/`, D-0220): `do-not-drop/scripts/core/company/`,
+  `scripts/gameplay/business/`, `scripts/gameplay/districts/`, `scripts/gameplay/fleet/`,
+  `scenes/company/` y los datos `data/products/`, `zones/`, `vehicles/`, `boxes/`, `suppliers/`,
+  `gates/`, `order_requirements/` y `placeables/`. Lo portable de la expansión va a `modules/` (zona
+  compartida, abajo).
 
 ## Slatex — Jugador, Paquetes, Interacción, UI y Progresión
 
