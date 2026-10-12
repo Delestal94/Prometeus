@@ -4,7 +4,7 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, rock and rock_cluster rebuild just that one model.
+tall_fern, rock, rock_cluster and mushroom rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -487,16 +487,85 @@ def flowers():
         frond("FlowerLeaf", 0.18, 0.05, a + 1.2, 0.6, "grass", z=h * 0.3)
 
 
+# Mushroom cluster (N-331.3): 21 meshes and 444 tris, 300 of them in 15
+# icosphere spots nobody sees from 7 m, the caps icospheres too and the spots
+# in the signs' "sign_white". Now one MushroomCluster mesh of 142 tris: the
+# same three mushrooms (sizes and spacing as before, 0.52 m tall), each a
+# 6-sided uncapped stem (12 tris) under an 8-segment, two-ring cap with a
+# drooping rim (16 tris of band, 8 of dome) closed underneath by a pale
+# gill fan (8 tris), and flat 4-sided spots (3 on the big cap, 2 on the
+# middle one) lying 4 mm off the cap's band facets, so they never z-fight.
+# "mushroom" and "plaster" (stem, gills, spots) single-sided; the footprint
+# is centred on the origin (the old one sat 5 cm off in X) and the stems go
+# 1.5 cm into the ground.
+# (x, y, scale, spot facets on the cap band, spin of the cap)
+MUSHROOMS = [(0.0, 0.0, 1.0, (0, 3, 5), 0.0), (0.18, 0.1, 0.6, (1, 5), 0.3), (-0.12, 0.14, 0.45, (), 0.15)]
+# (radius, height) of the cap's rim and shoulder rings, and the apex and gill
+# centre heights, all x scale.
+CAP_RIM, CAP_SHOULDER, CAP_APEX, CAP_GILLS = (0.26, 0.335), (0.215, 0.455), 0.52, 0.372
+
+
+def _mushroom_face(bm, verts, slot, outward):
+    f = bm.faces.new(verts)
+    f.normal_update()
+    if f.normal.dot(outward) < 0.0:
+        f.normal_flip()
+    f.material_index = slot
+    return f
+
+
 def mushroom():
     clear()
-    rng = random.Random(13)
-    for i, (x, y, s) in enumerate([(0, 0, 1.0), (0.18, 0.1, 0.6), (-0.12, 0.14, 0.45)]):
-        cone("MushroomStem", (x, y, 0.18 * s), 0.07 * s, 0.05 * s, 0.36 * s, "plaster", 8)
-        cap = blob("MushroomCap", (x, y, 0.36 * s), (0.26 * s, 0.26 * s, 0.16 * s), "mushroom")
-        squash_bottom(cap, 0.0)
-        for k in range(5):
-            a = k * math.tau / 5 + rng.uniform(0, 0.5)
-            blob("CapSpot", (x + math.cos(a) * 0.14 * s, y + math.sin(a) * 0.14 * s, 0.36 * s + 0.1 * s), (0.03 * s, 0.03 * s, 0.015 * s), "sign_white")
+    mesh = bpy.data.meshes.new("MushroomCluster")
+    obj = bpy.data.objects.new("MushroomCluster", mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(_single_sided("mushroom"))
+    mesh.materials.append(_single_sided("plaster"))
+    bm = bmesh.new()
+    for x, y, s, spots, spin in MUSHROOMS:
+        c = Vector((x, y, 0.0))
+        up = Vector((0, 0, 1))
+        # Stem: 6 sides, no caps, its top hidden inside the cap.
+        ring = lambda r, z, n, a0=0.0: [bm.verts.new(c + Vector((math.cos(a0 + i * math.tau / n) * r,
+                                                                 math.sin(a0 + i * math.tau / n) * r, z)))
+                                        for i in range(n)]
+        low, high = ring(0.07 * s, -0.015, 6), ring(0.05 * s, (CAP_GILLS + 0.006) * s, 6)
+        for i in range(6):
+            j = (i + 1) % 6
+            mid = (low[i].co + low[j].co + high[i].co + high[j].co) / 4
+            _mushroom_face(bm, (low[i], low[j], high[j], high[i]), 1, mid - Vector((c.x, c.y, mid.z)))
+        # Cap: rim and shoulder rings, apex, gill fan underneath.
+        rim = ring(CAP_RIM[0] * s, CAP_RIM[1] * s, 8, spin)
+        shoulder = ring(CAP_SHOULDER[0] * s, CAP_SHOULDER[1] * s, 8, spin)
+        apex = bm.verts.new(c + Vector((0, 0, CAP_APEX * s)))
+        gills = bm.verts.new(c + Vector((0, 0, CAP_GILLS * s)))
+        band = []
+        for i in range(8):
+            j = (i + 1) % 8
+            mid = (rim[i].co + rim[j].co + shoulder[i].co + shoulder[j].co) / 4
+            band.append(_mushroom_face(bm, (rim[i], rim[j], shoulder[j], shoulder[i]), 0,
+                                       mid - Vector((c.x, c.y, CAP_GILLS * s))))
+            _mushroom_face(bm, (shoulder[i], shoulder[j], apex), 0, up)
+            _mushroom_face(bm, (rim[i], gills, rim[j]), 1, -up)
+        # Spots: flat squares on band facets, 4 mm out, turned a little.
+        for k, facet in enumerate(spots):
+            f = band[facet]
+            n = f.normal.copy()
+            centre = f.calc_center_median() + n * 0.004
+            t = (f.verts[1].co - f.verts[0].co).normalized()
+            b = n.cross(t)
+            turn = 0.35 + 0.5 * k
+            t, b = t * math.cos(turn) + b * math.sin(turn), b * math.cos(turn) - t * math.sin(turn)
+            h = 0.042 * s
+            corners = [bm.verts.new(centre + (t * dx + b * dy) * h) for dx, dy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            _mushroom_face(bm, corners, 1, n)
+    # Centre the footprint on the origin.
+    for i in range(2):
+        mid = (min(v.co[i] for v in bm.verts) + max(v.co[i] for v in bm.verts)) / 2
+        for v in bm.verts:
+            v.co[i] -= mid
+    bm.to_mesh(mesh)
+    bm.free()
 
 
 def log():
@@ -1200,6 +1269,8 @@ GROUPS = {
     "rock": lambda: (forest_rock(), export_forest("rock")),
     # Only the mossy rock cluster (N-331.9), without rewriting the other plants.
     "rock_cluster": lambda: (mossy_rock_cluster(), export_forest("mossy_rock_cluster")),
+    # Only the mushroom cluster (N-331.3), without rewriting the other plants.
+    "mushroom": lambda: (mushroom(), export_forest("mushroom")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
