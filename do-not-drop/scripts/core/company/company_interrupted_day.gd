@@ -9,63 +9,31 @@ extends RefCounted
 ## (take_pending_text()) next to the session's "host lost" message.
 ##
 ## Pure: it takes the company as a parameter (anything with day, clock_minutes, money, ledger and
-## inventory, like CompanyState) and names no autoload (lesson N-919). The ledger movements of the
-## day are split by sign the same way DaySummary (D-0508) does at the day's close.
+## inventory, like CompanyState) and names no autoload (lesson N-919). The money of the day is
+## DaySummary's (D-0508), the same figures the day's close will show.
 
 ## The summary kept for the main menu, {} for none (hold() / take_pending()).
 static var _pending: Dictionary = {}
 
 
-## What a peer saw of the day in progress, as plain values:
-##   day            the company's day
-##   clock_minutes  `minute` when given (a running clock's minute), else the company's
-##   money          the balance now
-##   opening        the balance when the day's first movement started (money with none)
-##   income, costs  the day's movements in the ledger, by sign (costs is positive)
-##   profit         income - costs
-##   movements      how many movements of the day the ledger holds
-##   units          units in `stock` (the live one), else in the company's stored stock
-##   truncated      the ledger is full and starts on this day: movements of it may be gone
+## What a peer saw of the day in progress, as plain values: DaySummary.build() of the company's day
+## (day, income, costs, profit, opening, closing, income_by_reason, cost_by_reason, truncated) and
+##   clock_minutes  `minute` when given (a running clock's minute), else the company's, held
+##                  within the day
+##   money          the wallet now
+##   units          every unit in `stock` (the live one), else in the company's stored stock:
+##                  shelves and pallets, but also hands, boxes and packages
 static func summary(company: Object, stock: Inventory = null, minute: int = -1) -> Dictionary:
-	var result: Dictionary = {
-		"day": 0,
-		"clock_minutes": 0,
-		"money": 0,
-		"opening": 0,
-		"income": 0,
-		"costs": 0,
-		"profit": 0,
-		"movements": 0,
-		"units": 0,
-		"truncated": false,
-	}
+	var day: int = int(company.day) if company != null else 0
+	var result: Dictionary = DaySummary.build(company, day)
+	result["clock_minutes"] = 0
+	result["money"] = 0
+	result["units"] = 0
 	if company == null:
 		return result
-	var day: int = int(company.day)
-	var money: int = int(company.money)
-	result["day"] = day
-	result["money"] = money
-	result["opening"] = money
 	var clock: int = minute if minute >= 0 else int(company.clock_minutes)
 	result["clock_minutes"] = clampi(clock, 0, CompanyTuning.MINUTES_PER_DAY - 1)
-	var ledger: Array = company.ledger
-	var first: Dictionary = {}
-	for entry: Dictionary in ledger:
-		if int(entry.get("day", -1)) != day:
-			continue
-		if first.is_empty():
-			first = entry
-		var amount: int = int(entry.get("amount", 0))
-		if amount >= 0:
-			result["income"] += amount
-		else:
-			result["costs"] -= amount
-		result["movements"] += 1
-	if not first.is_empty():
-		result["opening"] = int(first.get("balance", 0)) - int(first.get("amount", 0))
-	result["profit"] = int(result["income"]) - int(result["costs"])
-	if not ledger.is_empty() and ledger.size() >= CompanyTuning.LEDGER_MAX:
-		result["truncated"] = int((ledger[0] as Dictionary).get("day", day)) >= day
+	result["money"] = int(company.money)
 	var units: Inventory = stock
 	if units == null:
 		units = Inventory.new()
@@ -76,13 +44,17 @@ static func summary(company: Object, stock: Inventory = null, minute: int = -1) 
 	return result
 
 
-## One line for the menu, in this peer's language; "" for an empty summary.
+## One line for the menu, in this peer's language; "" for an empty summary. A truncated ledger
+## (movements of the day may be gone) marks income and costs as partial.
 static func describe(day_summary: Dictionary) -> String:
 	if day_summary.is_empty():
 		return ""
 	var minutes: int = int(day_summary.get("clock_minutes", 0))
 	var clock: String = "%02d:%02d" % [floori(minutes / 60.0), minutes % 60]
-	return TranslationServer.translate("UI_COMPANY_DAY_CUT") % [
+	var key: String = "UI_COMPANY_DAY_CUT"
+	if bool(day_summary.get("truncated", false)):
+		key = "UI_COMPANY_DAY_CUT_PARTIAL"
+	return TranslationServer.translate(key) % [
 		int(day_summary.get("day", 0)), clock, int(day_summary.get("income", 0)),
 		int(day_summary.get("costs", 0)), int(day_summary.get("money", 0)),
 		int(day_summary.get("units", 0))]
@@ -91,6 +63,11 @@ static func describe(day_summary: Dictionary) -> String:
 ## Keeps `day_summary` for the menu, in place of any kept before.
 static func hold(day_summary: Dictionary) -> void:
 	_pending = day_summary.duplicate(true)
+
+
+## A copy of the summary kept for the menu, leaving it kept ({} when there is none).
+static func peek_pending() -> Dictionary:
+	return _pending.duplicate(true)
 
 
 ## The summary kept for the menu, once: {} when there is none, and none after this.

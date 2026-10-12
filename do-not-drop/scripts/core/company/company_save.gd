@@ -45,10 +45,19 @@ static func path_for(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> Str
 ## Writes the state's to_dict() to the slot; `interrupted` marks a day cut short
 ## (D-2005), which load_into() starts again from the opening. False when the
 ## folder or the file could not be written (the previous save, if any, stays as
-## it was).
+## it was), and when the slot holds a save from a newer build: load_into() left
+## it alone (TOO_NEW), so the company here is not that one and must not erase it.
 static func save(
 	state: Object, slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR, interrupted: bool = false
 ) -> bool:
+	var path: String = path_for(slot, dir)
+	var saved_version: int = _version_of(_peek(path))
+	if saved_version > VERSION:
+		push_warning(
+			"CompanySave: %s is version %d, this build writes %d; not overwritten"
+			% [path, saved_version, VERSION]
+		)
+		return false
 	if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir)) != OK:
 		return false
 	var payload: Dictionary = {
@@ -57,7 +66,7 @@ static func save(
 		"interrupted": interrupted,
 		"company": state.call("to_dict"),
 	}
-	return SafeJson.write(path_for(slot, dir), payload)
+	return SafeJson.write(path, payload)
 
 
 ## Loads the slot into the state. LOADED: the company is active with the saved
@@ -123,17 +132,26 @@ static func exists(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> bool:
 	return FileAccess.file_exists(path_for(slot, dir))
 
 
-## True when the slot holds a day cut short (saved with `interrupted`, D-2005). Only
-## reads: a missing or unreadable file is false and is left as it is (load_into()
-## is what quarantines a bad one).
+## True when the slot holds a day cut short (saved with `interrupted`, D-2005), in
+## its file or, without one, in the .bak a cut write left (as load_into() reads it).
+## Only reads: a missing or unreadable file is false and is left as it is
+## (load_into() is what quarantines a bad one).
 static func was_interrupted(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> bool:
-	var path: String = path_for(slot, dir)
-	if not FileAccess.file_exists(path):
-		return false
+	return _interrupted(_peek(path_for(slot, dir)))
+
+
+## The JSON object in `path` or, when it is missing, in its .bak; {} when neither is
+## there or it is not an object. Unlike SafeJson.read() it moves no file.
+static func _peek(path: String) -> Dictionary:
+	var source: String = path
+	if not FileAccess.file_exists(source):
+		source = path + ".bak"
+		if not FileAccess.file_exists(source):
+			return {}
 	var json := JSON.new()
-	if json.parse(FileAccess.get_file_as_string(path)) != OK or not json.data is Dictionary:
-		return false
-	return _interrupted(json.data)
+	if json.parse(FileAccess.get_file_as_string(source)) != OK or not json.data is Dictionary:
+		return {}
+	return json.data
 
 
 ## Only a JSON true counts: a missing key (a save from before D-2005) or any other
