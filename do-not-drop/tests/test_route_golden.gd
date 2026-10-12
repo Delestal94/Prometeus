@@ -18,6 +18,12 @@ extends SceneTree
 ##   transform to 1e-4, mesh / multimesh size, label text, collision layers, metadata);
 ## - the answers to get_progress, road_distance, stop_road_distance, distance_from_path,
 ##   get_section_name and ground_roughness on a grid of points along and around the road.
+## N-964: art does not enter the hash, so replacing a .glb or a stored mesh leaves the golden alone:
+## an instanced .glb counts as one line (scene name, x / z and yaw only: settle() sets its height and lean
+## from the model's mesh; metadata; its children are skipped), the colliders, merged meshes and contact
+## shadows built from a model's bounds are counted but not signed, and a
+## mesh with a resource_path (file or sub-resource of one) is signed as "from file" without size or
+## vertices. Meshes built by code (empty resource_path) still sign their aabb and vertices.
 ## tests/data/route_golden.txt was generated with the original single-file route.gd.
 ## The file was written on Linux (CI): on Windows ~77 lines differ from it by the last digit of a
 ## coordinate (a 4-decimal rounding that lands the other way: libm's sin/cos/pow differ in the last
@@ -175,6 +181,8 @@ func _sign_children(route: Node3D, lines: PackedStringArray) -> void:
 
 func _sign_tree(route: Node3D, node: Node, lines: PackedStringArray) -> void:
 	lines.append(_node_line(route, node))
+	if _is_imported_model(node):  # N-964: what is inside a .glb is art, not route generation
+		return
 	for child: Node in node.get_children():
 		_sign_tree(route, child, lines)
 
@@ -199,7 +207,20 @@ func _node_line(route: Node3D, node: Node) -> String:
 		parts.append("script=" + String((node.get_script() as Script).resource_path.get_file()))
 	if not node.scene_file_path.is_empty():
 		parts.append("scene=" + node.scene_file_path.get_file())
-	if node is Node3D:
+	var batched_art: bool = path.contains("/DressingColliders/") or path.contains("/ContactShadows/") or (
+		node is MultiMeshInstance3D and path.begins_with("BatchedDressing"))
+	if _is_imported_model(node):
+		# settle() (route_placement.gd:217) lowers and leans each model by its mesh: only x/z and the yaw
+		# of its local X axis (the lean never turns it) come from the generation.
+		var model := node as Node3D
+		var basis_x: Vector3 = model.transform.basis.x
+		parts.append("at(%s %s) yaw=%s" % [_num(model.position.x), _num(model.position.z),
+			_num(atan2(-basis_x.z, basis_x.x))])
+		if not model.visible:
+			parts.append("hidden")
+	elif batched_art:
+		pass  # box, offset and merged mesh come from the model's AABB: art, counted by nodes=
+	elif node is Node3D:
 		var node3d := node as Node3D
 		parts.append(_xform(node3d.transform))
 		if not node3d.visible:
@@ -208,7 +229,9 @@ func _node_line(route: Node3D, node: Node) -> String:
 		var mesh_node := node as MeshInstance3D
 		parts.append("mesh{%s}" % _mesh(mesh_node.mesh))
 		parts.append("shadow=%d" % mesh_node.cast_shadow)
-	if node is MultiMeshInstance3D:
+	if node is MultiMeshInstance3D and batched_art:
+		parts.append("multimesh{n=%d batched}" % (node as MultiMeshInstance3D).multimesh.instance_count)
+	elif node is MultiMeshInstance3D:
 		var multi := (node as MultiMeshInstance3D).multimesh
 		parts.append("multimesh{n=%d %s}" % [multi.instance_count if multi != null else -1,
 			_mesh(multi.mesh) if multi != null else "none"])
@@ -217,10 +240,11 @@ func _node_line(route: Node3D, node: Node) -> String:
 	if node is CollisionObject3D:
 		var body := node as CollisionObject3D
 		parts.append("layer=%d mask=%d" % [body.collision_layer, body.collision_mask])
-	if node is CollisionShape3D:
+	if node is CollisionShape3D and not batched_art:
 		var shape: Shape3D = (node as CollisionShape3D).shape
 		parts.append("shape=%s" % (_shape(shape)))
-	parts.append(_meta(node))
+	# A batch's draw range is a size bucket of its merged model's AABB (dressing_batcher.gd:278-281): art.
+	parts.append(_meta(node, batched_art))
 	return " | ".join(parts)
 
 
@@ -232,9 +256,16 @@ func _shape(shape: Shape3D) -> String:
 	return shape.get_class()
 
 
+func _is_imported_model(node: Node) -> bool:
+	var file: String = node.scene_file_path
+	return file.ends_with(".glb") or file.ends_with(".gltf")
+
+
 func _mesh(mesh: Mesh) -> String:
 	if mesh == null:
 		return "none"
+	if not mesh.resource_path.is_empty():  # N-964: a mesh stored in a file is art; only code-built ones are signed
+		return "%s from file" % mesh.get_class()
 	var aabb: AABB = mesh.get_aabb()
 	var text: String = "%s aabb(%s %s) surfaces=%d" % [
 		mesh.get_class(), _vec(aabb.position), _vec(aabb.size), mesh.get_surface_count()]
@@ -249,9 +280,11 @@ func _mesh(mesh: Mesh) -> String:
 	return text
 
 
-func _meta(node: Node) -> String:
+func _meta(node: Node, batched_art: bool = false) -> String:
 	var entries: Array[String] = []
 	for key: StringName in node.get_meta_list():
+		if batched_art and key == &"quality_base_range":
+			continue
 		entries.append("%s=%s" % [key, _variant(node.get_meta(key))])
 	entries.sort()
 	return "meta{%s}" % ",".join(entries)

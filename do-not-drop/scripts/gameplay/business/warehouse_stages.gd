@@ -79,11 +79,40 @@ static func expand(state: Object, unlocked_stage: int = -1) -> Dictionary:
 	return result
 
 
-## Resizes the build grid and the placement checks to the stage the company is at. Returns the
-## new grid size.
+## Floor cells in front of the loading dock (south wall, centered) that nothing can cover (D-0906).
+static func dock_rect(stage: int) -> Rect2i:
+	var size: Vector2i = grid_size_for(stage)
+	var cells: Vector2i = CompanyTuning.WAREHOUSE_DOCK_CELLS
+	return Rect2i(Vector2i((size.x - cells.x) / 2, size.y - cells.y), cells)
+
+
+## Floor cells in front of the customer exit (north wall, centered) that nothing can cover.
+static func exit_rect(stage: int) -> Rect2i:
+	var size: Vector2i = grid_size_for(stage)
+	var cells: Vector2i = CompanyTuning.WAREHOUSE_EXIT_CELLS
+	return Rect2i(Vector2i((size.x - cells.x) / 2, 0), cells)
+
+
+## Both fixed areas of a stage: BuildPlacement.fixed_blocked.
+static func fixed_rects(stage: int) -> Array[Rect2i]:
+	return [dock_rect(stage), exit_rect(stage)]
+
+
+## The gate openings in the wall line (cells just outside the floor, same span as the fixed
+## areas), so the world adapter leaves a gap in the wall meshes there: dock south, exit north.
+static func gate_rects(stage: int) -> Array[Rect2i]:
+	var size: Vector2i = grid_size_for(stage)
+	var dock: Rect2i = dock_rect(stage)
+	var door: Rect2i = exit_rect(stage)
+	return [Rect2i(dock.position.x, size.y, dock.size.x, 1), Rect2i(door.position.x, -1, door.size.x, 1)]
+
+
+## Resizes the build grid and the placement checks to the stage the company is at, and sets the
+## fixed areas (dock, exit). Returns the new grid size.
 static func apply_to(stage: int, placement: BuildPlacement, mode: BuildMode = null) -> Vector2i:
 	var size: Vector2i = grid_size_for(stage)
 	placement.grid_size = size
+	placement.fixed_blocked = fixed_rects(stage)
 	if mode != null:
 		mode.grid_size = size
 	return size
