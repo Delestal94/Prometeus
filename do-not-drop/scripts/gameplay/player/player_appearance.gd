@@ -21,6 +21,22 @@ static func enable_shadows(node: Node) -> void:
 		enable_shadows(child)
 
 
+## Sets the three player-owned gel controls on the geometry instance. The
+## ShaderMaterial remains shared, so changing one player cannot affect another.
+static func set_gel_look(
+	body: Node,
+	color: Color,
+	opacity: float = 1.0,
+	brightness: float = 1.0
+) -> void:
+	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
+	if mesh_instance == null:
+		return
+	mesh_instance.set_instance_shader_parameter(&"gel_color", color)
+	mesh_instance.set_instance_shader_parameter(&"gel_opacity", clampf(opacity, 0.0, 1.0))
+	mesh_instance.set_instance_shader_parameter(&"gel_brightness", clampf(brightness, 0.5, 1.5))
+
+
 ## Tints the shirt: surface 0 is the T-shirt; its collar/hem trim follows a
 ## shade darker. The imported material is duplicated per instance (a surface
 ## override, not a mutation of the shared glTF resource), so tinting one

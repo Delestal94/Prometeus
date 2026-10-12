@@ -4,14 +4,16 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27-33 also verify that the preview uses the GL Compatibility gel shader
+## S-311.27-34 also verify that the preview uses the GL Compatibility gel shader
 ## with a transparent centre, a denser Fresnel edge, normal-displaced screen
 ## refraction, a procedural studio-window reflection, thickness absorption and
 ## single-pass wrapped back lighting, object-space inclusions, stable self-overlap
-## and a translucent shadow pass.
+## and a translucent shadow pass, with colour, opacity and brightness isolated
+## per player while every body shares the same material resource.
 
 const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
+const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 
 var _failures: int = 0
@@ -146,6 +148,25 @@ func _check_gel_material(preview: Control) -> void:
 		"the gel preview uses the shared GL Compatibility material")
 	if material == null:
 		return
+	var other_gel := GEL_SCENE.instantiate() as Node3D
+	preview.add_child(other_gel)
+	var other_mesh: MeshInstance3D = PlayerAppearance.find_mesh_instance(other_gel)
+	other_mesh.material_override = GEL_MATERIAL
+	PlayerAppearance.set_gel_look(gel, Color(0.35, 0.8, 1.0), 0.62, 1.18)
+	PlayerAppearance.set_gel_look(other_gel, Color(1.0, 0.55, 0.3), 0.84, 0.76)
+	_expect(other_mesh.material_override == material,
+		"players with different looks keep the exact same material resource")
+	_expect(
+		mesh.get_instance_shader_parameter(&"gel_color")
+		!= other_mesh.get_instance_shader_parameter(&"gel_color")
+		and mesh.get_instance_shader_parameter(&"gel_opacity")
+		!= other_mesh.get_instance_shader_parameter(&"gel_opacity")
+		and mesh.get_instance_shader_parameter(&"gel_brightness")
+		!= other_mesh.get_instance_shader_parameter(&"gel_brightness"),
+		"colour, opacity and brightness stay isolated on each player instance"
+	)
+	other_gel.free()
+	PlayerAppearance.set_gel_look(gel, Color(0.78, 0.82, 0.92), 1.0, 1.0)
 	var center: float = material.get_shader_parameter(&"center_opacity")
 	var edge: float = material.get_shader_parameter(&"edge_opacity")
 	var density: float = material.get_shader_parameter(&"edge_density")
@@ -196,6 +217,14 @@ func _check_gel_material(preview: Control) -> void:
 	_expect(absorption_color > 0.0 and absorption_opacity > 0.0,
 		"thicker gel gains colour and opacity")
 	var shader_code: String = material.shader.code
+	_expect(
+		shader_code.contains("instance uniform vec4 gel_color")
+		and shader_code.contains("instance uniform float gel_opacity")
+		and shader_code.contains("instance uniform float gel_brightness")
+		and shader_code.contains("gel_color.a * gel_opacity")
+		and shader_code.contains("gel_color.rgb * gel_brightness"),
+		"the shared shader reads all three player-owned values as instance uniforms"
+	)
 	_expect(
 		shader_code.contains("hint_screen_texture")
 		and shader_code.contains("SCREEN_UV")
