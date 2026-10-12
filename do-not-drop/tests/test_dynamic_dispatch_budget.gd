@@ -249,6 +249,10 @@ const BUDGETS: Dictionary = {
 	# The one .get left is the level's `route`: only level_base.gd has it, and preloading the levels here
 	# loops back through level_common.gd, which preloads this file.
 	"res://scripts/gameplay/route/low_visibility_event.gd": {"call": 0, "callv": 0, "get": 1, "root": 0},
+	# The shared level (N-224.4) drives the truck (stop_prediction, set_door_open) as VehicleScript, the debug
+	# player (pick_up) as Player and the route (close_lost_order) as RouteScript. One .call left: the debug
+	# cargo mount's interact(), because its InteractionArea script has no class name.
+	"res://scripts/gameplay/level_common.gd": {"call": 1, "callv": 0, "get": 0, "root": 0},
 	# The box's presentation (N-224.4) is typed: the box (DeliveryPackage), its trap (TrapDefinition,
 	# HostileTrapBehavior, ExplosiveTrapBehavior, LiquidTrapBehavior), its contents (PackageContent) and the
 	# settings (GAME_SETTINGS, below). Nothing left by name but two /root/ lookups: the null-safe GameSettings

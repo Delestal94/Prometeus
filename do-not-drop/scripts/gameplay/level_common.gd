@@ -21,6 +21,7 @@ const STUCK_SECONDS: float = 6.0
 ## route.gd and vehicle.gd have no class name: typed through their scripts
 ## so a rename fails to compile instead of at run time (N-224).
 const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+const RouteScript = preload("res://scripts/gameplay/route/route.gd")
 ## Seconds the truck has been wedged (see _should_count_as_stuck()).
 var stuck_seconds: float = 0.0
 ## A box that leaves the van isn't written off on the spot (N-213.1): it lies
@@ -270,7 +271,7 @@ func _stop_orphaned_run(_reason: String) -> void:
 	RunManager.is_running = false
 	vehicle.linear_velocity = Vector3.ZERO
 	vehicle.angular_velocity = Vector3.ZERO
-	vehicle.call(&"stop_prediction")
+	(vehicle as VehicleScript).stop_prediction()
 	if vehicle.is_inside_tree():
 		vehicle.get_tree().call_group(&"stops_with_orphaned_run", &"stop_orphaned_run")
 
@@ -429,12 +430,12 @@ func start_debug_delivery() -> void:
 		# Shelf slots remain available in normal play, where loose cargo may
 		# genuinely fall after rough driving.
 		var mount: Node = vehicle.get_node_or_null(^"CargoBay/LeftSeat1PackageMount/InteractionArea")
-		player.call(&"pick_up", packages[0].get_path())
+		(player as Player).pick_up(packages[0].get_path())
 		if mount != null:
 			mount.call(&"interact", player)
 	if not _driver_seated:
 		# The driver's seat is only reachable through its open door.
-		vehicle.call(&"set_door_open", &"cab_left", true)
+		(vehicle as VehicleScript).set_door_open(&"cab_left", true)
 		_driver_seat.interact(player)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -549,9 +550,9 @@ func _check_lost_cargo() -> void:
 			_overboard_seconds.erase(id)
 			# The order closes empty first (N-213.4), so RunManager no longer
 			# counts the box as cargo and writing it off can't end the run.
-			var route_node: Node = get_node_or_null(^"World/Route")
-			if route_node != null and route_node.has_method(&"close_lost_order"):
-				route_node.call(&"close_lost_order", id)
+			var route_node: RouteScript = get_node_or_null(^"World/Route") as RouteScript
+			if route_node != null:
+				route_node.close_lost_order(id)
 			package.mark_lost("HUD_CARGO_FELL_OFF")
 			EventBus.relay(&"cargo_overboard_ended", [id, false])
 
