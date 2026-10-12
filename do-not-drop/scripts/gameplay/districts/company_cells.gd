@@ -5,9 +5,10 @@ extends WorldCellStreamer
 ##
 ## Pinned for good: the industrial park around the shed (cells -1..1) and the
 ## cells under the three main streets of diseno/mapa.md, so the shed and the
-## streets are there before anyone drives. A cell's content comes from
-## `content_for` (D-0304 will give it the road graph's pieces); until then a
-## cell is an empty `Node3D` named `Cell_<x>_<z>` so the flow is testable.
+## streets are there before anyone drives. `pin_streets` pins them again from the
+## road graph's real curves (RoadGraph, D-0304). A cell's content comes from
+## `content_for` (the road graph's pieces, once the mesh per edge exists); until
+## then a cell is an empty `Node3D` named `Cell_<x>_<z>` so the flow is testable.
 
 ## Waypoints of the main streets, from diseno/mapa.md (x, z in meters).
 const MAIN_STREETS: Array = [
@@ -45,6 +46,20 @@ func pin_fixed_cells() -> void:
 			for s in steps + 1:
 				var p := from.lerp(to, float(s) / float(steps))
 				grid.pin(grid.cell_of(Vector3(p.x, 0.0, p.y)))
+
+
+## Pins every cell the streets named `streets` (RoadEdge.street) cross, so they
+## never unload. Returns how many cells were pinned.
+func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_STREETS) -> int:
+	var count: int = 0
+	for edge: RoadEdge in graph.edges:
+		if not streets.has(edge.street):
+			continue
+		for cell: Vector2i in graph.cells_crossed(edge.id, grid.cell_size):
+			if not grid.is_pinned(cell):
+				count += 1
+			grid.pin(cell)
+	return count
 
 
 func _build_cell(cell: Vector2i) -> Node3D:

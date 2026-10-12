@@ -45,6 +45,12 @@ carga (medido con el reloj del motor en headless) ni huérfanos al volver.
 **Hecho cuando:** los dos tests pasan y CI corre el módulo en `portability-check.sh`.
 
 ### D-0304 · Grafo de calles y tramos sobre aristas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/route_gen/`) · F1
+**[~] Parcial (2026-10-12, PR pendiente)** — grafo, datos y test: `modules/route_gen/` suma `RoadNetwork`/`RoadNode`/`RoadEdge` (grafo con aristas Bézier, muestreo por largo, punto más cercano, celdas cruzadas, caminos mínimos que frenan en un bloqueo cerrado, `validate()`, `crossing_pairs()`; test `modules/route_gen/tests/test_road_network.gd`); `scripts/gameplay/districts/road_graph.gd` (`RoadGraph`) + `data/world/road_graph.tres` (27 nodos, 32 calles, ~12,2 km: galpón → Centro (grilla de 3 x 3 con adoquín) → Campo (ripio y barro), más las puntas hasta los bloqueos de Suburbio y Puerto); `RoadGraph.register_terrain()` pone los `add_span` del terreno sobre cada curva; `CompanyCells.pin_streets()`; `test_road_graph`.
+**Subtareas abiertas:**
+- **D-0304.1** Malla de calle por arista (calzada, banquinas y marcas sobre la curva con el terreno de `TerrainField`, sin duplicar la lógica de `StraightSegment`/`route_ground.gd`; la superficie va con shader, no caja de color, N-323) y su entrega por celda (`CompanyCells.content_for`). `constructor-tramos` + `artista-shaders`.
+- **D-0304.2** Colocar los tipos de tramo de `edge.segments` a lo largo de la curva (cada pieza es recta o un arco propio; hay que decidir cómo se parten las curvas Bézier en tramos, p. ej. cuerdas de ~30 m que respeten `CurveSegment`) con largo y dificultad, y el `route_golden` por arista del Campo.
+- **D-0304.3** Piloto automático del bot (D-2016) galpón → Centro con `OFF_ROAD` = 0: la línea ya existe (`test_road_graph` arma la polilínea del camino mínimo sin saltos), falta seguirla con el vehículo; depende de D-2016 y de la malla.
+- **D-0304.4** Capturas de `revisor-visual` de 3 aristas (asfalto, ripio, barro) cuando exista D-0304.1.
 **Depende de:** D-0301, D-0303
 **Qué:** `scripts/gameplay/districts/road_graph.gd` + recurso `data/world/road_graph.tres`:
 - **nodos:** posición, tipo `junction|dead_end|gate`;

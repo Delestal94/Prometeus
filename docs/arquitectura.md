@@ -452,7 +452,7 @@ La UI y el audio escuchan estas señales; la simulación nunca depende de que al
 | `scripts/gameplay/business/` | `ProductDefinition`, `Inventory`, `Order`, `OrderBook`, `Pallet`, armado de cajas |
 | `scripts/gameplay/districts/` | `CompanyWorld`, bloqueos, registro de zonas |
 | `scripts/gameplay/fleet/` | `VehicleDefinition` y vehículos nuevos |
-| `data/products/`, `zones/`, `vehicles/`, `boxes/`, `suppliers/`, `gates/` | recursos `.tres`; agregar uno suma contenido sin tocar código |
+| `data/products/`, `zones/`, `vehicles/`, `boxes/`, `suppliers/`, `gates/`, `world/` (grafo de calles) | recursos `.tres`; agregar uno suma contenido sin tocar código |
 | `scenes/company/` | `company_world.tscn` y lo que cuelga de él |
 | `modules/` | lo genérico y portable (tabla de abajo) |
 
