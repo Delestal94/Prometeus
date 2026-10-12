@@ -205,6 +205,7 @@ verdadero, hay `DayCycle` en `OPENING` y no hay `ERROR` en el log (Logger que cu
 **Hecho cuando:** el test pasa y Entrega/Endless arrancan igual que antes.
 
 ### D-0215 · Señales de negocio en `EventBus` — A · Opus 5.5 · medium · Aviso: sí (`event_bus.gd`) · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — 11 señales al final de `event_bus.gd` (sin relay: cada peer las emite al aplicar); `CompanyState` ya emite `money_changed` y `gate_opened`; las demás las conecta la tarea de su emisor; `test_event_bus_company`.
 **Depende de:** D-0201
 **Qué:** agregar al final de `event_bus.gd` (sin reordenar las 58 actuales):
 - `company_day_started`, `company_day_closing`, `company_day_summary`;

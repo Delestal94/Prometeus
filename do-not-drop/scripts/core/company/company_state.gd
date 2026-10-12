@@ -171,6 +171,7 @@ func open_gate(gate_id: StringName) -> bool:
 	if gate_id == &"" or opened_gates.has(gate_id):
 		return false
 	opened_gates.append(gate_id)
+	_emit_fact(&"gate_opened", [gate_id])
 	return true
 
 
@@ -209,6 +210,16 @@ func _record(signed_amount: int, reason: StringName) -> void:
 	)
 	if ledger.size() > CompanyTuning.LEDGER_MAX:
 		ledger.pop_front()
+	_emit_fact(&"money_changed", [signed_amount, reason])
+
+
+## Business facts go out on this peer's EventBus (docs/arquitectura.md 10.3). Reached by
+## path, not by name, so the script still loads where the autoload is missing (N-919);
+## from_dict() never calls this, so a loaded save or a snapshot fires nothing.
+func _emit_fact(fact: StringName, args: Array) -> void:
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and bus.has_signal(fact):
+		bus.callv(&"emit_signal", [fact] + args)
 
 
 func _set_defaults() -> void:

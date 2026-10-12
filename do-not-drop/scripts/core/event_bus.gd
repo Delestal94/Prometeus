@@ -154,6 +154,39 @@ signal vehicle_fault_repaired(fault_id: StringName, method: StringName)
 ## catching up). `active` false = it ended. Host decides, relayed.
 signal low_visibility_changed(active: bool, kind: StringName, duration: float, elapsed: float)
 
+# Company mode (D-0215, docs/arquitectura.md section 10.3). Facts of the business, never
+# relayed: CompanyNet applies every business event on each peer, the host too, and each
+# peer emits these locally while applying it. Applying a snapshot (late join, seq gap)
+# fires none of them, only CompanyNet.company_state_restored, so a late joiner doesn't
+# replay the day's sounds and notices. Presentation listens; the simulation never
+# depends on a listener.
+
+## A company day opened (DayCycle, D-0203). `day` counts from 1.
+signal company_day_started(day: int)
+## The day is closing: 20:00 came or the last trip out ended (DayCycle, D-0203).
+signal company_day_closing(day: int)
+## The day's closing summary is ready for the closing screen (DayCycle, D-0203):
+## earnings, costs, deliveries and failures as plain values.
+signal company_day_summary(day: int, summary: Dictionary)
+## A customer order came in (OrderBook, D-0210/D-0801).
+signal order_added(order_id: StringName)
+## A box was packed and sealed for that order (OrderBook.mark_packed).
+signal order_packed(order_id: StringName)
+## That order reached its customer (OrderBook.mark_delivered).
+signal order_delivered(order_id: StringName)
+## A supplier's truck arrived at the shed with the units bought (shed, D-0602).
+signal supply_arrived(supplier_id: StringName)
+## A box was taped shut at a packing station (shed, D-0701); `order_id` is &"" when the
+## box isn't tied to an order yet.
+signal box_sealed(station_id: StringName, order_id: StringName)
+## A map gate opened for good (CompanyState.open_gate, D-0306).
+signal gate_opened(gate_id: StringName)
+## The company reached a milestone (CompanyState, D-0118/D-04xx).
+signal milestone_reached(milestone_id: StringName)
+## Any wallet movement (CompanyState.earn/spend/charge): `amount` is signed (negative
+## when money went out) and `reason` the same tag the ledger keeps.
+signal money_changed(amount: int, reason: StringName)
+
 
 ## Minimum seconds between two callouts from the same player (N-505.3).
 ## The host rate-limits each player to one callout per this many seconds,
