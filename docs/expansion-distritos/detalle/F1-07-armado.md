@@ -54,3 +54,17 @@ conoce los tres, 8 celdas ocupadas sin solaparse, y `NO_SPOT` para un producto g
 **Qué:** `seal` pone la cinta de la caja de la mesa y cobra `TAPE_COST` una vez. `dispatch()` saca la caja de la mesa solo si está sellada; abierta devuelve null y la deja donde está.
 **Test** `test_packing_station`: sin caja, caja abierta que no se despacha, sellado con un solo cobro, despacho de la caja sellada.
 **Hecho cuando:** el test pasa (caja sin cinta no se puede despachar).
+
+### D-0707 · Etiqueta de envío con el pedido — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `OrderLabel` (`scripts/gameplay/business/order_label.gd`) y `PackingStation.label_for(order, wallet)`; `test_packing_station` ampliado. La hoja impresa y su dibujo (reusar `package_shipping_label.gd`) quedan para la mesa visible (D-0701.b).
+**Depende de:** D-0802 (`Order`), D-0504 (`PackagingSupplies.label`), D-0701
+**Qué:** `OrderLabel.address(order)` devuelve `{order, customer, street_key, number}` desde `house_id`
+(`<zona>_house_<n>`); vacío si el pedido no tiene id o casa. `PackingStation.label_for` pega la etiqueta del
+pedido en la caja de la mesa y la cobra con `PackagingSupplies.label` (gratis hoy, `LABEL_COST = 0`; repetir el
+mismo pedido no cobra). Sin caja o con pedido sin casa no cambia nada.
+Decisión: la calle es una clave de traducción (`WORLD_STREET_<ZONA>`, una por zona, con `WORLD_STREET_MAIN` de
+reserva) y el número es el de la casa, hasta que D-0312 dé nombre a cada calle. La clave no está en el CSV
+todavía: lo hace D-0312 junto con las calles.
+**Test** `test_packing_station`: calle y número del pedido, zona desconocida, pedido sin casa o sin id, caja
+sin etiquetar tras un rechazo, cobro, el mismo pedido gratis, y reetiquetar para otro.
+**Hecho cuando:** el test pasa (la etiqueta muestra calle y número del pedido).

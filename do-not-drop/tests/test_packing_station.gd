@@ -10,6 +10,8 @@ extends SceneTree
 ##   box knows its content (D-0703);
 ## - an open box cannot be dispatched; seal() tapes it, charges the tape once and dispatch()
 ##   then hands the box over (D-0706);
+## - label_for() sticks the order's label (street and number of its house) on the box, refuses
+##   with no box or an order without a house, and relabeling the same order is free (D-0707);
 ## - take_box() frees the table; to_dict() survives a JSON round trip.
 
 var _failures: int = 0
@@ -25,6 +27,7 @@ func _run() -> void:
 	_test_put_in_box()
 	_test_three_products()
 	_test_seal_and_dispatch()
+	_test_label()
 	_test_round_trip()
 	quit(_failures)
 
@@ -131,6 +134,36 @@ func _test_seal_and_dispatch() -> void:
 	var out: PackedBox = station.dispatch()
 	_expect(out != null and out.taped, "sealed box is dispatched")
 	_expect(not station.has_box(), "table is free after dispatch")
+	state.reset()
+
+
+func _test_label() -> void:
+	var state: Node = root.get_node_or_null(^"CompanyState")
+	if state == null or state.get_script() == null:
+		_expect(false, "CompanyState autoload missing")
+		return
+	state.new_company("Label Co")
+	var order: Dictionary = {"id": "o1", "customer": "Ana", "zone": "centro", "house_id": "centro_house_7"}
+	var addr: Dictionary = OrderLabel.address(order)
+	_expect(addr.get("number") == 7 and addr.get("street_key") == &"WORLD_STREET_CENTRO", "label shows street and number")
+	_expect(addr.get("order") == &"o1" and addr.get("customer") == "Ana", "label names the order and customer")
+	_expect(OrderLabel.address({"id": "o2", "zone": "campo", "house_id": "campo_house_12"}).get("number") == 12, "campo house 12")
+	_expect(OrderLabel.address({"id": "o3", "zone": "isla", "house_id": "isla_house_3"}).get("street_key") == OrderLabel.FALLBACK_STREET_KEY, "unknown zone uses the fallback street")
+	_expect(OrderLabel.address({"id": "o4", "zone": "centro", "house_id": "kiosk"}).is_empty(), "no house number: no label")
+	_expect(OrderLabel.address({"zone": "centro", "house_id": "centro_house_1"}).is_empty(), "no order id: no label")
+	var table: PackingStation = PackingStation.make(&"t1")
+	_expect(not table.label_for(order, state), "no box to label")
+	table.start_box(&"S")
+	_expect(not table.label_for({"id": "o4", "house_id": "kiosk"}, state), "order without a house is refused")
+	_expect(table.box.label_order_id == &"", "refused label leaves the box bare")
+	var money: int = state.money
+	_expect(table.label_for(order, state), "label sticks on the box")
+	_expect(OrderLabel.matches(table.box, order), "box carries the label of the order")
+	_expect(not OrderLabel.matches(table.box, {"id": "o2"}), "box does not match another order")
+	_expect(state.money == money - CompanyTuning.LABEL_COST, "label charged at its tuning price")
+	_expect(table.label_for(order, state) and state.money == money - CompanyTuning.LABEL_COST, "same order again is free")
+	_expect(table.label_for({"id": "o2", "house_id": "campo_house_2"}, state), "relabeling for another order works")
+	_expect(table.box.label_order_id == &"o2", "the newest label wins")
 	state.reset()
 
 

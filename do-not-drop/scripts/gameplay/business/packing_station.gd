@@ -85,6 +85,15 @@ func seal(wallet: Object) -> bool:
 	return box != null and PackagingSupplies.tape(box, wallet)
 
 
+## Sticks the label of `order` (an Order dictionary) on the box on the table and pays it
+## (PackagingSupplies.label). False, changing nothing, if the table has no box, the order names
+## no house or the wallet cannot pay. Relabeling for the same order is free (D-0707).
+func label_for(order: Dictionary, wallet: Object) -> bool:
+	if box == null or OrderLabel.address(order).is_empty():
+		return false
+	return PackagingSupplies.label(box, StringName(str(order["id"])), wallet)
+
+
 ## Takes the box off the table to send it away. Null, leaving it in place, if it is not taped
 ## shut: an open box cannot be dispatched (D-0706).
 func dispatch() -> PackedBox:
