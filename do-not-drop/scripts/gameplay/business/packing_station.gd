@@ -94,6 +94,13 @@ func label_for(order: Dictionary, wallet: Object) -> bool:
 	return PackagingSupplies.label(box, StringName(str(order["id"])), wallet)
 
 
+## Stamps a seal (BoxSeals.KINDS) on the box on the table and pays it (PackagingSupplies.stamp).
+## False, changing nothing, if the table has no box, the kind is unknown, the box already has
+## that seal or the wallet cannot pay (D-0708).
+func stamp(kind: StringName, wallet: Object) -> bool:
+	return box != null and BoxSeals.is_kind(kind) and PackagingSupplies.stamp(box, kind, wallet)
+
+
 ## Takes the box off the table to send it away. Null, leaving it in place, if it is not taped
 ## shut: an open box cannot be dispatched (D-0706).
 func dispatch() -> PackedBox:
