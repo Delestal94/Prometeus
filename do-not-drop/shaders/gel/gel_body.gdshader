@@ -1,11 +1,13 @@
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
+render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_schlick_ggx;
 
 // S-311.27-32: GL Compatibility gelatin with a clear centre, a denser Fresnel
 // edge, real screen-space refraction, studio highlights and Beer-Lambert-style
 // absorption driven by the baked base-body thickness map. Wrapped diffuse and
 // back-light transmission add a single-pass fake subsurface glow. Sparse 3D
-// object-space noise adds internal motes without camera or UV swimming.
+// object-space noise adds internal motes without camera or UV swimming. An
+// alpha depth pre-pass stabilizes self-overlap and a thinner shadow pass keeps
+// the translucent body's shadow lighter than an opaque character's.
 
 group_uniforms gel;
 uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
@@ -32,6 +34,9 @@ group_uniforms internal_inclusions;
 uniform float inclusion_density : hint_range(0.0, 0.4) = 0.18;
 uniform float inclusion_scale : hint_range(8.0, 128.0) = 72.0;
 uniform float inclusion_contrast : hint_range(0.0, 0.3) = 0.07;
+
+group_uniforms transparency_shadows;
+uniform float shadow_density : hint_range(0.1, 1.0) = 0.32;
 
 group_uniforms thickness_absorption;
 uniform sampler2D thickness_map : repeat_disable, filter_linear;
@@ -132,11 +137,21 @@ void fragment() {
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
 	float surface_alpha = gel_color.a * mix(center_opacity, edge_opacity, fresnel);
-	ALPHA = clamp(
+	float final_alpha = clamp(
 		surface_alpha + thickness_absorption * absorption_opacity + inclusion_mask * inclusion_contrast,
 		0.0,
 		1.0
 	);
+	if (IN_SHADOW_PASS) {
+		float shadow_coverage = mix(final_alpha, 1.0, shadow_density);
+		float shadow_hash = hash_object_cell(floor(model_position * 180.0));
+		if (shadow_hash > shadow_coverage) {
+			discard;
+		}
+		ALPHA = 1.0;
+	} else {
+		ALPHA = final_alpha;
+	}
 }
 
 void light() {
