@@ -33,10 +33,11 @@ var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
 var _controls_label: Label
 var _language_option: OptionButton
+## The key rows (options_controls_section.gd); _binding_buttons is its action -> Button map.
+var _controls_section: OptionsControlsSection
 var _binding_buttons: Dictionary = {}
 ## Every sound in the game, to mute one by one (sound_check_panel.gd).
 var _sound_check: Control
-var _listening_action: StringName = &""
 
 
 func _ready() -> void:
@@ -196,15 +197,10 @@ func _build() -> void:
 	UiTheme.tag(column, tr("UI_OPT_CONTROLS_TITLE"), UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
-	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")], [&"voice_talk", tr("UI_OPT_BIND_VOICE_TALK")],
-			[&"sprint", tr("UI_OPT_BIND_SPRINT")],
-			[&"drive_shift_up", tr("UI_OPT_BIND_SHIFT_UP")], [&"drive_shift_down", tr("UI_OPT_BIND_SHIFT_DOWN")]]:
-		var row := HBoxContainer.new()
-		column.add_child(row)
-		UiTheme.label(row, String(pair[1]), 16, UiTheme.INK).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var bind: Button = UiTheme.button(row, GameSettings.binding_label(pair[0]), false, Vector2(150, 38))
-		bind.pressed.connect(func(action: StringName = pair[0]) -> void: _listen_for_key(action))
-		_binding_buttons[pair[0]] = bind
+	_controls_section = OptionsControlsSection.new()
+	column.add_child(_controls_section)
+	_controls_section.build()
+	_binding_buttons = _controls_section.buttons
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
@@ -248,29 +244,16 @@ func _rebuild_for_language() -> void:
 	for child: Node in get_children():
 		remove_child(child)
 		child.queue_free()
-	_binding_buttons.clear()
+	_binding_buttons = {}
 	_sound_check = null
-	_listening_action = &""
 	_build()
 	visible = was_visible
 	if was_visible:
 		_language_option.grab_focus.call_deferred()
 
 
-func _listen_for_key(action: StringName) -> void:
-	_listening_action = action
-	(_binding_buttons[action] as Button).text = tr("UI_OPT_PRESS_KEY")
-
-
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
-		return
-	if not _listening_action.is_empty():
-		if event is InputEventKey and event.pressed and not event.echo and event.keycode != KEY_ESCAPE:
-			GameSettings.bind_key(_listening_action, event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode)
-			(_binding_buttons[_listening_action] as Button).text = GameSettings.binding_label(_listening_action)
-			_listening_action = &""
-			get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel"):
 		close()
@@ -314,8 +297,7 @@ func _sync_from_settings() -> void:
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)
 	_quality_slider.value_changed.emit(GameSettings.graphics_quality)
 	_language_option.select(GameSettings.SUPPORTED_LANGUAGES.find(GameSettings.language))
-	for action: StringName in _binding_buttons:
-		(_binding_buttons[action] as Button).text = GameSettings.binding_label(action)
+	_controls_section.stop_listening()
 
 
 func _menu_text_scale_index() -> int:
@@ -337,6 +319,8 @@ func open() -> void:
 
 
 func close() -> void:
+	if _controls_section != null and _controls_section.is_listening():
+		_controls_section.stop_listening()
 	if _sound_check != null and _sound_check.visible:
 		_sound_check.call(&"close")
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
