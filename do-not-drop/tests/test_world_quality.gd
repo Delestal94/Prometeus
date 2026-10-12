@@ -9,6 +9,8 @@ extends SceneTree
 ## directional atlas instead (world_quality.gd), Low the cheapest and High the
 ## softest, and the levels' Sun softens its shadows a little (shadow_opacity)
 ## without touching the biases that keep them attached to what casts them.
+## S-311.35 also routes gel bodies to the no-screen-read opaque material on
+## Low, while the accessibility preference can request it at any level.
 
 var _failures: int = 0
 
@@ -30,6 +32,7 @@ func _run() -> void:
 	dressing.set_meta(WorldQuality.BASE_RANGE_META, 100.0)
 	world.add_child(dressing)
 	await process_frame
+	settings.set(&"opaque_gel", false)
 
 	for level: int in [WorldQuality.Level.LOW, WorldQuality.Level.MEDIUM, WorldQuality.Level.HIGH]:
 		settings.set(&"graphics_quality", level)
@@ -40,6 +43,8 @@ func _run() -> void:
 		_expect(is_equal_approx(dressing.visibility_range_end, 100.0 * float(preset.range_scale)), "%s: dressing drawn to %.0f m (%.0f)" % [name, 100.0 * float(preset.range_scale), dressing.visibility_range_end])
 		_expect(is_equal_approx(root.scaling_3d_scale, preset.render_scale), "%s: 3D rendered at %.0f%% (%.2f)" % [name, float(preset.render_scale) * 100.0, root.scaling_3d_scale])
 		_expect(root.msaa_3d == int(preset.msaa), "%s: MSAA %d (%d)" % [name, int(preset.msaa), root.msaa_3d])
+		_expect(bool(settings.call(&"uses_opaque_gel")) == (level == WorldQuality.Level.LOW),
+			"%s selects the correct shared gel material" % name)
 	# Lower quality really is lighter, level by level.
 	var low: Dictionary = WorldQuality.PRESETS[WorldQuality.Level.LOW]
 	var high: Dictionary = WorldQuality.PRESETS[WorldQuality.Level.HIGH]
@@ -62,6 +67,10 @@ func _run() -> void:
 		"The chosen level is saved with the other settings")
 
 	settings.set(&"graphics_quality", WorldQuality.Level.HIGH)
+	settings.set(&"opaque_gel", true)
+	_expect(bool(settings.call(&"uses_opaque_gel")),
+		"the accessibility preference selects opaque gel even on High")
+	settings.set(&"opaque_gel", false)
 	world.free()
 	if _failures == 0:
 		print("PASS: each quality level sets shadows, draw distance, particles and scale, live, and is saved")

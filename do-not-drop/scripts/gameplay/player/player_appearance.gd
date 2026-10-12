@@ -4,6 +4,9 @@ extends RefCounted
 ## and shadows, and tinting the shirt. Stateless -- the Player decides what
 ## colour and layers, these apply them.
 
+const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
+const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
+
 
 ## Every visual under `node` onto `layers` (RenderLayers.LOCAL_BODY for your
 ## own body, which your own cameras leave out; WORLD for everyone else's).
@@ -35,6 +38,14 @@ static func set_gel_look(
 	mesh_instance.set_instance_shader_parameter(&"gel_color", color)
 	mesh_instance.set_instance_shader_parameter(&"gel_opacity", clampf(opacity, 0.0, 1.0))
 	mesh_instance.set_instance_shader_parameter(&"gel_brightness", clampf(brightness, 0.5, 1.5))
+
+
+## Swaps between two shared resources. The opaque material has no transparent
+## pass or screen texture, while keeping the same per-player instance controls.
+static func set_gel_material(body: Node, opaque: bool) -> void:
+	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
+	if mesh_instance != null:
+		mesh_instance.material_override = GEL_OPAQUE_MATERIAL if opaque else GEL_MATERIAL
 
 
 ## Tints the shirt: surface 0 is the T-shirt; its collar/hem trim follows a

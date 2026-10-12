@@ -4,7 +4,7 @@ extends SceneTree
 ## S-311.22 adds the Body page to the existing customization screen. This test
 ## covers its six presets, 17 native sliders, live gel preview, safe random,
 ## preset restore, undo and deterministic keyboard/gamepad focus path.
-## S-311.27-34 also verify that the preview uses the GL Compatibility gel shader
+## S-311.27-35 also verify that the preview uses the GL Compatibility gel shader
 ## with a transparent centre, a denser Fresnel edge, normal-displaced screen
 ## refraction, a procedural studio-window reflection, thickness absorption and
 ## single-pass wrapped back lighting, object-space inclusions, stable self-overlap
@@ -15,6 +15,7 @@ const SCREEN_PATH: String = "res://scripts/ui/cosmetics_panel.gd"
 const Presets := preload("res://scripts/gameplay/player/gel/gel_proportion_presets.gd")
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
+const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
 
 var _failures: int = 0
 
@@ -24,6 +25,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	var settings: Node = root.get_node("GameSettings")
+	settings.set(&"opaque_gel", false)
+	settings.set(&"graphics_quality", WorldQuality.Level.HIGH)
 	var panel: Control = load(SCREEN_PATH).new()
 	root.add_child(panel)
 	await process_frame
@@ -266,6 +270,33 @@ func _check_gel_material(preview: Control) -> void:
 		and not shader_code.contains("shadows_disabled"),
 		"the gel stabilizes self-overlap, receives shadows and dithers only its shadow pass"
 	)
+	var opaque_shader_code: String = GEL_OPAQUE_MATERIAL.shader.code
+	_expect(
+		not opaque_shader_code.contains("hint_screen_texture")
+		and not opaque_shader_code.contains("SCREEN_UV")
+		and not opaque_shader_code.contains("ALPHA")
+		and not opaque_shader_code.contains("blend_mix"),
+		"the milky fallback is fully opaque and never requests a screen copy"
+	)
+	_expect(
+		opaque_shader_code.contains("instance uniform vec4 gel_color")
+		and opaque_shader_code.contains("instance uniform float gel_opacity")
+		and opaque_shader_code.contains("instance uniform float gel_brightness")
+		and opaque_shader_code.contains("texture(thickness_map, UV).r")
+		and opaque_shader_code.contains("studio_mask"),
+		"the opaque fallback keeps per-player controls, thickness and studio accents"
+	)
+	var settings: Node = root.get_node("GameSettings")
+	settings.set(&"graphics_quality", WorldQuality.Level.LOW)
+	_expect(mesh.material_override == GEL_OPAQUE_MATERIAL,
+		"Low quality switches the live gel preview to the shared opaque material")
+	settings.set(&"graphics_quality", WorldQuality.Level.HIGH)
+	_expect(mesh.material_override == GEL_MATERIAL,
+		"High quality restores the shared transparent material")
+	settings.set(&"opaque_gel", true)
+	_expect(mesh.material_override == GEL_OPAQUE_MATERIAL,
+		"the accessibility preference selects opaque gel independently of quality")
+	settings.set(&"opaque_gel", false)
 
 
 func _action_has_joy_motion(action: StringName) -> bool:

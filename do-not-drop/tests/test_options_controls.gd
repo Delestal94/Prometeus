@@ -112,7 +112,8 @@ func _test_inventory() -> void:
 	_expect(bare.is_empty(), "Every action with a keyboard key is rebindable or listed as not offered (missing: %s)"
 		% str(bare))
 	for key: String in ["UI_OPT_BIND_SWAPPED", "UI_OPT_BIND_BLOCKED", "UI_OPT_BIND_RESERVED",
-			"UI_OPT_BIND_DEFAULT", "UI_OPT_BIND_DEFAULT_HINT", "UI_OPT_BIND_RIGHT_CLICK"]:
+			"UI_OPT_BIND_DEFAULT", "UI_OPT_BIND_DEFAULT_HINT", "UI_OPT_BIND_RIGHT_CLICK",
+			"UI_OPT_OPAQUE_GEL", "UI_OPT_OPAQUE_GEL_HINT"]:
 		_expect(texts.has(key), "%s is in strings_ui.csv" % key)
 
 
@@ -362,6 +363,13 @@ func _test_panel() -> void:
 	root.add_child(options)
 	await process_frame
 	options.call(&"open")
+	var opaque_gel := options.find_child("OpaqueGelCheck", true, false) as CheckBox
+	_expect(opaque_gel != null, "Options exposes the opaque-gel accessibility preference")
+	if opaque_gel != null:
+		opaque_gel.set_pressed(true)
+		_expect(bool(_settings.get(&"opaque_gel")) and bool(_settings.call(&"uses_opaque_gel")),
+			"the accessibility checkbox applies the opaque material preference")
+		opaque_gel.set_pressed(false)
 	var section: Node = options.find_child("ControlsSection", true, false)
 	_expect(section != null, "The options screen has the controls section")
 	if section == null:

@@ -6,13 +6,16 @@ extends SceneTree
 ## Visual proof for block D. It renders the real LOD0 gel body with the shared
 ## runtime material through a full turn. S-311.33 verifies stable self-overlap,
 ## a soft translucent shadow on the floor and received directional shadows.
+## Pass `-- --opaque` for the S-311.35 no-screen-read milky fallback.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
+const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
 
 var _camera: Camera3D
 var _gel: Node3D
+var _use_opaque: bool = false
 
 
 func _initialize() -> void:
@@ -25,11 +28,14 @@ func _run() -> void:
 		quit(2)
 		return
 	root.size = Vector2i(960, 960)
+	_use_opaque = "--opaque" in OS.get_cmdline_user_args()
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	await _save_turntable(output_path.path_join("s311_33_transparency_shadow_turntable.png"))
-	print("PASS: gel transparency and shadow turntable at ", output_path)
+	var file_name := "s311_35_opaque_milky_turntable.png" if _use_opaque \
+		else "s311_33_transparency_shadow_turntable.png"
+	await _save_turntable(output_path.path_join(file_name))
+	print("PASS: gel %s turntable at %s" % ["opaque milky" if _use_opaque else "transparency and shadow", output_path])
 	quit(0)
 
 
@@ -76,7 +82,7 @@ func _build_stage() -> void:
 		push_error("Gel LOD0 has no mesh for material review")
 		quit(1)
 		return
-	mesh.material_override = GEL_MATERIAL
+	mesh.material_override = GEL_OPAQUE_MATERIAL if _use_opaque else GEL_MATERIAL
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var animation: AnimationPlayer = PlayerAppearance.find_animation_player(_gel)
 	if animation != null and animation.has_animation(&"Idle"):

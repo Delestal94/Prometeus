@@ -21,7 +21,7 @@ const SAVED_KEYS: Array[StringName] = [
 	&"master_volume", &"music_volume", &"effects_volume", &"voice_volume", &"preferred_fov",
 	&"camera_shake_scale", &"impact_effects", &"look_sensitivity", &"invert_look_y", &"fullscreen",
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
-	&"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log", &"last_join_address",
+	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log", &"last_join_address",
 	&"newspaper_mode",
 ]
 
@@ -163,6 +163,7 @@ var graphics_quality: int = WORLD_QUALITY.Level.HIGH:
 		graphics_quality = clampi(value, WORLD_QUALITY.Level.LOW, WORLD_QUALITY.Level.HIGH)
 		if is_inside_tree():
 			WORLD_QUALITY.apply(get_tree(), graphics_quality)
+		gel_material_mode_changed.emit(uses_opaque_gel())
 		_save()
 
 ## Size of the in-game HUD (panels, banners, prompts) relative to how it
@@ -201,6 +202,20 @@ var colorblind_palette: bool = false:
 		colorblind_palette_changed.emit(colorblind_palette)
 		_save()
 signal colorblind_palette_changed(enabled: bool)
+
+## Removes transparent sorting and screen reads from gel bodies. Low graphics
+## quality enables the same opaque material automatically; this switch lets a
+## player choose it independently as an accessibility preference.
+var opaque_gel: bool = false:
+	set(value):
+		opaque_gel = value
+		gel_material_mode_changed.emit(uses_opaque_gel())
+		_save()
+signal gel_material_mode_changed(use_opaque: bool)
+
+
+func uses_opaque_gel() -> bool:
+	return opaque_gel or graphics_quality == WORLD_QUALITY.Level.LOW
 
 const MENU_TEXT_SCALES: Array[float] = [1.0, 1.25, 1.5]
 var menu_text_scale: float = 1.0:
@@ -385,6 +400,7 @@ func reset_to_defaults() -> void:
 	hud_scale = HUD_SCALE_DEFAULT
 	control_help_mode = ControlHelp.BEGINNING
 	colorblind_palette = false
+	opaque_gel = false
 	menu_text_scale = 1.0
 	sound_subtitles = false
 	voice_chat_enabled = false

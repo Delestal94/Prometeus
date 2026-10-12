@@ -1,0 +1,24 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://shaders/gel/gel_body_opaque.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://assets/textures/characters/gel/thickness.png" id="2_thickness"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/edge_density = 0.38
+shader_parameter/fresnel_power = 2.4
+shader_parameter/milkiness = 0.24
+shader_parameter/roughness = 0.12
+shader_parameter/specular = 0.86
+shader_parameter/inclusion_density = 0.18
+shader_parameter/inclusion_scale = 72.0
+shader_parameter/inclusion_contrast = 0.07
+shader_parameter/thickness_map = ExtResource("2_thickness")
+shader_parameter/thickness_decode_meters = 2.0
+shader_parameter/absorption_coefficient = 2.4
+shader_parameter/absorption_color_mix = 0.62
+shader_parameter/studio_reflection_color = Color(1, 0.97, 0.92, 1)
+shader_parameter/studio_reflection_strength = 0.3
+shader_parameter/studio_reflection_softness = 0.008
+shader_parameter/studio_ribbon_width = 0.026
