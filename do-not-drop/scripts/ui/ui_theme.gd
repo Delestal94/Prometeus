@@ -133,9 +133,12 @@ static func _text_scale_for(node: Node) -> float:
 	return 1.0
 
 
-static func _refresh_text_scale(scale: float, root: Control) -> void:
-	if not is_instance_valid(root):
+## `bound` is a Variant on purpose: a screen freed since it connected (the signal
+## outlives it) can't be converted to a typed Control argument, only checked.
+static func _refresh_text_scale(scale: float, bound: Variant) -> void:
+	if not is_instance_valid(bound):
 		return
+	var root := bound as Control
 	root.set_meta(&"ui_menu_text_scale", scale)
 	var controls: Array[Node] = [root]
 	controls.append_array(root.find_children("*", "Control", true, false))

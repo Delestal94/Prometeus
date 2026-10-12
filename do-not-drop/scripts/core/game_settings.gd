@@ -111,7 +111,8 @@ const DEFAULT_KEY_BINDINGS := {
 	&"drive_shift_up": KEY_UP, &"drive_shift_down": KEY_DOWN,
 	&"walk_forward": KEY_W, &"walk_backward": KEY_S, &"drive_left": KEY_A, &"drive_right": KEY_D,
 	&"jump": KEY_SPACE, &"drive_accelerate": KEY_W, &"drive_brake": KEY_S, &"drive_handbrake": KEY_SPACE,
-	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"care_tool_next": KEY_X, &"phone_toggle": KEY_F,
+	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"care_tool_next": KEY_X,
+	&"phone_toggle": KEY_F,
 	&"crew_panel": KEY_TAB, &"spectate_toggle": KEY_TAB,
 }
 

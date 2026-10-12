@@ -43,6 +43,8 @@ const NOT_OFFERED: Array[StringName] = [
 
 var _failures: int = 0
 var _settings: Node
+## Loaded at run time: the script names the GameSettings autoload, which a preload would not see.
+var _section_script: GDScript
 
 
 func _initialize() -> void:
@@ -51,6 +53,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_settings = root.get_node("GameSettings")
+	_section_script = load("res://scripts/ui/options_controls_section.gd")
 	_settings.reset_to_defaults()
 
 	_test_inventory()
@@ -74,9 +77,8 @@ func _run() -> void:
 
 func _test_inventory() -> void:
 	var texts: Dictionary = _csv_keys()
-	var section_script: GDScript = load("res://scripts/ui/options_controls_section.gd")
 	var rows: Array[StringName] = []
-	for group: Dictionary in section_script.GROUPS:
+	for group: Dictionary in _section_script.GROUPS:
 		_expect(texts.has(group["title"]), "Group title %s is in strings_ui.csv" % group["title"])
 		for pair: Array in group["rows"]:
 			rows.append(pair[0])
@@ -92,9 +94,15 @@ func _test_inventory() -> void:
 	for action: StringName in NOT_OFFERED:
 		_expect(action not in _settings.REBINDABLE_ACTIONS, "%s is not offered for rebinding" % action)
 	var bare: Array[StringName] = []
+	# The actions project.godot defines (the engine's own ui_accept, ui_text_* ... are also in the
+	# Input Map, and also in ProjectSettings, so the file is what tells them apart).
+	var project_file := ConfigFile.new()
+	_expect(project_file.load("res://project.godot") == OK, "project.godot can be read")
+	var project_actions: PackedStringArray = project_file.get_section_keys("input") \
+			if project_file.has_section("input") else PackedStringArray()
+	_expect(project_actions.size() > 20, "project.godot lists the project's actions (got %d)" % project_actions.size())
 	for action: StringName in InputMap.get_actions():
-		# The engine's own ui_* actions are not the project's; the project's ui_ping / ui_pause are.
-		if not ProjectSettings.has_setting("input/" + String(action)):
+		if not String(action) in project_actions:
 			continue
 		var has_key: bool = false
 		for event: InputEvent in InputMap.action_get_events(action):
@@ -311,7 +319,7 @@ func _test_reserved_keys() -> void:
 		"...and R / C are what the project ships for restart / look center")
 	_expect(_settings.key_bindings == before and _keys_of(&"jump") == [KEY_SPACE],
 		"Reserved keys changed nothing")
-	var section: Node = load("res://scripts/ui/options_controls_section.gd").new()
+	var section: Node = _section_script.new()
 	root.add_child(section)
 	section.call(&"build")
 	var shown: Dictionary = section.call(&"apply_key", &"jump", KEY_R)
