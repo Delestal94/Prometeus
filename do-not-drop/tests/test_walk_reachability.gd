@@ -83,7 +83,7 @@ func _run() -> void:
 	var with_zone: Array = wall.duplicate()
 	with_zone.append({"id": "dispatch_zone", "x": 9, "z": 4, "turns": 0})
 	_expect(WalkReachability.is_walkable(grid.grid_size, with_zone, entries), "a dispatch zone is walkable")
-	_expect(grid.preview(wall.slice(0, 4), zone, 5, 3)["ok"], "a zone over the gap is green")
+	_expect(grid.preview(wall.slice(0, 4), zone, 8, 3)["ok"], "a zone over the gap is green")
 
 	# No entries, no check.
 	var open := BuildPlacement.new()
