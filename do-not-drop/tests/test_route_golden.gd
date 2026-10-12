@@ -18,6 +18,10 @@ extends SceneTree
 ##   transform to 1e-4, mesh / multimesh size, label text, collision layers, metadata);
 ## - the answers to get_progress, road_distance, stop_road_distance, distance_from_path,
 ##   get_section_name and ground_roughness on a grid of points along and around the road.
+## N-964: art does not enter the hash, so replacing a .glb or a stored mesh leaves the golden alone:
+## an instanced .glb counts as one line (scene name, transform, metadata; its children are skipped) and a
+## mesh with a resource_path (file or sub-resource of one) is signed as "from file" without size or
+## vertices. Meshes built by code (empty resource_path) still sign their aabb and vertices.
 ## tests/data/route_golden.txt was generated with the original single-file route.gd.
 ## The file was written on Linux (CI): on Windows ~77 lines differ from it by the last digit of a
 ## coordinate (a 4-decimal rounding that lands the other way: libm's sin/cos/pow differ in the last
@@ -175,6 +179,8 @@ func _sign_children(route: Node3D, lines: PackedStringArray) -> void:
 
 func _sign_tree(route: Node3D, node: Node, lines: PackedStringArray) -> void:
 	lines.append(_node_line(route, node))
+	if _is_imported_model(node):  # N-964: what is inside a .glb is art, not route generation
+		return
 	for child: Node in node.get_children():
 		_sign_tree(route, child, lines)
 
@@ -232,9 +238,16 @@ func _shape(shape: Shape3D) -> String:
 	return shape.get_class()
 
 
+func _is_imported_model(node: Node) -> bool:
+	var file: String = node.scene_file_path
+	return file.ends_with(".glb") or file.ends_with(".gltf")
+
+
 func _mesh(mesh: Mesh) -> String:
 	if mesh == null:
 		return "none"
+	if not mesh.resource_path.is_empty():  # N-964: a mesh stored in a file is art; only code-built ones are signed
+		return "%s from file" % mesh.get_class()
 	var aabb: AABB = mesh.get_aabb()
 	var text: String = "%s aabb(%s %s) surfaces=%d" % [
 		mesh.get_class(), _vec(aabb.position), _vec(aabb.size), mesh.get_surface_count()]
