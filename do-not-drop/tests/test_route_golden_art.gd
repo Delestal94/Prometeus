@@ -20,7 +20,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var base: String = await _signature(false, false)
-	_expect(not base.is_empty() and base.contains("BridgePostModel"), "The bridge signature lists the post models (got %d chars)" % base.length())
+	_expect(not base.is_empty() and base.contains("BridgePostModel"),
+		"The bridge signature lists the post models (got %d chars)" % base.length())
 	_expect(base.contains("MergedGeometry"), "The bridge segment gets a MergedGeometry (as with batch_dressing)")
 
 	var swapped: String = await _signature(true, false)
