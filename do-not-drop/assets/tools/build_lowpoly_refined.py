@@ -3,8 +3,8 @@
     "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background \
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
-Groups: houses, trees, plants, signs, props, yard (default: all); guardrail and
-tall_fern rebuild just that one model.
+Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
+tall_fern and rock rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -527,7 +527,11 @@ def rock(seed=15, size=(0.8, 0.6, 0.5), material="stone", name="ForestRock", at=
 # stops reading cold next to the moss. Named "stone.forest" so
 # LowpolyMaterials keys it as "stone" (it cuts the name at the first dot)
 # and keeps this albedo under the detail map.
-STONE_FOREST = (0.33, 0.30, 0.25, 1)
+# N-331.7: 0.33/0.30/0.25 read almost white by day and blue under the
+# moonlight -- the game multiplies the (sRGB) albedo by DETAIL_GAIN 1.16. Now
+# the colour the falls' wet rocks had (old albedo x WET_TINT 0.74 in sRGB,
+# route_river_falls.gd), so a dry rock in the forest reads like those.
+STONE_FOREST = (0.17, 0.16, 0.14, 1)
 
 
 def stone_forest():
@@ -540,6 +544,22 @@ def stone_forest():
         principled.inputs["Roughness"].default_value = 0.88
         m.diffuse_color = STONE_FOREST
         m.roughness = 0.88
+        # A closed solid: back faces culled, so glTF doubleSided stays off
+        # (a new Blender material defaults to no culling, i.e. doubleSided).
+        m.use_backface_culling = True
+    return m
+
+
+def _single_sided(name):
+    """A copy of palette material `name` that culls back faces (glTF
+    doubleSided off), for closed solids. "moss.singlesided" still keys as
+    "moss" in LowpolyMaterials. The shared mat(name) is left as it was, so
+    the other models of a run export the same as before."""
+    m = bpy.data.materials.get(name + ".singlesided")
+    if m is None:
+        m = mat(name).copy()
+        m.name = name + ".singlesided"
+        m.use_backface_culling = True
     return m
 
 
@@ -596,7 +616,7 @@ def faceted_rock(name="ForestRock", size=(0.8, 0.6, 0.5), sink=0.05, seed=331):
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     obj.data.materials.append(stone_forest())
-    obj.data.materials.append(mat("moss"))
+    obj.data.materials.append(_single_sided("moss"))
     return obj
 
 
@@ -1137,6 +1157,8 @@ GROUPS = {
     "guardrail": guardrail,
     # Only the tall fern cluster (N-331.2), without rewriting the other plants.
     "tall_fern": lambda: (tall_fern_cluster(), export_forest("tall_fern_cluster")),
+    # Only the forest rock (N-331.7), without rewriting the other plants.
+    "rock": lambda: (forest_rock(), export_forest("rock")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
