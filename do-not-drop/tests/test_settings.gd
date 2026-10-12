@@ -89,12 +89,15 @@ func _run() -> void:
 		"The control-help preference is saved")
 	settings.control_help_mode = settings.ControlHelp.BEGINNING
 	settings.colorblind_palette = true
+	settings.opaque_gel = true
 	settings.menu_text_scale = 1.5
 	settings.sound_subtitles = true
 	var accessibility_config := ConfigFile.new()
 	accessibility_config.load(original_path)
 	_expect(bool(accessibility_config.get_value("player", "colorblind_palette", false)),
 		"The colour-blind palette preference is saved")
+	_expect(bool(accessibility_config.get_value("player", "opaque_gel", false)),
+		"The opaque-gel accessibility preference is saved")
 	_expect(is_equal_approx(float(accessibility_config.get_value("player", "menu_text_scale", 0.0)), 1.5),
 		"The menu text scale is saved independently from the HUD scale")
 	_expect(bool(accessibility_config.get_value("player", "sound_subtitles", false)),
@@ -125,6 +128,7 @@ func _run() -> void:
 	settings.invert_look_y = false
 	settings.control_help_mode = settings.ControlHelp.BEGINNING
 	settings.colorblind_palette = false
+	settings.opaque_gel = false
 	settings.menu_text_scale = 1.0
 	settings.sound_subtitles = false
 	settings.call(&"set_language", "es")
@@ -145,6 +149,7 @@ func _run() -> void:
 	settings.look_sensitivity = 1.0
 	settings.invert_look_y = false
 	settings.colorblind_palette = false
+	settings.opaque_gel = false
 	settings.menu_text_scale = 1.0
 	settings.sound_subtitles = false
 

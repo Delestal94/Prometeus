@@ -23,6 +23,7 @@ var _impact_effects_check: CheckBox
 var _hud_scale_slider: HSlider
 var _control_help_option: OptionButton
 var _colorblind_check: CheckBox
+var _opaque_gel_check: CheckBox
 var _menu_text_option: OptionButton
 var _sound_subtitles_check: CheckBox
 var _run_log_check: CheckBox
@@ -140,6 +141,10 @@ func _build() -> void:
 
 	_colorblind_check = UiTheme.check_box(column, tr("UI_OPT_COLORBLIND"), GameSettings.colorblind_palette)
 	_colorblind_check.toggled.connect(func(pressed: bool) -> void: GameSettings.colorblind_palette = pressed)
+	_opaque_gel_check = UiTheme.check_box(column, tr("UI_OPT_OPAQUE_GEL"), GameSettings.opaque_gel)
+	_opaque_gel_check.name = "OpaqueGelCheck"
+	_opaque_gel_check.tooltip_text = tr("UI_OPT_OPAQUE_GEL_HINT")
+	_opaque_gel_check.toggled.connect(func(pressed: bool) -> void: GameSettings.opaque_gel = pressed)
 
 	var text_row := HBoxContainer.new()
 	text_row.add_theme_constant_override("separation", 12)
@@ -290,6 +295,7 @@ func _sync_from_settings() -> void:
 	_hud_scale_slider.value_changed.emit(GameSettings.hud_scale)
 	_control_help_option.select(GameSettings.control_help_mode)
 	_colorblind_check.set_pressed_no_signal(GameSettings.colorblind_palette)
+	_opaque_gel_check.set_pressed_no_signal(GameSettings.opaque_gel)
 	_menu_text_option.select(_menu_text_scale_index())
 	_sound_subtitles_check.set_pressed_no_signal(GameSettings.sound_subtitles)
 	_run_log_check.set_pressed_no_signal(GameSettings.save_run_log)

@@ -7,7 +7,6 @@ extends SubViewportContainer
 
 const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
-const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 const GelShaper = preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 const GelGrounding = preload("res://scripts/gameplay/player/gel/gel_foot_grounding.gd")
@@ -56,6 +55,7 @@ func _ready() -> void:
 	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	add_child(viewport)
 	_build_studio(viewport)
+	GameSettings.gel_material_mode_changed.connect(_set_opaque_gel)
 	var shot: Dictionary = SHOTS[framing]
 	_target = shot.target
 	_distance = shot.distance
@@ -83,6 +83,10 @@ func show_character() -> void:
 
 func proportion_application_count() -> int:
 	return _gel_shaper.application_count
+
+
+func _set_opaque_gel(use_opaque: bool) -> void:
+	PlayerAppearance.set_gel_material(gel_mannequin, use_opaque)
 
 
 ## A quick squash and stretch: "that changed".
@@ -182,7 +186,7 @@ func _build_studio(viewport: SubViewport) -> void:
 	world.add_child(gel_mannequin)
 	var gel_mesh: MeshInstance3D = PlayerAppearance.find_mesh_instance(gel_mannequin)
 	if gel_mesh != null:
-		gel_mesh.material_override = GEL_MATERIAL
+		PlayerAppearance.set_gel_material(gel_mannequin, GameSettings.uses_opaque_gel())
 	PlayerAppearance.set_gel_look(gel_mannequin, Color(0.78, 0.82, 0.92), 1.0, 1.0)
 	_gel_shaper.setup(gel_mannequin)
 	_gel_grounding = GelGrounding.new()
