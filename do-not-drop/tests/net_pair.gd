@@ -44,6 +44,11 @@ extends Node
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
+## The client's budget for the host's commands, from its level load to the first disconnect (the rejoins set
+## their own, _deadline). The stages up to there take 22-26 s on a quiet machine, 32 s with the CPU
+## oversubscribed: at 40 s a slower runner ran out of it mid-drive or at the newspaper, the client left, and the
+## host waited on a peer that was gone until the job's timeout. A host that stalls is caught by its own waits.
+const CLIENT_BUDGET_SECONDS: float = 150.0
 const CLIENT_COSMETIC: StringName = &"mint_uniform"
 const CLIENT_NICKNAME: String = "Ana"
 const NEWS_DESK: Script = preload("res://scripts/presentation/newspaper/news_desk.gd")
@@ -519,6 +524,7 @@ func _check_rejoin(old_client: int, old_slot: int, old_merit: int, held: Deliver
 		var peers: PackedInt32Array = get_tree().root.multiplayer.get_peers()
 		return peers.size() == 1 and _player(peers[0]) != null, TIMEOUT_SECONDS * 2.0)
 	if not came_back:
+		print("NETLOG role=host rejoin never completed: peers %s" % str(get_tree().root.multiplayer.get_peers()))
 		_expect(false, "the client that left joins the session again")
 		return
 	_client_peer_id = int(get_tree().root.multiplayer.get_peers()[0])
@@ -616,10 +622,16 @@ func _watch_client() -> void:
 	var load_deadline: int = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 2.0 * 1000.0)
 	while _level == null and Time.get_ticks_msec() < load_deadline:
 		await get_tree().process_frame
-	_deadline = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 1000.0)
+	_deadline = Time.get_ticks_msec() + int(CLIENT_BUDGET_SECONDS * 1000.0)
 	while not _finished and Time.get_ticks_msec() < _deadline:
 		await get_tree().process_frame
 	if not _finished:
+		# NETLOG first: for a rejoin that never completed (no session_ready, no session_failed) the
+		# link's state is the only clue the log keeps.
+		var peer: MultiplayerPeer = get_tree().root.multiplayer.multiplayer_peer
+		print("NETLOG role=client gave up: level %s, link status %d, peers %s" % [
+			"up" if _level != null else "down", peer.get_connection_status() if peer != null else -1,
+			str(get_tree().root.multiplayer.get_peers())])
 		print("PAIR role=client FAIL timed out waiting for host commands")
 		_network.call(&"leave_session")
 		get_tree().quit(1)
