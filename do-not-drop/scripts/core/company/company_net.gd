@@ -34,6 +34,10 @@ extends Node
 ## CRITICAL_KINDS when losing it leaves a player stuck, rule 8), checks it in
 ## _handle_request() and applies its event in _apply_state().
 ##
+## Events nobody asks for (the contract's "without a client request": the day's clock, later
+## orders and phases) are the host's own rules: they go out through publish(), the same path.
+## Today: clock_anchor, the pace of the day's clock (D-0219, GameClock, given as `clock`).
+##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
 ## made there is refused (it would number its event before the one being applied).
@@ -61,8 +65,13 @@ const REQUEST_KINDS: Array[StringName] = [&"units_take", &"units_store", SNAPSHO
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
 ## RpcGuard's critical reserve once the sender's budget is gone. units_drop joins with D-2006.
 const CRITICAL_KINDS: Array[StringName] = []
+## The host's day clock changed pace: {minute, speed, paused} (D-0219, GameClock.apply_anchor()).
+const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## Event kinds every peer applies.
-const EVENT_KINDS: Array[StringName] = [&"units_moved"]
+const EVENT_KINDS: Array[StringName] = [&"units_moved", CLOCK_ANCHOR]
+## Event kinds the host may send with publish(), without a request: its own rules (the day's
+## clock). An event a request leads to (units_moved) only comes from _handle_request()'s checks.
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -104,6 +113,9 @@ var inventory: Inventory = Inventory.new()
 ## to_dict() in every snapshot; a client loads the host's into it, its only write there
 ## (rule 1). The owner sets it on every peer (CompanyRoot).
 var company: Object = null
+## The day's clock (D-0219), or null: clock_anchor events land in its apply_anchor(). Set on
+## every peer by GameClock.attach(), which also adds the anchor to the snapshot.
+var clock: GameClock = null
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -203,6 +215,17 @@ func request(kind: StringName, data: Dictionary = {}) -> int:
 	return _next_rid
 
 
+## Host: an event no request led to, decided by the host's own rules (the clock's pace, D-0219;
+## later the day's orders and phases). It takes the same path as one a request led to: applied
+## here first, numbered, sent to every ready peer, then event_applied. False, with nothing sent,
+## on a client, for a kind not in HOST_EVENT_KINDS, while another event is applied or when the
+## state here doesn't take it.
+func publish(kind: StringName, data: Dictionary) -> bool:
+	if not is_host() or not HOST_EVENT_KINDS.has(kind):
+		return false
+	return _publish(kind, data)
+
+
 ## True on the host and when playing solo: the only place business state is decided.
 func is_host() -> bool:
 	if not is_inside_tree():
@@ -277,6 +300,13 @@ func add_snapshot_part(key: String, take: Callable, put: Callable) -> bool:
 		return false
 	_parts[key] = [take, put]
 	return true
+
+
+## Takes back the part under `key` (its owner left the world: GameClock._exit_tree()). Snapshots
+## from now on go without it; a client applying one keeps what that part last put there. False
+## when there is no such part (the keys CompanyNet fills itself are never parts).
+func remove_snapshot_part(key: String) -> bool:
+	return _parts.erase(key)
 
 
 ## Host: the business state as a snapshot carries it (section 3), as plain data:
@@ -633,6 +663,11 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				_as_id(data.get("from")),
 				_as_id(data.get("to"))
 			)
+		CLOCK_ANCHOR:
+			if clock == null or not is_instance_valid(clock):
+				push_warning("CompanyNet: a clock_anchor event but no clock here (GameClock.attach())")
+			else:
+				applied = clock.apply_anchor(data)
 	_applying = false
 	return applied
 

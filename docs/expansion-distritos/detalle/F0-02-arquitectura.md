@@ -246,6 +246,7 @@ que vende los 10 productos, llega a las 08:30 y espera 180 min.
 **Hecho cuando:** el test pasa.
 
 ### D-0219 · Reloj del juego desde el host — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` si hace falta un RPC) · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `modules/day_clock/` (`DayClock`, ancla y `minute_at`) + adaptador `game_clock.gd` (`GameClock`): evento `clock_anchor` de `CompanyNet` solo al cambiar la marcha, ancla en el snapshot (parte `clock`), `PROTOCOL_VERSION` 31; `test_game_clock` con dos peers ENet. Falta cablearlo al mundo (D-0203/D-0214).
 **Depende de:** D-0202
 **Qué:** `scripts/core/company/game_clock.gd`. Lógica en `modules/day_clock/` (D-0223): sin nombres del
 juego, con adaptador.

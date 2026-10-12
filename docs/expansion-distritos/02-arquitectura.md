@@ -26,7 +26,7 @@
 | D-0216 | Registro de distritos (`DistrictRegistry`) leído de `.tres`, sin listas a mano | constructor-mundo | medium | agregar un `.tres` suma el distrito sin tocar código (test) |
 | D-0217 | Registro de vehículos (`FleetRegistry`) leído de `.tres` | constructor-camion | medium | idem con vehículos |
 | D-0218 | Registro de productos y proveedores leído de `.tres` | constructor-negocio | medium | idem con productos |
-| D-0219 | Reloj del juego determinista desde el host (hora del día, aceleración, pausa) | constructor-red | high | test con dos peers ve la misma hora ±1 tick |
+| D-0219 | ✅ Reloj del juego determinista desde el host (hora del día, aceleración, pausa) | constructor-red | high | test con dos peers ve la misma hora ±1 tick |
 | D-0220 | Decidir dónde vive cada script nuevo (`business/`, `fleet/`, `districts/`) y qué va a módulos | Plan | medium | árbol de carpetas en `docs/arquitectura.md`; `check_modules` verde |
 
 ## Ampliación
