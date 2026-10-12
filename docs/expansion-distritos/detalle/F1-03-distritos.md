@@ -28,6 +28,7 @@ o `FAILED`.
 **Hecho cuando:** el test pasa.
 
 ### D-0303 · Módulo `world_cells`: cargar el mapa por celdas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/`) · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `modules/world_cells/` (`WorldCellGrid` + `WorldCellStreamer`, con `module.cfg` y test propio) y su adaptador `CompanyCells`; `test_world_cells` y `test_world_cells_company`.
 **Depende de:** D-0220, D-0301
 **Qué:** `modules/world_cells/` (portable, sin nombres del juego), con `module.cfg` y `tests/`.
 - **Grilla:** celdas de 256 m. Cada celda es una escena `cell_<x>_<z>.tscn` o se arma desde datos. Se

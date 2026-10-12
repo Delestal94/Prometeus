@@ -34,6 +34,17 @@ const OPENING_REAL_SECONDS: float = 5.0
 ## through the door; long enough that nobody gains by dancing on the line.
 const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
 
+# --- World cells (D-0303) ---
+## The continuous map is cut in squares of this side, in meters (diseno/mapa.md).
+const CELL_SIZE: float = 256.0
+## Cells around an anchor that load, and the distance past which they unload (hysteresis).
+const CELL_LOAD_RADIUS: int = 2
+const CELL_UNLOAD_RADIUS: int = 3
+## Cells around an anchor that show a one-piece stand-in when not loaded.
+const CELL_IMPOSTOR_RADIUS: int = 5
+## Instancing budget per frame, in real milliseconds (the N-917 lesson: never a big frame).
+const CELL_SLICE_MSEC: float = 4.0
+
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
 
