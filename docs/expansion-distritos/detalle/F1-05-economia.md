@@ -106,3 +106,12 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** el resumen se calcula del libro y no se guarda: es una vista, así no hay otro estado que replicar ni migrar. Los motivos no se enumeran acá; el que escriba un cobro nuevo ya aparece solo.
 **Test** `test_day_summary`: ingresos/costos por motivo de un día con otros días alrededor, ganancia, apertura + ganancia = cierre, día sin movimientos, empresa nula, `truncated` y orden.
 **Hecho cuando:** el test pasa y el panel muestra los mismos números (D-0508.2).
+
+### D-0509 · Gastos fijos diarios — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `FixedCosts` (`scripts/gameplay/business/fixed_costs.gd`): alquiler diario (`CompanyTuning.RENT_PER_DAY` = 100) con `due`, `total_due`, `shortfall` y `settle`; `test_fixed_costs`.
+**Depende de:** D-0501
+**Qué:** funciones estáticas sin nodos sobre la billetera (`CompanyState`). `due()` devuelve los costos del día por motivo (hoy solo `rent`; la luz no es un gasto fijo, la maneja D-0912). `settle(company)` los cobra con `charge` (pasan aunque el saldo quede negativo) y devuelve lo cobrado. `shortfall(company)` dice cuánto no cubre la billetera, para que D-0510 decida la quiebra.
+**Decisión:** la clase no guarda estado (no hay "último día cobrado" que replicar ni migrar): el cierre del día (D-0203) la llama una vez por día. Se cobra al cierre, antes del resumen D-0508, así el alquiler aparece como costo `rent`.
+**Test** `test_fixed_costs`: el día cuesta 100; `settle` cobra con motivo `rent`; con 30 de saldo queda en -70 y `shortfall` da 70; saldo negativo debe el alquiler entero; sin empresa no cobra.
+**Hecho cuando:** el test pasa.
+
