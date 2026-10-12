@@ -163,7 +163,10 @@ con nombre de la paleta; los que empiezan con `stone.`, `concrete.` o `grass` to
 - `sm_env_route_tunnel_lamp.glb` (80): origen arriba (el anclaje); la lente es el nodo `Lens`, al
   que el script le pone el material emisivo.
 - `sm_env_route_bridge_deck.glb` (212): 4 m de tablero (asfalto de 6 m, líneas de borde, losa y
-  vigas de acero teal). `sm_env_route_bridge_post.glb` (92): el poste cada 4 m.
+  vigas de acero teal). `sm_env_route_bridge_post.glb` (240, N-333): el pilar cada 4 m,
+  0,34×0,34×1,15 m, en el lenguaje del poste de la baranda: plinto, fuste chaflanado, buña de goteo,
+  tapa piramidal baja, placas donde llegan pasamanos y riel medio, banda `warning` con reflectores
+  hacia el tráfico (±Z en Godot). AO horneado (`bake_vertex_ao.py`).
   `sm_env_route_bridge_water.glb` (696): 36 m de río bajo el tablero (agua a −1,6 m, márgenes,
   estribos, dos pilas, ondas y espuma), origen en el medio del tramo; se estira con el largo. Con
   terreno continuo (ruta principal) tablero y río no se ponen, igual que antes las cajas.
@@ -175,7 +178,7 @@ con nombre de la paleta; los que empiezan con `stone.`, `concrete.` o `grass` to
   transformador cada 4 postes; los cables salen de las puntas de los aisladores.
 
 ```
-"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_route_pieces.py [-- tunnel bridge chicane pole]
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_route_pieces.py [-- tunnel bridge chicane pole | bridge_post ...]
 ```
 
 ## Depósito (`models/environment/depot/`, 2026-09-27)

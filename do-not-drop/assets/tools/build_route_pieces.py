@@ -32,7 +32,11 @@ are only what you see. Pieces, in `models/environment/route/`:
                                    gives it its emissive material).
   sm_env_route_bridge_deck.glb     4 m of deck (6 m asphalt, edge lines,
                                    concrete slab, teal steel girders).
-  sm_env_route_bridge_post.glb     the post every 4 m (collision 0.3 x 1.08).
+  sm_env_route_bridge_post.glb     the pier every 4 m (collision 0.3 x 1.08), N-333:
+                                   the railing's post language (plinth, chamfered
+                                   shaft, drip groove, low pyramid cap), plates
+                                   where its rails land, warning band and
+                                   reflectors facing the traffic (+-Y).
   sm_env_route_bridge_water.glb    36 m of river under the deck: water, banks,
                                    abutments, two piers, ripples and foam.
                                    Origin at the middle of the span.
@@ -60,8 +64,10 @@ Origin at the centre of the base (the road surface for the road pieces),
 metres, Blender Z-up (the exporter turns it into Godot's Y-up; Blender +Y is
 Godot -Z, i.e. further down the road).
 
-Pass names after "--" to rebuild only some of them:
+Pass names after "--" to rebuild only some of them, a group or a single
+builder (then bake its AO again with bake_vertex_ao.py):
     blender --background --factory-startup --python build_route_pieces.py -- tunnel pole
+    blender --background --factory-startup --python build_route_pieces.py -- bridge_post
 """
 import math
 import os
@@ -415,12 +421,26 @@ def bridge_deck():
 
 
 def bridge_post():
+    """The pier every 4 m (N-333): the railing's own post grown up -- chamfered
+    pilaster on a plinth, a drip groove and a low pyramid cap like PostCap --
+    with the railing's runs (along Blender Y, the way the segment turns it)
+    seated on it: the curb butts into the plinth, the handrail and mid rail
+    land on guardrail plates. Warning band and reflectors face the traffic
+    (+-Y). Plan 0.34 x 0.34, nothing past x +-0.17."""
     clear()
-    cube("Post", (0, 0, 0.5), (0.34, 0.34, 1.1), "concrete.light", 0.03)
-    cone("Cap", (0, 0, 1.13), 0.3, 0.05, 0.16, "concrete", 4, rot=(0, 0, math.pi / 4))
-    cube("Band", (0, 0, 0.82), (0.36, 0.36, 0.14), "warning")
-    for y in (-0.185, 0.185):
-        cube("Reflector", (0, y, 0.82), (0.12, 0.012, 0.08), "reflector")
+    cube("PostBase", (0, 0, 0.12), (0.34, 0.34, 0.24), "concrete", 0.02)
+    cube("Post", (0, 0, 0.62), (0.28, 0.28, 0.76), "concrete.light", 0.025)
+    # Drip groove: a recessed neck between the shaft and the cap.
+    cube("DripGroove", (0, 0, 1.015), (0.25, 0.25, 0.03), "concrete")
+    cube("CapSlab", (0, 0, 1.055), (0.32, 0.32, 0.05), "concrete", 0.012)
+    cone("PostCap", (0, 0, 1.115), 0.205, 0.02, 0.07, "concrete", 4, rot=(0, 0, math.pi / 4))
+    # Warning band between the mid rail and the handrail, as on the railing's middle post.
+    cube("Band", (0, 0, 0.74), (0.29, 0.29, 0.12), "warning")
+    for side in (-1.0, 1.0):
+        cube("Reflector", (0, side * 0.151, 0.74), (0.1, 0.012, 0.07), "reflector")
+        # Plates the rails land on (Handrail at 0.92, r 0.05; MidRail 0.52..0.58).
+        cube("HandrailPlate", (0, side * 0.15, 0.92), (0.14, 0.02, 0.14), "guardrail")
+        cube("MidRailPlate", (0, side * 0.15, 0.55), (0.1, 0.02, 0.1), "guardrail")
     done("sm_env_route_bridge_post.glb")
 
 
@@ -595,8 +615,9 @@ BUILDERS = {
 }
 ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 for group, builders in BUILDERS.items():
-    if not ONLY or group in ONLY:
-        for builder in builders:
+    for builder in builders:
+        # A group name rebuilds the whole group; a builder name (bridge_post) just that piece.
+        if not ONLY or group in ONLY or builder.__name__ in ONLY:
             builder()
 
 print("ROUTE_REPORT")
