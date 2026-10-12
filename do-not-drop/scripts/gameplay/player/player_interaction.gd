@@ -18,26 +18,18 @@ func _ready() -> void:
 	player = get_parent() as Player
 
 
+## Only the actions decide (N-966): a key the player moved to another action
+## must not keep triggering this one from a hard-coded fallback.
 func is_interact_event(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"interact"):
-		return true
-	if event is InputEventKey and event.pressed and not event.echo:
-		return event.keycode == KEY_E or event.physical_keycode == KEY_E
-	return false
+	return event.is_action_pressed(&"interact")
 
 
 func is_drop_event(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"package_drop"):
-		return true
-	return event is InputEventKey and event.pressed and not event.echo \
-			and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q)
+	return event.is_action_pressed(&"package_drop")
 
 
 func is_open_event(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"package_open"):
-		return true
-	return event is InputEventKey and event.pressed and not event.echo \
-			and (event.keycode == KEY_T or event.physical_keycode == KEY_T)
+	return event.is_action_pressed(&"package_open")
 
 
 func lid_target(aimed: Node = null) -> DeliveryPackage:
@@ -78,7 +70,7 @@ func publish_lid_hint(package: DeliveryPackage) -> void:
 
 
 func poll_interact() -> void:
-	var is_down: bool = Input.is_action_pressed(&"interact") or Input.is_key_pressed(KEY_E)
+	var is_down: bool = Input.is_action_pressed(&"interact")
 	if is_down and not player._interact_was_down:
 		try_interact()
 	player._interact_was_down = is_down

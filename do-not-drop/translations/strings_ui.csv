@@ -490,6 +490,30 @@ UI_OPT_BIND_PING,Ping,Ping
 UI_OPT_BIND_SPRINT,Correr,Sprint
 UI_OPT_BIND_USE_CARD,Usar carta,Use card
 UI_OPT_BIND_VOICE_TALK,Hablar (chat de voz),Talk (voice chat)
+UI_OPT_BIND_WALK_FORWARD,Caminar adelante,Walk forward
+UI_OPT_BIND_WALK_BACK,Caminar atrás,Walk back
+UI_OPT_BIND_LEFT,Izquierda (a pie y volante),Left (on foot and wheel)
+UI_OPT_BIND_RIGHT,Derecha (a pie y volante),Right (on foot and wheel)
+UI_OPT_BIND_JUMP,Saltar,Jump
+UI_OPT_BIND_ACCELERATE,Acelerar,Accelerate
+UI_OPT_BIND_BRAKE,Frenar,Brake
+UI_OPT_BIND_HANDBRAKE,Freno de mano,Handbrake
+UI_OPT_BIND_PACKAGE_DROP,Soltar el paquete,Drop the package
+UI_OPT_BIND_PACKAGE_OPEN,Abrir el paquete,Open the package
+UI_OPT_BIND_CARE_WORK,Cuidar el paquete (mantener),Tend the package (hold)
+UI_OPT_BIND_CARE_TOOL_NEXT,Cambiar herramienta de cuidado,Switch care tool
+UI_OPT_BIND_PHONE,Celular,Phone
+UI_OPT_BIND_CREW,Tripulación (mantener),Crew list (hold)
+UI_OPT_BIND_SPECTATE,Espectar,Spectate
+UI_OPT_BIND_RIGHT_CLICK,Click derecho,Right click
+UI_OPT_BIND_GROUP_FOOT,A pie,On foot
+UI_OPT_BIND_GROUP_DRIVE,Manejando,Driving
+UI_OPT_BIND_GROUP_CREW,Tripulación,Crew
+UI_OPT_BIND_DEFAULT,Original,Default
+UI_OPT_BIND_DEFAULT_HINT,Volver a la tecla original,Back to the original key
+UI_OPT_BIND_SWAPPED,%s tenía esa tecla: se intercambiaron.,%s had that key: swapped.
+UI_OPT_BIND_BLOCKED,%s ya usa esa tecla. Liberala primero.,%s already uses that key. Free it first.
+UI_OPT_BIND_RESERVED,Esa tecla está reservada. Probá con otra.,That key is reserved. Try another one.
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
 UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte  ·  Flechas arriba/abajo marchas (furgón viejo)\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
 Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out  ·  Up/Down arrows gears (old van)

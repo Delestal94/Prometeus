@@ -90,13 +90,59 @@ var save_run_log: bool = false:
 const REBINDABLE_ACTIONS := [
 	&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card", &"voice_talk", &"sprint",
 	&"drive_shift_up", &"drive_shift_down",
+	# N-966: everything else the player presses. drive_left / drive_right are
+	# also the strafe keys on foot (player_movement.gd).
+	&"walk_forward", &"walk_backward", &"drive_left", &"drive_right", &"jump",
+	&"drive_accelerate", &"drive_brake", &"drive_handbrake",
+	&"package_drop", &"package_open", &"care_work", &"care_tool_next", &"phone_toggle", &"crew_panel",
+	&"spectate_toggle",
 ]
+## Actions that carry a key in the Input Map but are not offered in Options: no
+## action may be moved onto their key (a notice says it is reserved, like Esc / F11).
+const RESERVED_KEY_ACTIONS: Array[StringName] = [
+	&"ui_pause", &"run_restart", &"look_center", &"dev_camera_toggle", &"toggle_net_stats",
+]
+## The shipped keys are the project.godot ones. KEY_NONE means "no keyboard key
+## by default": care_work is the right mouse button until a key is added.
 const DEFAULT_KEY_BINDINGS := {
 	&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G,
 	&"voice_talk": KEY_Z, &"sprint": KEY_SHIFT,
 	# The old van's manual gearbox (N-114); the gamepad uses the bumpers.
 	&"drive_shift_up": KEY_UP, &"drive_shift_down": KEY_DOWN,
+	&"walk_forward": KEY_W, &"walk_backward": KEY_S, &"drive_left": KEY_A, &"drive_right": KEY_D,
+	&"jump": KEY_SPACE, &"drive_accelerate": KEY_W, &"drive_brake": KEY_S, &"drive_handbrake": KEY_SPACE,
+	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"care_tool_next": KEY_X,
+	&"phone_toggle": KEY_F,
+	&"crew_panel": KEY_TAB, &"spectate_toggle": KEY_TAB,
 }
+
+## Where each action is read. Two actions only clash over a key when they share
+## a context: W is both "walk forward" and "accelerate" by default, because you
+## are never walking and driving at once. An action missing here counts as ALL.
+const CONTEXT_FOOT: int = 1
+const CONTEXT_DRIVE: int = 2
+const CONTEXT_DEPOT: int = 4
+const CONTEXT_SPECTATE: int = 8
+const CONTEXT_ALL: int = 15
+const BINDING_CONTEXTS := {
+	&"walk_forward": CONTEXT_FOOT, &"walk_backward": CONTEXT_FOOT, &"jump": CONTEXT_FOOT,
+	&"drive_left": CONTEXT_FOOT | CONTEXT_DRIVE, &"drive_right": CONTEXT_FOOT | CONTEXT_DRIVE,
+	&"drive_accelerate": CONTEXT_DRIVE, &"drive_brake": CONTEXT_DRIVE, &"drive_handbrake": CONTEXT_DRIVE,
+	&"drive_horn": CONTEXT_DRIVE, &"drive_shift_up": CONTEXT_DRIVE, &"drive_shift_down": CONTEXT_DRIVE,
+	&"look_back": CONTEXT_FOOT | CONTEXT_DRIVE,
+	&"sprint": CONTEXT_FOOT | CONTEXT_DRIVE, &"package_drop": CONTEXT_FOOT | CONTEXT_DRIVE,
+	&"package_open": CONTEXT_FOOT | CONTEXT_DRIVE, &"care_work": CONTEXT_FOOT | CONTEXT_DRIVE,
+		&"care_tool_next": CONTEXT_FOOT | CONTEXT_DRIVE,
+	&"phone_toggle": CONTEXT_FOOT | CONTEXT_DRIVE,
+	&"crew_panel": CONTEXT_FOOT | CONTEXT_DRIVE | CONTEXT_DEPOT, &"spectate_toggle": CONTEXT_SPECTATE,
+}
+
+## What rebind_key() / reset_binding() report in result["status"].
+const BIND_OK: StringName = &"ok"
+const BIND_SWAPPED: StringName = &"swapped"
+const BIND_BLOCKED: StringName = &"blocked"
+const BIND_RESERVED: StringName = &"reserved"
+const BIND_INVALID: StringName = &"invalid"
 
 ## Multiplies whatever each look implementation already uses, so 1.0 is
 ## exactly today's feel and nobody has to re-tune the defaults.
@@ -197,8 +243,109 @@ const KEY_GLYPHS := {KEY_UP: "↑", KEY_DOWN: "↓", KEY_LEFT: "←", KEY_RIGHT:
 
 
 func binding_label(action: StringName) -> String:
-	var keycode: int = int(key_bindings.get(action, default_key_bindings.get(action, KEY_NONE)))
+	var keycode: int = bound_key(action)
+	if keycode == KEY_NONE:
+		return tr("UI_OPT_BIND_RIGHT_CLICK")
 	return String(KEY_GLYPHS.get(keycode, super(action)))
+
+
+## The key an action has now (its default until the player changes it).
+func bound_key(action: StringName) -> int:
+	return int(key_bindings.get(action, default_key_bindings.get(action, KEY_NONE)))
+
+
+func is_binding_default(action: StringName) -> bool:
+	return bound_key(action) == int(DEFAULT_KEY_BINDINGS.get(action, KEY_NONE))
+
+
+## The other rebindable actions that already use this key in a context that
+## `action` is also read in (empty when the key is free for it).
+func binding_conflicts(action: StringName, keycode: int) -> Array[StringName]:
+	var found: Array[StringName] = []
+	if keycode == KEY_NONE:
+		return found
+	var mine: int = int(BINDING_CONTEXTS.get(action, CONTEXT_ALL))
+	for other: StringName in rebindable_actions:
+		if other != action and bound_key(other) == keycode \
+				and (mine & int(BINDING_CONTEXTS.get(other, CONTEXT_ALL))) != 0:
+			found.append(other)
+	return found
+
+
+## True when the key belongs to an action Options does not offer (restart,
+## look center, dev camera, net stats, pause), whatever the Input Map says now.
+func is_reserved_key(keycode: int) -> bool:
+	for action: StringName in RESERVED_KEY_ACTIONS:
+		if not InputMap.has_action(action):
+			continue
+		for event: InputEvent in InputMap.action_get_events(action):
+			if event is InputEventKey:
+				var key := event as InputEventKey
+				if keycode in [int(key.physical_keycode), int(key.keycode)] and keycode != KEY_NONE:
+					return true
+	return false
+
+
+## Binds a key the way Options does (N-966). A key another action already
+## uses (in a shared context) is swapped: that action gets this one's old key.
+## When a swap can't be clean (several owners, nothing to hand back, or the
+## handed-back key collides too) nothing changes and the status is BLOCKED.
+## Returns {"status": BIND_*, "other": the action involved, or &""}.
+func rebind_key(action: StringName, keycode: int) -> Dictionary:
+	if action not in rebindable_actions or keycode == KEY_NONE:
+		return {"status": BIND_INVALID, "other": &""}
+	if keycode == KEY_ESCAPE or (fullscreen_key != KEY_NONE and keycode == fullscreen_key):
+		return {"status": BIND_RESERVED, "other": &""}
+	if is_reserved_key(keycode):
+		return {"status": BIND_RESERVED, "other": &""}
+	var old: int = bound_key(action)
+	if keycode == old:
+		return {"status": BIND_OK, "other": &""}
+	var owners: Array[StringName] = binding_conflicts(action, keycode)
+	if owners.is_empty():
+		_assign_key(action, keycode)
+		_save()
+		return {"status": BIND_OK, "other": &""}
+	var other: StringName = owners[0]
+	if owners.size() > 1 or old == KEY_NONE:
+		return {"status": BIND_BLOCKED, "other": other}
+	var collisions: Array[StringName] = binding_conflicts(other, old)
+	collisions.erase(action)
+	if not collisions.is_empty():
+		return {"status": BIND_BLOCKED, "other": other}
+	_assign_key(other, old)
+	_assign_key(action, keycode)
+	_save()
+	return {"status": BIND_SWAPPED, "other": other}
+
+
+## Puts one action back on its shipped key (same swap rule as rebind_key).
+func reset_binding(action: StringName) -> Dictionary:
+	if action not in rebindable_actions:
+		return {"status": BIND_INVALID, "other": &""}
+	var default_key: int = int(DEFAULT_KEY_BINDINGS.get(action, KEY_NONE))
+	if default_key == KEY_NONE:
+		_assign_key(action, KEY_NONE)
+		_save()
+		return {"status": BIND_OK, "other": &""}
+	return rebind_key(action, default_key)
+
+
+func _assign_key(action: StringName, keycode: int) -> void:
+	key_bindings[action] = keycode
+	_apply_key_binding(action, keycode as Key)
+
+
+## KEY_NONE here means "take the keyboard key away" (care_work back to the
+## mouse); the module skips it.
+func _apply_key_binding(action: StringName, keycode: Key) -> void:
+	if keycode == KEY_NONE:
+		if InputMap.has_action(action):
+			for event: InputEvent in InputMap.action_get_events(action):
+				if event is InputEventKey:
+					InputMap.action_erase_event(action, event)
+		return
+	super(action, keycode)
 
 
 func _init() -> void:
@@ -263,6 +410,11 @@ func _apply_defaults() -> void:
 
 
 func _after_load(config: ConfigFile) -> void:
+	# A hand-edited file can't leave an action that ships with a key keyless.
+	for action: StringName in rebindable_actions:
+		var shipped: int = int(DEFAULT_KEY_BINDINGS.get(action, KEY_NONE))
+		if shipped != KEY_NONE and bound_key(action) == KEY_NONE:
+			_assign_key(action, shipped)
 	# Files saved before the HUD default dropped hold the old 100 % default,
 	# not a choice anyone made: move them to the new one, once.
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
