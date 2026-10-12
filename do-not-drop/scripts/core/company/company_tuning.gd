@@ -37,6 +37,11 @@ const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
 
+# --- Bankruptcy (D-0510) ---
+## A company that closes the day in the red opens the next one with this share of its orders
+## (docs/expansion-distritos/diseno/economia.md: no reset, no forced loan).
+const BANKRUPT_ORDER_SHARE: float = 0.6
+
 # --- Packing grid and boxes ---
 ## Side of one packing-grid cell, in meters (S6).
 const GRID_CELL_M: float = 0.2
