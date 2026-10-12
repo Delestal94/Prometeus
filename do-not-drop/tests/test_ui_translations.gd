@@ -74,7 +74,7 @@ const SPANISH_LITERAL_FILES: Array[String] = [
 	"res://scripts/presentation/sound_audit.gd",
 ]
 ## Words written the same in Spanish and English, allowed as a plain .text.
-const SAME_IN_BOTH: Array[String] = ["Endless"]
+const SAME_IN_BOTH: Array[String] = ["ENDLESS", "Endless"]
 ## The only scripts that read a resource's display_name: they turn it into a key.
 const DISPLAY_NAME_FILES: Array[String] = [
 	"res://scripts/gameplay/package/package_content.gd",
