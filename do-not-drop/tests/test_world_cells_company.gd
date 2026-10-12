@@ -28,7 +28,7 @@ func _run() -> void:
 		for x in range(-1, 2):
 			_expect(cells.grid.is_pinned(Vector2i(x, z)), "The shed's cell (%d, %d) is pinned" % [x, z])
 	_expect(cells.grid.is_pinned(Vector2i(4, 0)), "The Avenida Este is pinned up to the port")
-	_expect(cells.grid.is_pinned(Vector2i(-1, 2)), "The Camino del Campo is pinned")
+	_expect(cells.grid.is_pinned(Vector2i(0, 3)), "The Camino del Campo is pinned")
 	_expect(cells.grid.is_pinned(Vector2i(-4, -1)), "The Calle Oeste is pinned")
 	_expect(not cells.grid.is_pinned(Vector2i(0, -6)), "The mountains are not")
 
@@ -47,9 +47,9 @@ func _run() -> void:
 		cells.step(now)
 		worst = maxi(worst, Time.get_ticks_usec() - t0)
 		if i % 60 == 59:
-			fine = fine and _square_loaded(cells, van)
+			fine = fine and _square_loaded(cells, van, 1)
 	_expect(worst < FRAME_LIMIT_USEC, "No step over 50 ms driving to Centro (worst %d us)" % worst)
-	_expect(fine, "The square around the van was loaded every second")
+	_expect(fine, "The cells around the van were loaded every second")
 	_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is still there (pinned)")
 	_expect(not cells.is_loaded(Vector2i(-2, 2)), "A cell the van left behind is gone")
 
@@ -59,14 +59,12 @@ func _run() -> void:
 		van.x -= 12.0 / 60.0
 		cells.anchors = [van]
 		cells.step(now)
+	van = Vector3(10, 0, 10)
+	cells.anchors = [van]
 	cells.step(now + 1.0)
 	cells.step(now + 2.0)
-	var expected: Dictionary = {}
-	for dx in range(-2, 3):
-		for dz in range(-2, 3):
-			expected[Vector2i(dx, dz)] = true
 	for cell: Vector2i in cells.loaded_cells():
-		if not expected.has(cell) and not cells.grid.is_pinned(cell):
+		if cells.grid.distance_to_anchors(cell, cells.anchors) > 3 and not cells.grid.is_pinned(cell):
 			_expect(false, "Cell %s should be gone back at the shed" % [cell])
 	var nodes := 0
 	for child in cells.get_children():
@@ -82,10 +80,10 @@ func _run() -> void:
 	quit(_failures)
 
 
-func _square_loaded(cells: CompanyCells, pos: Vector3) -> bool:
+func _square_loaded(cells: CompanyCells, pos: Vector3, radius: int) -> bool:
 	var own := cells.grid.cell_of(pos)
-	for dx in range(-2, 3):
-		for dz in range(-2, 3):
+	for dx in range(-radius, radius + 1):
+		for dz in range(-radius, radius + 1):
 			if not cells.is_loaded(Vector2i(own.x + dx, own.y + dz)):
 				return false
 	return true

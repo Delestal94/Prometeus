@@ -70,9 +70,9 @@ func _test_hysteresis_and_pins() -> void:
 	# Teleporting back: the dropped cells wait out min_stay_sec before they load again.
 	anchors[0] = Vector3(10, 0, 10)
 	var back := grid.update(anchors, 12.2)
-	_expect(not back["load"].has(Vector2i(-2, 0)), "A cell dropped 0.2 s ago does not load yet")
+	_expect(not back["load"].has(Vector2i(-2, -2)), "A cell dropped 0.2 s ago does not load yet")
 	back = grid.update(anchors, 13.5)
-	_expect(back["load"].has(Vector2i(-2, 0)), "...and does once the second has passed")
+	_expect(back["load"].has(Vector2i(-2, -2)), "...and does once the second has passed")
 
 
 func _test_three_anchors() -> void:
@@ -143,12 +143,14 @@ func _test_streamer() -> void:
 	streamer.step(now)
 	_expect(not streamer.is_loaded(Vector2i(-2, 0)), "A cell left behind unloads")
 	_expect(streamer.is_loaded(Vector2i(6, 0)), "The new edge is loaded")
-	_expect(streamer.impostor_count() == 121 - 25, "Impostors follow: the loaded square always hides its own")
+	# Columns 1..6 stay: the old ones within 3 cells (1, 2) plus the new square (2..6).
+	_expect(streamer.loaded_cells().size() == 30, "30 cells are loaded after the walk")
+	_expect(streamer.impostor_count() == 121 - 30, "Impostors follow: a loaded cell never has one")
 	var cell_count := 0
 	for child in streamer.get_children():
 		if child.name.begins_with("cell_"):
 			cell_count += 1
-	_expect(cell_count == 25, "Exactly the 25 loaded cells are in the tree")
+	_expect(cell_count == 30, "Exactly the loaded cells are in the tree")
 	_expect(streamer.longest_step_usec < 50000, "Instancing a cell takes far less than a frame")
 	streamer.queue_free()
 	await process_frame
