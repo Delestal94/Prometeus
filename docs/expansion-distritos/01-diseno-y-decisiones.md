@@ -14,7 +14,7 @@
 | D-0104 | ✅ Un solo mapa continuo que se desbloquea (usuario; `docs/decisiones/2026-10-04-mapa-continuo.md`) | — | — | decidido |
 | D-0105 | ✅ Reloj de 08:00 a 20:00, 90 s reales por hora de juego | — | — | decidido |
 | D-0106 | ✅ Sin nadie ni empleados, el galpón se congela; con empleados sigue | — | — | decidido |
-| D-0107 | Análisis de *Schedule I* (gestión de empleados, portapapeles, automatización por estaciones, crecimiento) y qué tomar y qué no | critico-diseno | high | `diseno/referencia-schedule-1.md` con lista "tomamos / no tomamos" |
+| D-0107 | ✅ Análisis de *Schedule I* (gestión de empleados, portapapeles, automatización por estaciones, crecimiento) y qué tomar y qué no | critico-diseno | high | `diseno/referencia-schedule-1.md` con lista "tomamos / no tomamos" |
 | D-0108 | Análisis de referencias de armado y logística (Box Packing, Mini Motorways, Shapez, Overcooked, Totally Reliable Delivery Service) | critico-diseno | high | `diseno/referencias-logistica.md` |
 | D-0109 | ✅ Regla de diseño "lo que armás es la trampa": tabla producto × embalaje × trampa resultante | constructor-trampas | high | `diseno/armado-y-trampas.md` con la tabla completa para las 7 trampas actuales |
 | D-0110 | ✅ Definir cómo se reparte la tripulación de 1-8 en el día (galpón vs. ruta) y qué hace cada uno solo, en dupla y con 8 | critico-diseno | high | `diseno/roles-tripulacion.md` con tablas por cantidad de jugadores |
