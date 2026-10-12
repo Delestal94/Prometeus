@@ -18,7 +18,11 @@ extends SceneTree
 ##   what the client had (switched off when it had none, its own company when it had one);
 ## - the main menu knows the scene, the --mode=company flag and has the button;
 ## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
-##   as interrupted there, and the real slot (user://saves/company/) is never touched.
+##   as interrupted there, and the real slot (user://saves/company/) is never touched;
+## - D-2009: what Steam shows goes to NetworkManager's steam_presence (only kept here, no Steam):
+##   solo, the company's lobby data and rich presence (CompanyLobbyMeta) once the world is up; a
+##   client, the host's company's presence once the snapshot is in, and no lobby data; leaving the
+##   root clears both.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 ## The roots save here, never in the game's slot.
@@ -62,6 +66,7 @@ func _run() -> void:
 				"Solo opens the company's day: OPENING of day %s with the clock at 08:00 (got %s, %.1f)"
 				% [state.get(&"day"), cycle.phase_name(), clock.minute_now()])
 			_expect(not cycle.is_frozen(), "...and the shed isn't frozen (no area is wired yet)")
+	_expect_presence(state, true, "Solo, with the day open")
 
 	var zone_files: int = 0
 	for file: String in DirAccess.get_files_at("res://data/zones/"):
@@ -98,6 +103,7 @@ func _run() -> void:
 	await process_frame
 	_expect(CompanySave.was_interrupted(CompanySave.DEFAULT_SLOT, DIR),
 		"Leaving the solo root saves the day as interrupted in its save_dir")
+	_expect_presence(null, true, "Leaving the solo root")
 	await _check_client_restores(state)
 	state.call(&"reset")
 	_expect(_real_slot() == real_slot, "The game's own save slot is never touched")
@@ -146,8 +152,10 @@ func _check_client_restores(state: Node) -> void:
 			_expect(net.apply_snapshot(snapshot) and state.get(&"company_name") == "Host SRL"
 				and bool(state.call(&"is_active")),
 				"The snapshot loads the host's company into the client's CompanyState (%s)" % label)
+			_expect_presence(state, false, "A client %s, after the snapshot" % label)
 		level.queue_free()
 		await process_frame
+		_expect_presence(null, true, "A client %s, after leaving" % label)
 		_expect(bool(state.call(&"is_active")) == was_active and state.call(&"to_dict") == before,
 			"Leaving the root puts back what the client had %s (active %s, name '%s')"
 			% [label, state.call(&"is_active"), state.get(&"company_name")])
@@ -156,6 +164,31 @@ func _check_client_restores(state: Node) -> void:
 		side.free()
 	host.free()
 	host_state.free()
+
+
+## D-2009: NetworkManager's steam_presence (only kept: no Steam here) holds what CompanyLobbyMeta
+## builds for `company` (null: none), its keys set to "" left out; the lobby data only when `as_host`.
+func _expect_presence(company: Node, as_host: bool, when: String) -> void:
+	var session: NetSession = root.get_node_or_null(^"/root/NetworkManager") as NetSession
+	if session == null:
+		_expect(false, "NetworkManager is a NetSession, with a steam_presence")
+		return
+	var shown: CompanyLobbyMeta.COMPANY_STATE = company as CompanyLobbyMeta.COMPANY_STATE
+	var lobby: Dictionary = _without_blanks(CompanyLobbyMeta.lobby_meta(shown)) if as_host else {}
+	var presence: Dictionary = _without_blanks(CompanyLobbyMeta.rich_presence(shown))
+	var kept_lobby: Dictionary = session.steam_presence.lobby_meta()
+	var kept_presence: Dictionary = session.steam_presence.rich_presence()
+	_expect(kept_lobby == lobby and kept_presence == presence and (company == null or not presence.is_empty()),
+		"%s: Steam is handed lobby data %s and presence %s (got %s, %s)"
+		% [when, lobby, presence, kept_lobby, kept_presence])
+
+
+static func _without_blanks(values: Dictionary) -> Dictionary:
+	var kept: Dictionary = {}
+	for key: Variant in values:
+		if not String(values[key]).is_empty():
+			kept[key] = values[key]
+	return kept
 
 
 ## The scene, saving in DIR (set before it enters the tree: the host loads from there on entry).

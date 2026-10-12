@@ -16,7 +16,7 @@
 | D-2006 | ✅ Cliente desconectado vuelve y recupera su lugar | constructor-red | high | test |
 | D-2007 | ✅ `RpcGuard` en todos los RPC nuevos | constructor-red | medium | test N-238 extendido |
 | D-2008 | ✅ `PROTOCOL_VERSION` nuevo para la expansión | constructor-red | low | número subido según §6 |
-| D-2009 | Steam: lobby con nombre de empresa y día | constructor-red | medium | test en build |
+| D-2009 | ✅ Steam: lobby con nombre de empresa y día | constructor-red | medium | test en build |
 | D-2010 | Guardado en la nube del save de empresa (D-0237) | constructor-red | medium | probado en build |
 | D-2011 | Benchmark del modo Empresa (`bench_company`) en CI | perfilador-rendimiento | high | paso de CI con número |
 | D-2012 | Presupuesto de FPS por distrito y galpón | perfilador-rendimiento | medium | tabla en `rendimiento-pc.md` |

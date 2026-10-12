@@ -96,6 +96,7 @@ que cambien RPC suben de nuevo según §6, y la tabla de §6 anota "expansión" 
 **Hecho cuando:** el número subió y `docs/convenciones-godot.md` §6 tiene la fila.
 
 ### D-2009 · Lobby de Steam con nombre de empresa y día — B · Opus 5.5 · medium · Aviso: sí (`net_session.gd`) · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `NetSteamPresence` (módulo `net_session`, `NetSession.steam_presence`): guarda la metadata del lobby y la rich presence, las escribe con Steam (lobby: solo el dueño, al crearse y en cada cambio) y sin Steam solo las guarda; `CompanyLobbyMeta` arma `company_name`/`company_day` (texto) y `status` traducido (`UI_COMPANY_PRESENCE`, `UI_COMPANY_PRESENCE_UNNAMED`), sin empresa activa las claves en `""` (Steam las borra); `CompanyRoot` lo publica al subir el mundo, en cada `day_phase` y con el snapshot del cliente, y lo limpia al salir. Sin cambio de protocolo; `test_company_lobby_meta`, `test_net_steam_presence`, `test_company_root`. Falta la prueba con Steam real ([`revisar/D-2009.md`](../revisar/D-2009.md)).
 **Depende de:** D-0202
 **Qué:** metadata del lobby `company_name` y `company_day`. Rich presence `"Empresa <nombre> — día N"`
 (texto traducible). Sin Steam (ENet), se ignora.

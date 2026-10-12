@@ -65,6 +65,8 @@ var menu_join_method: StringName = &"join_steam_lobby"
 var transport: Transport = Transport.AUTO
 var active_transport: Transport = Transport.ENET
 var lobby_id: int = 0
+## What Steam shows of the game: its lobby's data, the player's rich presence.
+var steam_presence := NetSteamPresence.new(self)
 var peer_ids: Array[int] = [HOST_ID]
 ## How long a joiner may take to receive the host's world and load it before
 ## the connection is dropped (Godot's auth timeout). A host on another version

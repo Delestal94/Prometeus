@@ -30,6 +30,11 @@ extends Node3D
 ## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
 ## the phases and the clock then run by themselves (DayCycle). The shed's area is not wired as
 ## DayCycle.crew_in_shed yet (no remote player nodes exist), so the shed never freezes here.
+##
+## Steam (D-2009): what the company shows, CompanyLobbyMeta's lobby data (host) and rich presence,
+## goes to NetworkManager's steam_presence (NetSteamPresence) when the world comes up, on every
+## day_phase event and on a client's snapshot, and is cleared when the world closes. Without Steam
+## it is only kept there.
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -87,6 +92,10 @@ var _hosted_state: COMPANY_STATE
 var _saw_host_day: bool = false
 ## Client: the host is gone and the menu is on its way; nothing here runs any more.
 var _host_gone: bool = false
+## The session (the NetworkManager autoload, by path: N-919), or null where there is none.
+var _session: NetSession
+## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
+var _presence_shown: Array = []
 
 
 func _ready() -> void:
@@ -100,6 +109,7 @@ func _ready() -> void:
 		_add_zone_slab(zone)
 	_add_shed()
 	_spawn_player()
+	_publish_presence()
 	_open_company_day.call_deferred()
 
 
@@ -178,16 +188,16 @@ func _open_company_day() -> void:
 ## Whichever comes first does it and the other finds _host_gone set; _on_host_lost() only reads
 ## this peer's mirror and changes scene, so it doesn't matter whether the session already ended.
 func _start_company(state: COMPANY_STATE) -> void:
+	_session = get_node_or_null(^"/root/NetworkManager") as NetSession
 	_add_net(state)
+	net.event_applied.connect(_on_event_applied)
 	if net.is_host():
 		return
 	net.company_state_restored.connect(_on_host_day_restored)
 	if not multiplayer.server_disconnected.is_connected(_on_host_lost):
 		multiplayer.server_disconnected.connect(_on_host_lost)
-	var session: Node = get_node_or_null(^"/root/NetworkManager")
-	if session != null and session.has_signal(&"session_failed"):
-		if not session.is_connected(&"session_failed", _on_session_failed):
-			session.connect(&"session_failed", _on_session_failed)
+	if _session != null and not _session.session_failed.is_connected(_on_session_failed):
+		_session.session_failed.connect(_on_session_failed)
 
 
 ## Host (solo too): the day as it stands, at the last applied event, saved as interrupted
@@ -246,6 +256,7 @@ func _exit_tree() -> void:
 		save_interrupted_day()
 		_hosted_state = null
 	_restore_own_company()
+	_publish_presence()
 
 
 func _restore_own_company() -> void:
@@ -260,6 +271,41 @@ func _restore_own_company() -> void:
 
 func _on_host_day_restored(_snapshot_seq: int) -> void:
 	_saw_host_day = true
+	_publish_presence()
+
+
+## A new day (or phase) of the company: Steam shows the new day (D-2009).
+func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+	if kind == CompanyNet.DAY_PHASE:
+		_publish_presence()
+
+
+## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on
+## a client the host's, in its mirror, once a snapshot put it there; null otherwise (none yet, the
+## host gone, or the world closing).
+func _shown_company() -> COMPANY_STATE:
+	if not is_inside_tree() or _host_gone:
+		return null
+	if _hosted_state != null and is_instance_valid(_hosted_state):
+		return _hosted_state
+	if _saw_host_day and _mirrored_state != null and is_instance_valid(_mirrored_state):
+		return _mirrored_state
+	return null
+
+
+## What Steam shows of the company (D-2009, CompanyLobbyMeta): the lobby's company_name and
+## company_day on the host, the player's rich presence on every peer. Only a change goes out; with
+## no company to show (_shown_company()) both are cleared, the lobby's keys too.
+func _publish_presence() -> void:
+	if _session == null or not is_instance_valid(_session):
+		return
+	var company: COMPANY_STATE = _shown_company()
+	var shown: Array = [CompanyLobbyMeta.lobby_meta(company), CompanyLobbyMeta.rich_presence(company)]
+	if shown == _presence_shown:
+		return
+	var as_host: bool = company == null or (net != null and is_instance_valid(net) and net.is_host())
+	CompanyLobbyMeta.publish(_session.steam_presence, company, as_host)
+	_presence_shown = shown
 
 
 func _on_session_failed(_reason: String) -> void:
