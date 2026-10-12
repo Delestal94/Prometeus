@@ -15,6 +15,16 @@
 **Test** `test_build_mode`: entrar/salir con señales, las tres negativas, líneas de grilla (13+9 en 12×8), pan y zoom acotados, cámara más alta al alejar.
 **Hecho cuando:** el test pasa.
 
+### D-0902 · Colocar un objeto comprado con previsualización verde/roja — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `BuildPlacement` (`scripts/gameplay/business/build_placement.gd`): previsualización verde/roja y colocación que compra solo si es verde; `test_build_placement`. El adaptador con nodos (dibujar la huella con `preview_color()`, el cursor) queda para D-0917/D-0943.
+**Depende de:** D-0901 (grilla), D-0904 (definiciones) y D-0920 (`PlaceableShop`); la grilla portable D-0225 todavía no existe: la lógica de choque vive acá y se mueve cuando exista.
+**Qué:** `class_name BuildPlacement` (`RefCounted`, sin nodos ni autoloads):
+- `preview(layout, def, x, z, turns, money)` → `{ok, reason, rect}`; motivos `out_of_bounds`, `fixed_area` (rectángulos `fixed_blocked`, para dársena y salida de D-0906), `overlap`, `no_definition`, `no_money`.
+- `place(state, def, x, z, turns, free)`: valida con `preview` y recién ahí llama a `PlaceableShop.buy`; si es rojo no cambia nada.
+- `preview_color(result)`: verde o rojo translúcido.
+**Test** `test_build_placement`: libre, fuera del piso, área fija, choque, bordes que se tocan, giro, sin plata, `free`.
+**Hecho cuando:** el test de choque pasa.
+
 ### D-0904 · Objetos colocables iniciales — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `PlaceableDefinition` (`scripts/gameplay/business/placeable_definition.gd`) + 4 `.tres` en `data/placeables/` (mesa de armado, estante, heladera, zona de despacho); `test_placeable_definitions`.
 **Depende de:** nada que falte (solo datos; la grilla de colocación D-0225 y el layout D-0620 los usan, no al revés)
