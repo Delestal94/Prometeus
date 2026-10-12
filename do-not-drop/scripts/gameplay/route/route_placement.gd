@@ -27,6 +27,7 @@ const NIGHT_LIGHTS: Dictionary = {
 	RouteDresser.PROPS + "sm_env_prop_street_lamp_refined.glb": ["lamp_glass"],
 	"res://assets/models/vehicles/sm_vehicle_parked_hatchback.glb": ["lamp"],
 	"res://assets/models/vehicles/sm_vehicle_parked_pickup.glb": ["lamp"],
+	RouteDresser.PROPS + "sm_env_prop_guardrail.glb": ["reflector"],
 }
 const WINDMILL_TURN_SECONDS: float = 14.0
 ## Ground contact (see _settle()). A model's "feet" are every vertex within

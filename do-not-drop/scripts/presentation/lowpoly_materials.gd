@@ -74,6 +74,9 @@ const NIGHT_GLOW: Dictionary = {
 	"lamp_glass": [Color(1.0, 0.8, 0.52), 3.2],
 	"lamp": [Color(1.0, 0.9, 0.72), 2.2],
 	"window": [Color(1.0, 0.72, 0.38), 1.3],
+	# A guardrail's catadioptric buttons (N-967): they pick up the headlights, so
+	# a soft glint, well under a lamp.
+	"reflector": [Color(1.0, 0.9, 0.72), 0.6],
 }
 
 ## The session's season and how dark it is live in DetailMaterials
