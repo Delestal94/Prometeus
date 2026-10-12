@@ -43,3 +43,14 @@ Las unidades viven en `shelf:<estante>_<hueco>`. Capacidad por hueco: `CompanyTu
 El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es D-0616.
 **Test** `test_shelf_slots`: 8 huecos, etiquetas, depósito solo del producto etiquetado, tope, retiro, 50 movimientos conservan el total, JSON.
 **Hecho cuando:** dejar producto en un hueco lo suma al `Inventory` (test pasa).
+
+### D-0602 · Calendario de entregas de proveedores — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `SupplierSchedule` (`scripts/gameplay/business/supplier_schedule.gd`): lo pedido el día N llega el N + 1; `test_supplier_schedule`.
+**Depende de:** D-0604 (`Pallet.plan`), supuestos (1 camión por día a las 08:30, espera 3 h)
+**Qué:** `class_name SupplierSchedule` (`RefCounted`, sin nodos ni autoloads), día → `{producto: unidades}`:
+- `place(order_day, lines)`: suma un pedido (`[{product, qty}]`) al camión del día siguiente; todo o nada.
+- `ordered_for(day)`, `pallets_for(day)` (palets sellados con `Pallet.plan`, ids `d<día>_<producto>_<n>`), `upcoming_days(from)`, `has_delivery`, `clear_day`.
+- `truck_state(day, minute)`: `none` / `pending` / `at_dock` / `left` (08:30 a 11:30).
+- `to_dict` / `from_dict` tolerante. El camión que entra a la dársena es D-0601; la pantalla de pedido, D-0603.
+**Test** `test_supplier_schedule`: calendario de 3 días, fusión de pedidos y palets, estados del camión, pedidos inválidos, ida y vuelta JSON.
+**Hecho cuando:** el test pasa con un calendario de 3 días.
