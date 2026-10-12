@@ -21,8 +21,16 @@ extends SceneTree
 ##   phase in the snapshot without a signal; each phase reaches it as one event; the day number
 ##   reaches its company; a client can't open or move the day on; a snapshot at SUMMARY brings the
 ##   summary. (EventBus is one per process here, so a signal from each peer counts twice.)
+## - A host rule listening to company_day_closing can publish from there (the signal comes after the
+##   event is applied, from CompanyNet.event_applied), on every peer in the same order as the event.
+## - A summary with 41 reasons, one of them 80 characters long, is bounded by the host (the biggest
+##   31 kept, the rest in "other", names cut, truncated) and still reaches SUMMARY once, the clock
+##   stopped.
+## - A day_phase the state refuses doesn't start the clock (open_day) and isn't retried at every
+##   poll (a back-off of RETRY_MSEC).
 ## - Malformed day_phase data (event or snapshot part) is refused and changes nothing.
-## Expected in the log: CompanyNet's warning for the day_phase applied with no day cycle.
+## Expected in the log: CompanyNet's three warnings (a day_phase with no day cycle on the net) and
+## two errors (the host could not apply its own day_phase).
 
 const PORT: int = 24645
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
@@ -45,6 +53,7 @@ var _client_net: CompanyNet
 var _host_clock: GameClock
 var _host_cycle: DayCycle
 var _client_cycle: DayCycle
+var _client_clock: GameClock
 var _host_state: Node
 var _client_state: Node
 var _restored: Array[int] = []
@@ -66,6 +75,8 @@ func _run() -> void:
 	bus.connect(&"company_day_summary", func(day: int, summary: Dictionary) -> void:
 		_summaries.append([day, summary]))
 	await _check_solo()
+	_check_big_summary()
+	_check_refused_phase()
 	await _check_two_peers()
 	if _failures == 0:
 		print("PASS: the day goes OPENING, OPERATING, CLOSING, SUMMARY from the host, a trip out holds the"
@@ -117,6 +128,11 @@ func _check_solo() -> void:
 	var cycle: DayCycle = parts["cycle"]
 	cycle.trips_out = func() -> int: return _trips
 	cycle.crew_in_shed = func() -> bool: return _inside
+	# A host rule on the closing (rent, D-0320) publishes from the signal: CompanyNet is not busy.
+	var from_closing: Array[bool] = []
+	var closing_rule: Callable = func(_day: int) -> void:
+		from_closing.append(net.publish(CompanyNet.CLOCK_ANCHOR, clock.anchor()))
+	root.get_node(^"EventBus").connect(&"company_day_closing", closing_rule)
 	var phases: Array[String] = []
 	net.event_applied.connect(func(_seq: int, kind: StringName, data: Dictionary) -> void:
 		if kind == CompanyNet.DAY_PHASE and (phases.is_empty() or phases[-1] != data["phase"]):
@@ -154,6 +170,9 @@ func _check_solo() -> void:
 	_expect(_closing == [1] and _summaries.is_empty(),
 		"...with company_day_closing(1) once and no summary yet (closing %s, summaries %d)"
 		% [_closing, _summaries.size()])
+	_expect(from_closing == [true],
+		"...and a host rule listening to it can publish from there (got %s)" % [from_closing])
+	root.get_node(^"EventBus").disconnect(&"company_day_closing", closing_rule)
 	cycle.poll()
 	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and _closing == [1] and _summaries.size() == 1,
 		"With no trip out the next poll is SUMMARY (got %s)" % cycle.phase_name())
@@ -180,6 +199,80 @@ func _check_solo() -> void:
 	_check_trip(cycle, clock, net)
 	_check_frozen_shed(cycle, clock, net)
 	_check_bad_data(net)
+	parts["side"].free()
+
+
+## A day with 41 distinct reasons of cost, one of them 80 characters long.
+func _check_big_summary() -> void:
+	_summaries.clear()
+	var state: Node = _new_state("Muchos SRL")
+	var parts: Dictionary = _new_side("BigSide", state)
+	parts["side"].add_child(state)
+	var net: CompanyNet = parts["net"]
+	var clock: GameClock = parts["clock"]
+	var cycle: DayCycle = parts["cycle"]
+	var long_reason: String = "x".repeat(80)
+	state.call(&"earn", 5000, &"order_paid")
+	for i: int in range(40):
+		state.call(&"charge", i + 1, StringName("reason_%02d" % i))
+	state.call(&"charge", 7, StringName(long_reason))
+	clock.set_speed(SPEED)
+	cycle.open_day(1)
+	_advance(cycle, 5.0)
+	_advance(cycle, 11.0)
+	var seq: int = net.seq
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and _summaries.size() == 1 and clock.is_paused(),
+		"41 reasons still reach SUMMARY once, the clock stopped (got %s, %d summaries)"
+		% [cycle.phase_name(), _summaries.size()])
+	_expect(net.seq == seq + 2, "...as two events: the phase and the clock's stop (seq %d)" % (net.seq - seq))
+	var shown: Dictionary = cycle.summary
+	var costs: Dictionary = shown.get("cost_by_reason", {})
+	var total: int = 0
+	for amount: Variant in costs.values():
+		total += int(amount)
+	_expect(shown.get("truncated") == true and costs.size() == DayCycle.MAX_SUMMARY_REASONS
+		and costs.has(DayCycle.OTHER_REASON) and total == shown.get("costs") and total == 40 * 41 / 2 + 7,
+		"...bounded: %d reasons with 'other', truncated, the same total (%d of %s)"
+		% [costs.size(), total, shown.get("costs")])
+	_expect(costs.get("reason_39") == 40 and not costs.has("reason_00") and not costs.has(long_reason),
+		"...keeping the biggest amounts and cutting names (reason_39 %s)" % costs.get("reason_39"))
+	var long_cut: Dictionary = DayCycle._bounded_summary(DaySummary.build(state, 1))
+	_expect(not (long_cut["income_by_reason"] as Dictionary).is_empty() and long_cut == cycle.summary,
+		"The host's bounded summary is what every peer got")
+	parts["side"].free()
+
+
+## A refused day_phase: no clock started for it, and no retry at every poll.
+func _check_refused_phase() -> void:
+	var state: Node = _new_state("Rechazo SRL")
+	var parts: Dictionary = _new_side("RefusedSide", state)
+	parts["side"].add_child(state)
+	var net: CompanyNet = parts["net"]
+	var clock: GameClock = parts["clock"]
+	var cycle: DayCycle = parts["cycle"]
+	clock.set_speed(SPEED)
+	var seq: int = net.seq
+	net.day_cycle = null
+	_expect(not cycle.open_day(1) and cycle.phase() == DayCycle.Phase.IDLE and net.seq == seq,
+		"A day_phase the state refuses doesn't open the day")
+	_expect(clock.is_paused() and is_equal_approx(clock.minute_now(), 480.0),
+		"...and doesn't start the clock (paused %s, %.1f)" % [clock.is_paused(), clock.minute_now()])
+	net.day_cycle = cycle
+	_now += 6_000
+	_expect(cycle.open_day(1) and not clock.is_paused(), "Once the state takes it the day opens")
+	_advance(cycle, 5.0)
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING, "(OPERATING)")
+	net.day_cycle = null
+	_advance(cycle, 11.0)
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING and net.seq == seq + 3,
+		"At 20:00 a refused CLOSING changes nothing (seq %d)" % (net.seq - seq))
+	net.day_cycle = cycle
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING,
+		"...and the next poll doesn't try again at once (back-off)")
+	_advance(cycle, float(DayCycle.RETRY_MSEC) / 1000.0)
+	_expect(cycle.phase() == DayCycle.Phase.CLOSING, "...but after the back-off it does (got %s)" % cycle.phase_name())
 	parts["side"].free()
 
 
@@ -375,6 +468,7 @@ func _check_two_peers() -> void:
 	var client: Dictionary = _build_peer(client_side, _client_state)
 	_client_net = client["net"]
 	_client_cycle = client["cycle"]
+	_client_clock = client["clock"]
 	_client_net.wait_for_snapshot()
 	_client_net.company_state_restored.connect(func(seq: int) -> void: _restored.append(seq))
 	var connected: bool = await _wait_for(func() -> bool:
@@ -468,8 +562,10 @@ func _check_peers_follow(client_side: Node) -> void:
 		and int(_client_state.get(&"day")) == 2 and _started == [1, 2, 2],
 		"The client follows to OPENING of day 2, its company too (got %s %d, started %s)"
 		% [_client_cycle.phase_name(), _client_cycle.current_day(), _started])
-	_expect(absf(_client_cycle.shed_minute() - _host_cycle.shed_minute()) <= 1.0,
-		"Both shed clocks read the same within 1 minute (host %.1f, client %.1f)"
+	# The client's anchor is taken half a round trip back: at x100 every msec of it is 0.07 minutes.
+	var tolerance: float = float(_client_clock.lead_msec + 5) * SPEED / 1000.0 + 0.5
+	_expect(absf(_client_cycle.shed_minute() - _host_cycle.shed_minute()) <= tolerance,
+		"Both shed clocks read the same within the anchor's lead (host %.1f, client %.1f)"
 		% [_host_cycle.shed_minute(), _client_cycle.shed_minute()])
 
 	# The host's cycle leaves its world: snapshots go without its part.

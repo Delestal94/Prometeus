@@ -10,10 +10,19 @@ extends Node
 ## the host decides a transition, in poll() and open_day() / next_day(); each one goes out once as
 ## CompanyNet's day_phase event (reliable, numbered) and every peer, the host too, takes it in
 ## apply_phase() with the same code: it checks the data like any from the network (rule 5), sets
-## the phase and emits EventBus' company_day_* signal locally. A signal is never relayed, and
-## applying a snapshot (part SNAPSHOT_KEY, for a late joiner) fires none. A client is passive: it
+## the phase. EventBus' company_day_* signal is emitted locally from CompanyNet.event_applied (in
+## the same order on every peer), not from inside the apply, where CompanyNet is busy
+## (_applying) and takes no request or event. A signal is never relayed. A client is passive: it
 ## never moves the phase by itself. Without a CompanyNet (attach() not called) the phase applies
-## here at once, like GameClock's pace.
+## and the signal goes out here at once, like GameClock's pace.
+##
+## Who listens to what: a host rule that reacts to a phase (rent at company_day_closing, D-0320)
+## listens to CompanyNet.event_applied (kind DAY_PHASE), guarded by is_host(): from there it may
+## publish or request, and what it writes to CompanyState must come back as an event, never run on
+## every mirror. EventBus' company_day_* signals are for presentation (sounds, notices). Applying a
+## snapshot (part SNAPSHOT_KEY: a late join, or a resync after a gap) fires none of them, and a
+## resync can cross a phase (a client in SUMMARY gets OPENING of the next day): whatever shows the
+## phase also redraws on CompanyNet.company_state_restored, from phase() and summary().
 ##
 ## The day, in order:
 ##   OPENING    open_day() / next_day(): the clock restarts at 08:00 and the day is company.day (set
@@ -51,9 +60,14 @@ const KEYS: Array[String] = ["day", "phase", "frozen", "lag", "frozen_at"]
 ## DaySummary.build()'s money fields (ints) and its two reason tables (reason -> int).
 const SUMMARY_MONEY_KEYS: Array[String] = ["income", "costs", "profit", "opening", "closing"]
 const SUMMARY_REASON_KEYS: Array[String] = ["income_by_reason", "cost_by_reason"]
-## A summary's reason table holds at most this many reasons, each a short text.
+## A summary's reason table holds at most this many reasons, each a short text. The host folds
+## what doesn't fit into OTHER_REASON before it publishes (_bounded_summary()).
 const MAX_SUMMARY_REASONS: int = 32
 const MAX_REASON_LENGTH: int = 64
+const OTHER_REASON: String = "other"
+## After an event the host could not publish, poll() waits this long (msec) before trying again, so
+## a stuck phase logs one error every few seconds, not four times a second.
+const RETRY_MSEC: int = 5000
 
 ## The CompanyNet the phases travel through (attach()), or null: this peer's day alone.
 var net: CompanyNet = null
@@ -83,6 +97,10 @@ var _frozen_at: float = 0.0
 var _phase_msec: int = 0
 var _toggle_msec: int = -1
 var _since_poll: float = 0.0
+## Host: no poll() tries a phase before this tick (a failed publish), and EventBus facts this
+## peer applied and has not emitted yet ([fact, args]), flushed on event_applied.
+var _retry_at_msec: int = 0
+var _pending_facts: Array = []
 
 
 ## The host looks at the world a few times a second, not every frame.
@@ -99,6 +117,8 @@ func _exit_tree() -> void:
 	if _has_net() and net.day_cycle == self:
 		net.day_cycle = null
 		net.remove_snapshot_part(SNAPSHOT_KEY)
+		if net.event_applied.is_connected(_on_event_applied):
+			net.event_applied.disconnect(_on_event_applied)
 	net = null
 
 
@@ -115,6 +135,7 @@ func attach(company_net: CompanyNet, game_clock: GameClock, company_state: Objec
 	clock = game_clock
 	company = company_state
 	company_net.day_cycle = self
+	company_net.event_applied.connect(_on_event_applied)
 	return true
 
 
@@ -144,7 +165,7 @@ func next_day() -> bool:
 ## SUMMARY when no trip is out; otherwise it freezes or thaws the shed (S4). _process() calls it a
 ## few times a second; a test calls it after moving the clock.
 func poll() -> void:
-	if not is_host():
+	if not is_host() or _now() < _retry_at_msec:
 		return
 	match _phase:
 		Phase.OPENING:
@@ -167,9 +188,9 @@ func poll() -> void:
 ## Every peer, the host too: the host's day_phase (CompanyNet._apply_state()). Checked like any
 ## data from the network (rule 5: exactly the event's keys, the day and the minutes in range, the
 ## phase one of the four, a summary only in SUMMARY and shaped like DaySummary's), then the phase
-## is set and, for a new phase, the day's EventBus signal is emitted here. A new day also sets
+## is set and, for a new phase, the day's EventBus signal is queued. A new day also sets
 ## company.day (every peer's copy changes through the event, never by itself). False, changing
-## nothing, when the data doesn't fit.
+## nothing, when the data doesn't fit. The signal waits for event_applied (_on_event_applied()).
 func apply_phase(data: Dictionary) -> bool:
 	var parsed: Dictionary = _checked(data, false)
 	if parsed.is_empty():
@@ -180,15 +201,16 @@ func apply_phase(data: Dictionary) -> bool:
 	if phase == Phase.OPENING and company != null and is_instance_valid(company):
 		if int(company.get(&"day")) != day:
 			company.set(&"day", day)
-	if not is_new:
-		return true
-	match phase:
-		Phase.OPENING:
-			_emit_fact(&"company_day_started", [day])
-		Phase.CLOSING:
-			_emit_fact(&"company_day_closing", [day])
-		Phase.SUMMARY:
-			_emit_fact(&"company_day_summary", [day, summary.duplicate(true)])
+	if is_new:
+		match phase:
+			Phase.OPENING:
+				_pending_facts.append([&"company_day_started", [day]])
+			Phase.CLOSING:
+				_pending_facts.append([&"company_day_closing", [day]])
+			Phase.SUMMARY:
+				_pending_facts.append([&"company_day_summary", [day, summary.duplicate(true)]])
+	if not _has_net():
+		_flush_facts()
 	return true
 
 
@@ -219,9 +241,14 @@ func shed_minute() -> float:
 func _open(day: int) -> bool:
 	if day < 1 or day > MAX_DAY:
 		return false
+	# The event first: if the state doesn't take it, the clock is not started for a day that
+	# never opened. The clock_anchor follows it (seq order), so a listener of company_day_started
+	# still reads the old time; the clock runs from 08:00 before the next frame.
+	if not _publish(_event(day, Phase.OPENING, false, 0.0, 0.0)):
+		return false
 	if clock != null and is_instance_valid(clock):
 		clock.start(float(CompanyTuning.DAY_START_MIN))
-	return _publish(_event(day, Phase.OPENING, false, 0.0, 0.0))
+	return true
 
 
 ## Host: the next phase of this day, with the shed as it is. SUMMARY carries the day's summary and
@@ -229,7 +256,7 @@ func _open(day: int) -> bool:
 func _transition(next: Phase) -> bool:
 	var data: Dictionary = _event(_day, next, _frozen, _lag, _frozen_at)
 	if next == Phase.SUMMARY:
-		data["summary"] = DaySummary.build(company, _day)
+		data["summary"] = _bounded_summary(DaySummary.build(company, _day))
 	if not _publish(data):
 		return false
 	if next == Phase.SUMMARY and clock != null and is_instance_valid(clock):
@@ -267,9 +294,58 @@ func _event(day: int, phase_value: Phase, frozen: bool, lag: float, frozen_at: f
 ## Host: the event goes through CompanyNet, which applies it here too (apply_phase()), or without
 ## one applies here at once.
 func _publish(data: Dictionary) -> bool:
-	if _has_net():
-		return net.publish(CompanyNet.DAY_PHASE, data)
-	return apply_phase(data)
+	var done: bool = net.publish(CompanyNet.DAY_PHASE, data) if _has_net() else apply_phase(data)
+	if not done:
+		_retry_at_msec = _now() + RETRY_MSEC
+	return done
+
+
+## Host: `built` (DaySummary.build()) as the event may carry it. Its reason tables are unbounded, so
+## names are cut to MAX_REASON_LENGTH and a table over MAX_SUMMARY_REASONS keeps the biggest amounts
+## (MAX_SUMMARY_REASONS - 1) and folds the rest into OTHER_REASON; then `truncated` is true.
+static func _bounded_summary(built: Dictionary) -> Dictionary:
+	var result: Dictionary = built.duplicate(true)
+	for key: String in SUMMARY_REASON_KEYS:
+		var table: Dictionary = result.get(key, {})
+		var cut: Dictionary = {}
+		for reason: Variant in table:
+			var short: String = String(reason).left(MAX_REASON_LENGTH)
+			cut[short] = int(cut.get(short, 0)) + int(table[reason])
+		var changed: bool = cut.size() != table.size()
+		for reason: Variant in table:
+			changed = changed or String(reason).length() > MAX_REASON_LENGTH
+		if cut.size() > MAX_SUMMARY_REASONS:
+			changed = true
+			var names: Array = cut.keys()
+			names.sort_custom(func(a: String, b: String) -> bool:
+				return a < b if cut[a] == cut[b] else cut[a] > cut[b])
+			var kept: Dictionary = {}
+			var rest: int = 0
+			for index: int in range(names.size()):
+				if index < MAX_SUMMARY_REASONS - 1:
+					kept[names[index]] = cut[names[index]]
+				else:
+					rest += int(cut[names[index]])
+			kept[OTHER_REASON] = int(kept.get(OTHER_REASON, 0)) + rest
+			cut = kept
+		result[key] = cut
+		if changed:
+			result["truncated"] = true
+	return result
+
+
+## Every peer: the facts the last events queued go out on EventBus now that CompanyNet is not
+## applying (event_applied), so a host rule listening to them may publish or request.
+func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+	if kind == CompanyNet.DAY_PHASE:
+		_flush_facts()
+
+
+func _flush_facts() -> void:
+	var facts: Array = _pending_facts
+	_pending_facts = []
+	for fact: Array in facts:
+		_emit_fact(fact[0], fact[1])
 
 
 ## The checked state in place. True when it is a new phase or day (a toggle of the shed alone is
