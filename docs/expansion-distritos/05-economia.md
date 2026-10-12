@@ -16,7 +16,7 @@
 | D-0506 | ✅ Penalidades: rotura, producto equivocado, tarde, caja mal etiquetada | constructor-progresion | high | test por tipo |
 | D-0507 | ✅ Propinas por entrega perfecta y rápida | constructor-progresion | low | test |
 | D-0508 | ◐ (falta el panel, D-0508.2) Resumen financiero del cierre del día (ingresos, costos, ganancia) | constructor-ui | high | captura y test de los números |
-| D-0509 | Gastos fijos diarios (alquiler del galpón, luz) | constructor-progresion | medium | test |
+| D-0509 | ✅ Gastos fijos diarios (alquiler del galpón, luz) | constructor-progresion | medium | test |
 | D-0510 | Quiebra: qué pasa con saldo negativo N días (préstamo forzado, reinicio, aviso) | constructor-progresion | medium | test del caso |
 | D-0511 | Tienda de la empresa (máquinas, vehículos, ampliaciones, licencias) con catálogo de `.tres` | constructor-progresion | high | comprar ítem en test descuenta y otorga |
 | D-0512 | Precios de vehículos (bici < carrito < camioneta 4x4 < lancha < avioneta) | constructor-progresion | low | tabla en `.tres` |
