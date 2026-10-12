@@ -128,6 +128,12 @@ func earn(amount: int, reason: StringName) -> bool:
 	return true
 
 
+## Moves the company's reputation by delta (clamped to its range) and returns the new value.
+func add_reputation(delta: float) -> float:
+	reputation = _clamp_reputation(reputation + delta)
+	return reputation
+
+
 ## True when the wallet covers the amount (a spend never leaves the money below zero).
 func can_afford(amount: int) -> bool:
 	return amount >= 0 and money >= amount

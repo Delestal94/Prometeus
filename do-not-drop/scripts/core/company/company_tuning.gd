@@ -109,6 +109,11 @@ const BROKEN_PRODUCT_REPUTATION: float = -5.0
 ## A wrong or missing product makes that whole box pay 0.
 const WRONG_BOX_PAY_FACTOR: float = 0.0
 const WRONG_BOX_REPUTATION: float = -3.0
+## A box labeled for another order (or not labeled) pays this share less and costs reputation (D-0506).
+const MISLABEL_PAY_LOSS: float = 0.15
+const MISLABEL_REPUTATION: float = -1.0
+## One delivery never costs more reputation than this, however many products broke.
+const PENALTY_REPUTATION_CAP: float = -10.0
 
 # --- Supplier ---
 ## One truck a day, at 08:30, with what was ordered the day before.
