@@ -2,11 +2,13 @@ class_name CompanyRoot
 extends Node3D
 ## Root scene of the "Modo Empresa" (expansion D-0214, docs/arquitectura.md section 10).
 ##
-## The first thing you can walk around in: a bare shed in the industrial park
+## The first thing you can walk around in: the company's shed in the industrial park
 ## and the nine zones of the continuous map drawn as flat slabs with their name,
-## all from data (data/zones/*.tres), nothing placed by hand. It is a stand-in
-## made of boxes until the shed (D-09xx) and the district scenes exist; what is
-## final here is the entry: --mode=company or the menu opens this scene, the
+## all from data (data/zones/*.tres), nothing placed by hand. The shed (CompanyShed) is
+## furnished from the company's layout: a new company starts from DefaultShed (D-0911, D-0620):
+## dock and reception with the first pallets, shelves with stock, two packing tables and the
+## dispatch zone by the exit. It is a grey-box stand-in until the final models and the district
+## scenes exist; what is final here is the entry: --mode=company or the menu opens this scene, the
 ## company is switched on (CompanyState) and the local player stands in the shed.
 ##
 ## No vehicle, no route and no run: Delivery and Endless ignore all of this
@@ -49,12 +51,17 @@ const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 ## bundle 0, a floor:<n> location of red-autoridad.md section 2 (row 7). D-2006 / D-0611 will
 ## refine where they go (where each player stood).
 const SAVED_HANDS_LOCATION: StringName = &"floor:0"
-## The shed, in meters: centered on the origin, inside the industrial park.
-const SHED_SIZE: Vector2 = Vector2(48.0, 32.0)
-const WALL_HEIGHT: float = 6.0
-const WALL_THICKNESS: float = 0.5
-## Where the player appears, inside the shed, by the door.
-const SPAWN: Vector3 = Vector3(0.0, 1.0, 10.0)
+## The starting shed (stage 0 of WarehouseStages, 12 x 8 cells of 1 m), in meters: centered on the
+## origin, inside the industrial park. A bigger stage draws a bigger floor (CompanyShed).
+const SHED_SIZE: Vector2 = Vector2(12.0, 8.0)
+## Where the player appears: on the dock floor, facing the shed (north, -Z).
+const SPAWN: Vector3 = Vector3(0.0, 1.0, 2.6)
+## The group of every player here: this is the company, there is no vehicle to practise for
+## (the delivery practice card, player_cargo_care.gd, checks it).
+const CREW_GROUP: StringName = &"company_crew"
+## Zone names over the map: size of a pixel of their 256 px letters, and height over the ground.
+const ZONE_LABEL_PIXEL_SIZE: float = 0.06
+const ZONE_LABEL_HEIGHT: float = 30.0
 const ZONE_COLORS: Dictionary = {
 	&"parque_industrial": Color(0.55, 0.55, 0.58),
 	&"centro": Color(0.62, 0.58, 0.50),
@@ -69,6 +76,8 @@ const ZONE_COLORS: Dictionary = {
 
 var zones: Array[ZoneDefinition] = []
 var player: Node3D
+## The shed the players walk in, drawn from the company's layout and stock.
+var shed: CompanyShed
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
@@ -156,6 +165,13 @@ func _add_net(state: COMPANY_STATE) -> void:
 		CompanySave.load_into(state, save_slot, save_dir)
 		if not state.is_active():
 			state.new_company()
+	# A new company (or a save from before the default existed) starts with the furnished shed:
+	# pieces and units, free and the same on every run. It goes in the state before CompanyNet
+	# copies the stock, and reaches the clients with the snapshot (D-2004).
+	if DefaultShed.needs_default(state):
+		var report: Dictionary = DefaultShed.load_default().apply_to(state)
+		for refusal: Dictionary in report["refused"]:
+			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
 	net.inventory = state.stock()
 	_hosted_state = state
 
@@ -271,6 +287,7 @@ func _restore_own_company() -> void:
 
 func _on_host_day_restored(_snapshot_seq: int) -> void:
 	_saw_host_day = true
+	_redraw_shed()
 	_publish_presence()
 
 
@@ -278,6 +295,8 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		_publish_presence()
+	elif kind == &"units_moved" and shed != null:
+		shed.refresh_stock(net.inventory)
 
 
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on
@@ -351,54 +370,32 @@ func _add_zone_slab(zone: ZoneDefinition) -> void:
 	var color: Color = ZONE_COLORS.get(zone.id, Color(0.5, 0.5, 0.5))
 	var size := Vector3(zone.bounds.size.x, 0.2, zone.bounds.size.y)
 	var center := Vector3(zone.bounds.get_center().x, -0.2, zone.bounds.get_center().y)
-	var slab: StaticBody3D = _box("Zone_%s" % zone.id, size, center, color)
+	var slab: StaticBody3D = CompanyShed.solid_box("Zone_%s" % zone.id, size, center, color)
 	_world.add_child(slab)
 	var label := Label3D.new()
 	label.name = "Name"
 	label.text = String(zone.id).to_upper()
+	# Letters about 15 m tall, 30 m up: a name to read from afar. At pixel_size 0.5 they were 128 m tall
+	# and the industrial park's, right over the shed, filled the player's view with a blurred stripe.
 	label.font_size = 256
-	label.pixel_size = 0.5
+	label.pixel_size = ZONE_LABEL_PIXEL_SIZE
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.position = Vector3(center.x, 40.0, center.z)
+	label.position = Vector3(center.x, ZONE_LABEL_HEIGHT, center.z)
 	slab.add_child(label)
 
 
 func _add_shed() -> void:
-	var shed := Node3D.new()
+	shed = CompanyShed.new()
 	shed.name = "Shed"
 	_world.add_child(shed)
-	var floor_size := Vector3(SHED_SIZE.x, 0.2, SHED_SIZE.y)
-	shed.add_child(_box("Floor", floor_size, Vector3(0.0, -0.1, 0.0), Color(0.42, 0.42, 0.44)))
-	var half_x: float = SHED_SIZE.x * 0.5
-	var half_z: float = SHED_SIZE.y * 0.5
-	var wall_color := Color(0.72, 0.68, 0.60)
-	var y: float = WALL_HEIGHT * 0.5
-	var across := Vector3(SHED_SIZE.x, WALL_HEIGHT, WALL_THICKNESS)
-	var along := Vector3(WALL_THICKNESS, WALL_HEIGHT, SHED_SIZE.y)
-	# Back and sides; the front (+Z) is left open as the door.
-	shed.add_child(_box("WallBack", across, Vector3(0.0, y, -half_z), wall_color))
-	shed.add_child(_box("WallLeft", along, Vector3(-half_x, y, 0.0), wall_color))
-	shed.add_child(_box("WallRight", along, Vector3(half_x, y, 0.0), wall_color))
+	_redraw_shed()
 
 
-func _box(box_name: String, size: Vector3, center: Vector3, color: Color) -> StaticBody3D:
-	var body := StaticBody3D.new()
-	body.name = box_name
-	body.position = center
-	var shape := CollisionShape3D.new()
-	var box_shape := BoxShape3D.new()
-	box_shape.size = size
-	shape.shape = box_shape
-	body.add_child(shape)
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	mesh.material = material
-	mesh_instance.mesh = mesh
-	body.add_child(mesh_instance)
-	return body
+## The shed from the company as this peer holds it: on the host what it started with; on a client
+## the host's, once the snapshot is in (until then, bare).
+func _redraw_shed() -> void:
+	if shed != null and net != null and net.company != null:
+		shed.rebuild(net.company, net.inventory)
 
 
 func _spawn_player() -> void:
@@ -406,5 +403,6 @@ func _spawn_player() -> void:
 	player = (load(PLAYER_SCENE) as PackedScene).instantiate() as Node3D
 	player.name = "Player_%d" % id
 	player.position = SPAWN
+	player.add_to_group(CREW_GROUP)
 	player.set_multiplayer_authority(id)
 	_world.add_child(player)

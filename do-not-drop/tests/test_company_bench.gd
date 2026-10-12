@@ -5,7 +5,7 @@ extends SceneTree
 ## need no rendering:
 ## - the camera path is deterministic: the same (t, seconds) gives the same pose, in any order,
 ##   and it starts and ends at the player's spawn by the door;
-## - it stays inside the shed (48 x 32 m, CompanyRoot.SHED_SIZE) with a margin, at eye height,
+## - it stays inside the shed (12 x 8 m, CompanyRoot.SHED_SIZE) with a margin, at eye height,
 ##   and every pose is a valid, finite rotation;
 ## - it ends looking out of the door (+Z) at the zone slabs, sweeping from side to side;
 ## - the summary prints one `BENCH_COMPANY key=value` line per required key (objects, nodes,
@@ -18,7 +18,7 @@ extends SceneTree
 const BENCH := preload("res://tests/bench_company.gd")
 const SAMPLES: int = 601
 ## The camera stays at least this far from every wall of the shed, meters.
-const WALL_MARGIN: float = 3.0
+const WALL_MARGIN: float = 1.0
 const REQUIRED_KEYS: Array[String] = [
 	"objects", "nodes", "draw_calls", "physics_bodies", "frame_ms_p50", "frame_ms_p95", "memory_static_kb",
 	"drive",
@@ -92,7 +92,7 @@ func _check_path_stays_in_shed() -> void:
 	_expect(valid, "Every pose is a finite rotation (no look straight up or down, no zero direction)")
 	_expect(level_eyes, "The camera stays at eye height (%.1f m)" % BENCH.EYE_HEIGHT)
 	# A real walk: the loop covers the shed instead of standing at the door.
-	_expect(BENCH.walk_length() > 60.0, "The loop is long enough to cross the shed (%.0f m)" % BENCH.walk_length())
+	_expect(BENCH.walk_length() > 12.0, "The loop is long enough to cross the shed (%.0f m)" % BENCH.walk_length())
 
 
 func _check_door_look() -> void:
