@@ -6,7 +6,6 @@
 [resource]
 render_priority = 0
 shader = ExtResource("1_shader")
-shader_parameter/gel_color = Color(0.78, 0.82, 0.92, 1)
 shader_parameter/center_opacity = 0.24
 shader_parameter/edge_opacity = 0.78
 shader_parameter/edge_density = 0.38

@@ -1,16 +1,20 @@
 shader_type spatial;
 render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_schlick_ggx;
 
-// S-311.27-32: GL Compatibility gelatin with a clear centre, a denser Fresnel
+// S-311.27-34: GL Compatibility gelatin with a clear centre, a denser Fresnel
 // edge, real screen-space refraction, studio highlights and Beer-Lambert-style
 // absorption driven by the baked base-body thickness map. Wrapped diffuse and
 // back-light transmission add a single-pass fake subsurface glow. Sparse 3D
 // object-space noise adds internal motes without camera or UV swimming. An
 // alpha depth pre-pass stabilizes self-overlap and a thinner shadow pass keeps
-// the translucent body's shadow lighter than an opaque character's.
+// the translucent body's shadow lighter than an opaque character's. Per-instance
+// colour, opacity and brightness keep one shared material for every player.
+
+instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
+instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
+instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 
 group_uniforms gel;
-uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 uniform float center_opacity : hint_range(0.0, 1.0) = 0.24;
 uniform float edge_opacity : hint_range(0.0, 1.0) = 0.78;
 uniform float edge_density : hint_range(0.0, 1.0) = 0.38;
@@ -90,16 +94,17 @@ void fragment() {
 	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
 	float fresnel = pow(1.0 - facing, fresnel_power);
 	float density = fresnel * edge_density;
+	vec3 player_tint = gel_color.rgb * gel_brightness;
 	vec2 refraction_offset = NORMAL.xy * refraction_strength * (0.55 + fresnel * 0.45);
 	vec2 refraction_uv = clamp(SCREEN_UV + refraction_offset, vec2(0.001), vec2(0.999));
 	vec3 refracted_background = texture(screen_texture, refraction_uv).rgb;
-	vec3 surface_tint = mix(gel_color.rgb, vec3(1.0), density * 0.48);
+	vec3 surface_tint = mix(player_tint, vec3(1.0), density * 0.48);
 	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters;
 	float thickness_transmission = exp(-absorption_coefficient * thickness_meters);
 	float thickness_absorption = 1.0 - thickness_transmission;
 	vec3 absorbed_tint = mix(
 		surface_tint,
-		gel_color.rgb,
+		player_tint,
 		thickness_absorption * absorption_color_mix
 	);
 	float background_mix = refraction_mix * (1.0 - fresnel * 0.35);
@@ -133,10 +138,10 @@ void fragment() {
 	float bubble_outer = smoothstep(inclusion_threshold - 0.012, inclusion_threshold, bubble_field);
 	float bubble_inner = smoothstep(inclusion_threshold + 0.008, inclusion_threshold + 0.02, bubble_field);
 	float inclusion_mask = clamp(fine_motes + (bubble_outer - bubble_inner) * 0.7, 0.0, 1.0);
-	ALBEDO = mix(ALBEDO, gel_color.rgb * 0.82, inclusion_mask * inclusion_contrast);
+	ALBEDO = mix(ALBEDO, player_tint * 0.82, inclusion_mask * inclusion_contrast);
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
-	float surface_alpha = gel_color.a * mix(center_opacity, edge_opacity, fresnel);
+	float surface_alpha = gel_color.a * gel_opacity * mix(center_opacity, edge_opacity, fresnel);
 	float final_alpha = clamp(
 		surface_alpha + thickness_absorption * absorption_opacity + inclusion_mask * inclusion_contrast,
 		0.0,
@@ -166,7 +171,7 @@ void light() {
 	float specular_power = mix(128.0, 8.0, roughness);
 	float specular_lobe = pow(clamp(dot(NORMAL, half_vector), 0.0, 1.0), specular_power);
 	vec3 wrapped_diffuse = ALBEDO * LIGHT_COLOR * wrapped_light;
-	vec3 back_scatter = gel_color.rgb * LIGHT_COLOR * back_light * backlight_strength;
+	vec3 back_scatter = gel_color.rgb * gel_brightness * LIGHT_COLOR * back_light * backlight_strength;
 	DIFFUSE_LIGHT += (wrapped_diffuse + back_scatter) * ATTENUATION;
 	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * specular * ATTENUATION;
 }
