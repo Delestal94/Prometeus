@@ -62,6 +62,8 @@ func _build() -> void:
 	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	# A gamepad / Tab walking down the two dozen key rows keeps the focused one in view.
+	scroll.follow_focus = true
 	add_child(scroll)
 	var padding := MarginContainer.new()
 	padding.size_flags_horizontal = Control.SIZE_EXPAND_FILL

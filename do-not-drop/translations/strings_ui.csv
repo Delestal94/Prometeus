@@ -501,6 +501,7 @@ UI_OPT_BIND_HANDBRAKE,Freno de mano,Handbrake
 UI_OPT_BIND_PACKAGE_DROP,Soltar el paquete,Drop the package
 UI_OPT_BIND_PACKAGE_OPEN,Abrir el paquete,Open the package
 UI_OPT_BIND_CARE_WORK,Cuidar el paquete (mantener),Tend the package (hold)
+UI_OPT_BIND_CARE_TOOL_NEXT,Cambiar herramienta de cuidado,Switch care tool
 UI_OPT_BIND_PHONE,Celular,Phone
 UI_OPT_BIND_CREW,Tripulación (mantener),Crew list (hold)
 UI_OPT_BIND_SPECTATE,Espectar,Spectate

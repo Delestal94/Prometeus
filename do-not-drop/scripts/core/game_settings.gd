@@ -94,7 +94,13 @@ const REBINDABLE_ACTIONS := [
 	# also the strafe keys on foot (player_movement.gd).
 	&"walk_forward", &"walk_backward", &"drive_left", &"drive_right", &"jump",
 	&"drive_accelerate", &"drive_brake", &"drive_handbrake",
-	&"package_drop", &"package_open", &"care_work", &"phone_toggle", &"crew_panel", &"spectate_toggle",
+	&"package_drop", &"package_open", &"care_work", &"care_tool_next", &"phone_toggle", &"crew_panel",
+	&"spectate_toggle",
+]
+## Actions that carry a key in the Input Map but are not offered in Options: no
+## action may be moved onto their key (a notice says it is reserved, like Esc / F11).
+const RESERVED_KEY_ACTIONS: Array[StringName] = [
+	&"ui_pause", &"run_restart", &"look_center", &"dev_camera_toggle", &"toggle_net_stats",
 ]
 ## The shipped keys are the project.godot ones. KEY_NONE means "no keyboard key
 ## by default": care_work is the right mouse button until a key is added.
@@ -105,7 +111,7 @@ const DEFAULT_KEY_BINDINGS := {
 	&"drive_shift_up": KEY_UP, &"drive_shift_down": KEY_DOWN,
 	&"walk_forward": KEY_W, &"walk_backward": KEY_S, &"drive_left": KEY_A, &"drive_right": KEY_D,
 	&"jump": KEY_SPACE, &"drive_accelerate": KEY_W, &"drive_brake": KEY_S, &"drive_handbrake": KEY_SPACE,
-	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"phone_toggle": KEY_F,
+	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"care_tool_next": KEY_X, &"phone_toggle": KEY_F,
 	&"crew_panel": KEY_TAB, &"spectate_toggle": KEY_TAB,
 }
 
@@ -125,6 +131,7 @@ const BINDING_CONTEXTS := {
 	&"look_back": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"sprint": CONTEXT_FOOT | CONTEXT_DRIVE, &"package_drop": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"package_open": CONTEXT_FOOT | CONTEXT_DRIVE, &"care_work": CONTEXT_FOOT | CONTEXT_DRIVE,
+		&"care_tool_next": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"phone_toggle": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"crew_panel": CONTEXT_FOOT | CONTEXT_DRIVE | CONTEXT_DEPOT, &"spectate_toggle": CONTEXT_SPECTATE,
 }
@@ -264,6 +271,20 @@ func binding_conflicts(action: StringName, keycode: int) -> Array[StringName]:
 	return found
 
 
+## True when the key belongs to an action Options does not offer (restart,
+## look center, dev camera, net stats, pause), whatever the Input Map says now.
+func is_reserved_key(keycode: int) -> bool:
+	for action: StringName in RESERVED_KEY_ACTIONS:
+		if not InputMap.has_action(action):
+			continue
+		for event: InputEvent in InputMap.action_get_events(action):
+			if event is InputEventKey:
+				var key := event as InputEventKey
+				if keycode in [int(key.physical_keycode), int(key.keycode)] and keycode != KEY_NONE:
+					return true
+	return false
+
+
 ## Binds a key the way Options does (N-966). A key another action already
 ## uses (in a shared context) is swapped: that action gets this one's old key.
 ## When a swap can't be clean (several owners, nothing to hand back, or the
@@ -273,6 +294,8 @@ func rebind_key(action: StringName, keycode: int) -> Dictionary:
 	if action not in rebindable_actions or keycode == KEY_NONE:
 		return {"status": BIND_INVALID, "other": &""}
 	if keycode == KEY_ESCAPE or (fullscreen_key != KEY_NONE and keycode == fullscreen_key):
+		return {"status": BIND_RESERVED, "other": &""}
+	if is_reserved_key(keycode):
 		return {"status": BIND_RESERVED, "other": &""}
 	var old: int = bound_key(action)
 	if keycode == old:

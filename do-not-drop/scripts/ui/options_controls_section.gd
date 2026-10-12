@@ -22,8 +22,8 @@ const GROUPS: Array[Dictionary] = [
 		[&"jump", "UI_OPT_BIND_JUMP"], [&"sprint", "UI_OPT_BIND_SPRINT"],
 		[&"interact", "UI_OPT_BIND_INTERACT"],
 		[&"package_drop", "UI_OPT_BIND_PACKAGE_DROP"], [&"package_open", "UI_OPT_BIND_PACKAGE_OPEN"],
-		[&"care_work", "UI_OPT_BIND_CARE_WORK"], [&"use_card", "UI_OPT_BIND_USE_CARD"],
-		[&"phone_toggle", "UI_OPT_BIND_PHONE"],
+		[&"care_work", "UI_OPT_BIND_CARE_WORK"], [&"care_tool_next", "UI_OPT_BIND_CARE_TOOL_NEXT"],
+		[&"use_card", "UI_OPT_BIND_USE_CARD"], [&"phone_toggle", "UI_OPT_BIND_PHONE"],
 	]},
 	{"id": &"drive", "title": "UI_OPT_BIND_GROUP_DRIVE", "rows": [
 		[&"drive_accelerate", "UI_OPT_BIND_ACCELERATE"], [&"drive_brake", "UI_OPT_BIND_BRAKE"],
@@ -157,6 +157,13 @@ func stop_listening() -> void:
 
 func _input(event: InputEvent) -> void:
 	if _listening.is_empty() or not is_visible_in_tree():
+		return
+	if event is InputEventMouseButton and event.pressed:
+		# A click outside the row that waits ends the wait; the click itself still
+		# reaches what it hit. Clicking its own key button leaves it waiting.
+		var own: Button = buttons.get(_listening)
+		if own == null or not own.get_global_rect().has_point((event as InputEventMouseButton).global_position):
+			stop_listening()
 		return
 	if event.is_action_pressed(&"ui_cancel"):
 		stop_listening()

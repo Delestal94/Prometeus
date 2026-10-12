@@ -6,6 +6,10 @@ extends SceneTree
 ## - inventory: every action the player presses is rebindable and has a
 ##   shipped key, a row (key button + "put it back" button) and a text in both
 ##   languages; the camera/dev/pause actions are not offered;
+## - every Input Map action of the project with a keyboard key is either
+##   rebindable or on an explicit not-offered list (a new key action fails here);
+## - the keys of the not-offered actions (R, C, F-keys...) are refused as reserved;
+## - the interaction events follow the actions only (no hard-coded E / Q / T);
 ## - the shipped keys do not clash with each other (W is walk forward and
 ##   accelerate, but never in the same context);
 ## - every action can be rebound: the InputMap gets exactly that key, keeps its
@@ -27,9 +31,11 @@ const EXPECTED: Array[StringName] = [
 	&"drive_shift_up", &"drive_shift_down",
 	&"walk_forward", &"walk_backward", &"drive_left", &"drive_right", &"jump",
 	&"drive_accelerate", &"drive_brake", &"drive_handbrake",
-	&"package_drop", &"package_open", &"care_work", &"phone_toggle", &"crew_panel", &"spectate_toggle",
+	&"package_drop", &"package_open", &"care_work", &"care_tool_next", &"phone_toggle", &"crew_panel",
+	&"spectate_toggle",
 ]
-## Left out on purpose: mouse look, camera/dev toggles, pause, restart.
+## Left out on purpose: mouse look, camera/dev toggles, pause, restart. The ones
+## with a keyboard key are reserved: nothing can be rebound onto that key.
 const NOT_OFFERED: Array[StringName] = [
 	&"look_left", &"look_right", &"look_up", &"look_down", &"look_center", &"ui_pause", &"run_restart",
 	&"dev_camera_toggle", &"toggle_net_stats",
@@ -53,6 +59,8 @@ func _run() -> void:
 	_test_persistence()
 	_test_per_action_reset()
 	_test_conflicts()
+	_test_reserved_keys()
+	_test_interaction_follows_actions()
 	await _test_panel()
 
 	_settings.reset_to_defaults()
@@ -83,6 +91,18 @@ func _test_inventory() -> void:
 		% [_settings.REBINDABLE_ACTIONS.size(), rows.size()])
 	for action: StringName in NOT_OFFERED:
 		_expect(action not in _settings.REBINDABLE_ACTIONS, "%s is not offered for rebinding" % action)
+	var bare: Array[StringName] = []
+	for action: StringName in InputMap.get_actions():
+		# The engine's own ui_* actions are not the project's; the project's ui_ping / ui_pause are.
+		if not ProjectSettings.has_setting("input/" + String(action)):
+			continue
+		var has_key: bool = false
+		for event: InputEvent in InputMap.action_get_events(action):
+			has_key = has_key or event is InputEventKey
+		if has_key and action not in _settings.REBINDABLE_ACTIONS and action not in NOT_OFFERED:
+			bare.append(action)
+	_expect(bare.is_empty(), "Every action with a keyboard key is rebindable or listed as not offered (missing: %s)"
+		% str(bare))
 	for key: String in ["UI_OPT_BIND_SWAPPED", "UI_OPT_BIND_BLOCKED", "UI_OPT_BIND_RESERVED",
 			"UI_OPT_BIND_DEFAULT", "UI_OPT_BIND_DEFAULT_HINT", "UI_OPT_BIND_RIGHT_CLICK"]:
 		_expect(texts.has(key), "%s is in strings_ui.csv" % key)
@@ -276,6 +296,53 @@ func _test_conflicts() -> void:
 	_expect(_keys_of(&"jump") == [KEY_SPACE] and _keys_of(&"package_drop") == [KEY_Q]
 		and _keys_of(&"drive_left") == [KEY_A] and _keys_of(&"interact") == [KEY_E],
 		"...nor the Input Map")
+
+
+func _test_reserved_keys() -> void:
+	_settings.reset_to_defaults()
+	var before: Dictionary = _settings.key_bindings.duplicate()
+	# R restart, C look center, F-keys dev camera / net stats, Esc pause: all refused.
+	for action: StringName in [&"run_restart", &"look_center", &"dev_camera_toggle", &"toggle_net_stats", &"ui_pause"]:
+		for key: int in _keys_of(action):
+			var result: Dictionary = _settings.rebind_key(&"jump", key)
+			_expect(result["status"] == _settings.BIND_RESERVED,
+				"The key of %s (%s) is reserved (got %s)" % [action, OS.get_keycode_string(key), result])
+	_expect(_keys_of(&"run_restart") == [KEY_R] and _keys_of(&"look_center") == [KEY_C],
+		"...and R / C are what the project ships for restart / look center")
+	_expect(_settings.key_bindings == before and _keys_of(&"jump") == [KEY_SPACE],
+		"Reserved keys changed nothing")
+	var section: Node = load("res://scripts/ui/options_controls_section.gd").new()
+	root.add_child(section)
+	section.call(&"build")
+	var shown: Dictionary = section.call(&"apply_key", &"jump", KEY_R)
+	_expect(shown["status"] == _settings.BIND_RESERVED and not str(section.call(&"note_text", &"jump")).is_empty(),
+		"Taking R shows the reserved notice under the row")
+	section.queue_free()
+	# The care tool key is a normal binding now.
+	_expect(&"care_tool_next" in _settings.REBINDABLE_ACTIONS and _keys_of(&"care_tool_next") == [KEY_X],
+		"care_tool_next ships on X and is rebindable")
+
+
+## N-966: an action moved to another key must not keep answering on the old one.
+func _test_interaction_follows_actions() -> void:
+	_settings.reset_to_defaults()
+	var interaction: Node = load("res://scripts/gameplay/player/player_interaction.gd").new()
+	_expect(interaction.is_interact_event(_key_event(KEY_E)) and interaction.is_drop_event(_key_event(KEY_Q))
+		and interaction.is_open_event(_key_event(KEY_T)), "E / Q / T interact, drop and open by default")
+	# Interact moves away, then walking takes E: pressing E must walk, not interact.
+	_settings.rebind_key(&"interact", KEY_F13)
+	var result: Dictionary = _settings.rebind_key(&"walk_forward", KEY_E)
+	_expect(result["status"] == _settings.BIND_OK, "Walk forward takes the freed E (got %s)" % result)
+	_expect(not interaction.is_interact_event(_key_event(KEY_E)), "E no longer interacts once walk_forward has it")
+	_expect(interaction.is_interact_event(_key_event(KEY_F13)), "...Interact answers on its new key")
+	_settings.rebind_key(&"package_drop", KEY_F14)
+	_settings.rebind_key(&"package_open", KEY_F15)
+	_expect(not interaction.is_drop_event(_key_event(KEY_Q)) and interaction.is_drop_event(_key_event(KEY_F14)),
+		"Drop follows its rebound key, not Q")
+	_expect(not interaction.is_open_event(_key_event(KEY_T)) and interaction.is_open_event(_key_event(KEY_F15)),
+		"Open follows its rebound key, not T")
+	interaction.free()
+	_settings.reset_to_defaults()
 
 
 # --- The options screen ----------------------------------------------------------------------------
