@@ -49,7 +49,7 @@ do-not-drop/scripts/ui/depot_panel.gd|max-line-length 3
 do-not-drop/scripts/ui/hud/hud_cargo_panel.gd|max-line-length 2
 do-not-drop/scripts/ui/hud/hud_pause.gd|max-line-length 3
 do-not-drop/scripts/ui/hud/hud_results.gd|max-line-length 3
-do-not-drop/scripts/ui/options_panel.gd|max-line-length 8
+do-not-drop/scripts/ui/options_panel.gd|max-line-length 6
 do-not-drop/scripts/ui/sound_check_panel.gd|max-line-length 1
 do-not-drop/scripts/ui/ui_theme.gd|max-line-length 8
 do-not-drop/tests/bench_drive.gd|class-variable-name 1
