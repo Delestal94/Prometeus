@@ -74,7 +74,7 @@ const SPANISH_LITERAL_FILES: Array[String] = [
 	"res://scripts/presentation/sound_audit.gd",
 ]
 ## Words written the same in Spanish and English, allowed as a plain .text.
-const SAME_IN_BOTH: Array[String] = ["ENDLESS", "Endless", "PING"]
+const SAME_IN_BOTH: Array[String] = ["Endless"]
 ## The only scripts that read a resource's display_name: they turn it into a key.
 const DISPLAY_NAME_FILES: Array[String] = [
 	"res://scripts/gameplay/package/package_content.gd",
@@ -123,6 +123,7 @@ func _run() -> void:
 	_check_trap_name_keys(table)
 	_check_content_keys(table)
 	_check_short_warnings(table)
+	_check_glossary(table)
 	var menu_constants: Dictionary = load("res://scripts/ui/main_menu.gd").get_script_constant_map()
 	var page_titles: Dictionary = menu_constants.get("PAGE_TITLES", {})
 	_expect(not page_titles.is_empty(), "The main menu has page titles")
@@ -227,6 +228,20 @@ func _check_no_plain_word_texts() -> void:
 					var word: String = text.replace("●", "").strip_edges()
 					_expect(word in SAME_IN_BOTH,
 						"%s:%d draws the plain word \"%s\" (use a key)" % [file_path, line_number, text])
+
+
+## N-970: docs/glossary words. The player's vehicle is "camión"/"truck" (the Furgoneta/Furgón
+## entries are vehicle models), the room's owner is "anfitrión", never "hostea".
+func _check_glossary(table: Dictionary) -> void:
+	for key: String in table:
+		var es: String = String(table[key][0]).to_lower()
+		_expect(not es.contains("camioneta"), "%s uses camión, not camioneta (docs/glosario.md)" % key)
+		_expect(not es.contains("hostea"), "%s uses anfitrión, not hostea (docs/glosario.md)" % key)
+	for key: String in ["HUD_RUN_TIPPED", "HUD_RUN_STUCK", "HUD_RUN_STUCK_ROADSIDE", "HUD_BACK_TO_ZONE", "HUD_HOLD_STILL"]:
+		_expect(String(table[key][0]).to_lower().contains("camión"), "%s calls the vehicle camión" % key)
+		_expect(String(table[key][1]).to_lower().contains("truck"), "%s calls the vehicle truck" % key)
+	_expect(not String(table["HUD_CARE_IDLE_DETAIL"][1]).contains("gets at risk"),
+			"HUD_CARE_IDLE_DETAIL reads as natural English")
 
 
 func _check_trap_name_keys(table: Dictionary) -> void:

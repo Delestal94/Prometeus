@@ -1,7 +1,7 @@
 keys,es,en
 HUD_ARRIVED,¡En la bahía! Frená del todo para estacionar.,You are in the bay! Come to a full stop to park.
 HUD_BACK_TO_MENU,Volver al menú,Back to menu
-HUD_BACK_TO_ZONE,Volvé a la bahía libre y detené la camioneta.,Go back to the free bay and stop the truck.
+HUD_BACK_TO_ZONE,Volvé a la bahía libre y detené el camión.,Go back to the free bay and stop the truck.
 HUD_BOXES_TO_SECURE,Faltan asegurar %d cajas,%d boxes left to secure
 HUD_CALLOUT_BRAKE,¡Frená!,Brake!
 HUD_CALLOUT_BUMP,¡Bache!,Bump!
@@ -25,11 +25,11 @@ HUD_CARE_CUSHION,¡AMORTIGUÁ!,CUSHION IT!
 HUD_CARE_CUSHION_DETAIL,"Un toque de %s justo antes del bache. Mantener apretado no sirve.","One tap of %s right before the bump. Holding it does nothing."
 HUD_CARE_HOLD_DETAIL,Mantené %s: la protege de golpes y curvas.,Hold %s: it shields the box from bumps and turns.
 HUD_CARE_IDLE,TODO EN ORDEN,ALL GOOD
-HUD_CARE_IDLE_DETAIL,Podés soltar. Mantené %s si se sacude o se pone en riesgo.,You can let go. Hold %s if it shakes or gets at risk.
+HUD_CARE_IDLE_DETAIL,Podés soltar. Mantené %s si se sacude o corre riesgo.,You can let go. Hold %s if it shakes or is at risk.
 HUD_CARE_LOST,CONTENIDO PERDIDO,CONTENTS LOST
 HUD_CARE_LOST_DETAIL,Ya no se puede recuperar.,It can't be recovered anymore.
 HUD_CARE_RELEASE,¡SOLTALA!,LET GO!
-HUD_CARE_RELEASE_DETAIL,No toques la caja hasta que vuelva a pedir calma.,Don't touch the box until it asks for calm again.
+HUD_CARE_RELEASE_DETAIL,No toques la caja hasta que vuelva a pedir calma.,Hands off the box until it settles down.
 HUD_CARE_SEQUENCE,TOCÁ EN ORDEN,TAP IN ORDER
 HUD_CARE_SEQUENCE_DETAIL,"%s: %s. Si le errás, vuelve a empezar.",%s: %s. Miss one and it starts over.
 HUD_CARE_SEQUENCE_ON_FOOT,mantené %s y tocá una tecla por vez,hold %s and tap one key at a time
@@ -134,10 +134,10 @@ HUD_CARGO_FELL_OFF,Se cayó del camión.,It fell off the truck.
 HUD_CARGO_TITLE,CARGA,CARGO
 HUD_NOTICE_CREW_GREW,Se sumó gente: preparando la ruta para %d casas...,More people joined: setting up the route for %d houses...
 HUD_NOTICE_EDGE_OF_MAP,No hay nada más allá: volvé hacia la ruta,There's nothing out there: head back to the road
-HUD_RUN_TIPPED,La camioneta volcó. Tomá las curvas más despacio.,The van tipped over. Take the curves slower.
+HUD_RUN_TIPPED,El camión volcó. Tomá las curvas más despacio.,The truck tipped over. Take the curves slower.
 HUD_RUN_OFF_ROAD,Te saliste de la ruta. Reiniciá para intentarlo de nuevo.,You went off the road. Restart to try again.
-HUD_RUN_STUCK,La camioneta quedó atascada. Reiniciá para intentarlo de nuevo.,The van got stuck. Restart to try again.
-HUD_RUN_STUCK_ROADSIDE,La camioneta quedó atascada contra la ruta. Reiniciá para intentarlo de nuevo.,The van got stuck against the roadside. Restart to try again.
+HUD_RUN_STUCK,El camión quedó atascado. Reiniciá para intentarlo de nuevo.,The truck got stuck. Restart to try again.
+HUD_RUN_STUCK_ROADSIDE,El camión quedó atascado contra la ruta. Reiniciá para intentarlo de nuevo.,The truck got stuck against the roadside. Restart to try again.
 HUD_DEADLINE_NOTICE,Casa %d: %s en %02d:%02d,House %d: %s in %02d:%02d
 HUD_DEADLINE_REASON_LEAVING,el cliente sale de casa,the customer leaves home
 HUD_DEADLINE_REASON_BIRTHDAY,empieza el cumpleaños,the birthday party starts
@@ -220,7 +220,7 @@ HUD_EVENT,Evento,Event
 HUD_EVENT_FAILED,Evento fallido,Event failed
 HUD_EVENT_RESOLVED,Evento resuelto,Event resolved
 HUD_HIT,¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo.,Hit!  −%d integrity. Slow down before the next obstacle.
-HUD_HOLD_STILL,Mantené la camioneta detenida…,Keep the truck stopped…
+HUD_HOLD_STILL,Mantené el camión detenido…,Keep the truck stopped…
 HUD_HOST_GONE,La partida del anfitrión ya no está disponible.,The host's game is no longer available.
 HUD_HOST_GONE_TALLY,"Hasta acá: %d de %d casas entregadas, %d de %d cajas sanas, %d m recorridos en %s.","So far: %d of %d houses delivered, %d of %d boxes intact, %d m travelled in %s."
 HUD_HOST_GONE_TALLY_ENDLESS,"Hasta acá: %d m recorridos en %s, %d de %d cajas sanas.","So far: %d m travelled in %s, %d of %d boxes intact."
@@ -412,7 +412,7 @@ UI_DEPOT_VOTE_OPEN,Votación abierta · el reloj empieza con el primer voto,Vote
 UI_DEPOT_VOTE_OPEN_TIMER,Votación abierta · %d s,Vote open · %d s
 UI_DEPOT_VOTE_PREFIX,"Votar: ","Vote: "
 UI_DEPOT_WORKSHOP,Taller,Workshop
-UI_DEPOT_WORKSHOP_GUEST_HINT,El camión lo elige quien hostea la partida. Podés mirar lo que hay.,The host picks the truck. You can look at what there is.
+UI_DEPOT_WORKSHOP_GUEST_HINT,El camión lo elige el anfitrión de la partida. Podés mirar lo que hay.,The host picks the truck. You can look at what there is.
 UI_DEPOT_WORKSHOP_HOST_HINT,Los cambios se ven al instante en el camión.,Changes show on the truck right away.
 UI_DEPOT_WORKSHOP_TAG,CAMIÓN Y PINTURA,TRUCK AND PAINT
 UI_DONE,Listo,Done
@@ -1236,3 +1236,5 @@ UI_GEL_EDITOR_HINT,Elegí una base y ajustá cada parte. Los cambios se ven al i
 UI_GEL_EDITOR_PRESET,Base,Preset
 UI_GEL_EDITOR_RESTORE,Restaurar base,Restore preset
 UI_GEL_EDITOR_UNDO,Deshacer,Undo
+HUD_SECTION_ENDLESS,ENDLESS,ENDLESS
+UI_PING_TITLE,PING,PING
