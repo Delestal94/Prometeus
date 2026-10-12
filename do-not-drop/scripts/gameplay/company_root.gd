@@ -16,11 +16,28 @@ extends Node3D
 ## starts from the company's stock and, until stations exist, refuses every units
 ## request; on a client it holds the events until the host's snapshot (D-2004), which
 ## also loads the host's company into this peer's CompanyState.
+##
+## The host leaving mid-day (D-2005, like N-222): a client keeps what it saw of the
+## host's day for the menu (CompanyInterruptedDay), gets its own company back, stops
+## the world and loads the main menu. The host (solo too) loads its slot when it comes
+## up without a company (CompanySave) and saves the day as it stood at the last applied
+## event, marked interrupted, whenever its world closes before the day does: its session
+## ended and it went back to the menu, or the game closed. Until DayCycle (D-0203) closes
+## days, every day is in progress.
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
+## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here in
+## gameplay/: once the company HUD exists, the host-gone screen and the way to the menu move
+## there, as N-222's live in hud_pause.gd.
+const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
+## Where a save puts the units players held (D-2005): a loaded day opens with empty hands. The
+## shed has no fixed spot for them yet (no station gives a location), so they lie in floor
+## bundle 0, a floor:<n> location of red-autoridad.md section 2 (row 7). D-2006 / D-0611 will
+## refine where they go (where each player stood).
+const SAVED_HANDS_LOCATION: StringName = &"floor:0"
 ## The shed, in meters: centered on the origin, inside the industrial park.
 const SHED_SIZE: Vector2 = Vector2(48.0, 32.0)
 const WALL_HEIGHT: float = 6.0
@@ -43,16 +60,28 @@ var zones: Array[ZoneDefinition] = []
 var player: Node3D
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
+## Host: the slot and folder the company is loaded from when the world comes up without one,
+## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
+## of its own before adding the root.
+var save_slot: String = CompanySave.DEFAULT_SLOT
+var save_dir: String = CompanySave.SAVE_DIR
 
 var _world: Node3D
 ## Client: the CompanyState node the host's snapshot writes into, and what it held before (its
 ## to_dict(), or {} when no company was on), put back on leaving (_exit_tree()).
 var _mirrored_state: COMPANY_STATE
 var _own_company: Dictionary = {}
+## Host (solo too): the CompanyState node it runs, saved when the world closes mid-day. Decided
+## when the world comes up: a client whose session ended counts as a host to CompanyNet then.
+var _hosted_state: COMPANY_STATE
+## Client: a snapshot put the host's company in its mirror (there is a day to sum up).
+var _saw_host_day: bool = false
+## Client: the host is gone and the menu is on its way; nothing here runs any more.
+var _host_gone: bool = false
 
 
 func _ready() -> void:
-	_add_net(get_node_or_null(^"/root/CompanyState") as COMPANY_STATE)
+	_start_company(get_node_or_null(^"/root/CompanyState") as COMPANY_STATE)
 	_world = Node3D.new()
 	_world.name = "World"
 	add_child(_world)
@@ -78,8 +107,9 @@ static func load_zones() -> Array[ZoneDefinition]:
 
 
 ## Same name on every peer, so its RPCs reach the same node. The host (solo
-## counts) switches the company on if none is loaded and hands CompanyNet its
-## stock (CompanyState.stock(): a copy the events keep up to date). A client
+## counts), with no company on, loads its slot (a new company only when there is
+## none to load) and hands CompanyNet its stock (CompanyState.stock(): a copy the
+## events keep up to date). A client
 ## writes nothing (rule 1 of red-autoridad.md): an empty stock, and every event
 ## held until the host's snapshot puts the real one, and the host's company, in
 ## place (D-2004); what the client's CompanyState held before comes back when it
@@ -98,13 +128,95 @@ func _add_net(state: COMPANY_STATE) -> void:
 	if state == null:
 		return
 	if not state.is_active():
-		state.new_company()
+		# The slot first: a new company here would erase it on the first exit
+		# (save_interrupted_day()). CORRUPT already starts a new company (the bad file is kept as
+		# .bad); MISSING and TOO_NEW leave it off. A newer build's file is never overwritten
+		# (CompanySave.save()), so a new company played over one is not saved.
+		CompanySave.load_into(state, save_slot, save_dir)
+		if not state.is_active():
+			state.new_company()
 	net.inventory = state.stock()
+	_hosted_state = state
 
 
-## A client leaves the host's company behind: its CompanyState goes back to what it had before
-## the snapshot (switched off when it had none), so solo play or a save never takes the host's.
+## The business side of the world, before the world itself: CompanyNet (_add_net()) and, on a
+## client, the watch for its host going away, on two signals: this root's multiplayer
+## server_disconnected (the host left or dropped) and NetworkManager's session_failed, by path
+## (a handshake that times out or is refused ends the session with no server_disconnected).
+## Whichever comes first does it and the other finds _host_gone set; _on_host_lost() only reads
+## this peer's mirror and changes scene, so it doesn't matter whether the session already ended.
+func _start_company(state: COMPANY_STATE) -> void:
+	_add_net(state)
+	if net.is_host():
+		return
+	net.company_state_restored.connect(_on_host_day_restored)
+	if not multiplayer.server_disconnected.is_connected(_on_host_lost):
+		multiplayer.server_disconnected.connect(_on_host_lost)
+	var session: Node = get_node_or_null(^"/root/NetworkManager")
+	if session != null and session.has_signal(&"session_failed"):
+		if not session.is_connected(&"session_failed", _on_session_failed):
+			session.connect(&"session_failed", _on_session_failed)
+
+
+## Host (solo too): the day as it stands, at the last applied event, saved as interrupted
+## (CompanySave): the live stock goes into the company first as a save keeps it (stock_for_save():
+## nobody holds anything when it loads). Loading it plays the same day again from the opening.
+## False on a client, without a company on, over a newer build's save or when the file could not
+## be written.
+func save_interrupted_day() -> bool:
+	if _hosted_state == null or not is_instance_valid(_hosted_state):
+		return false
+	if not _hosted_state.is_active():
+		return false
+	if net != null and is_instance_valid(net) and net.inventory != null:
+		_hosted_state.store_stock(stock_for_save(net.inventory))
+	var saved: bool = CompanySave.save(_hosted_state, save_slot, save_dir, true)
+	if not saved:
+		push_warning("CompanyRoot: the interrupted day %d could not be saved to %s"
+			% [_hosted_state.day, CompanySave.path_for(save_slot, save_dir)])
+	return saved
+
+
+## A copy of `stock` as a save keeps it (D-2005): what every hands:<peer> held lies in
+## SAVED_HANDS_LOCATION, with the total of each product and the reservations unchanged. `stock`
+## itself (CompanyNet's live one) is not touched.
+static func stock_for_save(stock: Inventory) -> Inventory:
+	var copy := Inventory.new()
+	copy.from_dict(stock.to_dict())
+	var by_product: Dictionary = copy.to_dict().get("stock", {})
+	for product: Variant in by_product:
+		var locations: Dictionary = by_product[product]
+		for location: Variant in locations:
+			if String(location).begins_with(CompanyNet.HANDS_PREFIX):
+				copy.move(StringName(product), int(locations[location]), StringName(location),
+					SAVED_HANDS_LOCATION)
+	return copy
+
+
+## What this client saw of the host's day (CompanyInterruptedDay.summary()): the mirror's day,
+## money and wallet history, the live stock and, with a clock, its minute. {} on the host or
+## before any snapshot.
+func host_day_seen() -> Dictionary:
+	if not _saw_host_day or _mirrored_state == null or not is_instance_valid(_mirrored_state):
+		return {}
+	var minute: int = -1
+	if net != null and is_instance_valid(net) and net.clock != null and is_instance_valid(net.clock):
+		minute = floori(net.clock.minute_now())
+	var stock: Inventory = net.inventory if net != null and is_instance_valid(net) else null
+	return CompanyInterruptedDay.summary(_mirrored_state, stock, minute)
+
+
+## The host's world closing mid-day saves the day as interrupted (D-2005); a client leaves the
+## host's company behind: its CompanyState goes back to what it had before the snapshot
+## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
+	if _hosted_state != null:
+		save_interrupted_day()
+		_hosted_state = null
+	_restore_own_company()
+
+
+func _restore_own_company() -> void:
 	if _mirrored_state == null or not is_instance_valid(_mirrored_state):
 		return
 	if _own_company.is_empty():
@@ -112,6 +224,30 @@ func _exit_tree() -> void:
 	else:
 		_mirrored_state.from_dict(_own_company)
 	_mirrored_state = null
+
+
+func _on_host_day_restored(_snapshot_seq: int) -> void:
+	_saw_host_day = true
+
+
+func _on_session_failed(_reason: String) -> void:
+	_on_host_lost()
+
+
+## Client: the host went away mid-day (D-2005). What it saw of the day is kept for the menu
+## before its own company comes back; the world stops (a clock or a request here would now act
+## as a host on the mirror) and the main menu loads, as hud_pause.leave_to_menu() does. The
+## jump to the menu is here only until the company HUD exists (see MAIN_MENU_SCENE).
+func _on_host_lost() -> void:
+	if _host_gone or _hosted_state != null:
+		return
+	_host_gone = true
+	CompanyInterruptedDay.hold(host_day_seen())
+	_restore_own_company()
+	process_mode = Node.PROCESS_MODE_DISABLED
+	get_tree().paused = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().change_scene_to_file.call_deferred(MAIN_MENU_SCENE)
 
 
 func _add_environment() -> void:

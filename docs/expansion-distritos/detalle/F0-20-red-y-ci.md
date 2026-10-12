@@ -60,6 +60,7 @@ snapshot de un galpón con 300 unidades de stock pesa < 64 KB.
 **Hecho cuando:** el test pasa.
 
 ### D-2005 · El host se va a mitad de día — A · Opus 5.5 · high · Aviso: sí (`hud_pause.gd`, `level_base.gd` si se reusan) · F0
+**[x] Hecho (2026-10-12, PR #387)** — cliente: `CompanyRoot` en `server_disconnected`/`session_failed` arma el resumen (`CompanyInterruptedDay` sobre `DaySummary`), recupera su empresa, congela el mundo y vuelve al menú, que muestra la línea; host: carga el slot al entrar y al cerrar su mundo guarda con `interrupted: true` (manos → `floor:0`), que carga ese día desde la apertura; `test_company_host_leaves`.
 **Depende de:** D-2003, D-0206
 **Qué:** como N-222. Cuando el host se desconecta, los clientes ven el resumen parcial del día y vuelven
 al menú. El host, si sigue vivo (se cerró la sesión de red), **guarda** el estado al último evento
@@ -87,6 +88,7 @@ piso del host, el stock total no cambia y al volver ve el mismo stock.
 test) y pasa con el código real.
 
 ### D-2008 · `PROTOCOL_VERSION` de la expansión — A · Opus 5.5 · low · Aviso: sí (`network_manager.gd`) · F0
+**[x] Hecho (2026-10-12, 5257be0, PR #336)** — ya estaba: D-2003 subió a 29 con el primer RPC de negocio y cada PR siguiente sube según §6 con su línea `## N: …` en el historial de `network_manager.gd` (30 dice "expansión"); el historial hace de tabla de §6.
 **Depende de:** D-2003
 **Qué:** un solo aumento para el primer PR que agrega RPC de negocio. Los siguientes PRs de la expansión
 que cambien RPC suben de nuevo según §6, y la tabla de §6 anota "expansión" en el motivo.

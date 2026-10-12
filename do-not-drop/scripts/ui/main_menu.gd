@@ -142,9 +142,16 @@ func _ready() -> void:
 	# A session that ended while in a level (host gone, handshake refused):
 	# say why here, where the player lands.
 	var reason: String = NetworkManager.take_failure_message()
+	var lines: PackedStringArray = []
 	if not reason.is_empty():
 		# A code ("version", "timeout"...) still needs its text; a sentence passes through.
-		_set_status(connection_error_text(reason), RED)
+		lines.append(connection_error_text(reason))
+	# D-2005: what a company client saw of the day its host's leaving cut short, once.
+	var day_cut: String = CompanyInterruptedDay.take_pending_text()
+	if not day_cut.is_empty():
+		lines.append(day_cut)
+	if not lines.is_empty():
+		_set_status("\n".join(lines), RED)
 	_handle_cmdline_args()
 
 

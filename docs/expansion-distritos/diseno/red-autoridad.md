@@ -108,6 +108,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | Se abre un bloqueo (D-0306) | host | evento `gate_opened` `{gate}`; no se vuelve a cerrar. En F1 Centro y Campo están abiertos desde el día 1 |
 | Un peer se va (D-2006) | host, en `peer_removed` | eventos `units_moved` `hands:<peer>` → `floor:<n>` (uno por producto) con la última posición conocida del jugador: la del nodo del jugador si sigue en pie y, si no, la última que `CompanyNet` guardó en su `units_take` o `units_drop`. Las mesas no tienen dueño, así que no hay nada más que soltar |
 | Entra un peer tarde (D-2004) | host, en el gancho de peer listo | snapshot con el `seq` actual (ver §3) |
+| Se va el host (D-2005) | cada cliente, en `multiplayer.server_disconnected` | nada viaja: resumen local (`CompanyInterruptedDay`), empresa propia de vuelta, mundo congelado y menú con el resumen; el host guarda el día con `interrupted: true` al cerrar su mundo (`CompanyRoot._exit_tree()`) y al cargarlo arranca ese día desde la apertura |
 
 ## 3. Secuencia, huecos y snapshot
 

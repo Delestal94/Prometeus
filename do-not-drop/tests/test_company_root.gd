@@ -13,9 +13,13 @@ extends SceneTree
 ## - on a client (a session that isn't the host) it waits for the snapshot without touching
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
-## - the main menu knows the scene, the --mode=company flag and has the button.
+## - the main menu knows the scene, the --mode=company flag and has the button;
+## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
+##   as interrupted there, and the real slot (user://saves/company/) is never touched.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
+## The roots save here, never in the game's slot.
+const DIR: String = "user://test_company_root"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 ## Nobody listens here: the client stays connecting, which is enough not to be the host.
 const CLOSED_PORT: int = 24639
@@ -28,9 +32,11 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_clean()
+	var real_slot: String = _real_slot()
 	var state: Node = root.get_node(^"/root/CompanyState")
 	state.call(&"reset")
-	var level: Node = (load(SCENE) as PackedScene).instantiate()
+	var level: Node = _instantiate()
 	root.add_child(level)
 	await process_frame
 	await physics_frame
@@ -76,8 +82,12 @@ func _run() -> void:
 
 	level.queue_free()
 	await process_frame
+	_expect(CompanySave.was_interrupted(CompanySave.DEFAULT_SLOT, DIR),
+		"Leaving the solo root saves the day as interrupted in its save_dir")
 	await _check_client_restores(state)
 	state.call(&"reset")
+	_expect(_real_slot() == real_slot, "The game's own save slot is never touched")
+	_clean()
 	if _failures == 0:
 		print("PASS: company root builds the shed and nine zones, company on, player inside, menu flag")
 	quit(_failures)
@@ -86,6 +96,8 @@ func _run() -> void:
 ## A client loads the host's company from the snapshot; leaving the root puts its own back.
 func _check_client_restores(state: Node) -> void:
 	var host_state: Node = (load(STATE_SCRIPT) as GDScript).new()
+	# In the tree, so its facts reach EventBus instead of erroring on an absolute path.
+	root.add_child(host_state)
 	host_state.call(&"new_company", "Host SRL")
 	host_state.call(&"earn", 900, &"order_paid")
 	host_state.call(&"open_gate", &"gate_campo")
@@ -108,7 +120,7 @@ func _check_client_restores(state: Node) -> void:
 		var peer := ENetMultiplayerPeer.new()
 		_expect(peer.create_client("127.0.0.1", CLOSED_PORT) == OK, "A client session starts")
 		side.multiplayer.multiplayer_peer = peer
-		var level: Node = (load(SCENE) as PackedScene).instantiate()
+		var level: Node = _instantiate()
 		side.add_child(level)
 		await process_frame
 		var net: CompanyNet = level.get(&"net")
@@ -130,6 +142,31 @@ func _check_client_restores(state: Node) -> void:
 		side.free()
 	host.free()
 	host_state.free()
+
+
+## The scene, saving in DIR (set before it enters the tree: the host loads from there on entry).
+func _instantiate() -> CompanyRoot:
+	var level := (load(SCENE) as PackedScene).instantiate() as CompanyRoot
+	level.save_dir = DIR
+	return level
+
+
+## What the game's slot holds now, its file, .bak and .tmp ("" for each one missing).
+static func _real_slot() -> String:
+	var path: String = CompanySave.path_for()
+	var parts: PackedStringArray = []
+	for file: String in [path, path + ".bak", path + ".tmp"]:
+		parts.append(FileAccess.get_file_as_string(file) if FileAccess.file_exists(file) else "")
+	return "|".join(parts)
+
+
+func _clean() -> void:
+	var dir := DirAccess.open(DIR)
+	if dir == null:
+		return
+	for file: String in dir.get_files():
+		dir.remove(file)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR))
 
 
 func _expect(condition: bool, message: String) -> void:
