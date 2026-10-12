@@ -286,42 +286,42 @@ segments 38
 -- houses
 house House0 variant=4 index=0 pos(-23.2867 -2.8703 -674.9465) basis(0.6066 0.0000 0.7950 0.0000 1.0000 0.0000 -0.7950 0.0000 0.6066)
   label HouseNumber0 -23.2867 4.7756 -674.9465 meta{height_above_house=7.6459}
-  piece House0/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | pos(0.0000 0.3000 -3.5800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.5000,on_porch=true}
-    summary nodes=6 hash=6718f1519081
-  piece House0/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | pos(-0.9500 0.3000 -3.7300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=3297f3bf633e
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | pos(0.9500 0.3000 -3.7300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=3df9a257b7ad
-  piece House0/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 -0.1024 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=e32798e34f07
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5948 -0.0781 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=a747290c5720
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 -0.0573 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=b7b15e87badf
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 -0.0524 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=e1ab611394e5
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 0.0371 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=e2f72aba3886
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 0.3219 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=824043a9ad59
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0290 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=b6297b863d05
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0353 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=75619eade1f9
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0351 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=8084a98f427f
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0199 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=f21ee0708466
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 0.0402 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=a3e4e6c5c1d8
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 0.2247 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=e10343fd93b0
-  piece House0/Yard/sm_arch_barn | Node3D | scene=sm_arch_barn.glb | pos(-14.9720 -0.5792 4.0000) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=6.4000,on_porch=false,reach=6.4000,rule=yard,solid=true}
-    summary nodes=84 hash=fa4a03c9f468
+  piece House0/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | at(0.0000 -3.5800) yaw=0.0000 | meta{footprint=0.5000,on_porch=true}
+    summary nodes=1 hash=26bfdcb9446a
+  piece House0/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | at(-0.9500 -3.7300) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=86798a5ccd7d
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | at(0.9500 -3.7300) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=76dbc3a41f35
+  piece House0/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 -3.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=769247fb3008
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5948 -1.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=04100bda9edf
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 0.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=8049ca811e40
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 2.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=fd7e03be08f0
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 4.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=f276603e14ff
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 6.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=c8de70f37d80
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 -3.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=a86ef34135b0
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 -1.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=ab8969e8b751
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 0.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=be3c6a50632d
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 2.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=025914c798b7
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 4.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=ec213ed4ff0f
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 6.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=c33c834f7bdb
+  piece House0/Yard/sm_arch_barn | Node3D | scene=sm_arch_barn.glb | at(-14.9720 4.0000) yaw=1.5708 | meta{footprint=6.4000,on_porch=false,reach=6.4000,rule=yard,solid=true}
+    summary nodes=1 hash=1621da331a90
 -- assign_packages
   house0 id=pkg_0 label='TRAP_0 10' sign=CASA 1|TRAP_0 10
 -- children
-ContinuousTerrain | Node3D | script=route_terrain.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=1192 hash=e4610f43c2dc
+ContinuousTerrain | Node3D | script=route_terrain.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=1089 hash=206695a20367
 SalidaPost | StaticBody3D | pos(-7.6000 1.5250 -5.1500) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | layer=1 mask=6 | meta{}
 SalidaPost/@MeshInstance3D@ | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-0.0800 -1.6796 -0.0800 0.1600 3.2548 0.1600) surfaces=1 [verts=24 sum(0.0000 -1.2528 0.0000)]} | shadow=1 | meta{}
 SalidaPost/@CollisionShape3D@ | CollisionShape3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=ConcavePolygonShape3D | meta{}
@@ -333,46 +333,46 @@ SalidaTitle | Label3D | pos(-7.6000 2.7578 -4.9250) basis(1.0000 0.0000 0.0000 0
 SalidaText | Label3D | pos(-7.6000 2.2378 -4.9250) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='Cuidá la carga · el camino serpentea' | meta{}
 StartLine | Node3D | pos(0.0000 0.0300 -4.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{}
 StartLine/@MeshInstance3D@ | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-5.7000 -0.0138 -0.1750 11.4000 0.0238 0.3500) surfaces=1 [verts=64 sum(0.0000 -0.0904 0.0000)]} | shadow=1 | meta{}
-Segment0 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=0.0000} | nodes=1372 hash=a7713c9dd678
-Segment1 | Node3D | script=straight_segment.gd | pos(0.0000 0.0000 -44.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=44.0000} | nodes=565 hash=2004f3892ddc
-Segment2 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 -74.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=74.0000} | nodes=405 hash=ae2c54a0a2df
-Segment3 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 -98.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=98.0000} | nodes=1309 hash=053d3eb6b4bd
-Segment4 | Node3D | script=curve_segment.gd | pos(0.0000 0.0000 -142.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=142.0000} | nodes=694 hash=2b81fbae8545
-Segment5 | Node3D | script=speed_bump_segment.gd | pos(6.8593 0.0000 -170.6400) basis(0.7615 0.0000 0.6482 0.0000 1.0000 0.0000 -0.6482 0.0000 0.7615) | meta{route_distance=172.0000} | nodes=541 hash=186304ae2814
-Segment6 | Node3D | script=gravel_segment.gd | pos(22.4162 0.0000 -188.9152) basis(0.7615 0.0000 0.6482 0.0000 1.0000 0.0000 -0.6482 0.0000 0.7615) | meta{route_distance=196.0000} | nodes=699 hash=06d5f242f64c
-Segment7 | Node3D | script=curve_segment.gd | pos(41.8622 0.0000 -211.7593) basis(0.7615 0.0000 0.6482 0.0000 1.0000 0.0000 -0.6482 0.0000 0.7615) | meta{route_distance=226.0000} | nodes=758 hash=a3c8b1a7c859
-Segment8 | Node3D | script=tunnel_segment.gd | pos(55.3890 0.0000 -237.9528) basis(0.9998 0.0000 0.0196 0.0000 1.0000 0.0000 -0.0196 0.0000 0.9998) | meta{route_distance=256.0000} | nodes=1275 hash=0dbc35aec419
-Segment9 | Node3D | script=hill_segment.gd | pos(56.2532 0.0000 -281.9443) basis(0.9998 0.0000 0.0196 0.0000 1.0000 0.0000 -0.0196 0.0000 0.9998) | meta{route_distance=300.0000} | nodes=1168 hash=b348547f3e64
-Segment10 | Node3D | script=curve_segment.gd | pos(57.6281 0.0000 -351.9308) basis(0.9998 0.0000 0.0196 0.0000 1.0000 0.0000 -0.0196 0.0000 0.9998) | meta{route_distance=370.0000} | nodes=781 hash=ec039faaed16
-Segment11 | Node3D | script=rail_crossing_segment.gd | pos(46.2512 0.0000 -389.1252) basis(0.6791 0.0000 -0.7341 0.0000 1.0000 0.0000 0.7341 0.0000 0.6791) | meta{route_distance=410.0000,track_height=-2.2206} | nodes=897 hash=171698f08f9d
-Segment12 | Node3D | script=curve_segment.gd | pos(22.7607 0.0000 -410.8553) basis(0.6791 0.0000 -0.7341 0.0000 1.0000 0.0000 0.7341 0.0000 0.6791) | meta{route_distance=442.0000} | nodes=636 hash=70908c5872ce
-Segment13 | Node3D | script=s_curve_segment.gd | pos(6.1382 0.0000 -435.2182) basis(0.9891 0.0000 -0.1471 0.0000 1.0000 0.0000 0.1471 0.0000 0.9891) | meta{route_distance=472.0000} | nodes=987 hash=971cf4e47096
-Segment14 | Node3D | script=tunnel_segment.gd | pos(-2.6856 0.0000 -494.5658) basis(0.9891 0.0000 -0.1471 0.0000 1.0000 0.0000 0.1471 0.0000 0.9891) | meta{route_distance=532.0000} | nodes=1318 hash=907c406da661
-Segment15 | Node3D | script=curve_segment.gd | pos(-9.1564 0.0000 -538.0874) basis(0.9891 0.0000 -0.1471 0.0000 1.0000 0.0000 0.1471 0.0000 0.9891) | meta{route_distance=576.0000} | nodes=724 hash=4c1e015c8905
-Segment16 | Node3D | script=straight_segment.gd | pos(-9.2001 0.0000 -567.8742) basis(0.9580 0.0000 0.2867 0.0000 1.0000 0.0000 -0.2867 0.0000 0.9580) | meta{delivery_sign_side=-1.0000,route_distance=606.0000} | nodes=519 hash=787353b030e7
-Segment17 | Node3D | script=curve_segment.gd | pos(-0.5989 0.0000 -596.6147) basis(0.9580 0.0000 0.2867 0.0000 1.0000 0.0000 -0.2867 0.0000 0.9580) | meta{route_distance=636.0000} | nodes=485 hash=0147d988b03c
-Segment18 | Node3D | script=straight_segment.gd | pos(3.3771 0.0000 -626.1027) basis(0.9839 0.0000 -0.1785 0.0000 1.0000 0.0000 0.1785 0.0000 0.9839) | meta{route_distance=666.0000} | nodes=270 hash=7cae139566e9
-Segment19 | Node3D | script=curve_segment.gd | pos(-1.9789 0.0000 -655.6207) basis(0.9839 0.0000 -0.1785 0.0000 1.0000 0.0000 0.1785 0.0000 0.9839) | meta{route_distance=696.0000} | nodes=355 hash=6f7694516096
-House0 | Node3D | script=delivery_house.gd | pos(-23.2867 -2.8703 -674.9465) basis(0.6066 0.0000 0.7950 0.0000 1.0000 0.0000 -0.7950 0.0000 0.6066) | meta{} | nodes=361 hash=540b8152b16c
-Segment20 | Node3D | script=construction_zone_segment.gd | pos(-11.8151 0.0000 -683.7004) basis(0.7950 0.0000 -0.6066 0.0000 1.0000 0.0000 0.6066 0.0000 0.7950) | meta{route_distance=726.0000} | nodes=620 hash=783b06930734
-Segment21 | Node3D | script=hill_segment.gd | pos(-36.0806 0.0000 -715.4996) basis(0.7950 0.0000 -0.6066 0.0000 1.0000 0.0000 0.6066 0.0000 0.7950) | meta{route_distance=766.0000} | nodes=677 hash=25822cccb7ac
-Segment22 | Node3D | script=curve_segment.gd | pos(-78.5451 0.0000 -771.1481) basis(0.7950 0.0000 -0.6066 0.0000 1.0000 0.0000 0.6066 0.0000 0.7950) | meta{route_distance=836.0000} | nodes=1290 hash=4e08da87e0a0
-Segment23 | Node3D | script=narrow_bridge_segment.gd | pos(-88.6927 0.0000 -817.6979) basis(0.9043 0.0000 0.4270 0.0000 1.0000 0.0000 -0.4270 0.0000 0.9043) | meta{ignore_river=true,route_distance=886.0000} | nodes=891 hash=05bfd6988a6c
-Segment24 | Node3D | script=straight_segment.gd | pos(-73.3217 0.0000 -850.2515) basis(0.9043 0.0000 0.4270 0.0000 1.0000 0.0000 -0.4270 0.0000 0.9043) | meta{route_distance=922.0000} | nodes=649 hash=d76c5f812a70
-Segment25 | Node3D | script=curve_segment.gd | pos(-60.5125 0.0000 -877.3794) basis(0.9043 0.0000 0.4270 0.0000 1.0000 0.0000 -0.4270 0.0000 0.9043) | meta{route_distance=952.0000} | nodes=1030 hash=17ed25e35fb2
-Segment26 | Node3D | script=s_curve_segment.gd | pos(-34.1946 0.0000 -906.1761) basis(0.3255 0.0000 0.9456 0.0000 1.0000 0.0000 -0.9456 0.0000 0.3255) | meta{route_distance=992.0000} | nodes=984 hash=b15b40e8b35d
-Segment27 | Node3D | script=straight_segment.gd | pos(22.5388 0.0000 -925.7036) basis(0.3255 0.0000 0.9456 0.0000 1.0000 0.0000 -0.9456 0.0000 0.3255) | meta{route_distance=1052.0000} | nodes=722 hash=38bea6241b6c
-Segment28 | Node3D | script=curve_segment.gd | pos(50.9055 0.0000 -935.4673) basis(0.3255 0.0000 0.9456 0.0000 1.0000 0.0000 -0.9456 0.0000 0.3255) | meta{route_distance=1082.0000} | nodes=1106 hash=2df41b2a2bba
-Segment29 | Node3D | script=chicane_segment.gd | pos(81.0685 0.0000 -959.6944) basis(0.9496 0.0000 0.3134 0.0000 1.0000 0.0000 -0.3134 0.0000 0.9496) | meta{route_distance=1122.0000} | nodes=970 hash=9ba39738e627
-Segment30 | Node3D | script=speed_bump_segment.gd | pos(93.6048 0.0000 -997.6791) basis(0.9496 0.0000 0.3134 0.0000 1.0000 0.0000 -0.3134 0.0000 0.9496) | meta{route_distance=1162.0000} | nodes=514 hash=a9d03132b5e9
-Segment31 | Node3D | script=curve_segment.gd | pos(101.1266 0.0000 -1020.4700) basis(0.9496 0.0000 0.3134 0.0000 1.0000 0.0000 -0.3134 0.0000 0.9496) | meta{route_distance=1186.0000} | nodes=1479 hash=74d4756dd2e2
-Segment32 | Node3D | script=construction_zone_segment.gd | pos(97.7009 0.0000 -1068.4667) basis(0.7923 0.0000 -0.6102 0.0000 1.0000 0.0000 0.6102 0.0000 0.7923) | meta{route_distance=1236.0000} | nodes=1127 hash=68394810a9d7
-Segment33 | Node3D | script=straight_segment.gd | pos(73.2933 0.0000 -1100.1569) basis(0.7923 0.0000 -0.6102 0.0000 1.0000 0.0000 0.6102 0.0000 0.7923) | meta{route_distance=1276.0000} | nodes=774 hash=b723a241e16b
-Segment34 | Node3D | script=curve_segment.gd | pos(54.9876 0.0000 -1123.9246) basis(0.7923 0.0000 -0.6102 0.0000 1.0000 0.0000 0.6102 0.0000 0.7923) | meta{route_distance=1306.0000} | nodes=707 hash=d5904f957a78
-Segment35 | Node3D | script=straight_segment.gd | pos(33.3962 0.0000 -1144.4034) basis(0.4331 0.0000 -0.9014 0.0000 1.0000 0.0000 0.9014 0.0000 0.4331) | meta{route_distance=1336.0000} | nodes=768 hash=f360676516a0
-Segment36 | Node3D | script=curve_segment.gd | pos(6.3552 0.0000 -1157.3951) basis(0.4331 0.0000 -0.9014 0.0000 1.0000 0.0000 0.9014 0.0000 0.4331) | meta{route_distance=1366.0000} | nodes=763 hash=4591db5a1d3b
-Segment37 | Node3D | script=straight_segment.gd | pos(-18.2435 0.0000 -1174.1693) basis(0.7831 0.0000 -0.6219 0.0000 1.0000 0.0000 0.6219 0.0000 0.7831) | meta{route_distance=1396.0000} | nodes=391 hash=f9c752fe948d
-GoalLot | Node3D | script=route_goal_lot.gd | pos(-36.8994 3.6523 -1197.6631) basis(0.7831 0.0000 -0.6219 0.0000 1.0000 0.0000 0.6219 0.0000 0.7831) | meta{halo_points=[(-17.4800 3.9000 -5.5000), (-17.4800 3.9000 -19.0000), (17.4800 3.9000 -5.5000), (17.4800 3.9000 -19.0000)]} | nodes=69 hash=bca4f9f546a0
+Segment0 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=0.0000} | nodes=135 hash=0bda0103c179
+Segment1 | Node3D | script=straight_segment.gd | pos(0.0000 0.0000 -44.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=44.0000} | nodes=65 hash=31698bdda397
+Segment2 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 -74.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=74.0000} | nodes=52 hash=6b311c45114a
+Segment3 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 -98.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=98.0000} | nodes=144 hash=c72796e32a54
+Segment4 | Node3D | script=curve_segment.gd | pos(0.0000 0.0000 -142.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=142.0000} | nodes=64 hash=9a5d4e076b74
+Segment5 | Node3D | script=speed_bump_segment.gd | pos(6.8593 0.0000 -170.6400) basis(0.7615 0.0000 0.6482 0.0000 1.0000 0.0000 -0.6482 0.0000 0.7615) | meta{route_distance=172.0000} | nodes=57 hash=2f28c4ad314b
+Segment6 | Node3D | script=gravel_segment.gd | pos(22.4162 0.0000 -188.9152) basis(0.7615 0.0000 0.6482 0.0000 1.0000 0.0000 -0.6482 0.0000 0.7615) | meta{route_distance=196.0000} | nodes=48 hash=968352b1fa6d
+Segment7 | Node3D | script=curve_segment.gd | pos(41.8622 0.0000 -211.7593) basis(0.7615 0.0000 0.6482 0.0000 1.0000 0.0000 -0.6482 0.0000 0.7615) | meta{route_distance=226.0000} | nodes=64 hash=df661b990c3b
+Segment8 | Node3D | script=tunnel_segment.gd | pos(55.3890 0.0000 -237.9528) basis(0.9998 0.0000 0.0196 0.0000 1.0000 0.0000 -0.0196 0.0000 0.9998) | meta{route_distance=256.0000} | nodes=135 hash=d334f984e7b8
+Segment9 | Node3D | script=hill_segment.gd | pos(56.2532 0.0000 -281.9443) basis(0.9998 0.0000 0.0196 0.0000 1.0000 0.0000 -0.0196 0.0000 0.9998) | meta{route_distance=300.0000} | nodes=100 hash=f3bcceb39614
+Segment10 | Node3D | script=curve_segment.gd | pos(57.6281 0.0000 -351.9308) basis(0.9998 0.0000 0.0196 0.0000 1.0000 0.0000 -0.0196 0.0000 0.9998) | meta{route_distance=370.0000} | nodes=69 hash=e9032802b44c
+Segment11 | Node3D | script=rail_crossing_segment.gd | pos(46.2512 0.0000 -389.1252) basis(0.6791 0.0000 -0.7341 0.0000 1.0000 0.0000 0.7341 0.0000 0.6791) | meta{route_distance=410.0000,track_height=-2.2206} | nodes=67 hash=2bc697317261
+Segment12 | Node3D | script=curve_segment.gd | pos(22.7607 0.0000 -410.8553) basis(0.6791 0.0000 -0.7341 0.0000 1.0000 0.0000 0.7341 0.0000 0.6791) | meta{route_distance=442.0000} | nodes=50 hash=7caade5de080
+Segment13 | Node3D | script=s_curve_segment.gd | pos(6.1382 0.0000 -435.2182) basis(0.9891 0.0000 -0.1471 0.0000 1.0000 0.0000 0.1471 0.0000 0.9891) | meta{route_distance=472.0000} | nodes=97 hash=0691d6c33af4
+Segment14 | Node3D | script=tunnel_segment.gd | pos(-2.6856 0.0000 -494.5658) basis(0.9891 0.0000 -0.1471 0.0000 1.0000 0.0000 0.1471 0.0000 0.9891) | meta{route_distance=532.0000} | nodes=145 hash=7f312c427bb4
+Segment15 | Node3D | script=curve_segment.gd | pos(-9.1564 0.0000 -538.0874) basis(0.9891 0.0000 -0.1471 0.0000 1.0000 0.0000 0.1471 0.0000 0.9891) | meta{route_distance=576.0000} | nodes=65 hash=ea197a22a5e7
+Segment16 | Node3D | script=straight_segment.gd | pos(-9.2001 0.0000 -567.8742) basis(0.9580 0.0000 0.2867 0.0000 1.0000 0.0000 -0.2867 0.0000 0.9580) | meta{delivery_sign_side=-1.0000,route_distance=606.0000} | nodes=66 hash=328ca6451055
+Segment17 | Node3D | script=curve_segment.gd | pos(-0.5989 0.0000 -596.6147) basis(0.9580 0.0000 0.2867 0.0000 1.0000 0.0000 -0.2867 0.0000 0.9580) | meta{route_distance=636.0000} | nodes=42 hash=9380b8ed8910
+Segment18 | Node3D | script=straight_segment.gd | pos(3.3771 0.0000 -626.1027) basis(0.9839 0.0000 -0.1785 0.0000 1.0000 0.0000 0.1785 0.0000 0.9839) | meta{route_distance=666.0000} | nodes=54 hash=c80cf91d036b
+Segment19 | Node3D | script=curve_segment.gd | pos(-1.9789 0.0000 -655.6207) basis(0.9839 0.0000 -0.1785 0.0000 1.0000 0.0000 0.1785 0.0000 0.9839) | meta{route_distance=696.0000} | nodes=35 hash=d1693b73e3af
+House0 | Node3D | script=delivery_house.gd | pos(-23.2867 -2.8703 -674.9465) basis(0.6066 0.0000 0.7950 0.0000 1.0000 0.0000 -0.7950 0.0000 0.6066) | meta{} | nodes=59 hash=9ac63f20969b
+Segment20 | Node3D | script=construction_zone_segment.gd | pos(-11.8151 0.0000 -683.7004) basis(0.7950 0.0000 -0.6066 0.0000 1.0000 0.0000 0.6066 0.0000 0.7950) | meta{route_distance=726.0000} | nodes=66 hash=ed633cf51720
+Segment21 | Node3D | script=hill_segment.gd | pos(-36.0806 0.0000 -715.4996) basis(0.7950 0.0000 -0.6066 0.0000 1.0000 0.0000 0.6066 0.0000 0.7950) | meta{route_distance=766.0000} | nodes=85 hash=22979dc6f0e2
+Segment22 | Node3D | script=curve_segment.gd | pos(-78.5451 0.0000 -771.1481) basis(0.7950 0.0000 -0.6066 0.0000 1.0000 0.0000 0.6066 0.0000 0.7950) | meta{route_distance=836.0000} | nodes=107 hash=3c1c05b671f1
+Segment23 | Node3D | script=narrow_bridge_segment.gd | pos(-88.6927 0.0000 -817.6979) basis(0.9043 0.0000 0.4270 0.0000 1.0000 0.0000 -0.4270 0.0000 0.9043) | meta{ignore_river=true,route_distance=886.0000} | nodes=127 hash=ac858ff88bcc
+Segment24 | Node3D | script=straight_segment.gd | pos(-73.3217 0.0000 -850.2515) basis(0.9043 0.0000 0.4270 0.0000 1.0000 0.0000 -0.4270 0.0000 0.9043) | meta{route_distance=922.0000} | nodes=83 hash=7104a3edcae2
+Segment25 | Node3D | script=curve_segment.gd | pos(-60.5125 0.0000 -877.3794) basis(0.9043 0.0000 0.4270 0.0000 1.0000 0.0000 -0.4270 0.0000 0.9043) | meta{route_distance=952.0000} | nodes=84 hash=0ffba479c2af
+Segment26 | Node3D | script=s_curve_segment.gd | pos(-34.1946 0.0000 -906.1761) basis(0.3255 0.0000 0.9456 0.0000 1.0000 0.0000 -0.9456 0.0000 0.3255) | meta{route_distance=992.0000} | nodes=115 hash=4ff27eec2d99
+Segment27 | Node3D | script=straight_segment.gd | pos(22.5388 0.0000 -925.7036) basis(0.3255 0.0000 0.9456 0.0000 1.0000 0.0000 -0.9456 0.0000 0.3255) | meta{route_distance=1052.0000} | nodes=84 hash=17625dd0e990
+Segment28 | Node3D | script=curve_segment.gd | pos(50.9055 0.0000 -935.4673) basis(0.3255 0.0000 0.9456 0.0000 1.0000 0.0000 -0.9456 0.0000 0.3255) | meta{route_distance=1082.0000} | nodes=82 hash=a1190b34fd6f
+Segment29 | Node3D | script=chicane_segment.gd | pos(81.0685 0.0000 -959.6944) basis(0.9496 0.0000 0.3134 0.0000 1.0000 0.0000 -0.3134 0.0000 0.9496) | meta{route_distance=1122.0000} | nodes=79 hash=f6b275fff954
+Segment30 | Node3D | script=speed_bump_segment.gd | pos(93.6048 0.0000 -997.6791) basis(0.9496 0.0000 0.3134 0.0000 1.0000 0.0000 -0.3134 0.0000 0.9496) | meta{route_distance=1162.0000} | nodes=60 hash=095814e3023a
+Segment31 | Node3D | script=curve_segment.gd | pos(101.1266 0.0000 -1020.4700) basis(0.9496 0.0000 0.3134 0.0000 1.0000 0.0000 -0.3134 0.0000 0.9496) | meta{route_distance=1186.0000} | nodes=108 hash=30ea5242912e
+Segment32 | Node3D | script=construction_zone_segment.gd | pos(97.7009 0.0000 -1068.4667) basis(0.7923 0.0000 -0.6102 0.0000 1.0000 0.0000 0.6102 0.0000 0.7923) | meta{route_distance=1236.0000} | nodes=109 hash=baad0d722973
+Segment33 | Node3D | script=straight_segment.gd | pos(73.2933 0.0000 -1100.1569) basis(0.7923 0.0000 -0.6102 0.0000 1.0000 0.0000 0.6102 0.0000 0.7923) | meta{route_distance=1276.0000} | nodes=80 hash=23ca8ced2965
+Segment34 | Node3D | script=curve_segment.gd | pos(54.9876 0.0000 -1123.9246) basis(0.7923 0.0000 -0.6102 0.0000 1.0000 0.0000 0.6102 0.0000 0.7923) | meta{route_distance=1306.0000} | nodes=61 hash=085821026b25
+Segment35 | Node3D | script=straight_segment.gd | pos(33.3962 0.0000 -1144.4034) basis(0.4331 0.0000 -0.9014 0.0000 1.0000 0.0000 0.9014 0.0000 0.4331) | meta{route_distance=1336.0000} | nodes=83 hash=294905064f72
+Segment36 | Node3D | script=curve_segment.gd | pos(6.3552 0.0000 -1157.3951) basis(0.4331 0.0000 -0.9014 0.0000 1.0000 0.0000 0.9014 0.0000 0.4331) | meta{route_distance=1366.0000} | nodes=67 hash=b4d00acca2d5
+Segment37 | Node3D | script=straight_segment.gd | pos(-18.2435 0.0000 -1174.1693) basis(0.7831 0.0000 -0.6219 0.0000 1.0000 0.0000 0.6219 0.0000 0.7831) | meta{route_distance=1396.0000} | nodes=57 hash=61738960f4da
+GoalLot | Node3D | script=route_goal_lot.gd | pos(-36.8994 3.6523 -1197.6631) basis(0.7831 0.0000 -0.6219 0.0000 1.0000 0.0000 0.6219 0.0000 0.7831) | meta{halo_points=[(-17.4800 3.9000 -5.5000), (-17.4800 3.9000 -19.0000), (17.4800 3.9000 -5.5000), (17.4800 3.9000 -19.0000)]} | nodes=61 hash=925816d11149
 HouseNumber0 | Label3D | pos(-23.2867 4.7756 -674.9465) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 1|TRAP_0 10' | meta{height_above_house=7.6459}
 PowerLines | Node3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{}
 PowerLines/PowerPoles | MultiMeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | multimesh{n=35 ArrayMesh aabb(-0.9500 -0.3000 -0.1600 1.9000 7.5700 0.3200) surfaces=6 [verts=108 sum(-0.0012 598.5544 3.8398)] [verts=96 sum(-0.0010 673.5594 -0.0002)] [verts=216 sum(-0.0026 1520.1002 -0.0003)] [verts=24 sum(0.0000 57.6000 3.1200)] [verts=24 sum(0.0000 58.3200 3.4080)] [verts=24 sum(0.0000 40.8000 3.0000)]} | meta{}
@@ -415,7 +415,7 @@ PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(-0.554
 PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(-20.6753 6.6299 -1192.6692) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=CylinderShape3D | meta{}
 PowerLines/PowerWires | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-82.0739 2.4829 -1193.2113 196.8814 14.2437 1028.8831) surfaces=1 [verts=22320 sum(461064.1562 164623.0000 -17223774.0000)]} | shadow=0 | meta{}
 AmbientWind | AudioStreamPlayer | meta{}
-Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=74 hash=a0c0d7626684
+Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=4 hash=0a1a5709fec5
 -- queries
 stop_road_distance(0)=726.0000
 stop_road_distance(1)=1455.8468
@@ -1052,71 +1052,71 @@ segments 59
 house House0 variant=4 index=0 pos(-283.7027 0.7693 -325.4647) basis(0.9655 0.0000 0.2606 0.0000 1.0000 0.0000 -0.2606 0.0000 0.9655)
   label HouseNumber0 -283.7027 8.4152 -325.4647 meta{height_above_house=7.6459}
   piece House0/Yard/Knockablesm_env_yard_picket_fence | RigidBody3D | pos(-5.5948 -0.0292 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.5948 -0.0292 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=e6aa9245824b
+    summary nodes=3 hash=31010b5ba211
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.5948 -0.0314 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.5948 -0.0314 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=c8c7e04a8aaf
+    summary nodes=3 hash=88e979949872
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.5947 -0.0314 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.5947 -0.0314 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=0b4dcf225a33
+    summary nodes=3 hash=06c46c18485b
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.5948 -0.0134 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.5948 -0.0134 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=0ac48a39cc5c
+    summary nodes=3 hash=800ef750fa3d
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.5948 0.0505 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.5948 0.0505 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=9ec9690c4150
+    summary nodes=3 hash=347529990e87
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.5948 0.2680 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.5948 0.2680 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=14328667c80c
+    summary nodes=3 hash=5de1d481cf78
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.5948 -0.1309 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.5948 -0.1309 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=87c4b95ff04d
+    summary nodes=3 hash=04a8a5f99a8f
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.5947 -0.0851 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.5947 -0.0851 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=ccb678d98895
+    summary nodes=3 hash=8fb62be92f0d
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.5948 -0.0613 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.5948 -0.0613 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=66161e823aeb
+    summary nodes=3 hash=407c007ca77c
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.5948 -0.0524 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.5948 -0.0524 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=ec1cb9ed0dcb
+    summary nodes=3 hash=0494251b9242
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.5948 0.0190 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.5948 0.0190 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=163645c1b76a
+    summary nodes=3 hash=3e9fa5a622b1
   piece House0/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.5948 0.3220 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.5948 0.3220 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=4f2f0499f3e9
+    summary nodes=3 hash=0c8ee751b470
 house House1 variant=2 index=1 pos(-236.6101 1.0436 -771.3044) basis(0.9650 0.0000 -0.2621 0.0000 1.0000 0.0000 0.2621 0.0000 0.9650)
   label HouseNumber1 -236.6101 7.7280 -771.3044 meta{height_above_house=6.6844}
   piece House1/Yard/Knockablesm_env_yard_picket_fence | RigidBody3D | pos(-5.4401 -0.1158 -2.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.4401 -0.1158 -2.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=8cf9635b72c8
+    summary nodes=3 hash=e872d8cfc849
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.4401 -0.0750 -0.9799) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.4401 -0.0750 -0.9799) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=51d617342476
+    summary nodes=3 hash=05fd80fcb132
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.4401 -0.0622 1.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.4401 -0.0622 1.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=2c85183bb435
+    summary nodes=3 hash=7c6c2c6041bf
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(-5.4402 -0.0623 3.0201) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-5.4402 -0.0623 3.0201) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=6cb4d7424616
+    summary nodes=3 hash=51a70a16bb3e
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.4402 -0.0365 -2.9799) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.4402 -0.0365 -2.9799) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=19a3a47ef3a4
+    summary nodes=3 hash=55473085cc4b
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.4402 -0.0364 -0.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.4402 -0.0364 -0.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=4f664866c34e
+    summary nodes=3 hash=243fe324561e
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.4402 -0.0272 1.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.4402 -0.0272 1.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=67f33a16cfac
+    summary nodes=3 hash=3c0ac1a7d4d1
   piece House1/Yard/Knockable_Node3D_N | RigidBody3D | pos(5.4402 0.0082 3.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(5.4402 0.0082 3.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=2d43e6c2e71d
+    summary nodes=3 hash=95688e8ec821
 house House2 variant=0 index=2 pos(-20.4966 0.3862 -1266.6044) basis(-0.2773 0.0000 0.9608 0.0000 1.0000 0.0000 -0.9608 0.0000 -0.2773)
   label HouseNumber2 -20.4966 7.7494 -1266.6044 meta{height_above_house=7.3632}
   piece House2/Yard/Knockablesm_env_yard_picket_fence | RigidBody3D | pos(-4.8296 -0.0613 -2.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-4.8296 -0.0613 -2.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=bf93f3afdd19
+    summary nodes=3 hash=e5cc6fbd6bb1
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(-4.8296 -0.0618 -0.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-4.8296 -0.0618 -0.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=d63772b5bb7e
+    summary nodes=3 hash=984e4434bdd5
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(-4.8296 -0.0563 1.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-4.8296 -0.0563 1.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=2613c5a6399e
+    summary nodes=3 hash=613185d31e92
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(-4.8296 -0.0785 3.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(-4.8296 -0.0785 3.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=31c65a10f6c2
+    summary nodes=3 hash=ac05730670c9
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(4.8295 -0.0372 -2.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(4.8295 -0.0372 -2.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=1ce667009243
+    summary nodes=3 hash=44fae0ee5578
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(4.8295 -0.0515 -0.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(4.8295 -0.0515 -0.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=8fdc200f0024
+    summary nodes=3 hash=1dacdd0b8ff8
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(4.8296 -0.0516 1.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(4.8296 -0.0516 1.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=b69cb8b10682
+    summary nodes=3 hash=5c213b50b1de
   piece House2/Yard/Knockable_Node3D_N | RigidBody3D | pos(4.8295 -0.0419 3.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | layer=1 mask=3 | meta{footprint=0.9500,on_porch=false,placed_transform=pos(4.8295 -0.0419 3.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000),reach=0.9500,rule=yard,solid=true}
-    summary nodes=17 hash=a04eb148e54f
+    summary nodes=3 hash=99ea381935e5
 -- assign_packages
   house0 id=pkg_0 label='TRAP_0 10' sign=CASA 1|TRAP_0 10
   house1 id=pkg_1 label='TRAP_1 23' sign=CASA 2|TRAP_1 23
   house2 id=pkg_2 label='TRAP_2 36' sign=CASA 3|TRAP_2 36
 -- children
-ContinuousTerrain | Node3D | script=route_terrain.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=1955 hash=da39f387e141
+ContinuousTerrain | Node3D | script=route_terrain.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=1746 hash=1934c7f50910
 SalidaPost | StaticBody3D | pos(-7.6000 1.5250 -5.1500) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | layer=1 mask=6 | meta{}
 SalidaPost/@MeshInstance3D@ | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-0.0800 -1.6778 -0.0800 0.1600 3.2551 0.1600) surfaces=1 [verts=24 sum(0.0000 -1.2059 0.0000)]} | shadow=1 | meta{}
 SalidaPost/@CollisionShape3D@ | CollisionShape3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=ConcavePolygonShape3D | meta{}
@@ -1128,69 +1128,69 @@ SalidaTitle | Label3D | pos(-7.6000 2.7603 -4.9250) basis(1.0000 0.0000 0.0000 0
 SalidaText | Label3D | pos(-7.6000 2.2403 -4.9250) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='Cuidá la carga · el camino serpentea' | meta{}
 StartLine | Node3D | pos(0.0000 0.0300 -4.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{}
 StartLine/@MeshInstance3D@ | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-5.7000 -0.0159 -0.1750 11.4000 0.0240 0.3500) surfaces=1 [verts=64 sum(0.0000 -0.2218 0.0000)]} | shadow=1 | meta{}
-Segment0 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=0.0000} | nodes=88 hash=4f7a7a455790
-Segment1 | Node3D | script=hill_segment.gd | pos(0.0000 0.0000 -24.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=24.0000} | nodes=255 hash=71f247b3544b
-Segment2 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 -94.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=94.0000} | nodes=183 hash=9de2f29a7468
-Segment3 | Node3D | script=curve_segment.gd | pos(0.0000 0.0000 -138.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=138.0000} | nodes=163 hash=78311ad2e595
-Segment4 | Node3D | script=s_curve_segment.gd | pos(-12.5404 0.0000 -174.7247) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{route_distance=178.0000} | nodes=154 hash=883058ac4216
-Segment5 | Node3D | script=tunnel_segment.gd | pos(-58.6884 0.0000 -213.0700) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{route_distance=238.0000} | nodes=244 hash=0ffbe5969ef5
-Segment6 | Node3D | script=narrow_bridge_segment.gd | pos(-92.5303 0.0000 -241.1899) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{ignore_river=true,route_distance=282.0000} | nodes=110 hash=95a4f8616ce6
-Segment7 | Node3D | script=curve_segment.gd | pos(-120.2190 0.0000 -264.1971) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{route_distance=318.0000} | nodes=149 hash=d2f754ba09c5
-Segment8 | Node3D | script=straight_segment.gd | pos(-145.9215 0.0000 -279.1208) basis(0.1904 0.0000 -0.9817 0.0000 1.0000 0.0000 0.9817 0.0000 0.1904) | meta{route_distance=348.0000} | nodes=200 hash=937524a38078
-Segment9 | Node3D | script=curve_segment.gd | pos(-175.3728 0.0000 -284.8322) basis(0.1904 0.0000 -0.9817 0.0000 1.0000 0.0000 0.9817 0.0000 0.1904) | meta{delivery_sign_side=-1.0000,route_distance=378.0000} | nodes=109 hash=547d3b282fa8
-Segment10 | Node3D | script=straight_segment.gd | pos(-203.1447 0.0000 -295.3787) basis(0.6486 0.0000 -0.7612 0.0000 1.0000 0.0000 0.7612 0.0000 0.6486) | meta{route_distance=408.0000} | nodes=43 hash=c4493188dee1
-Segment11 | Node3D | script=curve_segment.gd | pos(-225.9794 0.0000 -314.8358) basis(0.6486 0.0000 -0.7612 0.0000 1.0000 0.0000 0.7612 0.0000 0.6486) | meta{route_distance=438.0000} | nodes=86 hash=7db7d50aa880
-Segment12 | Node3D | script=straight_segment.gd | pos(-251.2397 0.0000 -330.6141) basis(0.2606 0.0000 -0.9655 0.0000 1.0000 0.0000 0.9655 0.0000 0.2606) | meta{route_distance=468.0000} | nodes=63 hash=1f1a18a64566
-House0 | Node3D | script=delivery_house.gd | pos(-283.7027 0.7693 -325.4647) basis(0.9655 0.0000 0.2606 0.0000 1.0000 0.0000 -0.2606 0.0000 0.9655) | meta{} | nodes=265 hash=9e53b336291c
-Segment13 | Node3D | script=s_curve_segment.gd | pos(-280.2034 0.0000 -338.4308) basis(0.2606 0.0000 -0.9655 0.0000 1.0000 0.0000 0.9655 0.0000 0.2606) | meta{route_distance=498.0000} | nodes=77 hash=2986cb539f2a
-Segment14 | Node3D | script=curve_segment.gd | pos(-338.1310 0.0000 -354.0642) basis(0.2606 0.0000 -0.9655 0.0000 1.0000 0.0000 0.9655 0.0000 0.2606) | meta{route_distance=558.0000} | nodes=57 hash=57a8834d3e62
-Segment15 | Node3D | script=speed_bump_segment.gd | pos(-370.4171 0.0000 -375.6405) basis(0.9051 0.0000 -0.4252 0.0000 1.0000 0.0000 0.4252 0.0000 0.9051) | meta{route_distance=598.0000} | nodes=54 hash=14c9f8f7adaf
-Segment16 | Node3D | script=curve_segment.gd | pos(-380.6209 0.0000 -397.3633) basis(0.9051 0.0000 -0.4252 0.0000 1.0000 0.0000 0.4252 0.0000 0.9051) | meta{route_distance=622.0000} | nodes=42 hash=b5f19c3ba922
-Segment17 | Node3D | script=chicane_segment.gd | pos(-380.7802 0.0000 -445.0208) basis(0.7959 0.0000 0.6055 0.0000 1.0000 0.0000 -0.6055 0.0000 0.7959) | meta{route_distance=672.0000} | nodes=174 hash=f3ddd214e710
-Segment18 | Node3D | script=speed_bump_segment.gd | pos(-356.5614 0.0000 -476.8555) basis(0.7959 0.0000 0.6055 0.0000 1.0000 0.0000 -0.6055 0.0000 0.7959) | meta{route_distance=712.0000} | nodes=158 hash=dcbfd4d030e3
-Segment19 | Node3D | script=curve_segment.gd | pos(-342.0301 0.0000 -495.9564) basis(0.7959 0.0000 0.6055 0.0000 1.0000 0.0000 -0.6055 0.0000 0.7959) | meta{route_distance=736.0000} | nodes=188 hash=6d3989b03df8
-Segment20 | Node3D | script=s_curve_segment.gd | pos(-330.2096 0.0000 -542.4855) basis(0.9381 0.0000 -0.3463 0.0000 1.0000 0.0000 0.3463 0.0000 0.9381) | meta{route_distance=786.0000} | nodes=63 hash=87ad99eab7f9
-Segment21 | Node3D | script=curve_segment.gd | pos(-350.9850 0.0000 -598.7739) basis(0.9381 0.0000 -0.3463 0.0000 1.0000 0.0000 0.3463 0.0000 0.9381) | meta{route_distance=846.0000} | nodes=146 hash=4c150e8ad955
-Segment22 | Node3D | script=straight_segment.gd | pos(-346.3420 0.0000 -646.0347) basis(0.7143 0.0000 0.6999 0.0000 1.0000 0.0000 -0.6999 0.0000 0.7143) | meta{route_distance=896.0000} | nodes=54 hash=1d35414a2112
-Segment23 | Node3D | script=curve_segment.gd | pos(-325.3464 0.0000 -667.4633) basis(0.7143 0.0000 0.6999 0.0000 1.0000 0.0000 -0.6999 0.0000 0.7143) | meta{route_distance=926.0000} | nodes=85 hash=41b06e770b19
-Segment24 | Node3D | script=straight_segment.gd | pos(-308.1875 0.0000 -691.7585) basis(0.9570 0.0000 0.2901 0.0000 1.0000 0.0000 -0.2901 0.0000 0.9570) | meta{delivery_sign_side=1.0000,route_distance=956.0000} | nodes=66 hash=6d51431a5987
-Segment25 | Node3D | script=curve_segment.gd | pos(-299.4830 0.0000 -720.4680) basis(0.9570 0.0000 0.2901 0.0000 1.0000 0.0000 -0.2901 0.0000 0.9570) | meta{route_distance=986.0000} | nodes=39 hash=f1800f1e40a7
-Segment26 | Node3D | script=straight_segment.gd | pos(-286.2321 0.0000 -747.0696) basis(0.6984 0.0000 0.7157 0.0000 1.0000 0.0000 -0.7157 0.0000 0.6984) | meta{route_distance=1016.0000} | nodes=99 hash=24a4526be8d9
-Segment27 | Node3D | script=curve_segment.gd | pos(-264.7603 0.0000 -768.0209) basis(0.6984 0.0000 0.7157 0.0000 1.0000 0.0000 -0.7157 0.0000 0.6984) | meta{route_distance=1046.0000} | nodes=79 hash=391a1da947d2
-House1 | Node3D | script=delivery_house.gd | pos(-236.6101 1.0436 -771.3044) basis(0.9650 0.0000 -0.2621 0.0000 1.0000 0.0000 0.2621 0.0000 0.9650) | meta{} | nodes=195 hash=56c8861c76cc
-Segment28 | Node3D | script=speed_bump_segment.gd | pos(-240.3005 0.0000 -784.8923) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1076.0000} | nodes=25 hash=192e873b83ff
-Segment29 | Node3D | script=construction_zone_segment.gd | pos(-217.1395 0.0000 -791.1827) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1100.0000} | nodes=192 hash=9a766b6de512
-Segment30 | Node3D | script=service_stop_segment.gd | pos(-178.5379 0.0000 -801.6667) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1140.0000} | nodes=378 hash=aa6735132a0b
-Segment31 | Node3D | script=curve_segment.gd | pos(-72.3834 0.0000 -830.4977) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1250.0000} | nodes=44 hash=767e2fa1d720
-Segment32 | Node3D | script=chicane_segment.gd | pos(-46.2954 0.0000 -844.2959) basis(0.8011 0.0000 0.5985 0.0000 1.0000 0.0000 -0.5985 0.0000 0.8011) | meta{route_distance=1280.0000} | nodes=109 hash=913904f5dece
-Segment33 | Node3D | script=speed_bump_segment.gd | pos(-22.3540 0.0000 -876.3397) basis(0.8011 0.0000 0.5985 0.0000 1.0000 0.0000 -0.5985 0.0000 0.8011) | meta{route_distance=1320.0000} | nodes=150 hash=41a938d0ed87
-Segment34 | Node3D | script=curve_segment.gd | pos(-7.9891 0.0000 -895.5660) basis(0.8011 0.0000 0.5985 0.0000 1.0000 0.0000 -0.5985 0.0000 0.8011) | meta{route_distance=1344.0000} | nodes=170 hash=b108858babe1
-Segment35 | Node3D | script=construction_zone_segment.gd | pos(1.3905 0.0000 -942.2105) basis(0.8932 0.0000 -0.4497 0.0000 1.0000 0.0000 0.4497 0.0000 0.8932) | meta{route_distance=1394.0000} | nodes=114 hash=1c5ebb513edd
-Segment36 | Node3D | script=hill_segment.gd | pos(-16.5967 0.0000 -977.9380) basis(0.8932 0.0000 -0.4497 0.0000 1.0000 0.0000 0.4497 0.0000 0.8932) | meta{route_distance=1434.0000} | nodes=56 hash=540aad0e2ec9
-Segment37 | Node3D | script=curve_segment.gd | pos(-48.0745 0.0000 -1040.4612) basis(0.8932 0.0000 -0.4497 0.0000 1.0000 0.0000 0.4497 0.0000 0.8932) | meta{route_distance=1504.0000} | nodes=165 hash=b007d855d7fc
-Segment38 | Node3D | script=straight_segment.gd | pos(-46.8441 0.0000 -1097.1655) basis(0.7616 0.0000 0.6481 0.0000 1.0000 0.0000 -0.6481 0.0000 0.7616) | meta{route_distance=1564.0000} | nodes=68 hash=9796a48cbc68
-Segment39 | Node3D | script=curve_segment.gd | pos(-27.4021 0.0000 -1120.0131) basis(0.7616 0.0000 0.6481 0.0000 1.0000 0.0000 -0.6481 0.0000 0.7616) | meta{route_distance=1594.0000} | nodes=127 hash=a50f23cbd0e5
-Segment40 | Node3D | script=straight_segment.gd | pos(-11.6792 0.0000 -1145.3029) basis(0.9667 0.0000 0.2557 0.0000 1.0000 0.0000 -0.2557 0.0000 0.9667) | meta{delivery_sign_side=-1.0000,route_distance=1624.0000} | nodes=81 hash=f0900a87877f
-Segment41 | Node3D | script=curve_segment.gd | pos(-4.0074 0.0000 -1174.3053) basis(0.9667 0.0000 0.2557 0.0000 1.0000 0.0000 -0.2557 0.0000 0.9667) | meta{route_distance=1654.0000} | nodes=31 hash=ebd6e504d8f5
-Segment42 | Node3D | script=straight_segment.gd | pos(-0.8773 0.0000 -1203.9059) basis(0.9798 0.0000 -0.1998 0.0000 1.0000 0.0000 0.1998 0.0000 0.9798) | meta{route_distance=1684.0000} | nodes=31 hash=939f5019c2e8
-Segment43 | Node3D | script=curve_segment.gd | pos(-6.8711 0.0000 -1233.3010) basis(0.9798 0.0000 -0.1998 0.0000 1.0000 0.0000 0.1998 0.0000 0.9798) | meta{route_distance=1714.0000} | nodes=29 hash=ec8620b7d52b
-House2 | Node3D | script=delivery_house.gd | pos(-20.4966 0.3862 -1266.6044) basis(-0.2773 0.0000 0.9608 0.0000 1.0000 0.0000 -0.9608 0.0000 -0.2773) | meta{} | nodes=195 hash=9c5c1db4cb4d
-Segment44 | Node3D | script=gravel_segment.gd | pos(-8.0736 0.0000 -1263.0190) basis(0.9608 0.0000 0.2773 0.0000 1.0000 0.0000 -0.2773 0.0000 0.9608) | meta{route_distance=1744.0000} | nodes=111 hash=106da32aa991
-Segment45 | Node3D | script=tunnel_segment.gd | pos(0.2447 0.0000 -1291.8428) basis(0.9608 0.0000 0.2773 0.0000 1.0000 0.0000 -0.2773 0.0000 0.9608) | meta{route_distance=1774.0000} | nodes=179 hash=b0bf6ec8b030
-Segment46 | Node3D | script=curve_segment.gd | pos(12.4450 0.0000 -1334.1176) basis(0.9608 0.0000 0.2773 0.0000 1.0000 0.0000 -0.2773 0.0000 0.9608) | meta{route_distance=1818.0000} | nodes=228 hash=4d0a50af436c
-Segment47 | Node3D | script=narrow_bridge_segment.gd | pos(0.3631 0.0000 -1389.4253) basis(0.6141 0.0000 -0.7892 0.0000 1.0000 0.0000 0.7892 0.0000 0.6141) | meta{ignore_river=true,route_distance=1878.0000} | nodes=140 hash=ad24883f35a0
-Segment48 | Node3D | script=curve_segment.gd | pos(-28.0481 0.0000 -1411.5341) basis(0.6141 0.0000 -0.7892 0.0000 1.0000 0.0000 0.7892 0.0000 0.6141) | meta{route_distance=1914.0000} | nodes=150 hash=100d1d2cf7d1
-Segment49 | Node3D | script=chicane_segment.gd | pos(-51.3298 0.0000 -1453.5017) basis(0.9952 0.0000 0.0979 0.0000 1.0000 0.0000 -0.0979 0.0000 0.9952) | meta{route_distance=1964.0000} | nodes=213 hash=92ee63f6ded1
-Segment50 | Node3D | script=tunnel_segment.gd | pos(-47.4139 0.0000 -1493.3096) basis(0.9952 0.0000 0.0979 0.0000 1.0000 0.0000 -0.0979 0.0000 0.9952) | meta{route_distance=2004.0000} | nodes=101 hash=bbbc54900b63
-Segment51 | Node3D | script=curve_segment.gd | pos(-43.1064 0.0000 -1537.0983) basis(0.9952 0.0000 0.0979 0.0000 1.0000 0.0000 -0.0979 0.0000 0.9952) | meta{route_distance=2048.0000} | nodes=77 hash=be1d8a8b600e
-Segment52 | Node3D | script=chicane_segment.gd | pos(-26.5126 0.0000 -1572.0464) basis(0.5245 0.0000 0.8514 0.0000 1.0000 0.0000 -0.8514 0.0000 0.5245) | meta{route_distance=2088.0000} | nodes=39 hash=be41791f1c3c
-Segment53 | Node3D | script=speed_bump_segment.gd | pos(7.5445 0.0000 -1593.0254) basis(0.5245 0.0000 0.8514 0.0000 1.0000 0.0000 -0.8514 0.0000 0.5245) | meta{route_distance=2128.0000} | nodes=123 hash=09d44ff2cce5
-Segment54 | Node3D | script=curve_segment.gd | pos(27.9787 0.0000 -1605.6128) basis(0.5245 0.0000 0.8514 0.0000 1.0000 0.0000 -0.8514 0.0000 0.5245) | meta{route_distance=2152.0000} | nodes=238 hash=9b15971beca8
-Segment55 | Node3D | script=straight_segment.gd | pos(50.6555 0.0000 -1624.8967) basis(0.8468 0.0000 0.5319 0.0000 1.0000 0.0000 -0.5319 0.0000 0.8468) | meta{route_distance=2182.0000} | nodes=80 hash=f516bb6dc220
-Segment56 | Node3D | script=curve_segment.gd | pos(66.6127 0.0000 -1650.3008) basis(0.8468 0.0000 0.5319 0.0000 1.0000 0.0000 -0.5319 0.0000 0.8468) | meta{route_distance=2212.0000} | nodes=169 hash=bc35c32cba6f
-Segment57 | Node3D | script=straight_segment.gd | pos(86.1495 0.0000 -1672.7491) basis(0.5176 0.0000 0.8556 0.0000 1.0000 0.0000 -0.8556 0.0000 0.5176) | meta{route_distance=2242.0000} | nodes=49 hash=e3bead494a35
-Segment58 | Node3D | script=curve_segment.gd | pos(111.8187 0.0000 -1688.2764) basis(0.5176 0.0000 0.8556 0.0000 1.0000 0.0000 -0.8556 0.0000 0.5176) | meta{route_distance=2272.0000} | nodes=190 hash=d57087cf46bc
-GoalLot | Node3D | script=route_goal_lot.gd | pos(134.7767 3.1571 -1707.2522) basis(0.8328 0.0000 0.5536 0.0000 1.0000 0.0000 -0.5536 0.0000 0.8328) | meta{halo_points=[(-17.4800 3.9000 -5.5000), (-17.4800 3.9000 -19.0000), (17.4800 3.9000 -5.5000), (17.4800 3.9000 -19.0000)]} | nodes=69 hash=0100e70e46ff
+Segment0 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=0.0000} | nodes=19 hash=04d144b95082
+Segment1 | Node3D | script=hill_segment.gd | pos(0.0000 0.0000 -24.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=24.0000} | nodes=34 hash=702fbae6ffb6
+Segment2 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 -94.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=94.0000} | nodes=87 hash=e29fc9b68ffa
+Segment3 | Node3D | script=curve_segment.gd | pos(0.0000 0.0000 -138.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=138.0000} | nodes=20 hash=65e158cc5b63
+Segment4 | Node3D | script=s_curve_segment.gd | pos(-12.5404 0.0000 -174.7247) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{route_distance=178.0000} | nodes=37 hash=16b88b3a6ffb
+Segment5 | Node3D | script=tunnel_segment.gd | pos(-58.6884 0.0000 -213.0700) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{route_distance=238.0000} | nodes=97 hash=644c38888f2d
+Segment6 | Node3D | script=narrow_bridge_segment.gd | pos(-92.5303 0.0000 -241.1899) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{ignore_river=true,route_distance=282.0000} | nodes=109 hash=f54499d994bf
+Segment7 | Node3D | script=curve_segment.gd | pos(-120.2190 0.0000 -264.1971) basis(0.6391 0.0000 -0.7691 0.0000 1.0000 0.0000 0.7691 0.0000 0.6391) | meta{route_distance=318.0000} | nodes=21 hash=b91dd1a8c9a0
+Segment8 | Node3D | script=straight_segment.gd | pos(-145.9215 0.0000 -279.1208) basis(0.1904 0.0000 -0.9817 0.0000 1.0000 0.0000 0.9817 0.0000 0.1904) | meta{route_distance=348.0000} | nodes=37 hash=d67b2f3e6001
+Segment9 | Node3D | script=curve_segment.gd | pos(-175.3728 0.0000 -284.8322) basis(0.1904 0.0000 -0.9817 0.0000 1.0000 0.0000 0.9817 0.0000 0.1904) | meta{delivery_sign_side=-1.0000,route_distance=378.0000} | nodes=29 hash=22153a31de61
+Segment10 | Node3D | script=straight_segment.gd | pos(-203.1447 0.0000 -295.3787) basis(0.6486 0.0000 -0.7612 0.0000 1.0000 0.0000 0.7612 0.0000 0.6486) | meta{route_distance=408.0000} | nodes=22 hash=ed1a82489d15
+Segment11 | Node3D | script=curve_segment.gd | pos(-225.9794 0.0000 -314.8358) basis(0.6486 0.0000 -0.7612 0.0000 1.0000 0.0000 0.7612 0.0000 0.6486) | meta{route_distance=438.0000} | nodes=18 hash=5920ed81dc3d
+Segment12 | Node3D | script=straight_segment.gd | pos(-251.2397 0.0000 -330.6141) basis(0.2606 0.0000 -0.9655 0.0000 1.0000 0.0000 0.9655 0.0000 0.2606) | meta{route_distance=468.0000} | nodes=24 hash=c46d701711d7
+House0 | Node3D | script=delivery_house.gd | pos(-283.7027 0.7693 -325.4647) basis(0.9655 0.0000 0.2606 0.0000 1.0000 0.0000 -0.2606 0.0000 0.9655) | meta{} | nodes=79 hash=688b86de14b7
+Segment13 | Node3D | script=s_curve_segment.gd | pos(-280.2034 0.0000 -338.4308) basis(0.2606 0.0000 -0.9655 0.0000 1.0000 0.0000 0.9655 0.0000 0.2606) | meta{route_distance=498.0000} | nodes=35 hash=61c105685ff6
+Segment14 | Node3D | script=curve_segment.gd | pos(-338.1310 0.0000 -354.0642) basis(0.2606 0.0000 -0.9655 0.0000 1.0000 0.0000 0.9655 0.0000 0.2606) | meta{route_distance=558.0000} | nodes=18 hash=db7a29b7c9e8
+Segment15 | Node3D | script=speed_bump_segment.gd | pos(-370.4171 0.0000 -375.6405) basis(0.9051 0.0000 -0.4252 0.0000 1.0000 0.0000 0.4252 0.0000 0.9051) | meta{route_distance=598.0000} | nodes=30 hash=804765b233c6
+Segment16 | Node3D | script=curve_segment.gd | pos(-380.6209 0.0000 -397.3633) basis(0.9051 0.0000 -0.4252 0.0000 1.0000 0.0000 0.4252 0.0000 0.9051) | meta{route_distance=622.0000} | nodes=13 hash=ca589919d96c
+Segment17 | Node3D | script=chicane_segment.gd | pos(-380.7802 0.0000 -445.0208) basis(0.7959 0.0000 0.6055 0.0000 1.0000 0.0000 -0.6055 0.0000 0.7959) | meta{route_distance=672.0000} | nodes=19 hash=9cc9d4c35709
+Segment18 | Node3D | script=speed_bump_segment.gd | pos(-356.5614 0.0000 -476.8555) basis(0.7959 0.0000 0.6055 0.0000 1.0000 0.0000 -0.6055 0.0000 0.7959) | meta{route_distance=712.0000} | nodes=28 hash=e181bec8385e
+Segment19 | Node3D | script=curve_segment.gd | pos(-342.0301 0.0000 -495.9564) basis(0.7959 0.0000 0.6055 0.0000 1.0000 0.0000 -0.6055 0.0000 0.7959) | meta{route_distance=736.0000} | nodes=24 hash=349d3bfe9c4f
+Segment20 | Node3D | script=s_curve_segment.gd | pos(-330.2096 0.0000 -542.4855) basis(0.9381 0.0000 -0.3463 0.0000 1.0000 0.0000 0.3463 0.0000 0.9381) | meta{route_distance=786.0000} | nodes=27 hash=6269ab69b13b
+Segment21 | Node3D | script=curve_segment.gd | pos(-350.9850 0.0000 -598.7739) basis(0.9381 0.0000 -0.3463 0.0000 1.0000 0.0000 0.3463 0.0000 0.9381) | meta{route_distance=846.0000} | nodes=17 hash=f7554eea3491
+Segment22 | Node3D | script=straight_segment.gd | pos(-346.3420 0.0000 -646.0347) basis(0.7143 0.0000 0.6999 0.0000 1.0000 0.0000 -0.6999 0.0000 0.7143) | meta{route_distance=896.0000} | nodes=20 hash=f4fc893fbcd7
+Segment23 | Node3D | script=curve_segment.gd | pos(-325.3464 0.0000 -667.4633) basis(0.7143 0.0000 0.6999 0.0000 1.0000 0.0000 -0.6999 0.0000 0.7143) | meta{route_distance=926.0000} | nodes=24 hash=5f4fde8bbef5
+Segment24 | Node3D | script=straight_segment.gd | pos(-308.1875 0.0000 -691.7585) basis(0.9570 0.0000 0.2901 0.0000 1.0000 0.0000 -0.2901 0.0000 0.9570) | meta{delivery_sign_side=1.0000,route_distance=956.0000} | nodes=27 hash=4d88b60bb45e
+Segment25 | Node3D | script=curve_segment.gd | pos(-299.4830 0.0000 -720.4680) basis(0.9570 0.0000 0.2901 0.0000 1.0000 0.0000 -0.2901 0.0000 0.9570) | meta{route_distance=986.0000} | nodes=15 hash=0b81d596b46d
+Segment26 | Node3D | script=straight_segment.gd | pos(-286.2321 0.0000 -747.0696) basis(0.6984 0.0000 0.7157 0.0000 1.0000 0.0000 -0.7157 0.0000 0.6984) | meta{route_distance=1016.0000} | nodes=30 hash=6bc2651427da
+Segment27 | Node3D | script=curve_segment.gd | pos(-264.7603 0.0000 -768.0209) basis(0.6984 0.0000 0.7157 0.0000 1.0000 0.0000 -0.7157 0.0000 0.6984) | meta{route_distance=1046.0000} | nodes=18 hash=015740d47056
+House1 | Node3D | script=delivery_house.gd | pos(-236.6101 1.0436 -771.3044) basis(0.9650 0.0000 -0.2621 0.0000 1.0000 0.0000 0.2621 0.0000 0.9650) | meta{} | nodes=65 hash=581f6865435e
+Segment28 | Node3D | script=speed_bump_segment.gd | pos(-240.3005 0.0000 -784.8923) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1076.0000} | nodes=16 hash=10ea628d4756
+Segment29 | Node3D | script=construction_zone_segment.gd | pos(-217.1395 0.0000 -791.1827) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1100.0000} | nodes=59 hash=eafac88867e1
+Segment30 | Node3D | script=service_stop_segment.gd | pos(-178.5379 0.0000 -801.6667) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1140.0000} | nodes=175 hash=8ff2ce3f1856
+Segment31 | Node3D | script=curve_segment.gd | pos(-72.3834 0.0000 -830.4977) basis(0.2621 0.0000 0.9650 0.0000 1.0000 0.0000 -0.9650 0.0000 0.2621) | meta{route_distance=1250.0000} | nodes=10 hash=bc33f19c6bae
+Segment32 | Node3D | script=chicane_segment.gd | pos(-46.2954 0.0000 -844.2959) basis(0.8011 0.0000 0.5985 0.0000 1.0000 0.0000 -0.5985 0.0000 0.8011) | meta{route_distance=1280.0000} | nodes=20 hash=48ad4532c875
+Segment33 | Node3D | script=speed_bump_segment.gd | pos(-22.3540 0.0000 -876.3397) basis(0.8011 0.0000 0.5985 0.0000 1.0000 0.0000 -0.5985 0.0000 0.8011) | meta{route_distance=1320.0000} | nodes=33 hash=e3dcf1cb397d
+Segment34 | Node3D | script=curve_segment.gd | pos(-7.9891 0.0000 -895.5660) basis(0.8011 0.0000 0.5985 0.0000 1.0000 0.0000 -0.5985 0.0000 0.8011) | meta{route_distance=1344.0000} | nodes=23 hash=7bd11f59cf81
+Segment35 | Node3D | script=construction_zone_segment.gd | pos(1.3905 0.0000 -942.2105) basis(0.8932 0.0000 -0.4497 0.0000 1.0000 0.0000 0.4497 0.0000 0.8932) | meta{route_distance=1394.0000} | nodes=45 hash=db4158514aec
+Segment36 | Node3D | script=hill_segment.gd | pos(-16.5967 0.0000 -977.9380) basis(0.8932 0.0000 -0.4497 0.0000 1.0000 0.0000 0.4497 0.0000 0.8932) | meta{route_distance=1434.0000} | nodes=19 hash=ad17eb83c476
+Segment37 | Node3D | script=curve_segment.gd | pos(-48.0745 0.0000 -1040.4612) basis(0.8932 0.0000 -0.4497 0.0000 1.0000 0.0000 0.4497 0.0000 0.8932) | meta{route_distance=1504.0000} | nodes=17 hash=327067bd19df
+Segment38 | Node3D | script=straight_segment.gd | pos(-46.8441 0.0000 -1097.1655) basis(0.7616 0.0000 0.6481 0.0000 1.0000 0.0000 -0.6481 0.0000 0.7616) | meta{route_distance=1564.0000} | nodes=24 hash=9218c2faf375
+Segment39 | Node3D | script=curve_segment.gd | pos(-27.4021 0.0000 -1120.0131) basis(0.7616 0.0000 0.6481 0.0000 1.0000 0.0000 -0.6481 0.0000 0.7616) | meta{route_distance=1594.0000} | nodes=18 hash=3efb26b63e31
+Segment40 | Node3D | script=straight_segment.gd | pos(-11.6792 0.0000 -1145.3029) basis(0.9667 0.0000 0.2557 0.0000 1.0000 0.0000 -0.2557 0.0000 0.9667) | meta{delivery_sign_side=-1.0000,route_distance=1624.0000} | nodes=35 hash=b4949b85bb9c
+Segment41 | Node3D | script=curve_segment.gd | pos(-4.0074 0.0000 -1174.3053) basis(0.9667 0.0000 0.2557 0.0000 1.0000 0.0000 -0.2557 0.0000 0.9667) | meta{route_distance=1654.0000} | nodes=13 hash=f4586bcd6c54
+Segment42 | Node3D | script=straight_segment.gd | pos(-0.8773 0.0000 -1203.9059) basis(0.9798 0.0000 -0.1998 0.0000 1.0000 0.0000 0.1998 0.0000 0.9798) | meta{route_distance=1684.0000} | nodes=22 hash=8e71530d3951
+Segment43 | Node3D | script=curve_segment.gd | pos(-6.8711 0.0000 -1233.3010) basis(0.9798 0.0000 -0.1998 0.0000 1.0000 0.0000 0.1998 0.0000 0.9798) | meta{route_distance=1714.0000} | nodes=11 hash=0c9c8d925b47
+House2 | Node3D | script=delivery_house.gd | pos(-20.4966 0.3862 -1266.6044) basis(-0.2773 0.0000 0.9608 0.0000 1.0000 0.0000 -0.9608 0.0000 -0.2773) | meta{} | nodes=65 hash=e5ae9595363f
+Segment44 | Node3D | script=gravel_segment.gd | pos(-8.0736 0.0000 -1263.0190) basis(0.9608 0.0000 0.2773 0.0000 1.0000 0.0000 -0.2773 0.0000 0.9608) | meta{route_distance=1744.0000} | nodes=24 hash=cff8cb9be478
+Segment45 | Node3D | script=tunnel_segment.gd | pos(0.2447 0.0000 -1291.8428) basis(0.9608 0.0000 0.2773 0.0000 1.0000 0.0000 -0.2773 0.0000 0.9608) | meta{route_distance=1774.0000} | nodes=98 hash=05f6fd10e04d
+Segment46 | Node3D | script=curve_segment.gd | pos(12.4450 0.0000 -1334.1176) basis(0.9608 0.0000 0.2773 0.0000 1.0000 0.0000 -0.2773 0.0000 0.9608) | meta{route_distance=1818.0000} | nodes=45 hash=3f0c18382bf2
+Segment47 | Node3D | script=narrow_bridge_segment.gd | pos(0.3631 0.0000 -1389.4253) basis(0.6141 0.0000 -0.7892 0.0000 1.0000 0.0000 0.7892 0.0000 0.6141) | meta{ignore_river=true,route_distance=1878.0000} | nodes=110 hash=8eedba727732
+Segment48 | Node3D | script=curve_segment.gd | pos(-28.0481 0.0000 -1411.5341) basis(0.6141 0.0000 -0.7892 0.0000 1.0000 0.0000 0.7892 0.0000 0.6141) | meta{route_distance=1914.0000} | nodes=20 hash=0928d214d863
+Segment49 | Node3D | script=chicane_segment.gd | pos(-51.3298 0.0000 -1453.5017) basis(0.9952 0.0000 0.0979 0.0000 1.0000 0.0000 -0.0979 0.0000 0.9952) | meta{route_distance=1964.0000} | nodes=25 hash=1d045c10a1a2
+Segment50 | Node3D | script=tunnel_segment.gd | pos(-47.4139 0.0000 -1493.3096) basis(0.9952 0.0000 0.0979 0.0000 1.0000 0.0000 -0.0979 0.0000 0.9952) | meta{route_distance=2004.0000} | nodes=82 hash=cb4873c80122
+Segment51 | Node3D | script=curve_segment.gd | pos(-43.1064 0.0000 -1537.0983) basis(0.9952 0.0000 0.0979 0.0000 1.0000 0.0000 -0.0979 0.0000 0.9952) | meta{route_distance=2048.0000} | nodes=12 hash=451bb36ae499
+Segment52 | Node3D | script=chicane_segment.gd | pos(-26.5126 0.0000 -1572.0464) basis(0.5245 0.0000 0.8514 0.0000 1.0000 0.0000 -0.8514 0.0000 0.5245) | meta{route_distance=2088.0000} | nodes=14 hash=8e2e469f60e7
+Segment53 | Node3D | script=speed_bump_segment.gd | pos(7.5445 0.0000 -1593.0254) basis(0.5245 0.0000 0.8514 0.0000 1.0000 0.0000 -0.8514 0.0000 0.5245) | meta{route_distance=2128.0000} | nodes=24 hash=a2607135fdc7
+Segment54 | Node3D | script=curve_segment.gd | pos(27.9787 0.0000 -1605.6128) basis(0.5245 0.0000 0.8514 0.0000 1.0000 0.0000 -0.8514 0.0000 0.5245) | meta{route_distance=2152.0000} | nodes=21 hash=f70b5b710888
+Segment55 | Node3D | script=straight_segment.gd | pos(50.6555 0.0000 -1624.8967) basis(0.8468 0.0000 0.5319 0.0000 1.0000 0.0000 -0.5319 0.0000 0.8468) | meta{route_distance=2182.0000} | nodes=27 hash=b9b1679d7678
+Segment56 | Node3D | script=curve_segment.gd | pos(66.6127 0.0000 -1650.3008) basis(0.8468 0.0000 0.5319 0.0000 1.0000 0.0000 -0.5319 0.0000 0.8468) | meta{route_distance=2212.0000} | nodes=21 hash=5510ca254ab3
+Segment57 | Node3D | script=straight_segment.gd | pos(86.1495 0.0000 -1672.7491) basis(0.5176 0.0000 0.8556 0.0000 1.0000 0.0000 -0.8556 0.0000 0.5176) | meta{route_distance=2242.0000} | nodes=20 hash=83d0692ed823
+Segment58 | Node3D | script=curve_segment.gd | pos(111.8187 0.0000 -1688.2764) basis(0.5176 0.0000 0.8556 0.0000 1.0000 0.0000 -0.8556 0.0000 0.5176) | meta{route_distance=2272.0000} | nodes=15 hash=23ca1fa8f62d
+GoalLot | Node3D | script=route_goal_lot.gd | pos(134.7767 3.1571 -1707.2522) basis(0.8328 0.0000 0.5536 0.0000 1.0000 0.0000 -0.5536 0.0000 0.8328) | meta{halo_points=[(-17.4800 3.9000 -5.5000), (-17.4800 3.9000 -19.0000), (17.4800 3.9000 -5.5000), (17.4800 3.9000 -19.0000)]} | nodes=61 hash=a60405313d37
 HouseNumber0 | Label3D | pos(-283.7027 8.4152 -325.4647) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 1|TRAP_0 10' | meta{height_above_house=7.6459}
 HouseNumber1 | Label3D | pos(-236.6101 7.7280 -771.3044) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 2|TRAP_1 23' | meta{height_above_house=6.6844}
 HouseNumber2 | Label3D | pos(-20.4966 7.7494 -1266.6044) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 3|TRAP_2 36' | meta{height_above_house=7.3632}
@@ -1260,9 +1260,9 @@ PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(73.678
 PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(90.7985 4.5751 -1664.1150) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=CylinderShape3D | meta{}
 PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(116.7874 5.6144 -1680.0623) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=CylinderShape3D | meta{}
 PowerLines/PowerWires | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-378.2359 2.3638 -1680.7247 495.4315 9.8856 1648.7255) surfaces=1 [verts=40320 sum(-5338662.5000 282015.9062 -33699936.0000)]} | shadow=0 | meta{}
-BatchedDressing | Node3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=2746 hash=136430280510
+BatchedDressing | Node3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=2746 hash=7556c845a69a
 AmbientWind | AudioStreamPlayer | meta{}
-Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=74 hash=a0c0d7626684
+Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=4 hash=0a1a5709fec5
 -- queries
 stop_road_distance(0)=498.0000
 stop_road_distance(1)=1075.9999
@@ -1913,117 +1913,117 @@ segments 55
 -- houses
 house House0 variant=3 index=0 pos(56.3484 3.2948 -324.6753) basis(0.3410 0.0000 0.9401 0.0000 1.0000 0.0000 -0.9401 0.0000 0.3410)
   label HouseNumber0 56.3484 13.2472 -324.6753 meta{height_above_house=9.9524}
-  piece House0/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | pos(0.0000 0.3000 -3.3300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.5000,on_porch=true}
-    summary nodes=6 hash=59ece029e9a0
-  piece House0/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | pos(-0.9500 0.3000 -3.4800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=ef6ad950eba8
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | pos(0.9500 0.3000 -3.4800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=5287625553b3
-  piece House0/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.0775 -0.3591 -3.0800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=f86f20a01019
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.0775 -0.1195 -1.0800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=790da6806824
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.0775 -0.0562 0.9200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=9b693eb2dc71
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.0775 -0.0558 2.9200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=d06d08b769ee
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.0775 -0.0449 -3.0800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=cbb292abd075
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.0775 -0.0504 -1.0800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=d7b4d7ffc81c
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.0775 -0.0505 0.9200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=cc53d493cca7
-  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.0775 -0.0379 2.9200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=8f269ddab5fd
+  piece House0/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | at(0.0000 -3.3300) yaw=0.0000 | meta{footprint=0.5000,on_porch=true}
+    summary nodes=1 hash=ac5158c37f3f
+  piece House0/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | at(-0.9500 -3.4800) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=a7b0b1de7ea7
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | at(0.9500 -3.4800) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=181a6f3231f1
+  piece House0/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.0775 -3.0800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=01958b60daa9
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.0775 -1.0800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=623fafc38455
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.0775 0.9200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=64c9d0d88712
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.0775 2.9200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=7889c81ef36d
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.0775 -3.0800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=84145101770a
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.0775 -1.0800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=08fc6b816ced
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.0775 0.9200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=d2061e275d45
+  piece House0/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.0775 2.9200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=146bc00d6119
 house House1 variant=2 index=1 pos(-156.4787 -1.0029 -598.9460) basis(0.1801 0.0000 -0.9837 0.0000 1.0000 0.0000 0.9837 0.0000 0.1801)
   label HouseNumber1 -156.4787 5.6815 -598.9460 meta{height_above_house=6.6844}
-  piece House1/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | pos(0.0000 0.3000 -3.2300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.5000,on_porch=true}
-    summary nodes=6 hash=cdcb302097a2
-  piece House1/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | pos(-0.9500 0.3000 -3.3800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=763c2951dfb2
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | pos(0.9500 0.3000 -3.3800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=e08f97d88c7e
-  piece House1/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.4402 -0.0842 -2.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=e2dae0a10471
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.4401 -0.0570 -0.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=4f01381d84c6
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.4402 -0.0507 1.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=c947ef54cc42
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.4401 -0.0254 3.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=28ca0ca556d7
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.4401 -0.0094 -2.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=50573971b298
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.4402 -0.0198 -0.9800) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=7951ec1ae3a8
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.4401 -0.0189 1.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=9ce644993b59
-  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.4402 -0.0059 3.0200) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=6162d9c1a690
+  piece House1/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | at(0.0000 -3.2300) yaw=0.0000 | meta{footprint=0.5000,on_porch=true}
+    summary nodes=1 hash=c262c4a3e6d5
+  piece House1/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | at(-0.9500 -3.3800) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=7e8ac23b7b5b
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | at(0.9500 -3.3800) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=841ef1976473
+  piece House1/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.4402 -2.9800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=010cd6f7e588
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.4401 -0.9800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=684b62aea512
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.4402 1.0200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=b56ee5272f74
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.4401 3.0200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=1bd94af8cfb3
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.4401 -2.9800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=b71dab597b6c
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.4402 -0.9800) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=5920710ae280
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.4401 1.0200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=28784fb07da4
+  piece House1/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.4402 3.0200) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=4ae81c0c6b4a
 house House2 variant=0 index=2 pos(-105.1340 -1.6865 -939.6086) basis(0.2759 0.0000 0.9612 0.0000 1.0000 0.0000 -0.9612 0.0000 0.2759)
   label HouseNumber2 -105.1340 5.6768 -939.6086 meta{height_above_house=7.3632}
-  piece House2/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | pos(0.0000 0.3000 -3.0800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.5000,on_porch=true}
-    summary nodes=6 hash=06fbc613d4fe
-  piece House2/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | pos(-0.9500 0.3000 -3.2300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=786e7c882984
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | pos(0.9500 0.3000 -3.2300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=f871d0024bd8
-  piece House2/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-4.8297 -0.0488 -2.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=82b267591f9e
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-4.8297 -0.0524 -0.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=27dd21247bc1
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-4.8297 -0.0539 1.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=23b468e2f526
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-4.8297 -0.0636 3.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=cb9ff3b48b68
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(4.8296 -0.0463 -2.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=11e62eca9b41
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(4.8296 -0.0500 -0.8300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=c5f0995cb4b5
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(4.8296 -0.0527 1.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=476343db5eb8
-  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(4.8297 -0.0798 3.1700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=e88ab1538220
+  piece House2/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | at(0.0000 -3.0800) yaw=0.0000 | meta{footprint=0.5000,on_porch=true}
+    summary nodes=1 hash=1cd623d1dc23
+  piece House2/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | at(-0.9500 -3.2300) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=e406131007b6
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | at(0.9500 -3.2300) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=7e3c98f3066d
+  piece House2/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | at(-4.8297 -2.8300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=05b328a60653
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-4.8297 -0.8300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=0ddd42a05846
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-4.8297 1.1700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=a0b5cf81efcc
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-4.8297 3.1700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=58681a9bcf72
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(4.8296 -2.8300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=8c12942515ef
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(4.8296 -0.8300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=d86a52e713e7
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(4.8296 1.1700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=c46e5b8940e7
+  piece House2/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(4.8297 3.1700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=14590d309e59
 house House3 variant=4 index=3 pos(-491.9825 2.4953 -1155.1426) basis(-0.7308 0.0000 -0.6826 0.0000 1.0000 0.0000 0.6826 0.0000 -0.7308)
   label HouseNumber3 -491.9825 10.1412 -1155.1426 meta{height_above_house=7.6459}
-  piece House3/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | pos(0.0000 0.3000 -3.5800) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.5000,on_porch=true}
-    summary nodes=6 hash=b53d5736bd6e
-  piece House3/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | pos(-0.9500 0.3000 -3.7300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=06a466e1c9f2
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | pos(0.9500 0.3000 -3.7300) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{footprint=0.3000,on_porch=true}
-    summary nodes=15 hash=3b4c2d9e2415
-  piece House3/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5946 -0.1204 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=27fa3da981bb
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 -0.0848 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=7e7a9c61164d
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5946 -0.0706 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=96b861d07448
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 -0.0506 2.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=f0fac55877d2
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5946 0.0409 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=1e9f9d7449af
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(-5.5947 0.3979 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=ac99c6eab1eb
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0217 -3.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=5d42f70d0487
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0283 -1.3300) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=578c41b9dde5
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0283 0.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=97c03d0a4e81
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 -0.0142 2.6701) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=f80265b44271
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 0.1274 4.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=7a6b9904c306
-  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | pos(5.5947 0.5284 6.6700) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
-    summary nodes=15 hash=69f80381073d
-  piece House3/Yard/sm_arch_barn | Node3D | scene=sm_arch_barn.glb | pos(-14.9719 -1.1367 4.0001) basis(0.0000 0.0000 -1.0000 0.0000 1.0000 0.0000 1.0000 0.0000 0.0000) | meta{footprint=6.4000,on_porch=false,reach=6.4000,rule=yard,solid=true}
-    summary nodes=84 hash=0cf3873d7b09
+  piece House3/Yard/sm_env_yard_doormat | Node3D | scene=sm_env_yard_doormat.glb | at(0.0000 -3.5800) yaw=0.0000 | meta{footprint=0.5000,on_porch=true}
+    summary nodes=1 hash=a86de82239dc
+  piece House3/Yard/sm_env_yard_flower_pot | Node3D | scene=sm_env_yard_flower_pot.glb | at(-0.9500 -3.7300) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=074a4fdfcfc2
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_flower_pot.glb | at(0.9500 -3.7300) yaw=0.0000 | meta{footprint=0.3000,on_porch=true}
+    summary nodes=1 hash=4bc8bcd155a0
+  piece House3/Yard/sm_env_yard_picket_fence | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5946 -3.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=faaa9e0febda
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 -1.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=624767966513
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5946 0.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=c9df62fb6144
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 2.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=f199450081f6
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5946 4.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=833297023ce5
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(-5.5947 6.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=0f3039ac98f2
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 -3.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=9f7ed6ffd422
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 -1.3300) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=fb581e91c38e
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 0.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=8ae6abb91c8a
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 2.6701) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=aea7b892ce55
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 4.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=b7f40f8abcc0
+  piece House3/Yard/@Node3D@ | Node3D | scene=sm_env_yard_picket_fence.glb | at(5.5947 6.6700) yaw=1.5708 | meta{footprint=0.9500,on_porch=false,reach=0.9500,rule=yard,solid=true}
+    summary nodes=1 hash=398ea9fe9d52
+  piece House3/Yard/sm_arch_barn | Node3D | scene=sm_arch_barn.glb | at(-14.9719 4.0001) yaw=1.5708 | meta{footprint=6.4000,on_porch=false,reach=6.4000,rule=yard,solid=true}
+    summary nodes=1 hash=35bdb641fb51
 -- assign_packages
   house0 id=pkg_0 label='TRAP_0 10' sign=CASA 1|TRAP_0 10
   house1 id=pkg_1 label='TRAP_1 23' sign=CASA 2|TRAP_1 23
   house2 id=pkg_2 label='TRAP_2 36' sign=CASA 3|TRAP_2 36
   house3 id=pkg_3 label='TRAP_3 49' sign=CASA 4|TRAP_3 49
 -- children
-ContinuousTerrain | Node3D | script=route_terrain.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=1895 hash=574f369c556a
+ContinuousTerrain | Node3D | script=route_terrain.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=1585 hash=3c4e48915ef6
 SalidaPost | StaticBody3D | pos(-7.6000 1.5250 -5.1500) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | layer=1 mask=6 | meta{}
 SalidaPost/@MeshInstance3D@ | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-0.0800 -1.6778 -0.0800 0.1600 3.2551 0.1600) surfaces=1 [verts=24 sum(0.0000 -1.2059 0.0000)]} | shadow=1 | meta{}
 SalidaPost/@CollisionShape3D@ | CollisionShape3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=ConcavePolygonShape3D | meta{}
@@ -2035,66 +2035,66 @@ SalidaTitle | Label3D | pos(-7.6000 2.7603 -4.9250) basis(1.0000 0.0000 0.0000 0
 SalidaText | Label3D | pos(-7.6000 2.2403 -4.9250) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='Cuidá la carga · el camino serpentea' | meta{}
 StartLine | Node3D | pos(0.0000 0.0300 -4.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{}
 StartLine/@MeshInstance3D@ | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-5.7000 -0.0159 -0.1750 11.4000 0.0240 0.3500) surfaces=1 [verts=64 sum(0.0000 -0.2218 0.0000)]} | shadow=1 | meta{}
-Segment0 | Node3D | script=straight_segment.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=0.0000} | nodes=677 hash=75206bdd2fd3
-Segment1 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 -30.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=30.0000} | nodes=578 hash=219ca2fe314d
-Segment2 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 -54.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=54.0000} | nodes=1452 hash=2b6edb070b90
-Segment3 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 -98.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=98.0000} | nodes=644 hash=92bc283d8bf9
-Segment4 | Node3D | script=curve_segment.gd | pos(0.0000 0.0000 -122.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=122.0000} | nodes=790 hash=4f8ec1ec490f
-Segment5 | Node3D | script=construction_zone_segment.gd | pos(6.6764 0.0000 -150.7144) basis(0.7742 0.0000 0.6329 0.0000 1.0000 0.0000 -0.6329 0.0000 0.7742) | meta{route_distance=152.0000} | nodes=1212 hash=2578898f7ac4
-Segment6 | Node3D | script=tunnel_segment.gd | pos(31.9944 0.0000 -181.6821) basis(0.7742 0.0000 0.6329 0.0000 1.0000 0.0000 -0.6329 0.0000 0.7742) | meta{route_distance=192.0000} | nodes=1200 hash=7dfff685529f
-Segment7 | Node3D | script=curve_segment.gd | pos(59.8442 0.0000 -215.7466) basis(0.7742 0.0000 0.6329 0.0000 1.0000 0.0000 -0.6329 0.0000 0.7742) | meta{delivery_sign_side=-1.0000,route_distance=236.0000} | nodes=535 hash=874f1209fee8
-Segment8 | Node3D | script=straight_segment.gd | pos(74.3653 0.0000 -241.6507) basis(0.9869 0.0000 0.1613 0.0000 1.0000 0.0000 -0.1613 0.0000 0.9869) | meta{route_distance=266.0000} | nodes=298 hash=5ab81e1c72a7
-Segment9 | Node3D | script=curve_segment.gd | pos(79.2057 0.0000 -271.2576) basis(0.9869 0.0000 0.1613 0.0000 1.0000 0.0000 -0.1613 0.0000 0.9869) | meta{route_distance=296.0000} | nodes=331 hash=5aa7d908525a
-Segment10 | Node3D | script=straight_segment.gd | pos(78.9691 0.0000 -300.9683) basis(0.9401 0.0000 -0.3410 0.0000 1.0000 0.0000 0.3410 0.0000 0.9401) | meta{route_distance=326.0000} | nodes=250 hash=6af6ab79af20
-House0 | Node3D | script=delivery_house.gd | pos(56.3484 3.2948 -324.6753) basis(0.3410 0.0000 0.9401 0.0000 1.0000 0.0000 -0.9401 0.0000 0.3410) | meta{} | nodes=215 hash=420c4a329029
-Segment11 | Node3D | script=narrow_bridge_segment.gd | pos(68.7383 0.0000 -329.1700) basis(0.9401 0.0000 -0.3410 0.0000 1.0000 0.0000 0.3410 0.0000 0.9401) | meta{ignore_river=true,route_distance=356.0000} | nodes=923 hash=f87266b4980f
-Segment12 | Node3D | script=curve_segment.gd | pos(56.4614 0.0000 -363.0119) basis(0.9401 0.0000 -0.3410 0.0000 1.0000 0.0000 0.3410 0.0000 0.9401) | meta{route_distance=392.0000} | nodes=861 hash=346f5f141f39
-Segment13 | Node3D | script=narrow_bridge_segment.gd | pos(23.4393 0.0000 -397.7047) basis(0.1898 0.0000 -0.9818 0.0000 1.0000 0.0000 0.9818 0.0000 0.1898) | meta{ignore_river=true,route_distance=442.0000} | nodes=818 hash=0d927b63d7bd
-Segment14 | Node3D | script=speed_bump_segment.gd | pos(-11.9062 0.0000 -404.5381) basis(0.1898 0.0000 -0.9818 0.0000 1.0000 0.0000 0.9818 0.0000 0.1898) | meta{route_distance=478.0000} | nodes=518 hash=cc698c790383
-Segment15 | Node3D | script=curve_segment.gd | pos(-35.4699 0.0000 -409.0938) basis(0.1898 0.0000 -0.9818 0.0000 1.0000 0.0000 0.9818 0.0000 0.1898) | meta{route_distance=502.0000} | nodes=648 hash=a759a4292ecf
-Segment16 | Node3D | script=narrow_bridge_segment.gd | pos(-63.1210 0.0000 -419.8654) basis(0.6687 0.0000 -0.7435 0.0000 1.0000 0.0000 0.7435 0.0000 0.6687) | meta{ignore_river=true,route_distance=532.0000} | nodes=890 hash=006caa4e5ee4
-Segment17 | Node3D | script=hill_segment.gd | pos(-89.8884 0.0000 -443.9384) basis(0.6687 0.0000 -0.7435 0.0000 1.0000 0.0000 0.7435 0.0000 0.6687) | meta{route_distance=568.0000} | nodes=1577 hash=ca5087365328
-Segment18 | Node3D | script=curve_segment.gd | pos(-141.9360 0.0000 -490.7469) basis(0.6687 0.0000 -0.7435 0.0000 1.0000 0.0000 0.7435 0.0000 0.6687) | meta{delivery_sign_side=1.0000,route_distance=638.0000} | nodes=468 hash=9ad6da5868ea
-Segment19 | Node3D | script=straight_segment.gd | pos(-160.3531 0.0000 -514.0630) basis(0.9464 0.0000 -0.3230 0.0000 1.0000 0.0000 0.3230 0.0000 0.9464) | meta{route_distance=668.0000} | nodes=338 hash=de70b1439982
-Segment20 | Node3D | script=curve_segment.gd | pos(-170.0443 0.0000 -542.4545) basis(0.9464 0.0000 -0.3230 0.0000 1.0000 0.0000 0.3230 0.0000 0.9464) | meta{route_distance=698.0000} | nodes=438 hash=06c002ba9691
-Segment21 | Node3D | script=straight_segment.gd | pos(-174.7469 0.0000 -571.7917) basis(0.9837 0.0000 0.1801 0.0000 1.0000 0.0000 -0.1801 0.0000 0.9837) | meta{route_distance=728.0000} | nodes=308 hash=4b644df8ec81
-House1 | Node3D | script=delivery_house.gd | pos(-156.4787 -1.0029 -598.9460) basis(0.1801 0.0000 -0.9837 0.0000 1.0000 0.0000 0.9837 0.0000 0.1801) | meta{} | nodes=215 hash=73136517ff12
-Segment22 | Node3D | script=hill_segment.gd | pos(-169.3449 0.0000 -601.3013) basis(0.9837 0.0000 0.1801 0.0000 1.0000 0.0000 -0.1801 0.0000 0.9837) | meta{route_distance=758.0000} | nodes=754 hash=f8ed6cb4f8ac
-Segment23 | Node3D | script=curve_segment.gd | pos(-156.7400 0.0000 -670.1571) basis(0.9837 0.0000 0.1801 0.0000 1.0000 0.0000 -0.1801 0.0000 0.9837) | meta{route_distance=828.0000} | nodes=549 hash=b00fa9149e69
-Segment24 | Node3D | script=tunnel_segment.gd | pos(-145.9786 0.0000 -697.7725) basis(0.7299 0.0000 0.6836 0.0000 1.0000 0.0000 -0.6836 0.0000 0.7299) | meta{route_distance=858.0000} | nodes=1176 hash=d5ad1c62f55b
-Segment25 | Node3D | script=gravel_segment.gd | pos(-115.9014 0.0000 -729.8873) basis(0.7299 0.0000 0.6836 0.0000 1.0000 0.0000 -0.6836 0.0000 0.7299) | meta{route_distance=902.0000} | nodes=753 hash=4b8d9385d516
-Segment26 | Node3D | script=curve_segment.gd | pos(-95.3942 0.0000 -751.7838) basis(0.7299 0.0000 0.6836 0.0000 1.0000 0.0000 -0.6836 0.0000 0.7299) | meta{route_distance=932.0000} | nodes=1165 hash=e7ae263557c1
-Segment27 | Node3D | script=straight_segment.gd | pos(-79.5731 0.0000 -796.9589) basis(0.9592 0.0000 -0.2829 0.0000 1.0000 0.0000 0.2829 0.0000 0.9592) | meta{route_distance=982.0000} | nodes=623 hash=7d07f7e16973
-Segment28 | Node3D | script=curve_segment.gd | pos(-88.0596 0.0000 -825.7335) basis(0.9592 0.0000 -0.2829 0.0000 1.0000 0.0000 0.2829 0.0000 0.9592) | meta{route_distance=1012.0000} | nodes=554 hash=92cc1517ea13
-Segment29 | Node3D | script=straight_segment.gd | pos(-91.7244 0.0000 -855.2410) basis(0.9795 0.0000 0.2015 0.0000 1.0000 0.0000 -0.2015 0.0000 0.9795) | meta{delivery_sign_side=-1.0000,route_distance=1042.0000} | nodes=433 hash=37844512bd3a
-Segment30 | Node3D | script=curve_segment.gd | pos(-85.6791 0.0000 -884.6255) basis(0.9795 0.0000 0.2015 0.0000 1.0000 0.0000 -0.2015 0.0000 0.9795) | meta{route_distance=1072.0000} | nodes=451 hash=b77f72c13f62
-Segment31 | Node3D | script=straight_segment.gd | pos(-84.4279 0.0000 -914.3411) basis(0.9612 0.0000 -0.2759 0.0000 1.0000 0.0000 0.2759 0.0000 0.9612) | meta{route_distance=1102.0000} | nodes=298 hash=f64e8237e29e
-House2 | Node3D | script=delivery_house.gd | pos(-105.1340 -1.6865 -939.6086) basis(0.2759 0.0000 0.9612 0.0000 1.0000 0.0000 -0.9612 0.0000 0.2759) | meta{} | nodes=215 hash=31cc8dc13c4a
-Segment32 | Node3D | script=gravel_segment.gd | pos(-92.7060 0.0000 -943.1764) basis(0.9612 0.0000 -0.2759 0.0000 1.0000 0.0000 0.2759 0.0000 0.9612) | meta{route_distance=1132.0000} | nodes=343 hash=32d91862912c
-Segment33 | Node3D | script=curve_segment.gd | pos(-100.9840 0.0000 -972.0117) basis(0.9612 0.0000 -0.2759 0.0000 1.0000 0.0000 0.2759 0.0000 0.9612) | meta{route_distance=1162.0000} | nodes=1042 hash=00d654ee4d2f
-Segment34 | Node3D | script=service_stop_segment.gd | pos(-131.4883 0.0000 -1008.9668) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1212.0000} | nodes=1444 hash=dea2167c52ef
-Segment35 | Node3D | script=gravel_segment.gd | pos(-237.6490 0.0000 -1037.7750) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1322.0000} | nodes=461 hash=dde53a276919
-Segment36 | Node3D | script=hill_segment.gd | pos(-266.6019 0.0000 -1045.6318) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1352.0000} | nodes=981 hash=824c1251b838
-Segment37 | Node3D | script=construction_zone_segment.gd | pos(-334.1586 0.0000 -1063.9644) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1422.0000} | nodes=959 hash=851c70945936
-Segment38 | Node3D | script=curve_segment.gd | pos(-372.7625 0.0000 -1074.4401) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1462.0000} | nodes=899 hash=30cb15e45bca
-Segment39 | Node3D | script=straight_segment.gd | pos(-399.7271 0.0000 -1086.9281) basis(0.6970 0.0000 -0.7171 0.0000 1.0000 0.0000 0.7171 0.0000 0.6970) | meta{delivery_sign_side=1.0000,route_distance=1492.0000} | nodes=474 hash=8ccfa9647348
-Segment40 | Node3D | script=curve_segment.gd | pos(-421.2395 0.0000 -1107.8378) basis(0.6970 0.0000 -0.7171 0.0000 1.0000 0.0000 0.7171 0.0000 0.6970) | meta{route_distance=1522.0000} | nodes=601 hash=3f46cd3b8bff
-Segment41 | Node3D | script=straight_segment.gd | pos(-445.7450 0.0000 -1124.6370) basis(0.2575 0.0000 -0.9663 0.0000 1.0000 0.0000 0.9663 0.0000 0.2575) | meta{route_distance=1552.0000} | nodes=485 hash=9b5b5565c1cf
-Segment42 | Node3D | script=curve_segment.gd | pos(-474.7332 0.0000 -1132.3628) basis(0.2575 0.0000 -0.9663 0.0000 1.0000 0.0000 0.9663 0.0000 0.2575) | meta{route_distance=1582.0000} | nodes=322 hash=986b899eeae9
-House3 | Node3D | script=delivery_house.gd | pos(-491.9825 2.4953 -1155.1426) basis(-0.7308 0.0000 -0.6826 0.0000 1.0000 0.0000 0.6826 0.0000 -0.7308) | meta{} | nodes=361 hash=f2740f6dcdcc
-Segment43 | Node3D | script=construction_zone_segment.gd | pos(-501.8323 0.0000 -1144.5973) basis(0.6826 0.0000 -0.7308 0.0000 1.0000 0.0000 0.7308 0.0000 0.6826) | meta{route_distance=1612.0000} | nodes=677 hash=9812bc5b5efe
-Segment44 | Node3D | script=curve_segment.gd | pos(-531.0643 0.0000 -1171.9009) basis(0.6826 0.0000 -0.7308 0.0000 1.0000 0.0000 0.7308 0.0000 0.6826) | meta{route_distance=1652.0000} | nodes=748 hash=ba9fe5809ed2
-Segment45 | Node3D | script=speed_bump_segment.gd | pos(-549.2541 0.0000 -1206.1614) basis(0.9979 0.0000 0.0642 0.0000 1.0000 0.0000 -0.0642 0.0000 0.9979) | meta{route_distance=1692.0000} | nodes=365 hash=d9369cf5db7b
-Segment46 | Node3D | script=rail_crossing_segment.gd | pos(-547.7126 0.0000 -1230.1118) basis(0.9979 0.0000 0.0642 0.0000 1.0000 0.0000 -0.0642 0.0000 0.9979) | meta{route_distance=1716.0000,track_height=-1.0788} | nodes=1005 hash=1c96cb638f4e
-Segment47 | Node3D | script=curve_segment.gd | pos(-545.6572 0.0000 -1262.0458) basis(0.9979 0.0000 0.0642 0.0000 1.0000 0.0000 -0.0642 0.0000 0.9979) | meta{route_distance=1748.0000} | nodes=806 hash=7a639f342e07
-Segment48 | Node3D | script=rail_crossing_segment.gd | pos(-538.1989 0.0000 -1290.7318) basis(0.8053 0.0000 0.5928 0.0000 1.0000 0.0000 -0.5928 0.0000 0.8053) | meta{route_distance=1778.0000,track_height=-1.7271} | nodes=988 hash=80afd80c4900
-Segment49 | Node3D | script=curve_segment.gd | pos(-519.2285 0.0000 -1316.5024) basis(0.8053 0.0000 0.5928 0.0000 1.0000 0.0000 -0.5928 0.0000 0.8053) | meta{route_distance=1810.0000} | nodes=1231 hash=2eed49de01ce
-Segment50 | Node3D | script=straight_segment.gd | pos(-508.3205 0.0000 -1363.2175) basis(0.9293 0.0000 -0.3694 0.0000 1.0000 0.0000 0.3694 0.0000 0.9293) | meta{route_distance=1860.0000} | nodes=557 hash=4dd03e8219c7
-Segment51 | Node3D | script=curve_segment.gd | pos(-519.4026 0.0000 -1391.0956) basis(0.9293 0.0000 -0.3694 0.0000 1.0000 0.0000 0.3694 0.0000 0.9293) | meta{route_distance=1890.0000} | nodes=733 hash=e001abbb5928
-Segment52 | Node3D | script=straight_segment.gd | pos(-525.8865 0.0000 -1420.1293) basis(0.9952 0.0000 0.0974 0.0000 1.0000 0.0000 -0.0974 0.0000 0.9952) | meta{route_distance=1920.0000} | nodes=472 hash=4faf13e17447
-Segment53 | Node3D | script=curve_segment.gd | pos(-522.9637 0.0000 -1449.9866) basis(0.9952 0.0000 0.0974 0.0000 1.0000 0.0000 -0.0974 0.0000 0.9952) | meta{route_distance=1950.0000} | nodes=700 hash=f5e6f3a88979
-Segment54 | Node3D | script=straight_segment.gd | pos(-515.7661 0.0000 -1478.8896) basis(0.8592 0.0000 0.5116 0.0000 1.0000 0.0000 -0.5116 0.0000 0.8592) | meta{route_distance=1980.0000} | nodes=514 hash=987d70374d7e
-GoalLot | Node3D | script=route_goal_lot.gd | pos(-500.4190 2.6512 -1504.6669) basis(0.8592 0.0000 0.5116 0.0000 1.0000 0.0000 -0.5116 0.0000 0.8592) | meta{halo_points=[(-17.4800 3.9000 -5.5000), (-17.4800 3.9000 -19.0000), (17.4800 3.9000 -5.5000), (17.4800 3.9000 -19.0000)]} | nodes=74 hash=196f9c0251a0
+Segment0 | Node3D | script=straight_segment.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=0.0000} | nodes=83 hash=654258f8af7f
+Segment1 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 -30.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=30.0000} | nodes=61 hash=e893313101ad
+Segment2 | Node3D | script=tunnel_segment.gd | pos(0.0000 0.0000 -54.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=54.0000} | nodes=146 hash=92f345a9cc63
+Segment3 | Node3D | script=speed_bump_segment.gd | pos(0.0000 0.0000 -98.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=98.0000} | nodes=61 hash=4d000b2df19a
+Segment4 | Node3D | script=curve_segment.gd | pos(0.0000 0.0000 -122.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{route_distance=122.0000} | nodes=57 hash=bf64c15f6151
+Segment5 | Node3D | script=construction_zone_segment.gd | pos(6.6764 0.0000 -150.7144) basis(0.7742 0.0000 0.6329 0.0000 1.0000 0.0000 -0.6329 0.0000 0.7742) | meta{route_distance=152.0000} | nodes=109 hash=b4dba948c0cc
+Segment6 | Node3D | script=tunnel_segment.gd | pos(31.9944 0.0000 -181.6821) basis(0.7742 0.0000 0.6329 0.0000 1.0000 0.0000 -0.6329 0.0000 0.7742) | meta{route_distance=192.0000} | nodes=135 hash=7dd7edb9a4e1
+Segment7 | Node3D | script=curve_segment.gd | pos(59.8442 0.0000 -215.7466) basis(0.7742 0.0000 0.6329 0.0000 1.0000 0.0000 -0.6329 0.0000 0.7742) | meta{delivery_sign_side=-1.0000,route_distance=236.0000} | nodes=50 hash=31779927d641
+Segment8 | Node3D | script=straight_segment.gd | pos(74.3653 0.0000 -241.6507) basis(0.9869 0.0000 0.1613 0.0000 1.0000 0.0000 -0.1613 0.0000 0.9869) | meta{route_distance=266.0000} | nodes=65 hash=ea88046fef34
+Segment9 | Node3D | script=curve_segment.gd | pos(79.2057 0.0000 -271.2576) basis(0.9869 0.0000 0.1613 0.0000 1.0000 0.0000 -0.1613 0.0000 0.9869) | meta{route_distance=296.0000} | nodes=33 hash=001ca0c057fa
+Segment10 | Node3D | script=straight_segment.gd | pos(78.9691 0.0000 -300.9683) basis(0.9401 0.0000 -0.3410 0.0000 1.0000 0.0000 0.3410 0.0000 0.9401) | meta{route_distance=326.0000} | nodes=49 hash=1ad2567bbd7a
+House0 | Node3D | script=delivery_house.gd | pos(56.3484 3.2948 -324.6753) basis(0.3410 0.0000 0.9401 0.0000 1.0000 0.0000 -0.9401 0.0000 0.3410) | meta{} | nodes=52 hash=30188e9b753b
+Segment11 | Node3D | script=narrow_bridge_segment.gd | pos(68.7383 0.0000 -329.1700) basis(0.9401 0.0000 -0.3410 0.0000 1.0000 0.0000 0.3410 0.0000 0.9401) | meta{ignore_river=true,route_distance=356.0000} | nodes=124 hash=908ccc52f081
+Segment12 | Node3D | script=curve_segment.gd | pos(56.4614 0.0000 -363.0119) basis(0.9401 0.0000 -0.3410 0.0000 1.0000 0.0000 0.3410 0.0000 0.9401) | meta{route_distance=392.0000} | nodes=68 hash=22c5ff5b9a19
+Segment13 | Node3D | script=narrow_bridge_segment.gd | pos(23.4393 0.0000 -397.7047) basis(0.1898 0.0000 -0.9818 0.0000 1.0000 0.0000 0.9818 0.0000 0.1898) | meta{ignore_river=true,route_distance=442.0000} | nodes=118 hash=bed3b8e69865
+Segment14 | Node3D | script=speed_bump_segment.gd | pos(-11.9062 0.0000 -404.5381) basis(0.1898 0.0000 -0.9818 0.0000 1.0000 0.0000 0.9818 0.0000 0.1898) | meta{route_distance=478.0000} | nodes=61 hash=38cc5919efc7
+Segment15 | Node3D | script=curve_segment.gd | pos(-35.4699 0.0000 -409.0938) basis(0.1898 0.0000 -0.9818 0.0000 1.0000 0.0000 0.9818 0.0000 0.1898) | meta{route_distance=502.0000} | nodes=48 hash=79aa5e4883dd
+Segment16 | Node3D | script=narrow_bridge_segment.gd | pos(-63.1210 0.0000 -419.8654) basis(0.6687 0.0000 -0.7435 0.0000 1.0000 0.0000 0.7435 0.0000 0.6687) | meta{ignore_river=true,route_distance=532.0000} | nodes=124 hash=a77fc40ecddb
+Segment17 | Node3D | script=hill_segment.gd | pos(-89.8884 0.0000 -443.9384) basis(0.6687 0.0000 -0.7435 0.0000 1.0000 0.0000 0.7435 0.0000 0.6687) | meta{route_distance=568.0000} | nodes=135 hash=190d0a63cba9
+Segment18 | Node3D | script=curve_segment.gd | pos(-141.9360 0.0000 -490.7469) basis(0.6687 0.0000 -0.7435 0.0000 1.0000 0.0000 0.7435 0.0000 0.6687) | meta{delivery_sign_side=1.0000,route_distance=638.0000} | nodes=51 hash=65ea9f66e807
+Segment19 | Node3D | script=straight_segment.gd | pos(-160.3531 0.0000 -514.0630) basis(0.9464 0.0000 -0.3230 0.0000 1.0000 0.0000 0.3230 0.0000 0.9464) | meta{route_distance=668.0000} | nodes=54 hash=60380b798070
+Segment20 | Node3D | script=curve_segment.gd | pos(-170.0443 0.0000 -542.4545) basis(0.9464 0.0000 -0.3230 0.0000 1.0000 0.0000 0.3230 0.0000 0.9464) | meta{route_distance=698.0000} | nodes=38 hash=2680ce886056
+Segment21 | Node3D | script=straight_segment.gd | pos(-174.7469 0.0000 -571.7917) basis(0.9837 0.0000 0.1801 0.0000 1.0000 0.0000 -0.1801 0.0000 0.9837) | meta{route_distance=728.0000} | nodes=54 hash=fbb30edae9c8
+House1 | Node3D | script=delivery_house.gd | pos(-156.4787 -1.0029 -598.9460) basis(0.1801 0.0000 -0.9837 0.0000 1.0000 0.0000 0.9837 0.0000 0.1801) | meta{} | nodes=52 hash=50e8a745f0de
+Segment22 | Node3D | script=hill_segment.gd | pos(-169.3449 0.0000 -601.3013) basis(0.9837 0.0000 0.1801 0.0000 1.0000 0.0000 -0.1801 0.0000 0.9837) | meta{route_distance=758.0000} | nodes=78 hash=f006e34b3217
+Segment23 | Node3D | script=curve_segment.gd | pos(-156.7400 0.0000 -670.1571) basis(0.9837 0.0000 0.1801 0.0000 1.0000 0.0000 -0.1801 0.0000 0.9837) | meta{route_distance=828.0000} | nodes=50 hash=ba360261ecb5
+Segment24 | Node3D | script=tunnel_segment.gd | pos(-145.9786 0.0000 -697.7725) basis(0.7299 0.0000 0.6836 0.0000 1.0000 0.0000 -0.6836 0.0000 0.7299) | meta{route_distance=858.0000} | nodes=143 hash=7ab9793d8586
+Segment25 | Node3D | script=gravel_segment.gd | pos(-115.9014 0.0000 -729.8873) basis(0.7299 0.0000 0.6836 0.0000 1.0000 0.0000 -0.6836 0.0000 0.7299) | meta{route_distance=902.0000} | nodes=57 hash=6cebe8c5cea2
+Segment26 | Node3D | script=curve_segment.gd | pos(-95.3942 0.0000 -751.7838) basis(0.7299 0.0000 0.6836 0.0000 1.0000 0.0000 -0.6836 0.0000 0.7299) | meta{route_distance=932.0000} | nodes=84 hash=30fa50f20d83
+Segment27 | Node3D | script=straight_segment.gd | pos(-79.5731 0.0000 -796.9589) basis(0.9592 0.0000 -0.2829 0.0000 1.0000 0.0000 0.2829 0.0000 0.9592) | meta{route_distance=982.0000} | nodes=79 hash=b8ef80dee91a
+Segment28 | Node3D | script=curve_segment.gd | pos(-88.0596 0.0000 -825.7335) basis(0.9592 0.0000 -0.2829 0.0000 1.0000 0.0000 0.2829 0.0000 0.9592) | meta{route_distance=1012.0000} | nodes=57 hash=29dbca6a4faf
+Segment29 | Node3D | script=straight_segment.gd | pos(-91.7244 0.0000 -855.2410) basis(0.9795 0.0000 0.2015 0.0000 1.0000 0.0000 -0.2015 0.0000 0.9795) | meta{delivery_sign_side=-1.0000,route_distance=1042.0000} | nodes=63 hash=7a48cb8aa58c
+Segment30 | Node3D | script=curve_segment.gd | pos(-85.6791 0.0000 -884.6255) basis(0.9795 0.0000 0.2015 0.0000 1.0000 0.0000 -0.2015 0.0000 0.9795) | meta{route_distance=1072.0000} | nodes=42 hash=0fd40f805bc0
+Segment31 | Node3D | script=straight_segment.gd | pos(-84.4279 0.0000 -914.3411) basis(0.9612 0.0000 -0.2759 0.0000 1.0000 0.0000 0.2759 0.0000 0.9612) | meta{route_distance=1102.0000} | nodes=51 hash=bc5d18ad37d2
+House2 | Node3D | script=delivery_house.gd | pos(-105.1340 -1.6865 -939.6086) basis(0.2759 0.0000 0.9612 0.0000 1.0000 0.0000 -0.9612 0.0000 0.2759) | meta{} | nodes=52 hash=57c551ee0729
+Segment32 | Node3D | script=gravel_segment.gd | pos(-92.7060 0.0000 -943.1764) basis(0.9612 0.0000 -0.2759 0.0000 1.0000 0.0000 0.2759 0.0000 0.9612) | meta{route_distance=1132.0000} | nodes=30 hash=a8974fda9df0
+Segment33 | Node3D | script=curve_segment.gd | pos(-100.9840 0.0000 -972.0117) basis(0.9612 0.0000 -0.2759 0.0000 1.0000 0.0000 0.2759 0.0000 0.9612) | meta{route_distance=1162.0000} | nodes=76 hash=0a5c9b349a13
+Segment34 | Node3D | script=service_stop_segment.gd | pos(-131.4883 0.0000 -1008.9668) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1212.0000} | nodes=309 hash=00433c0c44b3
+Segment35 | Node3D | script=gravel_segment.gd | pos(-237.6490 0.0000 -1037.7750) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1322.0000} | nodes=39 hash=169873cdbe70
+Segment36 | Node3D | script=hill_segment.gd | pos(-266.6019 0.0000 -1045.6318) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1352.0000} | nodes=94 hash=2e948c4f0a98
+Segment37 | Node3D | script=construction_zone_segment.gd | pos(-334.1586 0.0000 -1063.9644) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1422.0000} | nodes=93 hash=a8fab1f307f3
+Segment38 | Node3D | script=curve_segment.gd | pos(-372.7625 0.0000 -1074.4401) basis(0.2619 0.0000 -0.9651 0.0000 1.0000 0.0000 0.9651 0.0000 0.2619) | meta{route_distance=1462.0000} | nodes=67 hash=7946b855fff0
+Segment39 | Node3D | script=straight_segment.gd | pos(-399.7271 0.0000 -1086.9281) basis(0.6970 0.0000 -0.7171 0.0000 1.0000 0.0000 0.7171 0.0000 0.6970) | meta{delivery_sign_side=1.0000,route_distance=1492.0000} | nodes=76 hash=8f581e4ebecd
+Segment40 | Node3D | script=curve_segment.gd | pos(-421.2395 0.0000 -1107.8378) basis(0.6970 0.0000 -0.7171 0.0000 1.0000 0.0000 0.7171 0.0000 0.6970) | meta{route_distance=1522.0000} | nodes=44 hash=6c396b2d7665
+Segment41 | Node3D | script=straight_segment.gd | pos(-445.7450 0.0000 -1124.6370) basis(0.2575 0.0000 -0.9663 0.0000 1.0000 0.0000 0.9663 0.0000 0.2575) | meta{route_distance=1552.0000} | nodes=61 hash=62ee604819ac
+Segment42 | Node3D | script=curve_segment.gd | pos(-474.7332 0.0000 -1132.3628) basis(0.2575 0.0000 -0.9663 0.0000 1.0000 0.0000 0.9663 0.0000 0.2575) | meta{route_distance=1582.0000} | nodes=32 hash=eedb6c9ce6bf
+House3 | Node3D | script=delivery_house.gd | pos(-491.9825 2.4953 -1155.1426) basis(-0.7308 0.0000 -0.6826 0.0000 1.0000 0.0000 0.6826 0.0000 -0.7308) | meta{} | nodes=59 hash=970c8d676e2c
+Segment43 | Node3D | script=construction_zone_segment.gd | pos(-501.8323 0.0000 -1144.5973) basis(0.6826 0.0000 -0.7308 0.0000 1.0000 0.0000 0.7308 0.0000 0.6826) | meta{route_distance=1612.0000} | nodes=68 hash=0c7035a1d500
+Segment44 | Node3D | script=curve_segment.gd | pos(-531.0643 0.0000 -1171.9009) basis(0.6826 0.0000 -0.7308 0.0000 1.0000 0.0000 0.7308 0.0000 0.6826) | meta{route_distance=1652.0000} | nodes=63 hash=804b3200f100
+Segment45 | Node3D | script=speed_bump_segment.gd | pos(-549.2541 0.0000 -1206.1614) basis(0.9979 0.0000 0.0642 0.0000 1.0000 0.0000 -0.0642 0.0000 0.9979) | meta{route_distance=1692.0000} | nodes=41 hash=9f53dc1b8f61
+Segment46 | Node3D | script=rail_crossing_segment.gd | pos(-547.7126 0.0000 -1230.1118) basis(0.9979 0.0000 0.0642 0.0000 1.0000 0.0000 -0.0642 0.0000 0.9979) | meta{route_distance=1716.0000,track_height=-1.0788} | nodes=83 hash=7272d2e04111
+Segment47 | Node3D | script=curve_segment.gd | pos(-545.6572 0.0000 -1262.0458) basis(0.9979 0.0000 0.0642 0.0000 1.0000 0.0000 -0.0642 0.0000 0.9979) | meta{route_distance=1748.0000} | nodes=63 hash=86280202b06e
+Segment48 | Node3D | script=rail_crossing_segment.gd | pos(-538.1989 0.0000 -1290.7318) basis(0.8053 0.0000 0.5928 0.0000 1.0000 0.0000 -0.5928 0.0000 0.8053) | meta{route_distance=1778.0000,track_height=-1.7271} | nodes=66 hash=0f379fdfeb89
+Segment49 | Node3D | script=curve_segment.gd | pos(-519.2285 0.0000 -1316.5024) basis(0.8053 0.0000 0.5928 0.0000 1.0000 0.0000 -0.5928 0.0000 0.8053) | meta{route_distance=1810.0000} | nodes=83 hash=ccc7786f1bdc
+Segment50 | Node3D | script=straight_segment.gd | pos(-508.3205 0.0000 -1363.2175) basis(0.9293 0.0000 -0.3694 0.0000 1.0000 0.0000 0.3694 0.0000 0.9293) | meta{route_distance=1860.0000} | nodes=67 hash=2d874dc86500
+Segment51 | Node3D | script=curve_segment.gd | pos(-519.4026 0.0000 -1391.0956) basis(0.9293 0.0000 -0.3694 0.0000 1.0000 0.0000 0.3694 0.0000 0.9293) | meta{route_distance=1890.0000} | nodes=55 hash=523c918cbc40
+Segment52 | Node3D | script=straight_segment.gd | pos(-525.8865 0.0000 -1420.1293) basis(0.9952 0.0000 0.0974 0.0000 1.0000 0.0000 -0.0974 0.0000 0.9952) | meta{route_distance=1920.0000} | nodes=64 hash=379ee78653f2
+Segment53 | Node3D | script=curve_segment.gd | pos(-522.9637 0.0000 -1449.9866) basis(0.9952 0.0000 0.0974 0.0000 1.0000 0.0000 -0.0974 0.0000 0.9952) | meta{route_distance=1950.0000} | nodes=48 hash=45a485c94416
+Segment54 | Node3D | script=straight_segment.gd | pos(-515.7661 0.0000 -1478.8896) basis(0.8592 0.0000 0.5116 0.0000 1.0000 0.0000 -0.5116 0.0000 0.8592) | meta{route_distance=1980.0000} | nodes=63 hash=79e67fdd0ac1
+GoalLot | Node3D | script=route_goal_lot.gd | pos(-500.4190 2.6512 -1504.6669) basis(0.8592 0.0000 0.5116 0.0000 1.0000 0.0000 -0.5116 0.0000 0.8592) | meta{halo_points=[(-17.4800 3.9000 -5.5000), (-17.4800 3.9000 -19.0000), (17.4800 3.9000 -5.5000), (17.4800 3.9000 -19.0000)]} | nodes=66 hash=632e580f9bfc
 HouseNumber0 | Label3D | pos(56.3484 13.2472 -324.6753) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 1|TRAP_0 10' | meta{height_above_house=9.9524}
 HouseNumber1 | Label3D | pos(-156.4787 5.6815 -598.9460) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 2|TRAP_1 23' | meta{height_above_house=6.6844}
 HouseNumber2 | Label3D | pos(-105.1340 5.6768 -939.6086) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | text='CASA 3|TRAP_2 36' | meta{height_above_house=7.3632}
@@ -2158,7 +2158,7 @@ PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(-507.5
 PowerLines/PowerWires | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-540.2280 3.4381 -1474.1611 629.6810 10.7796 1344.2340) surfaces=1 [verts=34560 sum(-7799670.0000 244961.7656 -30052688.0000)]} | shadow=0 | meta{}
 NightFlares | MultiMeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | multimesh{n=83 QuadMesh aabb(-0.5000 -0.5000 0.0000 1.0000 1.0000 0.0000) surfaces=1} | meta{}
 AmbientWind | AudioStreamPlayer | meta{}
-Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=74 hash=a0c0d7626684
+Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=4 hash=0a1a5709fec5
 -- queries
 stop_road_distance(0)=356.0000
 stop_road_distance(1)=758.0000
