@@ -36,6 +36,9 @@ const PATHS: Array[String] = [
 	"res://assets/models/environment/props/sm_env_prop_road_barrier.glb",
 	# N-325 narrow bridge railing: 6 m along X, origin at the centre of the base (min_y 0).
 	"res://assets/models/environment/props/sm_env_prop_bridge_railing.glb",
+	# N-333 narrow bridge pier, every 4 m beside the railing: 0.34 x 0.34 x 1.15 m, origin at the
+	# centre of the base (min_y 0, x/z within +-0.17).
+	"res://assets/models/environment/route/sm_env_route_bridge_post.glb",
 	"res://assets/models/vehicles/sm_vehicle_parked_hatchback.glb",
 	"res://assets/models/vehicles/sm_vehicle_parked_pickup.glb",
 	# N-321 tow crane of the mud stretch: wheels on y=0, origin at the centre of the base, faces -Z.
