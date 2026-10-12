@@ -3,7 +3,8 @@
     "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background \
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
-Groups: houses, trees, plants, signs, props, yard (default: all).
+Groups: houses, trees, plants, signs, props, yard (default: all); guardrail and
+tall_fern rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -640,14 +641,76 @@ def bramble():
         blob("Berry", (math.cos(a) * 0.5, math.sin(a) * 0.5, rng.uniform(0.3, 0.8)), (0.04, 0.04, 0.04), "danger")
 
 
+# Tall fern cluster (N-331.2): 24 flat, straight fronds were 960 tris for a
+# prop that ground_plant scatters by the dozen (cap 250, N-331.6). Now 20
+# open fronds of 12 tris each: one-sided blades folded into a shallow V along
+# the midrib (volume without closing the mesh), drawn double-sided, so the
+# triangles go into the number of fronds instead of their thickness. Each
+# frond is a rosette leaf: it leaves the clump centre, arcs out over four
+# spans and droops to the tip; the blade starts at 12 % of the length, is
+# widest at 40 % and tapers to a point. Upright and spreading fronds alternate.
+def _double_sided(name):
+    """A copy of palette material `name` that never culls back faces (glTF
+    doubleSided). "fern.doublesided" still keys as "fern" in LowpolyMaterials,
+    which cuts the name at the first dot."""
+    m = bpy.data.materials.get(name + ".doublesided")
+    if m is None:
+        m = mat(name).copy()
+        m.name = name + ".doublesided"
+        m.use_backface_culling = False
+    return m
+
+
+def _open_frond(bm, slot, root, heading, length, half_width, lift, droop, fold=0.3):
+    ch, sh = math.cos(heading), math.sin(heading)
+    side = Vector((-sh, ch, 0.0))
+    spine = [Vector(root)]
+    angles = [lift - droop * j for j in range(4)]
+    for seg, a in zip((0.12, 0.28, 0.30, 0.30), angles):
+        r, z = math.cos(a) * length * seg, math.sin(a) * length * seg
+        spine.append(spine[-1] + Vector((ch * r, sh * r, z)))
+    rows = []
+    for k, w in ((1, 0.55), (2, 1.0), (3, 0.7)):
+        a = (angles[k - 1] + angles[k]) * 0.5
+        up = Vector((-ch * math.sin(a), -sh * math.sin(a), math.cos(a)))
+        w *= half_width
+        rows.append((bm.verts.new(spine[k] + side * -w), bm.verts.new(spine[k] + up * (w * fold)),
+                     bm.verts.new(spine[k] + side * w), up))
+    base, tip = bm.verts.new(spine[0]), bm.verts.new(spine[4])
+    quads = [((base, rows[0][1], rows[0][0]), rows[0][3]), ((base, rows[0][2], rows[0][1]), rows[0][3])]
+    for (l0, m0, r0, up), (l1, m1, r1, _) in zip(rows, rows[1:]):
+        quads += [((l0, m0, m1, l1), up), ((m0, r0, r1, m1), up)]
+    l2, m2, r2, up = rows[2]
+    quads += [((l2, m2, tip), up), ((m2, r2, tip), up)]
+    for verts, up in quads:
+        f = bm.faces.new(verts)
+        f.normal_update()
+        if f.normal.dot(up) < 0.0:
+            f.normal_flip()
+        f.material_index = slot
+
+
 def tall_fern_cluster():
     clear()
-    for k, (x, y) in enumerate([(0, 0), (0.55, 0.3), (-0.45, 0.35)]):
-        before = {o.name for o in bpy.context.scene.objects}
+    mesh = bpy.data.meshes.new("TallFernCluster")
+    obj = bpy.data.objects.new("TallFernCluster", mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(_double_sided("leaf"))
+    mesh.materials.append(_double_sided("fern"))
+    bm = bmesh.new()
+    # Clump centres around the origin (the old ones sat 0.2 m off it in y).
+    for k, (x, y, count) in enumerate([(-0.03, -0.22, 7), (0.52, 0.08, 7), (-0.48, 0.13, 6)]):
         rng = random.Random(210 + k)
-        for i in range(8):
-            frond("TallFern", 1.1 * rng.uniform(0.85, 1.1), 0.2, i * math.tau / 8 + rng.uniform(-0.2, 0.2), rng.uniform(0.6, 1.0), "fern" if i % 2 else "leaf")
-        move_new(before, dx=x, dy=y)
+        start = rng.uniform(0.0, math.tau)
+        for i in range(count):
+            heading = start + i * math.tau / count + rng.uniform(-0.2, 0.2)
+            if i % 2:   # spreading: rises ~45 deg, shorter, tip ends ~0.2 m up
+                lift, droop, length = rng.uniform(0.75, 0.9), rng.uniform(0.28, 0.34), 0.88
+            else:       # upright: rises ~70 deg, gives the clump its height
+                lift, droop, length = rng.uniform(1.15, 1.35), rng.uniform(0.22, 0.28), 1.2
+            _open_frond(bm, (i + k) % 2, (x, y, 0.0), heading, length * rng.uniform(0.9, 1.08), 0.15, lift, droop)
+    bm.to_mesh(mesh)
+    bm.free()
 
 
 def deadfall_branch():
@@ -1072,6 +1135,8 @@ GROUPS = {
                                                         "road_barrier", "bench")]),
     # Only the guardrail (N-332), without rewriting the other props.
     "guardrail": guardrail,
+    # Only the tall fern cluster (N-331.2), without rewriting the other plants.
+    "tall_fern": lambda: (tall_fern_cluster(), export_forest("tall_fern_cluster")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
