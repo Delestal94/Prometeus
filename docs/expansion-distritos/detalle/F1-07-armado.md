@@ -98,6 +98,7 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 
 
 ### D-0711 · Caja armada sigue siendo `DeliveryPackage` — A · Sonnet 5.5 · xhigh · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — sin código nuevo: `test_box_package_flow` prueba levantar, asentar, asiento, cuidado igual al de un paquete común y entrega en la puerta con una caja armada.
 **Depende de:** D-0213 (`BoxToPackage`), D-0710
 **Qué:** el paquete que sale de `BoxToPackage.build()` no es un tipo nuevo: se levanta, se asienta en el camión, se cuida y se entrega con el mismo código de hoy (`package.gd`, `PackageHandling`, `PackageCare`). Decisión: no se agrega ninguna clase; se prueba el flujo completo con una caja armada y se deja la garantía en un test.
 **Test** `test_box_package_flow`: una caja armada pasa por levantar, asentar en el camión, cuidado y entrega en la puerta; sus metadatos (`META_PACKED_BOX`, `META_ORDER_ID`) sobreviven.
