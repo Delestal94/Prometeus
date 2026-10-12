@@ -43,3 +43,14 @@ entra. Sin rotación en F1.
 **Test** `test_packing_station`: tres productos (1×1×2, 2×2×1, 2×1×1) en una caja M por `first_fit`, la caja
 conoce los tres, 8 celdas ocupadas sin solaparse, y `NO_SPOT` para un producto grande, nulo o caja llena.
 **Hecho cuando:** el test pasa. La interacción visible (apuntar a una celda, vista previa) queda para la mesa D-0701.b.
+
+### D-0705 · Relleno — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-12, ya en main)** — se construyó con D-0212 y D-0504: `PackedBox.fill_free_cells` / `free_ratio` / `fill_ratio` y `PackagingSupplies.pad` (cobra 1 por celda); `test_packed_box`, `test_packaging_supplies`. Decisión: un solo tipo de relleno en F1 (supuestos: "1 por celda"); papel/burbuja/espuma quedan para la Ampliación.
+**Depende de:** D-0212, D-0504
+
+### D-0706 · Cerrar con cinta — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `PackingStation.seal(wallet)`, `is_sealed()` y `dispatch()`; `test_packing_station` ampliado. El gesto de pasar el dispensador queda para la mesa visible (D-0701.b).
+**Depende de:** D-0701 (`PackingStation`), D-0504 (`PackagingSupplies.tape`)
+**Qué:** `seal` pone la cinta de la caja de la mesa y cobra `TAPE_COST` una vez. `dispatch()` saca la caja de la mesa solo si está sellada; abierta devuelve null y la deja donde está.
+**Test** `test_packing_station`: sin caja, caja abierta que no se despacha, sellado con un solo cobro, despacho de la caja sellada.
+**Hecho cuando:** el test pasa (caja sin cinta no se puede despachar).

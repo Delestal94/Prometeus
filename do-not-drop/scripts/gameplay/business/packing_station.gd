@@ -74,6 +74,25 @@ func take_box() -> PackedBox:
 	return out
 
 
+## True when the box on the table is taped shut (D-0706).
+func is_sealed() -> bool:
+	return box != null and box.taped
+
+
+## Tapes the box on the table shut and pays the tape (PackagingSupplies.tape). False, changing
+## nothing, if the table has no box, it is already taped or the wallet cannot pay.
+func seal(wallet: Object) -> bool:
+	return box != null and PackagingSupplies.tape(box, wallet)
+
+
+## Takes the box off the table to send it away. Null, leaving it in place, if it is not taped
+## shut: an open box cannot be dispatched (D-0706).
+func dispatch() -> PackedBox:
+	if not is_sealed():
+		return null
+	return take_box()
+
+
 ## JSON-friendly copy: travels by network and lives in a save.
 func to_dict() -> Dictionary:
 	var waiting: Array = []
