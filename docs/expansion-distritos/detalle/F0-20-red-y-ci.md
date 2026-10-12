@@ -78,6 +78,7 @@ piso del host, el stock total no cambia y al volver ve el mismo stock.
 **Hecho cuando:** el test pasa.
 
 ### D-2007 · `RpcGuard` en todos los RPC nuevos — A · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `test_rpc_guard` ya recorría todo `res://`; ahora fija `EXPANSION_DIRS` (`scripts/core/company/`, `scripts/gameplay/business/`), exige `CompanyNet._request` entre los RPC y prueba un RPC de negocio temporal (texto dentro del test): sin guardas lo marca, con guardas pasa.
 **Depende de:** D-2003
 **Qué:** ampliar el test de N-238 que recorre los RPC del proyecto para que incluya
 `scripts/core/company/` y `scripts/gameplay/business/`. Cada `@rpc("any_peer")` debe pasar por

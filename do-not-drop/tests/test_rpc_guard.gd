@@ -20,6 +20,10 @@ extends SceneTree
 ##   (ORDERED_PAIRS: the colour slots before the campaign applied by slot);
 ## - EventBus only relays the requests a player can make (a callout, the
 ##   horn), each with its own shape: request() is itself an any_peer RPC.
+## - D-2007: the expansion's folders (EXPANSION_DIRS) are scanned and
+##   CompanyNet._request is among the RPCs found; an unguarded any_peer RPC
+##   placed in one of them (a temporary script kept inside this test) is
+##   caught, and the same RPC with its guards passes.
 ## A function that can't follow a rule goes in EXCEPTIONS with the reason.
 ## Tokens only count in code: a `# ...` comment is cut before searching, so a
 ## TODO naming RpcGuard can't stand in for the call (N-238).
@@ -49,6 +53,21 @@ const FINITE_CHECKS: Array[String] = ["RpcGuard.finite", "is_finite(", "is_nan("
 ## The project had 36 any_peer RPCs when this test was last updated: far
 ## fewer found means the scanner broke, not that they went away.
 const MIN_RPCS: int = 34
+## D-2007: the expansion's code. Every any_peer RPC in it follows the same rules.
+const EXPANSION_DIRS: Array[String] = ["res://scripts/core/company/", "res://scripts/gameplay/business/"]
+## A request a business script could add, written without any guard...
+const UNGUARDED_RPC: String = """@rpc("any_peer", "reliable")
+func request_move(units: int, label: String, note: Dictionary) -> void:
+	move_units(units, label, note)
+"""
+## ...and the same request once it checks who sent it, spends their budget and
+## bounds its values.
+const GUARDED_RPC: String = """@rpc("any_peer", "reliable")
+func request_move(units: int, label: String, note: Dictionary) -> void:
+	if not RpcGuard.allow_request(self) or not RpcGuard.text_ok(label) or not RpcGuard.dict_ok(note):
+		return
+	move_units(units, label, note)
+"""
 const SKIPPED_DIRS: Array[String] = ["addons", "tests", ".godot"]
 ## RPCs the host sends one after the other that must arrive in that order:
 ## reliable, on the same channel. [path, function] each.
@@ -78,7 +97,8 @@ func _run() -> void:
 	for path: String in scripts:
 		for rpc: Dictionary in _any_peer_rpcs(path):
 			found.append("%s:%s" % [path, rpc.name])
-			_check_rpc(path, rpc)
+			for problem: String in _rpc_problems(path, rpc):
+				_expect(false, problem)
 	_expect(found.size() >= MIN_RPCS, "Finds every any_peer RPC in the project (got %d)" % found.size())
 	_expect(found.has("res://modules/net_session/net_event_bus.gd:request"),
 		"Portable modules are scanned too (NetEventBus.request)")
@@ -89,6 +109,7 @@ func _run() -> void:
 	for key: String in CRITICAL_RPCS:
 		_expect(found.has(key), "Critical request %s still names an any_peer RPC" % key)
 
+	_check_expansion(scripts, found)
 	_check_comments_ignored()
 	_check_ordered_pairs()
 	await _check_event_bus()
@@ -99,35 +120,42 @@ func _run() -> void:
 	quit(_failures)
 
 
-func _check_rpc(path: String, rpc: Dictionary) -> void:
+## What `rpc` in `path` gets wrong, one line per broken rule; empty when it
+## follows them all.
+func _rpc_problems(path: String, rpc: Dictionary) -> Array[String]:
+	var problems: Array[String] = []
 	var key: String = "%s:%s" % [path, rpc.name]
 	if EXCEPTIONS.has(key):
-		return
+		return problems
 	var body: String = _expanded_body(path, rpc)
 	var from_host: bool = body.contains("RpcGuard.from_host(")
-	_expect(_has_any(body, SENDER_CHECKS), "%s checks who sent it (RpcGuard or get_remote_sender_id())" % key)
+	var rule: Callable = func(condition: bool, description: String) -> void:
+		if not condition:
+			problems.append(description)
+	rule.call(_has_any(body, SENDER_CHECKS), "%s checks who sent it (RpcGuard or get_remote_sender_id())" % key)
 	if bool(rpc.reliable) and not from_host and not BUDGET_EXEMPT.has(key):
-		_expect(_has_any(body, BUDGET_CHECKS),
+		rule.call(_has_any(body, BUDGET_CHECKS),
 			"%s is a reliable request: RpcGuard.allow_request() limits it per peer" % key)
 	if CRITICAL_RPCS.has(key):
-		_expect(body.contains("RpcGuard.allow_critical_request("),
+		rule.call(body.contains("RpcGuard.allow_critical_request("),
 			"%s lets go of something: RpcGuard.allow_critical_request() keeps a reserve for it" % key)
 	for parameter: Dictionary in rpc.params:
 		var type_name: String = parameter.type
 		var name_: String = parameter.name
 		if type_name in ["float", "Vector2", "Vector3", "Transform3D"]:
-			_expect(_has_any(body, FINITE_CHECKS), "%s rejects NaN/inf in its %s %s" % [key, type_name, name_])
+			rule.call(_has_any(body, FINITE_CHECKS), "%s rejects NaN/inf in its %s %s" % [key, type_name, name_])
 		elif type_name == "Dictionary":
-			_expect(body.contains("RpcGuard.dict_ok(%s" % name_), "%s bounds its dictionary %s" % [key, name_])
+			rule.call(body.contains("RpcGuard.dict_ok(%s" % name_), "%s bounds its dictionary %s" % [key, name_])
 		elif type_name == "String":
-			_expect(body.contains("RpcGuard.text_ok(%s" % name_), "%s bounds its text %s" % [key, name_])
+			rule.call(body.contains("RpcGuard.text_ok(%s" % name_), "%s bounds its text %s" % [key, name_])
 		elif type_name == "StringName" and not from_host:
-			_expect(body.contains("RpcGuard.name_ok(%s" % name_), "%s bounds its StringName %s" % [key, name_])
+			rule.call(body.contains("RpcGuard.name_ok(%s" % name_), "%s bounds its StringName %s" % [key, name_])
 		elif type_name == "NodePath" and not from_host:
-			_expect(body.contains("RpcGuard.path_ok(%s" % name_), "%s bounds its NodePath %s" % [key, name_])
+			rule.call(body.contains("RpcGuard.path_ok(%s" % name_), "%s bounds its NodePath %s" % [key, name_])
 		elif type_name == "Array" or type_name.begins_with("Packed"):
-			_expect(body.contains(".size()") or body.contains("RpcGuard.args_ok(%s" % name_),
+			rule.call(body.contains(".size()") or body.contains("RpcGuard.args_ok(%s" % name_),
 				"%s bounds the size of %s" % [key, name_])
+	return problems
 
 
 ## The RPC's own body plus, one level down, the body of each function it
@@ -157,6 +185,8 @@ func _expanded_body(path: String, rpc: Dictionary) -> String:
 
 ## The script `path` extends, when it extends a class_name (or a path).
 func _parent_path(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return ""
 	var match_: RegExMatch = RegEx.create_from_string("(?m)^extends\\s+(\"[^\"]+\"|\\w+)").search(
 		FileAccess.get_file_as_string(path))
 	if match_ == null:
@@ -168,8 +198,12 @@ func _parent_path(path: String) -> String:
 
 
 func _any_peer_rpcs(path: String) -> Array[Dictionary]:
+	return _any_peer_rpcs_in(path, FileAccess.get_file_as_string(path))
+
+
+func _any_peer_rpcs_in(path: String, text: String) -> Array[Dictionary]:
 	var rpcs: Array[Dictionary] = []
-	var lines: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+	var lines: PackedStringArray = text.split("\n")
 	var signature := RegEx.create_from_string(
 		"^(?:static\\s+)?func\\s+(\\w+)\\s*\\((.*)\\)\\s*(?:->\\s*[\\w\\[\\]]+\\s*)?:")
 	for index: int in lines.size():
@@ -229,6 +263,38 @@ func _code_only(line: String) -> String:
 	return line
 
 
+## D-2007: the expansion's folders are part of the scan, its request RPC is
+## checked like any other, and a new unguarded RPC in one of them is caught
+## (a script that only lives in this test, never on disk).
+func _check_expansion(scripts: Array[String], found: Array[String]) -> void:
+	for dir: String in EXPANSION_DIRS:
+		_expect(scripts.any(func(path: String) -> bool: return path.begins_with(dir)),
+			"Scripts under %s are scanned" % dir)
+	_expect(found.has("res://scripts/core/company/company_net.gd:_request"),
+		"CompanyNet._request is among the any_peer RPCs checked")
+	var fake: String = EXPANSION_DIRS[1].path_join("_d2007_temporary.gd")
+	var unguarded: Array[String] = _fake_rpc_problems(fake, UNGUARDED_RPC)
+	var wanted: Array[String] = ["checks who sent it", "RpcGuard.allow_request()", "bounds its text label",
+		"bounds its dictionary note"]
+	for rule: String in wanted:
+		_expect(unguarded.any(func(problem: String) -> bool: return problem.contains(rule)),
+			"An unguarded business RPC is caught: %s (got %s)" % [rule, unguarded])
+	var guarded: Array[String] = _fake_rpc_problems(fake, GUARDED_RPC)
+	_expect(guarded.is_empty(), "The same RPC with its guards passes (got %s)" % [guarded])
+
+
+## The problems of the one RPC in `text`, as if it were the script at `path`.
+func _fake_rpc_problems(path: String, text: String) -> Array[String]:
+	_function_cache.erase(path)
+	var rpcs: Array[Dictionary] = _any_peer_rpcs_in(path, text)
+	if rpcs.size() != 1:
+		return ["expected one any_peer RPC in the fake script, got %d" % rpcs.size()]
+	_function_cache[path] = _functions_in(text)
+	var problems: Array[String] = _rpc_problems(path, rpcs[0])
+	_function_cache.erase(path)
+	return problems
+
+
 ## N-238: a check named only in a comment doesn't count, one in code does, and
 ## a `#` inside a string doesn't cut the line.
 func _check_comments_ignored() -> void:
@@ -250,14 +316,19 @@ func _check_comments_ignored() -> void:
 func _functions(path: String) -> Dictionary:
 	if _function_cache.has(path):
 		return _function_cache[path]
+	var functions: Dictionary = _functions_in(FileAccess.get_file_as_string(path))
+	_function_cache[path] = functions
+	return functions
+
+
+func _functions_in(text: String) -> Dictionary:
 	var functions: Dictionary = {}
-	var lines: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+	var lines: PackedStringArray = text.split("\n")
 	var head := RegEx.create_from_string("^(?:static\\s+)?func\\s+(\\w+)")
 	for index: int in lines.size():
 		var match_: RegExMatch = head.search(lines[index])
 		if match_ != null:
 			functions[match_.get_string(1)] = _body(lines, index)
-	_function_cache[path] = functions
 	return functions
 
 
