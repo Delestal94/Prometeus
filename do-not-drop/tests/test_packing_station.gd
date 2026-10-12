@@ -8,6 +8,8 @@ extends SceneTree
 ##   nothing) with no box, an unstaged product or a spot that does not fit;
 ## - three products fit in one box at PackedBox.first_fit() spots without overlapping, and the
 ##   box knows its content (D-0703);
+## - an open box cannot be dispatched; seal() tapes it, charges the tape once and dispatch()
+##   then hands the box over (D-0706);
 ## - take_box() frees the table; to_dict() survives a JSON round trip.
 
 var _failures: int = 0
@@ -22,6 +24,7 @@ func _run() -> void:
 	_test_staging()
 	_test_put_in_box()
 	_test_three_products()
+	_test_seal_and_dispatch()
 	_test_round_trip()
 	quit(_failures)
 
@@ -104,6 +107,31 @@ func _test_three_products() -> void:
 	var full: PackedBox = PackedBox.new(&"M")
 	full.fill_free_cells(full.total_cells())
 	_expect(full.first_fit(_product(&"mug", Vector3i.ONE)) == PackedBox.NO_SPOT, "full box: no spot")
+
+
+func _test_seal_and_dispatch() -> void:
+	var state: Node = root.get_node_or_null(^"CompanyState")
+	if state == null or state.get_script() == null:
+		_expect(false, "CompanyState autoload missing")
+		return
+	state.new_company("Tape Co")
+	var money: int = state.money
+	var station: PackingStation = PackingStation.make(&"t1")
+	_expect(not station.seal(state), "no box to seal")
+	_expect(station.dispatch() == null, "empty table dispatches nothing")
+	station.start_box(&"S")
+	_expect(not station.is_sealed(), "a fresh box is open")
+	_expect(station.dispatch() == null, "open box is not dispatched")
+	_expect(station.has_box(), "the open box stays on the table")
+	_expect(station.seal(state), "seal tapes the box")
+	_expect(station.is_sealed(), "box is sealed")
+	_expect(state.money == money - CompanyTuning.TAPE_COST, "tape charged once")
+	_expect(not station.seal(state), "second seal refused")
+	_expect(state.money == money - CompanyTuning.TAPE_COST, "no second charge")
+	var out: PackedBox = station.dispatch()
+	_expect(out != null and out.taped, "sealed box is dispatched")
+	_expect(not station.has_box(), "table is free after dispatch")
+	state.reset()
 
 
 func _test_round_trip() -> void:

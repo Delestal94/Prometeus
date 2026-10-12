@@ -25,6 +25,17 @@
 **Test** `test_build_placement`: libre, fuera del piso, área fija, choque, bordes que se tocan, giro, sin plata, `free`.
 **Hecho cuando:** el test de choque pasa.
 
+### D-0903 · Rotar, mover y vender objetos colocados — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `BuildPlacement.rotate_piece/move_piece/sell_piece` (`build_placement.gd`): las mismas comprobaciones que al colocar, ignorando la pieza misma; `test_build_edit`. El adaptador con nodos (elegir la pieza con el cursor, teclas) queda para D-0917/D-0943.
+**Depende de:** D-0902 (`BuildPlacement`) y D-0920 (`PlaceableShop.sell`)
+**Qué:** sobre una pieza ya en `layout` (por índice):
+- `preview(..., ignore_index)`: el choque no cuenta las celdas de la propia pieza.
+- `rotate_piece(state, index, quarter_turns = 1)` y `move_piece(state, index, x, z)`: devuelven el resultado de `preview`; la pieza solo cambia si es verde. No cuestan plata.
+- `sell_piece(state, index)`: `PlaceableShop.sell` (devolución parcial); `-1` con índice inválido.
+**Decisión:** rotar y mover son gratis (el costo de reubicar es el tiempo del jugador); gira alrededor de la celda esquina, igual que `footprint_rect`.
+**Test** `test_build_edit`: giro libre y con vuelta a 0, giro fuera del piso o sobre otra pieza rechazado sin cambios, mover a celda libre (incluidas las propias), mover fuera / sobre área fija / sobre otra pieza rechazado, gratis, vender paga la devolución, índices inválidos.
+**Hecho cuando:** el test de las 3 acciones pasa.
+
 ### D-0904 · Objetos colocables iniciales — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `PlaceableDefinition` (`scripts/gameplay/business/placeable_definition.gd`) + 4 `.tres` en `data/placeables/` (mesa de armado, estante, heladera, zona de despacho); `test_placeable_definitions`.
 **Depende de:** nada que falte (solo datos; la grilla de colocación D-0225 y el layout D-0620 los usan, no al revés)

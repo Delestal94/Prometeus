@@ -195,12 +195,14 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 - **Qué lleva hoy** (`CompanyNet.snapshot()`): `seq`; `inventory` (el stock vivo con reservas);
   `company` (`CompanyState.to_dict()` sin su stock guardado: plata, día y hora, reputación, bloqueos
   abiertos, flota, empleados, hitos, layout, libro de caja). Un galpón de 300 unidades en 150 lugares con
-  el libro lleno pesa 34 KB y 2 KB comprimido: un solo trozo.
+  el libro lleno pesa 34 KB y 2 KB comprimido: un solo trozo. Parte `clock` (D-0219, `GameClock.attach()`):
+  el ancla `{minute, speed, paused}` movida al momento en que el host arma el snapshot; el que entra la
+  toma con su propio tick menos medio RTT, como un `clock_anchor`.
 - **Partes que faltan**: `add_snapshot_part(key, take, put)` suma una parte con su clave; cada peer suma
   las mismas antes de que su mundo esté listo. `take` (host) devuelve datos planos; `put` (cliente) los
   pone en su lugar sin señales de hechos, los valida (regla 5) y devuelve `false` si no sirven (el
   cliente espera otro snapshot). Las suman: `OrderBook` (D-0803 / D-0807, cuando el mundo lo tenga),
-  fase del día y ancla del reloj (D-0203 / D-0219), palets con estado y zona (D-0605 / D-0607), mesas de
+  fase del día (D-0203), palets con estado y zona (D-0605 / D-0607), mesas de
   armado (D-0701 en adelante), cajas vivas con lo de `box_sealed` y `update_visibility` después del
   último trozo (regla 10, D-0709 / D-0711) y bultos en el piso con su posición (D-2006 / D-0611).
 - **Del lado del cliente** (`apply_snapshot()`): valida el `seq` (entero, no menor al aplicado) y el stock
