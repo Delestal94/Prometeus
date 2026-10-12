@@ -190,6 +190,18 @@ jobs:
           set -o pipefail
           timeout 120 xvfb-run -a "$GODOT" --path do-not-drop --script res://tests/bench_drive.gd -- --seconds=30 --seed=4242 --hitch=33 2>&1 | tee "$RUNNER_TEMP/runtime-audit/bench-drive.log"
 
+      # Informational (D-2011): the company world's shed walk. FPS under software rendering mean
+      # nothing, so a slow, crashed or timed-out bench never fails the job (|| true); the numbers
+      # are in the log (BENCH_COMPANY key=value lines) and in the uploaded artifact.
+      - name: Measure company world performance
+        if: always()
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          timeout 120 xvfb-run -a "$GODOT" --path do-not-drop --script res://tests/bench_company.gd -- --seconds=30 2>&1 | tee "$RUNNER_TEMP/runtime-audit/bench-company.log" || true
+
       - name: Upload runtime audit
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
