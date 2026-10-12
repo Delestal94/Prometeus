@@ -64,3 +64,25 @@ mira el pedido entero; recibir sin saldo lo deja en rojo.
 **Decisión:** se cobra cada paso al hacerlo (no al cerrar la caja), con `spend` y no `charge`: sin plata no se puede seguir embalando, a diferencia de la mercadería ya descargada (D-0503). Una caja abandonada solo cuesta lo usado. Los pasos de la mesa (relleno D-0705, cinta D-0706, etiqueta D-0707) llaman a esta clase.
 **Test** `test_packaging_supplies`: rellenar 3 celdas cobra 3; pedir de más se limita a las libres; cinta se cobra una vez; etiqueta y sello rechazan repetidos y vacíos; con 2 de saldo, 3 celdas no entran (la caja y el saldo no cambian) y 2 sí; el libro suma `packaging` y `used_cost` coincide.
 **Hecho cuando:** el test pasa.
+
+### D-0506 · Penalidades — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `OrderPenalties` (equivocado, roto, tarde, mal etiquetado) + `CompanyState.add_reputation`; `test_order_penalties`.
+**Depende de:** D-0501, D-0502, D-0212
+**Qué:** `OrderPenalties` (`scripts/gameplay/business/order_penalties.gd`), funciones estáticas sin nodos.
+`assess(order, box, now_min, broken, products)` devuelve `{pay, base, lost, kinds, reputation}`:
+- **Producto equivocado, faltante o de más** (`matches_order` compara `PackedBox.contents()` con los ítems del
+  pedido): la caja paga `WRONG_BOX_PAY_FACTOR` (0) y cuesta `WRONG_BOX_REPUTATION` (-3).
+- **Rotura** (`broken` = un id por unidad rota): se pierde el precio de venta de cada una (tope: la paga) y
+  cuesta `BROKEN_PRODUCT_REPUTATION` (-5) por unidad. El envío no se pierde.
+- **Tarde:** `LATE_PENALTY` (-25 %), igual que `Order.payout`; no cuesta reputación.
+- **Caja mal etiquetada o sin etiqueta:** `MISLABEL_PAY_LOSS` (-15 %) y `MISLABEL_REPUTATION` (-1).
+- Las penalidades se apilan en ese orden; la reputación de una entrega nunca baja de `PENALTY_REPUTATION_CAP` (-10).
+- `apply_reputation(company, verdict)` pasa el cambio a `CompanyState.add_reputation` (nuevo, con tope del rango).
+**Decisión:** las penalidades son **rebajas de la paga** y de reputación, no cobros aparte: lo que el cliente
+no paga nunca es plata que la empresa tuvo. (Los cobros a mano, como alquiler, son `charge`.) Los números
+nuevos (`MISLABEL_*`, tope) van en `CompanyTuning`. Qué entrega "llega rota" lo decide el tramo de puerta (D-0340);
+acá solo se recibe la lista.
+**Test** `test_order_penalties`: entrega perfecta; 1 y 3 unidades en vez de 2; una y dos rotas; tarde (y justo en
+el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77); tope de reputación; reputación en
+`CompanyState` dentro de su rango.
+**Hecho cuando:** el test pasa.
