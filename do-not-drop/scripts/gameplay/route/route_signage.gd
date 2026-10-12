@@ -38,6 +38,10 @@ const SIGN_LATERAL: float = 7.8
 const SIGN_LEAD: float = 6.0
 const GUARDRAIL: String = RouteDresser.PROPS + "sm_env_prop_guardrail.glb"
 const GUARDRAIL_LATERAL: float = 7.4
+## The model is 4 m along X; its beam face stands this far toward the road from
+## its origin (the W-beam sits at Blender y 0.45..0.75, centre 0.6).
+const GUARDRAIL_LENGTH: float = 4.0
+const GUARDRAIL_BEAM_INSET: float = 0.6
 
 
 var _dresser: RouteDresser
@@ -262,16 +266,52 @@ func dress_barriers(segment: RouteSegment) -> void:
 ## Along the outside of every real bend -- the side a van that takes it too
 ## fast leaves the road on. Authored along X with the reflector on -Z; a
 ## quarter turn lays it along the road, reflector toward the asphalt.
+##
+## The run follows the beam's own line round the bend, cornered the way the
+## edge line is (CurveSegment._build_edge_line: mitred at each pivot), and each
+## chord's stretch of it is cut into equal pieces, stretched a few percent along
+## X to meet end to end. Laying 4 m pieces from the centreline's slots instead
+## (the old way) put the piece centred on a pivot 2 m from its neighbour: closer
+## than the footprints allow, so that neighbour was always turned down and a 2 m
+## hole opened at every pivot.
 func _place_guardrails(segment: RouteSegment) -> void:
+	for xform: Transform3D in guardrail_layout(segment):
+		_placement.try_place(segment, "RoadsideDressing", GUARDRAIL, xform,
+			{"id": &"guardrail", "radius": 0.3, "footprint": 1.5, "clearance": 6.6, "max_slope": 1.0, "solid": true,
+					"tilt": true})
+
+
+## Where each piece of a bend's guardrail goes, in the segment's space (empty on
+## a bend with no outside). Public so a test can lay it without a terrain.
+static func guardrail_layout(segment: RouteSegment) -> Array[Transform3D]:
+	var layout: Array[Transform3D] = []
 	var outer: float = -signf(segment.exit_offset.x)
 	if outer == 0.0:
-		return
-	for slot: Transform3D in segment.get_dressing_slots(4.0):
-		var xform: Transform3D = slot * Transform3D(Basis(Vector3.UP, outer * PI * 0.5),
-				Vector3(outer * GUARDRAIL_LATERAL, 0.0, -2.0))
-		_placement.try_place(segment, "RoadsideDressing", GUARDRAIL, xform,
-			{"id": &"guardrail", "radius": 0.3, "footprint": 1.8, "clearance": 6.6, "max_slope": 1.0, "solid": true,
-					"tilt": true})
+		return layout
+	# One slot per chord at this spacing: the chords' own frames, then the exit.
+	var frames: Array[Transform3D] = segment.get_dressing_slots(CurveSegment.CHORD_LENGTH)
+	frames.append(Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset))
+	var corners: Array[Vector3] = []
+	for index: int in range(frames.size()):
+		var right: Vector3 = frames[index].basis.x
+		var miter: float = 1.0
+		if index > 0:
+			right = (frames[index - 1].basis.x + frames[index].basis.x).normalized()
+			miter = 1.0 / maxf(right.dot(frames[index].basis.x), 0.5)
+		corners.append(frames[index].origin + right * (outer * miter * (GUARDRAIL_LATERAL - GUARDRAIL_BEAM_INSET)))
+	for index: int in range(corners.size() - 1):
+		var span: float = corners[index].distance_to(corners[index + 1])
+		var pieces: int = maxi(1, roundi(span / GUARDRAIL_LENGTH))
+		var step: float = span / float(pieces)
+		var forward: Vector3 = (corners[index + 1] - corners[index]) / span
+		var yaw: float = atan2(-forward.x, -forward.z)
+		var basis: Basis = Basis(Vector3.UP, yaw + outer * PI * 0.5).scaled_local(
+				Vector3(step / GUARDRAIL_LENGTH, 1.0, 1.0))
+		# From the beam's line out to the model's origin, away from the road.
+		var away: Vector3 = Basis(Vector3.UP, yaw).x * (outer * GUARDRAIL_BEAM_INSET)
+		for piece: int in range(pieces):
+			layout.append(Transform3D(basis, corners[index] + forward * (step * (float(piece) + 0.5)) + away))
+	return layout
 
 
 ## Cones and the barrier stand right at the edge of the closed lane (that's
