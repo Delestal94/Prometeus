@@ -254,7 +254,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   suave, un poco más clara que la de un opaco, y recibe sombra. Captura girando 360°.
 - [x] **S-311.34** (`8a79db6d`) Color, opacidad y brillo por jugador con `instance uniform`: un solo material para
   todos, sin duplicarlo por instancia.
-- [ ] **S-311.35** Variante "opaca lechosa" para la calidad baja de las opciones y para quien la elija en
+- [x] **S-311.35** (`56c07255`) Variante "opaca lechosa" para la calidad baja de las opciones y para quien la elija en
   accesibilidad: mismo look sin transparencia ni lectura de pantalla.
 - [ ] **S-311.36** Capturas en todos los contextos con `revisor-visual`: día, atardecer, noche con
   linternas, lluvia, niebla, interior del camión, depósito, pantalla de resultados.
