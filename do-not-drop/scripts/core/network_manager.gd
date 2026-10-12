@@ -70,11 +70,14 @@ const MAX_PLAYERS: int = 8
 ## snapshot a "clock" part (the company day's clock from the host), D-0219;
 ## 32: CompanyNet's _apply_event carries a new kind, day_phase, and its
 ## snapshot a "day_cycle" part (the company day's phase and frozen shed from
-## the host), D-0203.
+## the host), D-0203;
+## 33: CompanyNet's _request takes a new kind, units_drop, and units_moved
+## events to floor:<n> carry pos; the snapshot carries floor positions
+## (company mode, D-2006).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 32
+const PROTOCOL_VERSION: int = 33
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
