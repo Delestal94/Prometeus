@@ -29,10 +29,14 @@ extends Node
 ## (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
 ## path, only to know which peers have their world up and when one comes up.
 ##
-## Kinds today: units_take and units_store (rows 5 and 6 of the contract's section 2) and
-## snapshot_request. A task that adds an action appends its kind to REQUEST_KINDS (and to
-## CRITICAL_KINDS when losing it leaves a player stuck, rule 8), checks it in
-## _handle_request() and applies its event in _apply_state().
+## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section
+## 2; units_drop is critical) and snapshot_request. A task that adds an action appends its kind
+## to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule 8),
+## checks it in _handle_request() and applies its event in _apply_state().
+##
+## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its
+## `pos` (a drop, or what a peer that left held), kept on every peer (floor_bundles) and taken
+## back with units_take (a bundle is its own station).
 ##
 ## Events nobody asks for (the contract's "without a client request": the day's clock and phases,
 ## later orders) are the host's own rules: they go out through publish(), the same path.
@@ -60,12 +64,16 @@ signal company_state_restored(snapshot_seq: int)
 
 const HOST_ID: int = 1
 const SNAPSHOT_REQUEST: StringName = &"snapshot_request"
+## Units from the sender's hands onto the floor: {product, qty, pos: Vector3, rid} (row 7, D-2006).
+const UNITS_DROP: StringName = &"units_drop"
 ## Request kinds the host takes (the contract's section 2 whitelist); anything else is
 ## dropped. Later tasks append theirs.
-const REQUEST_KINDS: Array[StringName] = [&"units_take", &"units_store", SNAPSHOT_REQUEST]
+const REQUEST_KINDS: Array[StringName] = [
+	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST
+]
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
-## RpcGuard's critical reserve once the sender's budget is gone. units_drop joins with D-2006.
-const CRITICAL_KINDS: Array[StringName] = []
+## RpcGuard's critical reserve once the sender's budget is gone.
+const CRITICAL_KINDS: Array[StringName] = [UNITS_DROP]
 ## The host's day clock changed pace: {minute, speed, paused} (D-0219, GameClock.apply_anchor()).
 const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## The day moved on, or the shed froze or thawed: {day, phase, frozen, lag, frozen_at[, summary]}
@@ -96,10 +104,15 @@ const SNAPSHOT_MAX_CHUNKS: int = 8
 ## Longest id (product, location, order) the stock of a snapshot may carry.
 const SNAPSHOT_MAX_ID_LENGTH: int = 256
 ## Keys of the snapshot that CompanyNet fills itself (snapshot()); no part may take them.
-const SNAPSHOT_KEYS: Array[String] = ["seq", "inventory", "company"]
+const SNAPSHOT_KEYS: Array[String] = ["seq", "inventory", "company", "floor"]
 const HANDS_PREFIX: String = "hands:"
+## Inventory locations of the bundles of units on the floor: floor:<n> (D-2006).
+const FLOOR_PREFIX: String = FloorBundles.PREFIX
+## units_drop: a `pos` farther than this (meters) from where the host sees the player lands at
+## its feet instead. Never a refusal: letting go always empties the hand (row 7).
+const DROP_REACH: float = 2.0
 ## Where the product catalog lives: an id in a request must name one of its files.
-const PRODUCTS_DIR: String = "res://data/products/"
+const PRODUCTS_DIR: String = CompanyAsk.PRODUCTS_DIR
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 const REASON_NO_STATION: StringName = &"no_station"
@@ -118,6 +131,9 @@ var inventory: Inventory = Inventory.new()
 ## to_dict() in every snapshot; a client loads the host's into it, its only write there
 ## (rule 1). The owner sets it on every peer (CompanyRoot).
 var company: Object = null
+## Where each bundle of units on the floor lies (D-2006), kept by the units_moved events and
+## the snapshot on every peer. Read it, never write it: only events change it.
+var floor_bundles: FloorBundles = FloorBundles.new()
 ## The day's clock (D-0219), or null: clock_anchor events land in its apply_anchor(). Set on
 ## every peer by GameClock.attach(), which also adds the anchor to the snapshot.
 var clock: GameClock = null
@@ -155,8 +171,9 @@ var _awaiting_snapshot: bool = false
 var _snapshot_asked_msec: int = -1
 ## Host: {peer: msec} of the last snapshot request let through, per peer.
 var _snapshot_granted: Dictionary = {}
-## Host: {peer: Vector3}, where each peer stood at its last units request. D-2006 drops what
-## a leaver held there when its player node is already gone (last_known_position()).
+## Host: {peer: Vector3}, where each peer stood at its last units request (take, store, drop).
+## What a leaver held is dropped there when its player node is already gone
+## (last_known_position(), D-2006); forgotten once it left.
 var _last_origin: Dictionary = {}
 ## Snapshot parts kept outside CompanyNet, {key: [take, put]} (add_snapshot_part()).
 var _parts: Dictionary = {}
@@ -172,18 +189,19 @@ var _rx_total: int = 0
 var _rx_size: int = 0
 var _rx_chunks: Dictionary = {}
 
-## Product ids of the catalog, read once from PRODUCTS_DIR ({StringName: true}).
-static var _known_products: Dictionary = {}
-static var _catalog_read: bool = false
-
-
 func _ready() -> void:
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_disconnected):
 		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and network.has_signal(&"peer_level_ready"):
-		if not network.is_connected(&"peer_level_ready", _on_peer_level_ready):
-			network.connect(&"peer_level_ready", _on_peer_level_ready)
+	# A leaver lets go (D-2006): peer_removed comes with its player still there, and before a
+	# dropped ghost's peer_disconnected (N-221); peer_returned for one back under the same id.
+	var hooks: Dictionary = {
+		&"peer_level_ready": _on_peer_level_ready, &"peer_removed": _on_peer_removed,
+		&"peer_returned": _on_peer_returned,
+	}
+	for hook: StringName in hooks:
+		if network != null and network.has_signal(hook) and not network.is_connected(hook, hooks[hook]):
+			network.connect(hook, hooks[hook])
 	# Peers already up when this world came up won't fire peer_level_ready again. Deferred: the
 	# owner hands over the stock and the company right after adding this node.
 	_snapshot_ready_peers.call_deferred()
@@ -252,6 +270,12 @@ static func hands_location(peer: int) -> StringName:
 	return StringName(HANDS_PREFIX + str(peer))
 
 
+## Client (and the host's own player): asks to let go of `qty` of `product` from its hands at
+## `pos` (units_drop, critical). As request(): the request id, 0 with nobody to ask.
+func drop(product: StringName, qty: int, pos: Vector3) -> int:
+	return request(UNITS_DROP, {"product": product, "qty": qty, "pos": pos})
+
+
 ## Rule 4's shared check: a spot (a pallet, a shelf slot, a grid cell) is within reach of
 ## `origin` (the player's reach origin) up to Interactable.REMOTE_REACH plus `slack`.
 static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> bool:
@@ -259,18 +283,13 @@ static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> 
 
 
 ## A product id that came over the network names a product of the catalog: exactly the
-## name of one of its files (case included), never a path.
+## name of one of its files (case included), never a path (CompanyAsk.product_exists()).
 static func product_exists(product: StringName) -> bool:
-	if not _catalog_read:
-		_catalog_read = true
-		# ResourceLoader lists exported files by their original names (no .remap).
-		for file: String in ResourceLoader.list_directory(PRODUCTS_DIR):
-			if file.ends_with(".tres") or file.ends_with(".res"):
-				_known_products[StringName(file.get_basename())] = true
-	return _known_products.has(product)
+	return CompanyAsk.product_exists(product)
 
 
-## Host: where `peer` stood at its last units request, null if it never made one (D-2006).
+## Host: where `peer` stood at its last units request, null if it never made one or it left
+## (D-2006: what a leaver held is dropped there when its player is already gone).
 func last_known_position(peer: int) -> Variant:
 	return _last_origin.get(peer)
 
@@ -323,10 +342,12 @@ func remove_snapshot_part(key: String) -> bool:
 ##   company    CompanyState.to_dict() without its stored stock (the live one is `inventory`):
 ##              money, day and clock, reputation, gates (the locks), fleet, employees,
 ##              milestones, layout, ledger. Missing without a `company`
+##   floor      {floor:<n>: Vector3}: where each bundle on the floor lies (FloorBundles)
 ##   <part>     one per add_snapshot_part()
 func snapshot() -> Dictionary:
 	var stock: Inventory = inventory if inventory != null else Inventory.new()
 	var data: Dictionary = {"seq": seq, "inventory": stock.to_dict()}
+	data["floor"] = floor_bundles.to_dict()
 	if company != null and company.has_method(&"to_dict"):
 		var state: Variant = company.call(&"to_dict")
 		if state is Dictionary:
@@ -423,7 +444,8 @@ static func stock_ok(value: Variant) -> bool:
 
 
 ## Client: puts the host's snapshot (snapshot()) in place of the business state here: the
-## stock with its reservations, the company and every part, without a fact signal; emits
+## stock with its reservations, the floor bundles' positions (none if `floor` is missing), the
+## company and every part, without a fact signal; emits
 ## company_state_restored once, then drops the held events the snapshot covers and applies the
 ## rest in order (resume_after_snapshot()). False, changing nothing, when it is malformed,
 ## older than what is applied here or this is the host. A part that refuses its value comes
@@ -436,10 +458,14 @@ func apply_snapshot(data: Dictionary) -> bool:
 		return false
 	var stock: Variant = data.get("inventory")
 	var state: Variant = data.get("company", {})
+	var floor_part: Variant = data.get("floor", {})
 	if not stock_ok(stock) or not state is Dictionary or inventory == null:
+		return false
+	if not FloorBundles.positions_ok(floor_part):
 		return false
 	_applying = true
 	inventory.from_dict(stock)
+	floor_bundles.from_dict(floor_part)
 	if company != null and company.has_method(&"from_dict") and not (state as Dictionary).is_empty():
 		var with_stock: Dictionary = (state as Dictionary).duplicate()
 		with_stock["inventory"] = inventory.to_dict()
@@ -564,6 +590,8 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 			return _take_units(peer, data)
 		&"units_store":
 			return _store_units(peer, data)
+		UNITS_DROP:
+			return _drop_units(peer, data)
 		SNAPSHOT_REQUEST:
 			# Over the limit it is dropped, not refused: the client asks again on its own.
 			grant_snapshot(peer, Time.get_ticks_msec())
@@ -575,7 +603,7 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 ## Reserved units may be taken too: a reservation is per product and stays where it is (who
 ## may put a reserved unit in which box is checked at box_place, D-0807 / D-0703).
 func _take_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = _units_ask(data)
+	var ask: Dictionary = CompanyAsk.at_station(data)
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
 	if problem != &"":
@@ -596,9 +624,10 @@ func _take_units(peer: int, data: Dictionary) -> StringName:
 
 
 ## Host, section 2 row 6: units from the sender's hands into a station that takes them (a
-## shelf slot labeled for that product, with room, D-0608).
+## shelf slot labeled for that product, with room, D-0608). A floor bundle is no such station
+## (no_station): letting go on the floor is units_drop, a bundle of its own.
 func _store_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = _units_ask(data)
+	var ask: Dictionary = CompanyAsk.at_station(data)
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
 	if problem != &"":
@@ -606,6 +635,8 @@ func _store_units(peer: int, data: Dictionary) -> StringName:
 	var product: StringName = ask["product"]
 	var qty: int = ask["qty"]
 	var to: StringName = _as_id(station["location"])
+	if FloorBundles.is_floor(to):
+		return REASON_NO_STATION
 	var hands: StringName = hands_location(peer)
 	if inventory.count(product, hands) < qty:
 		return REASON_NOT_ENOUGH
@@ -617,6 +648,64 @@ func _store_units(peer: int, data: Dictionary) -> StringName:
 		return REASON_NO_ROOM
 	var moved: Dictionary = {"product": product, "qty": qty, "from": hands, "to": to}
 	return &"" if _publish(&"units_moved", moved) else REASON_BAD_DATA
+
+
+## Host, section 2 row 7 (D-2006): units from the sender's hands into a new floor bundle at
+## `pos`, or at its feet (_feet_of()) when `pos` is over DROP_REACH plus the reach slack from them
+## (never refused for distance). Refused for bad data, units not in the hand (not_enough, also
+## for another product) or no idea where the player is (out_of_reach, as at a station).
+func _drop_units(peer: int, data: Dictionary) -> StringName:
+	var ask: Dictionary = CompanyAsk.drop(data)
+	if ask.is_empty():
+		return REASON_BAD_DATA
+	var feet: Variant = _feet_of(peer)
+	if feet == null:
+		return REASON_OUT_OF_REACH
+	_last_origin[peer] = feet
+	var product: StringName = ask["product"]
+	var qty: int = ask["qty"]
+	if inventory.count(product, hands_location(peer)) < qty:
+		return REASON_NOT_ENOUGH
+	var pos: Vector3 = ask["pos"]
+	if pos.distance_to(feet) > DROP_REACH + NetStats.reach_slack(multiplayer.multiplayer_peer, peer):
+		pos = feet
+	return &"" if _drop_from_hands(peer, product, qty, pos) else REASON_BAD_DATA
+
+
+## Host: `qty` of `product` from `peer`'s hands into a new floor bundle at `pos` (one
+## units_moved with its `pos`). False when it could not be published.
+func _drop_from_hands(peer: int, product: StringName, qty: int, pos: Vector3) -> bool:
+	var moved: Dictionary = {
+		"product": product, "qty": qty, "from": hands_location(peer),
+		"to": floor_bundles.next_free(inventory), "pos": pos,
+	}
+	return _publish(&"units_moved", moved)
+
+
+## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second
+## finds empty hands). What it held goes onto the floor, one units_moved per product into a new
+## bundle at its feet (_feet_of()), else the origin. Mid-event it waits for the next frame.
+func _let_go(peer: int) -> void:
+	if _applying:
+		_let_go.call_deferred(peer)
+		return
+	var held: Dictionary = {}
+	if is_host() and peer != multiplayer.get_unique_id() and inventory != null:
+		held = inventory.contents_at(hands_location(peer))
+	var pos: Variant = _feet_of(peer) if not held.is_empty() else null
+	for product: StringName in held:
+		if not _drop_from_hands(peer, product, int(held[product]), pos if pos != null else Vector3.ZERO):
+			push_error("CompanyNet: what peer %d held (%s) could not be dropped" % [peer, product])
+	_last_origin.erase(peer)
+
+
+## Host: where `peer`'s player stands, its body (not its reach origin) or player_origin's value,
+## if known and finite; else where it stood at its last units request; else null.
+func _feet_of(peer: int) -> Variant:
+	var body: Variant = _origin_of(peer, false)
+	if body is Vector3 and RpcGuard.finite_vec3(body):
+		return body
+	return _last_origin.get(peer)
 
 
 ## Host: the one way an event happens. Numbers it, applies it here first, sends it to every
@@ -665,12 +754,9 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 	var applied: bool = false
 	match kind:
 		&"units_moved":
-			applied = inventory.move(
-				_as_id(data.get("product")),
-				_as_int(data.get("qty")),
-				_as_id(data.get("from")),
-				_as_id(data.get("to"))
-			)
+			applied = floor_bundles.apply_move(inventory, _as_id(data.get("product")),
+				_as_int(data.get("qty")), _as_id(data.get("from")), _as_id(data.get("to")),
+				data.get("pos"))
 		CLOCK_ANCHOR:
 			if clock == null or not is_instance_valid(clock):
 				push_warning("CompanyNet: a clock_anchor event but no clock here (GameClock.attach())")
@@ -681,6 +767,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
 			else:
 				applied = day_cycle.apply_phase(data)
+	if applied:
+		floor_bundles.prune(inventory)
 	_applying = false
 	return applied
 
@@ -770,27 +858,19 @@ func _connected_client() -> bool:
 	)
 
 
-## The station, product and quantity of a units request, checked (rule 5: plain, bounded, a
-## product of the catalog), or {} when any is missing, of the wrong type or out of range.
-static func _units_ask(data: Dictionary) -> Dictionary:
-	var station: Variant = data.get("station")
-	var product: Variant = data.get("product")
-	var qty: Variant = data.get("qty")
-	if not (_is_id(station) and _is_id(product) and typeof(qty) == TYPE_INT):
-		return {}
-	if int(qty) < 1 or int(qty) > CompanyTuning.PALLET_MAX_UNITS or String(station).is_empty():
-		return {}
-	if not product_exists(StringName(product)):
-		return {}
-	return {"station": StringName(station), "product": StringName(product), "qty": int(qty)}
-
-
 ## The station a checked request names, as the owner describes it (`stations`), or {} when it
-## is unknown or the description is unusable.
+## is unknown or the description is unusable. A floor bundle with a position here is its own
+## station (row 5): its id is its location and its spot is where it lies.
 func _lookup_station(ask: Dictionary) -> Dictionary:
-	if ask.is_empty() or not stations.is_valid():
+	if ask.is_empty():
 		return {}
-	var found: Variant = stations.call(ask["station"])
+	var id: StringName = ask["station"]
+	var bundle: Variant = floor_bundles.position_of(id)
+	if bundle is Vector3:
+		return {"location": id, "spot": bundle}
+	if not stations.is_valid():
+		return {}
+	var found: Variant = stations.call(id)
 	if not found is Dictionary:
 		return {}
 	var station: Dictionary = found
@@ -817,12 +897,14 @@ func _station_problem(peer: int, ask: Dictionary, station: Dictionary) -> String
 	return &""
 
 
-func _origin_of(peer: int) -> Variant:
+## Where `peer`'s player is: its reach_origin() when `reach`, else its body's position;
+## player_origin's value when set. Null when that peer has no player.
+func _origin_of(peer: int, reach: bool = true) -> Variant:
 	if player_origin.is_valid():
 		return player_origin.call(peer)
 	for player: Node in get_tree().get_nodes_in_group(Interactable.player_group):
 		if player.get_multiplayer_authority() == peer and player is Node3D:
-			if player.has_method(&"reach_origin"):
+			if reach and player.has_method(&"reach_origin"):
 				return player.call(&"reach_origin")
 			return (player as Node3D).global_position
 	return null
@@ -838,6 +920,19 @@ func _units_at(location: StringName) -> int:
 func _on_peer_disconnected(peer: int) -> void:
 	_snapshot_granted.erase(peer)
 	_oversize_reported.erase(peer)
+	_let_go(peer)
+
+
+## Host: `peer` left the session's roster (NetworkManager.peer_removed): it lets go (_let_go()).
+func _on_peer_removed(peer: int) -> void:
+	_let_go(peer)
+
+
+## Host: `id` is back (NetworkManager.peer_returned). Back under the same id (Steam may hand it out
+## again) it never left the roster, so what it held is let go here.
+func _on_peer_returned(id: int, previous_id: int) -> void:
+	if id == previous_id:
+		_let_go(id)
 
 
 ## Host: `peer`'s world is up and it gets events from now on (is_peer_ready()); the snapshot
@@ -857,7 +952,7 @@ func _snapshot_ready_peers() -> void:
 
 
 static func _is_id(value: Variant) -> bool:
-	return typeof(value) == TYPE_STRING or typeof(value) == TYPE_STRING_NAME
+	return CompanyAsk.is_id(value)
 
 
 static func _snapshot_name_ok(value: Variant) -> bool:

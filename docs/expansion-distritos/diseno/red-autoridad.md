@@ -80,7 +80,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | 4 | Abrir el palet (D-0607) | jugador, en el palet | `pallet_open` `{station, rid}` | alcance; palet recibido, `sealed`, con unidades | `pallet_opened` `{pallet}` | `Pallet.open`: `sealed` → `open` |
 | 5 | Tomar unidades de un palet, estante o bulto del piso (D-0609, D-0611) | jugador | `units_take` `{station, product, qty, rid}` | alcance; el origen (`pallet:`, `shelf:` o `floor:<n>`) tiene `qty` libres **o reservadas para el pedido de una mesa** (cualquiera puede tomar lo reservado para armarlo; la reserva solo impide que otro pedido lo use); manos libres o con el mismo producto; tope de la mano | `units_moved` `{product, qty, from, to: hands:<peer>}` | `Inventory.move` (la reserva es por producto y sigue en pie) |
 | 6 | Guardar en un hueco del estante (D-0608) | jugador con unidades en la mano | `units_store` `{station, product, qty, rid}` | alcance; el hueco acepta ese producto y tiene lugar; la mano tiene `qty` | `units_moved` `{…, from: hands:<peer>, to: shelf:<id>}` | `Inventory.move` |
-| 7 | Soltar unidades en el piso (D-2006) | jugador | `units_drop` `{product, qty, pos: Vector3, rid}` — **crítica** | `finite_vec3`; si `pos` está a más de 2 m del jugador según el host, suelta a sus pies (no rechaza: soltar siempre vacía la mano) | `units_moved` `{…, to: floor:<n>, pos}` | `Inventory.move`; aparece el bulto estático en `pos` |
+| 7 | Soltar unidades en el piso (D-2006) | jugador | `units_drop` `{product, qty, pos: Vector3, rid}` — **crítica** | `finite_vec3`; producto del catálogo y `qty` en rango; la mano tiene `qty` de ese producto; si `pos` está a más de 2 m del jugador según el host, suelta a sus pies (no rechaza: soltar siempre vacía la mano) | `units_moved` `{…, from: hands:<peer>, to: floor:<n>, pos}` (un bulto nuevo por soltada, §7) | `Inventory.move`; aparece el bulto estático en `pos` |
 | 8 | Tomar un pedido del tablero (D-0807, D-0804) | jugador, en el tablero | `order_claim` `{station, order, table, rid}` | alcance; pedido vivo y sin mesa; mesa sin pedido; stock disponible para reservar | `order_claimed` `{order, table}` | `OrderBook`: pedido → mesa; `Inventory.reserve(order)`. **Decisión:** la mesa es **compartida**, sin dueño: cualquiera que llegue arma en ella (D-0715, uno pone productos y otro encinta); lo que la ata es el pedido, no un jugador |
 | 9 | Sacar una caja del dispensador (D-0702, D-0718) | jugador, en la mesa | `box_start` `{station, size, rid}` | alcance; mesa sin caja; `size` ∈ S/M/L/XL; hay insumo | `box_started` `{table, size, box}` | caja vacía en `table:<id>`; insumo `−1` (D-0504) |
 | 10 | Poner un producto en la grilla (D-0703, D-0704) | jugador con la unidad en la mano | `box_place` `{station, product, cx: int, cy: int, rot: int, rid}` | alcance; la unidad está en `hands:<peer>`; la celda entra y está libre; si la mesa tiene pedido X, la unidad sale primero de la reserva de X y si no de lo libre; si solo queda reservada para otro pedido, `_rejected(rid, &"reserved_for_other")` (así una unidad de A no termina sellada en la caja de B) | `box_placed` `{table, product, cx, cy, rot}` | `Inventory.move` mano → `box:<id>`; grilla ocupada |
@@ -106,7 +106,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | Cierre: cobro, alquiler, penalidades (D-0320, D-0509) | host | evento `day_closed` `{day, summary}`; después el host guarda (solo el host guarda) |
 | Pasar al día siguiente | **solo el host** aprieta "seguir" en el resumen | evento `day_phase` `OPENING` del día siguiente (`DayCycle.next_day()`). **Decisión:** igual que el reinicio de la partida de hoy (`hud_pause.request_restart`): un cliente no puede adelantar el día de todos; si el host tarda, el resumen queda en pantalla |
 | Se abre un bloqueo (D-0306) | host | evento `gate_opened` `{gate}`; no se vuelve a cerrar. En F1 Centro y Campo están abiertos desde el día 1 |
-| Un peer se va (D-2006) | host, en `peer_removed` | eventos `units_moved` `hands:<peer>` → `floor:<n>` (uno por producto) con la última posición conocida del jugador: la del nodo del jugador si sigue en pie y, si no, la última que `CompanyNet` guardó en su `units_take` o `units_drop`. Las mesas no tienen dueño, así que no hay nada más que soltar |
+| Un peer se va (D-2006) | host, en `peer_removed` (o `peer_disconnected` si llega antes; el segundo encuentra las manos vacías) | eventos `units_moved` `hands:<peer>` → `floor:<n>` (uno por producto) con la última posición conocida del jugador: la del nodo del jugador si sigue en pie y, si no, la última que `CompanyNet` guardó en su `units_take` o `units_drop`. Las mesas no tienen dueño, así que no hay nada más que soltar |
 | Entra un peer tarde (D-2004) | host, en el gancho de peer listo | snapshot con el `seq` actual (ver §3) |
 | Se va el host (D-2005) | cada cliente, en `multiplayer.server_disconnected` | nada viaja: resumen local (`CompanyInterruptedDay`), empresa propia de vuelta, mundo congelado y menú con el resumen; el host guarda el día con `interrupted: true` al cerrar su mundo (`CompanyRoot._exit_tree()`) y al cargarlo arranca ese día desde la apertura |
 
@@ -173,7 +173,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
     (la continuación de D-0214; D-2004 dejó el gancho listo, §6);
   - D-0206 escribe `CompanyNet.inventory` de vuelta en `CompanyState` **solo en el host** (en un cliente es un
     espejo y nunca se guarda);
-  - soltar lo de `hands:<peer>` al irse (D-2006, con `last_known_position()`).
+  - ~~soltar lo de `hands:<peer>` al irse (D-2006, con `last_known_position()`)~~ (hecho en D-2006, §7).
 
 ## 6. Lo construido (D-2004)
 
@@ -205,7 +205,8 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   cliente espera otro snapshot). Las suman: `OrderBook` (D-0803 / D-0807, cuando el mundo lo tenga),
   fase del día (D-0203), palets con estado y zona (D-0605 / D-0607), mesas de
   armado (D-0701 en adelante), cajas vivas con lo de `box_sealed` y `update_visibility` después del
-  último trozo (regla 10, D-0709 / D-0711) y bultos en el piso con su posición (D-2006 / D-0611).
+  último trozo (regla 10, D-0709 / D-0711) y bultos en el piso con su posición (~~D-2006~~: hecho, clave
+  propia `floor`, §7; dibujarlos es D-0611).
 - **Del lado del cliente** (`apply_snapshot()`): valida el `seq` (entero, no menor al aplicado) y el stock
   (`stock_ok()`: solo `stock` y `reserved`, ids de texto, cantidades enteras positivas) antes de tocar
   nada; reemplaza el stock y carga `company` en su `CompanyState` (su única escritura ahí, regla 1, con el
@@ -214,3 +215,50 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   `resume_after_snapshot()`: descarta lo guardado con `seq` ≤ y aplica el resto en orden. El primer trozo
   de un snapshot nuevo ya empieza a guardar eventos; un snapshot que no se arma o no se aplica deja al
   cliente esperando y vuelve a pedir a los 5 s.
+
+## 7. Lo construido (D-2006)
+
+- **`units_drop`** (fila 7, protocolo 33), **crítica** (`CRITICAL_KINDS`): `{product, qty, pos: Vector3, rid}`,
+  la arma `CompanyNet.drop(product, qty, pos)`. El host valida producto (del catálogo) y `qty` (entero,
+  `1..PALLET_MAX_UNITS`) como en `units_take` (`CompanyAsk`, `scripts/core/company/company_ask.gd`: las
+  validaciones de datos de las peticiones de unidades y el catálogo, separadas de `company_net.gd`); `pos`
+  `Vector3` finito (un `NaN` o fuera del mundo no pasa `dict_ok` y se descarta en silencio; otro tipo es
+  `bad_data`); que la mano tenga esa cantidad de ese producto (`not_enough`, también si tiene otro).
+- **Los pies del jugador** (`_feet_of`): la posición del **cuerpo** (`global_position` del nodo del
+  jugador, no su `reach_origin()`; con `player_origin` puesto, su valor) y, si el nodo ya no está, la última
+  que se anotó en `_last_origin`. Solo si no hay ninguna de las dos se rechaza con `out_of_reach`. Si `pos`
+  está a más de `DROP_REACH` = 2 m más `NetStats.reach_slack()` de los pies, suelta ahí: nunca rechaza por
+  distancia. Anota los pies en `_last_origin`.
+- **Bultos en el piso**: cada soltada es un bulto nuevo, `floor:<n>` con el `n` libre más bajo (sin unidades
+  y sin posición: el `floor:0` que deja un guardado, `CompanyRoot.SAVED_HANDS_LOCATION`, no se pisa). El
+  evento es `units_moved {product, qty, from: hands:<peer>, to: floor:<n>, pos}`; en cada peer
+  `FloorBundles` (`scripts/core/company/floor_bundles.gd`, `CompanyNet.floor_bundles`) anota la posición al
+  aplicarlo y, después de cada evento aplicado, olvida todo bulto que quedó vacío (`prune()`: también si en
+  el futuro un evento consume unidades del piso, no queda un bulto fantasma). Un `units_moved` hacia
+  `floor:` sin `pos` `Vector3` finito no se aplica. **Decisión:** no se suma a un bulto que ya está (cada soltada es uno nuevo), y las
+  posiciones viven en una clase de datos aparte y no en `CompanyNet`, que quedó cerca del tope de 1000
+  líneas de gdlint.
+- **Tomar un bulto** (fila 5): la estación de `units_take` puede ser el propio `floor:<n>` si tiene
+  posición; el alcance se mide hasta ahí. Guardar en un bulto con `units_store` se rechaza con
+  `no_station` (soltar es `units_drop`).
+- **Un peer se va**: el host, en `NetworkManager.peer_removed` (llega con el jugador todavía en pie y antes
+  del `peer_disconnected` de un fantasma que suelta, N-221), en `multiplayer.peer_disconnected` (lo que
+  llegue primero; el segundo encuentra las manos vacías) o en `NetworkManager.peer_returned(id, id)` (Steam
+  le devuelve el mismo id al que vuelve y no hubo ni `peer_removed` ni desconexión), publica un
+  `units_moved` por producto de `hands:<peer>` a un bulto nuevo, en sus pies (`_feet_of`) y si no en el
+  origen; después olvida `_last_origin[peer]`. Solo en el host. Si llega mientras se aplica un evento, se
+  difiere al frame siguiente (sin olvidar dónde estaba); si un evento no se puede publicar, `push_error`.
+  El que vuelve recibe el snapshot de D-2004 con el piso así.
+- **Snapshot**: clave propia `floor` (en `SNAPSHOT_KEYS`), `{floor:<n>: Vector3}`. El cliente la valida antes
+  de tocar nada (`FloorBundles.positions_ok()`: diccionario de a lo sumo `MAX_BUNDLES` = 4096 entradas, ids
+  de texto `floor:<n>` de hasta 32 caracteres con `n` entero ≥ 0, `Vector3` finitos) y reemplaza las suyas; un
+  snapshot sin la clave deja el piso sin posiciones.
+- Test: `test_company_rejoin` (y `test_company_late_join` usa otra clave para su parte de prueba).
+- **Pendiente:**
+  - dibujar los bultos (nodos estáticos, regla 10) leyendo `floor_bundles` en `event_applied` y
+    `company_state_restored` (D-0611);
+  - guardar las posiciones con el día (D-0206): un día cargado trae los `floor:<n>` sin posición y no se
+    pueden tomar hasta que el guardado las lleve (lo mismo vale para las manos que D-2005 deja en `floor:0`);
+  - `company_net.gd` quedó en 967 de las 1000 líneas que permite gdlint (ya salieron `FloorBundles` y
+    `CompanyAsk`): la próxima acción grande tiene que sacar algo más a otra clase;
+  - el margen de `reach_slack()` en `DROP_REACH` depende del RTT y no tiene test propio.

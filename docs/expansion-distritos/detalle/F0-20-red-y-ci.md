@@ -71,6 +71,7 @@ arranca ese día desde la apertura.
 **Hecho cuando:** el test pasa.
 
 ### D-2006 · Un cliente se cae y vuelve — B · Opus 5.5 · high · Aviso: sí (`network_manager.gd`) · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `CompanyNet`: al irse un peer (`peer_removed`, `peer_disconnected` o `peer_returned` con el mismo id) el host suelta lo de `hands:<peer>` en un `floor:<n>` nuevo a sus pies; petición crítica `units_drop`; bultos con posición en `FloorBundles` (snapshot `floor`), tomables con `units_take`; protocolo 33; `test_company_rejoin`.
 **Depende de:** D-2004
 **Qué:** reusar el reingreso de N-221 (slot de color, `_displaced_players`). Lo que tenía en las manos
 se suelta en el piso al caerse (evento `hands → floor`). Al volver recibe el snapshot.

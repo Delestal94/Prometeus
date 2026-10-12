@@ -200,21 +200,23 @@ func _check_size_and_parts() -> void:
 		_expect(back == data, "It unpacks to the same dictionary")
 	_check_size_limit()
 
-	var floor_units: Dictionary = {"floor:1": {"product": &"hen", "qty": 2, "pos": Vector3(1, 0, 2)}}
-	var take: Callable = func() -> Variant: return floor_units
+	var tables: Dictionary = {"table:t1": {"size": &"M", "fill": &"paper"}}
+	var take: Callable = func() -> Variant: return tables
 	var nothing: Callable = func(_value: Variant) -> bool: return true
-	_expect(host.add_snapshot_part("floor", take, nothing), "A snapshot part can be added")
-	_expect(not host.add_snapshot_part("floor", take, nothing)
+	_expect(host.add_snapshot_part("tables", take, nothing), "A snapshot part can be added")
+	_expect(not host.add_snapshot_part("tables", take, nothing)
 		and not host.add_snapshot_part("seq", take, nothing)
 		and not host.add_snapshot_part("company", take, nothing)
+		and not host.add_snapshot_part("floor", take, nothing)
 		and not host.add_snapshot_part("orders", Callable(), nothing),
-		"A repeated or reserved key, or an invalid callable, is refused")
+		"A repeated or reserved key (floor is CompanyNet's own, D-2006), or an invalid callable,"
+		+ " is refused")
 
 	var client_state: Node = _new_state()
 	var client := CompanyNet.new()
 	client.company = client_state
 	var received: Array = []
-	client.add_snapshot_part("floor", take, func(value: Variant) -> bool:
+	client.add_snapshot_part("tables", take, func(value: Variant) -> bool:
 		received.append(value)
 		return value is Dictionary)
 	var restored: Array[int] = []
@@ -229,7 +231,7 @@ func _check_size_and_parts() -> void:
 		"...the company is the host's and switched on (money %s)" % client_state.get(&"money"))
 	_expect((client_state.get(&"inventory") as Dictionary) == host.inventory.to_dict(),
 		"...and the client's CompanyState mirror holds the live stock")
-	_expect(received == [floor_units], "...and the part reached its put (got %s)" % [received])
+	_expect(received == [tables], "...and the part reached its put (got %s)" % [received])
 
 	var good: Dictionary = host.snapshot()
 	var bad_cases: Array = [
@@ -247,7 +249,7 @@ func _check_size_and_parts() -> void:
 			"A snapshot with %s is refused" % case[1])
 	_expect(client.inventory.to_dict() == host.inventory.to_dict(),
 		"...and the refused ones changed nothing")
-	_expect(not client.apply_snapshot(_with(good, "floor", 7)) and restored.size() == 1
+	_expect(not client.apply_snapshot(_with(good, "tables", 7)) and restored.size() == 1
 		and client.awaiting_snapshot(),
 		"A part that refuses its value fails the snapshot and the client waits for another")
 	client.free()
