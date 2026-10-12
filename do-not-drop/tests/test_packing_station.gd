@@ -75,7 +75,10 @@ func _test_put_in_box() -> void:
 	table.stage_product(&"mug")
 	_expect(not table.put_in_box(mug, Vector3i.ZERO), "no box: nothing goes in")
 	table.start_box(&"M")
-	_expect(not table.put_in_box(_product(&"vase", Vector3i.ONE), Vector3i.ZERO), "unstaged product refused")
+	_expect(
+		not table.put_in_box(_product(&"vase", Vector3i.ONE), Vector3i.ZERO),
+		"unstaged product refused",
+	)
 	_expect(not table.put_in_box(mug, Vector3i(0, 0, 2)), "a spot that sticks out is refused")
 	_expect(table.staged == [&"mug"] and table.box.items.is_empty(), "a refusal changes nothing")
 	_expect(table.put_in_box(mug, Vector3i.ZERO), "the staged product goes in the box")
@@ -98,18 +101,27 @@ func _test_three_products() -> void:
 		_expect(spot != PackedBox.NO_SPOT, "%s has a spot" % p.id)
 		_expect(table.put_in_box(p, spot), "%s goes in at its first fit" % p.id)
 	_expect(table.staged.is_empty(), "the three left the table")
-	_expect(box.contents() == {&"mug": 1, &"vase": 1, &"book": 1}, "the box knows its three products")
+	_expect(
+		box.contents() == {&"mug": 1, &"vase": 1, &"book": 1},
+		"the box knows its three products",
+	)
 	_expect(box.first_fit(mug) != box.first_fit(book), "a taken spot is not offered again")
 	var occupied: int = 0
 	for item: Dictionary in box.items:
 		var c: Vector3i = item["cells"]
 		occupied += c.x * c.y * c.z
 	_expect(occupied == 8 and box.grid.size() == 8, "cells taken match the products (no overlap)")
-	_expect(box.first_fit(_product(&"wardrobe", Vector3i(4, 1, 1))) == PackedBox.NO_SPOT, "too big: no spot")
+	_expect(
+		box.first_fit(_product(&"wardrobe", Vector3i(4, 1, 1))) == PackedBox.NO_SPOT,
+		"too big: no spot",
+	)
 	_expect(box.first_fit(null) == PackedBox.NO_SPOT, "null product: no spot")
 	var full: PackedBox = PackedBox.new(&"M")
 	full.fill_free_cells(full.total_cells())
-	_expect(full.first_fit(_product(&"mug", Vector3i.ONE)) == PackedBox.NO_SPOT, "full box: no spot")
+	_expect(
+		full.first_fit(_product(&"mug", Vector3i.ONE)) == PackedBox.NO_SPOT,
+		"full box: no spot",
+	)
 
 
 func _test_seal_and_dispatch() -> void:
@@ -145,24 +157,54 @@ func _test_label() -> void:
 	state.new_company("Label Co")
 	var order: Dictionary = {"id": "o1", "customer": "Ana", "zone": "centro", "house_id": "centro_house_7"}
 	var addr: Dictionary = OrderLabel.address(order)
-	_expect(addr.get("number") == 7 and addr.get("street_key") == &"WORLD_STREET_CENTRO", "label shows street and number")
-	_expect(addr.get("order") == &"o1" and addr.get("customer") == "Ana", "label names the order and customer")
-	_expect(OrderLabel.address({"id": "o2", "zone": "campo", "house_id": "campo_house_12"}).get("number") == 12, "campo house 12")
-	_expect(OrderLabel.address({"id": "o3", "zone": "isla", "house_id": "isla_house_3"}).get("street_key") == OrderLabel.FALLBACK_STREET_KEY, "unknown zone uses the fallback street")
-	_expect(OrderLabel.address({"id": "o4", "zone": "centro", "house_id": "kiosk"}).is_empty(), "no house number: no label")
-	_expect(OrderLabel.address({"zone": "centro", "house_id": "centro_house_1"}).is_empty(), "no order id: no label")
+	_expect(
+		addr.get("number") == 7 and addr.get("street_key") == &"WORLD_STREET_CENTRO",
+		"label shows street and number",
+	)
+	_expect(
+		addr.get("order") == &"o1" and addr.get("customer") == "Ana",
+		"label names the order and customer",
+	)
+	_expect(
+		OrderLabel.address({"id": "o2", "zone": "campo", "house_id": "campo_house_12"}).get("number") == 12,
+		"campo house 12",
+	)
+	_expect(
+		(
+			OrderLabel.address({"id": "o3", "zone": "isla", "house_id": "isla_house_3"}).get("street_key")
+			== OrderLabel.FALLBACK_STREET_KEY
+		),
+		"unknown zone uses the fallback street",
+	)
+	_expect(
+		OrderLabel.address({"id": "o4", "zone": "centro", "house_id": "kiosk"}).is_empty(),
+		"no house number: no label",
+	)
+	_expect(
+		OrderLabel.address({"zone": "centro", "house_id": "centro_house_1"}).is_empty(),
+		"no order id: no label",
+	)
 	var table: PackingStation = PackingStation.make(&"t1")
 	_expect(not table.label_for(order, state), "no box to label")
 	table.start_box(&"S")
-	_expect(not table.label_for({"id": "o4", "house_id": "kiosk"}, state), "order without a house is refused")
+	_expect(
+		not table.label_for({"id": "o4", "house_id": "kiosk"}, state),
+		"order without a house is refused",
+	)
 	_expect(table.box.label_order_id == &"", "refused label leaves the box bare")
 	var money: int = state.money
 	_expect(table.label_for(order, state), "label sticks on the box")
 	_expect(OrderLabel.matches(table.box, order), "box carries the label of the order")
 	_expect(not OrderLabel.matches(table.box, {"id": "o2"}), "box does not match another order")
 	_expect(state.money == money - CompanyTuning.LABEL_COST, "label charged at its tuning price")
-	_expect(table.label_for(order, state) and state.money == money - CompanyTuning.LABEL_COST, "same order again is free")
-	_expect(table.label_for({"id": "o2", "house_id": "campo_house_2"}, state), "relabeling for another order works")
+	_expect(
+		table.label_for(order, state) and state.money == money - CompanyTuning.LABEL_COST,
+		"same order again is free",
+	)
+	_expect(
+		table.label_for({"id": "o2", "house_id": "campo_house_2"}, state),
+		"relabeling for another order works",
+	)
 	_expect(table.box.label_order_id == &"o2", "the newest label wins")
 	state.reset()
 
