@@ -454,10 +454,31 @@ La UI y el audio escuchan estas señales; la simulación nunca depende de que al
 | `scripts/gameplay/fleet/` | `VehicleDefinition` y vehículos nuevos |
 | `data/products/`, `zones/`, `vehicles/`, `boxes/`, `suppliers/`, `gates/` | recursos `.tres`; agregar uno suma contenido sin tocar código |
 | `scenes/company/` | `company_world.tscn` y lo que cuelga de él |
-| `modules/` | lo genérico y portable: `world_cells`, `day_clock`, `inventory`, `order_queue`, `build_grid` (D-0220 lo cierra) |
+| `modules/` | lo genérico y portable (tabla de abajo) |
 
-Un script que no sabe de cajas, camión ni HUD va a un módulo con su `module.cfg` y su test, y el juego lo
-conecta desde un adaptador chico; `python tools/check_modules.py` lo comprueba.
+Cada carpeta tiene un `README.md` corto. Todas son del dominio de Nacho (`file_domain` en
+`.claude/hooks/lib.sh` y `docs/colaboracion-equipo.md`); `modules/` sigue siendo zona compartida.
+
+**Qué va a `modules/`** (D-0220). Regla: va a un módulo lo que se puede describir sin nombrar productos,
+cajas, camión, zonas ni autoloads; lo que necesita `CompanyTuning`, `EventBus` o `CompanyNet` queda en el
+juego como adaptador.
+
+| Módulo | Qué hace sin saber del juego | Adaptador en el juego | Estado |
+|---|---|---|---|
+| `day_clock` | reloj por ancla (minuto, velocidad, pausa) | `scripts/core/company/game_clock.gd` | hecho (D-0219) |
+| `world_cells` | carga y descarga de celdas por anclas, con histéresis y rebanadas | `scripts/gameplay/districts/company_cells.gd` | D-0303 |
+| `inventory` | unidades por id y ubicación, con reservas, sin duplicar | `scripts/gameplay/business/inventory.gd` pasa a envolverlo | D-0221 |
+| `order_queue` | cola con prioridad y vencimiento | `scripts/gameplay/business/order_book.gd` | D-0222 |
+| `build_grid` | colocación en grilla con choque y áreas prohibidas | `build_placement.gd` | D-0225 |
+| `job_board`, `conveyor_graph`, `milestones` | tareas de agentes, cintas, hitos declarativos | en `business/` | F2 (D-0224, D-0226, D-0229) |
+| `buoyancy`, `simple_flight` | flotación por puntos, vuelo simple | en `fleet/` | F3-F4 (D-0227, D-0228) |
+
+Quedan **en el juego**: `CompanyState`, `CompanyNet`, `CompanySave` (usa `modules/persistence`), `DayCycle`,
+los recursos `*Definition`, `PackedBox`, `BoxToPackage` y todo lo que habla de dinero, pedidos o trampas.
+`Inventory` y `OrderBook` existen hoy en `business/` (D-0211, D-0210): su parte genérica se extrae al
+módulo en D-0221/D-0222 sin cambiar su API pública. Un módulo nuevo lleva `module.cfg`, `tests/` y su
+fila en `docs/modulos.md` (D-0250); `python tools/check_modules.py` y `tools/portability-check.sh` lo
+comprueban.
 
 ### 10.5 Flujo de una caja, del palet a la puerta
 

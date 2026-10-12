@@ -61,7 +61,7 @@
 | D-0141 | Crear el agente `constructor-negocio` (galpón, stock, armado, empleados, automatización) en `.claude/agents/` | claude | medium | archivo versionado, con modelo y esfuerzo como los demás; listado en `CLAUDE.md` |
 | D-0142 | Ampliar `constructor-camion` a toda la flota (o crear `constructor-vehiculos`) | claude | medium | descripción del agente cubre bici, carrito, lancha y avioneta |
 | D-0143 | Ampliar `constructor-tramos` con tramos de agua, aire y montaña | claude | low | descripción actualizada |
-| D-0144 | Agregar los dominios nuevos (`scripts/gameplay/business/`, `scripts/gameplay/fleet/`, `scripts/gameplay/districts/`) a `file_domain` en `.claude/hooks/lib.sh` y a `colaboracion-equipo.md` | claude | low | hook clasifica bien los archivos nuevos (test del hook) |
+| D-0144 | ✅ Agregar los dominios nuevos (`scripts/gameplay/business/`, `scripts/gameplay/fleet/`, `scripts/gameplay/districts/`) a `file_domain` en `.claude/hooks/lib.sh` y a `colaboracion-equipo.md` | claude | low | hook clasifica bien los archivos nuevos (test del hook) |
 | D-0145 | Agregar la expansión a la tabla "Cobertura por etapa" de `.claude/rutinas/README.md` (cuándo la toma cada rutina) | documentador | low | tabla actualizada |
 | D-0146 | Plantilla de tarea promovida (de `D-` a formato `tareas-nacho.md`) para `planificador-tareas` | planificador-tareas | low | plantilla en este README o en el agente |
 | D-0147 | Inventario de assets necesarios de toda la expansión (para `sesion-arte`) | director-arte | medium | `docs/inventario-assets.md` con sección "Expansión" |
