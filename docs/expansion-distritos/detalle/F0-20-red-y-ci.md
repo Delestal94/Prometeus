@@ -87,6 +87,7 @@ piso del host, el stock total no cambia y al volver ve el mismo stock.
 test) y pasa con el código real.
 
 ### D-2008 · `PROTOCOL_VERSION` de la expansión — A · Opus 5.5 · low · Aviso: sí (`network_manager.gd`) · F0
+**[x] Hecho (2026-10-12, 5257be0, PR #336)** — ya estaba: D-2003 subió a 29 con el primer RPC de negocio y cada PR siguiente sube según §6 con su línea `## N: …` en el historial de `network_manager.gd` (30 dice "expansión"); el historial hace de tabla de §6.
 **Depende de:** D-2003
 **Qué:** un solo aumento para el primer PR que agrega RPC de negocio. Los siguientes PRs de la expansión
 que cambien RPC suben de nuevo según §6, y la tabla de §6 anota "expansión" en el motivo.
