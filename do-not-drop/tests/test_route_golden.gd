@@ -243,7 +243,8 @@ func _node_line(route: Node3D, node: Node) -> String:
 	if node is CollisionShape3D and not batched_art:
 		var shape: Shape3D = (node as CollisionShape3D).shape
 		parts.append("shape=%s" % (_shape(shape)))
-	parts.append(_meta(node))
+	# A batch's draw range is a size bucket of its merged model's AABB (dressing_batcher.gd:278-281): art.
+	parts.append(_meta(node, batched_art))
 	return " | ".join(parts)
 
 
@@ -279,9 +280,11 @@ func _mesh(mesh: Mesh) -> String:
 	return text
 
 
-func _meta(node: Node) -> String:
+func _meta(node: Node, batched_art: bool = false) -> String:
 	var entries: Array[String] = []
 	for key: StringName in node.get_meta_list():
+		if batched_art and key == &"quality_base_range":
+			continue
 		entries.append("%s=%s" % [key, _variant(node.get_meta(key))])
 	entries.sort()
 	return "meta{%s}" % ",".join(entries)

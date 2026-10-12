@@ -1260,7 +1260,7 @@ PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(73.678
 PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(90.7985 4.5751 -1664.1150) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=CylinderShape3D | meta{}
 PowerLines/PowerPoleColliders/@CollisionShape3D@ | CollisionShape3D | pos(116.7874 5.6144 -1680.0623) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | shape=CylinderShape3D | meta{}
 PowerLines/PowerWires | MeshInstance3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | mesh{ArrayMesh aabb(-378.2359 2.3638 -1680.7247 495.4315 9.8856 1648.7255) surfaces=1 [verts=40320 sum(-5338662.5000 282015.9062 -33699936.0000)]} | shadow=0 | meta{}
-BatchedDressing | Node3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=2746 hash=f0019e705a0f
+BatchedDressing | Node3D | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=2746 hash=7556c845a69a
 AmbientWind | AudioStreamPlayer | meta{}
 Sky | Node3D | script=route_sky.gd | pos(0.0000 0.0000 0.0000) basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta{} | nodes=4 hash=0a1a5709fec5
 -- queries
