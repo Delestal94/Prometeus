@@ -22,6 +22,7 @@ func _run() -> void:
 	var def := ProductDefinition.new()
 	def.id = &"avg"
 	def.buy_price = 50
+	def.cells = Vector3i(1, 1, 1)
 	_products[&"avg"] = def
 	var state: Node = root.get_node_or_null(^"CompanyState")
 	if state == null or state.get_script() == null:
@@ -52,13 +53,13 @@ func _box(units: int, label: StringName = &"o1") -> PackedBox:
 
 
 func _test_clean_and_wrong() -> void:
-	var order := _order()
+	var order: Dictionary = _order()
 	_expect(order["pay"] == 200, "the order pays 200")
-	var ok := OrderPenalties.assess(order, _box(2), 100, [], _products)
+	var ok: Dictionary = OrderPenalties.assess(order, _box(2), 100, [], _products)
 	_expect(ok["pay"] == 200 and ok["lost"] == 0, "a perfect delivery pays 200")
 	_expect(ok["kinds"].is_empty() and ok["reputation"] == 0.0, "no failure, no reputation loss")
 	for units in [1, 3]:
-		var wrong := OrderPenalties.assess(order, _box(units), 100, [], _products)
+		var wrong: Dictionary = OrderPenalties.assess(order, _box(units), 100, [], _products)
 		_expect(wrong["pay"] == 0, "%d units instead of 2 pays 0" % units)
 		_expect(wrong["kinds"] == [OrderPenalties.KIND_WRONG], "%d units is wrong" % units)
 		_expect(wrong["reputation"] == CompanyTuning.WRONG_BOX_REPUTATION, "wrong box costs reputation")
@@ -66,36 +67,36 @@ func _test_clean_and_wrong() -> void:
 
 
 func _test_broken() -> void:
-	var order := _order()
-	var one := OrderPenalties.assess(order, _box(2), 100, [&"avg"], _products)
+	var order: Dictionary = _order()
+	var one: Dictionary = OrderPenalties.assess(order, _box(2), 100, [&"avg"], _products)
 	_expect(one["pay"] == 120 and one["lost"] == 80, "one broken unit loses its 80 (got %d)" % one["pay"])
 	_expect(one["kinds"] == [OrderPenalties.KIND_BROKEN], "broken is reported")
 	_expect(one["reputation"] == CompanyTuning.BROKEN_PRODUCT_REPUTATION, "one broken: -5")
-	var both := OrderPenalties.assess(order, _box(2), 100, [&"avg", &"avg"], _products)
+	var both: Dictionary = OrderPenalties.assess(order, _box(2), 100, [&"avg", &"avg"], _products)
 	_expect(both["pay"] == 40, "both broken leave only the shipping (got %d)" % both["pay"])
 	_expect(both["reputation"] == CompanyTuning.PENALTY_REPUTATION_CAP, "two broken: -10, the cap")
-	var ghost := OrderPenalties.assess(order, _box(2), 100, [&"nope"], _products)
+	var ghost: Dictionary = OrderPenalties.assess(order, _box(2), 100, [&"nope"], _products)
 	_expect(ghost["pay"] == 200, "an unknown broken product loses no pay")
 
 
 func _test_late_and_label() -> void:
-	var order := _order()
-	var late := OrderPenalties.assess(order, _box(2), int(order["due_min"]) + 1, [], _products)
+	var order: Dictionary = _order()
+	var late: Dictionary = OrderPenalties.assess(order, _box(2), int(order["due_min"]) + 1, [], _products)
 	_expect(late["pay"] == 150 and late["kinds"] == [OrderPenalties.KIND_LATE], "late pays 150")
 	_expect(late["pay"] == Order.payout(order, int(order["due_min"]) + 1), "late matches Order.payout")
 	_expect(late["reputation"] == 0.0, "late costs no reputation")
-	var on_time := OrderPenalties.assess(order, _box(2), int(order["due_min"]), [], _products)
+	var on_time: Dictionary = OrderPenalties.assess(order, _box(2), int(order["due_min"]), [], _products)
 	_expect(on_time["pay"] == 200, "on the due minute is not late")
-	var label := OrderPenalties.assess(order, _box(2, &"other"), 100, [], _products)
+	var label: Dictionary = OrderPenalties.assess(order, _box(2, &"other"), 100, [], _products)
 	_expect(label["pay"] == 170 and label["kinds"] == [OrderPenalties.KIND_MISLABELED], "wrong label: -15 %")
 	_expect(label["reputation"] == CompanyTuning.MISLABEL_REPUTATION, "wrong label costs reputation")
-	var none := OrderPenalties.assess(order, _box(2, &""), 100, [], _products)
+	var none: Dictionary = OrderPenalties.assess(order, _box(2, &""), 100, [], _products)
 	_expect(none["pay"] == 170, "an unlabeled box counts as mislabeled")
 
 
 func _test_stacking() -> void:
-	var order := _order()
-	var all := OrderPenalties.assess(
+	var order: Dictionary = _order()
+	var all: Dictionary = OrderPenalties.assess(
 		order, _box(2, &"other"), int(order["due_min"]) + 1, [&"avg"], _products
 	)
 	# 200 - 80 broken = 120, x0.75 late = 90, x0.85 label = 76.5 -> 77 (roundi).
