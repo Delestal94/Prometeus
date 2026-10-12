@@ -115,3 +115,11 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Test** `test_fixed_costs`: el día cuesta 100; `settle` cobra con motivo `rent`; con 30 de saldo queda en -70 y `shortfall` da 70; saldo negativo debe el alquiler entero; sin empresa no cobra.
 **Hecho cuando:** el test pasa.
 
+### D-0510 · Quiebra — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `Bankruptcy` (`scripts/gameplay/business/bankruptcy.gd`): `is_bankrupt`, `order_share` y `orders_for_day`; `CompanyTuning.BANKRUPT_ORDER_SHARE` = 0,6; `test_bankruptcy`. El aviso en pantalla y el enganche con la apertura del día quedan como subtarea abierta D-0510.2.
+**Depende de:** D-0501, D-0509
+**Qué:** funciones estáticas sin nodos ni estado. Con la billetera por debajo de cero al cerrar (después de `FixedCosts.settle`), el día siguiente abre con el 60 % de los pedidos y un aviso; no hay reinicio ni préstamo forzado (`diseno/economia.md` §3). `orders_for_day(usual, company)` redondea y nunca baja de 1 si el día tiene pedidos.
+- **D-0510.2 (abierta, `constructor-progresion` + `constructor-ui`)** La apertura del día (`DayCycle`/`OrderBook`, D-0203/D-0210) llama a `orders_for_day` al generar los pedidos y el panel de apertura muestra el aviso (clave `bankrupt_warning`).
+**Decisión:** sin contador de "N días en rojo": cada cierre se evalúa solo por el saldo, así no hay otro estado que guardar ni replicar. Se cumple la decisión de diseño ya tomada (sin reinicio, 60 %); el préstamo forzado queda para D-0521 si se quiere.
+**Test** `test_bankruptcy`: 0 no es quiebra, -1 sí; 10 pedidos pasan a 6 y 7 a 4; mínimo 1; 0 queda en 0; el alquiler cobrado hasta el rojo la provoca; con plata vuelve el 100 %; sin empresa nada.
+**Hecho cuando:** el test pasa y la apertura usa `orders_for_day` (D-0510.2).
