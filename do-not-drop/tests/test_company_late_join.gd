@@ -170,9 +170,14 @@ func _check_size_and_parts() -> void:
 		state.call(&"earn", 10 + i, &"order_paid")
 	for gate: StringName in [&"gate_centro", &"gate_campo", &"gate_puerto"]:
 		state.call(&"open_gate", gate)
-	var layout: Array[Dictionary] = []
+	# Pieces the loader keeps (CompanyState.from_dict sanitizes the layout, D-0909): shelves on the
+	# logistics center floor, spaced so none overlaps or cuts a path.
+	state.set(&"warehouse_stage", 3)
+	var candidates: Array = []
 	for i: int in range(40):
-		layout.append({"id": &"shelf_basic", "x": i % 8, "z": i % 5, "turns": i % 4})
+		candidates.append({"id": "shelf", "x": (i % 8) * 4, "z": (i / 8) * 3, "turns": 0})
+	var layout: Array[Dictionary] = BuildLayoutSave.sanitize(candidates, 3)
+	_expect(layout.size() >= 30, "The test layout keeps most of its 40 pieces (got %d)" % layout.size())
 	state.set(&"layout", layout)
 	var fleet: Array[Dictionary] = [{"vehicle": &"van", "plate": "TMP-001"}]
 	state.set(&"fleet", fleet)

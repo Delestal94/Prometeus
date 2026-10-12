@@ -144,7 +144,7 @@ func _fill(state: Node) -> void:
 	state.fleet = [{"vehicle": "van", "plate": "AB123"}] as Array[Dictionary]
 	state.employees = [{"name": "Rita", "role": "packer"}] as Array[Dictionary]
 	state.milestones_done = [&"first_day"] as Array[StringName]
-	state.layout = [{"piece": "shelf", "x": 2, "y": 3}] as Array[Dictionary]
+	state.layout = [{"id": "shelf", "x": 2, "z": 3, "turns": 0}] as Array[Dictionary]
 	var stock: Inventory = state.stock()
 	stock.receive(&"books", 5, &"shelf_1")
 	state.store_stock(stock)

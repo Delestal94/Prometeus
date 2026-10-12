@@ -77,7 +77,7 @@ func _test_round_trip(state: Node) -> void:
 	state.fleet.assign([{"id": &"classic", "seats": 2}])
 	state.employees.assign([{"name": "Ana", "wage": 40}])
 	state.milestones_done.assign([&"first_delivery"])
-	state.layout.assign([{"piece": &"shelf", "x": 1, "z": 2}])
+	state.layout.assign([{"id": "shelf", "x": 1, "z": 2, "turns": 0}])
 	var stock := Inventory.new()
 	stock.receive(&"hen", 12, &"dock")
 	stock.receive(&"sourdough", 5, &"shelf:a1")
