@@ -68,3 +68,11 @@ reserva) y el número es el de la casa, hasta que D-0312 dé nombre a cada calle
 **Test** `test_packing_station`: calle y número del pedido, zona desconocida, pedido sin casa o sin id, caja
 sin etiquetar tras un rechazo, cobro, el mismo pedido gratis, y reetiquetar para otro.
 **Hecho cuando:** el test pasa (la etiqueta muestra calle y número del pedido).
+
+### D-0708 · Sellos — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `BoxSeals` (`scripts/gameplay/business/box_seals.gd`) y `PackingStation.stamp(kind, wallet)`; `test_box_seals`. El sello dibujado en la caja y el gesto de estamparlo quedan para la mesa visible (D-0701.b).
+**Depende de:** D-0701 (`PackingStation`), D-0504 (`PackagingSupplies.stamp`), D-0806 (`OrderRequirement.required_seals`)
+**Qué:** `BoxSeals` es estático: `KINDS` (fragile, no_bend, cold, gift, heavy: los ids que piden los requisitos), `required(order)` (sellos que piden los requisitos del pedido, sin repetir, ignorando ids sin recurso), `missing(box, order)` e `is_valid(box, order)` (el chequeo de la puerta). `PackingStation.stamp` estampa un sello conocido en la caja de la mesa y lo cobra (`STAMP_COST`, 0 hoy); rechaza sin caja, tipo desconocido o repetido.
+Decisión: el tipo de sello es el id que ya usa `required_seals` (FRÁGIL = `fragile`, ESTE LADO ARRIBA = `no_bend`, FRÍO = `cold`), para no mantener dos listas. La penalidad de sello faltante en la calidad es D-0709; el cobro/rechazo en la puerta, D-0712.
+**Test** `test_box_seals`: requeridos del pedido, caja sin sellos falla la puerta, sellar uno a uno, rechazos sin cambios, JSON.
+**Hecho cuando:** el test pasa (el sello queda en la caja y la puerta lo valida).
