@@ -27,3 +27,7 @@ Ninguna firma existente cambió; no hay RPC.
 ## Qué tiene que hacer Slatex
 
 Nada. Si rehacés Opciones, las teclas viven en `ControlsSection`. Falta el remapeo de mando (N-966.3).
+
+## Extra: `scripts/ui/ui_theme.gd`
+
+`_refresh_text_scale` now takes its screen as `Variant` and casts after `is_instance_valid`: a freed panel no longer raises "Cannot convert argument" when `menu_text_scale_changed` fires after it was freed (seen in `reset_to_defaults()` from tests).
