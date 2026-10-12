@@ -4,7 +4,7 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern and rock rebuild just that one model.
+tall_fern, rock and rock_cluster rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -522,7 +522,7 @@ def rock(seed=15, size=(0.8, 0.6, 0.5), material="stone", name="ForestRock", at=
 # silhouette at 8-15 m, so the standalone rock is cut instead -- a convex hull
 # sliced by a tilted top, a side cut and a back chip (big flat facets), ridges
 # chamfered, a moss patch on the top facet and the base 5 cm underground.
-# rock() itself stays as it was: mossy_rock_cluster still uses it.
+# rock() itself stays as it was (mossy_rock_cluster used it until N-331.9).
 # Warm stone: halfway between the palette's "stone" and "chimney", so it
 # stops reading cold next to the moss. Named "stone.forest" so
 # LowpolyMaterials keys it as "stone" (it cuts the name at the first dot)
@@ -534,10 +534,10 @@ def rock(seed=15, size=(0.8, 0.6, 0.5), material="stone", name="ForestRock", at=
 STONE_FOREST = (0.17, 0.16, 0.14, 1)
 
 
-def stone_forest():
-    m = bpy.data.materials.get("stone.forest")
+def stone_forest(name="stone.forest"):
+    m = bpy.data.materials.get(name)
     if m is None:
-        m = bpy.data.materials.new("stone.forest")
+        m = bpy.data.materials.new(name)
         m.use_nodes = True
         principled = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
         principled.inputs["Base Color"].default_value = STONE_FOREST
@@ -572,11 +572,19 @@ def _rock_cut(bm, co, no):
         bmesh.ops.edgeloop_fill(bm, edges=edges)
 
 
-def faceted_rock(name="ForestRock", size=(0.8, 0.6, 0.5), sink=0.05, seed=331):
+FACETED_RINGS = [(0.0, 1.0, 7), (0.45, 0.95, 7), (0.85, 0.6, 5)]
+
+
+def faceted_rock(name="ForestRock", size=(0.8, 0.6, 0.5), sink=0.05, seed=331, rings=FACETED_RINGS,
+                 bevel=0.025, moss=0.62, stone=None):
+    """`rings` (height, radius, points) shape the hull, `bevel` chamfers the
+    ridges (0: none, the cheap version), `moss` is how much of the top facet
+    the moss patch covers and `stone` the stone material (stone.forest by
+    default). The defaults are the standalone forest rock."""
     rng = random.Random(seed)
     sx, sy, sz = size[0] / 2, size[1] / 2, size[2]
     pts = []
-    for ring, (zf, rf, n) in enumerate([(0.0, 1.0, 7), (0.45, 0.95, 7), (0.85, 0.6, 5)]):
+    for ring, (zf, rf, n) in enumerate(rings):
         for i in range(n):
             a = (i + rng.uniform(-0.25, 0.25) + ring * 0.5) * math.tau / n
             r = rf * rng.uniform(0.85, 1.05)
@@ -594,14 +602,15 @@ def faceted_rock(name="ForestRock", size=(0.8, 0.6, 0.5), sink=0.05, seed=331):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     ridges = [e for e in bm.edges if not all(v.co.z < -sink + 1e-3 for v in e.verts)
               and e.calc_face_angle(0) > math.radians(25)]
-    bmesh.ops.bevel(bm, geom=ridges, offset=0.025, segments=1, affect="EDGES", profile=0.5, clamp_overlap=True)
+    if bevel:
+        bmesh.ops.bevel(bm, geom=ridges, offset=bevel, segments=1, affect="EDGES", profile=0.5, clamp_overlap=True)
     # Moss: the top facet split off, shrunk toward its centre, raised 1.5 cm.
     bm.normal_update()
     top = max((f for f in bm.faces if f.normal.z > 0.7), key=lambda f: f.calc_area())
     bmesh.ops.inset_region(bm, faces=[top], thickness=0.0, depth=0.0)
     centre, lift = top.calc_center_median(), top.normal * 0.015
     for v in top.verts:
-        v.co = centre + (v.co - centre) * (0.62 + rng.uniform(-0.08, 0.08)) + lift
+        v.co = centre + (v.co - centre) * (moss + rng.uniform(-0.08, 0.08)) + lift
     top.material_index = 1
     # Fit the bounding box to `size`, the base `sink` below the origin.
     lo = [min(v.co[i] for v in bm.verts) for i in range(3)]
@@ -615,7 +624,7 @@ def faceted_rock(name="ForestRock", size=(0.8, 0.6, 0.5), sink=0.05, seed=331):
     bm.free()
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
-    obj.data.materials.append(stone_forest())
+    obj.data.materials.append(stone or stone_forest())
     obj.data.materials.append(_single_sided("moss"))
     return obj
 
@@ -625,11 +634,41 @@ def forest_rock():
     faceted_rock()
 
 
+# Mossy rock cluster (N-331.9): three dented rock() balls in the palette's
+# cold "stone" (0.30/0.36/0.32) read pale blue-white by day and blue at night
+# next to the faceted rock, and their 0.12 m moss crowns sank into the rock.
+# Now three cheap faceted rocks (no ridge bevel, smaller hulls) that speak the
+# forest rock's language, in their own "stone.cluster" -- the same albedo as
+# stone.forest; LowpolyMaterials keys it as "stone" (cut at the first dot),
+# so the palette's "stone" the depot uses stays as it was -- with a broad
+# moss patch on each top facet, single-sided. Same footprint (about
+# 2.3 x 1.4 m, 0.71 m tall) as before, base 4 cm underground.
+CLUSTER_RINGS = [(0.0, 1.0, 6), (0.5, 0.92, 6), (0.88, 0.55, 4)]
+# (centre x, y, size x, y, z, turn about Z, seed); the footprint is centred
+# on the origin (the old cluster sat 0.11 m off in X).
+CLUSTER_ROCKS = [(-0.11, 0.0, 1.40, 1.20, 0.74, 0.35, 3391),
+                 (0.75, 0.18, 0.95, 0.74, 0.50, 2.6, 3392),
+                 (-0.81, -0.27, 0.86, 0.66, 0.44, -1.2, 3393)]
+
+
 def mossy_rock_cluster():
     clear()
-    for i, (x, y, s) in enumerate([(0, 0, 0.8), (0.75, 0.2, 0.5), (-0.6, -0.25, 0.45)]):
-        rock(160 + i, (s, s * 0.8, s * 0.6), at=(x, y))
-        crown("RockMoss", (x, y, s * 0.62), (s * 0.7, s * 0.55, s * 0.12), "moss", 170 + i, 0.2)
+    stone = stone_forest("stone.cluster")
+    parts = []
+    for x, y, sx, sy, sz, turn, seed in CLUSTER_ROCKS:
+        o = faceted_rock("MossyRock", (sx, sy, sz), sink=0.04, seed=seed, rings=CLUSTER_RINGS,
+                         bevel=0.0, moss=0.8, stone=stone)
+        o.rotation_euler = (0.0, 0.0, turn)
+        o.location = (x, y, 0.0)
+        parts.append(o)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    o = bpy.context.object
+    o.name = o.data.name = "MossyRockCluster"
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
 def mossy_stump():
@@ -1159,6 +1198,8 @@ GROUPS = {
     "tall_fern": lambda: (tall_fern_cluster(), export_forest("tall_fern_cluster")),
     # Only the forest rock (N-331.7), without rewriting the other plants.
     "rock": lambda: (forest_rock(), export_forest("rock")),
+    # Only the mossy rock cluster (N-331.9), without rewriting the other plants.
+    "rock_cluster": lambda: (mossy_rock_cluster(), export_forest("mossy_rock_cluster")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
