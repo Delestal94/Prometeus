@@ -148,19 +148,18 @@ const BUDGETS: Dictionary = {
 	"res://scripts/gameplay/package/package_impacts.gd": {"call": 1, "callv": 0, "get": 0, "root": 0},
 	# The rescue (host care simulation) is typed like the box: the trap (ITrapBehavior,
 	# TrapDefinition, ExplosiveTrapBehavior for the defused flag), the player's seat
-	# on the carrier (Player), the network and the autoload
-	# lookups (PackageAutoloads). Seven .call left: carries (x2) and point_velocity go
-	# to the truck, found through the "vehicle" group (vehicle.gd has no class name and
-	# tests put Node fakes there); care_supply_count, consume_care_supply and
-	# record_care go to RunManager, by name for the cycle package_autoloads.gd
-	# explains; store goes to the lap mount (package_mount_point.gd has no class
-	# name). Six .get left: the truck's driver_peer_id, RunManager's cargo, the
-	# seat_node_path of the players in the "player" group (tests put Node3D fakes
-	# there, `as Player` would drop them), the lap mount's occupied_by and the
-	# session's world_seed (network_manager.gd declares it, NetSession does not)
-	# and the radio's mode (truck_radio.gd names autoloads bare: typing it would
-	# pull them into the compile graph of every script that names the box).
-	"res://scripts/gameplay/package/package_rescue.gd": {"call": 7, "callv": 0, "get": 6, "root": 0},
+	# on the carrier (Player), the lap mount (MountPoint: occupied_by, store), the
+	# session's world_seed (NETWORK_MANAGER, below) and the autoload lookups
+	# (PackageAutoloads). Six .call left: carries (x2) and point_velocity go to the
+	# truck, found through the "vehicle" group (vehicle.gd names autoloads bare, so
+	# preloading it compiles it before they exist under a --script, and tests put Node
+	# fakes there); care_supply_count, consume_care_supply and record_care go to
+	# RunManager, by name for the cycle package_autoloads.gd explains. Four .get left:
+	# the truck's driver_peer_id, RunManager's cargo, the seat_node_path of the players
+	# in the "player" group (tests put Node3D fakes there, `as Player` would drop them)
+	# and the radio's mode (truck_radio.gd names autoloads bare: typing it would pull
+	# them into the compile graph of every script that names the box).
+	"res://scripts/gameplay/package/package_rescue.gd": {"call": 6, "callv": 0, "get": 4, "root": 0},
 	# Typed now: the player (Player), the box (DeliveryPackage), the settings
 	# (GAME_SETTINGS, below) and the profile (UnlockProfile). The one .call and
 	# the four .get left all go to RunManager (care_supply_count; is_running twice,
@@ -483,6 +482,9 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/gameplay/player/player_cargo_care.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",
+	},
+	"res://scripts/gameplay/package/package_rescue.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/player/player_movement.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",

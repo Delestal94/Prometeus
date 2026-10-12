@@ -6,14 +6,20 @@ extends RefCounted
 ## RPC) so callers and the network surface are unchanged.
 ##
 ## By name on purpose (N-224.4, test_dynamic_dispatch_budget): the truck
-## (vehicle.gd has no class name and tests put plain-Node fakes in the "vehicle"
-## group: carries, point_velocity, driver_peer_id), RunManager (see
-## package_autoloads.gd: typing it makes a compile cycle), world_seed (declared
-## by network_manager.gd, not by NetSession), the seat path of the players in
-## the "player" group (tests put Node3D fakes there), the lap mount
-## (package_mount_point.gd has no class name) and the truck radio's mode
-## (truck_radio.gd names autoloads bare: typing it pulls them into the box's
-## compile graph).
+## (vehicle.gd names autoloads bare, so preloading it as a type compiles it
+## before they exist under a --script, and tests put plain-Node fakes in the
+## "vehicle" group: carries, point_velocity, driver_peer_id), RunManager (see
+## package_autoloads.gd: typing it makes a compile cycle), the seat path of the
+## players in the "player" group (tests put Node3D fakes there) and the truck
+## radio's mode (truck_radio.gd names autoloads bare: typing it pulls them into
+## the box's compile graph). Typed: the lap mount (MountPoint, by preload: it
+## has no class name) and the session's world_seed (NETWORK_MANAGER).
+
+## The lap mount's script (package_mount_point.gd has no class name): it names no autoload.
+const MountPoint = preload("res://scripts/gameplay/interaction/package_mount_point.gd")
+## The session as a type: the script the NetworkManager autoload runs, which declares world_seed
+## (NetSession does not). test_dynamic_dispatch_budget checks it is that script.
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -127,9 +133,9 @@ const ROAD_LOOKAHEAD: float = 1.2
 ## same box, and each box its own. 0 without a seeded session (solo): the
 ## trap then draws from the clock.
 static func roll_seed(p: DeliveryPackage) -> int:
-	var network := PackageAutoloads.network(p)
-	# world_seed is declared by network_manager.gd, not by NetSession: by name.
-	var session_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	# world_seed is declared by network_manager.gd, not by NetSession: the handle's type.
+	var network := PackageAutoloads.network(p) as NETWORK_MANAGER
+	var session_seed: int = network.world_seed if network != null else 0
 	return hash([session_seed, String(p.package_id)]) if session_seed != 0 else 0
 
 
@@ -441,9 +447,9 @@ static func request_lap_toggle(p: DeliveryPackage) -> void:
 	if operator == null or not SeatTending.is_seated(p.get_tree(), operator, p.multiplayer.is_server()):
 		return
 	if p.is_held and p.carrier == operator:
-		var lap_mount: Node = SeatTending.lap_mount_of(p)  # PackageMountPoint: no class name
-		if lap_mount != null and lap_mount.get(&"occupied_by") == null:
-			lap_mount.call(&"store", p)
+		var lap_mount := SeatTending.lap_mount_of(p) as MountPoint
+		if lap_mount != null and lap_mount.occupied_by == null:
+			lap_mount.store(p)
 	elif p.is_loaded and not p.is_held and p.current_mount != null:
 		var shelf: Node = p.current_mount
 		p.take_by(operator)
