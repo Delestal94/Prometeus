@@ -9,13 +9,17 @@ extends SceneTree
 ##   multibyte characters stays valid UTF-8 within MAX_PRESENCE_VALUE_BYTES);
 ## - over a fake Steam: the rich presence goes to setRichPresence at once; lobby data waits for a
 ##   lobby (nothing goes out with none), and when this process's Steam lobby is up
-##   (session_ready(true) with lobby_id set) everything kept goes on it and every change after
-##   that too, "" included (Steam removes the key); a client (session_ready(false), or an online
-##   peer that isn't the server) writes no lobby data; an ENet session with a stale lobby_id
-##   neither; once the session ends (lobby left) nothing is written to the old lobby, and what was
-##   kept stays for the next one.
+##   (session_ready(true) with lobby_id set, and getLobbyOwner is this getSteamID) everything kept
+##   goes on it and every change after that too, a "" as deleteLobbyData; a client
+##   (session_ready(false), or an online peer that isn't the server) writes no lobby data; nor does
+##   one whose peer already dropped (is_host() true, lobby_id still set) but Steam says another owns
+##   the lobby; an ENet session with a stale lobby_id neither; once the session ends (lobby left)
+##   nothing is written to the old lobby, and what was kept stays for the next one.
 
 const CLOSED_PORT: int = 24641
+## Steam ids of this process and of another member of the lobby.
+const MY_STEAM_ID: int = 76561198000000001
+const OTHER_STEAM_ID: int = 76561198000000002
 
 var _failures: int = 0
 
@@ -24,12 +28,25 @@ var _failures: int = 0
 # gdlint: disable=function-name
 class FakeSteam extends Object:
 	var lobby_writes: Array = []
+	var lobby_deletes: Array = []
 	var presence_writes: Array = []
 	var left: Array = []
+	## Who owns every lobby, as getLobbyOwner says (0: nobody).
+	var lobby_owner: int = 0
 
 	func setLobbyData(lobby: int, key: String, value: String) -> bool:
 		lobby_writes.append([lobby, key, value])
 		return true
+
+	func deleteLobbyData(lobby: int, key: String) -> bool:
+		lobby_deletes.append([lobby, key])
+		return true
+
+	func getLobbyOwner(_lobby: int) -> int:
+		return lobby_owner
+
+	func getSteamID() -> int:
+		return MY_STEAM_ID
 
 	func setRichPresence(key: String, value: String) -> bool:
 		presence_writes.append([key, value])
@@ -108,6 +125,7 @@ func _test_fake_steam() -> void:
 
 	# The Steam lobby comes up (NetSession._on_lobby_created sets lobby_id, then session_ready).
 	session.lobby_id = 42
+	fake.lobby_owner = MY_STEAM_ID
 	session.active_transport = NetSession.Transport.STEAM
 	fake.presence_writes.clear()
 	session.session_ready.emit(true)
@@ -118,13 +136,17 @@ func _test_fake_steam() -> void:
 		"A session starting with Steam up sets the rich presence again (got %s)" % [fake.presence_writes])
 	fake.lobby_writes.clear()
 	presence.set_lobby_meta({"day": 4, "room": ""})
-	_expect(fake.lobby_writes == [[42, "day", "4"], [42, "room", ""]] and presence.lobby_meta() == {"day": "4"},
-		"While hosting, a change goes on the lobby, \"\" too (got %s)" % [fake.lobby_writes])
+	_expect(fake.lobby_writes == [[42, "day", "4"]] and fake.lobby_deletes == [[42, "room"]]
+		and presence.lobby_meta() == {"day": "4"},
+		"While hosting, a change goes on the lobby and \"\" deletes the key (got %s, deleted %s)"
+		% [fake.lobby_writes, fake.lobby_deletes])
+	fake.lobby_deletes.clear()
 
 	fake.lobby_writes.clear()
 	session.session_ready.emit(false)
 	_expect(fake.lobby_writes.is_empty(), "session_ready(false), a joiner, writes no lobby data")
 	await _check_client_writes_nothing(session, fake)
+	_check_not_owner_writes_nothing(session, fake)
 
 	session.active_transport = NetSession.Transport.ENET
 	presence.set_lobby_meta({"day": 5})
@@ -134,7 +156,8 @@ func _test_fake_steam() -> void:
 	session.leave_session()
 	_expect(fake.left == [42] and session.lobby_id == 0, "Leaving the session leaves the lobby")
 	presence.set_lobby_meta({"day": 6})
-	_expect(fake.lobby_writes.is_empty(), "After the session nothing is written to the old lobby")
+	_expect(fake.lobby_writes.is_empty() and fake.lobby_deletes.is_empty(),
+		"After the session nothing is written to the old lobby")
 	_expect(presence.lobby_meta() == {"day": "6"}, "...and what is kept stays for the next lobby")
 
 	session._steam = null
@@ -155,6 +178,19 @@ func _check_client_writes_nothing(session: NetSession, fake: FakeSteam) -> void:
 	_expect(fake.lobby_writes.is_empty(), "A client writes no lobby data (got %s)" % [fake.lobby_writes])
 	peer.close()
 	session.multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+
+
+## A client whose peer already dropped counts as a host (offline) while its lobby_id is still set:
+## Steam says another member owns that lobby, so nothing is written to it, "" included.
+func _check_not_owner_writes_nothing(session: NetSession, fake: FakeSteam) -> void:
+	fake.lobby_owner = OTHER_STEAM_ID
+	_expect(session.is_host() and session.lobby_id == 42, "A dropped client looks like a host with a lobby")
+	session.steam_presence.set_lobby_meta({"day": 7, "room": ""})
+	session.session_ready.emit(true)
+	_expect(fake.lobby_writes.is_empty() and fake.lobby_deletes.is_empty(),
+		"A peer that doesn't own the lobby writes nothing to it (got %s, deleted %s)"
+		% [fake.lobby_writes, fake.lobby_deletes])
+	fake.lobby_owner = MY_STEAM_ID
 
 
 func _expect(condition: bool, description: String) -> void:

@@ -8,8 +8,9 @@ extends RefCounted
 ## Pure: the company comes as a parameter (the CompanyState node, or null for none) and no autoload
 ## is named (lesson N-919), so a test hands it its own.
 ##
-## Without an active company every key is still there, with "" as its value: Steam removes a key
-## set to "" (lobby data and rich presence alike), so a lobby or a presence that showed a company
+## Without an active company every key is still there, with "" as its value: NetSteamPresence
+## takes "" as "remove this key" (deleteLobbyData on the lobby, an empty value for the rich
+## presence, which Steam documents as removing it), so a lobby or a presence that showed a company
 ## stops showing it, where an empty dictionary would leave the old values up. An active company
 ## with no name (the default until it is named) has no company_name either, and its presence reads
 ## "Modo Empresa — día N" instead.
