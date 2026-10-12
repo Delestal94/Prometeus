@@ -32,3 +32,14 @@ que no alcanza, mesa o billetera nulas. `can_dispense` es la misma comprobación
 **Test** `test_box_dispenser`: caja abierta del tamaño pedido en la mesa, cobro y libro mayor, y las cuatro
 negativas sin cambios.
 **Hecho cuando:** el test pasa (caja aparece abierta en la mesa).
+
+### D-0703 · Meter productos en la caja — A · Sonnet 5.5 · xhigh · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `PackedBox.first_fit()` + `NO_SPOT`; `test_packing_station` ampliado con tres productos.
+**Depende de:** D-0701 (`PackingStation.put_in_box`), D-0212 (`PackedBox`)
+**Qué:** Decisión: encastre en grilla (D-0704, decidido), no físico. `put_in_box` ya movía un producto de la
+mesa a la grilla; falta que el jugador (o el bot) no tenga que adivinar la celda: `PackedBox.first_fit(product)`
+devuelve la primera esquina baja libre (orden z, y, x) donde el producto entra, o `NO_SPOT` (-1,-1,-1) si no
+entra. Sin rotación en F1.
+**Test** `test_packing_station`: tres productos (1×1×2, 2×2×1, 2×1×1) en una caja M por `first_fit`, la caja
+conoce los tres, 8 celdas ocupadas sin solaparse, y `NO_SPOT` para un producto grande, nulo o caja llena.
+**Hecho cuando:** el test pasa. La interacción visible (apuntar a una celda, vista previa) queda para la mesa D-0701.b.

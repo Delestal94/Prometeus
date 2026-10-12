@@ -10,6 +10,8 @@ extends RefCounted
 ## box into a DeliveryPackage; the packing station (D-0701...) builds it.
 
 const FILL: StringName = &"fill"
+## first_fit() answer when the product fits nowhere.
+const NO_SPOT: Vector3i = Vector3i(-1, -1, -1)
 
 var box_size: StringName = &""
 ## Vector3i cell -> product id or FILL.
@@ -41,6 +43,20 @@ func place(product: ProductDefinition, origin: Vector3i) -> bool:
 	if product == null:
 		return false
 	return _place_cells(product.id, product.cells, origin)
+
+
+## Lowest-corner spot (z, then y, then x order) where the product fits now; NO_SPOT if none.
+## For the "put it anywhere" button and the bots; the player may still choose the spot.
+func first_fit(product: ProductDefinition) -> Vector3i:
+	if product == null or product.id == &"" or product.id == FILL:
+		return NO_SPOT
+	var c: Vector3i = product.cells
+	if c.x < 1 or c.y < 1 or c.z < 1:
+		return NO_SPOT
+	for origin: Vector3i in _all_cells():
+		if _fits(c, origin):
+			return origin
+	return NO_SPOT
 
 
 ## Pads the first n empty cells (x, then y, then z order). Returns how many it filled.
@@ -137,6 +153,16 @@ static func from_dict(d: Dictionary) -> PackedBox:
 	for stamp: Variant in d.get("stamps", []):
 		box.stamps.append(StringName(str(stamp)))
 	return box
+
+
+func _fits(size: Vector3i, origin: Vector3i) -> bool:
+	for x: int in size.x:
+		for y: int in size.y:
+			for z: int in size.z:
+				var cell: Vector3i = origin + Vector3i(x, y, z)
+				if not _inside(cell) or grid.has(cell):
+					return false
+	return true
 
 
 func _place_cells(id: StringName, size: Vector3i, origin: Vector3i) -> bool:
