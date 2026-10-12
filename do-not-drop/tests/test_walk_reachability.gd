@@ -51,7 +51,8 @@ func _run() -> void:
 		return
 	state.new_company("Walk Co")
 	state.money = 5000
-	state.layout = wall.duplicate(true)
+	for piece: Dictionary in wall:
+		state.layout.append(piece.duplicate())
 	var money: int = state.money
 	var refused: Dictionary = grid.place(state, table, 10, 3)
 	_expect(not refused["ok"] and refused["reason"] == BuildPlacement.REASON_BLOCKS_PATH, "place() refuses it")
