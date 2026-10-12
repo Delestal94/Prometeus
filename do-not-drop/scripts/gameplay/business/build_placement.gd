@@ -4,8 +4,9 @@ extends RefCounted
 ##
 ## Pure logic over the grid of BuildMode: `preview()` says whether an object fits at a cell with a
 ## given rotation (green) or not (red, with the reason), and `place()` buys it through PlaceableShop
-## only when the preview is green. `rotate_piece()`, `move_piece()` and `sell_piece()` (D-0903) act on
-## a piece already in the layout: the same checks, ignoring the piece itself. The world adapter draws the footprint with `preview_color()`.
+## only when the preview is green. `rotate_piece()`, `move_piece()` and `sell_piece()` (D-0903)
+## act on a piece already in the layout: the same checks, ignoring the piece itself.
+## The world adapter draws the footprint with `preview_color()`.
 ## Fixed areas that can never be covered (loading dock, exit: D-0906) arrive as `fixed_blocked`
 ## rectangles in grid cells. Nothing here names autoloads or UI classes (N-919).
 
