@@ -246,8 +246,9 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   pendiente en S-311.15 y no se da por cerrada aquí.
 - [x] **S-311.31** (`2e1a75f`) Luz trasera / subsurface falso: wrap lighting y transmisión a
   contraluz calculados en el mismo `light()` del shader, sin material ni pasada adicional.
-- [ ] **S-311.32** Motas y burbujas internas (criterio 7): ruido 3D en espacio del objeto, que se mueve
-  con el cuerpo y no con la cámara; densidad y tamaño como en la foto, sin estirarse con las proporciones.
+- [x] **S-311.32** (`39e09bc`) Motas y burbujas internas (criterio 7): ruido 3D en espacio del objeto,
+  que se mueve con el cuerpo y no con la cámara; densidad y tamaño como en la foto, sin estirarse con
+  las proporciones.
 - [ ] **S-311.33** Orden de transparencia y sombras: sin brazos que desaparecen detrás del torso ni
   agujeros al girar (prepasada de profundidad o dos pasadas cara trasera / delantera); proyecta sombra
   suave, un poco más clara que la de un opaco, y recibe sombra. Captura girando 360°.
