@@ -1,5 +1,5 @@
 extends SceneTree
-## Run: Godot --headless --path do-not-drop --script res://tests/test_world_cells_company.gd
+## Run: Godot --headless --path do-not-drop --script res://tests/test_company_cells.gd
 ##
 ## The company map's cells (expansion D-0303, scripts/gameplay/districts/company_cells.gd):
 ## - CompanyCells takes its numbers from CompanyTuning (256 m cells, load 2, unload 3) and
