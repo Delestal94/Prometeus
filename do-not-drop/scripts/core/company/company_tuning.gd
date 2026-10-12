@@ -61,6 +61,14 @@ const WAREHOUSE_GRID_M: float = 1.0
 ## Selling a placed object gives back this share of its price.
 const PLACEABLE_REFUND_RATIO: float = 0.5
 
+# --- Warehouse stages (D-0905) ---
+## Shed stages, small to large: grid size in cells (X x Z) and what the upgrade INTO each stage
+## costs (the first one is the starting shed, free). Same index in all three arrays.
+const WAREHOUSE_STAGE_IDS: Array[StringName] = [&"small", &"medium", &"large", &"logistics_center"]
+const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
+	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
+const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
+
 # --- Build mode (D-0901) ---
 ## Height of the build camera above the floor, in meters, at zoom 1.
 const BUILD_CAMERA_HEIGHT_M: float = 14.0
