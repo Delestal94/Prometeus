@@ -113,6 +113,7 @@ static func apply_to(stage: int, placement: BuildPlacement, mode: BuildMode = nu
 	var size: Vector2i = grid_size_for(stage)
 	placement.grid_size = size
 	placement.fixed_blocked = fixed_rects(stage)
+	placement.entry_areas = fixed_rects(stage)
 	if mode != null:
 		mode.grid_size = size
 	return size

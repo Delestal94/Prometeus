@@ -6,6 +6,7 @@ extends RefCounted
 ## given rotation (green) or not (red, with the reason), and `place()` buys it through PlaceableShop
 ## only when the preview is green. `rotate_piece()`, `move_piece()` and `sell_piece()` (D-0903)
 ## act on a piece already in the layout: the same checks, ignoring the piece itself.
+## A piece that would wall off a station or cut the dock from the exit is red too (D-0907).
 ## The world adapter draws the footprint with `preview_color()`.
 ## Fixed areas that can never be covered (loading dock, exit: D-0906) arrive as `fixed_blocked`
 ## rectangles in grid cells. Nothing here names autoloads or UI classes (N-919).
@@ -16,6 +17,7 @@ const REASON_OVERLAP: StringName = &"overlap"
 const REASON_FIXED: StringName = &"fixed_area"
 const REASON_NO_DEFINITION: StringName = &"no_definition"
 const REASON_NO_MONEY: StringName = &"no_money"
+const REASON_BLOCKS_PATH: StringName = &"blocks_path"
 
 const COLOR_OK: Color = Color(0.2, 0.85, 0.3, 0.55)
 const COLOR_BAD: Color = Color(0.9, 0.2, 0.2, 0.55)
@@ -24,6 +26,9 @@ const COLOR_BAD: Color = Color(0.9, 0.2, 0.2, 0.55)
 var grid_size: Vector2i = Vector2i(12, 8)
 ## Cells that no object may cover, as Rect2i in grid cells.
 var fixed_blocked: Array[Rect2i] = []
+## Areas people walk in from (loading dock, exit; D-0907). A piece that would leave one of them
+## cut off from the others, or wall off a placed piece, is red. Empty: no walking check.
+var entry_areas: Array[Rect2i] = []
 
 
 func _init(size: Vector2i = Vector2i(12, 8)) -> void:
@@ -44,6 +49,8 @@ func preview(layout: Array, def: PlaceableDefinition, x: int, z: int, turns: int
 		return {"ok": false, "reason": REASON_NO_DEFINITION, "rect": Rect2i()}
 	var rect: Rect2i = footprint_rect(def, x, z, turns)
 	var reason: StringName = _reason_for(layout, rect, ignore_index)
+	if reason == REASON_OK and not _keeps_paths(layout, def, x, z, turns, ignore_index):
+		reason = REASON_BLOCKS_PATH
 	if reason == REASON_OK and money >= 0 and money < def.price:
 		reason = REASON_NO_MONEY
 	return {"ok": reason == REASON_OK, "reason": reason, "rect": rect}
@@ -89,6 +96,19 @@ func move_piece(state: Object, index: int, x: int, z: int) -> Dictionary:
 ## back, or -1 when the index is not valid.
 func sell_piece(state: Object, index: int) -> int:
 	return PlaceableShop.sell(state, index)
+
+
+## D-0907: the layout with the piece at (x, z) still lets people walk to every piece.
+func _keeps_paths(layout: Array, def: PlaceableDefinition, x: int, z: int, turns: int,
+		ignore_index: int) -> bool:
+	if entry_areas.is_empty():
+		return true
+	var after: Array = []
+	for i: int in layout.size():
+		if i != ignore_index:
+			after.append(layout[i])
+	after.append({"id": String(def.id), "x": x, "z": z, "turns": turns})
+	return WalkReachability.is_walkable(grid_size, after, entry_areas)
 
 
 func _piece_at(state: Object, index: int) -> Dictionary:
