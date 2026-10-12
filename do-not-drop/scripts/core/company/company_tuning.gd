@@ -69,6 +69,12 @@ const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
 	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
 const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
 
+# --- Warehouse fixed areas (D-0906) ---
+## Floor cells (X x Z) kept free in front of the loading dock (south wall, centered) and the
+## customer exit (north wall, centered). No object can be placed there at any stage.
+const WAREHOUSE_DOCK_CELLS: Vector2i = Vector2i(4, 2)
+const WAREHOUSE_EXIT_CELLS: Vector2i = Vector2i(2, 2)
+
 # --- Build mode (D-0901) ---
 ## Height of the build camera above the floor, in meters, at zoom 1.
 const BUILD_CAMERA_HEIGHT_M: float = 14.0
