@@ -93,3 +93,14 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Decisión:** crece desde la esquina y no desde el centro para no migrar el layout guardado; precios ×4 por etapa como supuesto de balance (se ajustan solo en `CompanyTuning`, junto con D-0117).
 **Test** `test_warehouse_stages`: etapas crecientes y con precio creciente, cobro y libro, layout intacto, grilla nueva acepta un lugar antes fuera del piso, tres rechazos, paredes fuera del piso, ida y vuelta por JSON y tope del valor guardado.
 **Hecho cuando:** ampliar cambia grilla y paredes sin recargar el nivel (la parte de datos pasa el test; el adaptador de nodos va con D-0917).
+
+### D-0906 · Paredes y portones fijos que no se pueden tapar (dársena, salida) — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-12, PR pendiente)** — `WarehouseStages.dock_rect/exit_rect/fixed_rects/gate_rects` (`warehouse_stages.gd`) + `CompanyTuning.WAREHOUSE_DOCK_CELLS/EXIT_CELLS`; `apply_to` deja las zonas en `BuildPlacement.fixed_blocked`; test ampliado en `test_warehouse_stages`. El adaptador con nodos (abrir el hueco de los portones en las paredes con `gate_rects()`) queda para D-0917/D-0943.
+**Depende de:** D-0902 (`fixed_blocked`), D-0905 (etapas)
+**Qué:**
+- La dársena (portón de carga) es el centro del muro sur y la salida de clientes el centro del muro norte, en todas las etapas. Delante de cada una queda un rectángulo de piso libre: 4×2 celdas la dársena y 2×2 la salida (`CompanyTuning`).
+- `fixed_rects(stage)` los devuelve; `apply_to` los pasa a `BuildPlacement.fixed_blocked`, así colocar, mover o girar encima da `fixed_area` (rojo). Las paredes no se tapan por construcción: están fuera del piso (`out_of_bounds`).
+- `gate_rects(stage)`: las celdas del muro que quedan abiertas (mismo ancho que cada zona), para que el adaptador no ponga pared ahí.
+**Decisión:** dársena al sur y salida al norte, centradas, para que el recorrido camión → estantes → mesas → salida cruce el galpón a lo largo y no dependa de la etapa; los tamaños salen de lo que pasa un autoelevador (4 m) y una persona con carro (2 m).
+**Test** `test_warehouse_stages`: en las cuatro etapas las zonas están dentro del piso, no se pisan entre sí, tocan su muro, los huecos alinean con ellas; colocar encima es rojo con `fixed_area`; al lado es verde.
+**Hecho cuando:** el test pasa.

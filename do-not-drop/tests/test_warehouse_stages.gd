@@ -6,6 +6,8 @@ extends SceneTree
 ## - expand() charges the price, moves to the next stage and keeps the placed pieces untouched;
 ## - it is refused (nothing changes) without money, at the last stage and above the unlocked stage;
 ## - apply_to() resizes BuildPlacement and BuildMode: a spot out of the small floor is green after;
+## - the dock and the exit (D-0906) stay free at every stage: nothing can be placed on them, the
+##   gate openings sit in the wall line, and a piece next to them is still green;
 ## - the walls of a stage surround its floor, and the stage survives a save round trip.
 
 var _failures: int = 0
@@ -71,6 +73,8 @@ func _run() -> void:
 	for wall: Rect2i in walls:
 		_expect(not wall.intersects(Rect2i(Vector2i.ZERO, size)), "a wall stays off the floor")
 
+	_check_fixed_areas(grid, table)
+
 	var saved: Dictionary = state.to_dict()
 	state.reset()
 	_expect(state.warehouse_stage == 0, "reset goes back to small")
@@ -88,3 +92,28 @@ func _expect(condition: bool, message: String) -> void:
 	if not condition:
 		_failures += 1
 		push_error("FAIL: " + message)
+
+
+func _check_fixed_areas(grid: BuildPlacement, table: PlaceableDefinition) -> void:
+	for stage: int in WarehouseStages.stage_count():
+		var size: Vector2i = WarehouseStages.grid_size_for(stage)
+		var floor_rect := Rect2i(Vector2i.ZERO, size)
+		var dock: Rect2i = WarehouseStages.dock_rect(stage)
+		var door: Rect2i = WarehouseStages.exit_rect(stage)
+		_expect(floor_rect.encloses(dock) and floor_rect.encloses(door), "stage %d areas are on the floor" % stage)
+		_expect(not dock.intersects(door), "stage %d dock and exit do not overlap" % stage)
+		_expect(dock.end.y == size.y, "stage %d dock touches the south wall" % stage)
+		_expect(door.position.y == 0, "stage %d exit touches the north wall" % stage)
+		var gates: Array[Rect2i] = WarehouseStages.gate_rects(stage)
+		_expect(gates.size() == 2 and not gates[0].intersects(floor_rect) and not gates[1].intersects(floor_rect),
+			"stage %d gates are in the wall line" % stage)
+		_expect(gates[0].position.x == dock.position.x and gates[1].position.x == door.position.x,
+			"stage %d gates line up with their areas" % stage)
+		WarehouseStages.apply_to(stage, grid)
+		_expect(grid.fixed_blocked.size() == 2, "stage %d apply_to sets the fixed areas" % stage)
+		var on_dock: Dictionary = grid.preview([], table, dock.position.x, dock.position.y)
+		_expect(not on_dock["ok"] and on_dock["reason"] == BuildPlacement.REASON_FIXED, "stage %d dock is red" % stage)
+		var on_exit: Dictionary = grid.preview([], table, door.position.x, door.position.y)
+		_expect(not on_exit["ok"] and on_exit["reason"] == BuildPlacement.REASON_FIXED, "stage %d exit is red" % stage)
+		var beside: Dictionary = grid.preview([], table, dock.end.x, dock.position.y)
+		_expect(beside["ok"], "stage %d next to the dock is green" % stage)
