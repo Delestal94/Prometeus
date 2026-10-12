@@ -237,7 +237,8 @@ func _check_glossary(table: Dictionary) -> void:
 		var es: String = String(table[key][0]).to_lower()
 		_expect(not es.contains("camioneta"), "%s uses camión, not camioneta (docs/glosario.md)" % key)
 		_expect(not es.contains("hostea"), "%s uses anfitrión, not hostea (docs/glosario.md)" % key)
-	for key: String in ["HUD_RUN_TIPPED", "HUD_RUN_STUCK", "HUD_RUN_STUCK_ROADSIDE", "HUD_BACK_TO_ZONE", "HUD_HOLD_STILL"]:
+	for key: String in ["HUD_RUN_TIPPED", "HUD_RUN_STUCK", "HUD_RUN_STUCK_ROADSIDE",
+			"HUD_BACK_TO_ZONE", "HUD_HOLD_STILL"]:
 		_expect(String(table[key][0]).to_lower().contains("camión"), "%s calls the vehicle camión" % key)
 		_expect(String(table[key][1]).to_lower().contains("truck"), "%s calls the vehicle truck" % key)
 	_expect(not String(table["HUD_CARE_IDLE_DETAIL"][1]).contains("gets at risk"),
