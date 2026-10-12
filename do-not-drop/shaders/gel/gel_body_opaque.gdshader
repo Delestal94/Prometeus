@@ -118,4 +118,3 @@ void fragment() {
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
 }
-
