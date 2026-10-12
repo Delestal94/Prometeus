@@ -1,0 +1,567 @@
+[gd_resource type="Resource" script_class="RoadGraph" load_steps=63 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/road_graph.gd" id="1_graph"]
+[ext_resource type="Script" path="res://modules/route_gen/road_node.gd" id="2_node"]
+[ext_resource type="Script" path="res://modules/route_gen/road_edge.gd" id="3_edge"]
+
+[sub_resource type="Resource" id="Resource_n_shed"]
+script = ExtResource("2_node")
+id = &"shed"
+position = Vector2(0, 0)
+kind = &"junction"
+area = &"parque_industrial"
+
+[sub_resource type="Resource" id="Resource_n_oeste_in"]
+script = ExtResource("2_node")
+id = &"oeste_in"
+position = Vector2(-256, 0)
+kind = &"junction"
+area = &"parque_industrial"
+
+[sub_resource type="Resource" id="Resource_n_gate_suburbio"]
+script = ExtResource("2_node")
+id = &"gate_suburbio"
+position = Vector2(-768, 0)
+kind = &"gate"
+area = &"suburbio"
+lock_id = &"gate_suburbio"
+
+[sub_resource type="Resource" id="Resource_n_gate_campo_obra"]
+script = ExtResource("2_node")
+id = &"gate_campo_obra"
+position = Vector2(0, 512)
+kind = &"gate"
+area = &"campo"
+lock_id = &"gate_campo_obra"
+
+[sub_resource type="Resource" id="Resource_n_centro_in"]
+script = ExtResource("2_node")
+id = &"centro_in"
+position = Vector2(256, 0)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_384_m384"]
+script = ExtResource("2_node")
+id = &"c_384_m384"
+position = Vector2(384, -384)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_384_0"]
+script = ExtResource("2_node")
+id = &"c_384_0"
+position = Vector2(384, 0)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_384_384"]
+script = ExtResource("2_node")
+id = &"c_384_384"
+position = Vector2(384, 384)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_640_m384"]
+script = ExtResource("2_node")
+id = &"c_640_m384"
+position = Vector2(640, -384)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_640_0"]
+script = ExtResource("2_node")
+id = &"c_640_0"
+position = Vector2(640, 0)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_640_384"]
+script = ExtResource("2_node")
+id = &"c_640_384"
+position = Vector2(640, 384)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_896_m384"]
+script = ExtResource("2_node")
+id = &"c_896_m384"
+position = Vector2(896, -384)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_896_0"]
+script = ExtResource("2_node")
+id = &"c_896_0"
+position = Vector2(896, 0)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_896_384"]
+script = ExtResource("2_node")
+id = &"c_896_384"
+position = Vector2(896, 384)
+kind = &"junction"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_gate_puerto"]
+script = ExtResource("2_node")
+id = &"gate_puerto"
+position = Vector2(1024, 0)
+kind = &"gate"
+area = &"puerto"
+lock_id = &"gate_puerto"
+
+[sub_resource type="Resource" id="Resource_n_c_640_n"]
+script = ExtResource("2_node")
+id = &"c_640_n"
+position = Vector2(640, -480)
+kind = &"dead_end"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_640_s"]
+script = ExtResource("2_node")
+id = &"c_640_s"
+position = Vector2(640, 480)
+kind = &"dead_end"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_c_384_n"]
+script = ExtResource("2_node")
+id = &"c_384_n"
+position = Vector2(384, -480)
+kind = &"dead_end"
+area = &"centro"
+
+[sub_resource type="Resource" id="Resource_n_campo_a"]
+script = ExtResource("2_node")
+id = &"campo_a"
+position = Vector2(0, 1024)
+kind = &"junction"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_campo_b"]
+script = ExtResource("2_node")
+id = &"campo_b"
+position = Vector2(-640, 1536)
+kind = &"junction"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_campo_c"]
+script = ExtResource("2_node")
+id = &"campo_c"
+position = Vector2(512, 1792)
+kind = &"junction"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_campo_d"]
+script = ExtResource("2_node")
+id = &"campo_d"
+position = Vector2(0, 1536)
+kind = &"junction"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_chacra_o"]
+script = ExtResource("2_node")
+id = &"chacra_o"
+position = Vector2(-1024, 1408)
+kind = &"dead_end"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_chacra_s"]
+script = ExtResource("2_node")
+id = &"chacra_s"
+position = Vector2(-640, 1920)
+kind = &"junction"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_chacra_e"]
+script = ExtResource("2_node")
+id = &"chacra_e"
+position = Vector2(896, 1664)
+kind = &"dead_end"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_chacra_n"]
+script = ExtResource("2_node")
+id = &"chacra_n"
+position = Vector2(512, 1536)
+kind = &"dead_end"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_n_campo_e"]
+script = ExtResource("2_node")
+id = &"campo_e"
+position = Vector2(0, 1920)
+kind = &"junction"
+area = &"campo"
+
+[sub_resource type="Resource" id="Resource_e_avenida_este_1"]
+script = ExtResource("3_edge")
+id = &"avenida_este_1"
+from_id = &"shed"
+to_id = &"centro_in"
+width = 12
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"speed_bump", &"straight"])
+area = &"parque_industrial"
+street = &"avenida_este"
+
+[sub_resource type="Resource" id="Resource_e_avenida_este_2"]
+script = ExtResource("3_edge")
+id = &"avenida_este_2"
+from_id = &"centro_in"
+to_id = &"c_384_0"
+width = 12
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"avenida_este"
+
+[sub_resource type="Resource" id="Resource_e_avenida_este_3"]
+script = ExtResource("3_edge")
+id = &"avenida_este_3"
+from_id = &"c_384_0"
+to_id = &"c_640_0"
+width = 12
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"speed_bump"])
+area = &"centro"
+street = &"avenida_este"
+
+[sub_resource type="Resource" id="Resource_e_avenida_este_4"]
+script = ExtResource("3_edge")
+id = &"avenida_este_4"
+from_id = &"c_640_0"
+to_id = &"c_896_0"
+width = 12
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"chicane"])
+area = &"centro"
+street = &"avenida_este"
+
+[sub_resource type="Resource" id="Resource_e_avenida_este_5"]
+script = ExtResource("3_edge")
+id = &"avenida_este_5"
+from_id = &"c_896_0"
+to_id = &"gate_puerto"
+width = 12
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"avenida_este"
+
+[sub_resource type="Resource" id="Resource_e_calle_h_m384_1"]
+script = ExtResource("3_edge")
+id = &"calle_h_m384_1"
+from_id = &"c_384_m384"
+to_id = &"c_640_m384"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"curve"])
+area = &"centro"
+street = &"calle_h_m384"
+
+[sub_resource type="Resource" id="Resource_e_calle_h_m384_2"]
+script = ExtResource("3_edge")
+id = &"calle_h_m384_2"
+from_id = &"c_640_m384"
+to_id = &"c_896_m384"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"speed_bump"])
+area = &"centro"
+street = &"calle_h_m384"
+
+[sub_resource type="Resource" id="Resource_e_calle_h_384_1"]
+script = ExtResource("3_edge")
+id = &"calle_h_384_1"
+from_id = &"c_384_384"
+to_id = &"c_640_384"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"curve"])
+area = &"centro"
+street = &"calle_h_384"
+
+[sub_resource type="Resource" id="Resource_e_calle_h_384_2"]
+script = ExtResource("3_edge")
+id = &"calle_h_384_2"
+from_id = &"c_640_384"
+to_id = &"c_896_384"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"speed_bump"])
+area = &"centro"
+street = &"calle_h_384"
+
+[sub_resource type="Resource" id="Resource_e_calle_v_384_m384"]
+script = ExtResource("3_edge")
+id = &"calle_v_384_m384"
+from_id = &"c_384_m384"
+to_id = &"c_384_0"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_384"
+
+[sub_resource type="Resource" id="Resource_e_calle_v_384_0"]
+script = ExtResource("3_edge")
+id = &"calle_v_384_0"
+from_id = &"c_384_0"
+to_id = &"c_384_384"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_384"
+
+[sub_resource type="Resource" id="Resource_e_calle_v_640_m384"]
+script = ExtResource("3_edge")
+id = &"calle_v_640_m384"
+from_id = &"c_640_m384"
+to_id = &"c_640_0"
+width = 8
+surface = &"cobble"
+segments = Array[StringName]([&"straight", &"speed_bump"])
+area = &"centro"
+street = &"calle_v_640"
+
+[sub_resource type="Resource" id="Resource_e_calle_v_640_0"]
+script = ExtResource("3_edge")
+id = &"calle_v_640_0"
+from_id = &"c_640_0"
+to_id = &"c_640_384"
+width = 8
+surface = &"cobble"
+segments = Array[StringName]([&"straight", &"speed_bump"])
+area = &"centro"
+street = &"calle_v_640"
+
+[sub_resource type="Resource" id="Resource_e_calle_v_896_m384"]
+script = ExtResource("3_edge")
+id = &"calle_v_896_m384"
+from_id = &"c_896_m384"
+to_id = &"c_896_0"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_896"
+
+[sub_resource type="Resource" id="Resource_e_calle_v_896_0"]
+script = ExtResource("3_edge")
+id = &"calle_v_896_0"
+from_id = &"c_896_0"
+to_id = &"c_896_384"
+width = 8
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_896"
+
+[sub_resource type="Resource" id="Resource_e_pasaje_n"]
+script = ExtResource("3_edge")
+id = &"pasaje_n"
+from_id = &"c_640_m384"
+to_id = &"c_640_n"
+width = 6
+surface = &"cobble"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_640"
+
+[sub_resource type="Resource" id="Resource_e_pasaje_s"]
+script = ExtResource("3_edge")
+id = &"pasaje_s"
+from_id = &"c_640_384"
+to_id = &"c_640_s"
+width = 6
+surface = &"cobble"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_640"
+
+[sub_resource type="Resource" id="Resource_e_pasaje_oeste"]
+script = ExtResource("3_edge")
+id = &"pasaje_oeste"
+from_id = &"c_384_m384"
+to_id = &"c_384_n"
+width = 6
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"centro"
+street = &"calle_v_384"
+
+[sub_resource type="Resource" id="Resource_e_calle_oeste_1"]
+script = ExtResource("3_edge")
+id = &"calle_oeste_1"
+from_id = &"shed"
+to_id = &"oeste_in"
+width = 10
+surface = &"asphalt"
+segments = Array[StringName]([&"straight"])
+area = &"parque_industrial"
+street = &"calle_oeste"
+
+[sub_resource type="Resource" id="Resource_e_calle_oeste_2"]
+script = ExtResource("3_edge")
+id = &"calle_oeste_2"
+from_id = &"oeste_in"
+to_id = &"gate_suburbio"
+width = 10
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"curve"])
+area = &"suburbio"
+street = &"calle_oeste"
+
+[sub_resource type="Resource" id="Resource_e_camino_campo_1"]
+script = ExtResource("3_edge")
+id = &"camino_campo_1"
+from_id = &"shed"
+to_id = &"gate_campo_obra"
+width = 10
+surface = &"asphalt"
+segments = Array[StringName]([&"straight", &"hill"])
+street = &"camino_campo"
+
+[sub_resource type="Resource" id="Resource_e_camino_campo_2"]
+script = ExtResource("3_edge")
+id = &"camino_campo_2"
+from_id = &"gate_campo_obra"
+to_id = &"campo_a"
+width = 9
+surface = &"gravel"
+segments = Array[StringName]([&"gravel", &"straight", &"hill"])
+area = &"campo"
+street = &"camino_campo"
+
+[sub_resource type="Resource" id="Resource_e_camino_campo_3"]
+script = ExtResource("3_edge")
+id = &"camino_campo_3"
+from_id = &"campo_a"
+to_id = &"campo_b"
+out_handle = Vector2(-100, 200)
+in_handle = Vector2(150, -150)
+width = 9
+surface = &"gravel"
+segments = Array[StringName]([&"gravel", &"curve", &"s_curve", &"narrow_bridge", &"gravel"])
+area = &"campo"
+street = &"camino_campo"
+
+[sub_resource type="Resource" id="Resource_e_camino_campo_4"]
+script = ExtResource("3_edge")
+id = &"camino_campo_4"
+from_id = &"campo_b"
+to_id = &"campo_c"
+out_handle = Vector2(250, 150)
+in_handle = Vector2(-300, -50)
+width = 9
+surface = &"gravel"
+segments = Array[StringName]([&"gravel", &"curve", &"hill", &"gravel", &"chicane"])
+area = &"campo"
+street = &"camino_campo"
+
+[sub_resource type="Resource" id="Resource_e_chacra_1"]
+script = ExtResource("3_edge")
+id = &"chacra_1"
+from_id = &"campo_a"
+to_id = &"campo_d"
+width = 7
+surface = &"dirt"
+segments = Array[StringName]([&"mud", &"straight", &"gravel"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_2"]
+script = ExtResource("3_edge")
+id = &"chacra_2"
+from_id = &"campo_d"
+to_id = &"campo_c"
+out_handle = Vector2(150, 0)
+in_handle = Vector2(-200, -120)
+width = 7
+surface = &"dirt"
+segments = Array[StringName]([&"mud", &"curve", &"straight"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_3"]
+script = ExtResource("3_edge")
+id = &"chacra_3"
+from_id = &"campo_b"
+to_id = &"chacra_o"
+out_handle = Vector2(-150, 0)
+in_handle = Vector2(150, 100)
+width = 6
+surface = &"dirt"
+segments = Array[StringName]([&"gravel", &"curve", &"mud"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_4"]
+script = ExtResource("3_edge")
+id = &"chacra_4"
+from_id = &"campo_b"
+to_id = &"chacra_s"
+width = 6
+surface = &"dirt"
+segments = Array[StringName]([&"mud", &"straight"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_5"]
+script = ExtResource("3_edge")
+id = &"chacra_5"
+from_id = &"campo_c"
+to_id = &"chacra_e"
+out_handle = Vector2(100, -50)
+in_handle = Vector2(-100, 60)
+width = 7
+surface = &"gravel"
+segments = Array[StringName]([&"gravel", &"curve", &"straight"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_6"]
+script = ExtResource("3_edge")
+id = &"chacra_6"
+from_id = &"campo_c"
+to_id = &"chacra_n"
+width = 6
+surface = &"dirt"
+segments = Array[StringName]([&"mud", &"straight"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_7"]
+script = ExtResource("3_edge")
+id = &"chacra_7"
+from_id = &"chacra_s"
+to_id = &"campo_e"
+out_handle = Vector2(100, 80)
+in_handle = Vector2(-150, 40)
+width = 6
+surface = &"dirt"
+segments = Array[StringName]([&"gravel", &"curve"])
+area = &"campo"
+street = &"chacras"
+
+[sub_resource type="Resource" id="Resource_e_chacra_8"]
+script = ExtResource("3_edge")
+id = &"chacra_8"
+from_id = &"campo_e"
+to_id = &"campo_c"
+out_handle = Vector2(150, 50)
+in_handle = Vector2(-150, 100)
+width = 7
+surface = &"gravel"
+segments = Array[StringName]([&"gravel", &"straight", &"rail_crossing", &"curve"])
+area = &"campo"
+street = &"chacras"
+
+[resource]
+script = ExtResource("1_graph")
+nodes = Array[ExtResource("2_node")]([SubResource("Resource_n_shed"), SubResource("Resource_n_oeste_in"), SubResource("Resource_n_gate_suburbio"), SubResource("Resource_n_gate_campo_obra"), SubResource("Resource_n_centro_in"), SubResource("Resource_n_c_384_m384"), SubResource("Resource_n_c_384_0"), SubResource("Resource_n_c_384_384"), SubResource("Resource_n_c_640_m384"), SubResource("Resource_n_c_640_0"), SubResource("Resource_n_c_640_384"), SubResource("Resource_n_c_896_m384"), SubResource("Resource_n_c_896_0"), SubResource("Resource_n_c_896_384"), SubResource("Resource_n_gate_puerto"), SubResource("Resource_n_c_640_n"), SubResource("Resource_n_c_640_s"), SubResource("Resource_n_c_384_n"), SubResource("Resource_n_campo_a"), SubResource("Resource_n_campo_b"), SubResource("Resource_n_campo_c"), SubResource("Resource_n_campo_d"), SubResource("Resource_n_chacra_o"), SubResource("Resource_n_chacra_s"), SubResource("Resource_n_chacra_e"), SubResource("Resource_n_chacra_n"), SubResource("Resource_n_campo_e")])
+edges = Array[ExtResource("3_edge")]([SubResource("Resource_e_avenida_este_1"), SubResource("Resource_e_avenida_este_2"), SubResource("Resource_e_avenida_este_3"), SubResource("Resource_e_avenida_este_4"), SubResource("Resource_e_avenida_este_5"), SubResource("Resource_e_calle_h_m384_1"), SubResource("Resource_e_calle_h_m384_2"), SubResource("Resource_e_calle_h_384_1"), SubResource("Resource_e_calle_h_384_2"), SubResource("Resource_e_calle_v_384_m384"), SubResource("Resource_e_calle_v_384_0"), SubResource("Resource_e_calle_v_640_m384"), SubResource("Resource_e_calle_v_640_0"), SubResource("Resource_e_calle_v_896_m384"), SubResource("Resource_e_calle_v_896_0"), SubResource("Resource_e_pasaje_n"), SubResource("Resource_e_pasaje_s"), SubResource("Resource_e_pasaje_oeste"), SubResource("Resource_e_calle_oeste_1"), SubResource("Resource_e_calle_oeste_2"), SubResource("Resource_e_camino_campo_1"), SubResource("Resource_e_camino_campo_2"), SubResource("Resource_e_camino_campo_3"), SubResource("Resource_e_camino_campo_4"), SubResource("Resource_e_chacra_1"), SubResource("Resource_e_chacra_2"), SubResource("Resource_e_chacra_3"), SubResource("Resource_e_chacra_4"), SubResource("Resource_e_chacra_5"), SubResource("Resource_e_chacra_6"), SubResource("Resource_e_chacra_7"), SubResource("Resource_e_chacra_8")])
