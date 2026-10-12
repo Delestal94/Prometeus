@@ -96,3 +96,13 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** la propina es plata aparte de la paga (entra como `earn`, no se suma al precio del pedido), así el ledger la muestra por separado en el resumen de D-0508.
 **Test** `test_order_tips`: rápida, justo a la mitad, lenta, antes de existir el pedido, cada penalidad la cancela, billetera y reputación.
 **Hecho cuando:** el test pasa.
+
+### D-0508 · Resumen financiero del cierre del día — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho parcial (2026-10-12, PR pendiente)** — `DaySummary` (`scripts/gameplay/business/day_summary.gd`): ingresos, costos, ganancia y saldo de apertura/cierre del día, por motivo, desde el libro; `test_day_summary`. El panel de pantalla queda como subtarea abierta D-0508.2.
+**Depende de:** D-0501
+**Qué:**
+- **D-0508.1 (hecha)** `DaySummary.build(company, day)` devuelve `{day, income, costs, profit, opening, closing, income_by_reason, cost_by_reason, truncated}`. Parte los movimientos del libro de ese día por signo; `costs` y los montos por motivo son positivos. `sorted_reasons(dict)` ordena los motivos de mayor a menor para listarlos. `truncated` avisa que el libro está lleno y puede faltar parte del día (`LEDGER_MAX` = 200).
+- **D-0508.2 (abierta, `constructor-ui`)** Panel del cierre del día: lista de ingresos y de costos por motivo (nombres traducibles por clave `finance_reason_<motivo>`), ganancia con color, saldo de apertura y cierre. Se arma por código como el resto de la UI, navegable con mando; la lee `CompanyRoot` al cerrar el día (D-0320). Test de UI: los números del panel coinciden con `DaySummary.build`. Captura de `revisor-visual` a 1080p y Steam Deck.
+**Decisión:** el resumen se calcula del libro y no se guarda: es una vista, así no hay otro estado que replicar ni migrar. Los motivos no se enumeran acá; el que escriba un cobro nuevo ya aparece solo.
+**Test** `test_day_summary`: ingresos/costos por motivo de un día con otros días alrededor, ganancia, apertura + ganancia = cierre, día sin movimientos, empresa nula, `truncated` y orden.
+**Hecho cuando:** el test pasa y el panel muestra los mismos números (D-0508.2).
