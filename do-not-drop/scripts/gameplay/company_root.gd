@@ -22,8 +22,14 @@ extends Node3D
 ## the world and loads the main menu. The host (solo too) loads its slot when it comes
 ## up without a company (CompanySave) and saves the day as it stood at the last applied
 ## event, marked interrupted, whenever its world closes before the day does: its session
-## ended and it went back to the menu, or the game closed. Until DayCycle (D-0203) closes
-## days, every day is in progress.
+## ended and it went back to the menu, or the game closed. Every day is still saved as in progress,
+## also one DayCycle (D-0203) already closed (its SUMMARY phase): saving the closed day is D-0206's
+## hook (docs/expansion-distritos/revisar/D-0203.md).
+##
+## The day (D-0203): the root gives every peer a GameClock and a DayCycle child, both attached to
+## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
+## the phases and the clock then run by themselves (DayCycle). The shed's area is not wired as
+## DayCycle.crew_in_shed yet (no remote player nodes exist), so the shed never freezes here.
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -60,6 +66,9 @@ var zones: Array[ZoneDefinition] = []
 var player: Node3D
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
+## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
+var clock: GameClock
+var day_cycle: DayCycle
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -91,6 +100,7 @@ func _ready() -> void:
 		_add_zone_slab(zone)
 	_add_shed()
 	_spawn_player()
+	_open_company_day.call_deferred()
 
 
 ## Every zone in data/zones/, in a stable order. A new .tres joins without code.
@@ -119,6 +129,7 @@ func _add_net(state: COMPANY_STATE) -> void:
 	net.name = "CompanyNet"
 	net.company = state
 	add_child(net)
+	_add_day(state)
 	if not net.is_host():
 		if state != null:
 			_mirrored_state = state
@@ -137,6 +148,27 @@ func _add_net(state: COMPANY_STATE) -> void:
 			state.new_company()
 	net.inventory = state.stock()
 	_hosted_state = state
+
+
+## The day's clock and phases, hooked to CompanyNet on every peer in the frame it is added: the
+## snapshot to the peers already up goes out deferred, after this.
+func _add_day(state: COMPANY_STATE) -> void:
+	clock = GameClock.new()
+	clock.name = "GameClock"
+	add_child(clock)
+	clock.attach(net, state)
+	day_cycle = DayCycle.new()
+	day_cycle.name = "DayCycle"
+	add_child(day_cycle)
+	day_cycle.attach(net, clock, state)
+
+
+## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
+## waits for the host's events.
+func _open_company_day() -> void:
+	if not is_inside_tree() or _host_gone or not net.is_host() or _hosted_state == null:
+		return
+	day_cycle.open_day(_hosted_state.day)
 
 
 ## The business side of the world, before the world itself: CompanyNet (_add_net()) and, on a

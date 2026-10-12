@@ -53,6 +53,11 @@ class NetOnlyRoot extends CompanyRoot:
 	func _ready() -> void:
 		_start_company(company_state)
 
+	## No GameClock or DayCycle (D-0203): this test keeps the minute in the company itself, and a
+	## running clock would write its own over it.
+	func _add_day(_state: Node) -> void:
+		pass
+
 
 ## Engine errors (not warnings) logged while the host leaves.
 class ErrorCatcher extends Logger:

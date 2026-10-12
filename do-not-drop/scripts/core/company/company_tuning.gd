@@ -29,6 +29,10 @@ const MINUTES_PER_DAY: int = 24 * 60
 const SECONDS_PER_GAME_HOUR: float = 90.0
 ## OPENING state of DayCycle (D-0203): real seconds before the day operates.
 const OPENING_REAL_SECONDS: float = 5.0
+## S4: the frozen shed freezes or thaws at most once in this many real seconds (DayCycle, D-0203), so
+## a player standing on the shed's door line can't send an event per frame. Shorter than a walk
+## through the door; long enough that nobody gains by dancing on the line.
+const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100

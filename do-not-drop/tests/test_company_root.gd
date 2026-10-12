@@ -10,6 +10,9 @@ extends SceneTree
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
 ##   CompanyNet the CompanyState node, whose to_dict() the snapshot carries (D-2004);
+## - it has a GameClock and a DayCycle child hooked to that CompanyNet (D-0203, D-0219); solo opens the
+##   company's day once the world is up: OPENING of its day, the clock running from 08:00, and no
+##   shed freeze while no shed area is wired;
 ## - on a client (a session that isn't the host) it waits for the snapshot without touching
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
@@ -48,6 +51,17 @@ func _run() -> void:
 		_expect(net.inventory.to_dict() == stock.to_dict() and not net.awaiting_snapshot(),
 			"Solo counts as host: CompanyNet starts from the company's stock, not waiting for a snapshot")
 		_expect(net.company == state, "CompanyNet gets the CompanyState node for the snapshot")
+		var cycle: DayCycle = level.get(&"day_cycle")
+		var clock: GameClock = level.get(&"clock")
+		_expect(cycle != null and clock != null and net.day_cycle == cycle and net.clock == clock
+			and net.snapshot().has(DayCycle.SNAPSHOT_KEY) and net.snapshot().has(GameClock.SNAPSHOT_KEY),
+			"The root hooks a GameClock and a DayCycle to its CompanyNet (D-0203)")
+		if cycle != null and clock != null:
+			_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == int(state.get(&"day"))
+				and not clock.is_paused() and clock.minute_now() < float(CompanyTuning.DAY_START_MIN) + 5.0,
+				"Solo opens the company's day: OPENING of day %s with the clock at 08:00 (got %s, %.1f)"
+				% [state.get(&"day"), cycle.phase_name(), clock.minute_now()])
+			_expect(not cycle.is_frozen(), "...and the shed isn't frozen (no area is wired yet)")
 
 	var zone_files: int = 0
 	for file: String in DirAccess.get_files_at("res://data/zones/"):
