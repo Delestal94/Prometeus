@@ -180,6 +180,7 @@ del día. El guion de `probador-qa` suma "Empresa en red".
 **Hecho cuando:** los 3 peers terminan con el mismo diccionario y no hay `ERROR` en ninguno de los logs.
 
 ### D-2018 · Módulos nuevos en `portability-check.sh` — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-12, a1374c1, PR pendiente)** — ya estaba: `portability-check.sh` descubre solo cada `modules/<x>/` con `module.cfg` y `check_modules.py` (CI, lint) rechaza un módulo sin `module.cfg` o sin `tests/test_*.gd`; el run de main de a1374c1 da `OK day_clock`, `OK world_cells`, 25/25. `inventory`, `order_queue` y `build_grid` entran solos cuando D-0221, D-0222 y D-0225 los creen.
 **Depende de:** D-0220
 **Qué:** cada `modules/<nuevo>/` (`day_clock`, `world_cells`, `inventory`, `order_queue`, `build_grid`)
 tiene `module.cfg` y `tests/`, y `tools/portability-check.sh` lo recorre (si los descubre solo, verificar
