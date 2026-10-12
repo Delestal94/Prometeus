@@ -517,9 +517,91 @@ def rock(seed=15, size=(0.8, 0.6, 0.5), material="stone", name="ForestRock", at=
     return o
 
 
+# Forest rock (N-331): the dented-ball rock() read as a blue-grey lump with no
+# silhouette at 8-15 m, so the standalone rock is cut instead -- a convex hull
+# sliced by a tilted top, a side cut and a back chip (big flat facets), ridges
+# chamfered, a moss patch on the top facet and the base 5 cm underground.
+# rock() itself stays as it was: mossy_rock_cluster still uses it.
+# Warm stone: halfway between the palette's "stone" and "chimney", so it
+# stops reading cold next to the moss. Named "stone.forest" so
+# LowpolyMaterials keys it as "stone" (it cuts the name at the first dot)
+# and keeps this albedo under the detail map.
+STONE_FOREST = (0.33, 0.30, 0.25, 1)
+
+
+def stone_forest():
+    m = bpy.data.materials.get("stone.forest")
+    if m is None:
+        m = bpy.data.materials.new("stone.forest")
+        m.use_nodes = True
+        principled = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+        principled.inputs["Base Color"].default_value = STONE_FOREST
+        principled.inputs["Roughness"].default_value = 0.88
+        m.diffuse_color = STONE_FOREST
+        m.roughness = 0.88
+    return m
+
+
+def _rock_cut(bm, co, no):
+    """Slices the convex rock with a plane and caps the cut: one big flat facet."""
+    res = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co,
+                                 plane_no=Vector(no).normalized(), clear_outer=True)
+    edges = [e for e in res["geom_cut"] if isinstance(e, bmesh.types.BMEdge)]
+    if edges:
+        bmesh.ops.edgeloop_fill(bm, edges=edges)
+
+
+def faceted_rock(name="ForestRock", size=(0.8, 0.6, 0.5), sink=0.05, seed=331):
+    rng = random.Random(seed)
+    sx, sy, sz = size[0] / 2, size[1] / 2, size[2]
+    pts = []
+    for ring, (zf, rf, n) in enumerate([(0.0, 1.0, 7), (0.45, 0.95, 7), (0.85, 0.6, 5)]):
+        for i in range(n):
+            a = (i + rng.uniform(-0.25, 0.25) + ring * 0.5) * math.tau / n
+            r = rf * rng.uniform(0.85, 1.05)
+            pts.append(Vector((math.cos(a) * sx * r, math.sin(a) * sy * r, zf * sz + rng.uniform(-0.04, 0.04) - sink)))
+    pts.append(Vector((rng.uniform(-0.05, 0.05), rng.uniform(-0.05, 0.05), sz * 1.05 - sink)))
+    bm = bmesh.new()
+    bmesh.ops.convex_hull(bm, input=[bm.verts.new(p) for p in pts])
+    for v in [v for v in bm.verts if not v.link_faces]:
+        bm.verts.remove(v)
+    _rock_cut(bm, (0.05, 0.0, sz * 0.74 - sink), (0.42, -0.3, 1.0))   # tilted top
+    _rock_cut(bm, (sx * 0.72, 0.0, 0.0), (1.0, 0.35, 0.25))           # side cut
+    _rock_cut(bm, (-sx * 0.2, sy * 0.78, 0.0), (-0.3, 1.0, 0.45))     # back chip
+    _rock_cut(bm, (0, 0, -sink), (0, 0, -1))                          # buried base
+    bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(18), verts=bm.verts[:], edges=bm.edges[:])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    ridges = [e for e in bm.edges if not all(v.co.z < -sink + 1e-3 for v in e.verts)
+              and e.calc_face_angle(0) > math.radians(25)]
+    bmesh.ops.bevel(bm, geom=ridges, offset=0.025, segments=1, affect="EDGES", profile=0.5, clamp_overlap=True)
+    # Moss: the top facet split off, shrunk toward its centre, raised 1.5 cm.
+    bm.normal_update()
+    top = max((f for f in bm.faces if f.normal.z > 0.7), key=lambda f: f.calc_area())
+    bmesh.ops.inset_region(bm, faces=[top], thickness=0.0, depth=0.0)
+    centre, lift = top.calc_center_median(), top.normal * 0.015
+    for v in top.verts:
+        v.co = centre + (v.co - centre) * (0.62 + rng.uniform(-0.08, 0.08)) + lift
+    top.material_index = 1
+    # Fit the bounding box to `size`, the base `sink` below the origin.
+    lo = [min(v.co[i] for v in bm.verts) for i in range(3)]
+    hi = [max(v.co[i] for v in bm.verts) for i in range(3)]
+    for v in bm.verts:
+        v.co.x = (v.co.x - (lo[0] + hi[0]) / 2) * size[0] / (hi[0] - lo[0])
+        v.co.y = (v.co.y - (lo[1] + hi[1]) / 2) * size[1] / (hi[1] - lo[1])
+        v.co.z = (v.co.z - lo[2]) * size[2] / (hi[2] - lo[2]) - sink
+    mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(stone_forest())
+    obj.data.materials.append(mat("moss"))
+    return obj
+
+
 def forest_rock():
     clear()
-    rock()
+    faceted_rock()
 
 
 def mossy_rock_cluster():
