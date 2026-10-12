@@ -4,7 +4,8 @@ extends RefCounted
 ##
 ## Pure logic over the grid of BuildMode: `preview()` says whether an object fits at a cell with a
 ## given rotation (green) or not (red, with the reason), and `place()` buys it through PlaceableShop
-## only when the preview is green. The world adapter draws the footprint with `preview_color()`.
+## only when the preview is green. `rotate_piece()`, `move_piece()` and `sell_piece()` (D-0903) act on
+## a piece already in the layout: the same checks, ignoring the piece itself. The world adapter draws the footprint with `preview_color()`.
 ## Fixed areas that can never be covered (loading dock, exit: D-0906) arrive as `fixed_blocked`
 ## rectangles in grid cells. Nothing here names autoloads or UI classes (N-919).
 
@@ -37,11 +38,11 @@ func footprint_rect(def: PlaceableDefinition, x: int, z: int, turns: int) -> Rec
 ## `layout` is the CompanyState.layout array ({id, x, z, turns} per piece); `money` < 0 skips
 ## the wallet check (the preview only needs the grid; place() always checks it).
 func preview(layout: Array, def: PlaceableDefinition, x: int, z: int, turns: int = 0,
-		money: int = -1) -> Dictionary:
+		money: int = -1, ignore_index: int = -1) -> Dictionary:
 	if def == null:
 		return {"ok": false, "reason": REASON_NO_DEFINITION, "rect": Rect2i()}
 	var rect: Rect2i = footprint_rect(def, x, z, turns)
-	var reason: StringName = _reason_for(layout, rect)
+	var reason: StringName = _reason_for(layout, rect, ignore_index)
 	if reason == REASON_OK and money >= 0 and money < def.price:
 		reason = REASON_NO_MONEY
 	return {"ok": reason == REASON_OK, "reason": reason, "rect": rect}
@@ -65,14 +66,58 @@ func place(state: Object, def: PlaceableDefinition, x: int, z: int, turns: int =
 	return result
 
 
-func _reason_for(layout: Array, rect: Rect2i) -> StringName:
+## Turns the piece at `index` one quarter turn (`quarter_turns` more) around its corner cell.
+## Returns the preview result; the piece only changes when it is green. Free: no money moves.
+func rotate_piece(state: Object, index: int, quarter_turns: int = 1) -> Dictionary:
+	var piece: Dictionary = _piece_at(state, index)
+	if piece.is_empty():
+		return {"ok": false, "reason": REASON_NO_DEFINITION, "rect": Rect2i()}
+	var turns: int = posmod(int(piece.get("turns", 0)) + quarter_turns, 4)
+	return _reposition(state, index, int(piece.get("x", 0)), int(piece.get("z", 0)), turns)
+
+
+## Moves the piece at `index` so its corner is at (x, z), keeping its rotation. Free.
+func move_piece(state: Object, index: int, x: int, z: int) -> Dictionary:
+	var piece: Dictionary = _piece_at(state, index)
+	if piece.is_empty():
+		return {"ok": false, "reason": REASON_NO_DEFINITION, "rect": Rect2i()}
+	return _reposition(state, index, x, z, int(piece.get("turns", 0)))
+
+
+## Sells the piece at `index` (partial refund, PlaceableShop.sell). Returns the money given
+## back, or -1 when the index is not valid.
+func sell_piece(state: Object, index: int) -> int:
+	return PlaceableShop.sell(state, index)
+
+
+func _piece_at(state: Object, index: int) -> Dictionary:
+	if index < 0 or index >= state.layout.size():
+		return {}
+	return state.layout[index]
+
+
+func _reposition(state: Object, index: int, x: int, z: int, turns: int) -> Dictionary:
+	var piece: Dictionary = state.layout[index]
+	var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece.get("id", ""))))
+	var result: Dictionary = preview(state.layout, def, x, z, turns, -1, index)
+	if bool(result["ok"]):
+		piece["x"] = x
+		piece["z"] = z
+		piece["turns"] = turns
+	return result
+
+
+func _reason_for(layout: Array, rect: Rect2i, ignore_index: int = -1) -> StringName:
 	if rect.position.x < 0 or rect.position.y < 0 \
 			or rect.end.x > grid_size.x or rect.end.y > grid_size.y:
 		return REASON_OUT_OF_BOUNDS
 	for area: Rect2i in fixed_blocked:
 		if area.intersects(rect):
 			return REASON_FIXED
-	for piece: Variant in layout:
+	for i: int in layout.size():
+		if i == ignore_index:
+			continue
+		var piece: Variant = layout[i]
 		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece.get("id", ""))))
 		if def == null:
 			continue
