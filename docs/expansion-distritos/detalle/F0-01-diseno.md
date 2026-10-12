@@ -47,6 +47,7 @@ proveedores se van, o el host tiene que dejar a alguien.
 **Hecho cuando:** el issue está abierto.
 
 ### D-0107 · Análisis de *Schedule I* — B · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-12, PR pendiente)** — `diseno/referencia-schedule-1.md`: empleados, estaciones, crecimiento, bucle y quejas con 41 fuentes; tabla de 31 filas Tomamos/Adaptamos/No tomamos con su tarea `D-`.
 **Depende de:** —
 **Qué:** `diseno/referencia-schedule-1.md` con fuentes web (página de Steam, wiki, reseñas) sobre:
 - empleados (contratación, cama/locker, sueldo diario, asignación con portapapeles);
