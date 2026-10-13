@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "round": 1,
+  "generated_at_utc": "2026-10-13T05:06:27.627491+00:00",
+  "reference": "art/gel_character/referencia/referencia_frente.jpg",
+  "render": "art/gel_character/review_bloque_e/s311_38_godot_reference.png",
+  "resolution": [
+    832,
+    1248
+  ],
+  "mask": {
+    "method": "white-background threshold, largest component, enclosed-hole fill",
+    "white_distance_threshold_srgb8": 8,
+    "blue_bias_threshold_srgb8": 3
+  },
+  "silhouette": {
+    "iou": 0.609689,
+    "intersection_pixels": 191766,
+    "union_pixels": 314531,
+    "reference_pixels": 299222,
+    "render_pixels": 207075,
+    "reference_box_px": [
+      148,
+      98,
+      676,
+      1135
+    ]
+  },
+  "color": {
+    "method": "CIE76 Delta E on intersecting foreground pixels",
+    "zones": {
+      "head": {
+        "mean_delta_e": 25.9546,
+        "sample_pixels": 54837
+      },
+      "torso": {
+        "mean_delta_e": 17.0134,
+        "sample_pixels": 56737
+      },
+      "arms": {
+        "mean_delta_e": 14.7611,
+        "sample_pixels": 36934
+      },
+      "legs": {
+        "mean_delta_e": 16.823,
+        "sample_pixels": 46149
+      }
+    }
+  },
+  "artifacts": {
+    "side_by_side": "art/gel_character/review_bloque_e/round_01/side_by_side.png",
+    "difference": "art/gel_character/review_bloque_e/round_01/difference.png"
+  }
+}

@@ -1,0 +1,287 @@
+"""Compare the Godot gel render with the front reference for one iteration.
+
+blender --background --factory-startup --python-exit-code 1 --python \
+  art/gel_character/compare_reference.py -- --round=1
+
+Both inputs remain at the source resolution. The script thresholds their white
+backgrounds, reports silhouette IoU and CIE76 Delta E for four anatomical zones,
+then writes a side-by-side image and a difference map for the requested round.
+"""
+import json
+from collections import deque
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+import bpy
+import numpy as np
+
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+DEFAULT_REFERENCE = HERE / "referencia/referencia_frente.jpg"
+DEFAULT_RENDER = HERE / "review_bloque_e/s311_38_godot_reference.png"
+DEFAULT_OUTPUT = HERE / "review_bloque_e"
+WHITE_DISTANCE_THRESHOLD = 8
+BLUE_BIAS_THRESHOLD = 3
+ZONE_ORDER = ("head", "torso", "arms", "legs")
+
+
+def command_line_options():
+    arguments = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    options = {"round": 1, "reference": DEFAULT_REFERENCE,
+               "render": DEFAULT_RENDER, "output": DEFAULT_OUTPUT}
+    for argument in arguments:
+        if argument.startswith("--round="):
+            options["round"] = int(argument.split("=", 1)[1])
+        elif argument.startswith("--reference="):
+            options["reference"] = Path(argument.split("=", 1)[1]).resolve()
+        elif argument.startswith("--render="):
+            options["render"] = Path(argument.split("=", 1)[1]).resolve()
+        elif argument.startswith("--output="):
+            options["output"] = Path(argument.split("=", 1)[1]).resolve()
+        else:
+            raise ValueError(f"Unknown option: {argument}")
+    if options["round"] < 1:
+        raise ValueError("--round must be at least 1")
+    return options
+
+
+def load_rgb(path):
+    image = bpy.data.images.load(str(path), check_existing=False)
+    try:
+        width, height = image.size
+        pixels = np.empty(width * height * 4, dtype=np.float32)
+        image.pixels.foreach_get(pixels)
+        rgba = pixels.reshape(height, width, 4)[::-1].copy()
+        return rgba[:, :, :3], (width, height)
+    finally:
+        bpy.data.images.remove(image)
+
+
+def largest_component(mask):
+    """Keep the subject and reject disconnected dust/background artifacts."""
+    height, width = mask.shape
+    seen = np.zeros(mask.shape, dtype=bool)
+    largest = []
+    for y, x in zip(*np.nonzero(mask)):
+        if seen[y, x]:
+            continue
+        queue = deque([(int(y), int(x))])
+        seen[y, x] = True
+        component = []
+        while queue:
+            cy, cx = queue.popleft()
+            component.append((cy, cx))
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    ny, nx = cy + dy, cx + dx
+                    if (0 <= ny < height and 0 <= nx < width
+                            and mask[ny, nx] and not seen[ny, nx]):
+                        seen[ny, nx] = True
+                        queue.append((ny, nx))
+        if len(component) > len(largest):
+            largest = component
+    result = np.zeros(mask.shape, dtype=bool)
+    if largest:
+        points = np.asarray(largest, dtype=np.int32)
+        result[points[:, 0], points[:, 1]] = True
+    return result
+
+
+def fill_enclosed_holes(component):
+    """Fill white highlights inside the subject without filling arm/body gaps."""
+    height, width = component.shape
+    outside = np.zeros(component.shape, dtype=bool)
+    queue = deque()
+    for x in range(width):
+        for y in (0, height - 1):
+            if not component[y, x] and not outside[y, x]:
+                outside[y, x] = True
+                queue.append((y, x))
+    for y in range(height):
+        for x in (0, width - 1):
+            if not component[y, x] and not outside[y, x]:
+                outside[y, x] = True
+                queue.append((y, x))
+    while queue:
+        cy, cx = queue.popleft()
+        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            ny, nx = cy + dy, cx + dx
+            if (0 <= ny < height and 0 <= nx < width
+                    and not component[ny, nx] and not outside[ny, nx]):
+                outside[ny, nx] = True
+                queue.append((ny, nx))
+    return ~outside
+
+
+def foreground_mask(rgb):
+    srgb_255 = np.rint(np.clip(rgb, 0.0, 1.0) * 255.0)
+    candidate = ((srgb_255[:, :, 2] - srgb_255[:, :, 0]) >= BLUE_BIAS_THRESHOLD
+                 ) & ((255.0 - srgb_255.min(axis=2)) >= WHITE_DISTANCE_THRESHOLD)
+    return fill_enclosed_holes(largest_component(candidate))
+
+
+def mask_box(mask):
+    rows, columns = np.nonzero(mask)
+    if rows.size == 0:
+        raise ValueError("White-background threshold produced an empty silhouette")
+    return (int(columns.min()), int(rows.min()), int(columns.max()), int(rows.max()))
+
+
+def srgb_to_lab(rgb):
+    srgb = np.clip(rgb, 0.0, 1.0)
+    rgb = np.where(srgb <= 0.04045, srgb / 12.92,
+                   np.power((srgb + 0.055) / 1.055, 2.4))
+    matrix = np.array([
+        [0.4124564, 0.3575761, 0.1804375],
+        [0.2126729, 0.7151522, 0.0721750],
+        [0.0193339, 0.1191920, 0.9503041],
+    ], dtype=np.float32)
+    xyz = np.clip(rgb, 0.0, 1.0) @ matrix.T
+    xyz /= np.array([0.95047, 1.0, 1.08883], dtype=np.float32)
+    epsilon = 216.0 / 24389.0
+    kappa = 24389.0 / 27.0
+    transformed = np.where(xyz > epsilon, np.cbrt(xyz), (kappa * xyz + 16.0) / 116.0)
+    x, y, z = transformed[..., 0], transformed[..., 1], transformed[..., 2]
+    return np.stack((116.0 * y - 16.0, 500.0 * (x - y), 200.0 * (y - z)), axis=2)
+
+
+def anatomical_zones(shape, box):
+    height, width = shape
+    left, top, right, bottom = box
+    xs = np.arange(width, dtype=np.float32)[None, :]
+    ys = np.arange(height, dtype=np.float32)[:, None]
+    nx = (xs - left) / max(right - left, 1)
+    ny = (ys - top) / max(bottom - top, 1)
+    within_box = (nx >= 0.0) & (nx <= 1.0) & (ny >= 0.0) & (ny <= 1.0)
+    head = within_box & (ny < 0.29)
+    legs = within_box & (ny >= 0.64)
+    arms = within_box & (ny >= 0.27) & (ny < 0.70) & ((nx < 0.27) | (nx > 0.73))
+    torso = within_box & ~(head | legs | arms)
+    return {"head": head, "torso": torso, "arms": arms, "legs": legs}
+
+
+def relative(path):
+    try:
+        return str(path.relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
+def save_rgb(path, rgb, name):
+    height, width, channels = rgb.shape
+    if channels != 3:
+        raise ValueError("save_rgb expects three channels")
+    rgba = np.ones((height, width, 4), dtype=np.float32)
+    rgba[:, :, :3] = np.clip(rgb, 0.0, 1.0)
+    image = bpy.data.images.new(name, width, height, alpha=True, float_buffer=False)
+    try:
+        image.colorspace_settings.name = "Linear Rec.709"
+        image.pixels.foreach_set(rgba[::-1].reshape(-1))
+        image.filepath_raw = str(path)
+        image.file_format = "PNG"
+        image.save()
+    finally:
+        bpy.data.images.remove(image)
+
+
+def compare(reference, render):
+    reference_mask = foreground_mask(reference)
+    render_mask = foreground_mask(render)
+    intersection = reference_mask & render_mask
+    union = reference_mask | render_mask
+    intersection_pixels = int(intersection.sum())
+    union_pixels = int(union.sum())
+    if union_pixels == 0:
+        raise ValueError("Both thresholded silhouettes are empty")
+
+    reference_lab = srgb_to_lab(reference)
+    render_lab = srgb_to_lab(render)
+    delta_e = np.linalg.norm(reference_lab - render_lab, axis=2)
+    box = mask_box(reference_mask)
+    zones = anatomical_zones(reference_mask.shape, box)
+    zone_report = {}
+    for name in ZONE_ORDER:
+        samples = intersection & zones[name]
+        values = delta_e[samples]
+        zone_report[name] = {
+            "mean_delta_e": round(float(values.mean()), 4) if values.size else None,
+            "sample_pixels": int(values.size),
+        }
+
+    difference = np.ones_like(reference)
+    reference_only = reference_mask & ~render_mask
+    render_only = render_mask & ~reference_mask
+    difference[reference_only] = (1.0, 0.0, 0.65)
+    difference[render_only] = (0.0, 0.72, 1.0)
+    heat = np.clip(delta_e / 20.0, 0.0, 1.0)
+    difference[intersection, 0] = heat[intersection]
+    difference[intersection, 1] = 0.55 * (1.0 - heat[intersection])
+    difference[intersection, 2] = 0.08
+    return {
+        "reference_mask": reference_mask,
+        "render_mask": render_mask,
+        "intersection_pixels": intersection_pixels,
+        "union_pixels": union_pixels,
+        "iou": intersection_pixels / union_pixels,
+        "reference_box_px": box,
+        "zones": zone_report,
+        "difference": difference,
+    }
+
+
+def main():
+    options = command_line_options()
+    reference_path = options["reference"]
+    render_path = options["render"]
+    reference, reference_size = load_rgb(reference_path)
+    render, render_size = load_rgb(render_path)
+    if reference_size != render_size:
+        raise ValueError(f"Image dimensions differ: {reference_size} vs {render_size}")
+
+    result = compare(reference, render)
+    round_directory = options["output"] / f"round_{options['round']:02d}"
+    round_directory.mkdir(parents=True, exist_ok=True)
+    side_by_side = np.concatenate((reference, render), axis=1)
+    side_path = round_directory / "side_by_side.png"
+    difference_path = round_directory / "difference.png"
+    report_path = round_directory / "report.json"
+    save_rgb(side_path, side_by_side, f"GelReferenceRound{options['round']:02d}SideBySide")
+    save_rgb(difference_path, result["difference"], f"GelReferenceRound{options['round']:02d}Difference")
+
+    report = {
+        "schema_version": 1,
+        "round": options["round"],
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "reference": relative(reference_path),
+        "render": relative(render_path),
+        "resolution": list(reference_size),
+        "mask": {
+            "method": "white-background threshold, largest component, enclosed-hole fill",
+            "white_distance_threshold_srgb8": WHITE_DISTANCE_THRESHOLD,
+            "blue_bias_threshold_srgb8": BLUE_BIAS_THRESHOLD,
+        },
+        "silhouette": {
+            "iou": round(result["iou"], 6),
+            "intersection_pixels": result["intersection_pixels"],
+            "union_pixels": result["union_pixels"],
+            "reference_pixels": int(result["reference_mask"].sum()),
+            "render_pixels": int(result["render_mask"].sum()),
+            "reference_box_px": list(result["reference_box_px"]),
+        },
+        "color": {
+            "method": "CIE76 Delta E on intersecting foreground pixels",
+            "zones": result["zones"],
+        },
+        "artifacts": {
+            "side_by_side": relative(side_path),
+            "difference": relative(difference_path),
+        },
+    }
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print("GEL_REFERENCE_COMPARE", json.dumps(report, separators=(",", ":")))
+
+
+if __name__ == "__main__":
+    main()
