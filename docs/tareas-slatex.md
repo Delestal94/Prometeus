@@ -269,7 +269,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.39** (`1ebef167`) `art/gel_character/compare_reference.py`: lado a lado render / referencia, IoU de la
   silueta (máscara por umbral sobre el fondo blanco), diferencia de color media (ΔE) por zona (cabeza,
   torso, brazos, piernas) y un PNG de diferencias. Guarda el reporte de cada ronda.
-- [ ] **S-311.40** Umbrales para aprobar: **IoU de silueta ≥ 0,92**, **ΔE medio ≤ 8 por zona**, y los 12
+- [x] **S-311.40** (`0be09789`) Umbrales para aprobar: **IoU de silueta ≥ 0,92**, **ΔE medio ≤ 8 por zona**, y los 12
   criterios del ítem 4 marcados "sí" en la revisión visual.
 - [ ] **S-311.41** Bitácora `art/gel_character/iteraciones.md`: por ronda, el lado a lado, los números,
   qué se cambió y qué falta. **Mínimo 5 rondas**, y se sigue iterando hasta pasar los umbrales: no hay
