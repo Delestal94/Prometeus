@@ -190,6 +190,17 @@ jobs:
           set -o pipefail
           timeout 120 xvfb-run -a "$GODOT" --path do-not-drop --script res://tests/bench_drive.gd -- --seconds=30 --seed=4242 --hitch=33 2>&1 | tee "$RUNNER_TEMP/runtime-audit/bench-drive.log"
 
+      # Informational in CI: llvmpipe is useful for regressions, but only the
+      # hardware run recorded in the S-311.37 report decides the +0.5 ms gate.
+      - name: Compare four gel characters with the current character
+        if: always()
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          timeout 120 xvfb-run -a "$GODOT" --gpu-profile --path do-not-drop --rendering-method mobile --script res://tests/bench_gel_character.gd -- --seconds=5 --warmup=60 2>&1 | tee "$RUNNER_TEMP/runtime-audit/bench-gel-character.log" || true
+
       # Informational (D-2011): the company world's shed walk. FPS under software rendering mean
       # nothing, so a slow, crashed or timed-out bench never fails the job (|| true); the numbers
       # are in the log (BENCH_COMPANY key=value lines) and in the uploaded artifact.
