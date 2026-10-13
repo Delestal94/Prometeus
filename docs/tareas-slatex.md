@@ -263,7 +263,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### E. Iterar hasta que se vea igual que la imagen (38-43)
 
-- [ ] **S-311.38** `tests/render_gel_reference.gd`: preset Delgada, fondo blanco, luz de estudio suave de
+- [x] **S-311.38** (`c5cfaf13`) `tests/render_gel_reference.gd`: preset Delgada, fondo blanco, luz de estudio suave de
   arriba a la izquierda, cámara de frente con el encuadre y el campo de visión de la foto, pose A
   relajada como la referencia; guarda el PNG. Otra escena igual en Blender para iterar rápido.
 - [ ] **S-311.39** `art/gel_character/compare_reference.py`: lado a lado render / referencia, IoU de la
