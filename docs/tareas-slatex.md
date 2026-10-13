@@ -266,7 +266,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.38** (`c5cfaf13`) `tests/render_gel_reference.gd`: preset Delgada, fondo blanco, luz de estudio suave de
   arriba a la izquierda, cámara de frente con el encuadre y el campo de visión de la foto, pose A
   relajada como la referencia; guarda el PNG. Otra escena igual en Blender para iterar rápido.
-- [ ] **S-311.39** `art/gel_character/compare_reference.py`: lado a lado render / referencia, IoU de la
+- [x] **S-311.39** (`1ebef167`) `art/gel_character/compare_reference.py`: lado a lado render / referencia, IoU de la
   silueta (máscara por umbral sobre el fondo blanco), diferencia de color media (ΔE) por zona (cabeza,
   torso, brazos, piernas) y un PNG de diferencias. Guarda el reporte de cada ronda.
 - [ ] **S-311.40** Umbrales para aprobar: **IoU de silueta ≥ 0,92**, **ΔE medio ≤ 8 por zona**, y los 12
