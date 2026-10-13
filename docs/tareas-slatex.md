@@ -258,7 +258,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   accesibilidad: mismo look sin transparencia ni lectura de pantalla.
 - [x] **S-311.36** (`1eb61f2f`) Capturas en todos los contextos con `revisor-visual`: día, atardecer, noche con
   linternas, lluvia, niebla, interior del camión, depósito, pantalla de resultados.
-- [ ] **S-311.37** Costo medido con `perfilador-rendimiento`: 4 personajes con proporciones distintas en
+- [x] **S-311.37** (`41ff2f62`) Costo medido con `perfilador-rendimiento`: 4 personajes con proporciones distintas en
   pantalla contra el personaje de hoy; dentro del presupuesto del ítem 7.
 
 ### E. Iterar hasta que se vea igual que la imagen (38-43)
