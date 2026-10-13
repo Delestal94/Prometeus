@@ -1,6 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_reference_compare.gd
-## Guards the S-311.39 per-round comparison report and review artifacts.
+## Guards the S-311.39 comparison report and the S-311.40 approval gate.
 
 const REPORT_PATH: String = "res://../art/gel_character/review_bloque_e/round_01/report.json"
 
@@ -50,8 +50,35 @@ func _run() -> void:
 		var path: String = String(artifacts.get(artifact, ""))
 		_expect(not path.is_empty() and FileAccess.file_exists(ProjectSettings.globalize_path("res://../" + path)),
 			"%s PNG exists" % artifact)
+	var approval := data.get("approval", {}) as Dictionary
+	var thresholds := approval.get("thresholds", {}) as Dictionary
+	_expect(is_equal_approx(float(thresholds.get("minimum_silhouette_iou", 0.0)), 0.92),
+		"approval requires silhouette IoU >= 0.92")
+	_expect(is_equal_approx(float(thresholds.get("maximum_mean_delta_e_per_zone", 0.0)), 8.0),
+		"approval requires mean Delta E <= 8 in every zone")
+	_expect(int(thresholds.get("required_visual_yes", 0)) == 12,
+		"approval requires all 12 visual criteria")
+	var visual := approval.get("visual_review", {}) as Dictionary
+	_expect(int(visual.get("criteria_total", 0)) == 12, "visual review has 12 criteria")
+	var visual_path: String = String(visual.get("path", ""))
+	var visual_absolute: String = ProjectSettings.globalize_path("res://../" + visual_path)
+	_expect(not visual_path.is_empty() and FileAccess.file_exists(visual_absolute),
+		"visual review file exists")
+	if FileAccess.file_exists(visual_absolute):
+		var review := JSON.parse_string(FileAccess.get_file_as_string(visual_absolute)) as Dictionary
+		var criteria := review.get("criteria", []) as Array
+		_expect(criteria.size() == 12, "visual review lists exactly 12 criteria")
+		for criterion: Dictionary in criteria:
+			_expect(criterion.get("result") in ["yes", "no", "pending"],
+				"visual criterion uses a supported result")
+	var automatic := approval.get("automatic", {}) as Dictionary
+	var gated_zones := automatic.get("color_zones", {}) as Dictionary
+	_expect(gated_zones.size() == 4, "all four color zones are gated")
+	for zone: String in ["head", "torso", "arms", "legs"]:
+		_expect(gated_zones.has(zone), "%s has an approval gate" % zone)
+	_expect(approval.get("passed") == false, "baseline round is not falsely approved")
 	if _failures == 0:
-		print("PASS: S-311.39 records IoU, zoned Delta E and review PNGs per round")
+		print("PASS: S-311.39-40 records comparisons and enforces the approval gate")
 	quit(_failures)
 
 
