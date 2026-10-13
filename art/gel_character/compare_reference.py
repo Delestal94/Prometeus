@@ -25,12 +25,29 @@ DEFAULT_OUTPUT = HERE / "review_bloque_e"
 WHITE_DISTANCE_THRESHOLD = 8
 BLUE_BIAS_THRESHOLD = 3
 ZONE_ORDER = ("head", "torso", "arms", "legs")
+MINIMUM_SILHOUETTE_IOU = 0.92
+MAXIMUM_MEAN_DELTA_E = 8.0
+VISUAL_CRITERIA = (
+    ("silhouette", "Silueta"),
+    ("smooth_spherical_head", "Cabeza esférica y lisa"),
+    ("continuous_neck_shoulders", "Transición cuello-hombros continua"),
+    ("head_window_reflections", "Reflejos tipo ventana en la cabeza"),
+    ("dense_clear_rim", "Borde más denso y claro que el centro"),
+    ("background_visible", "Fondo visible a través del gel"),
+    ("fine_internal_bubbles", "Motas o burbujas internas finas"),
+    ("mitten_hands", "Manos manopla con pulgar"),
+    ("rounded_boot_feet", "Pies de bota redondeada"),
+    ("soft_contact_shadow", "Sombra de contacto suave"),
+    ("denser_torso", "Torso más opaco que las extremidades"),
+    ("no_visible_facets", "Cero facetas o aristas visibles"),
+)
 
 
 def command_line_options():
     arguments = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     options = {"round": 1, "reference": DEFAULT_REFERENCE,
-               "render": DEFAULT_RENDER, "output": DEFAULT_OUTPUT}
+               "render": DEFAULT_RENDER, "output": DEFAULT_OUTPUT,
+               "require_approval": False}
     for argument in arguments:
         if argument.startswith("--round="):
             options["round"] = int(argument.split("=", 1)[1])
@@ -40,6 +57,8 @@ def command_line_options():
             options["render"] = Path(argument.split("=", 1)[1]).resolve()
         elif argument.startswith("--output="):
             options["output"] = Path(argument.split("=", 1)[1]).resolve()
+        elif argument == "--require-approval":
+            options["require_approval"] = True
         else:
             raise ValueError(f"Unknown option: {argument}")
     if options["round"] < 1:
@@ -169,6 +188,71 @@ def relative(path):
         return str(path).replace("\\", "/")
 
 
+def load_visual_review(path, round_number):
+    if not path.exists():
+        review = {
+            "schema_version": 1,
+            "round": round_number,
+            "instructions": "Set every result to 'yes' only after reviewing the round PNGs.",
+            "criteria": [
+                {"id": criterion_id, "label": label, "result": "pending", "notes": ""}
+                for criterion_id, label in VISUAL_CRITERIA
+            ],
+        }
+        path.write_text(json.dumps(review, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8")
+        return review
+
+    review = json.loads(path.read_text(encoding="utf-8"))
+    criteria = review.get("criteria", [])
+    expected_ids = [criterion_id for criterion_id, _label in VISUAL_CRITERIA]
+    actual_ids = [criterion.get("id") for criterion in criteria]
+    if review.get("round") != round_number or actual_ids != expected_ids:
+        raise ValueError(f"Visual review does not match round {round_number}: {path}")
+    invalid = [criterion.get("result") for criterion in criteria
+               if criterion.get("result") not in ("yes", "no", "pending")]
+    if invalid:
+        raise ValueError(f"Invalid visual review results {invalid}: {path}")
+    return review
+
+
+def approval_status(result, visual_review, visual_path):
+    silhouette_passed = result["iou"] >= MINIMUM_SILHOUETTE_IOU
+    color_zones = {
+        name: {
+            "value": result["zones"][name]["mean_delta_e"],
+            "passed": (result["zones"][name]["mean_delta_e"] is not None
+                       and result["zones"][name]["mean_delta_e"] <= MAXIMUM_MEAN_DELTA_E),
+        }
+        for name in ZONE_ORDER
+    }
+    automatic_passed = silhouette_passed and all(
+        zone["passed"] for zone in color_zones.values())
+    criteria = visual_review["criteria"]
+    yes_count = sum(criterion["result"] == "yes" for criterion in criteria)
+    visual_passed = yes_count == len(VISUAL_CRITERIA)
+    return {
+        "thresholds": {
+            "minimum_silhouette_iou": MINIMUM_SILHOUETTE_IOU,
+            "maximum_mean_delta_e_per_zone": MAXIMUM_MEAN_DELTA_E,
+            "required_visual_yes": len(VISUAL_CRITERIA),
+        },
+        "automatic": {
+            "silhouette": {"value": round(result["iou"], 6),
+                           "passed": silhouette_passed},
+            "color_zones": color_zones,
+            "passed": automatic_passed,
+        },
+        "visual_review": {
+            "path": relative(visual_path),
+            "criteria_total": len(criteria),
+            "criteria_yes": yes_count,
+            "passed": visual_passed,
+        },
+        "passed": automatic_passed and visual_passed,
+    }
+
+
 def save_rgb(path, rgb, name):
     height, width, channels = rgb.shape
     if channels != 3:
@@ -247,6 +331,8 @@ def main():
     side_path = round_directory / "side_by_side.png"
     difference_path = round_directory / "difference.png"
     report_path = round_directory / "report.json"
+    visual_review_path = round_directory / "visual_review.json"
+    visual_review = load_visual_review(visual_review_path, options["round"])
     save_rgb(side_path, side_by_side, f"GelReferenceRound{options['round']:02d}SideBySide")
     save_rgb(difference_path, result["difference"], f"GelReferenceRound{options['round']:02d}Difference")
 
@@ -278,9 +364,12 @@ def main():
             "side_by_side": relative(side_path),
             "difference": relative(difference_path),
         },
+        "approval": approval_status(result, visual_review, visual_review_path),
     }
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print("GEL_REFERENCE_COMPARE", json.dumps(report, separators=(",", ":")))
+    if options["require_approval"] and not report["approval"]["passed"]:
+        raise AssertionError(f"Round {options['round']} does not pass the approval gate")
 
 
 if __name__ == "__main__":

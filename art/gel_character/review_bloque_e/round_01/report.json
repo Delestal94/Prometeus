@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "round": 1,
-  "generated_at_utc": "2026-10-13T05:06:27.627491+00:00",
+  "generated_at_utc": "2026-10-13T05:23:52.947851+00:00",
   "reference": "art/gel_character/referencia/referencia_frente.jpg",
   "render": "art/gel_character/review_bloque_e/s311_38_godot_reference.png",
   "resolution": [
@@ -50,5 +50,44 @@
   "artifacts": {
     "side_by_side": "art/gel_character/review_bloque_e/round_01/side_by_side.png",
     "difference": "art/gel_character/review_bloque_e/round_01/difference.png"
+  },
+  "approval": {
+    "thresholds": {
+      "minimum_silhouette_iou": 0.92,
+      "maximum_mean_delta_e_per_zone": 8.0,
+      "required_visual_yes": 12
+    },
+    "automatic": {
+      "silhouette": {
+        "value": 0.609689,
+        "passed": false
+      },
+      "color_zones": {
+        "head": {
+          "value": 25.9546,
+          "passed": false
+        },
+        "torso": {
+          "value": 17.0134,
+          "passed": false
+        },
+        "arms": {
+          "value": 14.7611,
+          "passed": false
+        },
+        "legs": {
+          "value": 16.823,
+          "passed": false
+        }
+      },
+      "passed": false
+    },
+    "visual_review": {
+      "path": "art/gel_character/review_bloque_e/round_01/visual_review.json",
+      "criteria_total": 12,
+      "criteria_yes": 0,
+      "passed": false
+    },
+    "passed": false
   }
 }
