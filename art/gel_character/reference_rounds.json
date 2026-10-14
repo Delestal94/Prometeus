@@ -1,0 +1,1180 @@
+{
+  "2": {
+    "proportions": {
+      "neck_length": 0.75,
+      "head_size": 1.04,
+      "general_thickness": 0.5,
+      "belly": 0.35,
+      "chest": 0.35,
+      "shoulders": 0.2,
+      "hips": 0.35,
+      "arm_thickness": 0.4,
+      "leg_thickness": 0.4,
+      "hand_size": 0.35,
+      "foot_size": 0.5,
+      "neck_thickness": 0.35
+    },
+    "material": {}
+  },
+  "3": {
+    "camera_target_y": 0.86,
+    "proportions": {
+      "head_size": 1.2,
+      "general_thickness": 0.3,
+      "shoulders": 0.1,
+      "hips": 0.2,
+      "arm_thickness": 0.4,
+      "leg_thickness": 0.4,
+      "hand_size": 0.1,
+      "foot_size": 0.2,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "adb0cf",
+      "gel_brightness": 0.9
+    }
+  },
+  "4": {
+    "camera_target_y": 0.872,
+    "proportions": {
+      "head_size": 1.13,
+      "general_thickness": 0.3,
+      "shoulders": 0.15,
+      "hips": 0.2,
+      "arm_thickness": 0.4,
+      "leg_thickness": 0.4,
+      "hand_size": 0.65,
+      "foot_size": 0.2,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9699ab",
+      "gel_brightness": 0.8
+    }
+  },
+  "5": {
+    "camera_target_y": 0.872,
+    "proportions": {
+      "head_size": 1.13,
+      "general_thickness": 0.4,
+      "shoulders": 0.2,
+      "hips": 0.3,
+      "arm_thickness": 0.6,
+      "leg_thickness": 0.65,
+      "hand_size": 1.0,
+      "foot_size": 0.5,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "aeb0c4",
+      "gel_brightness": 0.85,
+      "refraction_mix": 0.2
+    }
+  },
+  "6": {
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 110.0,
+      "forearm": -10.0,
+      "hand": 10.0
+    },
+    "proportions": {
+      "head_size": 1.13,
+      "general_thickness": 0.3,
+      "shoulders": 0.15,
+      "hips": 0.2,
+      "arm_thickness": 0.4,
+      "leg_thickness": 0.4,
+      "hand_size": 0.65,
+      "foot_size": 0.0,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9699ab",
+      "gel_brightness": 0.8,
+      "edge_density": 0.55,
+      "refraction_mix": 0.35,
+      "absorption_color_mix": 0.8
+    }
+  },
+  "7": {
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 95.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.8,
+      "head_size": 1.13,
+      "general_thickness": 0.4,
+      "shoulders": 0.2,
+      "hips": 0.3,
+      "arm_thickness": 0.6,
+      "leg_thickness": 0.55,
+      "hand_size": 0.8,
+      "foot_size": 0.2,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "8": {
+    "camera_target_x": 0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 95.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.88,
+      "head_size": 1.13,
+      "general_thickness": 0.5,
+      "shoulders": 0.2,
+      "hips": 0.3,
+      "arm_thickness": 0.6,
+      "leg_thickness": 0.7,
+      "hand_size": 0.8,
+      "foot_size": 0.2,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9a99a5",
+      "gel_brightness": 0.82,
+      "center_opacity": 0.58,
+      "edge_density": 0.5,
+      "edge_opacity": 0.88,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.75
+    }
+  },
+  "9": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 95.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.88,
+      "head_size": 1.13,
+      "general_thickness": 0.5,
+      "shoulders": 0.2,
+      "hips": 0.3,
+      "arm_thickness": 0.6,
+      "leg_thickness": 0.7,
+      "hand_size": 0.8,
+      "foot_size": 0.2,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "10": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 92.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.86,
+      "head_size": 1.13,
+      "general_thickness": 0.6,
+      "shoulders": 0.2,
+      "hips": 0.35,
+      "arm_thickness": 0.6,
+      "leg_thickness": 1.0,
+      "hand_size": 0.8,
+      "foot_size": 0.4,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "11": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 95.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.88,
+      "head_size": 1.13,
+      "general_thickness": 0.6,
+      "shoulders": 0.2,
+      "hips": 0.35,
+      "arm_thickness": 0.6,
+      "leg_thickness": 1.0,
+      "hand_size": 0.8,
+      "foot_size": 0.4,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "12": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 95.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.88,
+      "head_size": 1.13,
+      "general_thickness": 0.6,
+      "shoulders": 1.0,
+      "hips": 0.35,
+      "arm_thickness": 0.3,
+      "leg_thickness": 0.7,
+      "hand_size": 0.0,
+      "foot_size": 0.8,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "13": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 92.0,
+      "forearm": -20.0,
+      "hand": 20.0
+    },
+    "proportions": {
+      "arm_length": 0.86,
+      "head_size": 1.13,
+      "general_thickness": 0.6,
+      "shoulders": 0.2,
+      "hips": 0.35,
+      "arm_thickness": 0.6,
+      "leg_thickness": 1.0,
+      "hand_size": 0.8,
+      "foot_size": 0.4,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "14": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.887,
+    "camera_distance_m": 4.105,
+    "pose_degrees": {
+      "upper_arm": 92.0,
+      "forearm": -20.0,
+      "hand": 80.0
+    },
+    "proportions": {
+      "arm_length": 0.86,
+      "head_size": 1.13,
+      "general_thickness": 0.6,
+      "chest": 1.0,
+      "shoulders": 0.2,
+      "hips": 0.35,
+      "arm_thickness": 0.6,
+      "leg_thickness": 1.0,
+      "hand_size": 0.8,
+      "foot_size": 0.4,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "15": {
+    "camera_target_x": -0.006,
+    "camera_target_y": 0.879,
+    "camera_distance_m": 4.065,
+    "pose_degrees": {
+      "upper_arm": 92.0,
+      "forearm": -20.0,
+      "hand": -40.0
+    },
+    "proportions": {
+      "arm_length": 0.86,
+      "head_size": 1.13,
+      "general_thickness": 0.6,
+      "shoulders": 0.2,
+      "hips": 0.35,
+      "arm_thickness": 0.6,
+      "leg_thickness": 1.0,
+      "hand_size": 0.8,
+      "foot_size": 0.4,
+      "head_shape": 1.0,
+      "neck_thickness": 0.35
+    },
+    "material": {
+      "gel_color": "9c9da5",
+      "gel_brightness": 0.85,
+      "edge_density": 0.5,
+      "refraction_mix": 0.4,
+      "absorption_color_mix": 0.7
+    }
+  },
+  "16": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -10.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.84, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "17": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -30.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.84, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "18": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 93.0, "forearm": -10.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "19": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 93.0, "forearm": -30.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "20": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 91.0, "forearm": -15.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.85, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "21": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 91.0, "forearm": -25.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.85, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "22": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 35.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "23": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 100.0, "forearm": -20.0, "hand": 35.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "24": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "25": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": -20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.13, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.6, "leg_thickness": 1.0, "hand_size": 0.8, "foot_size": 0.4, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "26": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "27": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "28": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "29": {
+    "camera_target_x": -0.006, "camera_target_y": 0.879, "camera_distance_m": 4.065,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 15.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.0, "leg_thickness": 0.55, "hand_size": -0.2, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "30": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "31": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 94.0, "forearm": -25.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "32": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 96.0, "forearm": -30.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "33": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 98.0, "forearm": -35.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "34": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 94.0, "forearm": -30.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "35": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 96.0, "forearm": -35.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "36": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 98.0, "forearm": -40.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "37": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -25.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.85, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "38": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -30.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.85, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "39": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 91.0, "forearm": -25.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.85, "head_size": 1.15, "general_thickness": 0.6, "chest": 0.6, "shoulders": 0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "40": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "41": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 10.0, "camera_fov_degrees": 12.95,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": 0.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "42": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 20.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": -0.45, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "43": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": -0.45, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "44": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "45": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "46": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "47": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "48": {
+    "camera_target_x": -0.006, "camera_target_y": 0.887, "camera_distance_m": 4.105,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "49": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "50": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "51": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "52": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": -0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "53": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "54": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": -10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "55": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -15.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "56": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 94.0, "forearm": -15.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "57": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -25.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "58": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 94.0, "forearm": -25.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "59": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 92.0, "forearm": -20.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "60": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "61": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "62": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -10.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "63": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -10.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "64": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 91.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "65": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -12.5, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "66": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -17.5, "hand": 10.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "67": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 90.0, "forearm": -15.0, "hand": 0.0},
+    "proportions": {"arm_length": 0.86, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "68": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.88, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "69": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "70": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.92, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "71": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "72": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "73": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.88, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "74": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.0, "hips": 0.35, "arm_thickness": 0.1, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "75": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": 0.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.5, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "76": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.14, "general_thickness": 0.6, "shoulders": -0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "77": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.13, "general_thickness": 0.6, "shoulders": -0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "78": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.12, "general_thickness": 0.6, "shoulders": -0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "79": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.14, "general_thickness": 0.6, "shoulders": -0.2, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.4, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "80": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.4, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "81": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "82": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.88, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "83": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.92, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "84": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "85": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -1.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "86": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.89, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -1.0, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "87": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.9, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "88": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -1.0, "foot_size": 0.5, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "89": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -1.0, "foot_size": 0.3, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "90": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.9, "foot_size": 0.5, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "91": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "92": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 87.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "93": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "94": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "95": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -17.5, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "96": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.91, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -0.55, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "97": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.7, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "98": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 1.0, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "99": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "100": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "101": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.45, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "102": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.4, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "103": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.35, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "104": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "105": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.5, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "106": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.5, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "107": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -2.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "108": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.45, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "109": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.35, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "110": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.0, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "111": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": -0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "112": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": -0.4, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "113": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.0, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "114": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 89.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "115": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "116": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.5, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "117": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 87.5, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "118": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.5, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.2, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "119": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.5, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.4, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "120": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.5, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.6, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "121": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "122": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "123": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -16.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "124": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 8.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "125": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 12.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "126": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.25, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "127": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.45, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "128": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.60, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "129": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.6, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "130": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "131": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -15.0, "hand": 10.0},
+    "proportions": {"leg_length": 1.01, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "132": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "133": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.70, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "134": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.55, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "135": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.75, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "studio_reflection_strength": 0.4}
+  },
+  "136": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.75, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "studio_reflection_strength": 0.0}
+  },
+  "137": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.75, "edge_density": 0.5, "refraction_mix": 0.2, "absorption_color_mix": 0.7, "studio_reflection_strength": 0.4}
+  },
+  "138": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.75, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.85, "absorption_coefficient": 5.0, "absorption_opacity": 0.7, "studio_reflection_strength": 0.4}
+  },
+  "139": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "868895", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.3, "absorption_color_mix": 0.8, "studio_reflection_strength": 0.4}
+  },
+  "140": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "roughness": 0.5, "specular": 0.2}
+  },
+  "141": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "roughness": 1.0, "specular": 0.0}
+  },
+  "142": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "subsurface_wrap": 1.0, "backlight_strength": 0.0}
+  },
+  "143": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "subsurface_wrap": 1.0, "backlight_strength": 0.5}
+  },
+  "144": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "backlight_strength": 0.0}
+  },
+  "145": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.7, "absorption_color_mix": 0.7}
+  },
+  "146": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.9, "absorption_color_mix": 0.7}
+  },
+  "147": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.2, "refraction_mix": 0.4, "absorption_color_mix": 0.7}
+  },
+  "148": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "studio_reflection_strength": 0.0}
+  },
+  "149": {
+    "camera_target_x": -0.006, "camera_target_y": 0.891, "camera_distance_m": 4.133,
+    "pose_degrees": {"upper_arm": 88.0, "forearm": -14.0, "hand": 10.0},
+    "proportions": {"leg_length": 0.99, "arm_length": 0.90, "head_size": 1.15, "general_thickness": 0.6, "chest": -0.45, "shoulders": -1.0, "hips": 0.35, "arm_thickness": 0.2, "leg_thickness": 0.55, "hand_size": -0.7, "foot_size": 0.7, "head_shape": 0.5, "neck_thickness": 0.35},
+    "material": {"gel_color": "9c9da5", "gel_brightness": 0.85, "edge_density": 0.5, "refraction_mix": 0.4, "absorption_color_mix": 0.7, "subsurface_wrap": 1.0, "backlight_strength": 0.5}
+  }
+}

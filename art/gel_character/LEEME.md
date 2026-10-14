@@ -64,7 +64,7 @@ El generador carga el master redondeado por sí mismo en el proceso aislado, no 
 sobrescribe y guarda `gel_body.blend`, `gel_body_spec.json`, un reporte y tres GLB
 en `do-not-drop/assets/models/characters/gel/`. El cuerpo de autoría y LOD1 tienen
 quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
-suprime ramas anatómicas. Los límites son 6000/2500/800 triángulos.
+suprime ramas anatómicas. Los límites son 20000/2500/800 triángulos.
 
 `compare_delgada_silhouette.py` reconstruye LOD0, aplica la pose frontal medida,
 proyecta sus triángulos sobre `referencia/silueta_mascara.png` y exige IoU ≥ 0,84.

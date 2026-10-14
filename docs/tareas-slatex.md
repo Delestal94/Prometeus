@@ -271,7 +271,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   torso, brazos, piernas) y un PNG de diferencias. Guarda el reporte de cada ronda.
 - [x] **S-311.40** (`0be09789`) Umbrales para aprobar: **IoU de silueta ≥ 0,92**, **ΔE medio ≤ 8 por zona**, y los 12
   criterios del ítem 4 marcados "sí" en la revisión visual.
-- [ ] **S-311.41** Bitácora `art/gel_character/iteraciones.md`: por ronda, el lado a lado, los números,
+- [x] **S-311.41** Bitácora `art/gel_character/iteraciones.md`: por ronda, el lado a lado, los números,
   qué se cambió y qué falta. **Mínimo 5 rondas**, y se sigue iterando hasta pasar los umbrales: no hay
   tope de rondas. Si falla la silueta, se corrigen los valores del preset (ítem 21) antes que la malla.
 - [ ] **S-311.42** La comparación que cuenta es la del **render de Godot** (ítem 38), no solo la de

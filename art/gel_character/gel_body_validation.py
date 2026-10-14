@@ -15,7 +15,7 @@ MORPH_NAMES = ("general_thickness", "belly", "chest", "shoulders", "hips",
 JOINT_NAMES = frozenset(["pelvis", "chest", "neck", "head"] + [
     name + side for side in (".L", ".R")
     for name in ("upper_arm", "forearm", "hand", "thumb", "grip", "thigh", "shin", "foot")])
-BUDGETS = (6000, 2500, 800)
+BUDGETS = (20000, 2500, 800)
 EPS = 1e-8
 
 

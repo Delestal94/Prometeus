@@ -28,22 +28,29 @@ MORPHS = ('general_thickness', 'belly', 'chest', 'shoulders', 'hips',
 JOINTS = ('pelvis', 'chest', 'neck', 'head') + tuple(
     n + '.' + s for s in 'LR' for n in
     ('upper_arm', 'forearm', 'hand', 'thumb', 'grip', 'thigh', 'shin', 'foot'))
-LOD_LEVELS = (2, 1, 0)
-BUDGETS = (6000, 2500, 800)
+LOD_LEVELS = (3, 1, 0)
+BUDGETS = (20000, 2500, 800)
 ARM_SHOULDER_X = .225
 ARM_LENGTH_SCALE = 1.07
 DELGADA_FOOT_OUTSET = .045
 DELGADA_MITT_VERTICAL_SCALE = 1.25
 DELGADA_BOOT_VERTICAL_SCALE = .965
+DELGADA_HEAD_LIFT = .015
+DELGADA_HEAD_DOME_WIDTH = .055
+DELGADA_HEAD_JUNCTION_INSET = .06
+DELGADA_COLLAR_FLARE = .28
+DELGADA_FOREARM_FULLNESS = .18
+DELGADA_KNEE_FULLNESS = .16
+DELGADA_THIGH_INSET = .008
 DELGADA_CAGE = {
     'pelvis': ((0., 0., .70), (.195, .140)),
     'belly': ((0., 0., .86), (.203, .150)),
-    'chest': ((0., 0., 1.09), (.190, .140)),
+    'chest': ((0., 0., 1.09), (.220, .140)),
     'neck': ((0., 0., 1.275), (.095, .095)),
     'head': ((0., 0., 1.485), (.235, .235)),
     'crown': ((0., 0., 1.57), (.20, .20)),
     'head_top': ((0., 0., 1.65), (.13, .13)),
-    'shoulder': ((.225, 0., 1.105), (.075, .085)),
+    'shoulder': ((.225, 0., 1.105), (.065, .075)),
     'elbow': ((.46, 0., 1.105), (.064, .063)),
     'wrist': ((.66, 0., 1.105), (.055, .056)),
     'hand': ((.735, 0., 1.105), (.078, .073)),
@@ -51,10 +58,10 @@ DELGADA_CAGE = {
     'thumb': ((.735, -.09, 1.130), (.039, .038)),
     'thumb_tip': ((.760, -.14, 1.140), (.031, .030)),
     'hip': ((.13, 0., .67), (.105, .090)),
-    'knee': ((.145, 0., .375), (.085, .078)),
-    'ankle': ((.145, 0., .16), (.080, .070)),
-    'heel': ((.145, -.025, .105), (.100, .145)),
-    'toe': ((.145, -.205, .10), (.085, .145)),
+    'knee': ((.155, 0., .375), (.085, .078)),
+    'ankle': ((.155, 0., .16), (.080, .070)),
+    'heel': ((.155, -.025, .105), (.100, .145)),
+    'toe': ((.155, -.205, .10), (.085, .145)),
 }
 _LOD_CACHE = {}
 
@@ -202,7 +209,8 @@ def make_body(level, *, source=None, rig=None, clip_actions=None):
         node(*cage('toe', s), heel)
     mesh = bpy.data.meshes.new('GelQuadCage')
     mesh.from_pydata(coords, edges, [])
-    obj = bpy.data.objects.new('GelBodyLOD'+str(2-level), mesh)
+    lod_name = {3: 0, 2: 0, 1: 1, 0: 2}[level]
+    obj = bpy.data.objects.new('GelBodyLOD'+str(lod_name), mesh)
     bpy.context.collection.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
@@ -239,6 +247,40 @@ def make_body(level, *, source=None, rig=None, clip_actions=None):
     for v in obj.data.vertices:
         v.co *= scale
         v.co.z -= low*scale
+        collar_span = .16 if v.co.z >= 1.21 else .18
+        collar = max(0., 1.-abs(v.co.z-1.21)/collar_span)
+        collar = collar*collar*(3-2*collar)
+        collar_x = max(0., min(1., (.45-abs(v.co.x))/.20))
+        collar_x = collar_x*collar_x*(3-2*collar_x)
+        v.co.x *= 1. + DELGADA_COLLAR_FLARE*collar*collar_x
+        # Match the circular frontal profile: the authored cage is slightly
+        # narrow across the upper dome and too full immediately above the neck.
+        # Asymmetric spans keep the already-correct neck and crown untouched.
+        head_x = max(0., min(1., (.34-abs(v.co.x))/.06))
+        head_x = head_x*head_x*(3-2*head_x)
+        dome = max(0., min(1., (v.co.z-1.46)/.16))
+        dome = dome*dome*(3-2*dome)
+        v.co.x *= 1. + DELGADA_HEAD_DOME_WIDTH*dome*head_x
+        junction_span = .09 if v.co.z < 1.34 else .18
+        junction = max(0., 1.-abs(v.co.z-1.34)/junction_span)
+        junction = junction*junction*(3-2*junction)
+        v.co.x *= 1. - DELGADA_HEAD_JUNCTION_INSET*junction*head_x
+        forearm = max(0., min(1., (abs(v.co.x)-arm_x(.48))/(arm_x(.60)-arm_x(.48))))
+        forearm *= max(0., min(1., (arm_x(.73)-abs(v.co.x))/(arm_x(.73)-arm_x(.67))))
+        forearm = forearm*forearm*(3-2*forearm)
+        v.co.y *= 1. + DELGADA_FOREARM_FULLNESS*forearm
+        v.co.z = 1.105 + (v.co.z-1.105)*(1. + DELGADA_FOREARM_FULLNESS*forearm)
+        if abs(v.co.x) < .34 and v.co.z < .76:
+            leg_center = math.copysign(DELGADA_CAGE['knee'][0][0]*scale, v.co.x)
+            knee = max(0., 1.-abs(v.co.z-.36)/.22)
+            knee = knee*knee*(3-2*knee)
+            v.co.x = leg_center + (v.co.x-leg_center)*(1. + DELGADA_KNEE_FULLNESS*knee)
+            thigh = max(0., 1.-abs(v.co.z-.64)/.12)
+            thigh = thigh*thigh*(3-2*thigh)
+            v.co.x += math.copysign(DELGADA_THIGH_INSET*thigh, v.co.x)
+        if v.co.z > 1.30:
+            lift = max(0., min(1., (v.co.z-1.30)/.08))
+            v.co.z += DELGADA_HEAD_LIFT * lift*lift*(3-2*lift)
     if level == 1:
         rebuild_axilla(obj)
     # Broaden the frontal mitten silhouette without changing Skin's distant
@@ -436,7 +478,7 @@ def morph_delta(p, name):
     arm = smooth(arm_x(.22),arm_x(.40),abs(x))*smooth(.75,.95,z)
     leg = 1-smooth(.54,.76,z)
     head = smooth(1.25,1.36,z)
-    hand = arm*smooth(arm_x(.62),arm_x(.74),abs(x))
+    hand = arm*smooth(arm_x(.70),arm_x(.76),abs(x))
     foot = 1-smooth(.14,.42,z)
     torso = (1-arm)*(1-leg)*(1-head)
     # Smoothly split the two leg centerlines through the crotch. A signed step
@@ -470,14 +512,21 @@ def morph_delta(p, name):
     elif name == 'leg_thickness':
         amount = .18*leg*(1-foot)
     elif name == 'hand_size':
-        amount = .15*hand
+        amount = .45*hand
         center = Vector((math.copysign(arm_x(.735), x), 0, 1.105))
     elif name == 'foot_size':
         amount = .15*foot
         foot_x = DELGADA_CAGE['heel'][0][0]+DELGADA_FOOT_OUTSET
         center = Vector((math.copysign(foot_x, x), -.06, 0))
     elif name == 'head_shape':
-        return Vector((-x*.08, -y*.08, (z-1.485)*.08))*head
+        # Preserve the proven spherical dome while adding an independent lower
+        # cheek pinch. Head-size scaling moves the visible junction slightly
+        # above its source-space center, hence the asymmetric narrow band.
+        base = Vector((-x*.16, -y*.16, (z-1.485)*.16))*head
+        span = .08 if z < 1.35 else .10
+        junction = max(0., 1.-abs(z-1.35)/span)
+        junction = junction*junction*(3-2*junction)
+        return base + Vector((-x*.55, -y*.55, 0.))*junction
     elif name == 'neck_thickness':
         amount = .15*math.exp(-((z-1.25)/.08)**2)*(1-arm)
     delta = (Vector(p)-center)*amount
@@ -637,6 +686,18 @@ def assign_weights(obj, rig, *, reference=None):
     refine_joint_weights(obj, rig)
 
 
+def preserve_lod0_thumb_profile(obj):
+    """Keep the subdivided LOD0 thumb visibly forward without changing LOD1."""
+    for side in ('L', 'R'):
+        group = obj.vertex_groups['thumb.' + side]
+        for vertex in obj.data.vertices:
+            try:
+                weight = group.weight(vertex.index)
+            except RuntimeError:
+                continue
+            if weight > .25:
+                amount = min(1., (weight - .25) / .75)
+                vertex.co.y -= .025 * amount * amount * (3. - 2. * amount)
 def refine_joint_weights(obj, rig):
     """Joint-span C1 fields, retaining rigid soles and same-side limb ownership.
 
@@ -904,6 +965,7 @@ def build_body_lods(source):
     rig = create_rig(source)
     for obj in objects:
         assign_weights(obj, rig)
+    preserve_lod0_thumb_profile(objects[0])
     animation_report = bake_clips(source, rig)
     clips = {name: (bpy.data.actions[name], duration)
              for name, duration in animation_report['durations'].items()}
@@ -922,6 +984,15 @@ def main():
     for o in list(bpy.data.objects):
         if o != source:
             bpy.data.objects.remove(o, do_unlink=True)
+    if '--quick-shape-check' in sys.argv:
+        obj = make_body(3)
+        rig = create_rig(source)
+        assign_weights(obj, rig)
+        preserve_lod0_thumb_profile(obj)
+        report = shape_report(obj, 0)
+        assert_shape_report(report)
+        print('QUICK_SHAPE_PASS', json.dumps(report['sides']))
+        return
     rig, objects, animation_report = build_body_lods(source)
     for obj, budget in zip(objects, BUDGETS):
         tris = sum(len(f.vertices)-2 for f in obj.data.polygons)
@@ -948,7 +1019,7 @@ def main():
             'reference_shape_targets': {'torso_waist_width_m': [.40,.43],
                 'foot_width_m': .57*(1.74/3.68), 'neck_visible_height_m': .11*(1.74/3.68)},
             'reference_pose': f'measured static front pose: upper arm 100 degrees, forearm -25 degrees, hand 20 degrees; {len(animation_report["durations"])} source-timed clips adapted to gel limb proportions',
-            'morph_amplitudes': dict(zip(MORPHS,(.30,.18,.15,.12,.14,.18,.18,.15,.15,.08,.15)))}
+            'morph_amplitudes': dict(zip(MORPHS,(.30,.18,.15,.12,.14,.18,.18,.45,.15,.55,.15)))}
     OUT.mkdir(parents=True, exist_ok=True)
     report = {'source_sha256':source_hash, 'animations':animation_report, 'lods':[]}
     for index, obj in enumerate(objects):

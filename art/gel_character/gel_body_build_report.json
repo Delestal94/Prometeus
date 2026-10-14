@@ -13,7 +13,7 @@
       "TurnInPlace": 0.8
     },
     "maximum_rotation_error_radians": 0.0,
-    "maximum_bone_length_error_m": 2.1405298589183275e-07,
+    "maximum_bone_length_error_m": 3.4480758515087473e-07,
     "maximum_unreachable_endpoint_m": 0.0,
     "maximum_unreachable_endpoint_by_clip": {
       "Idle": {
@@ -54,46 +54,46 @@
       }
     },
     "maximum_chain_attachment_error_m": 3.21326533747432e-07,
-    "maximum_ankle_goal_error_m": 3.8955094961176366e-07,
+    "maximum_ankle_goal_error_m": 1.1567869294553018e-06,
     "maximum_interaction_grip_error_m": 7.731391055031327e-07,
     "maximum_pelvis_adjustment_m": 0.0,
     "endpoint_measurement": "baked keyframes; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous interpolation certification",
     "foot_joint_height_ranges_m": {
       "Idle": [
-        0.15999889373779297,
-        0.1599997729063034
+        0.15999871492385864,
+        0.15999960899353027
       ],
       "Walk": [
-        0.15999072790145874,
-        0.30475983023643494
+        0.1599906086921692,
+        0.3047597110271454
       ],
       "Stroll": [
-        0.15999923646450043,
-        0.23031498491764069
+        0.1599990874528885,
+        0.23031480610370636
       ],
       "Run": [
-        0.15998533368110657,
-        0.3928107023239136
+        0.1599852293729782,
+        0.3928106427192688
       ],
       "Jump": [
-        0.15996667742729187,
-        0.3399718999862671
+        0.15996654331684113,
+        0.339971661567688
       ],
       "PickUpPackage": [
-        0.15996919572353363,
-        0.1599995642900467
+        0.1599690467119217,
+        0.15999948978424072
       ],
       "PickUpHigh": [
-        0.159996896982193,
-        0.15999945998191833
+        0.15999679267406464,
+        0.15999926626682281
       ],
       "Sit": [
-        -0.05750609189271927,
-        0.002501110080629587
+        -0.0575060099363327,
+        0.002501002512872219
       ],
       "TurnInPlace": [
-        0.15999841690063477,
-        0.2469615489244461
+        0.15999817848205566,
+        0.24696144461631775
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -102,21 +102,21 @@
   "lods": [
     {
       "name": "GelBodyLOD0",
-      "vertices": 2354,
+      "vertices": 9410,
       "measured_proportions": {
-        "height_m": 1.7399998903761684,
-        "head_diameter_m": 0.4815080761909485,
+        "height_m": 1.7549998760710537,
+        "head_diameter_m": 0.4890800714492798,
         "arm_shoulder_to_hand_m": 0.6501228451728821,
-        "torso_waist_width_m": 0.4198180288076401,
-        "foot_width_m": 0.2615305706858635,
-        "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.26198745518922806,
-        "flat_sole_vertices": 39,
-        "flat_sole_depth_m": 0.21038570441305637
+        "torso_waist_width_m": 0.42294858396053314,
+        "foot_width_m": 0.26230208575725555,
+        "foot_forward_reach_m": 0.1966049075126648,
+        "foot_depth_m": 0.26585330069065094,
+        "flat_sole_vertices": 146,
+        "flat_sole_depth_m": 0.22156953439116478
       },
-      "triangles": 4704,
-      "geometry_sha256": "0ba5d2f5563744cce769223398cfed51a096c15e3f82829c6bf3e5d9c3b52e77",
-      "morph_sha256": "dd34919fb6422f7dcc3403c127a4d29270660b9e0ed5f058f958d4fd53aa6062",
+      "triangles": 18816,
+      "geometry_sha256": "d71a0d2cf6bfd00dd5a0320052467bbfb330a467bef7e1771a1d31c0b871ef5d",
+      "morph_sha256": "3eda36d4067044383a4a4f861cb24e19e0813013cbed40670cfcc01b2c150c32",
       "body_shape": {
         "lod_index": 0,
         "contract": {
@@ -126,12 +126,12 @@
           "minimum_thumb_forward_protrusion_m": 0.02,
           "maximum_bilateral_dimension_difference_relative": 0.05,
           "boot_width_range_m": [
-            0.24114130434782605,
-            0.29788043478260867
+            0.2269565217391304,
+            0.31206521739130433
           ],
           "boot_height_range_m": [
-            0.18440217391304348,
-            0.2411413043478261
+            0.17021739130434782,
+            0.25532608695652176
           ],
           "minimum_flat_sole_vertices_per_side": 4,
           "maximum_transition_angle_p95_degrees": 30.0,
@@ -139,50 +139,50 @@
         },
         "sides": {
           "L": {
-            "mitten_length_m": 0.1777268648147583,
-            "mitten_front_width_m": 0.14496004581451416,
-            "mitten_depth_m": 0.19577353447675705,
-            "thumb_forward_protrusion_m": 0.02224167436361313,
-            "boot_width_m": 0.2615305706858635,
-            "boot_depth_m": 0.2729189917445183,
-            "boot_height_m": 0.24079866712196457,
-            "flat_sole_vertices": 39,
+            "mitten_length_m": 0.18458706140518188,
+            "mitten_front_width_m": 0.146958589553833,
+            "mitten_depth_m": 0.22837873548269272,
+            "thumb_forward_protrusion_m": 0.04032362997531891,
+            "boot_width_m": 0.26230208575725555,
+            "boot_depth_m": 0.27430033683776855,
+            "boot_height_m": 0.2536684871207057,
+            "flat_sole_vertices": 146,
             "sole_height_m": -4.871476139145514e-11
           },
           "R": {
-            "mitten_length_m": 0.17772668600082397,
-            "mitten_front_width_m": 0.14496004581451416,
-            "mitten_depth_m": 0.19577352330088615,
-            "thumb_forward_protrusion_m": 0.022241666913032532,
-            "boot_width_m": 0.2615305706858635,
-            "boot_depth_m": 0.2729189768433571,
-            "boot_height_m": 0.24079869692428696,
-            "flat_sole_vertices": 39,
+            "mitten_length_m": 0.18458706140518188,
+            "mitten_front_width_m": 0.146958589553833,
+            "mitten_depth_m": 0.2283787541091442,
+            "thumb_forward_protrusion_m": 0.040323659777641296,
+            "boot_width_m": 0.26230208575725555,
+            "boot_depth_m": 0.27430032193660736,
+            "boot_height_m": 0.2536684871207057,
+            "flat_sole_vertices": 146,
             "sole_height_m": -4.871476139145514e-11
           }
         },
         "surface": {
           "boundary_or_nonmanifold_edges": 0,
           "connected_components": 1,
-          "smooth_faces": 2352,
-          "faces": 2352
+          "smooth_faces": 9408,
+          "faces": 9408
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 26.83165531050968,
-            "maximum_adjacent_face_angle_degrees": 53.07905566876825,
-            "sampled_edges": 778
+            "adjacent_face_angle_p95_degrees": 13.734193789620964,
+            "maximum_adjacent_face_angle_degrees": 46.97809445901489,
+            "sampled_edges": 3130
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 26.907124457073774,
-            "maximum_adjacent_face_angle_degrees": 39.945145102103304,
-            "sampled_edges": 528
+            "adjacent_face_angle_p95_degrees": 13.755418929804865,
+            "maximum_adjacent_face_angle_degrees": 26.48545159897962,
+            "sampled_edges": 2094
           }
         }
       },
       "authoring_topology": {
-        "faces": 2352,
-        "quad_faces": 2352,
+        "faces": 9408,
+        "quad_faces": 9408,
         "joint_contract": {
           "minimum_bilateral_loops": 2,
           "minimum_neck_loops": 1,
@@ -192,53 +192,53 @@
         },
         "joints": {
           "shoulder": {
-            "closed_loops": 12,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.0010575827211141697,
+            "closed_loops": 22,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.0009947113692760357,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.0499463808988243
+            "morph_extremes_edge_aspect_p90": 1.8279008450496714
           },
           "elbow": {
-            "closed_loops": 18,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.011856336104869858,
+            "closed_loops": 36,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.004086394836008533,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 1.471768950627746
+            "morph_extremes_edge_aspect_p90": 1.5728591901532414
           },
           "wrist": {
-            "closed_loops": 12,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.006682498735189446,
+            "closed_loops": 24,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.006682519224286088,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.7140481544911754
+            "morph_extremes_edge_aspect_p90": 2.6599603316837643
           },
           "hip": {
-            "closed_loops": 6,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.04996472045779232,
+            "closed_loops": 10,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.0499738567322493,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.0661685412081927
+            "morph_extremes_edge_aspect_p90": 1.9034384947962333
           },
           "knee": {
-            "closed_loops": 16,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.012694444507360458,
+            "closed_loops": 32,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.004734988324344158,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 1.2760971349087213
+            "morph_extremes_edge_aspect_p90": 1.2353447060810843
           },
           "ankle": {
-            "closed_loops": 12,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.003072870112955567,
+            "closed_loops": 24,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.0030728621967136827,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.6519407943339828
+            "morph_extremes_edge_aspect_p90": 2.6712520756302336
           },
           "neck": {
-            "closed_loops": 1,
-            "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.0684793049097061,
+            "closed_loops": 2,
+            "minimum_loop_vertices": 32,
+            "nearest_loop_distance_m": 0.03824557900428771,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.171766818823651
+            "morph_extremes_edge_aspect_p90": 1.7845951038967256
           }
         }
       }
@@ -247,19 +247,19 @@
       "name": "GelBodyLOD1",
       "vertices": 1126,
       "measured_proportions": {
-        "height_m": 1.7399998903761684,
-        "head_diameter_m": 0.479563444852829,
+        "height_m": 1.7549998760710537,
+        "head_diameter_m": 0.4874519407749176,
         "arm_shoulder_to_hand_m": 0.6496732473373413,
-        "torso_waist_width_m": 0.42673784494400024,
-        "foot_width_m": 0.25846492499113083,
-        "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.26198745518922806,
+        "torso_waist_width_m": 0.4191860109567642,
+        "foot_width_m": 0.25846489518880844,
+        "foot_forward_reach_m": 0.19561456143856049,
+        "foot_depth_m": 0.26198744028806686,
         "flat_sole_vertices": 12,
-        "flat_sole_depth_m": 0.15885205892845988
+        "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 2248,
-      "geometry_sha256": "e32522efa70c4d97af5d51d8c582f90b5288638ff3520dada40f7eb88005e8e9",
-      "morph_sha256": "645f61b9609fcb09ef8e44d0310794136c4520e380e50b5d18ea3e43b3c94de3",
+      "geometry_sha256": "6b95ddb9d742c838edd01453d911ddd78d476fde3d7335969eaf6fe98c31a0af",
+      "morph_sha256": "8b843bbe66feded56596294ce0a87d72cadc8d551188f823286ccac386c90cf0",
       "body_shape": {
         "lod_index": 1,
         "contract": {
@@ -269,12 +269,12 @@
           "minimum_thumb_forward_protrusion_m": 0.02,
           "maximum_bilateral_dimension_difference_relative": 0.05,
           "boot_width_range_m": [
-            0.24114130434782605,
-            0.29788043478260867
+            0.2269565217391304,
+            0.31206521739130433
           ],
           "boot_height_range_m": [
-            0.18440217391304348,
-            0.2411413043478261
+            0.17021739130434782,
+            0.25532608695652176
           ],
           "minimum_flat_sole_vertices_per_side": 4,
           "maximum_transition_angle_p95_degrees": 55.0,
@@ -282,23 +282,23 @@
         },
         "sides": {
           "L": {
-            "mitten_length_m": 0.17720210552215576,
+            "mitten_length_m": 0.17720413208007812,
             "mitten_front_width_m": 0.1721726655960083,
-            "mitten_depth_m": 0.1941906251013279,
+            "mitten_depth_m": 0.20157470926642418,
             "thumb_forward_protrusion_m": 0.028108634054660797,
-            "boot_width_m": 0.25846492499113083,
-            "boot_depth_m": 0.2729189917445183,
-            "boot_height_m": 0.24079866712196457,
+            "boot_width_m": 0.25846489518880844,
+            "boot_depth_m": 0.2729189768433571,
+            "boot_height_m": 0.24079869692428696,
             "flat_sole_vertices": 12,
             "sole_height_m": -4.871476139145514e-11
           },
           "R": {
-            "mitten_length_m": 0.17717981338500977,
+            "mitten_length_m": 0.17718183994293213,
             "mitten_front_width_m": 0.17217302322387695,
-            "mitten_depth_m": 0.1941906474530697,
+            "mitten_depth_m": 0.20157472044229507,
             "thumb_forward_protrusion_m": 0.028108656406402588,
-            "boot_width_m": 0.25846492499113083,
-            "boot_depth_m": 0.2729189768433571,
+            "boot_width_m": 0.25846489518880844,
+            "boot_depth_m": 0.2729189917445183,
             "boot_height_m": 0.24079869692428696,
             "flat_sole_vertices": 12,
             "sole_height_m": -4.871476139145514e-11
@@ -312,13 +312,13 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 40.93386885824395,
-            "maximum_adjacent_face_angle_degrees": 62.48998143417856,
+            "adjacent_face_angle_p95_degrees": 44.899191828676564,
+            "maximum_adjacent_face_angle_degrees": 60.94609170734545,
             "sampled_edges": 434
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 51.34674724158824,
-            "maximum_adjacent_face_angle_degrees": 58.66110101066953,
+            "adjacent_face_angle_p95_degrees": 53.87267397931836,
+            "maximum_adjacent_face_angle_degrees": 61.370760707976665,
             "sampled_edges": 294
           }
         }
@@ -335,39 +335,39 @@
         },
         "joints": {
           "shoulder": {
-            "closed_loops": 6,
+            "closed_loops": 4,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.0014693728515079996,
+            "nearest_loop_distance_m": 0.026549768447875988,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.699725651223019
+            "morph_extremes_edge_aspect_p90": 2.8177208579534816
           },
           "elbow": {
             "closed_loops": 10,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.01193866182735992,
+            "nearest_loop_distance_m": 0.010981713512965618,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.6535252154066287
+            "morph_extremes_edge_aspect_p90": 2.68518421209777
           },
           "wrist": {
             "closed_loops": 4,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.033997182423727845,
+            "nearest_loop_distance_m": 0.033991766916002586,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 3.0943895175726572
+            "morph_extremes_edge_aspect_p90": 2.9918998726603427
           },
           "hip": {
             "closed_loops": 2,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.08986645545278282,
+            "nearest_loop_distance_m": 0.0899648329189846,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.8019081368134344
+            "morph_extremes_edge_aspect_p90": 2.774079429879485
           },
           "knee": {
             "closed_loops": 8,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.012802353927067356,
+            "nearest_loop_distance_m": 0.012876025268009739,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.4769226308327625
+            "morph_extremes_edge_aspect_p90": 2.477201373924896
           },
           "ankle": {
             "closed_loops": 6,
@@ -379,9 +379,9 @@
           "neck": {
             "closed_loops": 1,
             "minimum_loop_vertices": 10,
-            "nearest_loop_distance_m": 0.004396893978118932,
+            "nearest_loop_distance_m": 0.003511991500854572,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.9671519286240806
+            "morph_extremes_edge_aspect_p90": 2.787441539775584
           }
         }
       }
@@ -390,19 +390,19 @@
       "name": "GelBodyLOD2",
       "vertices": 399,
       "measured_proportions": {
-        "height_m": 1.7399998903761684,
-        "head_diameter_m": 0.479563444852829,
+        "height_m": 1.7549998760710537,
+        "head_diameter_m": 0.4874519407749176,
         "arm_shoulder_to_hand_m": 0.648615026473999,
-        "torso_waist_width_m": 0.4119207412004471,
-        "foot_width_m": 0.25846492499113083,
-        "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.24271921813488007,
+        "torso_waist_width_m": 0.3228382021188736,
+        "foot_width_m": 0.25846489518880844,
+        "foot_forward_reach_m": 0.19561456143856049,
+        "foot_depth_m": 0.24271920323371887,
         "flat_sole_vertices": 12,
-        "flat_sole_depth_m": 0.15885205892845988
+        "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "31e1cbd8fc7d9c3f45ca28fb84b921dd5cd1a931d65575797b4e656aa75776b3",
-      "morph_sha256": "81af7f813275c9e0f470f5dcad63f2b7057eba0945e7cd8b8dfb82191b31ca92",
+      "geometry_sha256": "bb4f26f3c12c92e6e7a009b5ea27654a27f284b29172489181a1751c6ff3a325",
+      "morph_sha256": "c51a3b6c6128482d0542fdcab8cfb14a4ade26affaeeac6c800b1147a76eba48",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -412,12 +412,12 @@
           "minimum_thumb_forward_protrusion_m": 0.02,
           "maximum_bilateral_dimension_difference_relative": 0.07,
           "boot_width_range_m": [
-            0.24114130434782605,
-            0.29788043478260867
+            0.2269565217391304,
+            0.31206521739130433
           ],
           "boot_height_range_m": [
-            0.18440217391304348,
-            0.2411413043478261
+            0.17021739130434782,
+            0.25532608695652176
           ],
           "minimum_flat_sole_vertices_per_side": 4,
           "maximum_transition_angle_p95_degrees": null,
@@ -425,24 +425,24 @@
         },
         "sides": {
           "L": {
-            "mitten_length_m": 0.17517191171646118,
+            "mitten_length_m": 0.17614591121673584,
             "mitten_front_width_m": 0.1721726655960083,
-            "mitten_depth_m": 0.19378576055169106,
-            "thumb_forward_protrusion_m": 0.054894037544727325,
-            "boot_width_m": 0.25846492499113083,
-            "boot_depth_m": 0.2729189917445183,
-            "boot_height_m": 0.24031773214443314,
+            "mitten_depth_m": 0.20157470926642418,
+            "thumb_forward_protrusion_m": 0.040043555200099945,
+            "boot_width_m": 0.25846489518880844,
+            "boot_depth_m": 0.2729189768433571,
+            "boot_height_m": 0.24079869692428696,
             "flat_sole_vertices": 12,
             "sole_height_m": -4.871476139145514e-11
           },
           "R": {
-            "mitten_length_m": 0.16549700498580933,
+            "mitten_length_m": 0.1746586561203003,
             "mitten_front_width_m": 0.17217302322387695,
-            "mitten_depth_m": 0.19113106653094292,
-            "thumb_forward_protrusion_m": 0.03637462854385376,
-            "boot_width_m": 0.25846492499113083,
-            "boot_depth_m": 0.2729189768433571,
-            "boot_height_m": 0.24031773214443314,
+            "mitten_depth_m": 0.20115240663290024,
+            "thumb_forward_protrusion_m": 0.0691460371017456,
+            "boot_width_m": 0.25846489518880844,
+            "boot_depth_m": 0.2729189917445183,
+            "boot_height_m": 0.2404624373207866,
             "flat_sole_vertices": 12,
             "sole_height_m": -4.871476139145514e-11
           }
@@ -455,14 +455,14 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 55.73324036336178,
-            "maximum_adjacent_face_angle_degrees": 84.5317452381847,
-            "sampled_edges": 246
+            "adjacent_face_angle_p95_degrees": 51.85413040075676,
+            "maximum_adjacent_face_angle_degrees": 65.15973755750314,
+            "sampled_edges": 231
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 51.05948683024923,
-            "maximum_adjacent_face_angle_degrees": 57.161490696352935,
-            "sampled_edges": 176
+            "adjacent_face_angle_p95_degrees": 51.69898796088563,
+            "maximum_adjacent_face_angle_degrees": 61.97724724893338,
+            "sampled_edges": 167
           }
         }
       }

@@ -43,11 +43,16 @@ func _check_presets() -> void:
 	_expect(Presets.load_preset(&"unknown") == null, "unknown presets do not fall back silently")
 
 	var delgada: Resource = Presets.load_preset(&"delgada")
-	for definition: Dictionary in Proportions.parameter_definitions():
-		_expect(
-			is_equal_approx(float(delgada.get(definition[&"name"])), float(definition[&"default"])),
-			"Delgada keeps the measured default for %s" % definition[&"name"]
-		)
+	var reference_values: Dictionary = {
+		&"leg_length": 0.99, &"arm_length": 0.9, &"head_size": 1.15,
+		&"general_thickness": 0.6, &"chest": -0.45, &"shoulders": -1.0,
+		&"hips": 0.35, &"arm_thickness": 0.2, &"leg_thickness": 0.55,
+		&"hand_size": -0.7, &"foot_size": 0.7, &"head_shape": 0.5,
+		&"neck_thickness": 0.35,
+	}
+	for parameter_name: StringName in reference_values:
+		_expect(is_equal_approx(float(delgada.get(parameter_name)), float(reference_values[parameter_name])),
+			"Delgada keeps the approved reference value for %s" % parameter_name)
 	var flaca: Resource = Presets.load_preset(&"flaca")
 	_expect(flaca.total_height == 1.2 and flaca.head_size == 0.75, "Flaca uses the tall, small-head extremes")
 	_expect(flaca.general_thickness == -1.0, "Flaca uses the authored 30 percent thinner morph extreme")

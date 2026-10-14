@@ -208,6 +208,7 @@ def main():
     parser.add_argument('--blend', type=Path, default=here/'gel_body.blend')
     parser.add_argument('--output', type=Path, default=here/'review_bloque_b')
     parser.add_argument('--core-experiment', action='store_true')
+    parser.add_argument('--thickness-only', action='store_true')
     args = parser.parse_args(argv)
     bpy.ops.wm.open_mainfile(filepath=str(args.blend.resolve()))
     obj = bpy.data.objects.get('GelBodyLOD0')
@@ -219,6 +220,13 @@ def main():
     keys = mesh.shape_keys.key_blocks
     base = [obj.matrix_world @ v.co for v in keys['Basis'].data]
     base_thickness = ray_thickness(base, faces)
+    if args.thickness_only:
+        args.output.mkdir(parents=True, exist_ok=True)
+        thickness_map = write_map(mesh, base_thickness, args.output/'thickness.png')
+        print(json.dumps({'object': obj.name, 'triangles': len(faces),
+                          'basis': summarize(base_thickness),
+                          'thickness_map': thickness_map}, indent=2))
+        return
     report = {'object': obj.name, 'triangles': len(faces), 'units': 'metres',
               'source_blend_sha256': hashlib.sha256(args.blend.read_bytes()).hexdigest(),
               'blender_version': bpy.app.version_string,
