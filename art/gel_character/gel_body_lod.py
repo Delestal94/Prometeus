@@ -127,15 +127,25 @@ def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=79
             continue
         new_normals = face_normals(proposed)
         base_normals = new_normals[0]
+        morph_dots = np.sum(new_normals[:morph_count]*base_normals[None,:,:],axis=2)
+        morph_scales = np.sqrt(np.sum(new_normals[:morph_count]**2,axis=2)
+                               *np.sum(base_normals[None,:,:]**2,axis=2))
+        # Leave a small angular margin before 90 degrees. Blender stores mesh
+        # coordinates as float32; accepting an almost-zero float64 dot here can
+        # become a negative dot after the selected vertices enter the mesh.
+        orientation_margin = 1e-5
         if (np.any(np.sum(new_normals*new_normals,axis=2)<=EPS*EPS)
-                or np.any(np.sum(new_normals[:morph_count]*base_normals[None,:,:],axis=2)<=0)
+                or np.any(morph_dots<=orientation_margin*morph_scales)
                 or np.any(np.sum(new_normals[0]*normals[0,affected],axis=1)<=0)):
             stats['rejected_orientation']+=1
             continue
         if pose_count:
             expected = np.einsum('pfvij,fj->pfi',
                 pose_normal_matrices[:,proposed,:,:],base_normals)
-            if np.any(np.sum(new_normals[morph_count:]*expected,axis=2)<=0):
+            pose_dots = np.sum(new_normals[morph_count:]*expected,axis=2)
+            pose_scales = np.sqrt(np.sum(new_normals[morph_count:]**2,axis=2)
+                                  *np.sum(expected**2,axis=2))
+            if np.any(pose_dots<=orientation_margin*pose_scales):
                 stats['rejected_orientation']+=1
                 continue
         # Only these new faces can introduce an intersection. Unchanged faces

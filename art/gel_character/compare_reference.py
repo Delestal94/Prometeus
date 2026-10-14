@@ -24,6 +24,7 @@ DEFAULT_RENDER = HERE / "review_bloque_e/s311_38_godot_reference.png"
 DEFAULT_OUTPUT = HERE / "review_bloque_e"
 WHITE_DISTANCE_THRESHOLD = 8
 BLUE_BIAS_THRESHOLD = 3
+MAXIMUM_HIGHLIGHT_GAP_PX = 16
 ZONE_ORDER = ("head", "torso", "arms", "legs")
 MINIMUM_SILHOUETTE_IOU = 0.92
 MAXIMUM_MEAN_DELTA_E = 8.0
@@ -47,6 +48,7 @@ def command_line_options():
     arguments = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     options = {"round": 1, "reference": DEFAULT_REFERENCE,
                "render": DEFAULT_RENDER, "output": DEFAULT_OUTPUT,
+               "mask_render": None,
                "require_approval": False}
     for argument in arguments:
         if argument.startswith("--round="):
@@ -57,6 +59,8 @@ def command_line_options():
             options["render"] = Path(argument.split("=", 1)[1]).resolve()
         elif argument.startswith("--output="):
             options["output"] = Path(argument.split("=", 1)[1]).resolve()
+        elif argument.startswith("--mask-render="):
+            options["mask_render"] = Path(argument.split("=", 1)[1]).resolve()
         elif argument == "--require-approval":
             options["require_approval"] = True
         else:
@@ -134,11 +138,26 @@ def fill_enclosed_holes(component):
     return ~outside
 
 
+def close_small_row_gaps(mask, maximum_gap=MAXIMUM_HIGHLIGHT_GAP_PX):
+    """Reconnect narrow white specular cuts without bridging anatomical gaps."""
+    result = mask.copy()
+    for row in range(result.shape[0]):
+        columns = np.flatnonzero(result[row])
+        if columns.size < 2:
+            continue
+        for left, right in zip(columns[:-1], columns[1:]):
+            gap = int(right-left-1)
+            if 0 < gap <= maximum_gap:
+                result[row, left:right+1] = True
+    return result
+
+
 def foreground_mask(rgb):
     srgb_255 = np.rint(np.clip(rgb, 0.0, 1.0) * 255.0)
     candidate = ((srgb_255[:, :, 2] - srgb_255[:, :, 0]) >= BLUE_BIAS_THRESHOLD
                  ) & ((255.0 - srgb_255.min(axis=2)) >= WHITE_DISTANCE_THRESHOLD)
-    return fill_enclosed_holes(largest_component(candidate))
+    component = largest_component(candidate)
+    return fill_enclosed_holes(close_small_row_gaps(component))
 
 
 def mask_box(mask):
@@ -146,6 +165,15 @@ def mask_box(mask):
     if rows.size == 0:
         raise ValueError("White-background threshold produced an empty silhouette")
     return (int(columns.min()), int(rows.min()), int(columns.max()), int(rows.max()))
+
+
+def row_runs(mask, row):
+    columns = np.flatnonzero(mask[row])
+    if not columns.size:
+        return []
+    breaks = np.flatnonzero(np.diff(columns) > 1) + 1
+    groups = np.split(columns, breaks)
+    return [[int(group[0]), int(group[-1])] for group in groups]
 
 
 def srgb_to_lab(rgb):
@@ -270,9 +298,10 @@ def save_rgb(path, rgb, name):
         bpy.data.images.remove(image)
 
 
-def compare(reference, render):
+def compare(reference, render, render_mask_rgb=None):
     reference_mask = foreground_mask(reference)
-    render_mask = foreground_mask(render)
+    render_mask = (largest_component(render_mask_rgb.min(axis=2) < 0.5)
+                   if render_mask_rgb is not None else foreground_mask(render))
     intersection = reference_mask & render_mask
     union = reference_mask | render_mask
     intersection_pixels = int(intersection.sum())
@@ -286,12 +315,22 @@ def compare(reference, render):
     box = mask_box(reference_mask)
     zones = anatomical_zones(reference_mask.shape, box)
     zone_report = {}
+    silhouette_zone_report = {}
     for name in ZONE_ORDER:
         samples = intersection & zones[name]
         values = delta_e[samples]
         zone_report[name] = {
             "mean_delta_e": round(float(values.mean()), 4) if values.size else None,
             "sample_pixels": int(values.size),
+            "reference_mean_lab": [round(float(value), 4) for value in reference_lab[samples].mean(axis=0)] if values.size else None,
+            "render_mean_lab": [round(float(value), 4) for value in render_lab[samples].mean(axis=0)] if values.size else None,
+        }
+        zone_intersection = int((intersection & zones[name]).sum())
+        zone_union = int((union & zones[name]).sum())
+        silhouette_zone_report[name] = {
+            "iou": round(zone_intersection / zone_union, 6) if zone_union else None,
+            "intersection_pixels": zone_intersection,
+            "union_pixels": zone_union,
         }
 
     difference = np.ones_like(reference)
@@ -310,6 +349,19 @@ def compare(reference, render):
         "union_pixels": union_pixels,
         "iou": intersection_pixels / union_pixels,
         "reference_box_px": box,
+        "render_box_px": mask_box(render_mask),
+        "silhouette_zones": silhouette_zone_report,
+        "row_runs": {
+            str(row): {
+                "reference": row_runs(reference_mask, row),
+                "render": row_runs(render_mask, row),
+            }
+            for row in (
+                100, 120, 150, 200, 250, 300, 350, 390,
+                420, 460, 480, 500, 520, 540, 560, 600,
+                700, 720, 740, 760, 780, 800, 850, 950, 1050, 1120,
+            )
+        },
         "zones": zone_report,
         "difference": difference,
     }
@@ -324,7 +376,13 @@ def main():
     if reference_size != render_size:
         raise ValueError(f"Image dimensions differ: {reference_size} vs {render_size}")
 
-    result = compare(reference, render)
+    mask_render_path = options["mask_render"]
+    mask_render = None
+    if mask_render_path is not None:
+        mask_render, mask_size = load_rgb(mask_render_path)
+        if mask_size != reference_size:
+            raise ValueError(f"Mask image dimensions differ: {mask_size} vs {reference_size}")
+    result = compare(reference, render, mask_render)
     round_directory = options["output"] / f"round_{options['round']:02d}"
     round_directory.mkdir(parents=True, exist_ok=True)
     side_by_side = np.concatenate((reference, render), axis=1)
@@ -342,9 +400,10 @@ def main():
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "reference": relative(reference_path),
         "render": relative(render_path),
+        "mask_render": relative(mask_render_path) if mask_render_path is not None else None,
         "resolution": list(reference_size),
         "mask": {
-            "method": "white-background threshold, largest component, enclosed-hole fill",
+            "method": "white-background threshold, largest component, <=16 px specular-gap close, enclosed-hole fill",
             "white_distance_threshold_srgb8": WHITE_DISTANCE_THRESHOLD,
             "blue_bias_threshold_srgb8": BLUE_BIAS_THRESHOLD,
         },
@@ -355,6 +414,9 @@ def main():
             "reference_pixels": int(result["reference_mask"].sum()),
             "render_pixels": int(result["render_mask"].sum()),
             "reference_box_px": list(result["reference_box_px"]),
+            "render_box_px": list(result["render_box_px"]),
+            "zones": result["silhouette_zones"],
+            "row_runs": result["row_runs"],
         },
         "color": {
             "method": "CIE76 Delta E on intersecting foreground pixels",

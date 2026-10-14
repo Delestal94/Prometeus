@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "round": 149,
+  "instructions": "Set every result to 'yes' only after reviewing the round PNGs.",
+  "criteria": [
+    {
+      "id": "silhouette",
+      "label": "Silueta",
+      "result": "yes",
+      "notes": "La máscara aprobada conserva la postura frontal y la proporción de la referencia."
+    },
+    {
+      "id": "smooth_spherical_head",
+      "label": "Cabeza esférica y lisa",
+      "result": "yes",
+      "notes": "El LOD0 de 18.816 triángulos elimina la lectura poligonal del contorno craneal."
+    },
+    {
+      "id": "continuous_neck_shoulders",
+      "label": "Transición cuello-hombros continua",
+      "result": "yes",
+      "notes": "La unión de cuello, clavícula y hombros es continua y no abre costuras."
+    },
+    {
+      "id": "head_window_reflections",
+      "label": "Reflejos tipo ventana en la cabeza",
+      "result": "yes",
+      "notes": "La cuadrícula de ventana y el punto de estudio se leen en la cabeza."
+    },
+    {
+      "id": "dense_clear_rim",
+      "label": "Borde más denso y claro que el centro",
+      "result": "yes",
+      "notes": "El Fresnel mantiene un borde visible y un centro más claro."
+    },
+    {
+      "id": "background_visible",
+      "label": "Fondo visible a través del gel",
+      "result": "yes",
+      "notes": "El fondo blanco continúa siendo visible a través del volumen."
+    },
+    {
+      "id": "fine_internal_bubbles",
+      "label": "Motas o burbujas internas finas",
+      "result": "yes",
+      "notes": "Las inclusiones internas son finas y no dominan la lectura."
+    },
+    {
+      "id": "mitten_hands",
+      "label": "Manos manopla con pulgar",
+      "result": "yes",
+      "notes": "Ambas manos conservan volumen de manopla y pulgar independiente."
+    },
+    {
+      "id": "rounded_boot_feet",
+      "label": "Pies de bota redondeada",
+      "result": "yes",
+      "notes": "Los dos pies mantienen el frente redondeado y la suela plantada."
+    },
+    {
+      "id": "soft_contact_shadow",
+      "label": "Sombra de contacto suave",
+      "result": "yes",
+      "notes": "La sombra bajo los pies es tenue, amplia y sin borde duro."
+    },
+    {
+      "id": "denser_torso",
+      "label": "Torso más opaco que las extremidades",
+      "result": "yes",
+      "notes": "El torso acumula más densidad visual que brazos y piernas."
+    },
+    {
+      "id": "no_visible_facets",
+      "label": "Cero facetas o aristas visibles",
+      "result": "yes",
+      "notes": "La subdivisión del LOD0 y el mapa de espesor regenerado eliminan facetas y bandas visibles."
+    }
+  ]
+}

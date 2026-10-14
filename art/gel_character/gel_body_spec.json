@@ -46,7 +46,7 @@
     1
   ],
   "lod_triangle_budgets": [
-    6000,
+    20000,
     2500,
     800
   ],
@@ -111,9 +111,9 @@
     "hips": 0.14,
     "arm_thickness": 0.18,
     "leg_thickness": 0.18,
-    "hand_size": 0.15,
+    "hand_size": 0.45,
     "foot_size": 0.15,
-    "head_shape": 0.08,
+    "head_shape": 0.55,
     "neck_thickness": 0.15
   }
 }

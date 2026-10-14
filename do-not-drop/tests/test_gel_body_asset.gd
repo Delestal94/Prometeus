@@ -11,7 +11,7 @@ const MORPHS: Array[String] = [
 	"general_thickness", "belly", "chest", "shoulders", "hips", "arm_thickness",
 	"leg_thickness", "hand_size", "foot_size", "head_shape", "neck_thickness",
 ]
-const BUDGETS: Array[int] = [6000, 2500, 800]
+const BUDGETS: Array[int] = [20000, 2500, 800]
 const DURATIONS: Dictionary = {
 	"Idle": 6.0, "Walk": 1.0 / 3.0, "Stroll": 0.6, "Run": 1.0 / 3.0, "Jump": 1.6,
 	"PickUpPackage": 1.6, "PickUpHigh": 1.6, "Sit": 4.0, "TurnInPlace": 0.8,

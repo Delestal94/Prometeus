@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "round": 143,
+  "instructions": "Set every result to 'yes' only after reviewing the round PNGs.",
+  "criteria": [
+    {
+      "id": "silhouette",
+      "label": "Silueta",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "smooth_spherical_head",
+      "label": "Cabeza esférica y lisa",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "continuous_neck_shoulders",
+      "label": "Transición cuello-hombros continua",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "head_window_reflections",
+      "label": "Reflejos tipo ventana en la cabeza",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "dense_clear_rim",
+      "label": "Borde más denso y claro que el centro",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "background_visible",
+      "label": "Fondo visible a través del gel",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "fine_internal_bubbles",
+      "label": "Motas o burbujas internas finas",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "mitten_hands",
+      "label": "Manos manopla con pulgar",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "rounded_boot_feet",
+      "label": "Pies de bota redondeada",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "soft_contact_shadow",
+      "label": "Sombra de contacto suave",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "denser_torso",
+      "label": "Torso más opaco que las extremidades",
+      "result": "pending",
+      "notes": ""
+    },
+    {
+      "id": "no_visible_facets",
+      "label": "Cero facetas o aristas visibles",
+      "result": "pending",
+      "notes": ""
+    }
+  ]
+}

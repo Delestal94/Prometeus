@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "round": 84,
+  "generated_at_utc": "2026-10-14T01:35:06.197159+00:00",
+  "reference": "art/gel_character/referencia/referencia_frente.jpg",
+  "render": "art/gel_character/review_bloque_e/round_84/godot_render.png",
+  "mask_render": "art/gel_character/review_bloque_e/round_84/godot_render_mask.png",
+  "resolution": [
+    832,
+    1248
+  ],
+  "mask": {
+    "method": "white-background threshold, largest component, <=16 px specular-gap close, enclosed-hole fill",
+    "white_distance_threshold_srgb8": 8,
+    "blue_bias_threshold_srgb8": 3
+  },
+  "silhouette": {
+    "iou": 0.914189,
+    "intersection_pixels": 288519,
+    "union_pixels": 315601,
+    "reference_pixels": 300829,
+    "render_pixels": 303291,
+    "reference_box_px": [
+      148,
+      98,
+      676,
+      1135
+    ],
+    "render_box_px": [
+      140,
+      97,
+      684,
+      1134
+    ],
+    "zones": {
+      "head": {
+        "iou": 0.931433,
+        "intersection_pixels": 66115,
+        "union_pixels": 70982
+      },
+      "torso": {
+        "iou": 0.997279,
+        "intersection_pixels": 87967,
+        "union_pixels": 88207
+      },
+      "arms": {
+        "iou": 0.810474,
+        "intersection_pixels": 55340,
+        "union_pixels": 68281
+      },
+      "legs": {
+        "iou": 0.890426,
+        "intersection_pixels": 82311,
+        "union_pixels": 92440
+      }
+    },
+    "row_runs": {
+      "100": {
+        "reference": [
+          [
+            386,
+            442
+          ]
+        ],
+        "render": [
+          [
+            392,
+            431
+          ]
+        ]
+      },
+      "120": {
+        "reference": [
+          [
+            337,
+            488
+          ]
+        ],
+        "render": [
+          [
+            338,
+            487
+          ]
+        ]
+      },
+      "150": {
+        "reference": [
+          [
+            304,
+            525
+          ]
+        ],
+        "render": [
+          [
+            306,
+            518
+          ]
+        ]
+      },
+      "200": {
+        "reference": [
+          [
+            280,
+            551
+          ]
+        ],
+        "render": [
+          [
+            278,
+            547
+          ]
+        ]
+      },
+      "250": {
+        "reference": [
+          [
+            274,
+            555
+          ]
+        ],
+        "render": [
+          [
+            272,
+            553
+          ]
+        ]
+      },
+      "300": {
+        "reference": [
+          [
+            286,
+            541
+          ]
+        ],
+        "render": [
+          [
+            281,
+            543
+          ]
+        ]
+      },
+      "350": {
+        "reference": [
+          [
+            324,
+            475
+          ]
+        ],
+        "render": [
+          [
+            302,
+            523
+          ]
+        ]
+      },
+      "390": {
+        "reference": [
+          [
+            305,
+            523
+          ]
+        ],
+        "render": [
+          [
+            313,
+            511
+          ]
+        ]
+      },
+      "420": {
+        "reference": [
+          [
+            266,
+            562
+          ]
+        ],
+        "render": [
+          [
+            284,
+            540
+          ]
+        ]
+      },
+      "500": {
+        "reference": [
+          [
+            214,
+            613
+          ]
+        ],
+        "render": [
+          [
+            199,
+            626
+          ]
+        ]
+      },
+      "600": {
+        "reference": [
+          [
+            176,
+            254
+          ],
+          [
+            284,
+            543
+          ],
+          [
+            570,
+            650
+          ]
+        ],
+        "render": [
+          [
+            178,
+            258
+          ],
+          [
+            280,
+            544
+          ],
+          [
+            567,
+            647
+          ]
+        ]
+      },
+      "700": {
+        "reference": [
+          [
+            152,
+            240
+          ],
+          [
+            284,
+            542
+          ],
+          [
+            586,
+            674
+          ]
+        ],
+        "render": [
+          [
+            153,
+            241
+          ],
+          [
+            284,
+            540
+          ],
+          [
+            584,
+            671
+          ]
+        ]
+      },
+      "760": {
+        "reference": [
+          [
+            155,
+            212
+          ],
+          [
+            280,
+            546
+          ],
+          [
+            611,
+            670
+          ]
+        ],
+        "render": [
+          [
+            150,
+            223
+          ],
+          [
+            280,
+            544
+          ],
+          [
+            602,
+            674
+          ]
+        ]
+      },
+      "850": {
+        "reference": [
+          [
+            282,
+            380
+          ],
+          [
+            444,
+            546
+          ]
+        ],
+        "render": [
+          [
+            275,
+            379
+          ],
+          [
+            445,
+            550
+          ]
+        ]
+      },
+      "950": {
+        "reference": [
+          [
+            274,
+            370
+          ],
+          [
+            452,
+            552
+          ]
+        ],
+        "render": [
+          [
+            279,
+            372
+          ],
+          [
+            452,
+            545
+          ]
+        ]
+      },
+      "1050": {
+        "reference": [
+          [
+            228,
+            373
+          ],
+          [
+            452,
+            587
+          ]
+        ],
+        "render": [
+          [
+            226,
+            369
+          ],
+          [
+            455,
+            598
+          ]
+        ]
+      },
+      "1120": {
+        "reference": [
+          [
+            224,
+            360
+          ],
+          [
+            469,
+            594
+          ]
+        ],
+        "render": [
+          [
+            222,
+            371
+          ],
+          [
+            453,
+            602
+          ]
+        ]
+      }
+    }
+  },
+  "color": {
+    "method": "CIE76 Delta E on intersecting foreground pixels",
+    "zones": {
+      "head": {
+        "mean_delta_e": 11.2568,
+        "sample_pixels": 66115,
+        "reference_mean_lab": [
+          87.9692,
+          1.5001,
+          -3.2504
+        ],
+        "render_mean_lab": [
+          88.7412,
+          1.8332,
+          -3.7693
+        ]
+      },
+      "torso": {
+        "mean_delta_e": 9.7778,
+        "sample_pixels": 87967,
+        "reference_mean_lab": [
+          87.8432,
+          1.5487,
+          -3.0762
+        ],
+        "render_mean_lab": [
+          95.4584,
+          1.1168,
+          -2.266
+        ]
+      },
+      "arms": {
+        "mean_delta_e": 8.2664,
+        "sample_pixels": 55340,
+        "reference_mean_lab": [
+          89.009,
+          1.519,
+          -3.0335
+        ],
+        "render_mean_lab": [
+          93.99,
+          1.1784,
+          -2.3406
+        ]
+      },
+      "legs": {
+        "mean_delta_e": 9.4156,
+        "sample_pixels": 82311,
+        "reference_mean_lab": [
+          88.6834,
+          1.6494,
+          -3.2551
+        ],
+        "render_mean_lab": [
+          95.3342,
+          1.0129,
+          -1.9691
+        ]
+      }
+    }
+  },
+  "artifacts": {
+    "side_by_side": "art/gel_character/review_bloque_e/round_84/side_by_side.png",
+    "difference": "art/gel_character/review_bloque_e/round_84/difference.png"
+  },
+  "approval": {
+    "thresholds": {
+      "minimum_silhouette_iou": 0.92,
+      "maximum_mean_delta_e_per_zone": 8.0,
+      "required_visual_yes": 12
+    },
+    "automatic": {
+      "silhouette": {
+        "value": 0.914189,
+        "passed": false
+      },
+      "color_zones": {
+        "head": {
+          "value": 11.2568,
+          "passed": false
+        },
+        "torso": {
+          "value": 9.7778,
+          "passed": false
+        },
+        "arms": {
+          "value": 8.2664,
+          "passed": false
+        },
+        "legs": {
+          "value": 9.4156,
+          "passed": false
+        }
+      },
+      "passed": false
+    },
+    "visual_review": {
+      "path": "art/gel_character/review_bloque_e/round_84/visual_review.json",
+      "criteria_total": 12,
+      "criteria_yes": 0,
+      "passed": false
+    },
+    "passed": false
+  }
+}
