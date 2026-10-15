@@ -274,7 +274,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.41** Bitácora `art/gel_character/iteraciones.md`: por ronda, el lado a lado, los números,
   qué se cambió y qué falta. **Mínimo 5 rondas**, y se sigue iterando hasta pasar los umbrales: no hay
   tope de rondas. Si falla la silueta, se corrigen los valores del preset (ítem 21) antes que la malla.
-- [ ] **S-311.42** La comparación que cuenta es la del **render de Godot** (ítem 38), no solo la de
+- [x] **S-311.42** La comparación que cuenta es la del **render de Godot** (ítem 38), no solo la de
   Blender: lo que ve el jugador.
 - [ ] **S-311.43** Revisión final del lado a lado con `director-arte` y con el usuario. Si marcan algo,
   se hace otra ronda y se anota en la bitácora.
