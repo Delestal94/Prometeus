@@ -108,8 +108,9 @@ individuales. Su barrido pesado añade Basis y los 220 extremos por pares: 243
 estados por LOD. Es cobertura finita reproducible, no una prueba matemática del
 continuo completo de once controles.
 
-El rig de exportación conserva 20 nombres y los nueve clips actuales, incluido
-`Run` agregado en main por N-115. Los reposos nuevos
+El rig de exportación conserva los 20 huesos de juego, agrega seis huesos
+secundarios de jiggle y mantiene los nueve clips actuales, incluido `Run`
+agregado en main por N-115. Los reposos nuevos
 acomodan la referencia; el retarget usa diferencias de rotación mundial y
 IK de dos segmentos para conservar las metas relativas de tobillos y agarres
 con las longitudes propias del gel. Las recogidas ajustan el alcance del torso
@@ -118,6 +119,18 @@ y los codos; se verifican conexiones, longitudes y metas en cada clave horneada.
 estas proporciones. Los 35 huesos de autoría del
 master permanecen intactos. No se reemplaza el personaje activo ni se agregan
 controles de proporciones del bloque C.
+
+`gel_jiggle.gd` instala seis `SpringBoneSimulator3D` reales sobre esos huesos:
+cabeza, panza, ambos antebrazos y ambas pantorrillas. La entrada de presentación
+combina aceleración/frenado, velocidad angular, despegue y aterrizaje; en reposo
+aplica un temblor pequeño con fase determinista según el jugador. Cabeza, panza,
+brazos y piernas escalan amplitud y rigidez con sus proporciones, de modo que una
+panza mayor rebota más y queda menos rígida. El controlador no altera colisiones,
+autoridad ni estado replicado. El preview de personalización lo usa para mostrar
+reposo y giro; la conexión al jugador activo queda en la integración final cuando
+el modelo gel reemplace al personaje temporal. `test_gel_jiggle.gd` verifica las
+seis cadenas, los eventos, las escalas, las fases y una rotación producida por el
+solver nativo.
 
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los

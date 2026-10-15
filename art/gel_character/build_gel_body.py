@@ -25,9 +25,19 @@ OUT = ROOT / 'do-not-drop/assets/models/characters/gel'
 MORPHS = ('general_thickness', 'belly', 'chest', 'shoulders', 'hips',
           'arm_thickness', 'leg_thickness', 'hand_size', 'foot_size',
           'head_shape', 'neck_thickness')
-JOINTS = ('pelvis', 'chest', 'neck', 'head') + tuple(
+GAME_JOINTS = ('pelvis', 'chest', 'neck', 'head') + tuple(
     n + '.' + s for s in 'LR' for n in
     ('upper_arm', 'forearm', 'hand', 'thumb', 'grip', 'thigh', 'shin', 'foot'))
+JIGGLE_SOURCES = {
+    'jiggle_head': 'head',
+    'jiggle_belly': 'pelvis',
+    'jiggle_forearm.L': 'forearm.L',
+    'jiggle_forearm.R': 'forearm.R',
+    'jiggle_calf.L': 'shin.L',
+    'jiggle_calf.R': 'shin.R',
+}
+JIGGLE_JOINTS = tuple(JIGGLE_SOURCES)
+JOINTS = GAME_JOINTS + JIGGLE_JOINTS
 LOD_LEVELS = (3, 1, 0)
 BUDGETS = (20000, 2500, 800)
 ARM_SHOULDER_X = .225
@@ -512,7 +522,11 @@ def morph_delta(p, name):
     elif name == 'leg_thickness':
         amount = .18*leg*(1-foot)
     elif name == 'hand_size':
-        amount = .45*hand
+        # The former .45 extreme could rotate outer-mitten triangles past 90
+        # degrees when combined with minimum general thickness and maximum arm
+        # thickness (seeded sample 35). Keep useful range plus a validation
+        # margin under cross-parameter combinations.
+        amount = .30*hand
         center = Vector((math.copysign(arm_x(.735), x), 0, 1.105))
     elif name == 'foot_size':
         amount = .15*foot
@@ -586,6 +600,9 @@ def anatomical_rest():
             ('shin',p(*DELGADA_CAGE['knee'][0]),p(*DELGADA_CAGE['ankle'][0]),'thigh.'+side),
             ('foot',p(*DELGADA_CAGE['ankle'][0]),p(.145,-.14,.105),'shin.'+side)):
             bones[name+'.'+side] = (start,end,parent)
+    for name, source_name in JIGGLE_SOURCES.items():
+        start, end, _parent = bones[source_name]
+        bones[name] = (start, end, source_name)
     return bones
 
 
@@ -602,7 +619,8 @@ def create_rig(source):
         bone = data.edit_bones.new(name)
         bone.head, bone.tail = rest[name][:2]
         # Keep the source axes; copying Euler values across different axes is invalid.
-        axis = source.data.bones[name].matrix_local.to_3x3().col[2]
+        source_name = JIGGLE_SOURCES.get(name, name)
+        axis = source.data.bones[source_name].matrix_local.to_3x3().col[2]
         bone.align_roll(axis)
     for name in JOINTS:
         parent = rest[name][2]
@@ -633,11 +651,18 @@ def assign_weights(obj, rig, *, reference=None):
         modifier = obj.modifiers.new('Gel skin', 'ARMATURE')
         modifier.object = rig
         return
+    # Automatic heat must solve only the twenty animation bones. The six
+    # secondary bones receive deterministic weights below, copied from their
+    # animated parent so the rest/clip pose remains byte-for-byte equivalent.
+    for name in JIGGLE_JOINTS:
+        rig.data.bones[name].use_deform = False
     bpy.ops.object.select_all(action='DESELECT')
     obj.select_set(True)
     rig.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    for name in JIGGLE_JOINTS:
+        rig.data.bones[name].use_deform = True
     def smooth(a, b, value):
         t = max(0., min(1., (value-a)/(b-a)))
         return t*t*(3-2*t)
@@ -684,6 +709,49 @@ def assign_weights(obj, rig, *, reference=None):
             obj.vertex_groups[name].add([vertex.index], weight, 'REPLACE')
     next(mod for mod in obj.modifiers if mod.type == 'ARMATURE').name = 'Gel skin'
     refine_joint_weights(obj, rig)
+    assign_jiggle_weights(obj)
+
+
+def assign_jiggle_weights(obj):
+    """Hand the soft regions to child bones without changing the base pose.
+
+    Each jiggle bone shares its source bone's rest axis and inherits that
+    source's animation. Moving weight from source to child therefore preserves
+    every authored clip until SpringBoneSimulator3D adds its small rotation.
+    """
+    def smooth(a, b, value):
+        t = max(0., min(1., (value-a)/(b-a)))
+        return t*t*(3-2*t)
+
+    for vertex in obj.data.vertices:
+        weights = {obj.vertex_groups[g.group].name: g.weight for g in vertex.groups}
+        p = vertex.co
+        transfers = {
+            'jiggle_head': weights.get('head', 0.) * smooth(1.28, 1.34, p.z),
+            # Stay above the four-way pelvis/thigh blend and below the shoulder
+            # field. Splitting a fifth influence in either joint transition can
+            # evict a required leg/chest owner when capped to four weights.
+            'jiggle_belly': weights.get('pelvis', 0.)
+                * smooth(.78, .84, p.z) * (1-smooth(.94, 1.02, p.z))
+                * (1-smooth(.20, .30, abs(p.x))) * .78,
+        }
+        side = 'L' if p.x >= 0. else 'R'
+        transfers['jiggle_forearm.'+side] = weights.get('forearm.'+side, 0.)
+        transfers['jiggle_calf.'+side] = weights.get('shin.'+side, 0.)
+        for target, amount in transfers.items():
+            if amount <= 0.:
+                continue
+            source_name = JIGGLE_SOURCES[target]
+            weights[source_name] = max(0., weights.get(source_name, 0.)-amount)
+            weights[target] = weights.get(target, 0.)+amount
+        chosen = sorted(((name, weight) for name, weight in weights.items() if weight > 0.),
+                        key=lambda pair: (-pair[1], JOINTS.index(pair[0])))[:4]
+        total = sum(weight for _, weight in chosen)
+        assert total > 0., ('Jiggle weights left vertex unweighted', obj.name, vertex.index)
+        for group in obj.vertex_groups:
+            group.remove([vertex.index])
+        for name, weight in chosen:
+            obj.vertex_groups[name].add([vertex.index], weight/total, 'REPLACE')
 
 
 def preserve_lod0_thumb_profile(obj):
@@ -852,7 +920,9 @@ def bake_clips(source, target):
     for name, action in source_actions.items():
         assert tuple(action.frame_range) == (0, round(DURATIONS[name]*FPS))
         action.name = 'Source_'+name
-    order = sorted(JOINTS, key=lambda n: len(target.data.bones[n].parent_recursive))
+    # Secondary bones intentionally have no animation tracks: they inherit the
+    # baked game-bone pose and SpringBoneSimulator3D supplies the delta.
+    order = sorted(GAME_JOINTS, key=lambda n: len(target.data.bones[n].parent_recursive))
     max_rotation_error = 0.
     max_bone_length_error = 0.
     max_unreachable_endpoint = 0.
@@ -1019,7 +1089,7 @@ def main():
             'reference_shape_targets': {'torso_waist_width_m': [.40,.43],
                 'foot_width_m': .57*(1.74/3.68), 'neck_visible_height_m': .11*(1.74/3.68)},
             'reference_pose': f'measured static front pose: upper arm 100 degrees, forearm -25 degrees, hand 20 degrees; {len(animation_report["durations"])} source-timed clips adapted to gel limb proportions',
-            'morph_amplitudes': dict(zip(MORPHS,(.30,.18,.15,.12,.14,.18,.18,.45,.15,.55,.15)))}
+            'morph_amplitudes': dict(zip(MORPHS,(.30,.18,.15,.12,.14,.18,.18,.30,.15,.55,.15)))}
     OUT.mkdir(parents=True, exist_ok=True)
     report = {'source_sha256':source_hash, 'animations':animation_report, 'lods':[]}
     for index, obj in enumerate(objects):

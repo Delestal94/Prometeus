@@ -103,6 +103,8 @@ class SourceBodyTests(unittest.TestCase):
                                      clip_actions=self._clip_actions) if level == 0
                       else body.make_body(level))
             body.assign_weights(second, rig, reference=objects[1] if level == 0 else None)
+            if level == body.LOD_LEVELS[0]:
+                body.preserve_lod0_thumb_profile(second)
             self.assertEqual([tuple(v.co) for v in first.data.vertices],
                              [tuple(v.co) for v in second.data.vertices])
             self.assertEqual([tuple(f.vertices) for f in first.data.polygons],
@@ -264,7 +266,9 @@ class SourceBodyTests(unittest.TestCase):
     def test_contract(self):
         import build_gel_body as body
         self.assertEqual(len(body.MORPHS), 11)
-        self.assertEqual(len(body.JOINTS), 20)
+        self.assertEqual(len(body.GAME_JOINTS), 20)
+        self.assertEqual(len(body.JIGGLE_JOINTS), 6)
+        self.assertEqual(len(body.JOINTS), 26)
         self.assertEqual(body.LOD_LEVELS, (3, 1, 0))
         self.assertEqual(body.BUDGETS, (20000, 2500, 800))
 

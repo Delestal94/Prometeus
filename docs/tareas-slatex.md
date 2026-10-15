@@ -281,7 +281,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### F. Física de gelatina y ragdoll (44-56)
 
-- [ ] **S-311.44** Huesos de jiggle secundarios (cabeza, panza, antebrazos, pantorrillas) con
+- [x] **S-311.44** Huesos de jiggle secundarios (cabeza, panza, antebrazos, pantorrillas) con
   `SpringBoneSimulator3D`: rebote al frenar, girar, saltar y aterrizar, y un temblor en reposo muy suave
   con fase distinta por jugador. Rigidez y amplitud escaladas con las proporciones (más panza, más
   rebote).
