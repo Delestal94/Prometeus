@@ -276,7 +276,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   tope de rondas. Si falla la silueta, se corrigen los valores del preset (ítem 21) antes que la malla.
 - [x] **S-311.42** La comparación que cuenta es la del **render de Godot** (ítem 38), no solo la de
   Blender: lo que ve el jugador.
-- [ ] **S-311.43** Revisión final del lado a lado con `director-arte` y con el usuario. Si marcan algo,
+- [x] **S-311.43** Revisión final del lado a lado con `director-arte` y con el usuario. Si marcan algo,
   se hace otra ronda y se anota en la bitácora.
 
 ### F. Física de gelatina y ragdoll (44-56)
