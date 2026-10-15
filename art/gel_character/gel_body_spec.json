@@ -39,7 +39,13 @@
     "grip.R",
     "thigh.R",
     "shin.R",
-    "foot.R"
+    "foot.R",
+    "jiggle_head",
+    "jiggle_belly",
+    "jiggle_forearm.L",
+    "jiggle_forearm.R",
+    "jiggle_calf.L",
+    "jiggle_calf.R"
   ],
   "morph_range": [
     -1,
@@ -111,7 +117,7 @@
     "hips": 0.14,
     "arm_thickness": 0.18,
     "leg_thickness": 0.18,
-    "hand_size": 0.45,
+    "hand_size": 0.3,
     "foot_size": 0.15,
     "head_shape": 0.55,
     "neck_thickness": 0.15

@@ -1,7 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
-## three triangle budgets, eleven zero-default working morphs, twenty named bones,
+## three triangle budgets, eleven zero-default working morphs, twenty-six named bones,
 ## nine animation durations, finite vertex/UV data, normalized four-slot skinning,
 ## zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
@@ -12,6 +12,10 @@ const MORPHS: Array[String] = [
 	"leg_thickness", "hand_size", "foot_size", "head_shape", "neck_thickness",
 ]
 const BUDGETS: Array[int] = [20000, 2500, 800]
+const JIGGLE_BONES: Array[String] = [
+	"jiggle_head", "jiggle_belly", "jiggle_forearm.L", "jiggle_forearm.R",
+	"jiggle_calf.L", "jiggle_calf.R",
+]
 const DURATIONS: Dictionary = {
 	"Idle": 6.0, "Walk": 1.0 / 3.0, "Stroll": 0.6, "Run": 1.0 / 3.0, "Jump": 1.6,
 	"PickUpPackage": 1.6, "PickUpHigh": 1.6, "Sit": 4.0, "TurnInPlace": 0.8,
@@ -36,13 +40,15 @@ func _run() -> void:
 		var skeleton: Skeleton3D = _find(model, "Skeleton3D") as Skeleton3D
 		_expect(skeleton != null, "LOD%d has a skeleton (got %s)" % [lod, skeleton])
 		if skeleton != null:
-			_expect(skeleton.get_bone_count() == 20,
-				"LOD%d has twenty bones (got %d)" % [lod, skeleton.get_bone_count()])
+			_expect(skeleton.get_bone_count() == 26,
+				"LOD%d has twenty game and six jiggle bones (got %d)" % [lod, skeleton.get_bone_count()])
 			for name: String in ["pelvis", "chest", "neck", "head"]:
 				_expect(skeleton.find_bone(name) >= 0, "LOD%d retains %s" % [lod, name])
 			for side: String in ["L", "R"]:
 				for name: String in ["upper_arm", "forearm", "hand", "thumb", "grip", "thigh", "shin", "foot"]:
 					_expect(skeleton.find_bone(name + "." + side) >= 0, "LOD%d retains %s.%s" % [lod, name, side])
+			for name: String in JIGGLE_BONES:
+				_expect(skeleton.find_bone(name) >= 0, "LOD%d retains %s" % [lod, name])
 		var player: AnimationPlayer = _find(model, "AnimationPlayer") as AnimationPlayer
 		_expect(player != null, "LOD%d has animation clips (got %s)" % [lod, player])
 		if player != null:
@@ -103,7 +109,7 @@ func _check_mesh(body: MeshInstance3D, lod: int) -> void:
 					var index: int = vertex_index * 4 + slot
 					var weight: float = weights[index]
 					invalid = invalid or not is_finite(weight) or weight < 0.0
-					invalid = invalid or (weight > 0.0 and (bones[index] < 0 or bones[index] >= 20))
+					invalid = invalid or (weight > 0.0 and (bones[index] < 0 or bones[index] >= 26))
 					total += weight
 				# Fresh Godot imports lose up to 4.581e-5 from normalized GLB weights.
 				# Bound the four-slot import error by four 16-bit steps, not float epsilon.

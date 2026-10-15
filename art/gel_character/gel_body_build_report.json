@@ -115,8 +115,8 @@
         "flat_sole_depth_m": 0.22156953439116478
       },
       "triangles": 18816,
-      "geometry_sha256": "d71a0d2cf6bfd00dd5a0320052467bbfb330a467bef7e1771a1d31c0b871ef5d",
-      "morph_sha256": "3eda36d4067044383a4a4f861cb24e19e0813013cbed40670cfcc01b2c150c32",
+      "geometry_sha256": "f28f86311f89b6a004324fcd654d2edc2a0859725ef6e6923b2af74058ecf5bd",
+      "morph_sha256": "8a1e9abd6e17ee5193d82bb67b6b3372f08bb06cc829986d887bfb12233f175e",
       "body_shape": {
         "lod_index": 0,
         "contract": {
@@ -210,7 +210,7 @@
             "minimum_loop_vertices": 32,
             "nearest_loop_distance_m": 0.006682519224286088,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.6599603316837643
+            "morph_extremes_edge_aspect_p90": 2.650575843592316
           },
           "hip": {
             "closed_loops": 10,
@@ -259,7 +259,7 @@
       },
       "triangles": 2248,
       "geometry_sha256": "6b95ddb9d742c838edd01453d911ddd78d476fde3d7335969eaf6fe98c31a0af",
-      "morph_sha256": "8b843bbe66feded56596294ce0a87d72cadc8d551188f823286ccac386c90cf0",
+      "morph_sha256": "5fe82392450ce22abe7d5efa4b78c6ccd50df99fc0b876eec078420167198713",
       "body_shape": {
         "lod_index": 1,
         "contract": {
@@ -353,7 +353,7 @@
             "minimum_loop_vertices": 14,
             "nearest_loop_distance_m": 0.033991766916002586,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.9918998726603427
+            "morph_extremes_edge_aspect_p90": 2.9918914185096743
           },
           "hip": {
             "closed_loops": 2,
@@ -393,7 +393,7 @@
         "height_m": 1.7549998760710537,
         "head_diameter_m": 0.4874519407749176,
         "arm_shoulder_to_hand_m": 0.648615026473999,
-        "torso_waist_width_m": 0.3228382021188736,
+        "torso_waist_width_m": 0.4191860109567642,
         "foot_width_m": 0.25846489518880844,
         "foot_forward_reach_m": 0.19561456143856049,
         "foot_depth_m": 0.24271920323371887,
@@ -401,8 +401,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "bb4f26f3c12c92e6e7a009b5ea27654a27f284b29172489181a1751c6ff3a325",
-      "morph_sha256": "c51a3b6c6128482d0542fdcab8cfb14a4ade26affaeeac6c800b1147a76eba48",
+      "geometry_sha256": "ccb0e83198d30287b642af72564174a3cdc1d03ca26ecf62b65d1f2d47b988f9",
+      "morph_sha256": "7d2df0e9a1aa3af307ae1f7a400285e7c203ef5f5255a763781cfec034400f66",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -427,8 +427,8 @@
           "L": {
             "mitten_length_m": 0.17614591121673584,
             "mitten_front_width_m": 0.1721726655960083,
-            "mitten_depth_m": 0.20157470926642418,
-            "thumb_forward_protrusion_m": 0.040043555200099945,
+            "mitten_depth_m": 0.20116984471678734,
+            "thumb_forward_protrusion_m": 0.051879674196243286,
             "boot_width_m": 0.25846489518880844,
             "boot_depth_m": 0.2729189768433571,
             "boot_height_m": 0.24079869692428696,
@@ -438,8 +438,8 @@
           "R": {
             "mitten_length_m": 0.1746586561203003,
             "mitten_front_width_m": 0.17217302322387695,
-            "mitten_depth_m": 0.20115240663290024,
-            "thumb_forward_protrusion_m": 0.0691460371017456,
+            "mitten_depth_m": 0.1979825682938099,
+            "thumb_forward_protrusion_m": 0.03637458384037018,
             "boot_width_m": 0.25846489518880844,
             "boot_depth_m": 0.2729189917445183,
             "boot_height_m": 0.2404624373207866,
@@ -455,14 +455,14 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 51.85413040075676,
+            "adjacent_face_angle_p95_degrees": 50.57495966881852,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
-            "sampled_edges": 231
+            "sampled_edges": 239
           },
           "torso_legs": {
             "adjacent_face_angle_p95_degrees": 51.69898796088563,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
-            "sampled_edges": 167
+            "sampled_edges": 169
           }
         }
       }

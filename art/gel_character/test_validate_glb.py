@@ -19,6 +19,8 @@ from validate_glb import validate, validate_gel_body
 JOINT_NAMES = ["pelvis", "chest", "neck", "head"] + [
     name + side for side in (".L", ".R")
     for name in ("upper_arm", "forearm", "hand", "thumb", "grip", "thigh", "shin", "foot")]
+JOINT_NAMES += ["jiggle_head", "jiggle_belly"] + [
+    name + side for side in (".L", ".R") for name in ("jiggle_forearm", "jiggle_calf")]
 MORPH_NAMES = ["general_thickness", "belly", "chest", "shoulders", "hips",
                "arm_thickness", "leg_thickness", "hand_size", "foot_size",
                "head_shape", "neck_thickness"]

@@ -14,7 +14,9 @@ MORPH_NAMES = ("general_thickness", "belly", "chest", "shoulders", "hips",
                "head_shape", "neck_thickness")
 JOINT_NAMES = frozenset(["pelvis", "chest", "neck", "head"] + [
     name + side for side in (".L", ".R")
-    for name in ("upper_arm", "forearm", "hand", "thumb", "grip", "thigh", "shin", "foot")])
+    for name in ("upper_arm", "forearm", "hand", "thumb", "grip", "thigh", "shin", "foot")]
+    + ["jiggle_head", "jiggle_belly"]
+    + [name + side for side in (".L", ".R") for name in ("jiggle_forearm", "jiggle_calf")])
 BUDGETS = (20000, 2500, 800)
 EPS = 1e-8
 
@@ -209,8 +211,8 @@ def check(asset, lod):
     require(len(skins) == 1, "Gel body must use exactly one skin")
     if skins:
         names = [nodes[j].get("name", "") for j in skins[0]["joints"]]
-        require(len(names) == 20 and set(names) == JOINT_NAMES,
-                "Gel body requires exactly the 20 prescribed joints (including grips/thumbs)")
+        require(len(names) == 26 and set(names) == JOINT_NAMES,
+                "Gel body requires exactly 20 game and 6 jiggle joints")
     mesh_nodes = [i for i, n in enumerate(nodes) if "mesh" in n]
     require(len(mesh_nodes) == 1, "Gel body must contain one exterior mesh node")
     if len(mesh_nodes) != 1:
@@ -417,12 +419,14 @@ def check(asset, lod):
             if dot(n, n) <= EPS * EPS:
                 errors.append(f"Morph sample {sample_index} has degenerate triangle {i}")
                 break
-            if dot(n, base_normals[i]) <= 0:
+            normal_alignment = dot(n, base_normals[i])
+            if normal_alignment <= 0:
                 # Shape morphs are radial, not rigid rotations. This criterion
                 # conservatively rejects a normal turning >=90 degrees; it is
                 # not a general mathematical inversion test for arbitrary 3D
                 # deformations (a rigid 180-degree rotation would also fail).
-                errors.append(f"Morph sample {sample_index} has inverted/reoriented triangle {i} (normal dot base <= 0)")
+                errors.append(f"Morph sample {sample_index} has inverted/reoriented triangle {i} "
+                              f"(normal dot base {normal_alignment:.12g} <= 0)")
                 break
         if errors:
             break

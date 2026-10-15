@@ -10,6 +10,7 @@ const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_b
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 const GelShaper = preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 const GelGrounding = preload("res://scripts/gameplay/player/gel/gel_foot_grounding.gd")
+const GelJiggleController = preload("res://scripts/gameplay/player/gel/gel_jiggle.gd")
 
 enum Framing { FACE, BODY }
 
@@ -41,6 +42,7 @@ var _bounce_tween: Tween
 var _dragging: bool = false
 var _gel_shaper: GelBodyShaper = GelShaper.new()
 var _gel_grounding: Node3D
+var _gel_jiggle: Node
 
 
 func _ready() -> void:
@@ -74,6 +76,8 @@ func show_proportions(proportions: GelBodyProportions) -> void:
 	mannequin.visible = false
 	gel_mannequin.visible = true
 	_gel_shaper.apply(proportions)
+	if _gel_jiggle != null:
+		_gel_jiggle.apply_proportions(proportions)
 
 
 func show_character() -> void:
@@ -124,6 +128,8 @@ func _process(delta: float) -> void:
 		_yaw += stick * STICK_TURN * delta
 	mannequin.rotation.y = _yaw
 	gel_mannequin.rotation.y = _yaw
+	if gel_mannequin.visible and _gel_jiggle != null:
+		_gel_jiggle.advance_motion(Vector3.ZERO, _yaw, true, delta)
 	_place_camera()
 
 
@@ -189,6 +195,10 @@ func _build_studio(viewport: SubViewport) -> void:
 		PlayerAppearance.set_gel_material(gel_mannequin, GameSettings.uses_opaque_gel())
 	PlayerAppearance.set_gel_look(gel_mannequin, Color(0.78, 0.82, 0.92), 1.0, 1.0)
 	_gel_shaper.setup(gel_mannequin)
+	_gel_jiggle = GelJiggleController.new()
+	_gel_jiggle.name = "GelJiggle"
+	world.add_child(_gel_jiggle)
+	_gel_jiggle.setup(gel_mannequin, GelBodyProportions.new(), multiplayer.get_unique_id())
 	_gel_grounding = GelGrounding.new()
 	_gel_grounding.name = "GelFootGrounding"
 	world.add_child(_gel_grounding)
