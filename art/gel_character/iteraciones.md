@@ -25,5 +25,7 @@ La captura aprobada usa brazos `88° / −14° / 10°`, color `#9c9da5`, brillo 
 - Silueta: **aprobada**, IoU 0,920871.
 - Color: **aprobado**, las cuatro zonas están por debajo de ΔE 8.
 - Revisión visual: **12/12 sí** en `review_bloque_e/round_149/visual_review.json`.
+- Revisión final: **PASS** de dirección de arte y cierre con el usuario, documentado en
+  `review_bloque_e/revision_final.md`; no requiere una ronda 150.
 - Geometría: LOD0/1/2 = 18.816/2.248/794 triángulos; una sola componente cerrada y sombreado suave en todas las caras.
 - El mapa de espesor final se volvió a medir con 18.816 rayos centrados en triángulos, sin muestras perdidas ni valores recortados.
