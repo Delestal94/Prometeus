@@ -9,10 +9,22 @@ extends Node
 const CHAIN_DEFINITIONS: Array[Dictionary] = [
 	{&"name": &"head", &"bone": &"jiggle_head", &"stiffness": 0.62, &"drag": 0.36, &"radius": 0.13, &"length": 0.18},
 	{&"name": &"belly", &"bone": &"jiggle_belly", &"stiffness": 0.48, &"drag": 0.30, &"radius": 0.12, &"length": 0.20},
-	{&"name": &"forearm_l", &"bone": &"jiggle_forearm.L", &"stiffness": 0.72, &"drag": 0.44, &"radius": 0.055, &"length": 0.13},
-	{&"name": &"forearm_r", &"bone": &"jiggle_forearm.R", &"stiffness": 0.72, &"drag": 0.44, &"radius": 0.055, &"length": 0.13},
-	{&"name": &"calf_l", &"bone": &"jiggle_calf.L", &"stiffness": 0.78, &"drag": 0.50, &"radius": 0.065, &"length": 0.14},
-	{&"name": &"calf_r", &"bone": &"jiggle_calf.R", &"stiffness": 0.78, &"drag": 0.50, &"radius": 0.065, &"length": 0.14},
+	{
+		&"name": &"forearm_l", &"bone": &"jiggle_forearm.L", &"stiffness": 0.72,
+		&"drag": 0.44, &"radius": 0.055, &"length": 0.13,
+	},
+	{
+		&"name": &"forearm_r", &"bone": &"jiggle_forearm.R", &"stiffness": 0.72,
+		&"drag": 0.44, &"radius": 0.055, &"length": 0.13,
+	},
+	{
+		&"name": &"calf_l", &"bone": &"jiggle_calf.L", &"stiffness": 0.78,
+		&"drag": 0.50, &"radius": 0.065, &"length": 0.14,
+	},
+	{
+		&"name": &"calf_r", &"bone": &"jiggle_calf.R", &"stiffness": 0.78,
+		&"drag": 0.50, &"radius": 0.065, &"length": 0.14,
+	},
 ]
 
 const MOTION_GAIN: float = 0.018
