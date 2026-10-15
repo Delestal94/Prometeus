@@ -1,8 +1,10 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_reference_compare.gd
-## Guards the S-311.39 comparison report and the S-311.40 approval gate.
+## Guards the S-311.39 comparison report, the S-311.40 approval gate, and the
+## S-311.42 requirement that approval uses the Godot render seen by players.
 
 const REPORT_PATH: String = "res://../art/gel_character/review_bloque_e/round_01/report.json"
+const APPROVED_REPORT_PATH: String = "res://../art/gel_character/review_bloque_e/round_149/report.json"
 
 var _failures: int = 0
 
@@ -77,9 +79,35 @@ func _run() -> void:
 	for zone: String in ["head", "torso", "arms", "legs"]:
 		_expect(gated_zones.has(zone), "%s has an approval gate" % zone)
 	_expect(approval.get("passed") == false, "baseline round is not falsely approved")
+	_verify_approved_godot_report()
 	if _failures == 0:
-		print("PASS: S-311.39-40 records comparisons and enforces the approval gate")
+		print("PASS: S-311.39-40/42 records comparisons, enforces approval, and uses Godot output")
 	quit(_failures)
+
+
+func _verify_approved_godot_report() -> void:
+	var absolute: String = ProjectSettings.globalize_path(APPROVED_REPORT_PATH)
+	_expect(FileAccess.file_exists(absolute), "approved round report exists")
+	if not FileAccess.file_exists(absolute):
+		return
+	var report: Variant = JSON.parse_string(FileAccess.get_file_as_string(absolute))
+	_expect(report is Dictionary, "approved round report is valid JSON")
+	if not report is Dictionary:
+		return
+	var data := report as Dictionary
+	var render_path: String = String(data.get("render", ""))
+	var mask_path: String = String(data.get("mask_render", ""))
+	_expect(render_path.ends_with("/round_149/godot_render.png"),
+		"approved comparison uses the Godot color render")
+	_expect(mask_path.ends_with("/round_149/godot_render_mask.png"),
+		"approved silhouette uses the Godot mask render")
+	_expect(FileAccess.file_exists(ProjectSettings.globalize_path("res://../" + render_path)),
+		"approved Godot color render exists")
+	_expect(FileAccess.file_exists(ProjectSettings.globalize_path("res://../" + mask_path)),
+		"approved Godot mask render exists")
+	var approval := data.get("approval", {}) as Dictionary
+	_expect(approval.get("passed") == true,
+		"the report sourced from Godot is the approved comparison")
 
 
 func _expect(condition: bool, message: String) -> void:
