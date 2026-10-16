@@ -334,6 +334,9 @@ Desde S-311.48, `gel_active_ragdoll.gd` crea un `PhysicalBoneSimulator3D` sobre 
 y caderas, bisagras limitadas en codos y rodillas, y vuelve a calcular cápsulas y masas
 desde los rests ya deformados y los sliders de grosor. El módulo portable de cápsulas
 sueltas permanece intacto para consumidores que todavía no tengan un rig compatible.
+Desde S-311.49, motores regulables atraen los cuerpos hacia la pose animada capturada,
+aceptan empujes sucesivos y recuperan autoridad gradualmente antes de devolver el rig
+a la animación, sin un salto de pose en un único frame.
 
 Las integraciones propias de asientos se ubican en
 `do-not-drop/scripts/gameplay/player/player_seat_pose.gd` y

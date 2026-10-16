@@ -1,16 +1,27 @@
 class_name GelActiveRagdoll
 extends PhysicalBoneSimulator3D
-## Physical ragdoll built on the character's real Skeleton3D (S-311.48).
+## Active physical ragdoll built on the character's real Skeleton3D.
 ##
 ## PhysicalBone3D shapes are rebuilt from the current bone rests and gel
 ## proportions. The skinned mesh therefore remains visible and follows its
-## own rig instead of being replaced by detached placeholder capsules.
+## own rig instead of being replaced by detached placeholder capsules. While
+## simulated, configurable spring motors pull each body toward the animated
+## pose captured at handoff; recovery raises that influence gradually so
+## animation regains the rig without a one-frame snap (S-311.48 / S-311.49).
 
 signal finished
 
 const LIFETIME: float = 2.8
+const RECOVERY_DURATION: float = 0.75
+const DEFAULT_MOTOR_STRENGTH: float = 0.24
 const DENSITY: float = 620.0
 const MIN_MASS: float = 0.25
+const POSITION_SPRING: float = 38.0
+const POSITION_DAMPING: float = 7.5
+const ANGULAR_SPRING: float = 28.0
+const ANGULAR_DAMPING: float = 5.0
+const MAX_LINEAR_ACCELERATION: float = 55.0
+const MAX_ANGULAR_ACCELERATION: float = 45.0
 
 const BODY_DEFINITIONS: Array[Dictionary] = [
 	{&"bone": &"pelvis", &"end": &"chest", &"radius": 0.100, &"role": &"hips",
@@ -43,6 +54,23 @@ var _animation: AnimationPlayer
 var _animation_was_active: bool = true
 var _ragdoll_active: bool = false
 var _physical_bones: Dictionary = {}
+var _animated_body_poses: Dictionary = {}
+var _motor_strength: float = DEFAULT_MOTOR_STRENGTH
+var _recovery_elapsed: float = 0.0
+var _recovery_duration: float = 0.0
+var _recovery_from_strength: float = DEFAULT_MOTOR_STRENGTH
+
+
+func _ready() -> void:
+	set_physics_process(false)
+
+
+func _physics_process(delta: float) -> void:
+	if not _ragdoll_active:
+		return
+	if _recovery_duration > 0.0:
+		_recovery_elapsed = minf(_recovery_elapsed + delta, _recovery_duration)
+	_apply_pose_motors(delta)
 
 
 ## Finds the real rig, reparents this simulator below it and builds every
@@ -97,6 +125,10 @@ func start_ragdoll(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -
 		_animation_was_active = _animation.active
 		_animation.active = false
 	physical_bones_start_simulation()
+	_capture_animated_body_poses()
+	_recovery_elapsed = 0.0
+	_recovery_duration = 0.0
+	set_physics_process(true)
 	for value: Variant in _physical_bones.values():
 		var physical_bone := value as PhysicalBone3D
 		physical_bone.linear_velocity = carried_velocity
@@ -112,6 +144,9 @@ func stop_ragdoll() -> void:
 		return
 	physical_bones_stop_simulation()
 	_ragdoll_active = false
+	set_physics_process(false)
+	_recovery_elapsed = 0.0
+	_recovery_duration = 0.0
 	if _animation != null:
 		_animation.active = _animation_was_active
 
@@ -120,7 +155,9 @@ func stop_ragdoll() -> void:
 func fall(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -> void:
 	if not start_ragdoll(impulse, carried_velocity):
 		return
-	await get_tree().create_timer(LIFETIME).timeout
+	await get_tree().create_timer(LIFETIME - RECOVERY_DURATION).timeout
+	begin_recovery(RECOVERY_DURATION)
+	await get_tree().create_timer(RECOVERY_DURATION).timeout
 	stop_ragdoll()
 	finished.emit()
 	queue_free()
@@ -128,6 +165,127 @@ func fall(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -> void:
 
 func physical_bone(bone_name: StringName) -> PhysicalBone3D:
 	return _physical_bones.get(bone_name) as PhysicalBone3D
+
+
+## Sets how much the animated pose resists impacts: zero is fully loose,
+## while one uses the full active-ragdoll springs.
+func set_motor_strength(strength: float) -> void:
+	_motor_strength = clampf(strength, 0.0, 1.0)
+	if _recovery_duration <= 0.0:
+		_recovery_from_strength = _motor_strength
+
+
+func motor_strength() -> float:
+	return _effective_motor_strength()
+
+
+## Applies an additional hit without restarting the fall, so repeated cargo
+## impacts can shove or trip an already-simulating character.
+func push(bone_name: StringName, impulse: Vector3) -> bool:
+	if not _ragdoll_active or not impulse.is_finite():
+		return false
+	var body := physical_bone(bone_name)
+	if body == null:
+		return false
+	body.linear_velocity += impulse
+	return true
+
+
+## Raises motor authority smoothly. The physics bodies remain dynamic for the
+## whole blend and approach the animation target before simulation stops.
+func begin_recovery(duration: float = RECOVERY_DURATION) -> void:
+	if not _ragdoll_active:
+		return
+	_recovery_from_strength = _effective_motor_strength()
+	_recovery_duration = maxf(duration, 0.001)
+	_recovery_elapsed = 0.0
+
+
+func recovery_progress() -> float:
+	if _recovery_duration <= 0.0:
+		return 0.0
+	return clampf(_recovery_elapsed / _recovery_duration, 0.0, 1.0)
+
+
+## Maximum distance between a physical body and its captured animated pose.
+func pose_error() -> float:
+	var result: float = 0.0
+	for bone_name: StringName in _physical_bones:
+		var body := physical_bone(bone_name)
+		var target: Transform3D = _target_global_transform(bone_name)
+		if body != null:
+			result = maxf(result, body.global_position.distance_to(target.origin))
+	return result
+
+
+func _capture_animated_body_poses() -> void:
+	_animated_body_poses.clear()
+	var to_skeleton: Transform3D = _skeleton.global_transform.affine_inverse()
+	for bone_name: StringName in _physical_bones:
+		var body := physical_bone(bone_name)
+		if body != null:
+			_animated_body_poses[bone_name] = to_skeleton * body.global_transform
+
+
+func _apply_pose_motors(delta: float) -> void:
+	var strength: float = _effective_motor_strength()
+	if strength <= 0.0:
+		return
+	var recovery_gain: float = lerpf(1.0, 4.5, recovery_progress())
+	for bone_name: StringName in _physical_bones:
+		var body := physical_bone(bone_name)
+		if body == null:
+			continue
+		var target: Transform3D = _target_global_transform(bone_name)
+		_apply_position_motor(body, target.origin, strength, recovery_gain, delta)
+		_apply_rotation_motor(body, target.basis, strength, recovery_gain, delta)
+
+
+func _apply_position_motor(
+	body: PhysicalBone3D,
+	target: Vector3,
+	strength: float,
+	recovery_gain: float,
+	delta: float
+) -> void:
+	var acceleration: Vector3 = (target - body.global_position) \
+		* POSITION_SPRING * strength * recovery_gain
+	acceleration -= body.linear_velocity * POSITION_DAMPING * sqrt(strength) * recovery_gain
+	body.linear_velocity += acceleration.limit_length(MAX_LINEAR_ACCELERATION) * delta
+
+
+func _apply_rotation_motor(
+	body: PhysicalBone3D,
+	target: Basis,
+	strength: float,
+	recovery_gain: float,
+	delta: float
+) -> void:
+	var current_rotation: Quaternion = body.global_basis.orthonormalized().get_rotation_quaternion()
+	var target_rotation: Quaternion = target.orthonormalized().get_rotation_quaternion()
+	var rotation_delta: Quaternion = current_rotation.inverse() * target_rotation
+	if rotation_delta.w < 0.0:
+		rotation_delta = -rotation_delta
+	var angle: float = rotation_delta.get_angle()
+	if angle <= 0.0001:
+		return
+	var world_axis: Vector3 = current_rotation * rotation_delta.get_axis()
+	var acceleration: Vector3 = world_axis * angle * ANGULAR_SPRING * strength * recovery_gain
+	acceleration -= body.angular_velocity * ANGULAR_DAMPING * sqrt(strength) * recovery_gain
+	body.angular_velocity += acceleration.limit_length(MAX_ANGULAR_ACCELERATION) * delta
+
+
+func _effective_motor_strength() -> float:
+	var progress: float = recovery_progress()
+	if progress <= 0.0:
+		return _motor_strength
+	var eased: float = smoothstep(0.0, 1.0, progress)
+	return lerpf(_recovery_from_strength, 1.0, eased)
+
+
+func _target_global_transform(bone_name: StringName) -> Transform3D:
+	var local_target: Transform3D = _animated_body_poses.get(bone_name, Transform3D.IDENTITY)
+	return _skeleton.global_transform * local_target
 
 
 func _has_required_bones() -> bool:
