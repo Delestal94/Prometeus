@@ -340,6 +340,10 @@ a la animación, sin un salto de pose en un único frame.
 S-311.50 añade `gel_get_up.gd`: selecciona clips procedurales distintos si el pecho
 queda boca arriba o boca abajo, los inicia en la pose física exacta y conserva el
 desplazamiento horizontal de la caída al entregar nuevamente el rig a la animación.
+Desde S-311.51, el ragdoll mantiene activos los seis resortes de gelatina usando la
+velocidad física de la pelvis. Rayos cortos bajo pelvis, torso, cabeza y extremidades
+detectan cada contacto nuevo con el piso: inyectan un impulso de asentamiento y crean
+una onda local en el material, sin cambiar colisiones ni autoridad de juego.
 
 Las integraciones propias de asientos se ubican en
 `do-not-drop/scripts/gameplay/player/player_seat_pose.gd` y

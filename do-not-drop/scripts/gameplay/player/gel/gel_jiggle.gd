@@ -49,7 +49,7 @@ var _impulse: Vector3 = Vector3.ZERO
 
 
 func _exit_tree() -> void:
-	_clear_simulators()
+	_clear_simulators(true)
 
 
 func setup(model: Node, proportions: Resource, peer_id: int) -> bool:
@@ -154,6 +154,14 @@ func reset_motion() -> void:
 		simulator.reset()
 
 
+## Adds a short secondary-motion kick from a physical contact. Active ragdoll
+## uses this for floor hits while the usual acceleration sampling continues.
+func add_impulse(impulse: Vector3) -> void:
+	if not impulse.is_finite():
+		return
+	_impulse = (_impulse + impulse).limit_length(MAX_FORCE)
+
+
 func simulator_count() -> int:
 	return _simulators.size()
 
@@ -172,10 +180,14 @@ func _apply_force(force: Vector3) -> void:
 		simulator.external_force = force * float(_amplitudes.get(chain_name, 1.0))
 
 
-func _clear_simulators() -> void:
+func _clear_simulators(deferred: bool = false) -> void:
 	for value: Variant in _simulators.values():
 		if is_instance_valid(value):
-			(value as SpringBoneSimulator3D).free()
+			var simulator := value as SpringBoneSimulator3D
+			if deferred:
+				simulator.queue_free()
+			else:
+				simulator.free()
 	_simulators.clear()
 	_amplitudes.clear()
 

@@ -12,6 +12,8 @@ extends PhysicalBoneSimulator3D
 signal finished
 
 const GetUp := preload("res://scripts/gameplay/player/gel/gel_get_up.gd")
+const Jiggle := preload("res://scripts/gameplay/player/gel/gel_jiggle.gd")
+const ImpactWaves := preload("res://scripts/gameplay/player/gel/gel_impact_waves.gd")
 const LIFETIME: float = 2.8
 const RECOVERY_DURATION: float = 0.75
 const DEFAULT_MOTOR_STRENGTH: float = 0.24
@@ -23,6 +25,9 @@ const ANGULAR_SPRING: float = 28.0
 const ANGULAR_DAMPING: float = 5.0
 const MAX_LINEAR_ACCELERATION: float = 55.0
 const MAX_ANGULAR_ACCELERATION: float = 45.0
+const FLOOR_CONTACT_BONES: Array[StringName] = [
+	&"pelvis", &"chest", &"head", &"forearm.L", &"forearm.R", &"shin.L", &"shin.R",
+]
 
 const BODY_DEFINITIONS: Array[Dictionary] = [
 	{&"bone": &"pelvis", &"end": &"chest", &"radius": 0.100, &"role": &"hips",
@@ -64,6 +69,11 @@ var _recovery_from_strength: float = DEFAULT_MOTOR_STRENGTH
 var _recovery_start_poses: Dictionary = {}
 var _recovery_world_offset: Vector3 = Vector3.ZERO
 var _get_up_clip: StringName = StringName()
+var _jiggle: Node
+var _impact_waves: Node
+var _floor_contacts: Dictionary = {}
+var _previous_body_velocities: Dictionary = {}
+var _collision_exception_rid: RID
 
 
 func _ready() -> void:
@@ -76,6 +86,7 @@ func _physics_process(delta: float) -> void:
 	if _recovery_duration > 0.0:
 		_recovery_elapsed = minf(_recovery_elapsed + delta, _recovery_duration)
 	_apply_pose_motors(delta)
+	_advance_soft_effects(delta)
 
 
 ## Finds the real rig, reparents this simulator below it and builds every
@@ -100,7 +111,9 @@ func setup(
 	active = true
 	rebuild(proportions)
 	if collision_exception != null:
-		physical_bones_add_collision_exception(collision_exception.get_rid())
+		_collision_exception_rid = collision_exception.get_rid()
+		physical_bones_add_collision_exception(_collision_exception_rid)
+	_setup_soft_effects(model, proportions, collision_exception)
 	return _physical_bones.size() == BODY_DEFINITIONS.size()
 
 
@@ -110,9 +123,11 @@ func setup(
 func rebuild(proportions: GelBodyProportions = null) -> void:
 	if _skeleton == null or _ragdoll_active:
 		return
-	for child: Node in get_children():
-		remove_child(child)
-		child.free()
+	for value: Variant in _physical_bones.values():
+		var physical_bone := value as PhysicalBone3D
+		if physical_bone != null:
+			remove_child(physical_bone)
+			physical_bone.free()
 	_physical_bones.clear()
 	var values: Dictionary = proportions.as_dictionary() \
 		if proportions != null else GelBodyProportions.default_dictionary()
@@ -134,6 +149,8 @@ func start_ragdoll(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -
 	_capture_animated_body_poses()
 	_recovery_elapsed = 0.0
 	_recovery_duration = 0.0
+	_floor_contacts.clear()
+	_previous_body_velocities.clear()
 	set_physics_process(true)
 	for value: Variant in _physical_bones.values():
 		var physical_bone := value as PhysicalBone3D
@@ -236,6 +253,27 @@ func recovery_world_offset() -> Vector3:
 	return _recovery_world_offset
 
 
+func jiggle_controller() -> Node:
+	return _jiggle
+
+
+func impact_wave_controller() -> Node:
+	return _impact_waves
+
+
+## Shared entry point for detected contacts and deterministic gameplay/tests.
+func report_floor_contact(world_position: Vector3, strength: float) -> void:
+	if not _ragdoll_active or not world_position.is_finite():
+		return
+	var amount: float = clampf(strength, 0.0, 1.0)
+	if amount <= 0.0:
+		return
+	if _impact_waves != null:
+		_impact_waves.add_impact(world_position, amount)
+	if _jiggle != null:
+		_jiggle.add_impulse(Vector3.DOWN * lerpf(0.08, 0.28, amount))
+
+
 ## Maximum distance between a physical body and its captured animated pose.
 func pose_error() -> float:
 	var result: float = 0.0
@@ -254,6 +292,65 @@ func _capture_animated_body_poses() -> void:
 		var body := physical_bone(bone_name)
 		if body != null:
 			_animated_body_poses[bone_name] = to_skeleton * body.global_transform
+
+
+func _setup_soft_effects(model: Node, proportions: Resource, collision_exception: CollisionObject3D) -> void:
+	var jiggle: Node = Jiggle.new()
+	add_child(jiggle)
+	var peer_id: int = collision_exception.get_multiplayer_authority() \
+		if collision_exception != null else 1
+	if not jiggle.setup(model, proportions, peer_id):
+		jiggle.queue_free()
+		return
+	_jiggle = jiggle
+	_impact_waves = ImpactWaves.new()
+	add_child(_impact_waves)
+	if not _impact_waves.setup(model):
+		_impact_waves.queue_free()
+		_impact_waves = null
+
+
+func _advance_soft_effects(delta: float) -> void:
+	var pelvis := physical_bone(&"pelvis")
+	if _jiggle != null and pelvis != null:
+		_jiggle.advance_motion(pelvis.linear_velocity, pelvis.global_rotation.y, false, delta)
+	if _impact_waves != null:
+		_impact_waves.advance(delta)
+	_detect_floor_contacts()
+
+
+func _detect_floor_contacts() -> void:
+	if _impact_waves == null or get_world_3d() == null:
+		return
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	for bone_name: StringName in FLOOR_CONTACT_BONES:
+		var body := physical_bone(bone_name)
+		if body == null:
+			continue
+		var shape := body.get_node_or_null(^"Shape") as CollisionShape3D
+		var capsule := shape.shape as CapsuleShape3D if shape != null else null
+		var reach: float = capsule.radius + 0.08 if capsule != null else 0.16
+		var exclude: Array[RID] = [body.get_rid()]
+		if _collision_exception_rid.is_valid():
+			exclude.append(_collision_exception_rid)
+		var query := PhysicsRayQueryParameters3D.create(
+			body.global_position, body.global_position + Vector3.DOWN * reach,
+			collision_mask, exclude
+		)
+		query.collide_with_areas = false
+		var hit: Dictionary = space.intersect_ray(query)
+		var touching: bool = not hit.is_empty()
+		var was_touching: bool = bool(_floor_contacts.get(bone_name, false))
+		var previous_velocity: Vector3 = _previous_body_velocities.get(
+			bone_name, body.linear_velocity
+		)
+		if touching and not was_touching:
+			var impact_speed: float = maxf(-previous_velocity.y, 0.0)
+			if impact_speed >= 0.35:
+				var contact: Vector3 = hit.get(&"position", body.global_position)
+				report_floor_contact(contact, clampf(impact_speed / 8.0, 0.18, 1.0))
+		_floor_contacts[bone_name] = touching
+		_previous_body_velocities[bone_name] = body.linear_velocity
 
 
 func _apply_pose_motors(delta: float) -> void:
