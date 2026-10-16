@@ -296,7 +296,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   `player_ragdoll.gd`. Formas y masas de cada hueso físico se recalculan con las proporciones.
 - [x] **S-311.49** Ragdoll activo: mezcla animación ↔ física con motores hacia la pose animada y fuerza
   variable, para tropezar, ser empujado y recuperarse sin saltos (estilo Gang Beasts / Human Fall Flat).
-- [ ] **S-311.50** Levantarse: detecta boca arriba / boca abajo y mezcla con uno de dos clips de
+- [x] **S-311.50** Levantarse: detecta boca arriba / boca abajo y mezcla con uno de dos clips de
   levantarse, sin teletransporte.
 - [ ] **S-311.51** La gelatina sigue temblando durante el ragdoll (jiggle + ondas al tocar el piso).
 - [ ] **S-311.52** Solo visual y en red: la cápsula y la autoridad del host no cambian; el host replica
