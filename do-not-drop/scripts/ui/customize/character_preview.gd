@@ -11,6 +11,7 @@ const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 const GelShaper = preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 const GelGrounding = preload("res://scripts/gameplay/player/gel/gel_foot_grounding.gd")
 const GelJiggleController = preload("res://scripts/gameplay/player/gel/gel_jiggle.gd")
+const GelSquashController = preload("res://scripts/gameplay/player/gel/gel_squash_stretch.gd")
 
 enum Framing { FACE, BODY }
 
@@ -43,6 +44,7 @@ var _dragging: bool = false
 var _gel_shaper: GelBodyShaper = GelShaper.new()
 var _gel_grounding: Node3D
 var _gel_jiggle: Node
+var _gel_squash: Node
 
 
 func _ready() -> void:
@@ -101,6 +103,8 @@ func bounce() -> void:
 	_bounce_tween = create_tween()
 	_bounce_tween.tween_property(mannequin, "scale", Vector3.ONE, 0.45) \
 		.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	if gel_mannequin.visible and _gel_squash != null:
+		_gel_squash.trigger_landing(4.5)
 
 
 func set_framing(next: Framing, instant: bool = false) -> void:
@@ -130,6 +134,8 @@ func _process(delta: float) -> void:
 	gel_mannequin.rotation.y = _yaw
 	if gel_mannequin.visible and _gel_jiggle != null:
 		_gel_jiggle.advance_motion(Vector3.ZERO, _yaw, true, delta)
+	if gel_mannequin.visible and _gel_squash != null:
+		_gel_squash.advance_motion(Vector3.ZERO, true, delta)
 	_place_camera()
 
 
@@ -199,6 +205,10 @@ func _build_studio(viewport: SubViewport) -> void:
 	_gel_jiggle.name = "GelJiggle"
 	world.add_child(_gel_jiggle)
 	_gel_jiggle.setup(gel_mannequin, GelBodyProportions.new(), multiplayer.get_unique_id())
+	_gel_squash = GelSquashController.new()
+	_gel_squash.name = "GelSquashStretch"
+	world.add_child(_gel_squash)
+	_gel_squash.setup(gel_mannequin)
 	_gel_grounding = GelGrounding.new()
 	_gel_grounding.name = "GelFootGrounding"
 	world.add_child(_gel_grounding)

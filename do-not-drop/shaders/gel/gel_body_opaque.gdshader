@@ -3,11 +3,13 @@ render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 
 // S-311.35: milky fallback for low quality and accessibility. It preserves
 // the gel tint, Fresnel density, baked thickness, inclusions and studio
-// accents under regular PBR lighting, without transparency or a screen read.
+// accents and constant-volume deformation under regular PBR lighting, without
+// transparency or a screen read.
 
 instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
+instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 
 group_uniforms gel;
 uniform float edge_density : hint_range(0.0, 1.0) = 0.38;
@@ -67,6 +69,10 @@ float object_noise_3d(vec3 point) {
 }
 
 void vertex() {
+	float vertical_scale = max(1.0 + gel_squash_stretch, 0.8);
+	float radial_scale = inversesqrt(vertical_scale);
+	VERTEX *= vec3(radial_scale, vertical_scale, radial_scale);
+	NORMAL = normalize(NORMAL / vec3(radial_scale, vertical_scale, radial_scale));
 	model_position = VERTEX;
 }
 
