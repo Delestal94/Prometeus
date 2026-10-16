@@ -8,11 +8,13 @@ render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_
 // object-space noise adds internal motes without camera or UV swimming. An
 // alpha depth pre-pass stabilizes self-overlap and a thinner shadow pass keeps
 // the translucent body's shadow lighter than an opaque character's. Per-instance
-// colour, opacity and brightness keep one shared material for every player.
+// colour, opacity, brightness and constant-volume squash/stretch keep one
+// shared material for every player.
 
 instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
+instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 
 group_uniforms gel;
 uniform float center_opacity : hint_range(0.0, 1.0) = 0.24;
@@ -87,6 +89,10 @@ float object_noise_3d(vec3 point) {
 }
 
 void vertex() {
+	float vertical_scale = max(1.0 + gel_squash_stretch, 0.8);
+	float radial_scale = inversesqrt(vertical_scale);
+	VERTEX *= vec3(radial_scale, vertical_scale, radial_scale);
+	NORMAL = normalize(NORMAL / vec3(radial_scale, vertical_scale, radial_scale));
 	model_position = VERTEX;
 }
 

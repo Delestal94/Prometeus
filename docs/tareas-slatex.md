@@ -285,7 +285,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   `SpringBoneSimulator3D`: rebote al frenar, girar, saltar y aterrizar, y un temblor en reposo muy suave
   con fase distinta por jugador. Rigidez y amplitud escaladas con las proporciones (más panza, más
   rebote).
-- [ ] **S-311.45** Squash & stretch con volumen constante en el shader, a partir de la aceleración del
+- [x] **S-311.45** Squash & stretch con volumen constante en el shader, a partir de la aceleración del
   cuerpo: se aplasta al aterrizar y se estira al saltar.
 - [ ] **S-311.46** Ondas de impacto: un golpe (caja, pared, otro jugador, trampa) manda una onda por la
   malla desde el punto de contacto; hasta 4 simultáneas por uniforms.

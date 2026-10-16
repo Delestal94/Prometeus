@@ -132,6 +132,14 @@ el modelo gel reemplace al personaje temporal. `test_gel_jiggle.gd` verifica las
 seis cadenas, los eventos, las escalas, las fases y una rotación producida por el
 solver nativo.
 
+`gel_squash_stretch.gd` convierte la aceleración vertical en un uniform por
+instancia: al despegar estira el cuerpo y al aterrizar lo comprime. Los dos
+shaders compensan X/Z con `1 / sqrt(escala_vertical)`, de modo que el producto
+de las tres escalas permanece en uno y el volumen no cambia. El efecto es sólo
+visual, conserva los materiales compartidos y funciona igual en la variante
+transparente y en la opaca. El preview lo muestra al rebotar; la conexión al
+jugador activo se hará junto con el reemplazo final del modelo gel.
+
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses
