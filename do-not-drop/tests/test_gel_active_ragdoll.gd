@@ -1,6 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_active_ragdoll.gd
-## S-311.48: real-rig physical ragdoll bodies, joints, proportions and lifecycle.
+## S-311.48/49: real-rig bodies, joints, active motors and smooth recovery.
 
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
@@ -62,6 +62,8 @@ func _run() -> void:
 	_expect(ragdoll.start_ragdoll(Vector3(1.5, 2.0, -0.5)), "ragdoll simulation starts once")
 	await physics_frame
 	await physics_frame
+	_expect(ragdoll.motor_strength() > 0.0 and ragdoll.motor_strength() < 1.0,
+		"a fall begins with partial motor authority")
 	_expect(model.visible, "the real skinned model remains visible during ragdoll")
 	_expect(ragdoll.is_simulating_physics(), "PhysicalBoneSimulator3D drives the rig")
 	var moving: bool = false
@@ -74,13 +76,35 @@ func _run() -> void:
 		if physical_bone != null and physical_bone.linear_velocity.length() > 0.01:
 			moving = true
 	_expect(moving, "the impact moves the articulated physical rig")
+	var chest: PhysicalBone3D = ragdoll.physical_bone(&"chest")
+	var chest_speed: float = chest.linear_velocity.x
+	_expect(ragdoll.push(&"chest", Vector3(4.0, 0.0, 0.0)),
+		"an active ragdoll accepts a second physical push")
+	_expect(chest.linear_velocity.x > chest_speed, "the second push reaches the requested physical bone")
+	ragdoll.set_motor_strength(-1.0)
+	_expect(is_zero_approx(ragdoll.motor_strength()), "motor authority can make the body fully loose")
+	var pelvis: PhysicalBone3D = ragdoll.physical_bone(&"pelvis")
+	pelvis.global_position += Vector3(0.45, 0.0, 0.0)
+	pelvis.linear_velocity = Vector3.ZERO
+	await physics_frame
+	var loose_error: float = ragdoll.pose_error()
+	ragdoll.begin_recovery(0.35)
+	for frame: int in 35:
+		await physics_frame
+	var recovered_error: float = ragdoll.pose_error()
+	print("MEASURE: active ragdoll recovery error %.4f -> %.4f m" % [loose_error, recovered_error])
+	_expect(ragdoll.recovery_progress() >= 0.99, "recovery raises motor authority progressively")
+	_expect(ragdoll.motor_strength() >= 0.99, "animation has full authority at the end of recovery")
+	_expect(recovered_error < loose_error,
+		"active motors return displaced bodies toward the captured animated pose")
+	_expect(recovered_error < 0.2, "the handoff pose is close enough to avoid a visible recovery jump")
 	ragdoll.stop_ragdoll()
 	_expect(not ragdoll.is_simulating_physics(), "simulation returns control to animation")
 
 	model.free()
 	await _check_player_integration()
 	if _failures == 0:
-		print("PASS: real-rig ragdoll joints, proportions, masses and simulation")
+		print("PASS: real-rig ragdoll joints, motors, pushes and smooth recovery")
 	quit(_failures)
 
 

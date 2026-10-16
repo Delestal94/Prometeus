@@ -294,7 +294,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.48** Ragdoll sobre el rig real con `PhysicalBoneSimulator3D` y límites de articulación
   (cono en hombros y caderas, bisagra en codos y rodillas), en lugar de las cápsulas sueltas de
   `player_ragdoll.gd`. Formas y masas de cada hueso físico se recalculan con las proporciones.
-- [ ] **S-311.49** Ragdoll activo: mezcla animación ↔ física con motores hacia la pose animada y fuerza
+- [x] **S-311.49** Ragdoll activo: mezcla animación ↔ física con motores hacia la pose animada y fuerza
   variable, para tropezar, ser empujado y recuperarse sin saltos (estilo Gang Beasts / Human Fall Flat).
 - [ ] **S-311.50** Levantarse: detecta boca arriba / boca abajo y mezcla con uno de dos clips de
   levantarse, sin teletransporte.
