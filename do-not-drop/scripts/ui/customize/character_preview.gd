@@ -13,6 +13,7 @@ const GelGrounding = preload("res://scripts/gameplay/player/gel/gel_foot_groundi
 const GelJiggleController = preload("res://scripts/gameplay/player/gel/gel_jiggle.gd")
 const GelSquashController = preload("res://scripts/gameplay/player/gel/gel_squash_stretch.gd")
 const GelWaveController = preload("res://scripts/gameplay/player/gel/gel_impact_waves.gd")
+const GelDragController = preload("res://scripts/gameplay/player/gel/gel_inertial_drag.gd")
 
 enum Framing { FACE, BODY }
 
@@ -47,6 +48,7 @@ var _gel_grounding: Node3D
 var _gel_jiggle: Node
 var _gel_squash: Node
 var _gel_waves: Node
+var _gel_drag: Node
 
 
 func _ready() -> void:
@@ -142,6 +144,8 @@ func _process(delta: float) -> void:
 		_gel_squash.advance_motion(Vector3.ZERO, true, delta)
 	if gel_mannequin.visible and _gel_waves != null:
 		_gel_waves.advance(delta)
+	if gel_mannequin.visible and _gel_drag != null:
+		_gel_drag.advance_motion(Vector3.ZERO, _yaw, delta)
 	_place_camera()
 
 
@@ -219,6 +223,10 @@ func _build_studio(viewport: SubViewport) -> void:
 	_gel_waves.name = "GelImpactWaves"
 	world.add_child(_gel_waves)
 	_gel_waves.setup(gel_mannequin)
+	_gel_drag = GelDragController.new()
+	_gel_drag.name = "GelInertialDrag"
+	world.add_child(_gel_drag)
+	_gel_drag.setup(gel_mannequin)
 	_gel_grounding = GelGrounding.new()
 	_gel_grounding.name = "GelFootGrounding"
 	world.add_child(_gel_grounding)

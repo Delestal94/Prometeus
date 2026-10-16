@@ -147,6 +147,12 @@ shader propaga una cresta esférica con una depresión corta detrás y la desvan
 sin modificar colisiones, autoridad ni recursos compartidos. La variante opaca
 usa exactamente el mismo desplazamiento de vértices.
 
+`gel_inertial_drag.gd` calcula un retraso local pequeño y acotado a partir de la
+aceleración, frenado y giro del cuerpo. El shader lo aplica sólo en cabeza y
+brazos, con peso creciente según la distancia al anclaje de cuello u hombro;
+por eso las puntas blandas se atrasan más que la base. El uniform es por
+instancia y el efecto vuelve a cero durante movimiento constante.
+
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses
