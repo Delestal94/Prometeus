@@ -329,6 +329,12 @@ La implementación nueva se concentra en:
 lista de Nacho. Los avisos se crean en el bloque que efectivamente toque cada frontera,
 no en este bloque documental.
 
+Desde S-311.48, `gel_active_ragdoll.gd` crea un `PhysicalBoneSimulator3D` sobre el
+`Skeleton3D` real y mantiene visible la malla skinned. Usa conos limitados en hombros
+y caderas, bisagras limitadas en codos y rodillas, y vuelve a calcular cápsulas y masas
+desde los rests ya deformados y los sliders de grosor. El módulo portable de cápsulas
+sueltas permanece intacto para consumidores que todavía no tengan un rig compatible.
+
 Las integraciones propias de asientos se ubican en
 `do-not-drop/scripts/gameplay/player/player_seat_pose.gd` y
 `do-not-drop/scripts/gameplay/interaction/seat_point.gd` (ítems 25 y 78).

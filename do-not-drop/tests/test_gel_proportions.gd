@@ -15,7 +15,7 @@ const Shaper := preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 const Grounding := preload("res://scripts/gameplay/player/gel/gel_foot_grounding.gd")
 const CarryPose := preload("res://scripts/gameplay/player/carry_pose.gd")
 const CharacterFace := preload("res://scripts/presentation/character_face.gd")
-const Ragdoll := preload("res://modules/ragdoll/player_ragdoll.gd")
+const Ragdoll := preload("res://scripts/gameplay/player/gel/gel_active_ragdoll.gd")
 
 const RANDOM_SEED: int = 31126
 const RANDOM_CASES: int = 50
@@ -96,7 +96,7 @@ func _run() -> void:
 		_check_feet(skeleton, grounding, label)
 		_check_hands(carry, wrists, label)
 		_check_face(skeleton, face, proportions, label)
-		await _check_ragdoll(case_index, label)
+		await _check_ragdoll(gel, proportions, case_index, label)
 		_check_optional_wearables(gel, label)
 
 	print("MEASURE: %d proportion states, %d assertions, seed %d" % [cases.size(), _checks, RANDOM_SEED])
@@ -179,34 +179,36 @@ func _check_face(
 		"%s keeps the face on the head shell (error %.3f m)" % [label, shell_error])
 
 
-func _check_ragdoll(case_index: int, label: String) -> void:
-	var owner := CharacterBody3D.new()
-	owner.position = Vector3(8.0, 2.0, float(case_index % 7) * 0.1)
-	root.add_child(owner)
-	var ragdoll: PlayerRagdoll = Ragdoll.new()
-	owner.add_child(ragdoll)
-	ragdoll.setup(owner, null, 1)
+func _check_ragdoll(
+	gel: Node3D,
+	proportions: GelBodyProportions,
+	case_index: int,
+	label: String
+) -> void:
+	var ragdoll: GelActiveRagdoll = Ragdoll.new()
+	gel.add_child(ragdoll)
+	var built: bool = ragdoll.setup(gel, proportions, 1)
 	var impulse := Vector3(
 		lerpf(-2.0, 2.0, float(case_index % 11) / 10.0),
 		2.0 + float(case_index % 5) * 0.35,
 		lerpf(-1.5, 1.5, float(case_index % 13) / 12.0)
 	)
-	ragdoll.fall(impulse)
+	var started: bool = ragdoll.start_ragdoll(impulse)
 	for _frame: int in 3:
 		await physics_frame
 	var pieces: Array[Node] = []
 	for child: Node in ragdoll.get_children():
-		if child is RigidBody3D:
+		if child is PhysicalBone3D:
 			pieces.append(child)
-	var stable: bool = pieces.size() == 6
+	var stable: bool = built and started and pieces.size() == 11
 	for piece: Node in pieces:
-		var body := piece as RigidBody3D
+		var body := piece as PhysicalBone3D
 		stable = stable and body.global_transform.is_finite()
 		stable = stable and body.linear_velocity.is_finite() and body.angular_velocity.is_finite()
 		stable = stable and body.linear_velocity.length() < 50.0 and body.global_position.length() < 100.0
-	_expect(stable, "%s keeps all six ragdoll pieces finite and bounded" % label)
+	_expect(stable, "%s keeps all eleven physical bones finite and bounded" % label)
+	ragdoll.stop_ragdoll()
 	ragdoll.free()
-	owner.free()
 
 
 func _check_optional_wearables(gel: Node3D, label: String) -> void:

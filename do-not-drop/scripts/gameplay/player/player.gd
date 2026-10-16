@@ -77,6 +77,7 @@ const NetVisibility = preload("res://scripts/gameplay/player/player_net_visibili
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const GelRagdoll = preload("res://scripts/gameplay/player/gel/gel_active_ragdoll.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const UNLOCK_MANAGER := preload("res://scripts/core/unlock_manager.gd")  # What the UnlockManager autoload runs.
 ## Astra's rounded character (2026-09-24), game export built by
@@ -306,7 +307,11 @@ func _build_body() -> void:
 	PlayerAppearance.set_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_cosmetic()
 	_character_face = CharacterFace.new()
-	_character_face.setup(visual, PlayerAppearance.find_skeleton(visual), RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
+	_character_face.setup(
+		visual,
+		PlayerAppearance.find_skeleton(visual),
+		RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
+	)
 	_apply_face()
 
 	animator = PlayerAnimator.new(self, PlayerAppearance.find_animation_player(visual), _character_face)
@@ -594,10 +599,6 @@ func _within_reach(target: Node3D) -> bool:
 	return _interaction_component.within_reach(target)
 
 
-## A loose package can bowl somebody over. This intentionally stays a
-## controllable knockback with the current rig; a real ragdoll needs a
-## dedicated physical skeleton asset rather than faking one by deleting the
-## controller under a networked player.
 @rpc("any_peer", "call_local", "unreliable")
 func receive_package_hit(push: Vector3) -> void:
 	# Loose boxes are simulated on the host; nobody else gets to knock people over.
@@ -618,11 +619,14 @@ func _activate_ragdoll(push: Vector3) -> void:
 	if _ragdolled:
 		return
 	_ragdolled = true
-	var ragdoll := preload("res://modules/ragdoll/player_ragdoll.gd").new()
-	get_parent().add_child(ragdoll)
-	ragdoll.setup(self, get_tree().get_first_node_in_group(&"vehicle"), 1 | 64)
+	var ragdoll: GelActiveRagdoll = GelRagdoll.new()
+	add_child(ragdoll)
+	if not ragdoll.setup(_body_visual, $GelProportions.proportions, 1 | 64, self):
+		ragdoll.queue_free()
+		_ragdolled = false
+		return
 	ragdoll.fall(push)
-	await get_tree().create_timer(2.8).timeout
+	await ragdoll.finished
 	_ragdolled = false
 
 

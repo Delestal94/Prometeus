@@ -291,7 +291,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   malla desde el punto de contacto; hasta 4 simultáneas por uniforms.
 - [x] **S-311.47** Arrastre: los vértices lejos del hueso se atrasan un poco en brazos y cabeza al
   moverse (inercia de gelatina).
-- [ ] **S-311.48** Ragdoll sobre el rig real con `PhysicalBoneSimulator3D` y límites de articulación
+- [x] **S-311.48** Ragdoll sobre el rig real con `PhysicalBoneSimulator3D` y límites de articulación
   (cono en hombros y caderas, bisagra en codos y rodillas), en lugar de las cápsulas sueltas de
   `player_ragdoll.gd`. Formas y masas de cada hueso físico se recalculan con las proporciones.
 - [ ] **S-311.49** Ragdoll activo: mezcla animación ↔ física con motores hacia la pose animada y fuerza
