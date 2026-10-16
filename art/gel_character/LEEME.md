@@ -140,6 +140,13 @@ visual, conserva los materiales compartidos y funciona igual en la variante
 transparente y en la opaca. El preview lo muestra al rebotar; la conexión al
 jugador activo se hará junto con el reemplazo final del modelo gel.
 
+`gel_impact_waves.gd` transforma cada punto de contacto mundial al espacio local
+de la malla y mantiene hasta cuatro ondas activas. Centro, edad e intensidad se
+suben como uniforms por instancia; un quinto golpe reemplaza al más antiguo. El
+shader propaga una cresta esférica con una depresión corta detrás y la desvanece
+sin modificar colisiones, autoridad ni recursos compartidos. La variante opaca
+usa exactamente el mismo desplazamiento de vértices.
+
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses

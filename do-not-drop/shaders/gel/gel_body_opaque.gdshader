@@ -10,6 +10,11 @@ instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
+instance uniform vec4 gel_wave_0 = vec4(0.0, 0.0, 0.0, -1.0);
+instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
+instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
+instance uniform vec4 gel_wave_3 = vec4(0.0, 0.0, 0.0, -1.0);
+instance uniform vec4 gel_wave_strengths = vec4(0.0);
 
 group_uniforms gel;
 uniform float edge_density : hint_range(0.0, 1.0) = 0.38;
@@ -68,7 +73,25 @@ float object_noise_3d(vec3 point) {
 	return mix(near_z, far_z, blend.z);
 }
 
+float impact_wave(vec3 point, vec4 wave, float strength) {
+	if (wave.w < 0.0 || strength <= 0.0) {
+		return 0.0;
+	}
+	float radius = wave.w * 0.92;
+	float phase = (length(point - wave.xyz) - radius) / 0.06;
+	float crest = exp(-phase * phase);
+	float wake_phase = phase + 1.55;
+	float wake = exp(-wake_phase * wake_phase) * 0.34;
+	return (crest - wake) * strength * 0.035 * exp(-wave.w * 1.65);
+}
+
 void vertex() {
+	float wave_offset = 0.0;
+	wave_offset += impact_wave(VERTEX, gel_wave_0, gel_wave_strengths.x);
+	wave_offset += impact_wave(VERTEX, gel_wave_1, gel_wave_strengths.y);
+	wave_offset += impact_wave(VERTEX, gel_wave_2, gel_wave_strengths.z);
+	wave_offset += impact_wave(VERTEX, gel_wave_3, gel_wave_strengths.w);
+	VERTEX += NORMAL * clamp(wave_offset, -0.05, 0.07);
 	float vertical_scale = max(1.0 + gel_squash_stretch, 0.8);
 	float radial_scale = inversesqrt(vertical_scale);
 	VERTEX *= vec3(radial_scale, vertical_scale, radial_scale);

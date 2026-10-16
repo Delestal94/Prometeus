@@ -287,7 +287,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   rebote).
 - [x] **S-311.45** Squash & stretch con volumen constante en el shader, a partir de la aceleración del
   cuerpo: se aplasta al aterrizar y se estira al saltar.
-- [ ] **S-311.46** Ondas de impacto: un golpe (caja, pared, otro jugador, trampa) manda una onda por la
+- [x] **S-311.46** Ondas de impacto: un golpe (caja, pared, otro jugador, trampa) manda una onda por la
   malla desde el punto de contacto; hasta 4 simultáneas por uniforms.
 - [ ] **S-311.47** Arrastre: los vértices lejos del hueso se atrasan un poco en brazos y cabeza al
   moverse (inercia de gelatina).
