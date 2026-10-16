@@ -5,6 +5,7 @@ extends SceneTree
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
 const Ragdoll := preload("res://scripts/gameplay/player/gel/gel_active_ragdoll.gd")
+const GetUp := preload("res://scripts/gameplay/player/gel/gel_get_up.gd")
 const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 const Shaper := preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 
@@ -89,6 +90,11 @@ func _run() -> void:
 	await physics_frame
 	var loose_error: float = ragdoll.pose_error()
 	ragdoll.begin_recovery(0.35)
+	var recovery_offset: Vector3 = ragdoll.recovery_world_offset()
+	_expect(ragdoll.get_up_clip() in [GetUp.FACE_UP, GetUp.FACE_DOWN],
+		"chest orientation selects one of the two get-up clips")
+	_expect(absf(recovery_offset.y) < 0.001 and Vector2(recovery_offset.x, recovery_offset.z).length() > 0.2,
+		"recovery preserves the horizontal place where the body fell")
 	for frame: int in 35:
 		await physics_frame
 	var recovered_error: float = ragdoll.pose_error()
@@ -98,7 +104,14 @@ func _run() -> void:
 	_expect(recovered_error < loose_error,
 		"active motors return displaced bodies toward the captured animated pose")
 	_expect(recovered_error < 0.2, "the handoff pose is close enough to avoid a visible recovery jump")
+	var pelvis_before_handoff: Vector3 = pelvis.global_position
 	ragdoll.stop_ragdoll()
+	await process_frame
+	var pelvis_index: int = skeleton.find_bone(&"pelvis")
+	var animated_pelvis: Transform3D = skeleton.global_transform \
+		* skeleton.get_bone_global_pose(pelvis_index) * pelvis.body_offset
+	_expect(pelvis_before_handoff.distance_to(animated_pelvis.origin) < 0.2,
+		"animation resumes where the physical pelvis finished instead of teleporting")
 	_expect(not ragdoll.is_simulating_physics(), "simulation returns control to animation")
 
 	model.free()

@@ -11,6 +11,7 @@ extends PhysicalBoneSimulator3D
 
 signal finished
 
+const GetUp := preload("res://scripts/gameplay/player/gel/gel_get_up.gd")
 const LIFETIME: float = 2.8
 const RECOVERY_DURATION: float = 0.75
 const DEFAULT_MOTOR_STRENGTH: float = 0.24
@@ -49,6 +50,7 @@ const BODY_DEFINITIONS: Array[Dictionary] = [
 ]
 
 var collision_mask: int = 1
+var _model: Node3D
 var _skeleton: Skeleton3D
 var _animation: AnimationPlayer
 var _animation_was_active: bool = true
@@ -59,6 +61,9 @@ var _motor_strength: float = DEFAULT_MOTOR_STRENGTH
 var _recovery_elapsed: float = 0.0
 var _recovery_duration: float = 0.0
 var _recovery_from_strength: float = DEFAULT_MOTOR_STRENGTH
+var _recovery_start_poses: Dictionary = {}
+var _recovery_world_offset: Vector3 = Vector3.ZERO
+var _get_up_clip: StringName = StringName()
 
 
 func _ready() -> void:
@@ -82,6 +87,7 @@ func setup(
 	mask: int = 1,
 	collision_exception: CollisionObject3D = null
 ) -> bool:
+	_model = model as Node3D
 	_skeleton = PlayerAppearance.find_skeleton(model)
 	_animation = PlayerAppearance.find_animation_player(model)
 	collision_mask = mask
@@ -143,10 +149,13 @@ func stop_ragdoll() -> void:
 	if not _ragdoll_active:
 		return
 	physical_bones_stop_simulation()
+	_commit_recovery_anchor()
 	_ragdoll_active = false
 	set_physics_process(false)
 	_recovery_elapsed = 0.0
 	_recovery_duration = 0.0
+	_recovery_start_poses.clear()
+	_recovery_world_offset = Vector3.ZERO
 	if _animation != null:
 		_animation.active = _animation_was_active
 
@@ -196,6 +205,18 @@ func push(bone_name: StringName, impulse: Vector3) -> bool:
 func begin_recovery(duration: float = RECOVERY_DURATION) -> void:
 	if not _ragdoll_active:
 		return
+	_recovery_start_poses.clear()
+	for bone_name: StringName in _physical_bones:
+		var body := physical_bone(bone_name)
+		if body != null:
+			_recovery_start_poses[bone_name] = body.global_transform
+	var chest := physical_bone(&"chest")
+	_get_up_clip = GetUp.select_clip(chest.global_basis) if chest != null else GetUp.FACE_UP
+	var pelvis := physical_bone(&"pelvis")
+	if pelvis != null:
+		var standing_pelvis: Transform3D = _base_target_global_transform(&"pelvis")
+		_recovery_world_offset = pelvis.global_position - standing_pelvis.origin
+		_recovery_world_offset.y = 0.0
 	_recovery_from_strength = _effective_motor_strength()
 	_recovery_duration = maxf(duration, 0.001)
 	_recovery_elapsed = 0.0
@@ -205,6 +226,14 @@ func recovery_progress() -> float:
 	if _recovery_duration <= 0.0:
 		return 0.0
 	return clampf(_recovery_elapsed / _recovery_duration, 0.0, 1.0)
+
+
+func get_up_clip() -> StringName:
+	return _get_up_clip
+
+
+func recovery_world_offset() -> Vector3:
+	return _recovery_world_offset
 
 
 ## Maximum distance between a physical body and its captured animated pose.
@@ -284,8 +313,25 @@ func _effective_motor_strength() -> float:
 
 
 func _target_global_transform(bone_name: StringName) -> Transform3D:
+	var target: Transform3D = _base_target_global_transform(bone_name)
+	target.origin += _recovery_world_offset
+	if _recovery_duration > 0.0 and _recovery_start_poses.has(bone_name):
+		var physical_pose: Transform3D = _recovery_start_poses[bone_name]
+		return GetUp.blend_pose(
+			_get_up_clip, bone_name, physical_pose, target, recovery_progress()
+		)
+	return target
+
+
+func _base_target_global_transform(bone_name: StringName) -> Transform3D:
 	var local_target: Transform3D = _animated_body_poses.get(bone_name, Transform3D.IDENTITY)
 	return _skeleton.global_transform * local_target
+
+
+func _commit_recovery_anchor() -> void:
+	if _model == null or _recovery_duration <= 0.0:
+		return
+	_model.global_position += _recovery_world_offset
 
 
 func _has_required_bones() -> bool:
