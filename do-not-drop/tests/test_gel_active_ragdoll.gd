@@ -1,6 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_active_ragdoll.gd
-## S-311.48/49: real-rig bodies, joints, active motors and smooth recovery.
+## S-311.48-51: real-rig bodies, active motors, recovery and soft effects.
 
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
@@ -33,7 +33,15 @@ func _run() -> void:
 	_expect(ragdoll.setup(model, proportions, 1 | 64), "the physical ragdoll builds on the real rig")
 	await process_frame
 	_expect(ragdoll.get_parent() == skeleton, "PhysicalBoneSimulator3D is a child of Skeleton3D")
-	_expect(ragdoll.get_child_count() == 11, "the rig uses eleven articulated physical bones")
+	var physical_body_count: int = 0
+	for child: Node in ragdoll.get_children():
+		if child is PhysicalBone3D:
+			physical_body_count += 1
+	_expect(physical_body_count == 11, "the rig uses eleven articulated physical bones")
+	_expect(ragdoll.jiggle_controller() != null,
+		"ragdoll reuses the gel spring-bone controller")
+	_expect(ragdoll.impact_wave_controller() != null,
+		"ragdoll owns per-instance impact waves")
 	_check_joint(ragdoll, &"upper_arm.L", PhysicalBone3D.JOINT_TYPE_CONE)
 	_check_joint(ragdoll, &"upper_arm.R", PhysicalBone3D.JOINT_TYPE_CONE)
 	_check_joint(ragdoll, &"thigh.L", PhysicalBone3D.JOINT_TYPE_CONE)
@@ -54,6 +62,8 @@ func _run() -> void:
 	shaper.apply(proportions)
 	ragdoll.rebuild(proportions)
 	await process_frame
+	_expect(ragdoll.jiggle_controller() != null and ragdoll.impact_wave_controller() != null,
+		"proportion rebuilds preserve presentation-only ragdoll effects")
 	var thick_arm: PhysicalBone3D = ragdoll.physical_bone(&"upper_arm.L")
 	var thick_shape := thick_arm.get_node(^"Shape") as CollisionShape3D
 	_expect((thick_shape.shape as CapsuleShape3D).radius > neutral_radius,
@@ -67,14 +77,25 @@ func _run() -> void:
 		"a fall begins with partial motor authority")
 	_expect(model.visible, "the real skinned model remains visible during ragdoll")
 	_expect(ragdoll.is_simulating_physics(), "PhysicalBoneSimulator3D drives the rig")
+	var waves: Node = ragdoll.impact_wave_controller()
+	var jiggle: Node = ragdoll.jiggle_controller()
+	ragdoll.report_floor_contact(ragdoll.physical_bone(&"pelvis").global_position, 0.8)
+	_expect(waves.wave_count() == 1, "a physical floor contact starts a surface wave")
+	await physics_frame
+	_expect(float(waves.wave_at(0)[&"age"]) > 0.0,
+		"ragdoll physics keeps the impact wave advancing")
+	_expect(jiggle.simulator_for(&"belly").external_force.y < -0.01,
+		"a floor contact sends a settling impulse through the spring bones")
 	var moving: bool = false
 	for child: Node in ragdoll.get_children():
 		var physical_bone := child as PhysicalBone3D
-		_expect(physical_bone != null and physical_bone.get_bone_id() >= 0,
+		if physical_bone == null:
+			continue
+		_expect(physical_bone.get_bone_id() >= 0,
 			"every physical body is bound to a real skeleton bone")
-		_expect(physical_bone != null and physical_bone.global_transform.is_finite(),
+		_expect(physical_bone.global_transform.is_finite(),
 			"physical bone transforms stay finite")
-		if physical_bone != null and physical_bone.linear_velocity.length() > 0.01:
+		if physical_bone.linear_velocity.length() > 0.01:
 			moving = true
 	_expect(moving, "the impact moves the articulated physical rig")
 	var chest: PhysicalBone3D = ragdoll.physical_bone(&"chest")
@@ -117,7 +138,7 @@ func _run() -> void:
 	model.free()
 	await _check_player_integration()
 	if _failures == 0:
-		print("PASS: real-rig ragdoll joints, motors, pushes and smooth recovery")
+		print("PASS: real-rig ragdoll motors, recovery, jiggle and floor-contact waves")
 	quit(_failures)
 
 

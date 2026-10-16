@@ -88,6 +88,13 @@ func _check_motion_responses(jiggle: Node) -> void:
 	_expect(jiggle.simulator_for(&"belly").external_force.y < -0.10,
 		"landing creates a downward settling impulse")
 
+	jiggle.reset_motion()
+	jiggle.advance_motion(Vector3.ZERO, 0.0, false, 0.1)
+	jiggle.add_impulse(Vector3.DOWN * 0.25)
+	jiggle.advance_motion(Vector3.ZERO, 0.0, false, 0.1)
+	_expect(jiggle.simulator_for(&"belly").external_force.y < -0.10,
+		"ragdoll contacts can inject a secondary-motion impulse")
+
 
 func _check_native_solver_moves_bone(jiggle: Node, skeleton: Skeleton3D) -> void:
 	var head: int = skeleton.find_bone(&"jiggle_head")
