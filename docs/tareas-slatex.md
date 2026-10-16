@@ -289,7 +289,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   cuerpo: se aplasta al aterrizar y se estira al saltar.
 - [x] **S-311.46** Ondas de impacto: un golpe (caja, pared, otro jugador, trampa) manda una onda por la
   malla desde el punto de contacto; hasta 4 simultáneas por uniforms.
-- [ ] **S-311.47** Arrastre: los vértices lejos del hueso se atrasan un poco en brazos y cabeza al
+- [x] **S-311.47** Arrastre: los vértices lejos del hueso se atrasan un poco en brazos y cabeza al
   moverse (inercia de gelatina).
 - [ ] **S-311.48** Ragdoll sobre el rig real con `PhysicalBoneSimulator3D` y límites de articulación
   (cono en hombros y caderas, bisagra en codos y rodillas), en lugar de las cápsulas sueltas de

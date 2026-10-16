@@ -20,6 +20,7 @@ instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_3 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_strengths = vec4(0.0);
+instance uniform vec4 gel_inertia = vec4(0.0);
 
 group_uniforms gel;
 uniform float center_opacity : hint_range(0.0, 1.0) = 0.24;
@@ -105,7 +106,20 @@ float impact_wave(vec3 point, vec4 wave, float strength) {
 	return (crest - wake) * strength * 0.035 * exp(-wave.w * 1.65);
 }
 
+float inertial_drag_mask(vec3 point) {
+	float head_region = smoothstep(1.24, 1.36, point.y) * (1.0 - smoothstep(0.48, 0.68, abs(point.x)));
+	float head_reach = smoothstep(0.12, 0.46, length(point - vec3(0.0, 1.29, 0.0)));
+	float arm_region = smoothstep(0.28, 0.40, abs(point.x));
+	arm_region *= smoothstep(0.58, 0.76, point.y) * (1.0 - smoothstep(1.34, 1.48, point.y));
+	vec3 shoulder = vec3(sign(point.x) * 0.28, 1.17, 0.0);
+	float arm_reach = smoothstep(0.08, 0.58, length(point - shoulder));
+	return clamp(max(head_region * head_reach, arm_region * arm_reach), 0.0, 1.0);
+}
+
 void vertex() {
+	float drag_mask = inertial_drag_mask(VERTEX);
+	vec3 turning_drag = vec3(-VERTEX.z, 0.0, VERTEX.x) * gel_inertia.w;
+	VERTEX += (gel_inertia.xyz + turning_drag) * drag_mask;
 	float wave_offset = 0.0;
 	wave_offset += impact_wave(VERTEX, gel_wave_0, gel_wave_strengths.x);
 	wave_offset += impact_wave(VERTEX, gel_wave_1, gel_wave_strengths.y);
