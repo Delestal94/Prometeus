@@ -23,7 +23,7 @@ const SAVED_KEYS: Array[StringName] = [
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
 	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log",
 	&"last_join_address",
-	&"newspaper_mode",
+	&"newspaper_mode", &"text_backdrop_opacity",
 ]
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
@@ -237,6 +237,17 @@ var sound_subtitles: bool = false:
 		_save()
 signal sound_subtitles_changed(enabled: bool)
 
+## Opacity of the plate behind the subtitles and the interaction prompts
+## (N-969): 0 draws only the outlined text, 1 a solid plate. The default is
+## the plate the HUD always had.
+const TEXT_BACKDROP_DEFAULT: float = 0.88
+var text_backdrop_opacity: float = TEXT_BACKDROP_DEFAULT:
+	set(value):
+		text_backdrop_opacity = clampf(value, 0.0, 1.0)
+		text_backdrop_opacity_changed.emit(text_backdrop_opacity)
+		_save()
+signal text_backdrop_opacity_changed(opacity: float)
+
 ## The next-day newspaper at the end of a delivery (N-606.3): always, only
 ## when the run gave news (not the "everything arrived" scandal), or never.
 enum NewspaperMode { ALWAYS, NEWS_ONLY, NEVER }
@@ -404,6 +415,7 @@ func reset_to_defaults() -> void:
 	opaque_gel = false
 	menu_text_scale = 1.0
 	sound_subtitles = false
+	text_backdrop_opacity = TEXT_BACKDROP_DEFAULT
 	voice_chat_enabled = false
 	voice_push_to_talk = true
 	save_run_log = false
