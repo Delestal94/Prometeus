@@ -165,7 +165,8 @@ func _build() -> void:
 	_sound_subtitles_check = UiTheme.check_box(column, tr("UI_OPT_SOUND_SUBTITLES"), GameSettings.sound_subtitles)
 	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
 	# Live, like the HUD size: the prompt plate behind the dim follows the slider.
-	_text_backdrop_slider = UiTheme.slider_row(column, tr("UI_OPT_TEXT_BACKDROP"), 0.0, 1.0, 0.05, GameSettings.text_backdrop_opacity, true)
+	_text_backdrop_slider = UiTheme.slider_row(column, tr("UI_OPT_TEXT_BACKDROP"),
+		0.0, 1.0, 0.05, GameSettings.text_backdrop_opacity, true)
 	_text_backdrop_slider.value_changed.connect(func(value: float) -> void: GameSettings.text_backdrop_opacity = value)
 
 	var paper_row := HBoxContainer.new()
