@@ -3,7 +3,7 @@ extends SceneTree
 ##
 ## The appearance screen (N-506, scripts/ui/cosmetics_panel.gd) and the depot's
 ## lockers that open it:
-## - from the main menu it has the face, uniform and truck tabs; eight eyes and
+## - from the main menu it has the face, uniform and truck tabs; twelve eyes and
 ##   eight mouths as cards; the picked card (and only it) wears the check, and
 ##   picking moves it, saves it and never un-picks by clicking twice; a
 ##   ready-made face sets both and is checked only while both still match;
@@ -48,7 +48,7 @@ func _check_menu_panel(unlocks: Node) -> void:
 	await process_frame
 	for tab: String in ["Tab_face", "Tab_uniform", "Tab_truck"]:
 		_expect(panel.find_child(tab, true, false) != null, "The menu screen has %s" % tab)
-	_expect(panel.find_children("Eyes_*", "Button", true, false).size() == 8, "Eight eyes cards")
+	_expect(panel.find_children("Eyes_*", "Button", true, false).size() == 12, "Twelve eyes cards")
 	_expect(panel.find_children("Mouth_*", "Button", true, false).size() == 8, "Eight mouth cards")
 	_expect(_checked(panel) == ["Eyes_classic", "Mouth_smile"], "A fresh profile checks classic eyes and smile (got %s)"
 			% str(_checked(panel)))
