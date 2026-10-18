@@ -30,7 +30,8 @@ extends Node
 ## path, only to know which peers have their world up and when one comes up.
 ##
 ## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section
-## 2; units_drop is critical) and snapshot_request. A task that adds an action appends its kind
+## 2; units_drop is critical), snapshot_request and the shed layout's place, move, rotate and sell
+## (D-0910: checked and applied by CompanyLayoutNet, `build`). A task that adds an action appends its kind
 ## to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule 8),
 ## checks it in _handle_request() and applies its event in _apply_state().
 ##
@@ -69,7 +70,8 @@ const UNITS_DROP: StringName = &"units_drop"
 ## Request kinds the host takes (the contract's section 2 whitelist); anything else is
 ## dropped. Later tasks append theirs.
 const REQUEST_KINDS: Array[StringName] = [
-	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST
+	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
+	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
 ## RpcGuard's critical reserve once the sender's budget is gone.
@@ -80,7 +82,10 @@ const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## (D-0203, DayCycle.apply_phase()).
 const DAY_PHASE: StringName = &"day_phase"
 ## Event kinds every peer applies.
-const EVENT_KINDS: Array[StringName] = [&"units_moved", CLOCK_ANCHOR, DAY_PHASE]
+const EVENT_KINDS: Array[StringName] = [
+	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED,
+	CompanyLayoutNet.SOLD,
+]
 ## Event kinds the host may send with publish(), without a request: its own rules (the day's
 ## clock and phases). An event a request leads to (units_moved) only comes from
 ## _handle_request()'s checks.
@@ -140,6 +145,8 @@ var clock: GameClock = null
 ## The day's phases (D-0203), or null: day_phase events land in its apply_phase(). Set on every peer
 ## by DayCycle.attach(), which also adds the phase to the snapshot.
 var day_cycle: DayCycle = null
+## The shed layout's build requests (host) and events (every peer) on `company`'s layout (D-0910).
+var build: CompanyLayoutNet = CompanyLayoutNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -585,6 +592,8 @@ func _rejected(rid: int, reason: StringName) -> void:
 
 ## Host: what a valid request does, or the reason it is refused (&"" when it went through).
 func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringName:
+	if CompanyLayoutNet.REQUEST_KINDS.has(kind):
+		return _build(peer, kind, data)
 	match kind:
 		&"units_take":
 			return _take_units(peer, data)
@@ -596,6 +605,15 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 			# Over the limit it is dropped, not refused: the client asks again on its own.
 			grant_snapshot(peer, Time.get_ticks_msec())
 	return &""
+
+
+## Host: a build request (D-0910), checked by CompanyLayoutNet (only the host's own goes through),
+## and its one event published.
+func _build(peer: int, kind: StringName, data: Dictionary) -> StringName:
+	var ask: Dictionary = build.check(company, inventory, kind, data, peer == multiplayer.get_unique_id())
+	if ask["reason"] != &"":
+		return ask["reason"]
+	return &"" if _publish(ask["kind"], ask["data"]) else REASON_BAD_DATA
 
 
 ## Host, section 2 row 5: units from a station (pallet, shelf slot, floor bundle) into the
@@ -767,6 +785,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
 			else:
 				applied = day_cycle.apply_phase(data)
+		_:  # the layout's (CompanyLayoutNet.EVENT_KINDS); a new kind gets its own branch above
+			applied = build.apply(company, kind, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
