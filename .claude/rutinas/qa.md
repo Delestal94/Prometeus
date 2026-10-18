@@ -52,7 +52,7 @@ sino esto:
 
 1. Commit actual de `origin/main`. Mezclado en las últimas 12 h con `exp/` en la rama
    (`git log --since="12 hours ago" --first-parent origin/main --grep "D-"`).
-2. `ejecutor-tests` con el filtro `company`. `probador-qa` con `tools/bot_company_day.gd` (D-2016), si ya
+2. `ejecutor-tests` con el filtro `company`. `probador-qa` con `tests/bot_company_day.gd` (D-2016), si ya
    existe, con 1 y 2 jugadores; si no existe todavía, con los tests de la expansión que haya. Le apuntás a
    las áreas de los PRs del paso 1.
 3. Por cada falla o `BOT_FAIL` (máximo 3): `cazador-bugs` para la causa raíz y el PR que la trajo.
