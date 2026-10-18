@@ -54,7 +54,7 @@ bots y benchmarks, no con playtesting.
 
 ## 4. Criterio de cierre (lo mide el bot, no una persona)
 
-El corte está **cerrado** cuando `tools/bot_company_day.gd` (D-2016), con **2 jugadores simulados**, en
+El corte está **cerrado** cuando `tests/bot_company_day.gd` (D-2016), con **2 jugadores simulados**, en
 headless:
 
 1. recibe el palet del proveedor y lo guarda en estantes;

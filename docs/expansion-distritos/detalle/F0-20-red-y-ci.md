@@ -162,8 +162,9 @@ de la expansión.
 la salida del hook).
 
 ### D-2016 · Bot `bot_company_day` y guion de QA — A · Opus 5.5 · high · Aviso: no · F0
+**[~] Parcial (2026-10-18, PR pendiente)** — D-2016.1: `tests/bot_company_day.gd` abre `company_root.tscn` (save temporal), espera el `OPENING`, corre las 9 etapas (todas `not_implemented`, cada una con la tarea F1 que la llena), imprime `BOT_COMPANY key=value` y `BOT_OK`/`BOT_FAIL stages_missing=<n>`, con timeout duro; apartado "Modo Empresa" en `docs/qa-recorrido.md`; `test_company_bot_day`. Falta D-2016.2.
 **Depende de:** D-0214 (se completa a medida que existen las piezas de F1)
-**Qué:** `tools/bot_company_day.gd` (`extends SceneTree`). Juega el modo Empresa con N jugadores
+**Qué:** `tests/bot_company_day.gd` (`extends SceneTree`). Juega el modo Empresa con N jugadores
 simulados (peers ENet locales o actores locales).
 - **Pasos:** recibir el palet del proveedor, guardar en estantes, tomar los pedidos, armar cajas,
   despachar, manejar con piloto automático por el grafo de calles (D-0304) hasta las casas, entregar,
@@ -171,7 +172,7 @@ simulados (peers ENet locales o actores locales).
 - **Al final imprime:** plata, entregas, roturas, errores de armado, tiempo por etapa y una línea
   `BOT_OK` o `BOT_FAIL <motivo>`.
 - **Guion:** un apartado "Modo Empresa" en `docs/qa-recorrido.md` para `probador-qa`.
-- [ ] **D-2016.1** Esqueleto: arranca el mundo y espera el `OPENING`. Imprime `BOT_FAIL not_implemented:<etapa>`
+- [x] **D-2016.1** Esqueleto: arranca el mundo y espera el `OPENING`. Imprime `BOT_FAIL not_implemented:<etapa>`
   para cada etapa que todavía no existe, sin colgarse.
 - [ ] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya).
 **Hecho cuando:** con todo F1 cerrado imprime `BOT_OK` con 2 jugadores, y es el criterio de cierre de D-0111.
