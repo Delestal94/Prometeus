@@ -74,7 +74,8 @@ func _run() -> void:
 
 	_check_material_variants(model_a)
 	var packed_player: Node = PLAYER_SCENE.instantiate()
-	_expect(packed_player.has_node("GelContact"), "the runtime player scene owns the visual contact controller")
+	_expect(packed_player.has_node("GelEffects/GelContact"),
+		"the runtime player scene owns the visual contact controller")
 	packed_player.free()
 	actor_a.free()
 	actor_b.free()

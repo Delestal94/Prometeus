@@ -308,7 +308,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   proporciones aleatorias; se duerme en < 4 s, sin NaN, sin huesos estirados más de lo permitido.
 - [x] **S-311.55** Contacto entre gelatinas: dos jugadores que chocan se aplastan uno contra otro un
   instante (deformación de contacto, solo visual).
-- [ ] **S-311.56** Entorno: la lluvia hace ondas chicas, el viento lo mece, mojado brilla más.
+- [x] **S-311.56** Entorno: la lluvia hace ondas chicas, el viento lo mece, mojado brilla más.
 
 ### G. Caras (57-61)
 

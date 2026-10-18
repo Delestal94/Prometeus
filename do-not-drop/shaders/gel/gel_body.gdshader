@@ -23,6 +23,8 @@ instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_3 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_strengths = vec4(0.0);
 instance uniform vec4 gel_inertia = vec4(0.0);
+instance uniform vec4 gel_wind = vec4(0.0);
+instance uniform vec4 gel_weather = vec4(0.0);
 
 group_uniforms gel;
 uniform float center_opacity : hint_range(0.0, 1.0) = 0.24;
@@ -118,6 +120,23 @@ float inertial_drag_mask(vec3 point) {
 	return clamp(max(head_region * head_reach, arm_region * arm_reach), 0.0, 1.0);
 }
 
+float environment_drop(vec3 point, float offset) {
+	float drop_seed = gel_weather.y * 31.0 + offset;
+	float age = fract(gel_weather.x * 1.7 + drop_seed);
+	vec3 centre = vec3(
+		(fract(sin(drop_seed * 12.9898) * 43758.5453) - 0.5) * 0.62,
+		mix(0.28, 1.58, fract(sin(drop_seed * 78.233) * 23421.631)),
+		(fract(sin(drop_seed * 39.425) * 19341.117) - 0.5) * 0.48
+	);
+	float ring_distance = length(point - centre) - age * 0.34;
+	float ring = exp(-pow(ring_distance / 0.028, 2.0));
+	return ring * (1.0 - age) * gel_weather.z;
+}
+
+float environment_ripple(vec3 point) {
+	return environment_drop(point, 0.17) + environment_drop(point, 0.53) + environment_drop(point, 0.89);
+}
+
 void vertex() {
 	float drag_mask = inertial_drag_mask(VERTEX);
 	vec3 turning_drag = vec3(-VERTEX.z, 0.0, VERTEX.x) * gel_inertia.w;
@@ -146,6 +165,11 @@ void vertex() {
 		contact_axis * contact_normal / contact_scale
 		+ (NORMAL - contact_axis * contact_normal) / contact_radial
 	);
+	float wind_mask = smoothstep(0.12, 1.55, VERTEX.y);
+	float wind_sway = sin(gel_weather.x * 1.35 + gel_weather.y * 6.28318);
+	wind_sway = wind_sway * 0.72 + sin(gel_weather.x * 2.1 + gel_weather.y * 3.1) * 0.28;
+	VERTEX += gel_wind.xyz * gel_wind.w * wind_mask * wind_sway * 0.025;
+	VERTEX += NORMAL * environment_ripple(VERTEX) * 0.008;
 	model_position = VERTEX;
 }
 
@@ -153,7 +177,7 @@ void fragment() {
 	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
 	float fresnel = pow(1.0 - facing, fresnel_power);
 	float density = fresnel * edge_density;
-	vec3 player_tint = gel_color.rgb * gel_brightness;
+	vec3 player_tint = gel_color.rgb * gel_brightness * mix(1.0, 1.08, gel_weather.w);
 	vec2 refraction_offset = NORMAL.xy * refraction_strength * (0.55 + fresnel * 0.45);
 	vec2 refraction_uv = clamp(SCREEN_UV + refraction_offset, vec2(0.001), vec2(0.999));
 	vec3 refracted_background = texture(screen_texture, refraction_uv).rgb;
@@ -198,8 +222,8 @@ void fragment() {
 	float bubble_inner = smoothstep(inclusion_threshold + 0.008, inclusion_threshold + 0.02, bubble_field);
 	float inclusion_mask = clamp(fine_motes + (bubble_outer - bubble_inner) * 0.7, 0.0, 1.0);
 	ALBEDO = mix(ALBEDO, player_tint * 0.82, inclusion_mask * inclusion_contrast);
-	ROUGHNESS = roughness;
-	SPECULAR = specular;
+	ROUGHNESS = mix(roughness, 0.025, gel_weather.w * 0.75);
+	SPECULAR = mix(specular, 1.0, gel_weather.w);
 	float surface_alpha = gel_color.a * gel_opacity * mix(center_opacity, edge_opacity, fresnel);
 	float final_alpha = clamp(
 		surface_alpha + thickness_absorption * absorption_opacity + inclusion_mask * inclusion_contrast,

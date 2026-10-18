@@ -161,6 +161,13 @@ efecto se desvanece al instante. Sólo escribe uniforms por instancia: no cambia
 posición, velocidad, colisión, autoridad ni protocolo de red. Los shaders
 transparente y opaco usan la misma deformación.
 
+`gel_environment_response.gd` lee el `WorldMood` compartido. En lluvia activa
+tres ondas pequeñas y procedurales sobre la superficie; la humedad baja la
+rugosidad, sube el especular y tarda unos segundos en secarse. El viento ambiente
+inclina apenas la parte superior con dos frecuencias y fases distintas por
+jugador. Todo vive en uniforms por instancia y desplazamiento de vértices: no
+aplica fuerzas, no mueve la cápsula y no agrega estado de red.
+
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses
