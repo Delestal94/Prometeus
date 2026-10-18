@@ -312,7 +312,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### G. Caras (57-61)
 
-- [ ] **S-311.57** Sistema de caras: dibujo "flotando" dentro de la cabeza (se ve a través de la
+- [x] **S-311.57** Sistema de caras: dibujo "flotando" dentro de la cabeza (se ve a través de la
   gelatina) o en la superficie; probar las dos, elegir con el bloque E y documentarlo. Sigue el tamaño y
   la forma de la cabeza. La cara por defecto es **ninguna**, como la referencia.
 - [ ] **S-311.58** 12 caras: sin cara, feliz, preocupada, dormida, enojada, sorpresa, guiño, bizca, lengua

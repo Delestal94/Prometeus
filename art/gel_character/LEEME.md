@@ -168,6 +168,12 @@ inclina apenas la parte superior con dos frecuencias y fases distintas por
 jugador. Todo vive en uniforms por instancia y desplazamiento de vértices: no
 aplica fuerzas, no mueve la cápsula y no agrega estado de red.
 
+`gel_face.gd` conserva dos candidatos sobre el hueso real de cabeza: dibujo
+flotante interno y parche curvo en superficie. La revisión reproducible está en
+`review_bloque_g/s311_57_face_modes.md`; se eligió superficie por lectura estable
+con la transparencia, la variante opaca y GL Compatibility. El parche sigue
+`head_size` y `head_shape`; ojos, cejas y boca están ocultos por defecto.
+
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses
