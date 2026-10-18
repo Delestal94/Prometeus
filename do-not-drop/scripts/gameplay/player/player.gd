@@ -46,7 +46,7 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _carry_component: Node = $PlayerCarry
 @onready var _seat_pose_component: Node = $PlayerSeatPose
 @onready var _ragdoll_component: Node = $GelRagdoll
-@onready var _gel_contact_component: Node = $GelContact
+@onready var _gel_effects_component: Node = $GelEffects
 
 var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
@@ -304,7 +304,7 @@ func _build_body() -> void:
 	add_child(visual)
 	_body_visual = visual
 	PlayerAppearance.enable_shadows(visual)
-	_gel_contact_component.setup(visual)
+	_gel_effects_component.setup(visual, get_multiplayer_authority())
 
 	PlayerAppearance.set_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_cosmetic()
@@ -378,7 +378,7 @@ func _process(delta: float) -> void:
 		Ride.apply_net_state(self)
 	elif not _seated:
 		Ride.ride_frame_by_frame(self)
-	_gel_contact_component.update_contact(self, delta)
+	_gel_effects_component.update_effects(self, delta)
 	animator.animate()
 	if not is_physics_interpolated_and_enabled():
 		_seat_pose_component.pose_seated_body(delta)
