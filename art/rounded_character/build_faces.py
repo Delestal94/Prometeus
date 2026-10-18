@@ -183,6 +183,42 @@ def determined():
     write('brows_determined', both(lambda s: tick(s, -2, -12, 11)))
 
 
+def crossed():
+    # Both pupils point sharply toward the nose: readable even through gel.
+    write('eyes_crossed', both(lambda s: pie_eye(s, (20, 10), 17, 29)))
+    write('brows_crossed', both(lambda s: tick(s, -2, 5)))
+
+
+def crying():
+    eyes = both(lambda s: pie_eye(s, (2, -4), 14, 24))
+    for side in (0, 1):
+        cx = EYES_X[side]
+        eyes += (f'<path d="M {cx} 258 Q {cx - 18} 288 {cx - 14} 306 '
+                 f'A 16 16 0 0 0 {cx + 16} 302 Q {cx + 18} 286 {cx} 258 Z" '
+                 f'fill="{SWEAT}" stroke="{INK}" stroke-width="7"/>'
+                 f'<ellipse cx="{cx - 4}" cy="291" rx="4" ry="7" fill="{WHITE}"/>')
+    write('eyes_crying', eyes)
+    write('brows_crying', both(lambda s: tick(s, 4, 14)))
+
+
+def hearts():
+    eyes = ''
+    for cx in EYES_X:
+        eyes += (f'<path d="M {cx} 246 C {cx - 52} 212 {cx - 34} 166 {cx} 190 '
+                 f'C {cx + 34} 166 {cx + 52} 212 {cx} 246 Z" '
+                 f'fill="{TONGUE}" stroke="{INK}" stroke-width="{LINE}"/>')
+    write('eyes_hearts', eyes)
+    write('brows_hearts', both(lambda s: tick(s, 14)))
+
+
+def knockout():
+    eyes = ''
+    for cx in EYES_X:
+        eyes += stroke(f'M {cx - 28} 180 L {cx + 28} 246 M {cx + 28} 180 L {cx - 28} 246', 14)
+    write('eyes_knockout', eyes)
+    write('brows_knockout', both(lambda s: tick(s, -8, -5)))
+
+
 # --- Mouths ----------------------------------------------------------------
 
 def bracket(x, y, side, size=13):
@@ -230,6 +266,7 @@ def blank():
 
 if __name__ == '__main__':
     OUT.mkdir(parents=True, exist_ok=True)
-    for build in (classic, joyful, sleepy, worried, wink, lashes, determined, mouths, blank):
+    for build in (classic, joyful, sleepy, worried, wink, lashes, determined, crossed, crying, hearts,
+                  knockout, mouths, blank):
         build()
     print('FACE_VECTORS', len(list(OUT.glob('*.svg'))))

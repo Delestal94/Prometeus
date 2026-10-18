@@ -95,7 +95,7 @@ o un vehículo que manejar (medible con el bot de D-0111).
 - galpón por defecto, 1 proveedor y los 10 productos de `data/contents/`;
 - cajas S-XL, pedidos para Barrio Centro y Campo, camioneta actual, cierre del día;
 - arte gris permitido.
-Criterio de cierre: el bot `tools/bot_company_day.gd` (lo crea D-2016) juega un día
+Criterio de cierre: el bot `tests/bot_company_day.gd` (lo crea D-2016) juega un día
 completo en headless con 2 jugadores simulados. Debe recibir el palet, armar 6 cajas, despachar una
 salida a Barrio Centro, volver y cerrar el día con ganancia > 0, sin `ERROR`/`SCRIPT ERROR` en el log.
 `bench_company` dentro del presupuesto de D-2012.

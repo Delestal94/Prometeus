@@ -173,6 +173,10 @@ flotante interno y parche curvo en superficie. La revisión reproducible está e
 `review_bloque_g/s311_57_face_modes.md`; se eligió superficie por lectura estable
 con la transparencia, la variante opaca y GL Compatibility. El parche sigue
 `head_size` y `head_shape`; ojos, cejas y boca están ocultos por defecto.
+S-311.58 fija doce IDs de cara localizables y seguros para red: sin cara, feliz,
+preocupada, dormida, enojada, sorpresa, guiño, bizca, lengua afuera, llorando,
+enamorada y `X X`. Reutiliza las capas existentes y añade ojos vectoriales para
+bizca, lágrimas, corazones y knockout; un ID desconocido vuelve a sin cara.
 
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los

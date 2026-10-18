@@ -139,6 +139,28 @@ en pocos minutos. Tildar cuando se vio cada uno en este recorrido:
 - [ ] Faros, luces de freno y polvo de las ruedas.
 - [ ] Volcar a propósito en una curva: la detección de vuelco salta y el juego no queda trabado.
 
+## Modo Empresa (expansión, D-2016)
+
+Bot `tests/bot_company_day.gd` (headless, termina solo):
+
+```bash
+"$GODOT" --headless --path do-not-drop --script res://tests/bot_company_day.gd -- --players=1
+"$GODOT" --headless --path do-not-drop --script res://tests/bot_company_day.gd -- --players=2
+```
+
+- Abre `company_root.tscn` con el save en `user://bot_company_day` (se borra) y espera el `OPENING`
+  del día (máx. 10 s; si no llega, `BOT_FAIL no_opening`).
+- Corre las etapas en orden: `receive_pallet`, `shelve_stock`, `take_orders`, `pack_boxes`,
+  `dispatch`, `drive`, `deliver`, `return`, `close_day`. Cada una imprime `BOT_STAGE <etapa> ok`,
+  `BOT_FAIL not_implemented:<etapa>` (todavía no existe; sigue con la próxima) o
+  `BOT_FAIL <etapa>:<motivo>` (corta la corrida).
+- Resumen: líneas `BOT_COMPANY key=value` (jugadores, plata, entregas, roturas, errores de armado,
+  ms por etapa) y al final `BOT_OK` (salida 0) o `BOT_FAIL stages_missing=<n>` (salida 1);
+  `BOT_TIMEOUT` (salida 3) si se colgó.
+- Mientras D-2016.2 no llene las etapas, los `not_implemented` son esperables y no son hallazgo. Sí lo
+  son: `no_opening`, `BOT_TIMEOUT`, una etapa que pasa de `ok` a `not_implemented` o a falla, y todo
+  `ERROR`/`SCRIPT ERROR` del log.
+
 ## Hallazgos
 
 | Fecha | Commit | Qué se estaba haciendo | Qué pasó | Estado |
