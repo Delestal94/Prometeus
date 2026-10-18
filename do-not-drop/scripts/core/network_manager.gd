@@ -73,11 +73,14 @@ const MAX_PLAYERS: int = 8
 ## the host), D-0203;
 ## 33: CompanyNet's _request takes a new kind, units_drop, and units_moved
 ## events to floor:<n> carry pos; the snapshot carries floor positions
-## (company mode, D-2006).
+## (company mode, D-2006);
+## 34: CompanyNet's _request takes four new kinds (layout_place, layout_move,
+## layout_rotate, layout_sell) and _apply_event three (layout_placed,
+## layout_moved, layout_sold): the shed layout the host builds (company mode, D-0910).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 33
+const PROTOCOL_VERSION: int = 34
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
