@@ -153,6 +153,14 @@ brazos, con peso creciente según la distancia al anclaje de cuello u hombro;
 por eso las puntas blandas se atrasan más que la base. El uniform es por
 instancia y el efecto vuelve a cero durante movimiento constante.
 
+`gel_contact_deformation.gd` observa las posiciones y velocidades ya replicadas
+de los jugadores. Al entrar dos cápsulas en contacto, comprime cada malla en la
+dirección del otro jugador y compensa los dos ejes perpendiculares para conservar
+el volumen; una histéresis evita reactivar el golpe mientras siguen juntos y el
+efecto se desvanece al instante. Sólo escribe uniforms por instancia: no cambia
+posición, velocidad, colisión, autoridad ni protocolo de red. Los shaders
+transparente y opaco usan la misma deformación.
+
 `validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
 contrato específico y verifica el GLB real: costuras con posiciones y todos los
 deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses

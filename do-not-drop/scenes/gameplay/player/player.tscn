@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_nickname.gd" id="5_nickname"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_proportion_sync.gd" id="6_gel_proportions"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_ragdoll.gd" id="7_gel_ragdoll"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_contact_deformation.gd" id="8_gel_contact"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -86,6 +87,9 @@ script = ExtResource("6_gel_proportions")
 
 [node name="GelRagdoll" type="Node" parent="."]
 script = ExtResource("7_gel_ragdoll")
+
+[node name="GelContact" type="Node" parent="."]
+script = ExtResource("8_gel_contact")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="GelProportions"]
 replication_config = SubResource("Repl_gel_proportions")
