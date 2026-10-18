@@ -25,6 +25,9 @@ const ANGULAR_SPRING: float = 28.0
 const ANGULAR_DAMPING: float = 5.0
 const MAX_LINEAR_ACCELERATION: float = 55.0
 const MAX_ANGULAR_ACCELERATION: float = 45.0
+const MAX_LINEAR_SPEED: float = 24.0
+const MAX_ANGULAR_SPEED: float = 30.0
+const MAX_JOINT_STRETCH_RATIO: float = 1.55
 const FLOOR_CONTACT_BONES: Array[StringName] = [
 	&"pelvis", &"chest", &"head", &"forearm.L", &"forearm.R", &"shin.L", &"shin.R",
 ]
@@ -76,6 +79,7 @@ var _impact_waves: Node
 var _floor_contacts: Dictionary = {}
 var _previous_body_velocities: Dictionary = {}
 var _collision_exception_rid: RID
+var _joint_rest_lengths: Dictionary = {}
 
 
 func _ready() -> void:
@@ -87,7 +91,9 @@ func _physics_process(delta: float) -> void:
 		return
 	if _recovery_duration > 0.0:
 		_recovery_elapsed = minf(_recovery_elapsed + delta, _recovery_duration)
+	_stabilize_physical_bodies()
 	_apply_pose_motors(delta)
+	_limit_joint_stretch()
 	_advance_soft_effects(delta)
 
 
@@ -145,7 +151,8 @@ func start_ragdoll(
 	carried_velocity: Vector3 = Vector3.ZERO,
 	simulation_seed: int = 0
 ) -> bool:
-	if _ragdoll_active or _physical_bones.is_empty():
+	if _ragdoll_active or _physical_bones.is_empty() \
+			or not impulse.is_finite() or not carried_velocity.is_finite():
 		return false
 	_ragdoll_active = true
 	if _animation != null:
@@ -153,6 +160,7 @@ func start_ragdoll(
 		_animation.active = false
 	physical_bones_start_simulation()
 	_capture_animated_body_poses()
+	_capture_joint_rest_lengths()
 	_recovery_elapsed = 0.0
 	_recovery_duration = 0.0
 	_floor_contacts.clear()
@@ -168,7 +176,7 @@ func start_ragdoll(
 			random.randf_range(-0.02, 0.04),
 			random.randf_range(-0.04, 0.04)
 		)
-		physical_bone.linear_velocity = carried_velocity + jitter
+		physical_bone.linear_velocity = carried_velocity.limit_length(MAX_LINEAR_SPEED) + jitter
 		physical_bone.angular_velocity = Vector3(
 			random.randf_range(-0.16, 0.16),
 			random.randf_range(-0.16, 0.16),
@@ -176,7 +184,7 @@ func start_ragdoll(
 		)
 	var pelvis := _physical_bones.get(&"pelvis") as PhysicalBone3D
 	if pelvis != null:
-		pelvis.apply_central_impulse(impulse * pelvis.mass)
+		pelvis.apply_central_impulse(impulse.limit_length(MAX_LINEAR_SPEED) * pelvis.mass)
 	return true
 
 
@@ -184,6 +192,11 @@ func start_ragdoll(
 func stop_ragdoll() -> void:
 	if not _ragdoll_active:
 		return
+	for value: Variant in _physical_bones.values():
+		var physical_bone := value as PhysicalBone3D
+		if physical_bone != null:
+			physical_bone.linear_velocity = Vector3.ZERO
+			physical_bone.angular_velocity = Vector3.ZERO
 	physical_bones_stop_simulation()
 	_commit_recovery_anchor()
 	_ragdoll_active = false
@@ -318,6 +331,40 @@ func pose_error() -> float:
 	return result
 
 
+## Snapshot used by the stability gate without exposing solver internals.
+func stability_state() -> Dictionary:
+	return {
+		&"finite": _bodies_are_finite(),
+		&"settled": not _ragdoll_active and not is_simulating_physics(),
+		&"stretch_ratio": _maximum_joint_stretch_ratio(),
+	}
+
+
+func _bodies_are_finite() -> bool:
+	for value: Variant in _physical_bones.values():
+		var body := value as PhysicalBone3D
+		if body == null or not body.global_transform.is_finite() \
+				or not body.linear_velocity.is_finite() or not body.angular_velocity.is_finite():
+			return false
+	return true
+
+
+## Largest centre-to-centre separation relative to the distance captured at
+## simulation handoff. The cap leaves room for capsules rotating around their
+## joint anchors while catching a solver explosion before a limb visibly tears.
+func _maximum_joint_stretch_ratio() -> float:
+	var maximum: float = 1.0
+	for child_name: StringName in _joint_rest_lengths:
+		var joint: Dictionary = _joint_rest_lengths[child_name]
+		var child := physical_bone(child_name)
+		var parent := physical_bone(joint[&"parent"])
+		if child == null or parent == null:
+			continue
+		var rest_length: float = float(joint[&"length"])
+		maximum = maxf(maximum, child.global_position.distance_to(parent.global_position) / rest_length)
+	return maximum
+
+
 func _capture_animated_body_poses() -> void:
 	_animated_body_poses.clear()
 	var to_skeleton: Transform3D = _skeleton.global_transform.affine_inverse()
@@ -325,6 +372,66 @@ func _capture_animated_body_poses() -> void:
 		var body := physical_bone(bone_name)
 		if body != null:
 			_animated_body_poses[bone_name] = to_skeleton * body.global_transform
+
+
+func _capture_joint_rest_lengths() -> void:
+	_joint_rest_lengths.clear()
+	for child_name: StringName in _physical_bones:
+		var parent_name: StringName = _physical_parent_name(child_name)
+		if parent_name.is_empty():
+			continue
+		var child := physical_bone(child_name)
+		var parent := physical_bone(parent_name)
+		if child == null or parent == null:
+			continue
+		_joint_rest_lengths[child_name] = {
+			&"parent": parent_name,
+			&"length": maxf(child.global_position.distance_to(parent.global_position), 0.001),
+		}
+
+
+func _physical_parent_name(bone_name: StringName) -> StringName:
+	var bone_index: int = _skeleton.find_bone(bone_name)
+	var parent_index: int = _skeleton.get_bone_parent(bone_index) if bone_index >= 0 else -1
+	while parent_index >= 0:
+		var parent_name: StringName = _skeleton.get_bone_name(parent_index)
+		if _physical_bones.has(parent_name):
+			return parent_name
+		parent_index = _skeleton.get_bone_parent(parent_index)
+	return StringName()
+
+
+func _stabilize_physical_bodies() -> void:
+	for bone_name: StringName in _physical_bones:
+		var body := physical_bone(bone_name)
+		if body == null:
+			continue
+		if not body.global_transform.is_finite() or not body.linear_velocity.is_finite() \
+				or not body.angular_velocity.is_finite():
+			body.global_transform = _target_global_transform(bone_name)
+			body.linear_velocity = Vector3.ZERO
+			body.angular_velocity = Vector3.ZERO
+			continue
+		body.linear_velocity = body.linear_velocity.limit_length(MAX_LINEAR_SPEED)
+		body.angular_velocity = body.angular_velocity.limit_length(MAX_ANGULAR_SPEED)
+
+
+func _limit_joint_stretch() -> void:
+	for child_name: StringName in _joint_rest_lengths:
+		var joint: Dictionary = _joint_rest_lengths[child_name]
+		var child := physical_bone(child_name)
+		var parent := physical_bone(joint[&"parent"])
+		if child == null or parent == null:
+			continue
+		var offset: Vector3 = child.global_position - parent.global_position
+		var maximum: float = float(joint[&"length"]) * MAX_JOINT_STRETCH_RATIO
+		if offset.length_squared() <= maximum * maximum:
+			continue
+		var direction: Vector3 = offset.normalized()
+		child.global_position = parent.global_position + direction * maximum
+		var outward_speed: float = child.linear_velocity.dot(direction)
+		if outward_speed > 0.0:
+			child.linear_velocity -= direction * outward_speed
 
 
 func _setup_soft_effects(model: Node, proportions: Resource, collision_exception: CollisionObject3D) -> void:

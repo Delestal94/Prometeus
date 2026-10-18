@@ -304,7 +304,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   el cuerpo termina a < 0,5 m de la cápsula.
 - [x] **S-311.53** El ragdoll choca con cajas y con la caja del camión en movimiento y hereda su velocidad
   (como hoy `player_ragdoll.gd`). Aviso si toca algo del camión.
-- [ ] **S-311.54** Estabilidad: test headless que suelta el ragdoll 100 veces desde poses, impulsos y
+- [x] **S-311.54** Estabilidad: test headless que suelta el ragdoll 100 veces desde poses, impulsos y
   proporciones aleatorias; se duerme en < 4 s, sin NaN, sin huesos estirados más de lo permitido.
 - [ ] **S-311.55** Contacto entre gelatinas: dos jugadores que chocan se aplastan uno contra otro un
   instante (deformación de contacto, solo visual).

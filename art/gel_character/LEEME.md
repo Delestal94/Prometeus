@@ -348,6 +348,12 @@ S-311.52 separa ese cuerpo visible en `player_gel_ragdoll.gd`: el host transmite
 único impulso y una semilla, y cada par simula localmente el rig. La cápsula del
 `CharacterBody3D`, sus capas y su autoridad no se sustituyen ni reciben el empujón;
 la recuperación visual queda limitada a 0,45 m de esa cápsula.
+S-311.53 añade las capas de cajas y carrocería y, si la caída empieza dentro de la
+caja del camión, siembra cada hueso con `point_velocity()` del vehículo.
+S-311.54 limita velocidades extremas y separación de articulaciones, repara estados
+no finitos y detiene los cuerpos al cerrar la simulación. Su prueba headless recorre
+100 combinaciones deterministas de pose, impulso y proporciones y exige reposo antes
+de cuatro segundos.
 
 Las integraciones propias de asientos se ubican en
 `do-not-drop/scripts/gameplay/player/player_seat_pose.gd` y
