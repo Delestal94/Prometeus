@@ -760,6 +760,10 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 		poll_snapshot(Time.get_ticks_msec())
 		return
 	event_applied.emit(seq, kind, data)
+	if build.take_drift():
+		# Its wallet was off the host's (set right now, D-0910): the history it missed comes by snapshot.
+		_start_waiting()
+		poll_snapshot(Time.get_ticks_msec())
 
 
 ## The one place an event changes state, with the same code on every peer (rule 6: no game
@@ -785,7 +789,7 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
 			else:
 				applied = day_cycle.apply_phase(data)
-		_:  # the layout's (CompanyLayoutNet.EVENT_KINDS); a new kind gets its own branch above
+		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD:
 			applied = build.apply(company, kind, data)
 	if applied:
 		floor_bundles.prune(inventory)

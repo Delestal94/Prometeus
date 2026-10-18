@@ -31,12 +31,16 @@ extends RefCounted
 ## selling one never renames another. A piece that holds units is not sold (not_empty).
 ##
 ## Requests (CompanyNet.request(kind, data); cells as ints, never Vector2i, rule 5):
-##   layout_place   {id: placeable id, x, z, turns: 0..3}  ->  layout_placed {id, x, z, turns, uid, minute}
+##   layout_place   {id: placeable id, x, z, turns: 0..3}  ->  layout_placed {id, x, z, turns, uid, minute, money}
 ##   layout_move    {uid, x, z}                            ->  layout_moved  {uid, x, z, turns}
 ##   layout_rotate  {uid, turns: 1..3 quarter turns more}  ->  layout_moved  {uid, x, z, turns}
-##   layout_sell    {uid}                                  ->  layout_sold   {uid, minute}
-## `minute` is the host's CompanyState.clock_minutes: the wallet entry (placeable_buy,
-## placeable_sell) is written with the same minute on every peer (only the host's clock writes it).
+##   layout_sell    {uid}                                  ->  layout_sold   {uid, minute, money}
+## The wallet travels as absolute values: `money` is the host's balance after the movement and
+## `minute` the host's CompanyState.clock_minutes. Every peer starts the movement from the host's
+## balance before it (money - its amount), so the wallet and the entry's balance (placeable_buy,
+## placeable_sell) end as the host's; the entry takes `minute` (a client's clock_minutes is never
+## written: only the host's clock writes it). A copy whose balance was off is set right and
+## remembers it (take_drift()): CompanyNet then asks for a snapshot for the rest of the history.
 ## Refusals: host_only, bad_data, no_piece, not_empty and BuildPlacement's out_of_bounds,
 ## fixed_area, overlap, blocks_path, no_definition and no_money.
 
@@ -60,12 +64,16 @@ const REASON_BAD_DATA: StringName = &"bad_data"
 ## Cells a request or an event may name, from the corner either way: far past the biggest stage
 ## (32 x 20) and small enough that a Vector2i never wraps one back onto the floor.
 const MAX_CELL: int = 256
+## Largest balance, either sign, a layout event may carry.
+const MAX_MONEY: int = 1_000_000_000_000
 
 ## The employees' walking grid (D-0908), rebaked on this peer after every layout event that sticks;
 ## null (until the world gives one, D-1011): nothing to rebake. Its owner calls rebake() after a
 ## snapshot too.
 var navigation: WalkNavigation = null
 
+## True since an applied event found this copy's wallet off the host's (take_drift()).
+var _drifted: bool = false
 ## Placeable ids of the catalog, read once ({StringName: true}).
 static var _known: Dictionary = {}
 static var _catalog_read: bool = false
@@ -101,8 +109,8 @@ func check(state: Object, stock: Inventory, kind: StringName, data: Dictionary,
 
 ## Every peer, the host too (CompanyNet._apply_state()): a layout event in place with the same calls
 ## on every peer, then the navigation rebaked. Checked only as data (rule 6): a placeable of the
-## catalog, ints in range, a uid that names a piece (or, placing, a free one), money for the price.
-## False, changing nothing, when it doesn't fit.
+## catalog, ints in range, a uid that names a piece (or, placing, a free one), the host's balance and
+## minute. False, changing nothing, when it doesn't fit; every check comes before the first change.
 func apply(state: Object, kind: StringName, data: Dictionary) -> bool:
 	if state == null or not is_instance_valid(state):
 		push_warning("CompanyLayoutNet: a %s event but no company here" % kind)
@@ -118,6 +126,14 @@ func apply(state: Object, kind: StringName, data: Dictionary) -> bool:
 	if applied:
 		rebake(state)
 	return applied
+
+
+## True once, then false: an event applied since the last call found this copy's wallet off the
+## host's balance (and set it right). The rest of what it missed (wallet history) needs a snapshot.
+func take_drift() -> bool:
+	var drifted: bool = _drifted
+	_drifted = false
+	return drifted
 
 
 ## The navigation (if any) from the layout as it stands: after every applied event and after a
@@ -149,15 +165,29 @@ static func new_uid(layout: Array, id: StringName) -> StringName:
 
 
 ## Stores the derived name of every piece that has no uid. All names are worked out first: storing
-## one changes how the next is counted (DefaultShed.piece_uid()). Peers holding the same layout at
-## the same seq store the same names.
+## one changes how the next is counted (DefaultShed.piece_uid()). A name an earlier piece already has
+## (a saved uid next to a derived one, or a hand-edited save) gives the later piece a fresh one
+## ("<id>_<n>", the lowest n nobody has). Peers holding the same layout at the same seq store the
+## same names.
 static func stamp_uids(layout: Array) -> void:
 	var names: Array[StringName] = []
+	var taken: Dictionary = {}
 	for index: int in layout.size():
 		names.append(DefaultShed.piece_uid(layout, index))
+		taken[names[index]] = true
+	var seen: Dictionary = {}
 	for index: int in layout.size():
-		if str(layout[index].get("uid", "")) == "":
-			layout[index]["uid"] = String(names[index])
+		var name_now: StringName = names[index]
+		if seen.has(name_now):
+			var id: String = str(layout[index].get("id", ""))
+			var n: int = 1
+			while taken.has(StringName("%s_%d" % [id, n])):
+				n += 1
+			name_now = StringName("%s_%d" % [id, n])
+			taken[name_now] = true
+		seen[name_now] = true
+		if str(layout[index].get("uid", "")) != String(name_now):
+			layout[index]["uid"] = String(name_now)
 
 
 ## True while the piece `uid` holds units under its name: a shelf slot (shelf:<uid>_<slot>) or a
@@ -200,7 +230,8 @@ func _check_place(state: Object, data: Dictionary) -> Dictionary:
 		return _refused(result["reason"])
 	return _granted(PLACED, {
 		"id": StringName(id), "x": x, "z": z, "turns": int(turns),
-		"uid": new_uid(state.layout, StringName(id)), "minute": int(state.clock_minutes),
+		"uid": new_uid(_named(state.layout), StringName(id)), "minute": int(state.clock_minutes),
+		"money": int(state.money) - def.price,
 	})
 
 
@@ -245,25 +276,28 @@ func _check_sell(state: Object, stock: Inventory, data: Dictionary) -> Dictionar
 		return _refused(BuildPlacement.REASON_NO_DEFINITION)
 	if holds_units(stock, uid, def):
 		return _refused(REASON_NOT_EMPTY)
-	return _granted(SOLD, {"uid": uid, "minute": int(state.clock_minutes)})
+	return _granted(SOLD, {"uid": uid, "minute": int(state.clock_minutes), "money": int(state.money) + def.refund()})
 
 
+## Every check first: past them nothing fails and only then the state changes.
 func _apply_placed(state: Object, data: Dictionary) -> bool:
 	var id: Variant = data.get("id")
 	var uid: Variant = data.get("uid")
 	var turns: Variant = data.get("turns")
 	if not (placeable_exists(id) and _uid_ok(uid) and _turns_ok(turns) and _minute_ok(data.get("minute"))):
 		return false
-	if not (_cell_ok(data.get("x")) and _cell_ok(data.get("z"))):
+	if not (_cell_ok(data.get("x")) and _cell_ok(data.get("z")) and _money_ok(data.get("money"), 0)):
 		return false
 	var def: PlaceableDefinition = PlaceableShop.definition(StringName(id))
-	if def == null or piece_index(state.layout, uid) >= 0 or not state.can_afford(def.price):
+	if def == null or def.price < 1 or piece_index(_named(state.layout), uid) >= 0:
 		return false
 	stamp_uids(state.layout)
-	_set_minute(state, data["minute"])
+	# The host's balance before always covers the price (money >= 0), so the purchase goes through.
+	_set_balance(state, int(data["money"]) + def.price)
 	if not PlaceableShop.buy(state, def, data["x"], data["z"], turns):
 		return false
 	state.layout[state.layout.size() - 1]["uid"] = String(uid)
+	_entry_minute(state, data["minute"])
 	return true
 
 
@@ -284,20 +318,47 @@ func _apply_moved(state: Object, data: Dictionary) -> bool:
 
 func _apply_sold(state: Object, data: Dictionary) -> bool:
 	var uid: Variant = data.get("uid")
-	if not (_uid_ok(uid) and _minute_ok(data.get("minute"))):
+	if not (_uid_ok(uid) and _minute_ok(data.get("minute")) and _money_ok(data.get("money"))):
 		return false
 	var index: int = piece_index(state.layout, uid)
-	if index < 0 or PlaceableShop.definition(StringName(str(state.layout[index].get("id", "")))) == null:
+	if index < 0:
+		return false
+	var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(state.layout[index].get("id", ""))))
+	if def == null:
 		return false
 	stamp_uids(state.layout)
-	_set_minute(state, data["minute"])
-	return PlaceableShop.sell(state, index) >= 0
+	var refund: int = maxi(def.refund(), 0)
+	_set_balance(state, int(data["money"]) - refund)
+	PlaceableShop.sell(state, index)
+	if refund > 0:
+		_entry_minute(state, data["minute"])
+	return true
 
 
-## The host's minute in this peer's company before its wallet moves (on the host, the same value).
-static func _set_minute(state: Object, minute: int) -> void:
-	if int(state.get(&"clock_minutes")) != minute:
-		state.set(&"clock_minutes", minute)
+## The host's balance before the event's movement: a copy that holds another missed something; it
+## takes the host's (so the movement ends on the host's balance) and remembers it (take_drift()).
+func _set_balance(state: Object, before: int) -> void:
+	var here: int = int(state.get(&"money"))
+	if here == before:
+		return
+	push_warning("CompanyLayoutNet: this wallet held %d, the host's %d; set to the host's" % [here, before])
+	state.set(&"money", before)
+	_drifted = true
+
+
+## The wallet entry the event just wrote takes the host's minute; clock_minutes stays as it is.
+static func _entry_minute(state: Object, minute: int) -> void:
+	var ledger: Array = state.get(&"ledger")
+	if not ledger.is_empty():
+		ledger[ledger.size() - 1]["minute"] = minute
+
+
+## `layout` with every piece's name stored (stamp_uids()) in a copy: what the names will be once a
+## layout event is applied, without changing `layout`.
+static func _named(layout: Array) -> Array:
+	var copy: Array = layout.duplicate(true)
+	stamp_uids(copy)
+	return copy
 
 
 static func _refused(reason: StringName) -> Dictionary:
@@ -319,6 +380,11 @@ static func _cell_ok(value: Variant) -> bool:
 
 static func _turns_ok(value: Variant) -> bool:
 	return typeof(value) == TYPE_INT and int(value) >= 0 and int(value) <= 3
+
+
+## A balance from the host: an int from `minimum` up to MAX_MONEY (no overflow adding a price).
+static func _money_ok(value: Variant, minimum: int = -MAX_MONEY) -> bool:
+	return typeof(value) == TYPE_INT and int(value) >= minimum and int(value) <= MAX_MONEY
 
 
 static func _minute_ok(value: Variant) -> bool:

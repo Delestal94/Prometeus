@@ -7,14 +7,22 @@ extends SceneTree
 ## - solo (offline): placing pays the price and names the piece "<id>_<n>" (the lowest n free),
 ##   moving and turning are free, selling pays the refund; every event is a few plain values (under
 ##   EVENT_BYTES_MAX bytes, RpcGuard.dict_ok) and the wallet entry carries the host's minute;
+## - the wallet travels absolute: a mirror whose wallet missed a movement (the host earned without an
+##   event) ends a purchase and a sale on the host's money and entry balance, takes the entry's
+##   minute without its clock_minutes being written (a sentinel stays), and flags the drift
+##   (take_drift()) so CompanyNet asks for a snapshot;
 ## - the host refuses, changing nothing, with BuildPlacement's own reasons (overlap, fixed_area on the
 ##   dock, out_of_bounds, blocks_path, no_money), not_empty for a shelf with units, no_piece for an
 ##   unknown uid and bad_data for a path or a wrong-case id, a float or huge cell, turns out of range;
 ##   a request that is not the host's own is host_only (only the host builds, D-0910.1 is the vote);
 ## - pieces saved without a uid get their names stored before a layout event, so selling the first
-##   shelf does not rename the second (its units stay under shelf:shelf_2_<slot>);
+##   shelf does not rename the second (its units stay under shelf:shelf_2_<slot>); a name two pieces
+##   share gives the later one a fresh "<id>_<n>", and the host names a new piece after that;
 ## - an event whose data doesn't fit (unknown placeable, uid in use or unknown, float cell, turns or
-##   minute out of range, no money for the price) is not applied and changes nothing;
+##   minute out of range, money missing, negative or a float) is not applied and changes nothing,
+##   not even the names of pieces saved without a uid (every check comes before the first change);
+## - every kind of CompanyNet.EVENT_KINDS has its own branch in _apply_state() (read from the source:
+##   no catch-all `_:` branch);
 ## - with a host and a client as ENet peers in one process (each with its CompanyNet, DayCycle and
 ##   CompanyShed following it): 8 placements, turns, moves and sales by the host, in a thawed and in
 ##   a frozen shed, reach the client in order; the layout, money, wallet history, stock, day phase and
@@ -22,13 +30,21 @@ extends SceneTree
 ##   client's CompanyShed redraws each change (CompanyShed.follow());
 ## - the host's refused requests (overlap, dock, no money) change nothing on either peer and spend
 ##   no seq; the client asking to place, move, turn or sell hears host_only for each, only it hears
-##   it, and nothing changes anywhere;
+##   it, and nothing changes anywhere; the client's clock_minutes is never written by a layout event;
+## - the host earns money without an event and then buys: the client ends that purchase on the host's
+##   money and balance, asks for a snapshot and ends equal to the host, wallet history included;
 ## - a third peer joins late: it holds the event that reaches it before its snapshot, gets the
 ##   host's layout from the snapshot (CompanyState.layout in its `company` part), draws it, and
 ##   applies the event after it; the three end equal and every peer's seqs have no gap or repeat.
+## Expected in the log: CompanyLayoutNet's warning for each wallet set right (the mirror check and the
+## client after the host's silent earning).
 
 const PORT: int = 24651
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
+const NET_SCRIPT: String = "res://scripts/core/company/company_net.gd"
+const LAYOUT_SCRIPT: String = "res://scripts/core/company/company_layout_net.gd"
+## A clock_minutes no event may write (only the host's clock writes it).
+const SENTINEL_MINUTE: int = 7
 ## Bytes a layout event's data may take (var_to_bytes): a few small ints and two short ids.
 const EVENT_BYTES_MAX: int = 200
 
@@ -55,6 +71,8 @@ class Peer:
 	var layout_events: Array[Dictionary] = []
 	var refusals: Array = []
 	var restored: Array[int] = []
+	## {seq: [money, balance of the last wallet entry]} as each event was applied.
+	var wallet_at: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -64,7 +82,9 @@ func _initialize() -> void:
 func _run() -> void:
 	RpcGuard.reset()
 	_check_solo()
+	_check_mirror()
 	_check_legacy_names()
+	_check_event_branches()
 	await _check_network()
 	RpcGuard.reset()
 	if _failures == 0:
@@ -104,8 +124,9 @@ func _check_solo() -> void:
 	_expect(entry.get("reason") == "placeable_buy" and int(entry.get("minute", -1)) == 600,
 		"...with a placeable_buy wallet entry at the host's minute (%s)" % [entry])
 	_expect(net.seq == 1 and events.size() == 1 and events[0].get("uid") == &"fridge_1"
-		and events[0].get("minute") == 600 and (events[0].keys() as Array).size() == 6,
-		"...in one layout_placed event {id, x, z, turns, uid, minute} (%s)" % [events])
+		and events[0].get("minute") == 600 and events[0].get("money") == CompanyTuning.STARTING_MONEY - 200
+		and (events[0].keys() as Array).size() == 7,
+		"...in one layout_placed event {id, x, z, turns, uid, minute, money} (%s)" % [events])
 
 	_expect(_ask(net, heard, CompanyLayoutNet.PLACE, {"id": &"shelf", "x": 8, "z": 3, "turns": 0}) == &""
 		and CompanyLayoutNet.piece_index(_layout(state), &"shelf_4") >= 0,
@@ -183,7 +204,9 @@ func _check_solo() -> void:
 ## Rule 6: the event is applied as it comes, checked only as data.
 func _check_bad_events(net: CompanyNet, state: Node) -> void:
 	var before: Dictionary = _company(state)
-	var place: Dictionary = {"id": &"fridge", "x": 9, "z": 5, "turns": 0, "uid": &"fridge_9", "minute": 600}
+	var place: Dictionary = {
+		"id": &"fridge", "x": 9, "z": 5, "turns": 0, "uid": &"fridge_9", "minute": 600, "money": 10,
+	}
 	var bad: Array = [
 		[CompanyLayoutNet.PLACED, _with(place, "id", &"rocket"), "an unknown placeable"],
 		[CompanyLayoutNet.PLACED, _with(place, "uid", &"table_1"), "a uid in use"],
@@ -191,6 +214,10 @@ func _check_bad_events(net: CompanyNet, state: Node) -> void:
 		[CompanyLayoutNet.PLACED, _with(place, "turns", 4), "turns past 3"],
 		[CompanyLayoutNet.PLACED, _with(place, "minute", CompanyTuning.MINUTES_PER_DAY), "a minute past the day"],
 		[CompanyLayoutNet.PLACED, _without(place, "minute"), "no minute"],
+		[CompanyLayoutNet.PLACED, _without(place, "money"), "no money"],
+		[CompanyLayoutNet.PLACED, _with(place, "money", -1), "a negative balance after a purchase"],
+		[CompanyLayoutNet.PLACED, _with(place, "money", 10.0), "a float balance"],
+		[CompanyLayoutNet.SOLD, {"uid": &"table_1", "minute": 600}, "a sale without money"],
 		[CompanyLayoutNet.MOVED, {"uid": &"nobody", "x": 1, "z": 1, "turns": 0}, "a move of an unknown piece"],
 		[CompanyLayoutNet.MOVED, {"uid": &"table_1", "x": 1, "z": 1}, "a move without turns"],
 		[CompanyLayoutNet.SOLD, {"uid": &"nobody", "minute": 600}, "a sale of an unknown piece"],
@@ -199,9 +226,7 @@ func _check_bad_events(net: CompanyNet, state: Node) -> void:
 	for case: Array in bad:
 		_expect(not net.build.apply(state, case[0], case[1]), "An event with %s is not applied" % case[2])
 	_expect(_company(state) == before, "...and changed nothing")
-	_expect(int(state.get(&"money")) < 200 and not net.build.apply(state, CompanyLayoutNet.PLACED, place)
-		and _company(state) == before,
-		"A layout_placed this copy can't pay for is not applied (its peer then waits for a snapshot)")
+	_expect(not net.build.take_drift(), "None of them touched the wallet (no drift)")
 
 
 ## Pieces saved without a uid keep their names: selling the first shelf does not make the second
@@ -231,6 +256,115 @@ func _check_legacy_names() -> void:
 	net.free()
 	state.free()
 
+	# A refused event stores no name: every check comes before the first change.
+	var unnamed: Node = _new_state("UnnamedState")
+	unnamed.call(&"new_company", "Unnamed SRL")
+	var bare: Array[Dictionary] = [
+		{"id": "shelf", "x": 3, "z": 2, "turns": 0}, {"id": "shelf", "x": 3, "z": 4, "turns": 0},
+	]
+	unnamed.set(&"layout", bare)
+	var build := CompanyLayoutNet.new()
+	var taken_uid: Dictionary = {
+		"id": &"fridge", "x": 6, "z": 3, "turns": 0, "uid": &"shelf_2", "minute": 600, "money": 300,
+	}
+	_expect(not build.apply(unnamed, CompanyLayoutNet.PLACED, taken_uid)
+		and not (_layout(unnamed)[0] as Dictionary).has("uid") and not (_layout(unnamed)[1] as Dictionary).has("uid"),
+		"A layout_placed with a uid in use is refused before any piece gets its name stored (%s)" % [_layout(unnamed)])
+	unnamed.free()
+
+	# A name two pieces share: the later one gets a fresh one, and a new piece is named after that.
+	var shared: Node = _new_state("SharedState")
+	shared.call(&"new_company", "Shared SRL")
+	var twins: Array[Dictionary] = [
+		{"id": "shelf", "x": 3, "z": 2, "turns": 0, "uid": "shelf_1"}, {"id": "shelf", "x": 3, "z": 4, "turns": 0},
+	]
+	shared.set(&"layout", twins)
+	var asked: Dictionary = build.check(shared, Inventory.new(), CompanyLayoutNet.PLACE,
+		{"id": &"shelf", "x": 6, "z": 3, "turns": 0}, true)
+	var placed: bool = asked.get("reason") == &"" and build.apply(shared, asked["kind"], asked["data"])
+	var names: Array = []
+	for index: int in _layout(shared).size():
+		names.append(String(DefaultShed.piece_uid(_layout(shared), index)))
+	_expect(placed and names == ["shelf_1", "shelf_2", "shelf_3"],
+		"Two shelves both called shelf_1: the second becomes shelf_2 and the new one shelf_3 (%s, %s)"
+		% [names, asked])
+	shared.free()
+
+
+## A mirror (a client's copy, from the host's to_dict()) whose wallet missed a movement: the host's
+## events carry its balance, so the mirror ends each movement on it; its clock_minutes is not written.
+func _check_mirror() -> void:
+	var host: Node = _new_state("MirrorHost")
+	host.call(&"new_company", "Mirror SRL")
+	DefaultShed.load_default().apply_to(host)
+	var mirror: Node = _new_state("Mirror")
+	mirror.call(&"from_dict", host.call(&"to_dict"))
+	var host_build := CompanyLayoutNet.new()
+	var mirror_build := CompanyLayoutNet.new()
+	host.call(&"earn", 300, &"order_paid")
+	host.set(&"clock_minutes", 615)
+	mirror.set(&"clock_minutes", SENTINEL_MINUTE)
+	var stock: Inventory = host.call(&"stock")
+	var steps: Array = [
+		[CompanyLayoutNet.PLACE, {"id": &"shelf", "x": 8, "z": 3, "turns": 0}, "a purchase"],
+		[CompanyLayoutNet.SELL, {"uid": &"shelf_4"}, "a sale"],
+	]
+	var drifts: Array[bool] = []
+	for step: Array in steps:
+		var asked: Dictionary = host_build.check(host, stock, step[0], step[1], true)
+		var granted: bool = asked.get("reason") == &""
+		var applied: bool = granted and host_build.apply(host, asked["kind"], asked["data"])
+		applied = applied and mirror_build.apply(mirror, asked["kind"], asked["data"])
+		_expect(applied and int(mirror.get(&"money")) == int(host.get(&"money"))
+			and _last_entry(mirror).get("balance") == _last_entry(host).get("balance"),
+			"After %s the mirror holds the host's money and entry balance (%s / %s, host %s / %s)"
+			% [step[2], mirror.get(&"money"), _last_entry(mirror).get("balance"), host.get(&"money"),
+				_last_entry(host).get("balance")])
+		_expect(int(_last_entry(mirror).get("minute", -1)) == 615
+			and int(mirror.get(&"clock_minutes")) == SENTINEL_MINUTE,
+			"...its entry carries the host's minute 615 and its clock_minutes stays %d (%s, %s)"
+			% [SENTINEL_MINUTE, _last_entry(mirror).get("minute"), mirror.get(&"clock_minutes")])
+		drifts.append(mirror_build.take_drift())
+		_expect(not host_build.take_drift(), "...and the host never drifts")
+	_expect(drifts == [true, false], "The mirror flags the drift once, then it is in step (%s)" % [drifts])
+	host.free()
+	mirror.free()
+
+
+## Every event kind has its own branch in _apply_state(): a kind added later can't fall into the
+## layout's (or anyone's) catch-all.
+func _check_event_branches() -> void:
+	var text: String = FileAccess.get_file_as_string(NET_SCRIPT)
+	var start: int = text.find("\nfunc _apply_state(")
+	var end: int = text.find("\nfunc ", start + 1)
+	_expect(start >= 0 and end > start, "_apply_state() is in %s" % NET_SCRIPT)
+	if start < 0 or end <= start:
+		return
+	var net_consts: Dictionary = (load(NET_SCRIPT) as GDScript).get_script_constant_map()
+	var layout_consts: Dictionary = (load(LAYOUT_SCRIPT) as GDScript).get_script_constant_map()
+	var covered: Array[StringName] = []
+	var catch_all: bool = false
+	for line: String in text.substr(start, end - start).split("\n"):
+		if not (line.begins_with("\t\t") and not line.begins_with("\t\t\t") and line.strip_edges().ends_with(":")):
+			continue
+		var pattern: String = line.strip_edges().trim_suffix(":")
+		catch_all = catch_all or pattern == "_"
+		for token: String in pattern.split(","):
+			var name_: String = token.strip_edges()
+			if name_.begins_with("&\""):
+				covered.append(StringName(name_.trim_prefix("&\"").trim_suffix("\"")))
+			elif name_.begins_with("CompanyLayoutNet.") and layout_consts.has(name_.trim_prefix("CompanyLayoutNet.")):
+				covered.append(layout_consts[name_.trim_prefix("CompanyLayoutNet.")])
+			elif net_consts.has(name_):
+				covered.append(net_consts[name_])
+	var missing: Array[StringName] = []
+	for kind: StringName in CompanyNet.EVENT_KINDS:
+		if not covered.has(kind):
+			missing.append(kind)
+	_expect(missing.is_empty() and not catch_all and covered.size() == CompanyNet.EVENT_KINDS.size(),
+		"Every EVENT_KINDS kind has its own branch in _apply_state() (missing %s, catch-all %s, branches %s)"
+		% [missing, catch_all, covered])
+
 
 # --- Network ---
 
@@ -256,7 +390,7 @@ func _check_network() -> void:
 	_add_world(_client)
 	_client.net.wait_for_snapshot()
 	var connected: bool = await _wait_for(func() -> bool:
-		return _client.side.multiplayer.get_peers().has(1))
+		return _client.side.multiplayer.get_peers().has(1) and _host.side.multiplayer.get_peers().size() == 1)
 	_expect(up and connected, "The client connects to the host")
 	if connected:
 		await _play(late)
@@ -295,6 +429,7 @@ func _play(late: ENetMultiplayerPeer) -> void:
 	_expect(await _synced([_client]) and _host.day.is_frozen() and _client.day.is_frozen(),
 		"With the crew out the shed freezes on both peers")
 	_host.state.set(&"clock_minutes", 9 * 60 + 15)
+	_client.state.set(&"clock_minutes", SENTINEL_MINUTE)
 	var frozen: Array = [
 		[CompanyLayoutNet.MOVE, {"uid": &"shelf_2", "x": 2, "z": 2}],
 		[CompanyLayoutNet.SELL, {"uid": &"shelf_4"}],
@@ -303,8 +438,9 @@ func _play(late: ENetMultiplayerPeer) -> void:
 	await _build_all(frozen, [_client], "in a frozen shed")
 	_expect(_host.day.is_frozen() and _client.day.is_frozen(), "...and the shed is still frozen after them")
 	_expect(int(_last_entry(_client.state).get("minute", -1)) == 9 * 60 + 15
-		and int(_client.state.get(&"clock_minutes")) == 9 * 60 + 15,
-		"The client's wallet entry for the fridge carries the host's minute 09:15 (%s)" % [_last_entry(_client.state)])
+		and int(_client.state.get(&"clock_minutes")) == SENTINEL_MINUTE,
+		"The client's wallet entry for the fridge carries the host's minute 09:15 and its clock_minutes"
+		+ " stays %d (%s, %s)" % [SENTINEL_MINUTE, _last_entry(_client.state), _client.state.get(&"clock_minutes")])
 	_expect(_client.shed.piece_at(Vector2i(2, 2)) == &"shelf_2" and _client.shed.shelves.has(&"shelf_2")
 		and _units_on(_client, &"shelf_2") == _units_on(_host, &"shelf_2") and _units_on(_host, &"shelf_2") > 0,
 		"shelf_2 moved to (2, 2) keeps its name and its units on the client (%d units)"
@@ -318,6 +454,7 @@ func _play(late: ENetMultiplayerPeer) -> void:
 
 	await _check_host_refusals()
 	await _check_client_asks()
+	await _check_silent_money()
 	await _check_late_join(late)
 	_check_seqs()
 
@@ -383,6 +520,28 @@ func _check_client_asks() -> void:
 	_expect(_host.refusals.size() == host_heard and _host.net.seq == seq and _client.net.seq == seq,
 		"...only the client hears it and no seq is spent (seq %d)" % _host.net.seq)
 	_expect_equal([_host, _client], "after the client's asks")
+
+
+## The host's wallet moves without an event (a bug elsewhere): the next purchase still ends the
+## client's wallet on the host's balance, and the client asks for a snapshot for the history it missed.
+func _check_silent_money() -> void:
+	_host.state.call(&"earn", 300, &"order_paid")
+	var restores: int = _client.restored.size()
+	var seq: int = _host.net.seq
+	var reason: StringName = _ask(_host.net, _host.refusals, CompanyLayoutNet.PLACE,
+		{"id": &"shelf", "x": 8, "z": 5, "turns": 0})
+	# The host grants one snapshot request per peer per SNAPSHOT_INTERVAL_MSEC; the client asks again after it.
+	var resynced: bool = await _wait_for(func() -> bool:
+		return _client.restored.size() == restores + 1 and _client.net.seq == _host.net.seq,
+		2.0 * CompanyNet.SNAPSHOT_INTERVAL_MSEC / 1000.0 + 2.0)
+	var seen: Array = _client.wallet_at.get(seq + 1, [])
+	_expect(reason == &"" and seen.size() == 2 and seen[0] == int(_host.state.get(&"money"))
+		and seen[1] == int(_last_entry(_host.state).get("balance", -1)),
+		"After the host's silent earning the client ends the purchase on the host's money and balance"
+		+ " (%s, host %s)" % [seen, _host.state.get(&"money")])
+	_expect(resynced and _client.restored.back() == seq + 1,
+		"...then asks for a snapshot and gets it at seq %d (restored %s)" % [seq + 1, _client.restored])
+	_expect_equal([_host, _client], "after the snapshot that followed the drift")
 
 
 ## A third peer joins: one event reaches it before its snapshot (held, then dropped), one after.
@@ -467,6 +626,7 @@ func _add_world(peer: Peer) -> void:
 	peer.net.event_applied.connect(func(seq: int, kind: StringName, data: Dictionary) -> void:
 		peer.seqs.append(seq)
 		peer.kinds.append(kind)
+		peer.wallet_at[seq] = [int(peer.state.get(&"money")), int(_last_entry(peer.state).get("balance", 0))]
 		if CompanyLayoutNet.EVENT_KINDS.has(kind):
 			peer.layout_events.append(data))
 	peer.net.request_rejected.connect(func(rid: int, reason: StringName) -> void:

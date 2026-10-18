@@ -118,10 +118,10 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 
 | # | Acción (tarea) | Inicia | Petición: `kind` y `data` | El host valida | Evento: `kind` y `data` | Cambia en cada peer |
 |---|---|---|---|---|---|---|
-| 21 | Comprar y colocar una pieza (D-0902) | host, en el modo construcción | `layout_place` `{id, x: int, z: int, turns: 0..3, rid}` | que lo pida el host; `id` del catálogo `data/placeables/` (nombre exacto de archivo); celdas enteras en ±256; `BuildPlacement.preview` en la grilla de la etapa (dentro del piso, fuera de dársena y salida, sin choque, todo alcanzable) con la plata | `layout_placed` `{id, x, z, turns, uid, minute}` | `PlaceableShop.buy` (`money −= price`, libro `placeable_buy` con el `minute` del host); la pieza entra al `layout` con el `uid` nuevo (`<id>_<n>`, el `n` libre más bajo) |
+| 21 | Comprar y colocar una pieza (D-0902) | host, en el modo construcción | `layout_place` `{id, x: int, z: int, turns: 0..3, rid}` | que lo pida el host; `id` del catálogo `data/placeables/` (nombre exacto de archivo); celdas enteras en ±256; `BuildPlacement.preview` en la grilla de la etapa (dentro del piso, fuera de dársena y salida, sin choque, todo alcanzable) con la plata | `layout_placed` `{id, x, z, turns, uid, minute, money}` | `PlaceableShop.buy` desde el saldo del host antes de la compra (`money + price`), así la plata y el `balance` del libro quedan en `money`; libro `placeable_buy` con el `minute` del host; la pieza entra al `layout` con el `uid` nuevo (`<id>_<n>`, el `n` libre más bajo) |
 | 22 | Mover una pieza (D-0903) | host | `layout_move` `{uid, x: int, z: int, rid}` | que lo pida el host; la pieza existe; `preview` ignorando la pieza | `layout_moved` `{uid, x, z, turns}` | la pieza cambia de celda; conserva `uid` (y con él su stock y su estación) |
 | 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
-| 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute}` | `PlaceableShop.sell` (devolución, libro `placeable_sell`); la pieza sale del `layout` |
+| 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
 
 ## 3. Secuencia, huecos y snapshot
 
@@ -294,13 +294,23 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   `BuildPlacement` (`out_of_bounds`, `fixed_area`, `overlap`, `blocks_path`, `no_definition`, `no_money`) más
   `host_only`, `no_piece` (no hay pieza con ese `uid`), `not_empty` y `bad_data`.
 - **Eventos chicos y absolutos**: enteros y dos ids cortos (< 200 bytes); girar y mover mandan la pose final,
-  no el delta. `minute` es el `clock_minutes` del host: el libro de caja queda igual en todos los peers (el
-  `clock_minutes` del espejo de un cliente no lo mueve su reloj). Cada peer aplica con las mismas llamadas a
-  `PlaceableShop` y solo comprueba los datos (regla 6); si su copia no lo toma (por ejemplo no le alcanza la
-  plata para el precio), espera un snapshot.
+  no el delta. **La plata también va absoluta**: `money` es el saldo del host después del movimiento y cada
+  peer arranca la compra o la venta desde el saldo del host antes de ella, así la plata y el `balance` de la
+  entrada quedan iguales aunque al espejo le faltara un movimiento. Si el saldo del espejo no era ese, lo
+  corrige, avisa (`push_warning`) y `CompanyNet` pide un snapshot para el resto del libro
+  (`CompanyLayoutNet.take_drift()`, con el tope de 5 s por peer). `minute` es el `clock_minutes` del host y va
+  **solo a la entrada del libro** que el evento escribió: el `clock_minutes` del cliente no se toca (lo escribe
+  solo el reloj del host). Cada peer aplica con las mismas llamadas a `PlaceableShop` y solo comprueba los datos
+  (regla 6), todas las comprobaciones antes del primer cambio: si su copia no lo toma, no cambia nada y espera
+  un snapshot.
+- **Una rama por evento** en `CompanyNet._apply_state()` (`CompanyLayoutNet.PLACED, MOVED, SOLD:`), sin `_:`:
+  un `kind` nuevo que se olvide su rama no cae en la de otro (`test_company_layout_net` lo lee del código).
 - **Nombres estables**: antes de aplicar cualquier evento de layout, toda pieza sin `uid` guardado recibe el
   que ya se deducía (`DefaultShed.piece_uid`, todos calculados antes de guardar ninguno), así vender una no
-  renombra a otra y su stock sigue bajo su nombre.
+  renombra a otra y su stock sigue bajo su nombre. Si dos piezas comparten nombre (un `uid` guardado al lado
+  de uno deducido, o un guardado editado a mano), la segunda recibe uno nuevo (`<id>_<n>`, el `n` libre más
+  bajo), igual en todos los peers; el host nombra una pieza nueva después de ese renombre. `BuildLayoutSave.sanitize`
+  no renombra (el primer evento de layout lo hace).
 - **Join tardío**: el layout ya viaja en `company` (`CompanyState.to_dict()`); `CompanyState.from_dict` lo pasa
   por `BuildLayoutSave.sanitize`, que conserva un layout que el host validó pieza por pieza. `CompanyShed.follow(net)`
   redibuja el galpón en cada evento de layout y en `company_state_restored`, y las etiquetas en `units_moved`
@@ -316,4 +326,9 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
     (`box_started` / `box_place`, D-0702 / D-0703, unidades en `box:<id>`), vender una mesa también tiene
     que mirar su caja;
   - `money_changed` de `CompanyState` sale en medio de aplicar el evento (como cualquier movimiento de plata
-    hoy): quien lo escuche no puede pedir nada ahí (escuchar `event_applied`).
+    hoy): es **solo para presentación**; quien lo escuche no puede pedir ni publicar nada ahí (una regla del
+    host escucha `event_applied`);
+  - `CompanyShed.follow` hace un `rebuild()` entero (piso y paredes incluidos) por cada evento de layout: los
+    eventos son de a uno y a ritmo humano, pero si se nota un tirón, rehacer solo los muebles (`Furniture`) y
+    los palets;
+  - `holds_units` mira solo `shelf:<uid>_<hueco>` y `table:<uid>` (ver arriba la caja en armado).

@@ -7,8 +7,8 @@
 - **`PROTOCOL_VERSION` 34** (`scripts/core/network_manager.gd`, zona compartida): solo la constante y su
   línea del historial. **Cambió el protocolo** aunque no hay RPC nuevo ni firma distinta: `CompanyNet._request`
   acepta cuatro tipos nuevos (`layout_place`, `layout_move`, `layout_rotate`, `layout_sell`) y
-  `_apply_event` tres (`layout_placed`, `layout_moved`, `layout_sold`), todos por el canal confiable de
-  siempre (`reliable`, con `seq`). Un cliente con 33 y un host con 34 no se conectan (error de versión en
+  `_apply_event` tres (`layout_placed {…, minute, money}`, `layout_moved`, `layout_sold {uid, minute, money}`:
+  la plata viaja absoluta, el saldo del host), todos por el canal confiable de siempre (`reliable`, con `seq`). Un cliente con 33 y un host con 34 no se conectan (error de versión en
   el menú); con el mismo número viejo un cliente descartaría los eventos de layout y quedaría desfasado.
 - **`scripts/core/company/company_layout_net.gd`** (nuevo, `class_name CompanyLayoutNet`, `RefCounted`):
   valida en el host (`check()`) y aplica en cada peer (`apply()`) los cambios del layout. `CompanyNet` suma
