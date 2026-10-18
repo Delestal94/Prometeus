@@ -1,6 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_active_ragdoll.gd
-## S-311.48-52: real-rig bodies, active motors, recovery and network-safe presentation.
+## S-311.48-53: real-rig bodies, active motors, recovery and cargo collisions.
 
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
@@ -10,6 +10,16 @@ const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proport
 const Shaper := preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 
 var _failures: int = 0
+
+
+class Carrier extends Node3D:
+	var carried_velocity := Vector3(0.0, 0.0, -8.0)
+
+	func carries(_point: Vector3, _margin: float = 0.0) -> bool:
+		return true
+
+	func point_velocity(_point: Vector3) -> Vector3:
+		return carried_velocity
 
 
 func _initialize() -> void:
@@ -143,7 +153,7 @@ func _run() -> void:
 	model.free()
 	await _check_player_integration()
 	if _failures == 0:
-		print("PASS: real-rig ragdoll motors, recovery, jiggle and floor-contact waves")
+		print("PASS: real-rig ragdoll motors, recovery, cargo collisions and inherited motion")
 	quit(_failures)
 
 
@@ -162,6 +172,9 @@ func _check_joint(ragdoll: GelActiveRagdoll, bone_name: StringName, expected_typ
 
 
 func _check_player_integration() -> void:
+	var carrier := Carrier.new()
+	carrier.add_to_group(&"vehicle")
+	root.add_child(carrier)
 	var player: Player = PLAYER_SCENE.instantiate()
 	player.name = "Player_1"
 	root.add_child(player)
@@ -188,6 +201,17 @@ func _check_player_integration() -> void:
 				break
 	_expect(live_ragdoll != null and live_ragdoll.is_simulating_physics(),
 		"package knockdown uses the real-rig simulator instead of detached capsules")
+	if live_ragdoll != null:
+		var inherited_motion: bool = true
+		for definition: Dictionary in GelActiveRagdoll.BODY_DEFINITIONS:
+			var body: PhysicalBone3D = live_ragdoll.physical_bone(definition[&"bone"])
+			if body == null or body.collision_mask != (1 | 4 | 64):
+				_expect(false, "every ragdoll bone collides with the world, boxes and truck shell")
+				break
+			if body.linear_velocity.z > -4.0:
+				inherited_motion = false
+		_expect(inherited_motion,
+			"a ragdoll that starts in the cargo bay inherits the truck's point velocity")
 	_expect(player.visible, "the player stays visible while its skeleton ragdolls")
 	await create_timer(GelActiveRagdoll.LIFETIME + 0.1).timeout
 	await process_frame
@@ -196,6 +220,7 @@ func _check_player_integration() -> void:
 	_expect(body_visual.global_position.distance_to(player.global_position) < 0.5,
 		"the recovered visual body finishes within half a metre of its capsule")
 	player.free()
+	carrier.free()
 
 
 func _expect(condition: bool, description: String) -> void:
