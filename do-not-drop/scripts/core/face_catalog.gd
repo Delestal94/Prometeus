@@ -7,7 +7,9 @@ const DEFAULT_MOUTH: StringName = &"smile"
 const EYES: Dictionary = {
 	&"classic": "UI_FACE_EYES_CLASSIC", &"joyful": "UI_FACE_EYES_JOYFUL", &"sleepy": "UI_FACE_EYES_SLEEPY",
 	&"worried": "UI_FACE_EYES_WORRIED", &"wink": "UI_FACE_EYES_WINK",
-	&"lashes": "UI_FACE_EYES_LASHES", &"determined": "UI_FACE_EYES_DETERMINED", &"none": "UI_FACE_EYES_NONE",
+	&"lashes": "UI_FACE_EYES_LASHES", &"determined": "UI_FACE_EYES_DETERMINED",
+	&"crossed": "UI_FACE_EYES_CROSSED", &"crying": "UI_FACE_EYES_CRYING",
+	&"hearts": "UI_FACE_EYES_HEARTS", &"knockout": "UI_FACE_EYES_KNOCKOUT", &"none": "UI_FACE_EYES_NONE",
 }
 const MOUTHS: Dictionary = {
 	&"smile": "UI_FACE_MOUTH_SMILE", &"grin": "UI_FACE_MOUTH_GRIN", &"surprised": "UI_FACE_MOUTH_SURPRISED",
@@ -25,6 +27,22 @@ const PRESETS: Array[Dictionary] = [
 	{"id": &"cocky", "title": "UI_FACE_PRESET_COCKY", "eyes": &"determined", "mouth": &"grin"},
 	{"id": &"goofy", "title": "UI_FACE_PRESET_GOOFY", "eyes": &"lashes", "mouth": &"tongue"},
 	{"id": &"toothy", "title": "UI_FACE_PRESET_TOOTHY", "eyes": &"classic", "mouth": &"grin"},
+]
+## The fixed gel library (S-311.58). Gameplay state changes and player
+## selection consume these IDs; they never need to replicate resource paths.
+const GEL_FACES: Array[Dictionary] = [
+	{"id": &"none", "title": "UI_GEL_FACE_NONE", "eyes": &"none", "mouth": &"none"},
+	{"id": &"happy", "title": "UI_GEL_FACE_HAPPY", "eyes": &"joyful", "mouth": &"laugh"},
+	{"id": &"worried", "title": "UI_GEL_FACE_WORRIED", "eyes": &"worried", "mouth": &"pout"},
+	{"id": &"sleeping", "title": "UI_GEL_FACE_SLEEPING", "eyes": &"sleepy", "mouth": &"pout"},
+	{"id": &"angry", "title": "UI_GEL_FACE_ANGRY", "eyes": &"determined", "mouth": &"pout"},
+	{"id": &"surprised", "title": "UI_GEL_FACE_SURPRISED", "eyes": &"worried", "mouth": &"surprised"},
+	{"id": &"wink", "title": "UI_GEL_FACE_WINK", "eyes": &"wink", "mouth": &"smirk"},
+	{"id": &"crossed", "title": "UI_GEL_FACE_CROSSED", "eyes": &"crossed", "mouth": &"smile"},
+	{"id": &"tongue", "title": "UI_GEL_FACE_TONGUE", "eyes": &"classic", "mouth": &"tongue"},
+	{"id": &"crying", "title": "UI_GEL_FACE_CRYING", "eyes": &"crying", "mouth": &"pout"},
+	{"id": &"loved", "title": "UI_GEL_FACE_LOVED", "eyes": &"hearts", "mouth": &"smile"},
+	{"id": &"knockout", "title": "UI_GEL_FACE_KNOCKOUT", "eyes": &"knockout", "mouth": &"none"},
 ]
 ## What a card shows of the sheet: every eyes + brows sheet, every mouth sheet,
 ## the whole face (measured on the SVGs, centred, with a few pixels of air).
@@ -64,3 +82,9 @@ static func preset(id: StringName) -> Dictionary:
 		if each.id == id:
 			return each
 	return {}
+
+static func gel_face(id: StringName) -> Dictionary:
+	for each: Dictionary in GEL_FACES:
+		if each.id == id:
+			return each
+	return GEL_FACES[0]

@@ -747,7 +747,11 @@ UI_COLOR_WHITE,blanco,white
 UI_COLOR_YELLOW,amarillo,yellow
 UI_DELIVERIES,Entregas,Deliveries
 UI_FACE_EYES_CLASSIC,Clásicos,Classic
+UI_FACE_EYES_CROSSED,Bizcos,Cross-eyed
+UI_FACE_EYES_CRYING,Llorando,Crying
 UI_FACE_EYES_DETERMINED,Decididos,Determined
+UI_FACE_EYES_HEARTS,Corazones,Hearts
+UI_FACE_EYES_KNOCKOUT,X X,X X
 UI_FACE_EYES_JOYFUL,Contentos,Joyful
 UI_FACE_EYES_LASHES,Pestañas,Lashes
 UI_FACE_EYES_NONE,Sin ojos,No eyes
@@ -770,6 +774,18 @@ UI_FACE_PRESET_GOOFY,Payaso,Goofy
 UI_FACE_PRESET_LAZY,Fiaca,Lazy
 UI_FACE_PRESET_SCARED,Asustado,Scared
 UI_FACE_PRESET_TOOTHY,Dientudo,Toothy
+UI_GEL_FACE_ANGRY,Enojada,Angry
+UI_GEL_FACE_CROSSED,Bizca,Cross-eyed
+UI_GEL_FACE_CRYING,Llorando,Crying
+UI_GEL_FACE_HAPPY,Feliz,Happy
+UI_GEL_FACE_KNOCKOUT,X X,X X
+UI_GEL_FACE_LOVED,Enamorada,In love
+UI_GEL_FACE_NONE,Sin cara,No face
+UI_GEL_FACE_SLEEPING,Dormida,Sleeping
+UI_GEL_FACE_SURPRISED,Sorpresa,Surprised
+UI_GEL_FACE_TONGUE,Lengua afuera,Tongue out
+UI_GEL_FACE_WINK,Guiño,Wink
+UI_GEL_FACE_WORRIED,Preocupada,Worried
 UI_LEAD_DELIVERY,Entrega,Delivery
 UI_LEAD_DELIVERY_SELECTED,●  ENTREGA,●  DELIVERY
 UI_LEAD_ENDLESS_EMPTY,Todavía no hay partidas Endless registradas.,No Endless runs recorded yet.

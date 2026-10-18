@@ -45,8 +45,8 @@ func _run() -> void:
 	_expect(face_script.call(&"_patch_point", Vector2(0.8, 0.4)).x < 0.0
 			and face_script.call(&"_patch_point", Vector2(0.2, 0.4)).x > 0.0,
 			"The face sheet is not mirrored on the head")
-	_expect(Catalog.EYES.size() == 8 and Catalog.MOUTHS.size() == 8,
-			"Eight eyes and eight mouths fill one row each of the 8-wide grids")
+	_expect(Catalog.EYES.size() == 12 and Catalog.MOUTHS.size() == 8,
+			"Twelve eyes include the gel expressions; mouths keep their original row")
 
 	var player_scene: PackedScene = load("res://scenes/gameplay/player/player.tscn")
 	var first: Node3D = player_scene.instantiate()

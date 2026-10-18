@@ -20,6 +20,7 @@ const PATCH_STEPS: int = 16
 
 var eyes_id: StringName = DEFAULT_EYES
 var mouth_id: StringName = DEFAULT_MOUTH
+var face_id: StringName = &"none"
 var mode: Mode = SELECTED_MODE
 
 var _eyes: MeshInstance3D
@@ -44,11 +45,15 @@ func setup(model: Node3D, skeleton: Skeleton3D, layers: int, face_mode: Mode = S
 	_eyes = _layer("Eyes", mesh, layers)
 	_brows = _layer("Brows", mesh, layers)
 	_mouth = _layer("Mouth", mesh, layers)
-	set_expression(eyes_id, mouth_id)
+	if face_id == &"":
+		set_expression(eyes_id, mouth_id)
+	else:
+		set_face(face_id)
 	return true
 
 
 func set_expression(eyes: StringName, mouth: StringName) -> void:
+	face_id = &""
 	eyes_id = Catalog.valid_eyes(eyes)
 	mouth_id = Catalog.valid_mouth(mouth)
 	if _eyes == null:
@@ -60,6 +65,12 @@ func set_expression(eyes: StringName, mouth: StringName) -> void:
 	_eyes.visible = eyes_id != &"none"
 	_brows.visible = brows != null
 	_mouth.visible = mouth_id != &"none"
+
+
+func set_face(face_name: StringName) -> void:
+	var face: Dictionary = Catalog.gel_face(face_name)
+	set_expression(face.eyes, face.mouth)
+	self.face_id = face.id
 
 
 func apply_proportions(proportions: Resource) -> void:

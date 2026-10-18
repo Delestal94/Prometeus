@@ -5,6 +5,7 @@ extends SceneTree
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const GelFaceScript := preload("res://scripts/gameplay/player/gel/gel_face.gd")
 const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
+const Catalog := preload("res://scripts/core/face_catalog.gd")
 
 var _failures: int = 0
 
@@ -25,6 +26,12 @@ func _run() -> void:
 		"the surface candidate attaches to the real gel head")
 	_expect(internal_face.visible_layer_count() == 0 and surface_face.visible_layer_count() == 0,
 		"new gel characters have no face by default")
+	_expect(internal_face.face_id == &"none" and surface_face.face_id == &"none",
+		"the faceless default has its stable library ID")
+	var preselected_face: BoneAttachment3D = GelFaceScript.new()
+	preselected_face.set_expression(&"hearts", &"smile")
+	_expect(preselected_face.setup(model, skeleton, 1) and preselected_face.eyes_id == &"hearts",
+		"an expression chosen before setup is preserved")
 
 	var centre_uv := Vector2(0.5, 0.5)
 	var internal_point: Vector3 = GelFaceScript.face_model_point(centre_uv, GelFaceScript.Mode.INTERNAL)
@@ -49,8 +56,29 @@ func _run() -> void:
 	_expect(surface_face.bone_name == &"head" and surface_face.get_parent() == skeleton,
 		"the face follows head animation through its real bone")
 
+	var expected_faces: Array[StringName] = [
+		&"none", &"happy", &"worried", &"sleeping", &"angry", &"surprised",
+		&"wink", &"crossed", &"tongue", &"crying", &"loved", &"knockout",
+	]
+	_expect(Catalog.GEL_FACES.size() == 12, "the gel library contains exactly twelve faces")
+	for index: int in expected_faces.size():
+		var face: Dictionary = Catalog.GEL_FACES[index]
+		_expect(face.id == expected_faces[index], "gel face %d has the stable expected ID" % index)
+		_expect(Catalog.texture("eyes", face.eyes) != null, "eyes exist for gel face %s" % face.id)
+		_expect(Catalog.texture("mouth", face.mouth) != null, "mouth exists for gel face %s" % face.id)
+		for locale: String in ["es", "en"]:
+			TranslationServer.set_locale(locale)
+			_expect(TranslationServer.translate(face.title) != face.title,
+				"gel face %s has a %s title" % [face.id, locale])
+		surface_face.set_face(face.id)
+		_expect(surface_face.face_id == face.id, "gel face %s applies by ID" % face.id)
+	surface_face.set_face(&"not_a_face")
+	_expect(surface_face.face_id == &"none" and surface_face.visible_layer_count() == 0,
+		"an unknown face safely falls back to the faceless default")
+
 	internal_face.queue_free()
 	surface_face.queue_free()
+	preselected_face.queue_free()
 	model.queue_free()
 	if _failures == 0:
 		print("PASS: gel face candidates are reproducible; surface selected, none by default")
