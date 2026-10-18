@@ -306,7 +306,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   (como hoy `player_ragdoll.gd`). Aviso si toca algo del camión.
 - [x] **S-311.54** Estabilidad: test headless que suelta el ragdoll 100 veces desde poses, impulsos y
   proporciones aleatorias; se duerme en < 4 s, sin NaN, sin huesos estirados más de lo permitido.
-- [ ] **S-311.55** Contacto entre gelatinas: dos jugadores que chocan se aplastan uno contra otro un
+- [x] **S-311.55** Contacto entre gelatinas: dos jugadores que chocan se aplastan uno contra otro un
   instante (deformación de contacto, solo visual).
 - [ ] **S-311.56** Entorno: la lluvia hace ondas chicas, el viento lo mece, mojado brilla más.
 

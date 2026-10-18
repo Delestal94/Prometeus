@@ -15,6 +15,8 @@ instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
+instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
+instance uniform float gel_contact_compression : hint_range(0.0, 0.16) = 0.0;
 instance uniform vec4 gel_wave_0 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
@@ -130,6 +132,20 @@ void vertex() {
 	float radial_scale = inversesqrt(vertical_scale);
 	VERTEX *= vec3(radial_scale, vertical_scale, radial_scale);
 	NORMAL = normalize(NORMAL / vec3(radial_scale, vertical_scale, radial_scale));
+	vec3 contact_axis = normalize(gel_contact_direction);
+	float contact_scale = max(1.0 - gel_contact_compression, 0.82);
+	float contact_radial = inversesqrt(contact_scale);
+	float contact_position = dot(VERTEX, contact_axis);
+	vec3 contact_perpendicular = VERTEX - contact_axis * contact_position;
+	VERTEX = (
+		contact_axis * contact_position * contact_scale
+		+ contact_perpendicular * contact_radial
+	);
+	float contact_normal = dot(NORMAL, contact_axis);
+	NORMAL = normalize(
+		contact_axis * contact_normal / contact_scale
+		+ (NORMAL - contact_axis * contact_normal) / contact_radial
+	);
 	model_position = VERTEX;
 }
 
