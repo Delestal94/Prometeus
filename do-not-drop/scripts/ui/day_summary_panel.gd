@@ -5,14 +5,27 @@ class_name DaySummaryPanel
 ## Draws what DaySummary.build() returns (the same dictionary DayCycle publishes in its SUMMARY
 ## phase and EventBus.company_day_summary carries): income and costs by reason, the day's profit
 ## and the opening and closing balance. It reads the dictionary and nothing else, so a client
-## shows what the host closed. Reason names are the translation keys finance_reason_<reason>; a
+## shows what the host closed. Reason names are the translation keys UI_FINANCE_REASON_<REASON> (REASON_KEYS); a
 ## reason without a key shows its own id, so a new charge never needs this file.
 
 signal continued
 
 ## Rows shown in each list; the rest is folded into one "other" row so the panel keeps its size.
 const MAX_ROWS: int = 8
-const REASON_KEY: String = "finance_reason_%s"
+## Ledger reason -> translation key. Literal keys, so the translation test sees them used.
+const REASON_KEYS: Dictionary = {
+	"order_paid": "UI_FINANCE_REASON_ORDER_PAID",
+	"tip": "UI_FINANCE_REASON_TIP",
+	"placeable_sell": "UI_FINANCE_REASON_PLACEABLE_SELL",
+	"supplier": "UI_FINANCE_REASON_SUPPLIER",
+	"boxes": "UI_FINANCE_REASON_BOXES",
+	"packaging": "UI_FINANCE_REASON_PACKAGING",
+	"rent": "UI_FINANCE_REASON_RENT",
+	"placeable_buy": "UI_FINANCE_REASON_PLACEABLE_BUY",
+	"warehouse_expand": "UI_FINANCE_REASON_WAREHOUSE_EXPAND",
+	"penalty": "UI_FINANCE_REASON_PENALTY",
+	"other": "UI_FINANCE_REASON_OTHER",
+}
 const OTHER_REASON: String = "other"
 
 var _day_label: Label
@@ -50,20 +63,22 @@ func close() -> void:
 func refresh(summary: Dictionary) -> void:
 	if _day_label == null:
 		return
-	_day_label.text = tr("finance_day") % int(summary.get("day", 0))
+	_day_label.text = tr("UI_FINANCE_DAY") % int(summary.get("day", 0))
 	_fill(_income_list, summary.get("income_by_reason", {}), int(summary.get("income", 0)), UiTheme.MINT)
 	_fill(_cost_list, summary.get("cost_by_reason", {}), int(summary.get("costs", 0)), UiTheme.RED)
 	var profit: int = int(summary.get("profit", 0))
-	_profit_label.text = tr("finance_profit") % _signed(profit)
+	_profit_label.text = tr("UI_FINANCE_PROFIT") % _signed(profit)
 	_profit_label.add_theme_color_override(&"font_color", _profit_color(profit))
-	_balance_label.text = tr("finance_balance") % [money(int(summary.get("opening", 0))),
+	_balance_label.text = tr("UI_FINANCE_BALANCE") % [money(int(summary.get("opening", 0))),
 			money(int(summary.get("closing", 0)))]
 	_truncated_label.visible = bool(summary.get("truncated", false))
 
 
 ## The shown name of a ledger reason: its translation, or the id itself when it has none.
 static func reason_name(reason: String) -> String:
-	var key: String = REASON_KEY % reason
+	var key: String = String(REASON_KEYS.get(reason, ""))
+	if key.is_empty():
+		return reason
 	var text: String = TranslationServer.translate(key)
 	return reason if text == key else text
 
@@ -99,20 +114,20 @@ func _build() -> void:
 	add_child(center)
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(760, 0), 24)
 	column.add_theme_constant_override("separation", 10)
-	UiTheme.title(column, tr("finance_title"), 38)
+	UiTheme.title(column, tr("UI_FINANCE_TITLE"), 38)
 	_day_label = UiTheme.label(column, "", 17, UiTheme.MUTED)
 	var lists := HBoxContainer.new()
 	lists.add_theme_constant_override("separation", 20)
 	column.add_child(lists)
-	_income_list = _list(lists, tr("finance_income"), UiTheme.MINT)
-	_cost_list = _list(lists, tr("finance_costs"), UiTheme.RED)
+	_income_list = _list(lists, tr("UI_FINANCE_INCOME"), UiTheme.MINT)
+	_cost_list = _list(lists, tr("UI_FINANCE_COSTS"), UiTheme.RED)
 	_profit_label = UiTheme.label(column, "", 28, UiTheme.INK, true)
 	_profit_label.name = "Profit"
 	_balance_label = UiTheme.label(column, "", 16, UiTheme.MUTED)
 	_balance_label.name = "Balance"
-	_truncated_label = UiTheme.label(column, tr("finance_truncated"), 14, UiTheme.ORANGE)
+	_truncated_label = UiTheme.label(column, tr("UI_FINANCE_TRUNCATED"), 14, UiTheme.ORANGE)
 	_truncated_label.name = "Truncated"
-	_continue_button = UiTheme.button(column, tr("finance_continue"), true)
+	_continue_button = UiTheme.button(column, tr("UI_FINANCE_CONTINUE"), true)
 	_continue_button.pressed.connect(close)
 
 
@@ -134,7 +149,7 @@ func _fill(list: VBoxContainer, by_reason: Variant, total: int, color: Color) ->
 		child.queue_free()
 	var table: Dictionary = by_reason if by_reason is Dictionary else {}
 	if table.is_empty():
-		UiTheme.label(list, tr("finance_none"), 15, UiTheme.MUTED).name = "None"
+		UiTheme.label(list, tr("UI_FINANCE_NONE"), 15, UiTheme.MUTED).name = "None"
 	for entry: Array in rows(table):
 		var row := HBoxContainer.new()
 		row.name = "Row_%s" % entry[0]
@@ -143,7 +158,7 @@ func _fill(list: VBoxContainer, by_reason: Variant, total: int, color: Color) ->
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		UiTheme.label(row, money(int(entry[1])), 16, color, true).name = "Amount"
-	var total_label: Label = UiTheme.label(list, tr("finance_total") % money(total), 16, color, true)
+	var total_label: Label = UiTheme.label(list, tr("UI_FINANCE_TOTAL") % money(total), 16, color, true)
 	total_label.name = "Total"
 
 

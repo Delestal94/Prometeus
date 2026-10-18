@@ -13,12 +13,12 @@ extends SceneTree
 
 const PANEL: String = "res://scripts/ui/day_summary_panel.gd"
 const KEYS: Array[String] = [
-	"finance_title", "finance_day", "finance_income", "finance_costs", "finance_none",
-	"finance_total", "finance_profit", "finance_balance", "finance_truncated", "finance_continue",
-	"finance_reason_order_paid", "finance_reason_tip", "finance_reason_placeable_sell",
-	"finance_reason_supplier", "finance_reason_boxes", "finance_reason_packaging",
-	"finance_reason_rent", "finance_reason_placeable_buy", "finance_reason_warehouse_expand",
-	"finance_reason_penalty", "finance_reason_other",
+	"UI_FINANCE_TITLE", "UI_FINANCE_DAY", "UI_FINANCE_INCOME", "UI_FINANCE_COSTS", "UI_FINANCE_NONE",
+	"UI_FINANCE_TOTAL", "UI_FINANCE_PROFIT", "UI_FINANCE_BALANCE", "UI_FINANCE_TRUNCATED", "UI_FINANCE_CONTINUE",
+	"UI_FINANCE_REASON_ORDER_PAID", "UI_FINANCE_REASON_TIP", "UI_FINANCE_REASON_PLACEABLE_SELL",
+	"UI_FINANCE_REASON_SUPPLIER", "UI_FINANCE_REASON_BOXES", "UI_FINANCE_REASON_PACKAGING",
+	"UI_FINANCE_REASON_RENT", "UI_FINANCE_REASON_PLACEABLE_BUY", "UI_FINANCE_REASON_WAREHOUSE_EXPAND",
+	"UI_FINANCE_REASON_PENALTY", "UI_FINANCE_REASON_OTHER",
 ]
 
 var _failures: int = 0
