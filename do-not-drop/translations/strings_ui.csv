@@ -1256,3 +1256,24 @@ UI_GEL_EDITOR_RESTORE,Restaurar base,Restore preset
 UI_GEL_EDITOR_UNDO,Deshacer,Undo
 HUD_SECTION_ENDLESS,ENDLESS,ENDLESS
 UI_PING_TITLE,PING,PING
+UI_FINANCE_TITLE,Cierre del día,Day closing
+UI_FINANCE_DAY,Día %d,Day %d
+UI_FINANCE_INCOME,Ingresos,Income
+UI_FINANCE_COSTS,Costos,Costs
+UI_FINANCE_NONE,Nada este día,Nothing today
+UI_FINANCE_TOTAL,Total  %s,Total  %s
+UI_FINANCE_PROFIT,Ganancia  %s,Profit  %s
+UI_FINANCE_BALANCE,Saldo: abriste con %s · cerrás con %s,Balance: opened with %s · closing with %s
+UI_FINANCE_TRUNCATED,El libro está lleno: puede faltar parte del día.,The ledger is full: part of the day may be missing.
+UI_FINANCE_CONTINUE,Seguir,Continue
+UI_FINANCE_REASON_ORDER_PAID,Pedidos cobrados,Orders paid
+UI_FINANCE_REASON_TIP,Propinas,Tips
+UI_FINANCE_REASON_PLACEABLE_SELL,Venta de piezas del galpón,Shed pieces sold
+UI_FINANCE_REASON_SUPPLIER,Mercadería al proveedor,Supplier stock
+UI_FINANCE_REASON_BOXES,Cajas,Boxes
+UI_FINANCE_REASON_PACKAGING,"Embalaje (relleno, cinta, etiquetas)","Packaging (filler, tape, labels)"
+UI_FINANCE_REASON_RENT,Alquiler del galpón,Shed rent
+UI_FINANCE_REASON_PLACEABLE_BUY,Piezas del galpón compradas,Shed pieces bought
+UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
+UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
+UI_FINANCE_REASON_OTHER,Otros,Other
