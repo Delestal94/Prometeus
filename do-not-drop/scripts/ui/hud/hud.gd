@@ -378,6 +378,8 @@ func _build_bottom_bar() -> void:
 	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	interaction_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_plate(interaction_label, Color(INK, 0.88), INK)
+	GameSettings.text_backdrop_opacity_changed.connect(func(_opacity: float) -> void: apply_text_backdrop())
+	apply_text_backdrop()
 	interaction_icon = TextureRect.new()
 	interaction_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	interaction_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -456,6 +458,19 @@ func _plate(label: Label, fill: Color, border: Color) -> void:
 	label.add_theme_constant_override("outline_size", 4)
 	label.add_theme_constant_override("shadow_outline_size", 0)
 	label.add_theme_constant_override("shadow_offset_y", 0)
+
+
+## The plate behind the subtitles and prompts follows the "text backdrop"
+## setting (N-969): fill, border and shadow fade together; at 0 only the
+## outlined text is left.
+func apply_text_backdrop() -> void:
+	var plate := interaction_label.get_theme_stylebox("normal") as StyleBoxFlat
+	if plate == null:
+		return
+	var opacity: float = GameSettings.text_backdrop_opacity
+	plate.bg_color = Color(INK, opacity)
+	plate.border_color = Color(INK, opacity)
+	plate.shadow_color = Color(INK, opacity * 0.5)
 
 
 ## Messages that float over the view: pings, toasts, route events, interaction prompts.

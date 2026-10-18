@@ -26,6 +26,7 @@ var _colorblind_check: CheckBox
 var _opaque_gel_check: CheckBox
 var _menu_text_option: OptionButton
 var _sound_subtitles_check: CheckBox
+var _text_backdrop_slider: HSlider
 var _run_log_check: CheckBox
 ## Diario al final: siempre / solo si pasó algo / nunca (N-606.3).
 var _newspaper_option: OptionButton
@@ -163,6 +164,9 @@ func _build() -> void:
 
 	_sound_subtitles_check = UiTheme.check_box(column, tr("UI_OPT_SOUND_SUBTITLES"), GameSettings.sound_subtitles)
 	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
+	# Live, like the HUD size: the prompt plate behind the dim follows the slider.
+	_text_backdrop_slider = UiTheme.slider_row(column, tr("UI_OPT_TEXT_BACKDROP"), 0.0, 1.0, 0.05, GameSettings.text_backdrop_opacity, true)
+	_text_backdrop_slider.value_changed.connect(func(value: float) -> void: GameSettings.text_backdrop_opacity = value)
 
 	var paper_row := HBoxContainer.new()
 	paper_row.add_theme_constant_override("separation", 12)
@@ -298,6 +302,8 @@ func _sync_from_settings() -> void:
 	_opaque_gel_check.set_pressed_no_signal(GameSettings.opaque_gel)
 	_menu_text_option.select(_menu_text_scale_index())
 	_sound_subtitles_check.set_pressed_no_signal(GameSettings.sound_subtitles)
+	_text_backdrop_slider.set_value_no_signal(GameSettings.text_backdrop_opacity)
+	_text_backdrop_slider.value_changed.emit(GameSettings.text_backdrop_opacity)
 	_run_log_check.set_pressed_no_signal(GameSettings.save_run_log)
 	_newspaper_option.select(GameSettings.newspaper_mode)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
