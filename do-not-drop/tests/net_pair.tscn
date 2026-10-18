@@ -1,6 +1,10 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://tests/net_pair.gd" id="1_pair"]
+[ext_resource type="Script" path="res://tests/net_pair_ragdoll.gd" id="2_ragdoll"]
 
 [node name="NetPair" type="Node"]
 script = ExtResource("1_pair")
+
+[node name="RagdollCheck" type="Node" parent="."]
+script = ExtResource("2_ragdoll")
