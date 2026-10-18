@@ -101,6 +101,13 @@ func stamp(kind: StringName, wallet: Object) -> bool:
 	return box != null and BoxSeals.is_kind(kind) and PackagingSupplies.stamp(box, kind, wallet)
 
 
+## What is wrong with the box's content for `order`, before taping (D-0712): {missing, extra}
+## as BoxContentCheck.diff. Only a warning: sealing a wrong box is allowed, the door pays 0.
+## With no box on the table everything is missing.
+func content_errors(order: Dictionary) -> Dictionary:
+	return BoxContentCheck.diff(order, box)
+
+
 ## Takes the box off the table to send it away. Null, leaving it in place, if it is not taped
 ## shut: an open box cannot be dispatched (D-0706).
 func dispatch() -> PackedBox:
