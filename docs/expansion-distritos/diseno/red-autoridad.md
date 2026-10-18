@@ -67,7 +67,7 @@
     último trozo. Los bultos de unidades en el piso son nodos **estáticos** sin sincronizador: el evento
     trae su posición y no se mueven.
 
-## 2. Las 20 acciones del corte vertical
+## 2. Las 20 acciones del corte vertical (y las de construir el galpón, 21 a 24)
 
 `kind` de petición → `kind` de evento. "Host" en la columna de quién inicia quiere decir que no hay
 petición: el host lo detecta o lo decide solo y emite el evento.
@@ -109,6 +109,19 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | Un peer se va (D-2006) | host, en `peer_removed` (o `peer_disconnected` si llega antes; el segundo encuentra las manos vacías) | eventos `units_moved` `hands:<peer>` → `floor:<n>` (uno por producto) con la última posición conocida del jugador: la del nodo del jugador si sigue en pie y, si no, la última que `CompanyNet` guardó en su `units_take` o `units_drop`. Las mesas no tienen dueño, así que no hay nada más que soltar |
 | Entra un peer tarde (D-2004) | host, en el gancho de peer listo | snapshot con el `seq` actual (ver §3) |
 | Se va el host (D-2005) | cada cliente, en `multiplayer.server_disconnected` | nada viaja: resumen local (`CompanyInterruptedDay`), empresa propia de vuelta, mundo congelado y menú con el resumen; el host guarda el día con `interrupted: true` al cerrar su mundo (`CompanyRoot._exit_tree()`) y al cargarlo arranca ese día desde la apertura |
+
+### Construir el galpón (D-0910, fuera del corte)
+
+Las cuatro las valida y aplica `CompanyLayoutNet` (`scripts/core/company/company_layout_net.gd`, §8). La pieza
+se nombra por `uid` (`DefaultShed.piece_uid`), nunca por índice. **Solo el host construye:** la petición de
+cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto es D-0910.1).
+
+| # | Acción (tarea) | Inicia | Petición: `kind` y `data` | El host valida | Evento: `kind` y `data` | Cambia en cada peer |
+|---|---|---|---|---|---|---|
+| 21 | Comprar y colocar una pieza (D-0902) | host, en el modo construcción | `layout_place` `{id, x: int, z: int, turns: 0..3, rid}` | que lo pida el host; `id` del catálogo `data/placeables/` (nombre exacto de archivo); celdas enteras en ±256; `BuildPlacement.preview` en la grilla de la etapa (dentro del piso, fuera de dársena y salida, sin choque, todo alcanzable) con la plata | `layout_placed` `{id, x, z, turns, uid, minute}` | `PlaceableShop.buy` (`money −= price`, libro `placeable_buy` con el `minute` del host); la pieza entra al `layout` con el `uid` nuevo (`<id>_<n>`, el `n` libre más bajo) |
+| 22 | Mover una pieza (D-0903) | host | `layout_move` `{uid, x: int, z: int, rid}` | que lo pida el host; la pieza existe; `preview` ignorando la pieza | `layout_moved` `{uid, x, z, turns}` | la pieza cambia de celda; conserva `uid` (y con él su stock y su estación) |
+| 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
+| 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute}` | `PlaceableShop.sell` (devolución, libro `placeable_sell`); la pieza sale del `layout` |
 
 ## 3. Secuencia, huecos y snapshot
 
@@ -262,3 +275,45 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   - `company_net.gd` quedó en 967 de las 1000 líneas que permite gdlint (ya salieron `FloorBundles` y
     `CompanyAsk`): la próxima acción grande tiene que sacar algo más a otra clase;
   - el margen de `reach_slack()` en `DROP_REACH` depende del RTT y no tiene test propio.
+
+## 8. Lo construido (D-0910): el layout del galpón
+
+- **Peticiones** `layout_place`, `layout_move`, `layout_rotate`, `layout_sell` y **eventos** `layout_placed`,
+  `layout_moved`, `layout_sold` (filas 21 a 24, protocolo 34), por el `_request` / `_apply_event` de siempre: ningún
+  RPC nuevo. `CompanyNet` solo los suma a `REQUEST_KINDS` / `EVENT_KINDS` y los pasa a `CompanyNet.build`
+  (`CompanyLayoutNet`): `check()` en el host, `apply()` en cada peer (`_apply_state`). Ninguno es crítico.
+- **Decisión: solo el host construye.** `check()` recibe si el que pidió es el host (`RpcGuard.sender` en
+  `_request`, el host mismo en `request()`); cualquier otro oye `host_only` y nada cambia. Así el cliente que
+  abre el modo construcción sabe por qué no pasó nada. El voto de la tripulación queda en D-0910.1.
+- **Decisión: el día no lo frena.** Construir no depende de la fase ni del galpón congelado (D-0203): ni este
+  contrato ni D-0203 lo piden, y un evento de layout no toca `DayCycle` (ni fase ni minuto del galpón). Si el
+  jugador puede entrar al modo lo decide el adaptador (`BuildMode.enter(can_build)`, D-0917).
+- **Mismas comprobaciones que el modo construcción**: `BuildPlacement.preview` con la grilla, dársena,
+  salida y entradas de la etapa (`WarehouseStages.apply_to`, `CompanyLayoutNet.placement_for()`, que el
+  adaptador usa también para el verde/rojo local, regla 9) y la plata. Motivos de `_rejected`: los de
+  `BuildPlacement` (`out_of_bounds`, `fixed_area`, `overlap`, `blocks_path`, `no_definition`, `no_money`) más
+  `host_only`, `no_piece` (no hay pieza con ese `uid`), `not_empty` y `bad_data`.
+- **Eventos chicos y absolutos**: enteros y dos ids cortos (< 200 bytes); girar y mover mandan la pose final,
+  no el delta. `minute` es el `clock_minutes` del host: el libro de caja queda igual en todos los peers (el
+  `clock_minutes` del espejo de un cliente no lo mueve su reloj). Cada peer aplica con las mismas llamadas a
+  `PlaceableShop` y solo comprueba los datos (regla 6); si su copia no lo toma (por ejemplo no le alcanza la
+  plata para el precio), espera un snapshot.
+- **Nombres estables**: antes de aplicar cualquier evento de layout, toda pieza sin `uid` guardado recibe el
+  que ya se deducía (`DefaultShed.piece_uid`, todos calculados antes de guardar ninguno), así vender una no
+  renombra a otra y su stock sigue bajo su nombre.
+- **Join tardío**: el layout ya viaja en `company` (`CompanyState.to_dict()`); `CompanyState.from_dict` lo pasa
+  por `BuildLayoutSave.sanitize`, que conserva un layout que el host validó pieza por pieza. `CompanyShed.follow(net)`
+  redibuja el galpón en cada evento de layout y en `company_state_restored`, y las etiquetas en `units_moved`
+  (`CompanyRoot` lo usa).
+- Test: `test_company_layout_net` (solo, host + cliente ENet y un tercero que entra tarde).
+- **Pendiente:**
+  - el voto de la tripulación para que un cliente construya (D-0910.1);
+  - ampliar la etapa por red (D-0910.2): `WarehouseStages.expand` hoy es local; quien lo cablee en el host
+    sin un evento deja a los clientes con otra grilla hasta el próximo snapshot;
+  - `CompanyLayoutNet.navigation` (D-0908) lo da el mundo cuando existan empleados (D-1011), y ese dueño
+    llama a `rebake()` también en `company_state_restored`;
+  - `not_empty` mira `shelf:<uid>_<hueco>` y `table:<uid>`; cuando la caja en armado viaje por red
+    (`box_started` / `box_place`, D-0702 / D-0703, unidades en `box:<id>`), vender una mesa también tiene
+    que mirar su caja;
+  - `money_changed` de `CompanyState` sale en medio de aplicar el evento (como cualquier movimiento de plata
+    hoy): quien lo escuche no puede pedir nada ahí (escuchar `event_applied`).

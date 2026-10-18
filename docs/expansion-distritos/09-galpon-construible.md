@@ -17,7 +17,7 @@
 | D-0907 | ✅ Caminos libres: validación de que se puede llegar a cada estación | constructor-negocio | high | test de conectividad (navmesh) |
 | ✅ D-0908 | Navmesh que se rehornea al colocar objetos (para empleados) | constructor-negocio | high | test: empleado esquiva objeto nuevo |
 | ✅ D-0909 | Guardar el layout en el save de empresa | constructor-progresion | medium | test |
-| D-0910 | Layout replicado en red; solo host o voto coloca | constructor-red | xhigh | test de red |
+| D-0910 | ✅ Layout replicado en red; solo host o voto coloca | constructor-red | xhigh | test de red |
 | D-0911 | ✅ Layout por defecto que ya funciona sin tocar nada | constructor-mundo | medium | corte vertical juega con él |
 | D-0912 | ✅ Electricidad/enchufes como restricción de máquinas (sí/no) | critico-diseno | low | decisión |
 | D-0913 | Iluminación que se adapta al layout (sin rincones oscuros) | constructor-mundo | medium | captura |
