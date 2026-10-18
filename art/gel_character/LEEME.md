@@ -344,6 +344,10 @@ Desde S-311.51, el ragdoll mantiene activos los seis resortes de gelatina usando
 velocidad física de la pelvis. Rayos cortos bajo pelvis, torso, cabeza y extremidades
 detectan cada contacto nuevo con el piso: inyectan un impulso de asentamiento y crean
 una onda local en el material, sin cambiar colisiones ni autoridad de juego.
+S-311.52 separa ese cuerpo visible en `player_gel_ragdoll.gd`: el host transmite un
+único impulso y una semilla, y cada par simula localmente el rig. La cápsula del
+`CharacterBody3D`, sus capas y su autoridad no se sustituyen ni reciben el empujón;
+la recuperación visual queda limitada a 0,45 m de esa cápsula.
 
 Las integraciones propias de asientos se ubican en
 `do-not-drop/scripts/gameplay/player/player_seat_pose.gd` y

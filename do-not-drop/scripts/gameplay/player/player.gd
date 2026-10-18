@@ -45,6 +45,7 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _interaction_component: Node = $PlayerInteraction
 @onready var _carry_component: Node = $PlayerCarry
 @onready var _seat_pose_component: Node = $PlayerSeatPose
+@onready var _ragdoll_component: Node = $GelRagdoll
 
 var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
@@ -77,7 +78,6 @@ const NetVisibility = preload("res://scripts/gameplay/player/player_net_visibili
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
-const GelRagdoll = preload("res://scripts/gameplay/player/gel/gel_active_ragdoll.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const UNLOCK_MANAGER := preload("res://scripts/core/unlock_manager.gd")  # What the UnlockManager autoload runs.
 ## Astra's rounded character (2026-09-24), game export built by
@@ -600,7 +600,7 @@ func _within_reach(target: Node3D) -> bool:
 
 
 @rpc("any_peer", "call_local", "unreliable")
-func receive_package_hit(push: Vector3) -> void:
+func receive_package_hit(push: Vector3, simulation_seed: int = 0) -> void:
 	# Loose boxes are simulated on the host; nobody else gets to knock people over.
 	if not _from_host() or not RpcGuard.finite_vec3(push):
 		return
@@ -608,25 +608,22 @@ func receive_package_hit(push: Vector3) -> void:
 		return
 	_package_hit_cooldown = 0.45
 	_flinch_time = 0.32
+	if push.length() >= 2.2:
+		_activate_ragdoll(push, simulation_seed)
+		return
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
 		animator.play_one_shot(ANIM_JUMP, 420)
-	if push.length() >= 2.2:
-		_activate_ragdoll(push)
 
 
-func _activate_ragdoll(push: Vector3) -> void:
+func _activate_ragdoll(push: Vector3, simulation_seed: int = 0) -> void:
 	if _ragdolled:
 		return
 	_ragdolled = true
-	var ragdoll: GelActiveRagdoll = GelRagdoll.new()
-	add_child(ragdoll)
-	if not ragdoll.setup(_body_visual, $GelProportions.proportions, 1 | 64, self):
-		ragdoll.queue_free()
+	if not _ragdoll_component.start(self, push, simulation_seed):
 		_ragdolled = false
 		return
-	ragdoll.fall(push)
-	await ragdoll.finished
+	await _ragdoll_component.finished
 	_ragdolled = false
 
 

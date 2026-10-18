@@ -102,7 +102,10 @@ static func _hit_player(p: DeliveryPackage, player: Player) -> void:
 	if speed < PLAYER_HIT_MIN_SPEED:
 		return
 	var push: Vector3 = p.linear_velocity.normalized() * minf(speed * PLAYER_HIT_PUSH_SCALE, 5.0)
-	player.rpc(&"receive_package_hit", push)
+	var simulation_seed: int = hash([
+		p.package_id, player.get_multiplayer_authority(), Time.get_ticks_usec(),
+	])
+	player.rpc(&"receive_package_hit", push, simulation_seed)
 	apply_impact(p, speed * 0.35)
 
 

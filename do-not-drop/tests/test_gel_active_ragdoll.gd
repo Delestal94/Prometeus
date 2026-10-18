@@ -1,6 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_active_ragdoll.gd
-## S-311.48-51: real-rig bodies, active motors, recovery and soft effects.
+## S-311.48-52: real-rig bodies, active motors, recovery and network-safe presentation.
 
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
@@ -70,7 +70,10 @@ func _run() -> void:
 		"arm collision radius follows thickness proportions")
 	_expect(thick_arm.mass > neutral_mass, "arm mass follows recalculated volume")
 
-	_expect(ragdoll.start_ragdoll(Vector3(1.5, 2.0, -0.5)), "ragdoll simulation starts once")
+	ragdoll.set_recovery_anchor_limit(0.45)
+	_expect(ragdoll.start_ragdoll(Vector3(1.5, 2.0, -0.5), Vector3.ZERO, 31152),
+		"ragdoll simulation starts once")
+	_expect(ragdoll.simulation_seed() == 31152, "the replicated simulation seed is retained")
 	await physics_frame
 	await physics_frame
 	_expect(ragdoll.motor_strength() > 0.0 and ragdoll.motor_strength() < 1.0,
@@ -116,6 +119,8 @@ func _run() -> void:
 		"chest orientation selects one of the two get-up clips")
 	_expect(absf(recovery_offset.y) < 0.001 and Vector2(recovery_offset.x, recovery_offset.z).length() > 0.2,
 		"recovery preserves the horizontal place where the body fell")
+	_expect(recovery_offset.length() <= 0.451,
+		"network presentation keeps recovery within half a metre of the capsule")
 	for frame: int in 35:
 		await physics_frame
 	var recovered_error: float = ragdoll.pose_error()
@@ -161,8 +166,19 @@ func _check_player_integration() -> void:
 	player.name = "Player_1"
 	root.add_child(player)
 	await process_frame
-	player.call(&"_activate_ragdoll", Vector3(1.0, 2.0, 0.0))
+	var capsule_position: Vector3 = player.global_position
+	var capsule_velocity: Vector3 = player.velocity
+	var authority: int = player.get_multiplayer_authority()
+	player.call(&"receive_package_hit", Vector3(3.0, 0.0, 0.0), 31152)
 	await physics_frame
+	var component: Node = player.get_node(^"GelRagdoll")
+	_expect(component.call(&"is_active") and int(component.get(&"last_seed")) == 31152,
+		"the player starts its visual ragdoll with the replicated seed")
+	_expect(player.global_position.distance_to(capsule_position) < 0.01
+		and player.velocity.distance_to(capsule_velocity) < 0.01,
+		"a ragdoll-strength hit does not push the authoritative capsule")
+	_expect(player.get_multiplayer_authority() == authority,
+		"visual ragdoll never transfers player authority")
 	var skeleton: Skeleton3D = PlayerAppearance.find_skeleton(player.get_node(^"BodyVisual"))
 	var live_ragdoll: GelActiveRagdoll
 	if skeleton != null:
@@ -176,6 +192,9 @@ func _check_player_integration() -> void:
 	await create_timer(GelActiveRagdoll.LIFETIME + 0.1).timeout
 	await process_frame
 	_expect(not bool(player.get(&"_ragdolled")), "the gameplay knockdown completes cleanly")
+	var body_visual := player.get_node(^"BodyVisual") as Node3D
+	_expect(body_visual.global_position.distance_to(player.global_position) < 0.5,
+		"the recovered visual body finishes within half a metre of its capsule")
 	player.free()
 
 

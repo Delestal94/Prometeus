@@ -299,7 +299,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.50** Levantarse: detecta boca arriba / boca abajo y mezcla con uno de dos clips de
   levantarse, sin teletransporte.
 - [x] **S-311.51** La gelatina sigue temblando durante el ragdoll (jiggle + ondas al tocar el piso).
-- [ ] **S-311.52** Solo visual y en red: la cápsula y la autoridad del host no cambian; el host replica
+- [x] **S-311.52** Solo visual y en red: la cápsula y la autoridad del host no cambian; el host replica
   impulso y semilla y cada cliente simula su ragdoll. Test de dos pares: el ragdoll arranca en todos y
   el cuerpo termina a < 0,5 m de la cápsula.
 - [ ] **S-311.53** El ragdoll choca con cajas y con la caja del camión en movimiento y hereda su velocidad

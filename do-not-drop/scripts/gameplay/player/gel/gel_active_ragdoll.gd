@@ -69,6 +69,8 @@ var _recovery_from_strength: float = DEFAULT_MOTOR_STRENGTH
 var _recovery_start_poses: Dictionary = {}
 var _recovery_world_offset: Vector3 = Vector3.ZERO
 var _get_up_clip: StringName = StringName()
+var _recovery_anchor_limit: float = -1.0
+var _simulation_seed: int = 0
 var _jiggle: Node
 var _impact_waves: Node
 var _floor_contacts: Dictionary = {}
@@ -138,7 +140,11 @@ func rebuild(proportions: GelBodyProportions = null) -> void:
 
 ## Starts physics without replacing or hiding the mesh. `impulse` behaves as
 ## a velocity kick at the pelvis, while carried_velocity seeds every body.
-func start_ragdoll(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -> bool:
+func start_ragdoll(
+	impulse: Vector3,
+	carried_velocity: Vector3 = Vector3.ZERO,
+	simulation_seed: int = 0
+) -> bool:
 	if _ragdoll_active or _physical_bones.is_empty():
 		return false
 	_ragdoll_active = true
@@ -151,10 +157,23 @@ func start_ragdoll(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -
 	_recovery_duration = 0.0
 	_floor_contacts.clear()
 	_previous_body_velocities.clear()
+	_simulation_seed = simulation_seed
 	set_physics_process(true)
+	var random := RandomNumberGenerator.new()
+	random.seed = simulation_seed
 	for value: Variant in _physical_bones.values():
 		var physical_bone := value as PhysicalBone3D
-		physical_bone.linear_velocity = carried_velocity
+		var jitter := Vector3(
+			random.randf_range(-0.04, 0.04),
+			random.randf_range(-0.02, 0.04),
+			random.randf_range(-0.04, 0.04)
+		)
+		physical_bone.linear_velocity = carried_velocity + jitter
+		physical_bone.angular_velocity = Vector3(
+			random.randf_range(-0.16, 0.16),
+			random.randf_range(-0.16, 0.16),
+			random.randf_range(-0.16, 0.16)
+		)
 	var pelvis := _physical_bones.get(&"pelvis") as PhysicalBone3D
 	if pelvis != null:
 		pelvis.apply_central_impulse(impulse * pelvis.mass)
@@ -178,8 +197,12 @@ func stop_ragdoll() -> void:
 
 
 ## Gameplay convenience matching the old 2.8-second knockdown contract.
-func fall(impulse: Vector3, carried_velocity: Vector3 = Vector3.ZERO) -> void:
-	if not start_ragdoll(impulse, carried_velocity):
+func fall(
+	impulse: Vector3,
+	carried_velocity: Vector3 = Vector3.ZERO,
+	simulation_seed: int = 0
+) -> void:
+	if not start_ragdoll(impulse, carried_velocity, simulation_seed):
 		return
 	await get_tree().create_timer(LIFETIME - RECOVERY_DURATION).timeout
 	begin_recovery(RECOVERY_DURATION)
@@ -234,6 +257,8 @@ func begin_recovery(duration: float = RECOVERY_DURATION) -> void:
 		var standing_pelvis: Transform3D = _base_target_global_transform(&"pelvis")
 		_recovery_world_offset = pelvis.global_position - standing_pelvis.origin
 		_recovery_world_offset.y = 0.0
+		if _recovery_anchor_limit >= 0.0:
+			_recovery_world_offset = _recovery_world_offset.limit_length(_recovery_anchor_limit)
 	_recovery_from_strength = _effective_motor_strength()
 	_recovery_duration = maxf(duration, 0.001)
 	_recovery_elapsed = 0.0
@@ -251,6 +276,14 @@ func get_up_clip() -> StringName:
 
 func recovery_world_offset() -> Vector3:
 	return _recovery_world_offset
+
+
+func set_recovery_anchor_limit(maximum_distance: float) -> void:
+	_recovery_anchor_limit = maxf(maximum_distance, 0.0)
+
+
+func simulation_seed() -> int:
+	return _simulation_seed
 
 
 func jiggle_controller() -> Node:

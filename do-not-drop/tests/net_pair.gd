@@ -168,6 +168,8 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_gel_proportions",
 		GEL_PROPORTIONS.packet_from_dictionary(_gel_values(true)))
 	await _wait_for_report(&"gel_proportions")
+	_expect(await $RagdollCheck.run_host(host_player, _client_peer_id),
+		$RagdollCheck.detail)
 
 	# N-235: admitted and loaded, both ends drop a silent peer within the
 	# session timeout, not the 45 s load budget -- once the host's settle
