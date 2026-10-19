@@ -91,38 +91,42 @@ static func host_to_client(groups: Array, relayed: Array, mtu: int) -> Dictionar
 	}
 
 
-## Bytes MultiplayerAPI.encode_and_compress_variant gives `value`. With `worst_float` a float
-## counts as the 64-bit one it becomes for any value a 32-bit float can't hold (a yaw, a speed
-## mid-stride): a pose at rest (0.0) would read 4 bytes less a float.
-static func encoded_size(value: Variant, worst_float: bool = false) -> int:
+## Bytes MultiplayerAPI.encode_and_compress_variant gives `value`. With `worst_case` it counts what
+## the value grows into while playing: a float as the 64-bit one it becomes for any value a 32-bit
+## float can't hold (a yaw, a speed mid-stride: 0.0 at rest reads 4 bytes less), an int as at least
+## 32 bits (a clock in ms, player.gd's net_time, passes 32767 after 33 s; a seq past a day's events).
+static func encoded_size(value: Variant, worst_case: bool = false) -> int:
 	match typeof(value):
 		TYPE_BOOL:
 			return 1
 		TYPE_INT:
 			var number: int = value
+			var bytes: int = 9
 			if number >= -128 and number <= 127:
-				return 2
-			if number >= -32768 and number <= 32767:
-				return 3
-			if number >= -2147483648 and number <= 2147483647:
-				return 5
-			return 9
+				bytes = 2
+			elif number >= -32768 and number <= 32767:
+				bytes = 3
+			elif number >= -2147483648 and number <= 2147483647:
+				bytes = 5
+			return maxi(bytes, 5) if worst_case else bytes
 		TYPE_FLOAT:
-			if worst_float:
+			if worst_case:
 				return var_to_bytes(0.1).size()
 	return var_to_bytes(value).size()
 
 
-## Bytes one RPC call carries before its datagram: the header and every argument encoded.
-static func rpc_size(args: Array) -> int:
+## Bytes one RPC call carries before its datagram: the header and every argument encoded
+## (encoded_size(), `worst_case` as there).
+static func rpc_size(args: Array, worst_case: bool = false) -> int:
 	var bytes: int = RPC_HEADER
 	for arg: Variant in args:
-		bytes += encoded_size(arg)
+		bytes += encoded_size(arg, worst_case)
 	return bytes
 
 
 ## {property path: encoded bytes} of the properties `sync` sends every tick (REPLICATION_MODE_ALWAYS).
-static func always_properties(sync: MultiplayerSynchronizer, worst_float: bool = false) -> Dictionary:
+## `worst_case` as encoded_size().
+static func always_properties(sync: MultiplayerSynchronizer, worst_case: bool = false) -> Dictionary:
 	var sizes: Dictionary = {}
 	var synced: Node = sync.get_node_or_null(sync.root_path)
 	var config: SceneReplicationConfig = sync.replication_config
@@ -134,7 +138,7 @@ static func always_properties(sync: MultiplayerSynchronizer, worst_float: bool =
 		var owner_node: Node = synced.get_node_or_null(NodePath(path.get_concatenated_names()))
 		if owner_node == null:
 			continue
-		sizes[path] = encoded_size(owner_node.get_indexed(NodePath(path.get_concatenated_subnames())), worst_float)
+		sizes[path] = encoded_size(owner_node.get_indexed(NodePath(path.get_concatenated_subnames())), worst_case)
 	return sizes
 
 

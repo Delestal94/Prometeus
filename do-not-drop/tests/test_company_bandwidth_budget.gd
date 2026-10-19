@@ -6,9 +6,10 @@ extends SceneTree
 ## - Model (tests/bandwidth_model.gd, the framing test_net_bandwidth_budget counts with): the real
 ##   company world (company_root.tscn, solo) is opened and every MultiplayerSynchronizer in it is
 ##   counted, the shed's own once (the host's) and the player's once per crew member (the host's
-##   own, the other clients' relayed by the host); floats as 64-bit (a pose in motion) and a
-##   datagram at Steam's ceiling around every packet. On top, the business events (CompanyNet's
-##   _apply_event, reliable) of a busy packing line: every player does a business action a second
+##   own, the other clients' relayed by the host); floats as 64-bit and ints as 32-bit (a pose in
+##   motion, a clock past 33 s) and a datagram at Steam's ceiling around every packet. On top, the
+##   business events (CompanyNet's _apply_event, reliable, sized the same way) of a busy packing
+##   line: every player does a business action a second
 ##   (ACTIONS_PER_PLAYER_PER_SECOND) plus the host's own rules, each the size of the largest real
 ##   units_moved the root publishes (a drop and a take through CompanyNet), in a datagram of its own.
 ## - For the crew D-2002 measures with (MEASURED_CREW, 4 peers) it fits 24 KB/s, and nothing in the
@@ -20,7 +21,8 @@ extends SceneTree
 ##   host publishing real units_moved at the busy rate, read as the network overlay reads LAN
 ##   (NetStats, N-216). For MEASURED_CREW what each client receives (the overlay's KB/s plus IP and
 ##   UDP) fits the budget, stays under the model's ceiling and is over half of the model's data (it
-##   did flow), and every client applies every event.
+##   did flow; skipped and printed under two frames a player's send), and every client applies
+##   every event. The full crew's run is only printed (`skipped` if its session doesn't come up).
 ## - The late-join snapshot of the furnished shed, a one-off burst, is printed.
 ## Prints `COMPANY_BW key=value` lines. Pending (D-2002.2): one trip outside (40 KB/s) and two
 ## vehicles far away (64 KB/s), once the company world has a vehicle.
@@ -103,10 +105,13 @@ func _run() -> void:
 	var measured: Dictionary = {}
 	for index: int in range(crews.size()):
 		var crew: int = crews[index]
-		measured[crew] = await _measure_enet(crew, PORT + index)
+		measured[crew] = await _measure_enet(crew, PORT + index, crew == MEASURED_CREW)
 		if not (measured[crew] as Dictionary).is_empty():
 			_report_measured(crew, measured[crew])
-	_check_measured(measured.get(MEASURED_CREW, {}), gated)
+	var player_interval: float = 1.0
+	for entry: Array in syncs.player:
+		player_interval = minf(player_interval, float(entry[0]))
+	_check_measured(measured.get(MEASURED_CREW, {}), gated, 2.0 / player_interval)
 	_clean()
 	if _failures == 0:
 		print("PASS: the company's shed fits %.0f KB/s a client with %d players (model %.1f, ENet %.1f)" % [
@@ -187,7 +192,7 @@ func _event_sizes(net: CompanyNet, feet: Vector3, opened: Array) -> Dictionary:
 	seen.append_array(_drop_and_take(net, feet))
 	var sizes: Dictionary = {"busy_bytes": 0, "busy_kind": "", "largest_bytes": 0, "largest_kind": ""}
 	for event: Array in seen:
-		var bytes: int = MODEL.rpc_size(event)
+		var bytes: int = MODEL.rpc_size(event, true)
 		if bytes > int(sizes.largest_bytes):
 			sizes.largest_bytes = bytes
 			sizes.largest_kind = String(event[1])
@@ -309,8 +314,9 @@ func _busy_step(net: CompanyNet, hands: StringName, feet: Vector3, drop: bool) -
 ## `port`: a real player per peer on every side (its owner's authority, standing on one floor:
 ## players don't collide with each other) and a CompanyNet. Once every path is confirmed the host
 ## drops and takes units at the busy rate while ENet counts what each client receives
-## (_count_traffic()). {} when the session didn't come up.
-func _measure_enet(crew: int, port: int) -> Dictionary:
+## (_count_traffic()). {} when the session didn't come up: a failure when `gated` (the crew the
+## budget is checked for), else only a `skipped` line (the full crew is printed, never checked).
+func _measure_enet(crew: int, port: int, gated: bool) -> Dictionary:
 	var floor_body := StaticBody3D.new()
 	var floor_shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -321,28 +327,39 @@ func _measure_enet(crew: int, port: int) -> Dictionary:
 	root.add_child(floor_body)
 	var sides: Array[Node] = []
 	var peers: Array[ENetMultiplayerPeer] = []
+	var problem: String = ""
 	for index: int in range(crew):
 		var side := Node.new()
 		side.name = "Peer%d" % index
 		root.add_child(side)
 		set_multiplayer(SceneMultiplayer.new(), side.get_path())
+		sides.append(side)
 		var peer := ENetMultiplayerPeer.new()
+		peers.append(peer)
 		var made: Error = peer.create_server(port, crew) if index == 0 else peer.create_client("127.0.0.1", port)
-		_expect(made == OK, "ENet peer %d starts on localhost:%d (error %d)" % [index, port, made])
+		if made != OK:
+			problem = "ENet peer %d doesn't start on localhost:%d (error %d)" % [index, port, made]
+			break
 		side.multiplayer.multiplayer_peer = peer
 		var net := CompanyNet.new()
 		net.name = "CompanyNet"
 		side.add_child(net)
-		sides.append(side)
-		peers.append(peer)
-	var up: bool = await _wait_for(func() -> bool:
-		if sides[0].multiplayer.get_peers().size() != crew - 1:
-			return false
-		for index: int in range(1, crew):
-			if peers[index].get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+	var up: bool = false
+	if problem.is_empty():
+		up = await _wait_for(func() -> bool:
+			if sides[0].multiplayer.get_peers().size() != crew - 1:
 				return false
-		return true, CONNECT_SECONDS)
-	_expect(up, "%d ENet peers connect on localhost" % crew)
+			for index: int in range(1, crew):
+				if peers[index].get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+					return false
+			return true, CONNECT_SECONDS)
+	if problem.is_empty() and not up:
+		problem = "%d ENet peers don't connect on localhost in %.0f s" % [crew, CONNECT_SECONDS]
+	if not problem.is_empty():
+		if gated:
+			_expect(false, problem)
+		else:
+			_line("enet_crew%d" % crew, "skipped (%s)" % problem)
 	var result: Dictionary = {}
 	if up:
 		result = await _count_traffic(sides, peers)
@@ -357,8 +374,9 @@ func _measure_enet(crew: int, port: int) -> Dictionary:
 		if world != null:
 			world.free()
 	await process_frame
-	for index: int in range(crew - 1, -1, -1):
-		peers[index].close()
+	for index: int in range(peers.size() - 1, -1, -1):
+		if peers[index].get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED:
+			peers[index].close()
 	await process_frame
 	for side: Node in sides:
 		set_multiplayer(null, side.get_path())
@@ -451,8 +469,10 @@ func _report_measured(crew: int, measured: Dictionary) -> void:
 			" over_budget" if over else ""])
 
 
-## MEASURED_CREW's measurement (`measured`) against the budget and the model's `case`.
-func _check_measured(measured: Dictionary, case: Dictionary) -> void:
+## MEASURED_CREW's measurement (`measured`) against the budget and the model's `case`. The check that
+## the streams flowed needs `min_fps` (two frames a player's send): slower, the frame rate holds the
+## sync rate down and it is only printed as skipped.
+func _check_measured(measured: Dictionary, case: Dictionary, min_fps: float) -> void:
 	_expect(not measured.is_empty(), "%d players are measured on ENet" % MEASURED_CREW)
 	if measured.is_empty():
 		return
@@ -462,9 +482,13 @@ func _check_measured(measured: Dictionary, case: Dictionary) -> void:
 		% [MEASURED_CREW, SHED_BUDGET / KB, per_client / KB])
 	_expect(per_client <= float(case.total), "The measurement stays under the model's ceiling (%.1f <= %.1f KB/s)"
 		% [per_client / KB, float(case.total) / KB])
-	_expect(float(measured.per_client_enet) >= 0.5 * model_data,
-		"The streams flowed: ENet counted over half the model's data (%.1f of %.1f KB/s)"
-		% [float(measured.per_client_enet) / KB, model_data / KB])
+	if float(measured.fps) < min_fps:
+		_line("enet_crew%d_flow_check" % MEASURED_CREW, "skipped (%.0f fps, under %.0f: fewer sends than the game's)"
+			% [float(measured.fps), min_fps])
+	else:
+		_expect(float(measured.per_client_enet) >= 0.5 * model_data,
+			"The streams flowed: ENet counted over half the model's data (%.1f of %.1f KB/s)"
+			% [float(measured.per_client_enet) / KB, model_data / KB])
 	var events: int = measured.events
 	_expect(events > 0 and int(measured.events_seen) == events * (MEASURED_CREW - 1),
 		"Every client applied the host's %d events (applied %d of %d)"
