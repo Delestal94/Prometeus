@@ -23,7 +23,7 @@
 | D-0413 | Hito "Primer empleado" desbloquea contratación | constructor-progresion | low | test |
 | D-0414 | Hito "Primera máquina" desbloquea la tienda de automatización | constructor-progresion | low | test |
 | D-0415 | Hito de Puerto (licencia náutica) | constructor-progresion | low | test |
-| D-0416 | Hito de Montaña (4x4 comprada + 50 entregas en Campo) | constructor-progresion | low | test |
+| D-0416 | Hito de Montaña (4x4 comprada + 50 entregas en Campo) — **a reescribir:** con el mapa continuo Montaña se abre con la avioneta (`gate_montana_altura`); la 4x4 es para entregar adentro ([flota.md](diseno/flota.md), D-0115) | constructor-progresion | low | test |
 | D-0417 | Hito de Nieve (Montaña + abrigo de la tripulación + conservadoras) | constructor-progresion | low | test |
 | D-0418 | Hito de Volcán (aeródromo + licencia de vuelo + reputación 80) | constructor-progresion | low | test |
 | D-0419 | Guardar el progreso de hitos en el save de empresa | constructor-progresion | medium | test de guardar y cargar |

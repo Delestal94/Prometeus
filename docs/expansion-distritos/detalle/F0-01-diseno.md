@@ -130,6 +130,7 @@ Es la fuente para los `.tres` de D-0205.
 **Hecho cuando:** 9 filas completas. El README apunta a este documento.
 
 ### D-0115 · Tabla de vehículos definitiva — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR pendiente)** — `diseno/flota.md`: 8 filas (el detalle enumera 8 aunque dice 7), campos de `VehicleDefinition` para D-0207 más `fleet_key` y `amplified_trap`, regla de trampa amplificada ×1,5 y base fija por unidad.
 **Depende de:** D-0101
 **Qué:** `diseno/flota.md`. Por vehículo:
 - asientos, capacidad (cajas y kg), velocidad máxima y quién maneja;

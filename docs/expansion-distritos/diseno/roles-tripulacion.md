@@ -21,7 +21,7 @@ Reglas comunes:
 - **Galpón congelado** (S4): si toda la tripulación sale y no hay empleados, el reloj del galpón (proveedor,
   vencimientos de armado) se pausa. El reloj de los pedidos **sigue**: la ventana de entrega es de 4 h de
   juego desde que entra el pedido, y se cumple en la ruta.
-- **Una salida** = un vehículo con 1 conductor y 0 a 3 pasajeros (camioneta actual: 4 asientos); cada
+- **Una salida** = un vehículo con 1 conductor y 0 a 3 pasajeros (reparto sugerido; la camioneta tiene 8 asientos, [flota.md](flota.md)); cada
   pasajero cuida **una** caja (`PackageCare`), y el conductor lleva la suya solo si va solo.
 - **Estaciones** (D-0904 y siguientes): **Dársena** (recibir palets), **Estantes** (guardar y sacar
   productos), **Heladera** (productos fríos, desde que haya fríos), **Mesa de armado** (caja, insumos,
