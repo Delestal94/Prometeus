@@ -4,7 +4,7 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
+tall_fern, fern, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -439,14 +439,6 @@ def frond(name, length, width, angle, tilt, material, z=0.02):
     o.location.z = z
     o.rotation_euler = (0, -tilt, angle)
     return o
-
-
-def fern(scale=1.0, count=9, seed=8):
-    clear()
-    rng = random.Random(seed)
-    for i in range(count):
-        frond("FernFrond", 0.75 * scale * rng.uniform(0.85, 1.15), 0.16 * scale, i * math.tau / count + rng.uniform(-0.2, 0.2),
-              rng.uniform(0.35, 0.8), "fern" if i % 2 else "leaf")
 
 
 def blades(count, height, spread, seed, material="grass"):
@@ -901,7 +893,8 @@ def bramble():
 # 0.41/0.54/0.27) by hue, not by value. Passes (2026-10-18): 0.15/0.31/0.08
 # read pale, lighter than the lawn; 0.085/0.18/0.04 went tone on tone with it
 # (lost at night and at 10 m); now olive, its value between the two. The
-# palette's cyan-ish "fern" (0.08/0.34/0.13, the small fern) is left alone. LowpolyMaterials keys
+# palette's cyan-ish "fern" (0.08/0.34/0.13) is left alone (the small fern
+# moved to these two olives in N-331.10). LowpolyMaterials keys
 # both as "fern" (it cuts at the first dot): foliage detail and the autumn
 # tint still apply, and the albedo gets x1.16 there (DETAIL_GAIN).
 FERN_TALL = (0.13, 0.20, 0.03, 1)
@@ -927,10 +920,11 @@ def _double_sided(name, suffix="doublesided", color=None):
     return m
 
 
-def _pinnate_frond(bm, slot, root, heading, length, half_width, lift, droop, rng, fold=0.3):
+def _pinnate_frond(bm, slot, root, heading, length, half_width, lift, droop, rng, fold=0.3, reach=(0.95, 1.15)):
     """One open fern frond: a midrib arcing out of `root` over len(PINNA_WIDTHS)
     spans (rising at `lift`, bending down by `droop` per quarter) and one
-    triangular leaflet per span and side, 2 tris a span."""
+    triangular leaflet per span and side, 2 tris a span. `reach` is how far
+    along the span (and past it) each leaflet tip is swept."""
     ch, sh = math.cos(heading), math.sin(heading)
     side = Vector((-sh, ch, 0.0))
     spans = len(PINNA_WIDTHS)
@@ -951,8 +945,8 @@ def _pinnate_frond(bm, slot, root, heading, length, half_width, lift, droop, rng
             w = PINNA_WIDTHS[j] * half_width * rng.uniform(0.85, 1.12)
             # Tip swept forward to about the next station (a serrated edge),
             # hanging a little below the midrib.
-            reach = rng.uniform(0.95, 1.15)
-            tooth = bm.verts.new(spine[j].lerp(spine[j + 1], reach) + side * (s * w) - ups[j] * (w * 0.15))
+            sweep = rng.uniform(*reach)
+            tooth = bm.verts.new(spine[j].lerp(spine[j + 1], sweep) + side * (s * w) - ups[j] * (w * 0.15))
             f = bm.faces.new((mid[j], mid[j + 1], tooth))
             f.normal_update()
             if f.normal.dot(ups[j]) < 0.0:
@@ -979,6 +973,43 @@ def tall_fern_cluster():
             else:       # upright: rises ~65 deg and arches over, gives the clump its height
                 lift, droop, length, slot = rng.uniform(1.12, 1.25), rng.uniform(0.3, 0.34), 1.27, 1
             _pinnate_frond(bm, slot, (x, y, 0.0), heading, length * rng.uniform(0.9, 1.08), 0.24, lift, droop, rng)
+    bm.to_mesh(mesh)
+    bm.free()
+
+
+# Small fern (N-331.10): 9 closed, flat-edged fronds of 40 tris in the
+# palette's mint "fern" and "leaf" were 360 tris (cap 250, N-331.6) and read as
+# a mini agave, the small cousin of the old tall cluster. Now the tall
+# cluster's language on its own: one rosette of 11 one-sided pinnate fronds
+# (_pinnate_frond, 14 tris), upright and spreading alternating, one mesh with
+# the same double-sided olive "fern.tall" / "fern.tall_young" so both ferns
+# match. 154 tris, 1.14 x 1.23 m, 0.53 m tall (was 1.24 x 1.26 x 0.52).
+# Leaflet tips are swept 1.4-1.6 spans forward, past the next leaflet's base:
+# from above they overlap into a continuous herringbone instead of the loose
+# arrowheads the tall cluster shows at 0.95-1.15; the fold is shallower
+# (0.2) so the two halves of a frond shade closer.
+FERN_REACH = (1.4, 1.6)
+FERN_FOLD = 0.2
+
+
+def fern(count=11, seed=8):
+    clear()
+    mesh = bpy.data.meshes.new("Fern")
+    obj = bpy.data.objects.new("Fern", mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(_double_sided("fern", "tall", FERN_TALL))
+    mesh.materials.append(_double_sided("fern", "tall_young", FERN_TALL_YOUNG))
+    bm = bmesh.new()
+    rng = random.Random(seed)
+    start = rng.uniform(0.0, math.tau)
+    for i in range(count):
+        heading = start + i * math.tau / count + rng.uniform(-0.15, 0.15)
+        if i % 2:   # spreading
+            lift, droop, length, slot = rng.uniform(0.6, 0.75), rng.uniform(0.22, 0.28), 0.56, 0
+        else:       # upright
+            lift, droop, length, slot = rng.uniform(1.1, 1.22), rng.uniform(0.26, 0.3), 0.8, 1
+        _pinnate_frond(bm, slot, (0.0, 0.0, 0.0), heading, length * rng.uniform(0.92, 1.08), 0.15, lift, droop, rng,
+                       fold=FERN_FOLD, reach=FERN_REACH)
     bm.to_mesh(mesh)
     bm.free()
 
@@ -1407,6 +1438,8 @@ GROUPS = {
     "guardrail": guardrail,
     # Only the tall fern cluster (N-331.2, N-331.8), without rewriting the other plants.
     "tall_fern": lambda: (tall_fern_cluster(), export_forest("tall_fern_cluster")),
+    # Only the small fern (N-331.10), without rewriting the other plants.
+    "fern": lambda: (fern(), export_forest("fern")),
     # Only the forest rock (N-331.7), without rewriting the other plants.
     "rock": lambda: (forest_rock(), export_forest("rock")),
     # Only the mossy rock cluster (N-331.9), without rewriting the other plants.

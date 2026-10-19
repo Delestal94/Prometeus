@@ -6,13 +6,13 @@ extends SceneTree
 ## rule is checked without touching this test.
 ## Three models were already over when the cap landed: they keep their current
 ## count as a ceiling (never grow) until the art session redoes them (N-331.10,
-## needs Blender); delete their entry from LEGACY_OVER_CAP when they fit.
+## needs Blender); delete their entry from LEGACY_OVER_CAP when they fit. The
+## small fern fits since N-331.10 (154 tris).
 
 const MAX_TRIS: int = 250
 
 const LEGACY_OVER_CAP: Dictionary = {
 	"sm_env_forest_bramble_thicket.glb": 448,
-	"sm_env_forest_fern.glb": 360,
 	"sm_env_forest_tall_grass_clump.glb": 360,
 }
 
