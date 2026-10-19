@@ -154,6 +154,14 @@ Decisión: la zona no cambia el estado del pedido (sigue `PACKED`); pasa a `OUT`
 **Test** `test_dispatch_zone`: caja abierta, llevada, fuera del área, de otro pedido o de un pedido no armado no se despachan; sellada y quieta dentro, sí; al salir se desata y puede volver; `load_into` carga las 2 cajas y la camioneta sale con sus 2 pedidos `OUT` y el tercero sigue `PACKED`; ida y vuelta por JSON.
 **Hecho cuando:** el test pasa.
 
+### D-0717 · Cargar el vehículo desde despacho — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `DispatchLoading` (`scripts/gameplay/business/dispatch_loading.gd`) + `DispatchZone.load_boxes`; `test_dispatch_loading`. Llevar las cajas cargadas a los puntos de montaje de la camioneta queda para D-0717.b (ver `revisar/D-0717.md`).
+**Depende de:** D-0716 (`DispatchZone`), D-0309 (`DispatchRules`), D-0207 (`VehicleDefinition`)
+**Qué:** `class_name DispatchLoading`, estático. `plan(zone, book, vehicle, box_kg, zones, gates, owned, opened)` recorre las cajas de la zona, la más vieja primero, y deja en `load` las que entran: pasan `DispatchRules.check_order` para la zona de su pedido, hay `cargo_slots` libres y el peso acumulado no pasa `cargo_kg`. Las que no entran van en `left` con `box`, `order`, `key` y `args` (clave de traducción: las de `DispatchRules`, `WORLD_LOAD_NO_SLOTS`, `WORLD_LOAD_NO_WEIGHT`). `load_vehicle(...)` hace el plan y le pasa solo las que entran a `DispatchZone.load_boxes` → `CompanyTrips.stage_cargo`; el resto sigue esperando en la zona para el próximo vehículo.
+Decisión: una caja que no entra por peso no corta la carga; se salta y una más liviana detrás sí puede ir (el jugador ve el motivo de cada una que quedó). Decisión: el peso de cada caja lo da quien llama (`BoxScale.real_kg`), no se guarda en la zona.
+**Test** `test_dispatch_loading`: con 2 casilleros, de 3 cajas salen las 2 más viejas y la camioneta sale con esos pedidos `OUT` (la tercera sigue `PACKED` y espera); el siguiente vehículo la toma; por peso se salta la pesada y entra la liviana; una caja de Islas queda con el motivo de `DispatchRules`; las dos claves nuevas tienen traducción.
+**Hecho cuando:** camioneta cargada con cajas armadas sale (el test pasa).
+
 ### D-0718 · Insumos que se gastan y se reponen — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-19, PR pendiente)** — `StationSupplies` (`scripts/gameplay/business/station_supplies.gd`): cajas por tamaño, cinta y relleno por mesa; `PackingStation.supplies`, `seal()` y `pad()` los gastan, `BoxDispenser` se queda sin cajas; `test_station_supplies`. El gesto de reponer y el cartel de "falta cinta" quedan para la mesa visible (D-0701.b, ver `revisar/D-0718.md`).
 **Depende de:** D-0701 (`PackingStation`), D-0702 (`BoxDispenser`), D-0504 (`PackagingSupplies`)
