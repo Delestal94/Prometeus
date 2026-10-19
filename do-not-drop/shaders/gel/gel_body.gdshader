@@ -14,6 +14,11 @@ render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_
 instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
+// Packed to stay within Godot's 16 instance-uniform limit:
+// surface = absorption, shine, interior mode, interior amount.
+instance uniform vec4 gel_skin_surface = vec4(2.4, 0.9, 0.0, 0.0);
+// interior = RGB feature colour plus object-space feature scale.
+instance uniform vec4 gel_interior = vec4(0.0, 0.0, 0.0, 8.0);
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
 instance uniform float gel_contact_compression : hint_range(0.0, 0.16) = 0.0;
@@ -98,6 +103,47 @@ float object_noise_3d(vec3 point) {
 	return mix(near_z, far_z, blend.z);
 }
 
+vec3 random_cell_point(vec3 cell) {
+	return vec3(
+		hash_object_cell(cell + vec3(11.0, 3.0, 7.0)),
+		hash_object_cell(cell + vec3(5.0, 17.0, 13.0)),
+		hash_object_cell(cell + vec3(19.0, 23.0, 2.0))
+	) * 0.56 + 0.22;
+}
+
+vec3 interior_base_tint(vec3 base_tint, vec3 point) {
+	if (gel_skin_surface.z > 0.5 && gel_skin_surface.z < 1.5) {
+		float upper_layer = smoothstep(0.72, 0.82, point.y);
+		return mix(mix(base_tint, gel_interior.rgb, gel_skin_surface.w), base_tint, upper_layer);
+	}
+	if (gel_skin_surface.z > 1.5 && gel_skin_surface.z < 2.5) {
+		float height_mix = smoothstep(0.12, 1.55, point.y) * gel_skin_surface.w;
+		return mix(base_tint, gel_interior.rgb, height_mix);
+	}
+	return base_tint;
+}
+
+float interior_feature_mask(vec3 point) {
+	vec3 grid_point = point * gel_interior.a;
+	vec3 cell = floor(grid_point);
+	vec3 local_point = fract(grid_point);
+	vec3 delta = local_point - random_cell_point(cell);
+	if (gel_skin_surface.z > 2.5 && gel_skin_surface.z < 3.5) {
+		float chunk_distance = max(max(abs(delta.x), abs(delta.y)), abs(delta.z));
+		return 1.0 - smoothstep(0.11, 0.22, chunk_distance);
+	}
+	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
+		return 1.0 - smoothstep(0.035, 0.095, length(delta));
+	}
+	if (gel_skin_surface.z > 4.5) {
+		float bubble_distance = length(delta);
+		float bubble_outer = 1.0 - smoothstep(0.29, 0.36, bubble_distance);
+		float bubble_inner = 1.0 - smoothstep(0.2, 0.27, bubble_distance);
+		return max(bubble_outer - bubble_inner, 0.0);
+	}
+	return 0.0;
+}
+
 float impact_wave(vec3 point, vec4 wave, float strength) {
 	if (wave.w < 0.0 || strength <= 0.0) {
 		return 0.0;
@@ -177,13 +223,14 @@ void fragment() {
 	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
 	float fresnel = pow(1.0 - facing, fresnel_power);
 	float density = fresnel * edge_density;
-	vec3 player_tint = gel_color.rgb * gel_brightness * mix(1.0, 1.08, gel_weather.w);
+	vec3 skin_tint = interior_base_tint(gel_color.rgb, model_position);
+	vec3 player_tint = skin_tint * gel_brightness * mix(1.0, 1.08, gel_weather.w);
 	vec2 refraction_offset = NORMAL.xy * refraction_strength * (0.55 + fresnel * 0.45);
 	vec2 refraction_uv = clamp(SCREEN_UV + refraction_offset, vec2(0.001), vec2(0.999));
 	vec3 refracted_background = texture(screen_texture, refraction_uv).rgb;
 	vec3 surface_tint = mix(player_tint, vec3(1.0), density * 0.48);
 	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters;
-	float thickness_transmission = exp(-absorption_coefficient * thickness_meters);
+	float thickness_transmission = exp(-gel_skin_surface.x * thickness_meters);
 	float thickness_absorption = 1.0 - thickness_transmission;
 	vec3 absorbed_tint = mix(
 		surface_tint,
@@ -222,11 +269,18 @@ void fragment() {
 	float bubble_inner = smoothstep(inclusion_threshold + 0.008, inclusion_threshold + 0.02, bubble_field);
 	float inclusion_mask = clamp(fine_motes + (bubble_outer - bubble_inner) * 0.7, 0.0, 1.0);
 	ALBEDO = mix(ALBEDO, player_tint * 0.82, inclusion_mask * inclusion_contrast);
-	ROUGHNESS = mix(roughness, 0.025, gel_weather.w * 0.75);
-	SPECULAR = mix(specular, 1.0, gel_weather.w);
+	float interior_mask = interior_feature_mask(model_position) * gel_skin_surface.w;
+	ALBEDO = mix(ALBEDO, gel_interior.rgb * gel_brightness, interior_mask * 0.72);
+	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
+		EMISSION += gel_interior.rgb * interior_mask * 1.4;
+	}
+	float skin_roughness = mix(0.48, 0.025, gel_skin_surface.y);
+	ROUGHNESS = mix(skin_roughness, 0.025, gel_weather.w * 0.75);
+	SPECULAR = mix(gel_skin_surface.y, 1.0, gel_weather.w);
 	float surface_alpha = gel_color.a * gel_opacity * mix(center_opacity, edge_opacity, fresnel);
 	float final_alpha = clamp(
-		surface_alpha + thickness_absorption * absorption_opacity + inclusion_mask * inclusion_contrast,
+		surface_alpha + thickness_absorption * absorption_opacity
+			+ inclusion_mask * inclusion_contrast + interior_mask * 0.08,
 		0.0,
 		1.0
 	);
@@ -251,10 +305,11 @@ void light() {
 	);
 	float back_light = pow(clamp(-normal_light, 0.0, 1.0), backlight_power);
 	vec3 half_vector = normalize(LIGHT + VIEW);
-	float specular_power = mix(128.0, 8.0, roughness);
+	float skin_roughness = mix(0.48, 0.025, gel_skin_surface.y);
+	float specular_power = mix(128.0, 8.0, skin_roughness);
 	float specular_lobe = pow(clamp(dot(NORMAL, half_vector), 0.0, 1.0), specular_power);
 	vec3 wrapped_diffuse = ALBEDO * LIGHT_COLOR * wrapped_light;
 	vec3 back_scatter = gel_color.rgb * gel_brightness * LIGHT_COLOR * back_light * backlight_strength;
 	DIFFUSE_LIGHT += (wrapped_diffuse + back_scatter) * ATTENUATION;
-	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * specular * ATTENUATION;
+	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * gel_skin_surface.y * ATTENUATION;
 }

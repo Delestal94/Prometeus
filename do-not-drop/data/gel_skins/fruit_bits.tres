@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GelSkinDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_skin_definition.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = &"fruit_bits"
+color = Color(1, 0.69, 0.48, 0.88)
+absorption = 1.85
+shine = 0.76
+interior_mode = 3
+interior_color = Color(0.83, 0.12, 0.19, 1)
+interior_amount = 0.78
+interior_scale = 8.0

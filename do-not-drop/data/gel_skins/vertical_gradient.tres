@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GelSkinDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_skin_definition.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = &"vertical_gradient"
+color = Color(0.27, 0.8, 1, 0.92)
+absorption = 2.15
+shine = 0.9
+interior_mode = 2
+interior_color = Color(0.72, 0.3, 1, 1)
+interior_amount = 0.9
+interior_scale = 2.0
