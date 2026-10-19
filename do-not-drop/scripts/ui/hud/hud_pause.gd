@@ -26,7 +26,8 @@ func show_start() -> void:
 	hud.overlay_title.text = tr("HUD_START_TITLE")
 	hud.results.set_hero(false)
 	hud.overlay_body.text = tr("HUD_START_BODY")
-	hud.overlay_stats.text = tr("HUD_START_STEPS") % [hud.key_hint("E", "A"), hud.key_hint("E", "A"), hud.key_hint("E", "A")]
+	var interact: String = GameSettings.binding_label(&"interact")
+	hud.overlay_stats.text = tr("HUD_START_STEPS") % [interact, interact, interact]
 	hud.results.set_buttons(tr("HUD_PREPARE_DELIVERY"), false, true, true)
 
 

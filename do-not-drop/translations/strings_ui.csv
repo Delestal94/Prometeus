@@ -14,7 +14,7 @@ HUD_CALLOUT_WAIT,Esperá,Wait
 HUD_CARD,CARTA: %s   ·   %s,CARD: %s   ·   %s
 HUD_CARD_EARNED,Carta obtenida: %s,Card earned: %s
 HUD_CARD_USE_KEY,%s  usar,%s  use
-HUD_CARD_USE_PAD,D-pad izquierda  usar,D-pad left  use
+HUD_CARD_USE_PAD,%s  usar,%s  use
 HUD_CARE_COLLECT,JUNTÁ LAS PIEZAS,PICK UP THE PIECES
 HUD_CARE_COLLECT_DETAIL,Quedan %d en el piso: acercate a cada una y apretá %s.,%d left on the ground: walk up to each one and press %s.
 HUD_CARE_ASK_CODE,PEDÍ EL CÓDIGO,ASK FOR THE CODE
@@ -163,8 +163,8 @@ HUD_STORY_SUBSTITUTED,%s: sustituido,%s: substituted
 HUD_STORY_REPAIRED,%s: %d arreglo(s) en el camino,%s: %d fix(es) on the way
 HUD_STORY_LOST,%s: perdido en el camino,%s: lost on the way
 HUD_PHONE_CAMERA,● CÁMARA,● CAMERA
-HUD_PHONE_HINT_MOUSE,[ Click ]  sacar foto        [ F ]  guardar el celular,[ Click ]  take photo        [ F ]  put the phone away
-HUD_PHONE_HINT_PAD,[ RB ]  sacar foto        [ LB ]  guardar el celular,[ RB ]  take photo        [ LB ]  put the phone away
+HUD_PHONE_HINT_MOUSE,[ Click ]  sacar foto        [ %s ]  guardar el celular,[ Click ]  take photo        [ %s ]  put the phone away
+HUD_PHONE_HINT_PAD,[ RB ]  sacar foto        [ %s ]  guardar el celular,[ RB ]  take photo        [ %s ]  put the phone away
 HUD_PHONE_NO_DELIVERY,sin entrega cerca,no delivery nearby
 HUD_PHONE_HOUSE_DONE,CASA %d  ·  ya documentada,HOUSE %d  ·  already documented
 HUD_PHONE_HOUSE_READY,CASA %d  ·  listo para documentar,HOUSE %d  ·  ready to document
@@ -226,16 +226,16 @@ HUD_HOST_GONE_TALLY,"Hasta acá: %d de %d casas entregadas, %d de %d cajas sanas
 HUD_HOST_GONE_TALLY_ENDLESS,"Hasta acá: %d m recorridos en %s, %d de %d cajas sanas.","So far: %d m travelled in %s, %d of %d boxes intact."
 HUD_HOUSE_REFUSED,"Casa %d: ""Ese no es mío, pedí %s""","House %d: \""That's not mine, I ordered %s\"""
 HUD_INCIDENT,Incidente,Incident
-HUD_KEYS_AT_HOUSE,WASD  caminar   ·   E  interactuar   ·   F  sacar una foto de la entrega,WASD  walk   ·   E  interact   ·   F  take a delivery photo
-HUD_KEYS_DRIVER,W/S  acelerar y frenar   ·   A/D  girar   ·   Espacio  freno de mano   ·   H  bocina   ·   E  bajarte,W/S  accelerate and brake   ·   A/D  steer   ·   Space  handbrake   ·   H  horn   ·   E  get out
-HUD_KEYS_ON_FOOT,WASD  caminar   ·   Espacio  saltar   ·   E  agarrar / dejar   ·   Q  soltar paquete,WASD  walk   ·   Space  jump   ·   E  grab / place   ·   Q  drop package
-HUD_KEYS_PASSENGER,Click izq. (mantener)  cuidar tu paquete   ·   WASD  secuencias   ·   E  bajarte,Left click (hold)  tend your package   ·   WASD  sequences   ·   E  get out
+HUD_KEYS_AT_HOUSE,%s  caminar   ·   %s  interactuar   ·   %s  sacar una foto de la entrega,%s  walk   ·   %s  interact   ·   %s  take a delivery photo
+HUD_KEYS_DRIVER,%s  acelerar y frenar   ·   %s  girar   ·   %s  freno de mano   ·   %s  bocina   ·   %s  bajarte,%s  accelerate and brake   ·   %s  steer   ·   %s  handbrake   ·   %s  horn   ·   %s  get out
+HUD_KEYS_ON_FOOT,%s  caminar   ·   %s  saltar   ·   %s  agarrar / dejar   ·   %s  soltar paquete,%s  walk   ·   %s  jump   ·   %s  grab / place   ·   %s  drop package
+HUD_KEYS_PASSENGER,Click izq. (mantener)  cuidar tu paquete   ·   %s  secuencias   ·   %s  bajarte,Left click (hold)  tend your package   ·   %s  sequences   ·   %s  get out
 HUD_KEY_CENTER_VIEW,C  centrar vista,C  centre view
-HUD_KEY_CREW,Mantener Tab  tripulación,Hold Tab  crew
+HUD_KEY_CREW,Mantener %s  tripulación,Hold %s  crew
 HUD_KEY_LOOK_BACK,%s  mirar atrás,%s  look back
 HUD_KEY_PAUSE,Esc  pausa,Esc  pause
-HUD_KEY_PHONE,F  celular,F  phone
-HUD_KEY_PING,Click rueda  ping,Wheel click  ping
+HUD_KEY_PHONE,%s  celular,%s  phone
+HUD_KEY_PING,%s / Click rueda  ping,%s / Wheel click  ping
 HUD_KEY_RESTART,Mantener R  reiniciar,Hold R  restart
 HUD_MENU,Menú,Menu
 HUD_MENU_TITLE,MENÚ,MENU
@@ -246,17 +246,16 @@ HUD_MODE_ENDLESS,MODO ENDLESS,ENDLESS MODE
 HUD_MODE_ROUTE,PRUEBA DE RUTA,ROUTE TEST
 HUD_NEW_RECORD,¡NUEVO RÉCORD!,NEW RECORD!
 HUD_NO_CARGO_YET,Todavía no hay carga a bordo  ·  %s bajarte a buscar un paquete,No cargo on board yet  ·  %s get out and fetch a package
-HUD_PAD_AT_HOUSE,Stick izq.  caminar   ·   A  interactuar   ·   LB  sacar una foto de la entrega,L-stick  walk   ·   A  interact   ·   LB  take a delivery photo
+HUD_PAD_AT_HOUSE,%s  caminar   ·   %s  interactuar   ·   %s  sacar una foto de la entrega,%s  walk   ·   %s  interact   ·   %s  take a delivery photo
 HUD_PAD_CENTER_VIEW,Clic stick der.  centrar vista,R-stick click  centre view
-HUD_PAD_DOWN,D-pad abajo,D-pad down
-HUD_PAD_DRIVER,RT  acelerar   ·   LT  frenar   ·   Stick izq.  girar   ·   X  freno de mano   ·   B  bocina   ·   A  bajarte,RT  accelerate   ·   LT  brake   ·   L-stick  steer   ·   X  handbrake   ·   B  horn   ·   A  get out
+HUD_PAD_DRIVER,%s  acelerar   ·   %s  frenar   ·   %s  girar   ·   %s  freno de mano   ·   %s  bocina   ·   %s  bajarte,%s  accelerate   ·   %s  brake   ·   %s  steer   ·   %s  handbrake   ·   %s  horn   ·   %s  get out
 HUD_PAD_LOOK_BACK,Clic stick izq.  mirar atrás,L-stick click  look back
-HUD_PAD_ON_FOOT,Stick izq.  caminar   ·   X  saltar   ·   A  agarrar / dejar,L-stick  walk   ·   X  jump   ·   A  grab / place
-HUD_PAD_PASSENGER,RT (mantener)  cuidar tu paquete   ·   Stick izq.  secuencias   ·   A  bajarte,RT (hold)  tend your package   ·   L-stick  sequences   ·   A  get out
+HUD_PAD_ON_FOOT,%s  caminar   ·   %s  saltar   ·   %s  agarrar / dejar,%s  walk   ·   %s  jump   ·   %s  grab / place
+HUD_PAD_PASSENGER,RT (mantener)  cuidar tu paquete   ·   %s  secuencias   ·   %s  bajarte,RT (hold)  tend your package   ·   %s  sequences   ·   %s  get out
 HUD_PAD_PAUSE,Start  pausa,Start  pause
-HUD_PAD_CREW,Mantener Back  tripulación,Hold Back  crew
-HUD_PAD_PHONE,LB  celular,LB  phone
-HUD_PAD_PING,D-pad arriba  ping,D-pad up  ping
+HUD_PAD_CREW,Mantener %s  tripulación,Hold %s  crew
+HUD_PAD_PHONE,%s  celular,%s  phone
+HUD_PAD_PING,%s  ping,%s  ping
 HUD_PAD_RESTART,Mantener Y  reiniciar,Hold Y  restart
 HUD_PAUSED,EN PAUSA,PAUSED
 HUD_PAUSE_BODY,Tu entrega puede esperar.,Your delivery can wait.
@@ -519,16 +518,16 @@ UI_OPT_BIND_RESERVED,Esa tecla está reservada. Probá con otra.,That key is res
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
 UI_OPT_OPAQUE_GEL,Gel opaco (accesibilidad),Opaque gel (accessibility)
 UI_OPT_OPAQUE_GEL_HINT,Evita transparencias y lectura de pantalla. La calidad baja lo activa automáticamente.,Avoids transparency and screen reads. Low quality enables it automatically.
-UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte  ·  Flechas arriba/abajo marchas (furgón viejo)\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
-Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out  ·  Up/Down arrows gears (old van)
-Passenger: Left click (hold) tend the package  ·  WASD sequences
-F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
-Esc pause  ·  hold R restart  ·  F11 full screen  ·  hold Tab crew (depot)"
-UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  clic stick izq. correr  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte  ·  RB/LB marchas (furgón viejo)\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  L-stick click run  ·  R-stick look  ·  A interact  ·  X jump
-Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out  ·  RB/LB gears (old van)
-Passenger: RT (hold) tend the package  ·  L-stick sequences
-LB phone  ·  RB take photo  ·  D-pad up ping  ·  D-pad left use card
-R-stick click centre view  ·  Start pause  ·  hold Y restart  ·  hold Back crew (depot)"
+UI_OPT_CONTROLS_KEYS,"A pie: %s caminar  ·  %s correr  ·  Mouse mirar  ·  %s interactuar  ·  %s saltar  ·  %s soltar\nManejando: %s acelerar y frenar  ·  %s girar  ·  %s freno de mano  ·  %s bocina  ·  %s bajarte  ·  %s/%s marchas (furgón viejo)\nPasajero: Click izq. (mantener) cuidar el paquete  ·  %s secuencias\n%s celular  ·  Click sacar foto  ·  %s / Click rueda ping  ·  %s usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener %s tripulación (depósito)","On foot: %s walk  ·  %s run  ·  Mouse look  ·  %s interact  ·  %s jump  ·  %s drop
+Driving: %s accelerate and brake  ·  %s steer  ·  %s handbrake  ·  %s horn  ·  %s get out  ·  %s/%s gears (old van)
+Passenger: Left click (hold) tend the package  ·  %s sequences
+%s phone  ·  Click take photo  ·  %s / Wheel click ping  ·  %s use card  ·  C centre view
+Esc pause  ·  hold R restart  ·  F11 full screen  ·  hold %s crew (depot)"
+UI_OPT_CONTROLS_PAD,"A pie: %s caminar  ·  %s correr  ·  stick der. mirar  ·  %s interactuar  ·  %s saltar\nManejando: %s acelerar  ·  %s frenar  ·  %s girar  ·  %s freno de mano  ·  %s bocina  ·  %s bajarte  ·  %s/%s marchas (furgón viejo)\nPasajero: RT (mantener) cuidar el paquete  ·  %s secuencias\n%s celular  ·  RB sacar foto  ·  %s ping  ·  %s usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener %s tripulación (depósito)","On foot: %s walk  ·  %s run  ·  R-stick look  ·  %s interact  ·  %s jump
+Driving: %s accelerate  ·  %s brake  ·  %s steer  ·  %s handbrake  ·  %s horn  ·  %s get out  ·  %s/%s gears (old van)
+Passenger: RT (hold) tend the package  ·  %s sequences
+%s phone  ·  RB take photo  ·  %s ping  ·  %s use card
+R-stick click centre view  ·  Start pause  ·  hold Y restart  ·  hold %s crew (depot)"
 UI_OPT_CONTROL_HELP,Ayudas de controles,Control hints
 UI_OPT_EFFECTS_VOLUME,Volumen de efectos,Effects volume
 UI_OPT_FOV,Campo de visión,Field of view
@@ -958,7 +957,7 @@ HUD_SCRIBBLE_HOSTILE_4,"SI SE MUEVE, ES NORMAL","IF IT MOVES, THAT IS NORMAL"
 UI_DEPOT_BOSS_TAG,La Jefa por radio,The Boss on the radio
 HUD_LOW_VISIBILITY_DRIVER,¡No ves nada! Que te guíen,You can't see a thing! Get someone to guide you
 HUD_LOW_VISIBILITY_GUIDE_KEY,"¡El conductor no ve nada! Guialo con la rueda de frases (%s)","The driver can't see a thing! Guide them with the phrase wheel (%s)"
-HUD_LOW_VISIBILITY_GUIDE_PAD,¡El conductor no ve nada! Guialo con la rueda de frases (D-pad arriba),The driver can't see a thing! Guide them with the phrase wheel (D-pad up)
+HUD_LOW_VISIBILITY_GUIDE_PAD,¡El conductor no ve nada! Guialo con la rueda de frases (%s),The driver can't see a thing! Guide them with the phrase wheel (%s)
 HUD_NEWS_MISSED_1_H,Casa {house}: esperaron hasta la cena y el camión ni frenó,House {house} waited until dinner and the truck never slowed
 HUD_NEWS_MISSED_1_B,{player} lo explicó así: 'Me pareció ver un bache lindo más adelante'.,{player} explained: 'I spotted a really nice pothole up ahead.'
 HUD_NEWS_MISSED_2_H,Vecinos de {town} piden un mapa para los repartidores,Neighbors in {town} ask for a map for the delivery crew

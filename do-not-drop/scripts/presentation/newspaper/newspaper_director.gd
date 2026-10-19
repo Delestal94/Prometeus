@@ -383,7 +383,7 @@ func _build_overlay() -> void:
 	_skip_row.add_child(_skip_ring)
 	var hint := Label.new()
 	hint.name = "Hint"
-	hint.text = tr("HUD_NEWS_SKIP") % GameSettings.prompt(GameSettings.binding_label(&"interact"), "A")
+	hint.text = tr("HUD_NEWS_SKIP") % GameSettings.binding_label(&"interact")
 	hint.add_theme_font_override("font", UiTheme.body_font(700))
 	hint.add_theme_font_size_override("font_size", 20)
 	hint.add_theme_color_override("font_color", UiTheme.PAPER)
