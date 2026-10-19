@@ -1,5 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_skin_resources.gd
+## S-311.65: sixteen base skin resources expose stable colour, absorption and shine values.
 
 const Catalog := preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
 const Definition := preload("res://scripts/gameplay/player/gel/gel_skin_definition.gd")
