@@ -270,6 +270,8 @@ func put_snapshot(value: Variant) -> bool:
 	_tables = got["tables"]
 	_box_ids = got["boxes"]
 	_serial = got["serial"]
+	# The snapshot brings the host's wallet too: no drift left to report.
+	_drifted = false
 	return true
 
 
@@ -551,6 +553,8 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 	var box_at: StringName = box_location(box_id)
 	var held: Dictionary = desk.box.contents()
 	if held.is_empty() or not contents is Dictionary or contents != held:
+		return false
+	if not desk.supplies.has(StationSupplies.TAPE):
 		return false
 	for product: StringName in held:
 		if stock.count(product, box_at) < int(held[product]):

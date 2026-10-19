@@ -759,7 +759,9 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 		poll_snapshot(Time.get_ticks_msec())
 		return
 	event_applied.emit(seq, kind, data)
-	if build.take_drift() or table.take_drift():
+	var layout_drift: bool = build.take_drift()
+	var table_drift: bool = table.take_drift()
+	if layout_drift or table_drift:
 		# Its wallet was off the host's (set right now, D-0910): the history it missed comes by snapshot.
 		_start_waiting()
 		poll_snapshot(Time.get_ticks_msec())

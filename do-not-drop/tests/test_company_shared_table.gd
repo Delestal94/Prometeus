@@ -22,7 +22,9 @@ extends SceneTree
 ##   pair of hands, an empty cell, contents that differ) are not applied and change nothing;
 ## - the snapshot part: to_dict() through var_to_bytes and put_snapshot() gives the same tables;
 ##   a malformed one (not a dictionary, negative serial, overlapping products, an unknown product,
-##   supplies over capacity, a box without its id, one box id twice) is refused, changing nothing;
+##   cells that aren't the catalog's, a taped box, a seal twice, supplies over capacity, a box
+##   without its id, one box id twice) is refused, changing nothing; MAX_TABLES covers the biggest
+##   shed; box_sealed on a copy whose table has no tape is not applied and moves no money;
 ## - host and client as ENet peers in one process, one shared table and no owner: the client opens
 ##   the box and puts a hen and a puppy in, the host stamps, pads and labels it and tapes it; after
 ##   every step both hold the same tables, Inventory and company (money, wallet entries with the
@@ -152,7 +154,10 @@ func _check_solo() -> void:
 		[T.START, {"size": &"M"}, CompanyNet.REASON_BAD_DATA, "no station"],
 		[T.TAPE, {"station": &"table_3"}, T.REASON_NO_BOX, "taping at a table with no box"],
 	]
-	_refusals(net, heard, cases)
+	for case: Array in cases:
+		var got: StringName = _ask(net, heard, case[0], case[1])
+		_expect(got == case[2],
+			"%s with %s is refused with %s (got %s)" % [case[0], case[3], case[2], got])
 	stock.move(&"puppy", 1, &"shelf:s_1", hands)
 	_expect(_ask(net, heard, T.TAKE_OUT, _cell(0, 0, 0)) == CompanyNet.REASON_HANDS_BUSY,
 		"Taking a hen out into hands holding hens and a puppy is refused with hands_busy")
@@ -308,11 +313,16 @@ func _check_snapshot_part() -> void:
 	unknown["items"][0]["product"] = "unicorn"
 	var full: Dictionary = StationSupplies.full().to_dict()
 	full["tape"] = 11
+	var squeezed: Dictionary = box.to_dict()
+	squeezed["items"][0]["cells"] = [1, 1, 1]
 	var bad: Array = [
 		[7, "not a dictionary"],
 		[_with(good, "serial", -1), "a negative serial"],
 		[_table(good, "box", overlap), "two products on one cell"],
 		[_table(good, "box", unknown), "an unknown product"],
+		[_table(good, "box", squeezed), "a hen whose cells aren't the catalog's"],
+		[_table(good, "box", _with(box.to_dict(), "taped", true)), "a taped box on the table"],
+		[_table(good, "box", _with(box.to_dict(), "stamps", ["fragile", "fragile"])), "a seal 2x"],
 		[_table(good, "supplies", full), "tape over its capacity"],
 		[_table(good, "box_id", ""), "a box without its id"],
 		[_with(good, "tables", {"t1": good["tables"]["table_1"], "t2": good["tables"]["table_1"]}),
@@ -321,6 +331,31 @@ func _check_snapshot_part() -> void:
 	for case: Array in bad:
 		_expect(not tables.put_snapshot(case[0]) and tables.to_dict() == good,
 			"A tables part with %s is refused, changing nothing" % case[1])
+	var most: int = CompanyTuning.WAREHOUSE_STAGE_MAX_PIECES.max()
+	_expect(CompanyTableNet.MAX_TABLES >= most,
+		"A snapshot takes every table the biggest shed holds (%d >= %d pieces)"
+		% [CompanyTableNet.MAX_TABLES, most])
+	_check_seal_without_tape(good)
+
+
+## A copy whose table ran out of tape doesn't take a box_sealed, and its wallet doesn't move.
+func _check_seal_without_tape(good: Dictionary) -> void:
+	var no_tape: Dictionary = StationSupplies.full().to_dict()
+	no_tape["tape"] = 0
+	var mirror := CompanyTableNet.new()
+	var state: Node = _new_state("NoTapeState")
+	state.call(&"new_company", "No Tape SRL")
+	var stock := Inventory.new()
+	stock.receive(&"hen", 1, T.box_location(&"box_4"))
+	var loaded: bool = mirror.put_snapshot(_table(good, "supplies", no_tape))
+	var money: int = int(state.get(&"money"))
+	var sealed: Dictionary = {"table": &"table_1", "order": &"", "package_id": &"box_4",
+		"contents": {&"hen": 1}, "money": money - 50, "minute": 600}
+	_expect(loaded and not mirror.apply(state, stock, T.SEALED, sealed)
+		and int(state.get(&"money")) == money and not mirror.take_drift()
+		and stock.count(&"hen", T.box_location(&"box_4")) == 1 and mirror.has_box(&"table_1"),
+		"box_sealed on a copy without tape is not applied: no money moves, no drift, the box stays")
+	state.free()
 
 
 # --- Network ---
@@ -435,8 +470,8 @@ func _check_clash() -> void:
 		and _reason_heard(_client.refusals, rid) == T.REASON_CELL_TAKEN
 		and _host.net.seq == seq + 1,
 		"Both put a hen in the same cell: the host's goes in, the client hears cell_taken")
-	_expect(_host.refusals.size() == heard
-		and _client.net.inventory.count(&"hen", CompanyNet.hands_location(_client_id())) == 1,
+	var hands: StringName = CompanyNet.hands_location(_client.side.multiplayer.get_unique_id())
+	_expect(_host.refusals.size() == heard and _client.net.inventory.count(&"hen", hands) == 1,
 		"...only the client heard a refusal and its hen is still in its hands")
 	_expect_equal([_host, _client], "after the clashing requests")
 
@@ -525,13 +560,6 @@ func _connected(peer: Peer, peers: int) -> bool:
 		and _host.side.multiplayer.get_peers().size() == peers
 
 
-func _refusals(net: CompanyNet, heard: Array, cases: Array) -> void:
-	for case: Array in cases:
-		var got: StringName = _ask(net, heard, case[0], case[1])
-		_expect(got == case[2],
-			"%s with %s is refused with %s (got %s)" % [case[0], case[3], case[2], got])
-
-
 static func _solo_state(net: CompanyNet, state: Node) -> Array:
 	return [net.table.to_dict(), net.inventory.to_dict(), _company(state)]
 
@@ -556,10 +584,6 @@ func _add_net(peer: Peer) -> void:
 	peer.net.request_rejected.connect(func(rid: int, reason: StringName) -> void:
 		peer.refusals.append([rid, reason]))
 	peer.net.company_state_restored.connect(func(seq: int) -> void: peer.restored.append(seq))
-
-
-func _client_id() -> int:
-	return _client.side.multiplayer.get_unique_id()
 
 
 ## The host sends `peer` its snapshot as when that peer's world comes up; true once it is in.

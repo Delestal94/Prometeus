@@ -132,7 +132,8 @@ static func _supplies_ok(value: Variant) -> bool:
 	return true
 
 
-## A box as PackedBox.to_dict() writes it, with its types, products of the catalog and nothing
+## An open box as PackedBox.to_dict() writes it, with its types, no tape (a taped box leaves the
+## table), products of the catalog with the catalog's cells, each seal once, and nothing
 ## PackedBox.from_dict() would drop (a product out of the box or on another): it comes back equal.
 static func _box_ok(box: Dictionary) -> bool:
 	var size: Variant = box.get("box_size")
@@ -143,19 +144,23 @@ static func _box_ok(box: Dictionary) -> bool:
 		return false
 	if not (items is Array and fill is Array and stamps is Array and box.get("taped") is bool):
 		return false
-	var most: int = CompanyTableNet.MAX_ITEMS
-	if (items as Array).size() > most or (fill as Array).size() > CompanyTableNet.MAX_FILL:
+	if box["taped"] or (items as Array).size() > CompanyTableNet.MAX_ITEMS \
+			or (fill as Array).size() > CompanyTableNet.MAX_FILL \
+			or (stamps as Array).size() > BoxSeals.KINDS.size():
 		return false
 	for item: Variant in items:
-		if not (item is Dictionary and _catalog(item.get("product"))
-				and _triple_ok(item.get("origin")) and _triple_ok(item.get("cells"))):
+		var cells: Variant = _catalog_cells(item.get("product")) if item is Dictionary else null
+		if cells == null or cells != item.get("cells") or not _triple_ok(item.get("origin")):
 			return false
 	for cell: Variant in fill:
 		if not _triple_ok(cell):
 			return false
+	var seen: Dictionary = {}
 	for stamp: Variant in stamps:
-		if not (_short(stamp, false) and BoxSeals.is_kind(StringName(stamp))):
+		var kind: bool = _short(stamp, false) and BoxSeals.is_kind(StringName(stamp))
+		if not kind or seen.has(String(stamp)):
 			return false
+		seen[String(stamp)] = true
 	return _short(box.get("label_order_id"), true) and PackedBox.from_dict(box).to_dict() == box
 
 
@@ -169,8 +174,14 @@ static func _triple_ok(value: Variant) -> bool:
 	return true
 
 
-static func _catalog(product: Variant) -> bool:
-	return _short(product, false) and CompanyAsk.product_exists(StringName(product))
+## [x, y, z] of a catalog product's cells (ProductDefinition.cells, as PackedBox.to_dict() writes
+## them), null for anything that isn't a product of the catalog.
+static func _catalog_cells(product: Variant) -> Variant:
+	if not (_short(product, false) and CompanyAsk.product_exists(StringName(product))):
+		return null
+	var path: String = CompanyAsk.PRODUCTS_DIR + String(product) + ".tres"
+	var def: ProductDefinition = load(path) as ProductDefinition
+	return [def.cells.x, def.cells.y, def.cells.z] if def != null else null
 
 
 ## Text up to CompanyTableNet.MAX_ID_LENGTH, empty only if `empty_ok`.
