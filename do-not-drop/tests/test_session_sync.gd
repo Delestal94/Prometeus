@@ -10,8 +10,28 @@ extends SceneTree
 ## remote interactions only within reach, no photo bonus for a house the run
 ## drove past, and a session that ends leaving nothing of itself behind.
 ##
+## N-975, a peer that joins after the crew took the rescue hook and made two
+## deliveries (run_manager.gd _receive_session_state, rescue_hook.gd):
+## - the session state's deliveries come out as EventBus.delivery_restored, one
+##   per door with its outcome, and never as house_delivery_recorded (that one
+##   replays voices and faces and records the delivery again): the record keeps
+##   two entries, both houses' porch lights, signs, balloons and doorbells go
+##   out, the dashboard GPS skips them (to the bay, both being done) and the
+##   depot's board ticks each with its outcome;
+## - the rescue hook listens to peer_level_ready; with two ENet peers in one
+##   process (their own SceneMultiplayer each, the hook at the same path), the
+##   host's armed hook hands a joiner whose level came up its state (it missed
+##   arm()) and the joiner's pole shows; the state is read when it goes out
+##   (deferred), so a run that ends in that frame sends it stowed; a peer id
+##   that isn't connected gets nothing; offline, nothing happens.
+##
 ## Offline, so everything here is the host's side or a direct call of what a
-## client runs; the two/three-process behaviour is checked with probes.
+## client runs (but the hook's two peers); the two/three-process behaviour is
+## checked with probes.
+
+const HOOK_PORT: int = 24655
+## By path, not class_name: rescue_hook.gd names autoloads, and a --script compile runs before they exist.
+const RESCUE_HOOK_PATH: String = "res://scripts/gameplay/vehicle/rescue_hook.gd"
 
 var _failures: int = 0
 
@@ -114,18 +134,58 @@ func _initialize() -> void:
 	run.call(&"reset_run")
 	var gone: Node = packages[2]
 	var gone_path: String = String(gone.get_path())
+	# The photo check above resolved house 0 on this peer; a joiner's freshly loaded level has every door waiting.
+	var houses: Array = level.route.houses
+	var gps: DashboardGps = van.find_child("DashboardGps", true, false) as DashboardGps
+	_expect(houses.size() == 2 and gps != null, "A solo route has two houses and the truck a GPS (%d)" % houses.size())
+	for house: DeliveryHouse in houses:
+		house.waiting_marker.set_waiting(true)
+		house.set_doorbell_lit(true)
+	if gps != null:
+		gps.set(&"_done", {})
+	var board: Node = level.depot.get_node(^"OrderBoard")
+	var board_marks: Array[Label3D] = [board.get_node(^"Mark0"), board.get_node(^"Mark1")]
+	for mark: Label3D in board_marks:
+		mark.text = ""
+	var bus: Node = root.get_node(^"/root/EventBus")
+	var restored: Array = []
+	var recorded: Array = []
+	var on_restored := func(index: int, outcome: StringName) -> void: restored.append([index, outcome])
+	var on_recorded := func(index: int, _outcome: StringName, _package: StringName) -> void: recorded.append(index)
+	bus.connect(&"delivery_restored", on_restored)
+	bus.connect(&"house_delivery_recorded", on_recorded)
 	run.call(&"_receive_session_state", {
 		"running": true, "mode": &"delivery", "event_id": &"", "elapsed": 12.5, "distance": 0.0,
-		"expected_houses": 1, "deliveries": [{"house": 0, "outcome": &"delivered_ok", "package_id": &"x", "photo": false}],
+		"expected_houses": 2, "deliveries": [
+			{"house": 0, "outcome": &"delivered_ok", "package_id": &"x", "photo": false},
+			{"house": 1, "outcome": &"delivered_ruined", "package_id": &"y", "photo": false},
+		],
 		"cargo": {&"box_a": {"integrity": 80.0, "maximum": 100.0, "state": 0}}, "names": {&"box_a": "Frágil"},
 		"consumed": [gone_path], "door_open": false, "results": {},
 	})
 	await process_frame
+	bus.disconnect(&"delivery_restored", on_restored)
+	bus.disconnect(&"house_delivery_recorded", on_recorded)
 	_expect(bool(run.get(&"is_running")), "A joiner arriving mid-run is in the run")
 	# The clock keeps running for the frame this test waited.
 	var clock: float = float(run.get(&"elapsed_seconds"))
 	_expect(clock >= 12.5 and clock < 13.0, "...with the host's clock (got %.3f)" % clock)
-	_expect((run.get(&"deliveries") as Array).size() == 1, "...and the deliveries already made")
+	_expect((run.get(&"deliveries") as Array).size() == 2, "...and the deliveries already made, once each (got %d)"
+			% (run.get(&"deliveries") as Array).size())
+	_expect(restored == [[0, &"delivered_ok"], [1, &"delivered_ruined"]],
+			"Each door already resolved is restored with its outcome (got %s)" % [restored])
+	_expect(recorded.is_empty(), "...never as a new delivery: no voices, faces or second record (got %s)" % [recorded])
+	for house: DeliveryHouse in houses:
+		var marker: HouseWaitingMarker = house.waiting_marker
+		_expect(not marker.porch_light.visible and not marker.sign_board.visible and not marker.balloon.visible
+				and not house.doorbell_lit,
+				"House %d, done before the join: light out, sign and balloon down, doorbell dark" % house.house_index)
+	if gps != null:
+		_expect(gps.target_house == -1, "The joiner's GPS skips the houses already done (target %d)" % gps.target_house)
+	var board_ok: String = board_marks[0].text
+	var board_ruined: String = board_marks[1].text
+	_expect(board_ok == tr("WORLD_DEPOT_MARK_OK") and board_ruined == tr("WORLD_DEPOT_MARK_RUINED"),
+			"The joiner's depot board ticks each door with its outcome (got '%s', '%s')" % [board_ok, board_ruined])
 	_expect(not is_instance_valid(gone) or gone.is_queued_for_deletion(), "Boxes already handed over go away on the joiner")
 	_expect(not bool(level.depot.door.get(&"is_open")), "The depot door is shut if it's shut on the host")
 	# The host reads its own door through the typed level (N-224.4); a scene that isn't a level reads as open.
@@ -195,11 +255,97 @@ func _initialize() -> void:
 	_expect(box_limited[0], "A box's sync is already limited to ready peers when it enters the tree")
 	box_scene.free()
 
+	# --- the van's rescue hook catches a late joiner up (N-975) ---
+	var van_hook: Node = van.get_node(^"RescueHook")
+	var hook_wired: bool = van_hook.has_method(&"_on_peer_level_ready") \
+			and network.peer_level_ready.is_connected(Callable(van_hook, &"_on_peer_level_ready"))
+	_expect(hook_wired, "The van's rescue hook listens to peer_level_ready")
+	if hook_wired:
+		van_hook.call(&"_on_peer_level_ready", 2)
+		await process_frame
+		_expect(not bool(van_hook.get(&"armed")), "Offline, a peer's level coming up changes nothing on the hook")
+
 	level.free()
 	await create_timer(0.1).timeout
+	await _check_hook_late_join(network)
 	if _failures == 0:
-		print("PASS: late joiners, handed-over boxes, carrying in the truck, tending, reach, photos and session end")
+		print("PASS: late joiners (houses already done, the rescue hook), handed-over boxes, carrying in the truck,"
+				+ " tending, reach, photos and session end")
 	quit(_failures)
+
+
+## N-975 R-1: two ENet peers in one process, each side with its own SceneMultiplayer and a rescue hook at the same
+## path under it (as on every peer's van). The host took the hook before the client was there.
+func _check_hook_late_join(network: Node) -> void:
+	var host_side := Node3D.new()
+	host_side.name = "HookHost"
+	root.add_child(host_side)
+	var client_side := Node3D.new()
+	client_side.name = "HookClient"
+	root.add_child(client_side)
+	set_multiplayer(SceneMultiplayer.new(), host_side.get_path())
+	set_multiplayer(SceneMultiplayer.new(), client_side.get_path())
+	var server := ENetMultiplayerPeer.new()
+	_expect(server.create_server(HOOK_PORT, 2) == OK, "The test hosts an ENet session on localhost:%d" % HOOK_PORT)
+	host_side.multiplayer.multiplayer_peer = server
+	var hook_script: GDScript = load(RESCUE_HOOK_PATH)
+	var host_hook: Node3D = hook_script.new()
+	host_hook.name = "RescueHook"
+	host_side.add_child(host_hook)
+	host_hook.call(&"arm")
+	_expect(bool(host_hook.get(&"armed")), "The host's run took the hook")
+
+	var client := ENetMultiplayerPeer.new()
+	_expect(client.create_client("127.0.0.1", HOOK_PORT) == OK, "The client starts joining")
+	client_side.multiplayer.multiplayer_peer = client
+	var client_hook: Node3D = hook_script.new()
+	client_hook.name = "RescueHook"
+	client_side.add_child(client_hook)
+	var connected: bool = await _wait_for(func() -> bool:
+		return host_side.multiplayer.get_peers().size() == 1 and client_side.multiplayer.get_peers().has(1))
+	_expect(connected, "The client connects to the host")
+	if connected:
+		var client_id: int = client_side.multiplayer.get_unique_id()
+		await _wait_frames(5)
+		_expect(not bool(client_hook.get(&"armed")), "The joiner missed arm(): its hook starts stowed")
+		network.emit_signal(&"peer_level_ready", client_id)
+		var caught_up: bool = await _wait_for(func() -> bool: return bool(client_hook.get(&"armed")))
+		_expect(caught_up and (client_hook.get(&"_pole") as Node3D).visible,
+				"The joiner's hook is armed, its pole showing, once its level came up (armed %s)" % caught_up)
+		# Its level comes up again (a reload) and the run ends on the host in that same frame: what goes out
+		# is the hook as it is when sent, stowed.
+		network.emit_signal(&"peer_level_ready", client_id)
+		host_hook.call(&"_on_run_ended", 0, {})
+		var stowed: bool = await _wait_for(func() -> bool: return not bool(client_hook.get(&"armed")))
+		_expect(stowed, "The state is read when it's sent: the run that ended meanwhile leaves it stowed")
+		# Nobody connected by that id: nothing is sent, and nothing reaches the client by mistake.
+		host_hook.call(&"_set_armed", true)
+		network.emit_signal(&"peer_level_ready", 99)
+		await _wait_frames(10)
+		_expect(not bool(client_hook.get(&"armed")),
+				"A peer id that isn't connected gets nothing, and nobody else does")
+
+	client.close()
+	server.close()
+	await process_frame
+	set_multiplayer(null, host_side.get_path())
+	set_multiplayer(null, client_side.get_path())
+	host_side.free()
+	client_side.free()
+
+
+func _wait_for(done: Callable, seconds: float = 5.0) -> bool:
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		if done.call():
+			return true
+		await process_frame
+	return bool(done.call())
+
+
+func _wait_frames(count: int) -> void:
+	for i: int in range(count):
+		await process_frame
 
 
 func _expect(condition: bool, description: String) -> void:

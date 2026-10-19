@@ -8,6 +8,9 @@ extends SceneTree
 ## record doesn't touch it. The doorbell panel (N-302) hangs on each model's
 ## wall beside the door with the house number, lit while the house waits and
 ## dark once its delivery is recorded; ringing happens where it always did.
+## A peer that joined mid-run hears the doors already resolved as
+## EventBus.delivery_restored (N-975): that house's light, sign, balloon and
+## doorbell go out the same way, and another house's restore leaves it waiting.
 ## The order arrives as [package_id, trap_key, code] (N-805) and each peer
 ## writes the trap in its own language: English here reads "FRAGILE".
 ## The balloon is shaded by the lights with a glow of its own, not a flat
@@ -90,6 +93,17 @@ func _run() -> void:
 		_expect((houses[1] as DeliveryHouse).doorbell_lit and _doorbell_glows(houses[1]), "The other house's doorbell stays lit")
 		root.get_node(^"/root/EventBus").emit_signal(&"house_delivery_recorded", 1, &"missed", &"")
 		_expect(not second.sign_board.visible, "Driven past counts too: nothing left to wait for")
+		# A peer that joined mid-run (N-975): a house waiting in its fresh level, resolved before it came.
+		first.set_waiting(true)
+		(houses[0] as DeliveryHouse).set_doorbell_lit(true)
+		root.get_node(^"/root/EventBus").emit_signal(&"delivery_restored", 1, &"delivered_ok")
+		_expect(first.porch_light.visible and (houses[0] as DeliveryHouse).doorbell_lit,
+			"Another house restored for a late joiner leaves this one waiting")
+		root.get_node(^"/root/EventBus").emit_signal(&"delivery_restored", 0, &"delivered_ruined")
+		_expect(not first.porch_light.visible and not first.sign_board.visible and not first.balloon.visible,
+			"Restored for a late joiner: the light goes out and the sign and balloon come down")
+		_expect(not (houses[0] as DeliveryHouse).doorbell_lit and not _doorbell_glows(houses[0]),
+			"...and the doorbell goes dark, as on a delivery")
 		# Same order, English peer: the host's key reads in this peer's language.
 		var locale: String = TranslationServer.get_locale()
 		TranslationServer.set_locale("en")

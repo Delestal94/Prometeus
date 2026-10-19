@@ -4,7 +4,9 @@ extends SceneTree
 ## shows the distance along the road to the next house still waiting, the
 ## box code it ordered and an arrow toward it; once every house is done it
 ## points at the free bay of the base at the end of the road (N-116). In
-## Endless it shows the distance driven and the record.
+## Endless it shows the distance driven and the record. A GPS that came up
+## after the doors were resolved (a peer that joined mid-run, N-975) skips
+## them once it hears EventBus.delivery_restored, house by house, to the bay.
 
 var _failures: int = 0
 
@@ -59,6 +61,22 @@ func _run() -> void:
 		gps.refresh()
 		var aim: float = rad_to_deg(gps.arrow.rotation.z)
 		_expect(gps.arrow.visible and absf(gps.arrow.rotation.z) < 0.2, "and the arrow aims at it (%.0f°)" % aim)
+
+		# A late joiner's GPS (N-975): it came up after the doors were resolved, so it only
+		# hears of them from the session state, as delivery_restored.
+		var late := DashboardGps.new()
+		late.name = "LateJoinerGps"
+		gps.get_parent().add_child(late)
+		late.refresh()
+		_expect(late.target_house == 0,
+				"A GPS that missed the deliveries starts at the first house (%d)" % late.target_house)
+		bus.emit_signal(&"delivery_restored", 0, &"delivered_ok")
+		_expect(late.target_house == 1 and late.detail_label.text.begins_with("CASA 2"),
+				"A house restored as done is skipped (%s)" % late.detail_label.text)
+		bus.emit_signal(&"delivery_restored", 1, &"missed")
+		_expect(late.target_house == -1 and late.detail_label.text == "BAHÍA %d" % bay,
+				"With every house restored as done it points at the bay (%s)" % late.detail_label.text)
+		late.free()
 	level.queue_free()
 	network.set(&"world_seed", 0)
 	network.set(&"world_house_count", 0)

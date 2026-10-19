@@ -84,6 +84,13 @@ signal shop_resolved(offer_id: StringName, offer: Dictionary)
 ## at. photo_available says whether there's still something worth
 ## photographing there -- the phone camera uses it to offer the shot.
 signal house_delivery_recorded(house_index: int, outcome: StringName, package_id: StringName)
+## Local-only (a plain emit, never relayed): a peer that joined mid-run read in
+## the host's session state that this door was already resolved
+## (RunManager._receive_session_state, N-975). What shows a waiting house (its
+## marker and doorbell, the dashboard GPS, the depot's board) catches up as on
+## house_delivery_recorded; nothing replays the moment (voices, faces, the
+## neighbour's scene) and nothing records it again (register_delivery).
+signal delivery_restored(house_index: int, outcome: StringName)
 ## What the door saw of a rescued box (repaired / unconvincing / substituted),
 ## relayed right before its house_delivery_recorded. Relayed.
 signal delivery_care_noted(house_index: int, category: StringName)

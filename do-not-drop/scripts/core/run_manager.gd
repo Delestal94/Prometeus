@@ -512,6 +512,14 @@ func send_session_state(peer_id: int) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func _receive_session_state(state: Dictionary) -> void:
+	_load_session_state(state)
+	# The doors already resolved: their markers, doorbells, the GPS and the depot's board catch up (N-975). A
+	# local emit, not house_delivery_recorded, which would replay voices and faces and register_delivery() again.
+	for entry: Dictionary in deliveries:
+		EventBus.delivery_restored.emit(int(entry.get("house", -1)), StringName(entry.get("outcome", &"")))
+
+
+func _load_session_state(state: Dictionary) -> void:
 	RUN_SESSION.free_consumed(self, state.get("consumed", []))
 	if not bool(state.get("door_open", true)):
 		RUN_SESSION.close_depot_door(get_tree().current_scene)

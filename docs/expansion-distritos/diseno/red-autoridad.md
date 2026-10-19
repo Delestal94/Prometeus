@@ -337,7 +337,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 
 - **Peticiones** `box_start`, `box_place`, `box_take_out`, `box_fill`, `box_label`, `box_stamp`, `box_tape` y
   **eventos** `box_started`, `box_placed`, `box_taken_out`, `box_filled`, `box_labeled`, `box_stamped`,
-  `box_sealed` (filas 9 a 15, protocolo 36), por el `_request` / `_apply_event` de siempre: ningún RPC nuevo.
+  `box_sealed` (filas 9 a 15, protocolo 37), por el `_request` / `_apply_event` de siempre: ningún RPC nuevo.
   `CompanyNet` los suma a `REQUEST_KINDS` / `EVENT_KINDS` y los pasa a `CompanyNet.table`
   (`CompanyTableNet`, `scripts/core/company/company_table_net.gd`): `check()` en el host, `apply()` en cada
   peer, con una rama de `_apply_state()` por grupo de eventos (sin `_:`). Ninguna es crítica (regla 8):

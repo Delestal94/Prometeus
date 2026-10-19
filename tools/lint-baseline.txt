@@ -141,7 +141,7 @@ do-not-drop/tests/test_route_terrain.gd|max-line-length 1
 do-not-drop/tests/test_run_relay.gd|max-line-length 3
 do-not-drop/tests/test_score_breakdown.gd|max-line-length 1
 do-not-drop/tests/test_seat_look_limits.gd|max-line-length 6
-do-not-drop/tests/test_session_sync.gd|max-line-length 4
+do-not-drop/tests/test_session_sync.gd|max-line-length 3
 do-not-drop/tests/test_settings.gd|max-line-length 1
 do-not-drop/tests/test_shop_vote_manager.gd|max-line-length 1
 do-not-drop/tests/test_sound_check.gd|max-line-length 1
