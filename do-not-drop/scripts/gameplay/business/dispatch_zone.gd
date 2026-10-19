@@ -81,13 +81,24 @@ func orders() -> Array[StringName]:
 ## Hands the waiting boxes to the trip gate as the cargo of `vehicle_id` and empties the area.
 ## Returns how many boxes went; nothing is staged when none waits.
 func load_into(trips: CompanyTrips, vehicle_id: StringName) -> int:
-	if trips == null or _order_ids.is_empty():
+	return load_boxes(trips, vehicle_id, boxes())
+
+
+## Like load_into() for only `box_ids` (those that are waiting, in the zone's order); the other
+## boxes keep waiting. D-0717's DispatchLoading picks the ones that fit the vehicle.
+func load_boxes(trips: CompanyTrips, vehicle_id: StringName, box_ids: Array[StringName]) -> int:
+	var chosen: Array[StringName] = []
+	var chosen_orders: Array[StringName] = []
+	for box_id: StringName in _order_ids:
+		if box_ids.has(box_id):
+			chosen.append(box_id)
+			chosen_orders.append(_waiting[box_id])
+	if trips == null or chosen.is_empty():
 		return 0
-	var count: int = _order_ids.size()
-	trips.stage_cargo(vehicle_id, orders(), boxes())
-	_waiting.clear()
-	_order_ids.clear()
-	return count
+	trips.stage_cargo(vehicle_id, chosen_orders, chosen)
+	for box_id: StringName in chosen:
+		_forget(box_id)
+	return chosen.size()
 
 
 func to_dict() -> Dictionary:

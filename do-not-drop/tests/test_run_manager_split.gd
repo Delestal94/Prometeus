@@ -205,6 +205,11 @@ func _check_pure_helpers() -> void:
 	_expect(deliveries.mark_photo(door_records, 0) and bool(door_records[0]["photo"]),
 			"A delivered house takes the photo")
 	_expect(not deliveries.mark_photo(door_records, 0), "...once")
+	var asked: Dictionary = {}
+	_expect(deliveries.ask_photo(asked, 0, 1000, 3) and not deliveries.ask_photo(asked, 0, 3999, 3),
+			"A client photo waits for the host's answer: no second one while the first is in flight")
+	_expect(deliveries.ask_photo(asked, 0, 4000, 3) and deliveries.ask_photo(asked, 1, 4001, 3),
+			"...but a photo the host refused (nothing came back) can be retaken, and other houses are independent")
 
 	var results_script: GDScript = load("res://scripts/core/run_results.gd")
 	_expect(results_script.route_event(&"", {}, true) == {}, "No route event, no row")

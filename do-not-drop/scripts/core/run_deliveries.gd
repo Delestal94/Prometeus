@@ -23,6 +23,15 @@ static func delivered_at(deliveries: Array, house_index: int) -> bool:
 	return false
 
 
+## Client side: may this peer send the host another photo for this house? One is in flight for `wait_seconds`
+## (the host's delivery_photo_taken marks the record; a refusal sends nothing back), then it can be retaken.
+static func ask_photo(asked: Dictionary, house_index: int, now_msec: int, wait_seconds: int) -> bool:
+	if asked.has(house_index) and now_msec - int(asked[house_index]) < wait_seconds * 1000:
+		return false
+	asked[house_index] = now_msec
+	return true
+
+
 ## Marks the door's record as photographed; false when there is nothing to file it against.
 static func mark_photo(deliveries: Array, house_index: int) -> bool:
 	for entry: Dictionary in deliveries:

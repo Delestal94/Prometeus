@@ -222,3 +222,10 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Qué:** el galpón ya usaba `DepotKit` para las mallas; lo que duplicaba era la paleta (`ZONE_COLORS` con `Color(...)` sueltos) y el rótulo del piso (un `Label3D` armado a mano). Ahora `ZONE_COLORS` apunta a la paleta de `DepotLayout` (muelle = amarillo de carril, salida = teal, recepción = verde de paso, almacén = azul de estantes, armado = rojo de taller, despacho = naranja de oficina) y el nombre se escribe con `DepotLabels.floor_text` (fuente del depósito, color papel, plano).
 **Decisión:** no se movió geometría de `depot_zones.gd` (cajas del hall, escalera, oficina) porque son medidas en metros del depósito fijo y el galpón trabaja en celdas; compartir eso sería acoplar dos mundos que cambian por separado. Se comparte lo que sí es lo mismo: paleta y rótulos. Si el galpón gana más tipos de zona, el color se agrega en `DepotLayout`.
 **Test** `test_shed_zone_reuse`. **Hecho cuando:** el test pasa y no queda copia de paleta ni de rótulo en el galpón.
+
+### D-0919 · Etiquetas de zona pintadas en el piso (recepción, armado, despacho) — B · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-19, ya en el código desde D-0911, PR #489)** — `CompanyShed` pinta cada zona del `DefaultShed` (dársena, salida, recepción, estantes, armado, despacho) con un parche de color y su nombre en el piso (`ZONE_KEYS`, `ZONE_COLORS`, `DepotLabels.floor_text`, claves `WORLD_SHED_ZONE_*` en `strings_world.csv`, ES/EN); cubierto por `test_company_root` y `test_company_default_layout`. Sin cambios de código en este PR.
+**Depende de:** D-0911
+**Qué:** nombre de cada zona del galpón escrito en el piso, legible desde la cámara aérea.
+**Decisión:** no se agrega nada: D-0911 ya lo resolvió con el mismo dato (`zones` + piezas con rol). La captura con luz real queda para el repaso visual de `arte-pendiente/D-0911.md` (piso pintado con rayas y cinta).
+**Hecho cuando:** captura con las zonas rotuladas — el nombre sale en el piso en el layout por defecto.

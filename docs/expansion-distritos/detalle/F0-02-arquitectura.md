@@ -221,6 +221,7 @@ para que todas existan con su firma.
 **Hecho cuando:** el test pasa y el aviso está.
 
 ### D-0216 · Registros leídos de `data/` — A · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR pendiente)** — `CompanyCatalog` (`scripts/core/company/catalog.gd`): lee las seis carpetas de `data/` (y raíces extra) por id, resuelve `.remap`, junta ids repetidos o faltantes en `errors`; `company_root.load_zones()` lo usa; `test_company_catalog`.
 **Depende de:** D-0204, D-0205, D-0207
 **Qué:** `scripts/core/company/catalog.gd` (`RefCounted` estático o hijo de `CompanyState`). Lee
 `data/products/`, `data/zones/`, `data/vehicles/`, `data/gates/`, `data/suppliers/` y `data/boxes/` con
