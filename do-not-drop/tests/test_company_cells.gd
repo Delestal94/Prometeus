@@ -7,6 +7,7 @@ extends SceneTree
 ## - driving a van from the shed to the first Centro house (1000 m east at 12 m/s) in 60 fps
 ##   steps never costs a step over 50 ms, keeps the 5 x 5 square around it loaded, and drops
 ##   the cells it leaves behind except the pinned ones;
+## - ten cells in a row (D-0313) keep the same limit and never touch the loader;
 ## - coming back to the shed leaves exactly the pinned cells and the square around the shed,
 ##   no cell node outside the tree's children and no orphan node.
 
@@ -53,12 +54,24 @@ func _run() -> void:
 	_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is still there (pinned)")
 	_expect(not cells.is_loaded(Vector2i(-2, 2)), "A cell the van left behind is gone")
 
-	# Back to the shed.
-	for i in steps:
+	# D-0313: ten cells in a row (2560 m), also worst frame under the limit; the loader is not used.
+	var long_van := Vector3(0, 0, 0)
+	cells.anchors = [long_van]
+	cells.step(now + 1.0)
+	var far_worst := 0
+	for i in int(2560.0 / 12.0 * 60.0):
 		now += 1.0 / 60.0
-		van.x -= 12.0 / 60.0
-		cells.anchors = [van]
+		long_van.x += 12.0 / 60.0
+		cells.anchors = [long_van]
+		var t1 := Time.get_ticks_usec()
 		cells.step(now)
+		far_worst = maxi(far_worst, Time.get_ticks_usec() - t1)
+	_expect(far_worst < FRAME_LIMIT_USEC, "No step over 50 ms crossing 10 cells (worst %d us)" % far_worst)
+	_expect(_square_loaded(cells, long_van, 1), "The cells around the van after 10 cells are loaded")
+	_expect(root.get_node_or_null(^"SceneLoader") == null, "Streaming never goes through the loader")
+	van = Vector3(0, 0, 0)
+
+	# Back to the shed.
 	van = Vector3(10, 0, 10)
 	cells.anchors = [van]
 	cells.step(now + 1.0)

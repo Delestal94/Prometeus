@@ -52,6 +52,15 @@ func _run() -> void:
 	await process_frame
 	await physics_frame
 	_expect(bool(state.call(&"is_active")), "Entering the root switches the company on")
+	# D-0313: the map's cells stream around the crew, and the root never goes through the loader.
+	var cells: CompanyCells = level.get_node_or_null(^"WorldCells") as CompanyCells
+	_expect(cells != null and cells == level.get(&"cells"), "The root has its WorldCells child (D-0313)")
+	if cells != null:
+		var spawned: Node3D = level.get(&"player") as Node3D
+		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
+			"The only anchor is the local player")
+		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
+	_expect(root.get_node_or_null(^"SceneLoader") == null, "No loader is left once inside the company")
 	var net: CompanyNet = level.get_node_or_null(^"CompanyNet") as CompanyNet
 	_expect(net != null and net == level.get(&"net"), "The root has its CompanyNet child (D-2003)")
 	if net != null:
