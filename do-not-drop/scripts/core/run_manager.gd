@@ -12,6 +12,8 @@ extends Node
 ## photos), RunLeaderboard (the local board) and RunSession (the level side of a late join). The constants
 ## they define are re-exported below and the methods other files and tests call stay here as wrappers.
 
+## A client waits this long for the host to confirm a photo before it may send another.
+const PHOTO_ASK_SECONDS: int = 3
 const DEADLINE_CUT = preload("res://scripts/core/deadline_cut.gd")
 const RUN_SCORING = preload("res://scripts/core/run_scoring.gd")
 const RUN_RESULTS = preload("res://scripts/core/run_results.gd")
@@ -91,6 +93,8 @@ var expected_houses: int = 0
 ## the delivery records rather than inside them: the records are plain data
 ## that crosses the network, a texture never should.
 var delivery_photos: Dictionary = {}
+## Client side: house index -> when its photo was sent to the host, so a refused one can be retaken.
+var _photo_asked: Dictionary = {}
 ## Host-side attribution for CrewProgression's delivery_photo_taken listener.
 ## The signal keeps its existing compact signature; these fields describe
 ## the accepted shot while relay() emits it synchronously on the host.
@@ -151,6 +155,7 @@ func _physics_process(delta: float) -> void:
 
 
 func reset_run() -> void:
+	_photo_asked = {}
 	is_running = false
 	elapsed_seconds = 0.0
 	results = {}
@@ -342,7 +347,10 @@ func submit_delivery_photo(house_index: int) -> bool:
 		if int(entry["house"]) == house_index:
 			if bool(entry["photo"]) or not handed_over(StringName(entry["outcome"])):
 				return false
-			entry["photo"] = true
+			# Not marked yet: the host can still refuse it (PHOTO_REACH is measured on its side), and only its
+			# delivery_photo_taken marks the record. Until then (or PHOTO_ASK_SECONDS) the shot just waits.
+			if not RUN_DELIVERIES.ask_photo(_photo_asked, house_index, Time.get_ticks_msec(), PHOTO_ASK_SECONDS):
+				return false
 			_request_delivery_photo.rpc_id(NetworkManager.HOST_ID, house_index)
 			return true
 	return false
