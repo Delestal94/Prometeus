@@ -13,6 +13,8 @@ extends SceneTree
 ## - nothing overlaps, nothing is outside the floor or on the dock and the exit (D-0906), WalkReachability
 ##   says every piece is reachable and the dock reaches the exit (D-0907), and the player spawns on
 ##   the dock floor clear of every piece and pallet;
+## - the shelves are the shed shelf's model (D-1811, sm_env_shed_shelf: 2 x 2 x 1 m, centred, front on
+##   +Z), the crates stand on its real decks and the labels in front of its rails;
 ## - what is drawn follows the state: a station per table, a label with units per labeled slot that
 ##   follows the Inventory, a pallet node per pallet:<id>, and a client that only has the snapshot's
 ##   layout and stock draws the same pieces;
@@ -134,6 +136,7 @@ func _check_world(data: DefaultShed) -> void:
 			tables += 1
 			_expect(shed.stations.get(piece["uid"]) is PackingStation, "%s has its PackingStation" % piece["uid"])
 	_expect(tables >= 1, "There is a packing table (%d)" % tables)
+	_check_shelf_model(shed)
 	var labels: Array[Node] = shed.find_children("Label_*", "Label3D", true, false)
 	for label: Node in labels:
 		shelf_labels += 1
@@ -207,6 +210,44 @@ func _check_world(data: DefaultShed) -> void:
 	await process_frame
 	state.call(&"reset")
 	_clean()
+
+
+## The shelf is the model of the shed (D-1811), not boxes: it is imported, 2 m wide, 2 m high and 1 m deep
+## (X -1..1, Y 0..2, Z -0.5..0.5), the batch of the furniture holds its geometry over the shelf's
+## footprint, and the crates rest on the decks and the labels stand in front of the rails.
+func _check_shelf_model(shed: CompanyShed) -> void:
+	var path: String = DepotKit.depot_model(CompanyShed.MODEL_SHELF)
+	_expect(ResourceLoader.exists(path), "The shed shelf model is imported (%s)" % path)
+	if not ResourceLoader.exists(path):
+		return
+	var bounds: AABB = DepotKit.merged_mesh(path).get_aabb()
+	_expect(bounds.size.distance_to(Vector3(2.0, 2.0, 1.0)) < 0.01 and absf(bounds.position.y) < 0.01
+		and absf(bounds.get_center().x) < 0.01 and absf(bounds.get_center().z) < 0.01,
+		"...sized 2 x 2 x 1 m, base centre on the floor (%s)" % bounds)
+	var shelves: int = 0
+	for piece: Dictionary in shed.pieces:
+		if piece["id"] != &"shelf":
+			continue
+		shelves += 1
+		var node := shed.get_node("Furniture/Shelf_%s" % piece["uid"]) as Node3D
+		var rect: Rect2i = piece["rect"]
+		var middle: Vector3 = shed.cell_to_local(Vector2(rect.position) + Vector2(rect.size) * 0.5)
+		_expect(node.position.is_equal_approx(middle), "%s stands on the middle of its footprint" % piece["uid"])
+		var drawn := false
+		for batch: Node in shed.get_node(^"Furniture").get_children():
+			if batch is MeshInstance3D and (batch as MeshInstance3D).get_aabb().encloses(
+					node.transform * AABB(Vector3(-0.9, 0.0, -0.4), Vector3(1.8, 1.9, 0.8))):
+				drawn = true
+		_expect(drawn, "%s is drawn as geometry over its footprint, 1.9 m high" % piece["uid"])
+	_expect(shelves >= 1, "There is a shelf to check (%d)" % shelves)
+	for crate: Node in shed.find_children("Crate_*", "MeshInstance3D", true, false):
+		var level: int = floori(int(String(crate.name).trim_prefix("Crate_")) / float(CompanyShed.SHELF_COLUMNS))
+		var crate_y: float = (crate as Node3D).position.y
+		_expect(is_equal_approx(crate_y - CompanyShed.CRATE_SIZE.y * 0.5, CompanyShed.SHELF_DECKS[level]),
+			"%s rests on the top of its deck (%.3f)" % [crate.name, crate_y])
+	for label: Node in shed.find_children("Label_*", "Label3D", true, false):
+		var label_z: float = (label as Node3D).position.z
+		_expect(label_z > 0.5, "%s stands in front of the rail (z %.2f)" % [label.name, label_z])
 
 
 func _summary(pieces: Array[Dictionary]) -> Array:

@@ -69,6 +69,11 @@ floor, pictogram sign), breakroom (fridge, kitchenette), workshop (scissor lift,
 compressor, workbench). It also draws textures/depot/tx_depot_cage_mesh_256.png
 and tx_depot_pictograms_512.png.
 
+D-1811 (2026-10-19, group "shed"): sm_env_shed_shelf.glb, the company shed's
+default 8-slot shelf (CompanyShed._build_shelf): 2.0 x 1.0 x 2.0, base centre,
+front toward +Z, deck tops at 0.175 / 1.025, label rails centred at 0.62 / 1.47
+with their front at z = 0.5 (the Label3D stand at z = 0.51).
+
 Pass names after "--" to rebuild only some of them:
     blender --background --factory-startup --python build_depot_props.py -- door rack forklift
 """
@@ -2451,6 +2456,107 @@ def fridge_magnets():
     done("sm_env_depot_fridge_magnets.glb")
 
 
+# =============================================================================
+# D-1811 · Company shed default shelf (CompanyShed._build_shelf, front +Z).
+# =============================================================================
+
+SHED_SHELF_W, SHED_SHELF_D, SHED_SHELF_H = 2.0, 1.0, 2.0
+SHED_SHELF_DECK_TOPS = (0.175, 1.025)    # SHELF_DECKS (0.15, 1.0) + half the 5 cm placeholder deck
+SHED_SHELF_LABELS = (0.62, 1.47)         # SHELF_LABELS: the Label3D stand in front, z = 0.51
+SHED_SHELF_COLUMNS = 4
+
+
+def _face_slots(name, centre_u, axis, plane, normal, ys, w, h, material):
+    """Small dark quads (the punched slots of a rack upright) on a flat face.
+    `axis` is the Godot axis the face spans besides Y ("x" or "z"), `plane`
+    the face's coordinate on the other one, `normal` +1/-1 along that one."""
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+    want = Vector(G(*((0, 0, normal) if axis == "x" else (normal, 0, 0))))
+    for y in ys:
+        pts = []
+        for du, dy in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)):
+            u = centre_u + du
+            pts.append(G(u, y + dy, plane) if axis == "x" else G(plane, y + dy, u))
+        face = bm.faces.new([bm.verts.new(p) for p in pts])
+        face.normal_update()
+        if face.normal.dot(want) < 0:
+            face.normal_flip()
+    bm.to_mesh(mesh)
+    bm.free()
+    return _finish(obj, material)
+
+
+def shed_shelf():
+    """The company shed's default 8-slot shelf (D-0911 / D-1811): 2.0 (X) x
+    1.0 (Z) x 2.0, base centre on the floor, front toward +Z. Two working
+    levels of four 0.5 m slots: wooden decks on orange step beams with their
+    tops at SHED_SHELF_DECK_TOPS (the product crates sit there), a wooden top,
+    blue rack uprights with punched slots (dark quads), side bracing, thin
+    dividers at x = -0.5 / 0 / 0.5 and a diamond-mesh back on -Z. A label rail
+    (yellow lips, dark strip) runs across the front of each level at
+    SHED_SHELF_LABELS, front face at z = 0.5, so the code's Label3D at z = 0.51
+    sits just in front of it."""
+    clear()
+    hx, hz, top = SHED_SHELF_W / 2, SHED_SHELF_D / 2, SHED_SHELF_H
+    post = 0.06
+    px, pz = hx - post / 2, hz - post / 2          # upright centres
+    ix, iz = hx - post, hz - post                  # inner faces of the uprights
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            box("Upright", (sx * px, (top - 0.02) / 2, sz * pz), (post, top - 0.02, post), "depot_blue", 0.008)
+            box("UprightCap", (sx * px, top - 0.01, sz * pz), (post, 0.02, post), "ui_yellow")
+            box("UprightFoot", (sx * (hx - 0.035), 0.0075, sz * (hz - 0.035)), (0.07, 0.015, 0.07), "sign_ink")
+    # Punched slots: the front face of the front uprights and every upright's outer side.
+    ys = [0.26 + i * 0.1 for i in range(17)]
+    for sx in (-1, 1):
+        _face_slots("UprightSlots", sx * px, "x", hz + 0.0008, 1, ys, 0.014, 0.04, "sign_ink")
+        for sz in (-1, 1):
+            _face_slots("UprightSlots", sz * pz, "z", sx * (hx + 0.0008), sx, ys, 0.014, 0.04, "sign_ink")
+    # Side bracing between front and back uprights.
+    for sx in (-1, 1):
+        x = sx * px
+        for y in (0.6, 1.5):
+            bar("SideBrace", (x, y, -iz), (x, y, iz), 0.024, "depot_blue")
+        bar("SideBrace", (x, 0.2, -iz), (x, 0.6, iz), 0.022, "depot_blue")
+        bar("SideBrace", (x, 1.05, -iz), (x, 1.5, iz), 0.022, "depot_blue")
+    # Decks: two working levels and the top, three planks on a front and a back step beam.
+    beam_d, beam_h = 0.04, 0.08
+    for deck_top in SHED_SHELF_DECK_TOPS + (top - 0.025,):
+        for sz in (-1, 1):
+            box("StepBeam", (0, deck_top - beam_h / 2, sz * (iz - beam_d / 2)), (2 * ix, beam_h, beam_d),
+                "depot_orange", 0.008)
+        span = 2 * (iz - beam_d)
+        plank = (span - 0.02) / 3
+        for k in range(3):
+            z = -span / 2 + plank / 2 + k * (plank + 0.01)
+            box("DeckPlank", (0, deck_top - 0.02, z), (2 * ix - 0.01, 0.04, plank), "wood")
+    # Slot dividers: a thin front stile and a low fence back to the mesh, per level.
+    for i, deck_top in enumerate(SHED_SHELF_DECK_TOPS):
+        ceiling = (SHED_SHELF_DECK_TOPS[i + 1] if i + 1 < len(SHED_SHELF_DECK_TOPS) else top - 0.025) - 0.04
+        for c in range(1, SHED_SHELF_COLUMNS):
+            x = -hx + c * SHED_SHELF_W / SHED_SHELF_COLUMNS
+            box("DividerStile", (x, (deck_top + ceiling) / 2, iz - 0.03), (0.02, ceiling - deck_top, 0.02),
+                "steel_light")
+            box("DividerFence", (x, deck_top + 0.06, -0.02), (0.012, 0.12, 2 * iz - 0.1), "steel_light")
+    # Label rails: dark strip between yellow lips, across the front between the uprights.
+    rail_h, lip_h = 0.24, 0.02     # 3-line labels (name on 2 + count)
+    for y in SHED_SHELF_LABELS:
+        box("LabelRail", (0, y, hz - 0.013), (2 * ix, rail_h - 2 * lip_h, 0.012), "sign_ink")
+        for dy in (-1, 1):
+            box("LabelRailLip", (0, y + dy * (rail_h - lip_h) / 2, hz - 0.0125), (2 * ix, lip_h, 0.025), "ui_yellow")
+        for c in range(1, SHED_SHELF_COLUMNS):
+            x = -hx + c * SHED_SHELF_W / SHED_SHELF_COLUMNS
+            box("LabelRailTick", (x, y, hz - 0.008), (0.012, rail_h - 2 * lip_h, 0.01), "ui_yellow")
+    # Back: one diamond-mesh sheet between the back uprights, with a cross bar at mid height.
+    mesh_quad("BackMesh", -ix, ix, 0.06, top - 0.03, -hz + 0.015, cell=0.15)
+    box("BackBar", (0, 0.6, -hz + 0.035), (2 * ix, 0.03, 0.015), "depot_blue")
+    box("BackBar", (0, 1.5, -hz + 0.035), (2 * ix, 0.03, 0.015), "depot_blue")
+    done("sm_env_shed_shelf.glb")
+
+
 _special_materials()
 
 
@@ -2479,6 +2585,8 @@ BUILDERS = {
     # N-319 iteration 3.
     "iter3": [tire_stack, tool_board, paint_swatch_board, desk_lamp, cork_board, mug, service_bell,
               locker_door_open, hard_hat, safety_vest, fridge_magnets],
+    # D-1811: the company shed's default shelf (CompanyShed._build_shelf).
+    "shed": [shed_shelf],
 }
 ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 for group, builders in BUILDERS.items():
