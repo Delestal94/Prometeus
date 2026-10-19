@@ -93,7 +93,9 @@ func _build_ui() -> void:
 
 
 func _refresh_hint() -> void:
-	_frame.set_hint(GameSettings.prompt(tr("HUD_PHONE_HINT_MOUSE"), tr("HUD_PHONE_HINT_PAD")))
+	_frame.set_hint(GameSettings.prompt(
+			tr("HUD_PHONE_HINT_MOUSE") % GameSettings.key_label(&"phone_toggle"),
+			tr("HUD_PHONE_HINT_PAD") % GameSettings.pad_label(&"phone_toggle")))
 
 
 func _bracket(corner: Vector2) -> void:

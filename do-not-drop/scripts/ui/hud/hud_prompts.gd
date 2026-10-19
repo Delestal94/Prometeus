@@ -4,6 +4,7 @@ extends Node
 ## keyboard/gamepad cheat sheet and sound subtitles.
 
 const SubtitleQueue = preload("res://scripts/ui/hud/sound_subtitle_queue.gd")
+const ControlHints = preload("res://scripts/ui/control_hints.gd")
 
 ## Set by Hud before this is added as its child.
 var hud: Hud
@@ -63,16 +64,18 @@ func refresh_shortcuts(delta: float = 0.0) -> void:
 
 
 func refresh_shortcut_text() -> void:
+	# Phone, ping, look back and crew follow the player's bindings (N-966.4); center
+	# view, pause and restart are not rebindable.
 	var items: PackedStringArray = [
-		hud.key_hint(tr("HUD_KEY_PHONE"), tr("HUD_PAD_PHONE")),
-		hud.key_hint(tr("HUD_KEY_PING"), tr("HUD_PAD_PING")),
+		ControlHints.hint("HUD_KEY_PHONE", [&"phone_toggle"], "HUD_PAD_PHONE", [&"phone_toggle"]),
+		ControlHints.hint("HUD_KEY_PING", [&"ui_ping"], "HUD_PAD_PING", [&"ui_ping"]),
 		hud.key_hint(tr("HUD_KEY_CENTER_VIEW"), tr("HUD_PAD_CENTER_VIEW")),
 		hud.key_hint(tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back"), tr("HUD_PAD_LOOK_BACK")),
 		hud.key_hint(tr("HUD_KEY_PAUSE"), tr("HUD_PAD_PAUSE")),
 	]
 	# Only while the depot is open: it is the one place the crew panel shows.
 	if hud.overlay_mode == "preparation":
-		items.append(hud.key_hint(tr("HUD_KEY_CREW"), tr("HUD_PAD_CREW")))
+		items.append(ControlHints.hint("HUD_KEY_CREW", [&"crew_panel"], "HUD_PAD_CREW", [&"crew_panel"]))
 	if can_restart():
 		items.append(hud.key_hint(tr("HUD_KEY_RESTART"), tr("HUD_PAD_RESTART")))
 	hud.shortcut_label.text = UiTheme.keycaps("   ·   ".join(items), true)
@@ -131,24 +134,30 @@ func _show_hint(bbcode: String, color: Color) -> void:
 
 func _base_hint() -> String:
 	var waiting: bool = not RunManager.is_running and RunManager.results.is_empty()
+	var walk: StringName = ControlHints.WALK
+	var accelerate_brake: Array[StringName] = [&"drive_accelerate", &"drive_brake"]
+	var steer: Array[StringName] = [&"drive_left", &"drive_right"]
 	match _role:
 		Hud.Role.DRIVER:
 			if waiting:
-				return tr("HUD_NO_CARGO_YET") % hud.key_hint("E", "A")
-			return hud.key_hint(
-				tr("HUD_KEYS_DRIVER"),
-				tr("HUD_PAD_DRIVER"))
+				return tr("HUD_NO_CARGO_YET") % GameSettings.binding_label(&"interact")
+			return ControlHints.hint(
+				"HUD_KEYS_DRIVER",
+				[accelerate_brake, steer, &"drive_handbrake", &"drive_horn", &"interact"],
+				"HUD_PAD_DRIVER",
+				[&"drive_accelerate", &"drive_brake", steer, &"drive_handbrake", &"drive_horn",
+				&"interact"])
 		Hud.Role.PASSENGER:
-			return hud.key_hint(
-				tr("HUD_KEYS_PASSENGER"),
-				tr("HUD_PAD_PASSENGER"))
+			return ControlHints.hint(
+				"HUD_KEYS_PASSENGER", [walk, &"interact"],
+				"HUD_PAD_PASSENGER", [walk, &"interact"])
 	if waiting:
-		return hud.key_hint(
-			tr("HUD_KEYS_ON_FOOT"),
-			tr("HUD_PAD_ON_FOOT"))
-	return hud.key_hint(
-		tr("HUD_KEYS_AT_HOUSE"),
-		tr("HUD_PAD_AT_HOUSE"))
+		return ControlHints.hint(
+			"HUD_KEYS_ON_FOOT", [walk, &"jump", &"interact", &"package_drop"],
+			"HUD_PAD_ON_FOOT", [walk, &"jump", &"interact"])
+	return ControlHints.hint(
+		"HUD_KEYS_AT_HOUSE", [walk, &"interact", &"phone_toggle"],
+		"HUD_PAD_AT_HOUSE", [walk, &"interact", &"phone_toggle"])
 
 
 func _on_interaction_prompt(prompt: String) -> void:
@@ -165,13 +174,13 @@ func render_interaction_prompt() -> void:
 	var lines: PackedStringArray = []
 	var action_id: StringName = _action_id_for_prompt(hud.interaction_prompt)
 	if not hud.interaction_prompt.is_empty():
-		lines.append("[ %s ]  %s" % [hud.key_hint("E", "A"), hud.interaction_prompt])
+		lines.append("[ %s ]  %s" % [GameSettings.binding_label(&"interact"), hud.interaction_prompt])
 	if _carrying:
-		lines.append(tr("HUD_PROMPT_DROP") % hud.key_hint("Q", "B"))
+		lines.append(tr("HUD_PROMPT_DROP") % GameSettings.binding_label(&"package_drop"))
 		if action_id == &"":
 			action_id = &"drop"
 	if not _lid_action.is_empty():
-		lines.append("[ %s ]  %s" % [hud.key_hint("T", tr("HUD_PAD_DOWN")), _lid_action])
+		lines.append("[ %s ]  %s" % [GameSettings.binding_label(&"package_open"), _lid_action])
 		if action_id == &"":
 			action_id = &"open_box"
 	if not _lid_inside.is_empty():

@@ -10,6 +10,8 @@ class_name OptionsPanel
 
 signal closed
 
+const ControlHints = preload("res://scripts/ui/control_hints.gd")
+
 var _volume_slider: HSlider
 var _sensitivity_slider: HSlider
 var _music_slider: HSlider
@@ -215,6 +217,7 @@ func _build() -> void:
 	_controls_section = OptionsControlsSection.new()
 	column.add_child(_controls_section)
 	_controls_section.build()
+	_controls_section.refreshed.connect(_refresh_controls)
 	_binding_buttons = _controls_section.buttons
 
 	var actions := HBoxContainer.new()
@@ -235,15 +238,31 @@ func _open_sound_check() -> void:
 	_sound_check.call(&"open")
 
 
-## Mirrors the actual input map (project.godot), per device, so the list
-## never promises a gamepad button to someone holding a mouse.
+## The summary of the controls, per device, written from the bindings the player
+## has now (N-966.4): the keys and buttons come from the actions, what can't be
+## rebound (mouse, right stick, Start, Esc...) stays in the text.
 func _refresh_controls() -> void:
 	if _controls_label == null:
 		return
+	var walk: StringName = ControlHints.WALK
+	var accelerate_brake: Array[StringName] = [&"drive_accelerate", &"drive_brake"]
+	var steer: Array[StringName] = [&"drive_left", &"drive_right"]
 	if GameSettings.using_gamepad:
-		_controls_label.text = tr("UI_OPT_CONTROLS_PAD")
+		_controls_label.text = ControlHints.line("UI_OPT_CONTROLS_PAD", [
+			walk, &"sprint", &"interact", &"jump",
+			&"drive_accelerate", &"drive_brake", steer, &"drive_handbrake", &"drive_horn",
+			&"interact", &"drive_shift_up", &"drive_shift_down",
+			walk,
+			&"phone_toggle", &"ui_ping", &"use_card",
+			&"crew_panel"], true)
 	else:
-		_controls_label.text = tr("UI_OPT_CONTROLS_KEYS")
+		_controls_label.text = ControlHints.line("UI_OPT_CONTROLS_KEYS", [
+			walk, &"sprint", &"interact", &"jump", &"package_drop",
+			accelerate_brake, steer, &"drive_handbrake", &"drive_horn", &"interact",
+			&"drive_shift_up", &"drive_shift_down",
+			walk,
+			&"phone_toggle", &"ui_ping", &"use_card",
+			&"crew_panel"], false)
 
 
 func _on_input_device_changed(_gamepad: bool) -> void:

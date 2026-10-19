@@ -19,6 +19,10 @@ extends VBoxContainer
 ## click elsewhere does too, and so does a few seconds of nothing, so nobody is
 ## left stuck waiting with only a pad in hand.
 
+## After every refresh(): a binding was set, swapped or put back, so the summary
+## of controls above the rows has to be written again (N-966.4).
+signal refreshed
+
 ## Each row is [action, text key]. Actions shared between contexts say so in
 ## their text (left / right also strafe on foot).
 const GROUPS: Array[Dictionary] = [
@@ -350,3 +354,4 @@ func refresh() -> void:
 			var target: Button = pad_buttons[action] if GameSettings.using_gamepad else buttons[action]
 			target.grab_focus()
 		reset.disabled = at_default
+	refreshed.emit()

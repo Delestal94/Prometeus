@@ -286,10 +286,10 @@ func _fit_to_screen() -> void:
 
 
 func _interact_label(gamepad: bool) -> String:
-	if gamepad:
-		return "A"
 	var settings: GAME_SETTINGS = _settings()
-	return settings.binding_label(&"interact") if settings != null else "E"
+	if gamepad:
+		return settings.pad_label(&"interact") if settings != null else "A"
+	return settings.key_label(&"interact") if settings != null else "E"
 
 
 func _using_gamepad() -> bool:

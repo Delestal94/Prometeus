@@ -173,8 +173,9 @@ func refresh_card() -> void:
 	if card_id < 0:
 		hud.card_label.text = ""
 		return
-	var action: String = GameSettings.prompt(tr("HUD_CARD_USE_KEY") % GameSettings.binding_label(&"use_card"),
-			tr("HUD_CARD_USE_PAD"))
+	var action: String = GameSettings.prompt(
+			tr("HUD_CARD_USE_KEY") % GameSettings.key_label(&"use_card"),
+			tr("HUD_CARD_USE_PAD") % GameSettings.pad_label(&"use_card"))
 	hud.card_label.text = UiTheme.keycaps(tr("HUD_CARD") % [CrewProgression.card_name(card_id), action])
 
 
@@ -238,8 +239,9 @@ func _on_low_visibility_changed(is_starting: bool, _kind: StringName, duration: 
 	_low_visibility_left = maxf(duration - seconds_in, 1.0) if is_starting else 0.0
 	refresh_low_visibility(0.0)
 	if is_starting and not local_is_driving():
-		toast(GameSettings.prompt(tr("HUD_LOW_VISIBILITY_GUIDE_KEY") % GameSettings.binding_label(&"ui_ping"),
-				tr("HUD_LOW_VISIBILITY_GUIDE_PAD")), 45)
+		toast(GameSettings.prompt(
+				tr("HUD_LOW_VISIBILITY_GUIDE_KEY") % GameSettings.key_label(&"ui_ping"),
+				tr("HUD_LOW_VISIBILITY_GUIDE_PAD") % GameSettings.pad_label(&"ui_ping")), 45)
 
 
 ## Every frame while the event lasts: the driver's notice follows whoever is at

@@ -163,7 +163,7 @@ func _ready() -> void:
 		if spectator != null:
 			spectator.connect(&"availability_changed", func(available: bool) -> void:
 				if available:
-					notices.toast(tr("HUD_SPECTATE_AVAILABLE") % key_hint("Tab", "Back")))
+					notices.toast(tr("HUD_SPECTATE_AVAILABLE") % GameSettings.binding_label(&"spectate_toggle")))
 	EventBus.house_refused_package.connect(func(house_index: int, expected: String) -> void:
 		var label: String = _house_order_label(house_index, expected)
 		notices.toast(tr("HUD_HOUSE_REFUSED") % [house_index + 1, label.to_lower()]))
