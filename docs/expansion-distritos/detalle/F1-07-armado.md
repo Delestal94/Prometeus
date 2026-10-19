@@ -119,3 +119,11 @@ Decisión: el aviso de la mesa no bloquea el cierre, porque el pedido decide el 
 Decisión: solo pesan los productos (relleno y caja pesan 0) y es solo un aviso, como D-0712. No dice qué falta: un cambio por otro producto del mismo peso pasa (límite documentado y a propósito, para que la balanza sea una pista y no reemplace a `BoxContentCheck`).
 **Test** `test_box_scale`: caja exacta, falta una unidad (delta negativo), sobra una (positivo), cambio de igual peso, tolerancia, sin caja y producto desconocido.
 **Hecho cuando:** el test pasa.
+
+### D-0714 · Hoja de pedido visible en la mesa — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `OrderSheet` (`scripts/gameplay/business/order_sheet.gd`) arma la hoja y `OrderSheetPanel` (`scripts/ui/order_sheet_panel.gd`) la dibuja; `PackingStation.sheet_for`; `test_company_order_sheet`. Ponerla en pantalla junto a la mesa visible queda para D-0701.b (ver `revisar/D-0714.md`).
+**Depende de:** D-0701 (`PackingStation`), D-0802 (`Order`), D-0707 (`OrderLabel`)
+**Qué:** `OrderSheet.build(order, box, now_min, products)` devuelve un diccionario sin nodos: cliente, dirección (la de la etiqueta), una línea por producto con lo que ya tiene la caja, productos de más, sellos de los requisitos (hecho / pendiente), cinta, etiqueta de este pedido, minutos que quedan (negativos si se pasó), paga y `ready` (contenido justo, todos los sellos, cinta y etiqueta). `OrderSheetPanel` lo dibuja con una marca por línea (✓ hecho, ○ pendiente, ✗ mal), así se lee sin color, y "Sin pedido en la mesa" si no hay.
+Decisión: la hoja es un panel de solo lectura (sin foco ni input); abrirlo y cerrarlo, y dónde se ancla, lo decide la mesa visible. Decisión: sin hora de reloj, solo "quedan N min" / "atrasado N min" (los minutos del pedido son del día y el reloj lo muestra el HUD). Decisión: los nombres de requisitos son `WORLD_REQ_<ID>` (las seis filas se suman acá, como pedía D-0806); el nombre de un sello es el de su requisito (mismo id).
+**Test** `test_company_order_sheet`: contenido (falta, sobra, de más), sellos y `ready`, tiempo y bordes (sin pedido, sin caja), `sheet_for` de la mesa, y el panel con sus marcas, el atraso en rojo, el vacío y el idioma.
+**Hecho cuando:** el test pasa y la hoja se lee con la caja a medio armar.

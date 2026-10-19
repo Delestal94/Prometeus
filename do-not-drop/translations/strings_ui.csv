@@ -1314,3 +1314,17 @@ UI_OPT_PAD_RSTICK_LEFT,Stick der. ←,R-stick ←
 UI_OPT_PAD_RSTICK_RIGHT,Stick der. →,R-stick →
 UI_OPT_PAD_RSTICK_UP,Stick der. ↑,R-stick ↑
 UI_OPT_PAD_RSTICK_DOWN,Stick der. ↓,R-stick ↓
+UI_ORDER_SHEET_TITLE,Hoja de pedido,Order sheet
+UI_ORDER_SHEET_EMPTY,Sin pedido en la mesa,No order on the table
+UI_ORDER_SHEET_FOR,Para %s,For %s
+UI_ORDER_SHEET_ADDRESS,%s %d,%s %d
+UI_ORDER_SHEET_ITEM,%s  %d/%d,%s  %d/%d
+UI_ORDER_SHEET_EXTRA,Sobra: %s ×%d,Extra: %s ×%d
+UI_ORDER_SHEET_SEAL,Sello: %s,Stamp: %s
+UI_ORDER_SHEET_TAPE,Cinta,Tape
+UI_ORDER_SHEET_LABEL,Etiqueta,Label
+UI_ORDER_SHEET_LEFT,Quedan %d min,%d min left
+UI_ORDER_SHEET_LATE,Atrasado %d min,%d min late
+UI_ORDER_SHEET_PAY,Paga $%d,Pays $%d
+UI_ORDER_SHEET_READY,Lista para despachar,Ready to dispatch
+UI_ORDER_SHEET_NOT_READY,Falta completar,Not finished yet
