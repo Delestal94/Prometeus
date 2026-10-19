@@ -56,7 +56,8 @@ func _run() -> void:
 	var cells: CompanyCells = level.get_node_or_null(^"WorldCells") as CompanyCells
 	_expect(cells != null and cells == level.get(&"cells"), "The root has its WorldCells child (D-0313)")
 	if cells != null:
-		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to((level.get(&"player") as Node3D).global_position) < 0.01,
+		var spawned: Node3D = level.get(&"player") as Node3D
+		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
 			"The only anchor is the local player")
 		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
 	_expect(root.get_node_or_null(^"SceneLoader") == null, "No loader is left once inside the company")
