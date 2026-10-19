@@ -8,6 +8,7 @@ extends RefCounted
 ## act on a piece already in the layout: the same checks, ignoring the piece itself.
 ## A piece that would wall off a station or cut the dock from the exit is red too (D-0907).
 ## The employees' walking grid follows every change that sticks (`navigation`, D-0908).
+## `undo_last_placement()` (D-0916) takes back the last piece bought here, with a full refund.
 ## The world adapter draws the footprint with `preview_color()`.
 ## Fixed areas that can never be covered (loading dock, exit: D-0906) arrive as `fixed_blocked`
 ## rectangles in grid cells. Nothing here names autoloads or UI classes (N-919).
@@ -19,6 +20,10 @@ const REASON_FIXED: StringName = &"fixed_area"
 const REASON_NO_DEFINITION: StringName = &"no_definition"
 const REASON_NO_MONEY: StringName = &"no_money"
 const REASON_BLOCKS_PATH: StringName = &"blocks_path"
+
+const REASON_UNDO: StringName = &"placeable_undo"
+## How many placements can be taken back, newest first.
+const UNDO_DEPTH: int = 8
 
 const COLOR_OK: Color = Color(0.2, 0.85, 0.3, 0.55)
 const COLOR_BAD: Color = Color(0.9, 0.2, 0.2, 0.55)
@@ -33,6 +38,8 @@ var entry_areas: Array[Rect2i] = []
 ## Walking navigation to keep in step with the layout (D-0908): rebaked after every change that
 ## sticks. Null: nothing to rebake.
 var navigation: WalkNavigation = null
+## Pieces placed by `place()` (the layout entries themselves), oldest first, for the undo.
+var _placed: Array = []
 
 
 func _init(size: Vector2i = Vector2i(12, 8)) -> void:
@@ -76,6 +83,9 @@ func place(state: Object, def: PlaceableDefinition, x: int, z: int, turns: int =
 		result["ok"] = false
 		result["reason"] = REASON_NO_MONEY
 	else:
+		_placed.append(state.layout.back())
+		if _placed.size() > UNDO_DEPTH:
+			_placed.pop_front()
 		rebake_navigation(state)
 	return result
 
@@ -105,6 +115,33 @@ func sell_piece(state: Object, index: int) -> int:
 	if refund >= 0:
 		rebake_navigation(state)
 	return refund
+
+
+## D-0916: takes back the newest placement that is still in the layout (moved or turned since is
+## fine; sold since is skipped). Pays the full price back, unlike selling. Returns the money
+## given back, or -1 when there is nothing to undo.
+func undo_last_placement(state: Object) -> int:
+	while not _placed.is_empty():
+		var piece: Dictionary = _placed.pop_back()
+		for i: int in state.layout.size():
+			if is_same(state.layout[i], piece):
+				var def: PlaceableDefinition = PlaceableShop.definition(
+						StringName(str(piece.get("id", ""))))
+				state.layout.remove_at(i)
+				var price: int = def.price if def != null else 0
+				if price > 0:
+					state.earn(price, REASON_UNDO)
+				rebake_navigation(state)
+				return price
+	return -1
+
+
+func can_undo(state: Object) -> bool:
+	for piece: Variant in _placed:
+		for entry: Variant in state.layout:
+			if is_same(entry, piece):
+				return true
+	return false
 
 
 ## D-0908: rebuilds `navigation` from the current layout (also for a layout loaded or set by hand).
