@@ -31,7 +31,14 @@ const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
 const LINTEL_BOTTOM: float = 3.0
 const FLOOR_COLOR: Color = Color(0.42, 0.42, 0.44)
+## Warehouse slab (D-0911 "Suelo del galpón"): tx_detail_concrete_512 has one saw-cut joint per axis
+## on its border, so with one repetition every FLOOR_SLAB_M metres the joints fall on world multiples
+## of it. The shed stands at the origin and every stage's half floor is whole cells, so they land on
+## cell lines. Troweled concrete: a little sheen, less than the depot hall's polished floor (0.5).
+const FLOOR_SLAB_M: float = 4.0
+const FLOOR_ROUGHNESS: float = 0.75
 const WALL_COLOR: Color = Color(0.72, 0.68, 0.60)
+const WALL_PLASTER_M: float = 2.0
 const PATCH_HEIGHT: float = 0.02
 const LAMP_COLOR: Color = Color(1.0, 0.92, 0.78)
 const SHELF_LEVELS: int = 2
@@ -222,7 +229,9 @@ static func pallets_in(stock: Inventory) -> Array[Dictionary]:
 
 
 ## A StaticBody3D box with its mesh: the floor and the walls (and the zone slabs of the map).
-static func solid_box(box_name: String, size: Vector3, center: Vector3, color: Color) -> StaticBody3D:
+## `material` replaces the flat `color` when given (the shed's concrete and plaster).
+static func solid_box(box_name: String, size: Vector3, center: Vector3, color: Color,
+		material: Material = null) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = box_name
 	body.position = center
@@ -234,7 +243,7 @@ static func solid_box(box_name: String, size: Vector3, center: Vector3, color: C
 	var mesh_instance := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
-	mesh.material = DepotKit.flat(color)
+	mesh.material = material if material != null else DepotKit.flat(color)
 	mesh_instance.mesh = mesh
 	body.add_child(mesh_instance)
 	return body
@@ -243,13 +252,24 @@ static func solid_box(box_name: String, size: Vector3, center: Vector3, color: C
 # --- Shell: floor, walls with the two gates open ---
 
 
+## The shed's concrete floor: shared (DepotKit caches it), the same for every stage and redraw.
+static func floor_material() -> StandardMaterial3D:
+	return DepotKit.detailed(FLOOR_COLOR, "concrete", FLOOR_SLAB_M, FLOOR_ROUGHNESS)
+
+
+## The shed's walls: painted plaster, like the depot hall's blocks.
+static func wall_material() -> StandardMaterial3D:
+	return DepotKit.detailed(WALL_COLOR, "plaster", WALL_PLASTER_M)
+
+
 func _build_shell() -> void:
 	var floor_m: Vector2 = WarehouseStages.floor_size_m(stage)
 	var half := floor_m * 0.5
 	var shell := Node3D.new()
 	shell.name = "Shell"
 	add_child(shell)
-	shell.add_child(solid_box("Floor", Vector3(floor_m.x, 0.2, floor_m.y), Vector3(0.0, -0.1, 0.0), FLOOR_COLOR))
+	shell.add_child(solid_box("Floor", Vector3(floor_m.x, 0.2, floor_m.y), Vector3(0.0, -0.1, 0.0), FLOOR_COLOR,
+		floor_material()))
 	var reach: float = half.x + WALL_THICKNESS
 	var y: float = WALL_HEIGHT * 0.5
 	var gates: Array[Rect2i] = WarehouseStages.gate_rects(stage)
@@ -258,8 +278,10 @@ func _build_shell() -> void:
 	_wall_row(shell, "WallFront", half.y + WALL_THICKNESS * 0.5, -reach, reach, dock_span, y)
 	_wall_row(shell, "WallBack", -half.y - WALL_THICKNESS * 0.5, -reach, reach, exit_span, y)
 	var side := Vector3(WALL_THICKNESS, WALL_HEIGHT, floor_m.y)
-	shell.add_child(solid_box("WallLeft", side, Vector3(-half.x - WALL_THICKNESS * 0.5, y, 0.0), WALL_COLOR))
-	shell.add_child(solid_box("WallRight", side, Vector3(half.x + WALL_THICKNESS * 0.5, y, 0.0), WALL_COLOR))
+	shell.add_child(solid_box("WallLeft", side, Vector3(-half.x - WALL_THICKNESS * 0.5, y, 0.0), WALL_COLOR,
+		wall_material()))
+	shell.add_child(solid_box("WallRight", side, Vector3(half.x + WALL_THICKNESS * 0.5, y, 0.0), WALL_COLOR,
+		wall_material()))
 
 
 ## A wall along X at depth `z` from x0 to x1 with a gap `gap` (x range): two pieces and a lintel.
@@ -268,12 +290,12 @@ func _wall_row(parent: Node3D, base: String, z: float, x0: float, x1: float, gap
 	var left_len: float = gap.x - x0
 	var right_len: float = x1 - gap.y
 	parent.add_child(solid_box(base + "Left", Vector3(left_len, WALL_HEIGHT, thick),
-		Vector3(x0 + left_len * 0.5, y, z), WALL_COLOR))
+		Vector3(x0 + left_len * 0.5, y, z), WALL_COLOR, wall_material()))
 	parent.add_child(solid_box(base + "Right", Vector3(right_len, WALL_HEIGHT, thick),
-		Vector3(gap.y + right_len * 0.5, y, z), WALL_COLOR))
+		Vector3(gap.y + right_len * 0.5, y, z), WALL_COLOR, wall_material()))
 	var lintel_h: float = WALL_HEIGHT - LINTEL_BOTTOM
 	parent.add_child(solid_box(base + "Lintel", Vector3(gap.y - gap.x, lintel_h, thick),
-		Vector3((gap.x + gap.y) * 0.5, LINTEL_BOTTOM + lintel_h * 0.5, z), WALL_COLOR))
+		Vector3((gap.x + gap.y) * 0.5, LINTEL_BOTTOM + lintel_h * 0.5, z), WALL_COLOR, wall_material()))
 
 
 ## X range (metres, from the centre) of a wall-line gate rect.

@@ -94,8 +94,10 @@ Para sumar un contenido nuevo: una función en `build_cargo_packages.py`, un
 
 Mapas en gris que solo modulan el brillo (el color sale de la paleta): asfalto, tierra, pasto
 y grava para el terreno; tablas, tejas, revoque, corteza, follaje y piedra para los modelos,
-aplicados por `scripts/presentation/lowpoly_materials.gd` según el nombre del material.
-Se regeneran con `art/tools/make_detail_textures.py`. Las de `textures/terrain/` quedaron
+aplicados por `scripts/presentation/lowpoly_materials.gd` según el nombre del material;
+hormigón (`tx_detail_concrete_512.png`, piso del galpón de Modo Empresa vía `DepotKit.detailed`,
+juntas de corte en el borde dibujadas por código). Origen: Z-Image Turbo local (pesos Apache 2.0),
+procesadas por código; propias del proyecto. Se regeneran con `art/tools/make_detail_textures.py`. Las de `textures/terrain/` quedaron
 en desuso.
 
 ## Fauna (`models/environment/wildlife/`)

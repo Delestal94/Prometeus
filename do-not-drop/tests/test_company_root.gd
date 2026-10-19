@@ -7,7 +7,9 @@ extends SceneTree
 ## - there is one slab per data/zones/*.tres (nine), the zone names are small enough not to fill the
 ##   player's view (a blurred stripe in the first capture), and a shed (CompanyShed, D-0911) with its
 ##   floor and walls with collision, open at the dock and the exit; the furnishing is
-##   test_company_default_layout's;
+##   test_company_default_layout's; the floor is warehouse concrete (D-0911 "Suelo del galpón"): its
+##   material carries tx_detail_concrete_512.png in world triplanar, one repetition per
+##   CompanyShed.FLOOR_SLAB_M (a whole number of grid cells, so the slab joints land on cell lines);
 ## - the local player stands inside the shed, on the floor;
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
@@ -88,6 +90,7 @@ func _run() -> void:
 	for part: String in ["Floor", "WallBackLeft", "WallBackRight", "WallFrontLeft", "WallFrontRight",
 			"WallLeft", "WallRight"]:
 		_expect(shed.get_node_or_null(NodePath("Shell/" + part)) is StaticBody3D, "The shed has %s" % part)
+	_check_floor_material(shed)
 
 	for child: Node in level.get_node(^"World").get_children():
 		if child.name.begins_with("Zone_"):
@@ -232,3 +235,26 @@ func _expect(condition: bool, message: String) -> void:
 	if not condition:
 		_failures += 1
 		push_error("FAIL: " + message)
+
+
+func _check_floor_material(shed: Node) -> void:
+	var floor_mesh: MeshInstance3D = null
+	var floor_body: Node = shed.get_node_or_null(^"Shell/Floor")
+	if floor_body != null:
+		for child: Node in floor_body.get_children():
+			if child is MeshInstance3D:
+				floor_mesh = child
+	var mesh: PrimitiveMesh = floor_mesh.mesh as PrimitiveMesh if floor_mesh != null else null
+	var material := mesh.material as StandardMaterial3D if mesh != null else null
+	var texture: Texture2D = material.albedo_texture if material != null else null
+	_expect(texture != null and texture.resource_path.ends_with("tx_detail_concrete_512.png"),
+		"The shed floor carries the concrete detail map (got %s)"
+		% (texture.resource_path if texture != null else "none"))
+	if material == null:
+		return
+	_expect(material.uv1_triplanar and material.uv1_world_triplanar, "The floor's concrete is world triplanar")
+	var cells: float = CompanyShed.FLOOR_SLAB_M / CompanyTuning.WAREHOUSE_GRID_M
+	var per_slab: bool = is_equal_approx(material.uv1_scale.x, 1.0 / CompanyShed.FLOOR_SLAB_M)
+	_expect(per_slab and is_equal_approx(cells, roundf(cells)),
+		"One concrete repetition per %.1f m, a whole number of grid cells" % CompanyShed.FLOOR_SLAB_M)
+	_expect(material == CompanyShed.floor_material(), "The floor material is shared, not one per redraw")

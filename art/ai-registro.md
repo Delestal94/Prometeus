@@ -29,6 +29,7 @@ Script: `art/tools/comfy_generate.py`.
 | 2026-09-30 | `art/gel_character/concept/comfy/guidance_v3/concept_guided_seed311073.png` | 311073 (Z-Image Turbo, ComfyUI 0.38.0, img2img denoise 0,15) | Variación comparada S-311.6; misma guía, no asset del juego | idem; JSON homónimo guarda prompt y workflow |
 | 2026-10-01 | `art/concept/results/results_bg_r2_seed902.png` → `assets/ui/backgrounds/tx_ui_results_background_1920.png` | 902 (Z-Image Turbo, ComfyUI 0.37) | Fondo de la pantalla de resultados (S-307) | ver `art/concept/results/prompt.txt` |
 | 2026-10-01 | `art/concept/results/results_bg_r3_seed1906.png`, `art/concept/results/results_bg_seed618.png` | 1906, 618 (Z-Image Turbo, ComfyUI 0.37) | Alternativas descartadas del fondo de resultados S-307; no son assets del juego | idem |
+| 2026-10-19 | `assets/textures/detail/tx_detail_concrete_512.png` | 21 | Piso de hormigón del galpón (D-0911); crudo `art/concept/textures/tex_concrete_seed21.png`, a gris y procesado como los demás, con juntas, manchas y marcas de ruedas dibujadas por código (`concrete_marks()`) | ver `art/tools/make_detail_textures.py` (`TEXTURES["concrete"]`) |
 
 ## Imágenes sin IA
 

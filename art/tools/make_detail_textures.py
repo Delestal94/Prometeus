@@ -7,7 +7,7 @@
 Default mode generates each texture with ComfyUI + Z-Image Turbo (the raw
 1024x1024 image is kept as art/concept/textures/tex_<name>_seed<N>.png).
 --from-raw skips ComfyUI and rebuilds the maps from those raw files, so the
-output is fully reproducible. Without names, all ten are processed.
+output is fully reproducible. Without names, all eleven are processed.
 
 Each raw image is turned into a *detail map* (see to_detail): greyscale grain
 only, normalised to the same strength around DETAIL_MEAN so it only modulates
@@ -27,12 +27,15 @@ the tile, so there is no cross at 256):
      cross-fade would ghost the joints: their border is a joint line anyway.
 Boards and shingles (STAGGER) then have each row rolled sideways by its own
 offset (stagger_rows), so their ends do not form one vertical line per tile.
+Concrete (MARKED) gets its slab marks drawn by code on top (concrete_marks):
+the AI grain has no joints that land exactly on the tile border, and the
+joints must fall on the shed's metre grid, so they are drawn, seeded.
 
 --check prints the seam metric (seam_ratio) plus mean and std of each map:
 mean absolute gradient across the centre line (col/row 255|256) and across
 the wrap border (511 -> 0), divided by the median gradient of the other
 columns/rows. Values near 1 mean "no visible line". Without arguments it
-checks the ten files in OUT.
+checks the eleven files in OUT.
 
 The colour always comes from the game's palette (material albedo or terrain
 shader); the texture adds grain -- the subtle PEAK look rather than
@@ -59,6 +62,8 @@ BLUR_SIGMA = SIZE / 10  # high-pass cut: patches wider than this are removed
 SEAM_BAND = SIZE // 16  # half-width of the cross-fade around the wrap border
 NO_BAND = {"wood_planks", "roof_shingles"}  # drawn joints: a cross-fade ghosts them
 STAGGER = {"wood_planks", "roof_shingles"}  # rows rolled apart so the joints do not line up
+MARKED = {"concrete"}  # slab joints, wheel scuffs and stains drawn on top (concrete_marks)
+JOINT_DEPTH = 0.30  # how much darker the saw-cut joint is than the mean (a clear line, not a gap)
 STAGGER_GAP = 0.15  # minimum offset change between neighbouring rows (fraction of width)
 
 STYLE = ("Seamless tileable texture, perfectly flat top-down orthographic view, even flat lighting, "
@@ -76,6 +81,8 @@ TEXTURES = {
     "bark": ("Vertical tree bark with long soft grooves and ridges.", 18),
     "foliage": ("Dense cluster of small soft leaves overlapping, seen from above.", 19),
     "stone": ("Rough natural stone surface with soft irregular facets and speckles.", 20),
+    "concrete": ("Flat smooth grey concrete surface swatch filling the frame, very fine pores and tiny "
+                 "speckles, faint soft blotches, uniform, no joints, no lines, no cracks, no horizon.", 21),
 }
 
 
@@ -220,6 +227,51 @@ def seam_ratio(image: Image.Image | np.ndarray) -> dict[str, float]:
     }
 
 
+def _wrapped_distance(a: np.ndarray, b: float, n: int) -> np.ndarray:
+    d = np.abs(a - b) % n
+    return np.minimum(d, n - d)
+
+
+def concrete_marks(detail: Image.Image, seed: int) -> Image.Image:
+    """Warehouse slab marks on the concrete grain, all periodic and seeded.
+
+    - saw-cut joints on the wrap border, one per axis: with the map spanning
+      a whole number of grid cells, every joint lands on a cell line (a soft
+      2 px groove with a lighter lip, like a cut, so it reads at distance);
+    - soft stains (periodic low-frequency noise, small amplitude);
+    - pallet-jack wheel scuffs: long thin straight-ish streaks, mostly along
+      one axis, a little darker, wrapping around the tile.
+    The joints are what tell it apart from plaster and stone.
+    """
+    rng = np.random.default_rng(seed)
+    a = np.asarray(detail, dtype=np.float64) / 255.0
+    n = a.shape[0]
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64)
+    # Stains: wide blobs the high-pass removed from the AI grain, kept faint.
+    stain = circular_blur(rng.standard_normal((n, n)), n / 24)
+    a += stain / max(float(stain.std()), 1e-6) * 0.03
+    # Wheel scuffs: pairs of parallel streaks (the two wheels), slight slope that wraps exactly.
+    for _ in range(7):
+        horizontal = rng.random() < 0.6
+        pos = rng.uniform(0, n)
+        slope = 0  # straight along one axis: any other slope must be whole tiles per tile to wrap
+        gap = rng.uniform(10, 16)
+        strength = rng.uniform(0.03, 0.05)
+        along, across = (xx, yy) if horizontal else (yy, xx)
+        line = pos + slope * along
+        fade = 0.6 + 0.4 * np.sin(2 * np.pi * (along / n * int(rng.integers(1, 3)) + rng.random()))
+        for offset in (0.0, gap):
+            d = _wrapped_distance(across - line - offset, 0.0, n)
+            a -= strength * fade * np.exp(-(d / 1.6) ** 2)
+    # Saw-cut joints on the border (rows/cols 511|0): dark groove, light lip just beside it.
+    for coord in (xx, yy):
+        d = _wrapped_distance(coord + 0.5, 0.0, n)  # 0.5: the cut sits between pixel n-1 and 0
+        groove = np.exp(-(d / 1.4) ** 2)
+        lip = np.exp(-((d - 2.6) / 1.0) ** 2)
+        a = a * (1.0 - JOINT_DEPTH * groove / DETAIL_MEAN) + 0.025 * lip
+    return Image.fromarray((np.clip(a, 0.0, 1.0) * 255).round().astype(np.uint8), "L")
+
+
 def raw_path(name: str) -> Path:
     return RAW / f"tex_{name}_seed{TEXTURES[name][1]}.png"
 
@@ -228,7 +280,10 @@ def build(name: str, raw_file: Path) -> None:
     image = Image.open(raw_file).convert("RGB").resize((SIZE, SIZE), Image.LANCZOS)
     make_seamless(image).save(RAW / f"tex_{name}_seamless.png")  # colour preview only
     stagger = TEXTURES[name][1] if name in STAGGER else 0
-    to_detail(image, 0 if name in NO_BAND else SEAM_BAND, stagger).save(OUT / f"tx_detail_{name}_{SIZE}.png", optimize=True)
+    detail = to_detail(image, 0 if name in NO_BAND else SEAM_BAND, stagger)
+    if name in MARKED:
+        detail = concrete_marks(detail, TEXTURES[name][1])
+    detail.save(OUT / f"tx_detail_{name}_{SIZE}.png", optimize=True)
     print("detail", name, flush=True)
 
 
