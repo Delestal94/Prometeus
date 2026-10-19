@@ -91,6 +91,24 @@ const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
 const WAREHOUSE_DOCK_CELLS: Vector2i = Vector2i(4, 2)
 const WAREHOUSE_EXIT_CELLS: Vector2i = Vector2i(2, 2)
 
+# --- Warehouse lighting (D-0913) ---
+## Ceiling lamps: one per tile of at most this many meters, so the number grows with the stage
+## (2 lamps in the small shed, 12 in the logistics center).
+const SHED_LAMP_SPACING_M: float = 8.0
+## Range of a ceiling lamp, its energy, and the share of the range that counts as well lit (the
+## farthest point of a tile is 5.7 m from its lamp, under 8.5 * 0.75 = 6.4).
+const SHED_LAMP_RANGE_M: float = 8.5
+const SHED_LAMP_ENERGY: float = 0.8
+const SHED_LAMP_REACH: float = 0.75
+## Task lamp over each packing table.
+const SHED_TASK_LAMP_RANGE_M: float = 4.0
+const SHED_TASK_LAMP_ENERGY: float = 0.9
+## Most omni lights that may reach one surface at once (the GL Compatibility renderer lights an
+## object with 8 at most; the extra ones would flicker).
+const SHED_MAX_LIGHTS_PER_POINT: int = 8
+## Height of the lamps above the floor, under the 4 m walls.
+const SHED_LAMP_HEIGHT_M: float = 3.6
+
 # --- Build mode (D-0901) ---
 ## Height of the build camera above the floor, in meters, at zoom 1.
 const BUILD_CAMERA_HEIGHT_M: float = 14.0
