@@ -108,6 +108,11 @@ func content_errors(order: Dictionary) -> Dictionary:
 	return BoxContentCheck.diff(order, box)
 
 
+## The order sheet for this table (D-0714): OrderSheet.build() with the box on the table.
+func sheet_for(order: Dictionary, now_min: int, products: Dictionary = {}) -> Dictionary:
+	return OrderSheet.build(order, box, now_min, products)
+
+
 ## Takes the box off the table to send it away. Null, leaving it in place, if it is not taped
 ## shut: an open box cannot be dispatched (D-0706).
 func dispatch() -> PackedBox:
