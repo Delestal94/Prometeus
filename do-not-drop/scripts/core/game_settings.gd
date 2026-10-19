@@ -250,12 +250,14 @@ var sound_subtitles: bool = false:
 signal sound_subtitles_changed(enabled: bool)
 
 ## Opacity of the plate behind the subtitles and the interaction prompts
-## (N-969): 0 draws only the outlined text, 1 a solid plate. The default is
-## the plate the HUD always had.
+## (N-969): 1 is a solid plate. It never goes below TEXT_BACKDROP_MIN (N-977.3):
+## at 0 white prompts vanish over snow and sky. The default is the plate the HUD
+## always had.
 const TEXT_BACKDROP_DEFAULT: float = 0.88
+const TEXT_BACKDROP_MIN: float = 0.3
 var text_backdrop_opacity: float = TEXT_BACKDROP_DEFAULT:
 	set(value):
-		text_backdrop_opacity = clampf(value, 0.0, 1.0)
+		text_backdrop_opacity = clampf(value, TEXT_BACKDROP_MIN, 1.0)
 		text_backdrop_opacity_changed.emit(text_backdrop_opacity)
 		_save()
 signal text_backdrop_opacity_changed(opacity: float)
