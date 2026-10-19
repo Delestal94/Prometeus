@@ -340,7 +340,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   mora, durazno, cielo, carbón translúcido y arcoíris.
 - [x] **S-311.66** Skins con interior: bicolor en capas (gomita), degradé vertical, trocitos de fruta
   flotando adentro, brillantina, burbujas grandes.
-- [ ] **S-311.67** Skins animadas: arcoíris que cicla, neón que brilla de noche, lava con burbujas lentas,
+- [x] **S-311.67** Skins animadas: arcoíris que cicla, neón que brilla de noche, lava con burbujas lentas,
   holográfica.
 - [ ] **S-311.68** Color del equipo sin romper la skin: acento en el borde o en el núcleo con el color que
   hoy tiñe la camiseta.

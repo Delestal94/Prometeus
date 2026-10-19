@@ -16,6 +16,7 @@ var _time: float = 0.0
 var _phase: float = 0.0
 var _rain: float = 0.0
 var _wetness: float = 0.0
+var _time_of_day: int = WorldMood.TimeOfDay.DAY
 var _wind: Vector4 = Vector4.ZERO
 
 
@@ -33,6 +34,11 @@ func setup(model: Node, phase_seed: int = 0) -> bool:
 func update_environment(delta: float) -> void:
 	var weather: int = int(WorldMood.active.get("weather", WorldMood.Weather.CLEAR))
 	var raining: bool = bool(WorldMood.active.get("rain", weather == WorldMood.Weather.RAIN))
+	_time_of_day = clampi(
+		int(WorldMood.active.get("time", WorldMood.TimeOfDay.DAY)),
+		WorldMood.TimeOfDay.DAY,
+		WorldMood.TimeOfDay.NIGHT
+	)
 	advance_environment(raining, WIND_DIRECTION, wind_strength_for(weather), delta)
 
 
@@ -65,12 +71,16 @@ func reset_environment() -> void:
 	_time = 0.0
 	_rain = 0.0
 	_wetness = 0.0
+	_time_of_day = WorldMood.TimeOfDay.DAY
 	_wind = Vector4.ZERO
 	_upload()
 
 
 func weather_uniform() -> Vector4:
-	return Vector4(_time, _phase, _rain, _wetness)
+	# Z packs rain in its low bit and DAY/DUSK/NIGHT above it. Existing daytime
+	# values remain exactly 0/1 while shaders gain a night signal at no new slot.
+	var packed_weather: float = _rain + float(_time_of_day * 2)
+	return Vector4(_time, _phase, packed_weather, _wetness)
 
 
 func wind_uniform() -> Vector4:

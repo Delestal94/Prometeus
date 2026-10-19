@@ -15,7 +15,7 @@ instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 // Packed to stay within Godot's 16 instance-uniform limit:
-// surface = absorption, shine, interior mode, interior amount. Negative X/Y
+// surface = absorption, shine, skin effect mode, effect amount. Negative X/Y
 // keep the shared material's legacy absorption and shine until a skin applies.
 instance uniform vec4 gel_skin_surface = vec4(-1.0, -1.0, 0.0, 0.0);
 // interior = RGB feature colour plus object-space feature scale.
@@ -104,6 +104,39 @@ float object_noise_3d(vec3 point) {
 	return mix(near_z, far_z, blend.z);
 }
 
+float weather_rain() {
+	return mod(gel_weather.z, 2.0);
+}
+
+float weather_night() {
+	return clamp(floor(gel_weather.z * 0.5) * 0.5, 0.0, 1.0);
+}
+
+vec3 animated_spectrum(float phase) {
+	return 0.5 + 0.5 * cos(6.28318 * (phase + vec3(0.0, 0.333, 0.667)));
+}
+
+float animated_lava_mask(vec3 point) {
+	vec3 flow_point = point * vec3(gel_interior.a * 0.65, gel_interior.a * 0.42, gel_interior.a * 0.65);
+	flow_point.y -= TIME * (0.05 + gel_skin_surface.w * 0.08);
+	return smoothstep(0.48, 0.72, object_noise_3d(flow_point));
+}
+
+vec3 animated_skin_tint(vec3 base_tint, vec3 point) {
+	if (gel_skin_surface.z > 5.5 && gel_skin_surface.z < 6.5) {
+		float phase = point.y * gel_interior.a * 0.16 - TIME * (0.08 + gel_skin_surface.w * 0.18);
+		return mix(base_tint, animated_spectrum(phase + gel_weather.y), gel_skin_surface.w);
+	}
+	if (gel_skin_surface.z > 6.5 && gel_skin_surface.z < 7.5) {
+		float pulse = 0.86 + sin(TIME * 2.0 + gel_weather.y * 6.28318) * 0.14;
+		return mix(base_tint, gel_interior.rgb * pulse, weather_night() * gel_skin_surface.w * 0.55);
+	}
+	if (gel_skin_surface.z > 7.5 && gel_skin_surface.z < 8.5) {
+		return mix(base_tint, gel_interior.rgb, animated_lava_mask(point) * gel_skin_surface.w);
+	}
+	return base_tint;
+}
+
 vec3 random_cell_point(vec3 cell) {
 	return vec3(
 		hash_object_cell(cell + vec3(11.0, 3.0, 7.0)),
@@ -121,7 +154,7 @@ vec3 interior_base_tint(vec3 base_tint, vec3 point) {
 		float height_mix = smoothstep(0.12, 1.55, point.y) * gel_skin_surface.w;
 		return mix(base_tint, gel_interior.rgb, height_mix);
 	}
-	return base_tint;
+	return animated_skin_tint(base_tint, point);
 }
 
 float interior_feature_mask(vec3 point) {
@@ -136,7 +169,7 @@ float interior_feature_mask(vec3 point) {
 	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
 		return 1.0 - smoothstep(0.035, 0.095, length(delta));
 	}
-	if (gel_skin_surface.z > 4.5) {
+	if (gel_skin_surface.z > 4.5 && gel_skin_surface.z < 5.5) {
 		float bubble_distance = length(delta);
 		float bubble_outer = 1.0 - smoothstep(0.29, 0.36, bubble_distance);
 		float bubble_inner = 1.0 - smoothstep(0.2, 0.27, bubble_distance);
@@ -177,7 +210,7 @@ float environment_drop(vec3 point, float offset) {
 	);
 	float ring_distance = length(point - centre) - age * 0.34;
 	float ring = exp(-pow(ring_distance / 0.028, 2.0));
-	return ring * (1.0 - age) * gel_weather.z;
+	return ring * (1.0 - age) * weather_rain();
 }
 
 float environment_ripple(vec3 point) {
@@ -277,6 +310,19 @@ void fragment() {
 	ALBEDO = mix(ALBEDO, gel_interior.rgb * gel_brightness, interior_mask * 0.72);
 	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
 		EMISSION += gel_interior.rgb * interior_mask * 1.4;
+	}
+	if (gel_skin_surface.z > 6.5 && gel_skin_surface.z < 7.5) {
+		float neon_pulse = 0.86 + sin(TIME * 2.0 + gel_weather.y * 6.28318) * 0.14;
+		EMISSION += gel_interior.rgb * weather_night() * gel_skin_surface.w * neon_pulse * (0.7 + fresnel);
+	}
+	if (gel_skin_surface.z > 7.5 && gel_skin_surface.z < 8.5) {
+		EMISSION += gel_interior.rgb * animated_lava_mask(model_position) * gel_skin_surface.w * 0.8;
+	}
+	if (gel_skin_surface.z > 8.5 && gel_skin_surface.z < 9.5) {
+		float holo_phase = fresnel * 1.8 + model_position.y * gel_interior.a * 0.15 - TIME * 0.12;
+		vec3 holo_color = animated_spectrum(holo_phase + gel_weather.y);
+		ALBEDO = mix(ALBEDO, holo_color, gel_skin_surface.w * (0.3 + fresnel * 0.35));
+		EMISSION += holo_color * gel_skin_surface.w * (0.08 + fresnel * 0.18);
 	}
 	ROUGHNESS = mix(roughness, 0.025, gel_weather.w * 0.75);
 	SPECULAR = mix(specular, 1.0, gel_weather.w);
