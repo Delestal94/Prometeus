@@ -9,8 +9,8 @@ extends SceneTree
 ##   (the measurement: `print` of the counts at each stage).
 
 ## What a full shed may cost, per stage: scene nodes and physics bodies under the CompanyShed.
-const NODE_BUDGET: Array[int] = [600, 1100, 1800, 2800]
-const BODY_BUDGET: Array[int] = [40, 80, 140, 220]
+const NODE_BUDGET: Array[int] = [300, 450, 650, 900]
+const BODY_BUDGET: Array[int] = [40, 70, 110, 150]
 
 var _failures: int = 0
 
@@ -80,12 +80,13 @@ func _check_budget(state: Node) -> void:
 		WarehouseStages.apply_to(stage, grid)
 		var size: Vector2i = grid.grid_size
 		var kind: int = 0
-		for z: int in range(0, size.y, 2):
-			for x: int in range(0, size.x, 3):
-				var result: Dictionary = grid.place(state, defs[kind % defs.size()], x, z, 0, true)
-				kind += 1
-				if result["reason"] == BuildPlacement.REASON_PIECE_LIMIT:
+		var limit: int = WarehouseStages.max_pieces_for(stage)
+		for z: int in size.y:
+			for x: int in size.x:
+				if (state.get(&"layout") as Array).size() >= limit:
 					break
+				var result: Dictionary = grid.place(state, defs[kind % defs.size()], x, z, 0, true)
+				kind += 1 if bool(result["ok"]) else 0
 		var placed: int = (state.get(&"layout") as Array).size()
 		_expect(placed == WarehouseStages.max_pieces_for(stage),
 			"stage %d fills to its limit (%d of %d)" % [stage, placed, WarehouseStages.max_pieces_for(stage)])
