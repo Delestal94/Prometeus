@@ -1328,3 +1328,14 @@ UI_ORDER_SHEET_LATE,Atrasado %d min,%d min late
 UI_ORDER_SHEET_PAY,Paga $%d,Pays $%d
 UI_ORDER_SHEET_READY,Lista para despachar,Ready to dispatch
 UI_ORDER_SHEET_NOT_READY,Falta completar,Not finished yet
+UI_BUILD_HINT,Construir: %s ($%d) · Enter: colocar o tomar · F: girar · Q/E: elegir · Supr: vender · Retroceso: salir,Build: %s ($%d) · Enter: place or grab · F: turn · Q/E: choose · Del: sell · Backspace: exit
+UI_BUILD_HELD,Pieza en la mano: Enter la deja en la celda,Piece in hand: Enter drops it on the cell
+UI_BUILD_REASON_HOST_ONLY,Solo el anfitrión construye,Only the host can build
+UI_BUILD_REASON_OVERLAP,Ahí ya hay algo,Something is already there
+UI_BUILD_REASON_OUT,Fuera del galpón,Outside the shed
+UI_BUILD_REASON_FIXED,Hay que dejar libre la entrada y la salida,The dock and the exit must stay clear
+UI_BUILD_REASON_PATH,Taparía el paso,It would block the way
+UI_BUILD_REASON_MONEY,No alcanza la plata,Not enough money
+UI_BUILD_REASON_LIMIT,Llegaste al límite de piezas de esta etapa,You reached the piece limit of this stage
+UI_BUILD_REASON_NOT_EMPTY,Primero vaciá la pieza,Empty the piece first
+UI_BUILD_REASON_OTHER,No se puede,Not possible

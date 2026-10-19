@@ -83,6 +83,8 @@ var zones: Array[ZoneDefinition] = []
 var player: Node3D
 ## The shed the players walk in, drawn from the company's layout and stock.
 var shed: CompanyShed
+## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
+var builder: ShedBuilder
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
@@ -130,6 +132,7 @@ func _ready() -> void:
 	_add_cells()
 	_add_trips()
 	_spawn_player()
+	_add_builder()
 	_publish_presence()
 	_open_company_day.call_deferred()
 
@@ -445,6 +448,15 @@ func _add_trips() -> void:
 	trips.setup(shed.to_global(Vector3(0.0, 0.0, -half_depth)), width)
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	day_cycle.trips_out = trips.trips_out
+
+
+func _add_builder() -> void:
+	if net == null or shed == null:
+		return
+	builder = ShedBuilder.new()
+	builder.name = "ShedBuilder"
+	add_child(builder)
+	builder.setup(shed, net, player)
 
 
 func _spawn_player() -> void:
