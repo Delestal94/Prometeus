@@ -338,7 +338,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.65** 16 colores de gelatina como `.tres` (color, absorción, brillo): leche (el de la
   referencia, por defecto), frutilla, lima, uva, naranja, menta, limón, arándano, cereza, cola, sandía,
   mora, durazno, cielo, carbón translúcido y arcoíris.
-- [ ] **S-311.66** Skins con interior: bicolor en capas (gomita), degradé vertical, trocitos de fruta
+- [x] **S-311.66** Skins con interior: bicolor en capas (gomita), degradé vertical, trocitos de fruta
   flotando adentro, brillantina, burbujas grandes.
 - [ ] **S-311.67** Skins animadas: arcoíris que cicla, neón que brilla de noche, lava con burbujas lentas,
   holográfica.

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GelSkinDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_skin_definition.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = &"glitter"
+color = Color(0.73, 0.54, 1, 0.9)
+absorption = 2.0
+shine = 1.0
+interior_mode = 4
+interior_color = Color(1, 0.92, 0.5, 1)
+interior_amount = 0.86
+interior_scale = 52.0
