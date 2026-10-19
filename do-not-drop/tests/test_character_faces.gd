@@ -16,20 +16,24 @@ func _run() -> void:
 	profile.storage_path = "user://faces_test.json"
 	profile.reset_profile()
 	_expect(profile.select_eyes(&"wink") and profile.select_mouth(&"tongue"), "Face options are selectable")
+	_expect(profile.select_gel_face(&"loved"), "A gel face is selectable")
 	profile.select_eyes(&"sleepy")
 	_expect(profile.selected_mouth == &"tongue", "Changing eyes preserves the mouth")
 	profile.select_mouth(&"laugh")
 	_expect(profile.selected_eyes == &"sleepy", "Changing mouth preserves the eyes")
-	_expect(not profile.select_eyes(&"../../bad") and not profile.select_mouth(&"missing"), "Unknown IDs are rejected")
+	_expect(not profile.select_eyes(&"../../bad") and not profile.select_mouth(&"missing")
+			and not profile.select_gel_face(&"../../bad"), "Unknown IDs are rejected")
 	var restored := Profile.new()
 	restored.storage_path = profile.storage_path
 	restored.load_profile()
 	_expect(restored.selected_eyes == &"sleepy" and restored.selected_mouth == &"laugh", "Face survives save/load")
+	_expect(restored.selected_gel_face == &"loved", "Gel face survives save/load")
 	var file := FileAccess.open(profile.storage_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify({"version": 2, "selected_cosmetic": "mint_uniform", "selected_eyes": "invalid"}))
 	file.close()
 	restored.load_profile()
 	_expect(restored.selected_eyes == Catalog.DEFAULT_EYES and restored.selected_mouth == Catalog.DEFAULT_MOUTH, "Old/corrupt profiles get valid face defaults")
+	_expect(restored.selected_gel_face == &"none", "Old profiles get the faceless gel default")
 	_expect(restored.selected_cosmetic == &"mint_uniform", "Migration preserves the old uniform")
 	profile.free(); restored.free()
 	for kind: String in ["eyes", "mouth"]:
@@ -90,6 +94,10 @@ func _run() -> void:
 	var sync: MultiplayerSynchronizer = first.get_node("MultiplayerSynchronizer")
 	for path: NodePath in [^".:face_eyes", ^".:face_mouth"]:
 		_expect(sync.replication_config.has_property(path) and sync.replication_config.property_get_spawn(path), "Face selection replicates at spawn: %s" % path)
+	var gel_face_path := NodePath("GelFaceReactions:base_face_id")
+	_expect(sync.replication_config.has_property(gel_face_path)
+			and sync.replication_config.property_get_spawn(gel_face_path),
+			"Gel face selection replicates at spawn")
 
 	var panel: Control = load("res://scripts/ui/cosmetics_panel.gd").new()
 	root.add_child(panel)
@@ -101,6 +109,11 @@ func _run() -> void:
 			"The 3D preview's face combines the two clicked options")
 	_expect(first.face_eyes == &"lashes" and first.face_mouth == &"grin", "Wardrobe selection updates the live local player")
 	_expect(second.face_eyes == &"worried", "Local profile changes leave a remote player alone")
+	panel.find_child("GelFace_loved", true, false).pressed.emit()
+	var reactions: Node = first.get_node(^"GelFaceReactions")
+	var saved_profile: Node = root.get_node(^"/root/UnlockManager")
+	_expect(saved_profile.get(&"selected_gel_face") == &"loved" and reactions.get(&"base_face_id") == &"loved",
+			"The selected gel face reaches the local player's replicated component")
 	panel.find_child("Eyes_none", true, false).pressed.emit()
 	_expect(not face1.get_node("Eyes").visible and face1.get_node("Mouth").visible, "Blank eyes preserve the selected mouth")
 	_expect(not face1.get_node("Brows").visible, "Blank eyes take their brows with them")
@@ -108,7 +121,7 @@ func _run() -> void:
 	_expect(not face1.get_node("Mouth").visible, "Original faceless look remains available")
 	panel.free(); first.free(); second.free()
 	if _failures == 0:
-		print("PASS: independent eyes/mouth, brows layer, persistence, live 3D preview and replicated face")
+		print("PASS: legacy and gel faces persist, preview live and replicate independently")
 	quit(_failures)
 
 func _expect(condition: bool, message: String) -> void:

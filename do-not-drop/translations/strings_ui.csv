@@ -369,6 +369,8 @@ UI_COSM_BODY,Cuerpo,Body
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face
 UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.
+UI_COSM_GEL_FACES,Caras de gel,Gel faces
+UI_COSM_GEL_FACES_HINT,Tu cara base vuelve después de cada reacción.,Your base face returns after every reaction.
 UI_COSM_MOUTH,Boca,Mouth
 UI_COSM_PRESETS,Caras armadas,Ready-made faces
 UI_COSM_PRESETS_HINT,"Un toque y listo; después ajustá ojos y boca.","One tap, then fine-tune the eyes and mouth."

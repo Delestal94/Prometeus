@@ -15,8 +15,12 @@ var player: Node
 var face: Node
 var current_face_id: StringName = BASE_FACE
 var knocked_out: bool = false
+var base_face_id: StringName = &"none":
+	set(value):
+		base_face_id = StringName(Catalog.gel_face(value).id)
+		_last_applied = &""
+		_refresh()
 
-var _base_face_id: StringName = &"none"
 var _last_applied: StringName = &""
 var _last_base_eyes: StringName = &""
 var _last_base_mouth: StringName = &""
@@ -31,6 +35,10 @@ func _init() -> void:
 
 func _ready() -> void:
 	player = get_parent()
+	var profile: Node = get_node_or_null(^"/root/UnlockManager")
+	if profile != null and player.has_method(&"is_local") and bool(player.call(&"is_local")):
+		_sync_from_profile()
+		profile.progress_changed.connect(_sync_from_profile)
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
@@ -58,9 +66,7 @@ func set_knocked_out(active: bool) -> void:
 ## Lets customisation (S-311.61) replace the neutral gel face without knowing
 ## anything about the temporary gameplay reactions.
 func set_base_face(face_id: StringName) -> void:
-	_base_face_id = StringName(Catalog.gel_face(face_id).id)
-	_last_applied = &""
-	_refresh()
+	base_face_id = face_id
 
 
 func set_face_target(target: Node) -> void:
@@ -68,8 +74,6 @@ func set_face_target(target: Node) -> void:
 		return
 	face = target
 	_last_applied = &""
-	if face != null and face.has_method(&"set_face"):
-		_base_face_id = StringName(face.get(&"face_id"))
 	_refresh()
 
 
@@ -115,7 +119,7 @@ func _refresh() -> void:
 func _apply_base() -> void:
 	if face.has_method(&"set_face"):
 		if _last_applied != BASE_FACE:
-			face.call(&"set_face", _base_face_id)
+			face.call(&"set_face", base_face_id)
 			_last_applied = BASE_FACE
 		return
 	var eyes := StringName(player.get(&"face_eyes"))
@@ -135,6 +139,12 @@ func _apply_face(face_id: StringName) -> void:
 		var expression: Dictionary = Catalog.gel_face(face_id)
 		face.call(&"set_expression", expression.eyes, expression.mouth)
 	_last_applied = face_id
+
+
+func _sync_from_profile() -> void:
+	var profile: Node = get_node_or_null(^"/root/UnlockManager")
+	if profile != null:
+		base_face_id = StringName(profile.get(&"selected_gel_face"))
 
 
 func _find_face() -> Node:

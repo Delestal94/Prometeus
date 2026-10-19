@@ -93,13 +93,13 @@ func _check_menu_panel(menu: Control, button_text: String, panel: Control) -> vo
 		panel.emit_signal(&"closed")
 
 
-## The face cards (N-506: ready-made faces, eyes, mouths): arrows stay among
+## The face cards (gel faces, ready-made faces, eyes, mouths): arrows stay among
 ## them, except left out of the first column (the nickname field, N-606.1), up
 ## out of the top row (the tabs) and down out of the last row (Done).
 func _check_cosmetic_neighbors(panel: Control) -> void:
 	var cards: Array = panel.get(&"_cards")
 	for button: Button in cards:
-		if not button.get_meta(&"kind") in ["preset", "eyes", "mouth"]:
+		if not button.get_meta(&"kind") in ["gel_face", "preset", "eyes", "mouth"]:
 			continue
 		for property: StringName in [&"focus_neighbor_left", &"focus_neighbor_right", &"focus_neighbor_top",
 				&"focus_neighbor_bottom"]:
@@ -109,13 +109,14 @@ func _check_cosmetic_neighbors(panel: Control) -> void:
 				_expect(way == "left" and target.name == &"NicknameEdit",
 						"Only left out of the grid reaches the nickname")
 			elif target != null and String(target.name).begins_with("Tab_"):
-				_expect(way == "top" and button.get_meta(&"kind") == "preset",
+				_expect(way == "top" and button.get_meta(&"kind") == "gel_face",
 						"Only up from the top row reaches the tabs")
 			elif target != null and target.name == &"Done":
 				_expect(way == "bottom" and button.get_meta(&"kind") == "mouth",
 						"Only down from the last row reaches Done")
 			else:
-				_expect(target is Button and (target as Button).get_meta(&"kind", "") in ["preset", "eyes", "mouth"],
+				_expect(target is Button and (target as Button).get_meta(&"kind", "") \
+						in ["gel_face", "preset", "eyes", "mouth"],
 						"The face grid keeps %s navigation among the face cards (%s)" % [way, button.name])
 
 

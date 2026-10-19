@@ -3,8 +3,8 @@ extends SceneTree
 ##
 ## The appearance screen (N-506, scripts/ui/cosmetics_panel.gd) and the depot's
 ## lockers that open it:
-## - from the main menu it has the face, uniform and truck tabs; twelve eyes and
-##   eight mouths as cards; the picked card (and only it) wears the check, and
+## - from the main menu it has the face, uniform and truck tabs; twelve gel
+##   faces, twelve eyes and eight mouths as cards; the picked card wears the check, and
 ##   picking moves it, saves it and never un-picks by clicking twice; a
 ##   ready-made face sets both and is checked only while both still match;
 ## - the dice never rolls a blank face nor the one you already have;
@@ -50,6 +50,10 @@ func _check_menu_panel(unlocks: Node) -> void:
 		_expect(panel.find_child(tab, true, false) != null, "The menu screen has %s" % tab)
 	_expect(panel.find_children("Eyes_*", "Button", true, false).size() == 12, "Twelve eyes cards")
 	_expect(panel.find_children("Mouth_*", "Button", true, false).size() == 8, "Eight mouth cards")
+	_expect(panel.find_children("GelFace_*", "Button", true, false).size() == 12, "Twelve gel face cards")
+	var no_gel_face := panel.find_child("GelFace_none", true, false) as Button
+	_expect(no_gel_face.button_pressed and no_gel_face.get_node(^"Check").visible,
+			"A fresh profile checks the faceless gel option")
 	_expect(_checked(panel) == ["Eyes_classic", "Mouth_smile"], "A fresh profile checks classic eyes and smile (got %s)"
 			% str(_checked(panel)))
 	panel.find_child("Eyes_determined", true, false).pressed.emit()
@@ -72,16 +76,24 @@ func _check_menu_panel(unlocks: Node) -> void:
 	_expect(cheeky.button_pressed and cheeky.get_node(^"Check").visible, "The ready-made face is checked")
 	panel.find_child("Mouth_grin", true, false).pressed.emit()
 	_expect(not cheeky.get_node(^"Check").visible, "Changing one layer un-checks the ready-made face")
+	panel.find_child("GelFace_loved", true, false).pressed.emit()
+	_expect(unlocks.get(&"selected_gel_face") == &"loved"
+			and (panel.find_child("GelFace_loved", true, false) as Button).button_pressed,
+			"Picking a gel face saves and checks it")
 
 	var dice := panel.find_child("Randomize", true, false) as Button
 	for roll: int in 20:
+		var gel_before: StringName = unlocks.get(&"selected_gel_face")
 		var eyes_before: StringName = unlocks.get(&"selected_eyes")
 		var mouth_before: StringName = unlocks.get(&"selected_mouth")
 		dice.pressed.emit()
 		var eyes: StringName = unlocks.get(&"selected_eyes")
 		var mouth: StringName = unlocks.get(&"selected_mouth")
-		if eyes == &"none" or mouth == &"none" or eyes == eyes_before or mouth == mouth_before:
-			_expect(false, "The dice rolled %s/%s after %s/%s" % [eyes, mouth, eyes_before, mouth_before])
+		var gel_face: StringName = unlocks.get(&"selected_gel_face")
+		if gel_face == &"none" or gel_face == gel_before or eyes == &"none" or mouth == &"none" \
+				or eyes == eyes_before or mouth == mouth_before:
+			_expect(false, "The dice rolled %s and %s/%s after %s and %s/%s"
+					% [gel_face, eyes, mouth, gel_before, eyes_before, mouth_before])
 			break
 
 	var coral := panel.find_child("Uniform_coral_uniform", true, false) as Button
@@ -100,7 +112,8 @@ func _check_menu_panel(unlocks: Node) -> void:
 
 	var tab := panel.find_child("Tab_face", true, false) as Button
 	var landing := tab.get_node(tab.focus_neighbor_bottom) as Button
-	_expect(landing != null and landing.button_pressed and landing.get_meta(&"kind") in ["preset", "eyes"],
+	_expect(landing != null and landing.button_pressed
+			and landing.get_meta(&"kind") in ["gel_face", "preset", "eyes"],
 			"Down from the tabs lands on the first picked card (got %s)" % (landing.name if landing else "nothing"))
 	var last_mouth := panel.find_child("Mouth_none", true, false) as Button
 	_expect(last_mouth.get_node(last_mouth.focus_neighbor_bottom) == panel.find_child("Done", true, false),

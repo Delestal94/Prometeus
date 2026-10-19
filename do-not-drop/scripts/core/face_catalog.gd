@@ -88,3 +88,10 @@ static func gel_face(id: StringName) -> Dictionary:
 		if each.id == id:
 			return each
 	return GEL_FACES[0]
+
+
+static func has_gel_face(id: StringName) -> bool:
+	for each: Dictionary in GEL_FACES:
+		if each.id == id:
+			return true
+	return false
