@@ -83,6 +83,8 @@ var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
 var clock: GameClock
 var day_cycle: DayCycle
+## Host: the shed gate and the trips out (D-0302.1). Null on a client.
+var trips: CompanyTrips
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -117,6 +119,7 @@ func _ready() -> void:
 	for zone: ZoneDefinition in zones:
 		_add_zone_slab(zone)
 	_add_shed()
+	_add_trips()
 	_spawn_player()
 	_publish_presence()
 	_open_company_day.call_deferred()
@@ -397,6 +400,22 @@ func _add_shed() -> void:
 func _redraw_shed() -> void:
 	if shed != null and net != null and net.company != null:
 		shed.rebuild(net.company, net.inventory)
+
+
+## Host: the gate across the shed's exit (north wall, centered) and the trips that cross it; the
+## day waits for a trip still out (DayCycle.trips_out). A client sees the vehicle, nothing more.
+func _add_trips() -> void:
+	if net == null or not net.is_host():
+		return
+	var stage: int = net.company.warehouse_stage if net.company != null else 0
+	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
+	var width: float = float(CompanyTuning.WAREHOUSE_EXIT_CELLS.x) * CompanyTuning.WAREHOUSE_GRID_M
+	trips = CompanyTrips.new()
+	trips.name = "CompanyTrips"
+	add_child(trips)
+	trips.setup(shed.to_global(Vector3(0.0, 0.0, -half_depth)), width)
+	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	day_cycle.trips_out = trips.trips_out
 
 
 func _spawn_player() -> void:

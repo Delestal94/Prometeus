@@ -17,9 +17,10 @@ N-102 aplicada a la salida completa. Es la fuente de los `bounds` de D-0205 y de
 **Hecho cuando:** el boceto existe con coordenadas de cada zona y cada bloqueo.
 
 ### D-0302 · Portón del galpón como inicio de salida — A · Opus 5.5 · high · Aviso: no · F1
-**[~] Parcial (2026-10-19, PR pendiente)** — modelo y test: `Trip` (`scripts/gameplay/districts/trip.gd`: saca los pedidos PACKED a OUT al salir, entrega y cierra marcando FAILED lo no entregado) y `TripGate` (`trip_gate.gd`: plano del portón, detecta cruce de salida y de entrada por la abertura); `test_company_trip`.
+**[~] Parcial (2026-10-19, PR pendiente)** — modelo, enganche y test: `Trip` (`scripts/gameplay/districts/trip.gd`: saca los pedidos PACKED a OUT al salir, entrega y cierra marcando FAILED lo no entregado) y `TripGate` (`trip_gate.gd`: plano del portón, detecta cruce de salida y de entrada por la abertura); `test_company_trip`.
 **Subtareas abiertas:**
-- **D-0302.1** Conectar `TripGate` al `depot_roller_door.gd`/`CompanyRoot` (posición del vehículo cada tick de física, cajas despachadas del vehículo → `Trip.start`) y guardar el `Trip` activo en el estado de la empresa.
+- ~~**D-0302.1**~~ ✅ (2026-10-19, PR pendiente) `CompanyTrips` (`company_trips.gd`, hijo de `CompanyRoot` en el host): `TripGate` en la salida norte del galpón, sigue cada tick los nodos del grupo `company_vehicle`, `stage_cargo()` guarda lo que despacho cargó y al cruzar arranca el `Trip`; al volver lo cierra; `trips_out()` va a `DayCycle.trips_out`. `test_company_trips`.
+- **D-0302.2** Cuando exista el vehículo de la empresa (D-0207+): meterlo en el grupo `company_vehicle` con su id como nombre, llamar `stage_cargo()` desde la zona de despacho (D-0703/D-0716), pasar el `OrderBook` de la empresa a `CompanyTrips.book` (D-0801) y replicar `trip_started`/`trip_closed` por evento de `CompanyNet` (D-2003). El `depot_roller_door.gd` no hace falta: el cruce se mide contra el plano de la salida.
 **Depende de:** D-0620, D-0214
 **Qué:** el portón de persiana del depósito actual (`depot_roller_door.gd`) es el borde del galpón.
 - Una salida (`Trip`) empieza cuando un vehículo con cajas despachadas cruza el portón hacia afuera, y
