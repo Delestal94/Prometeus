@@ -47,12 +47,13 @@ func _check_stages() -> void:
 			% [stage, ShedLighting.problems(grid, [])])
 		for lamp: Dictionary in lamps:
 			var at: Vector2 = lamp["at"]
-			_expect(at.x > 0.0 and at.x < grid.x and at.y > 0.0 and at.y < grid.y, "stage %d lamp %s is over the floor" % [stage, at])
+			_expect(at.x > 0.0 and at.x < grid.x and at.y > 0.0 and at.y < grid.y,
+				"stage %d lamp %s is over the floor" % [stage, at])
 	_expect(ShedLighting.ceiling_lamps(WarehouseStages.grid_size_for(3)).size()
 		> ShedLighting.ceiling_lamps(WarehouseStages.grid_size_for(0)).size(), "a bigger shed has more lamps")
 	_expect(ShedLighting.ceiling_lamps(Vector2i(12, 8)).size() == 2, "the small shed has two lamps")
-	_expect(ShedLighting.ceiling_lamps(Vector2i(12, 8)) == ShedLighting.ceiling_lamps(Vector2i(12, 8)),
-		"the same floor gives the same lamps")
+	var again: Array[Dictionary] = ShedLighting.ceiling_lamps(Vector2i(12, 8))
+	_expect(ShedLighting.ceiling_lamps(Vector2i(12, 8)) == again, "the same floor gives the same lamps")
 
 
 func _check_task_lamps() -> void:
@@ -68,13 +69,16 @@ func _check_task_lamps() -> void:
 	_expect(tasks.size() == 1, "only the packing table gets a task lamp (%d)" % tasks.size())
 	if tasks.is_empty():
 		return
-	_expect(tasks[0]["at"] == Vector2(10, 2) + Vector2(table.footprint) * 0.5, "the task lamp is over the table's middle")
+	_expect(tasks[0]["at"] == Vector2(10, 2) + Vector2(table.footprint) * 0.5,
+		"the task lamp is over the table's middle")
 	_expect(tasks[0]["kind"] == ShedLighting.KIND_TASK, "it is a task lamp")
 	layout[0] = {"id": "assembly_table", "x": 4, "z": 5, "turns": 1}
 	var moved: Array[Dictionary] = ShedLighting.task_lamps(layout)
-	_expect(moved[0]["at"] == Vector2(4, 5) + Vector2(table.footprint_for(1)) * 0.5, "moved and turned, the lamp follows")
+	_expect(moved[0]["at"] == Vector2(4, 5) + Vector2(table.footprint_for(1)) * 0.5,
+		"moved and turned, the lamp follows")
 	var all: Array[Dictionary] = ShedLighting.lamps_for(Vector2i(12, 8), layout)
-	_expect(all.size() == ShedLighting.ceiling_lamps(Vector2i(12, 8)).size() + 1, "lamps_for adds the task lamp to the ceiling")
+	_expect(all.size() == ShedLighting.ceiling_lamps(Vector2i(12, 8)).size() + 1,
+		"lamps_for adds the task lamp to the ceiling")
 	_expect(ShedLighting.problems(Vector2i(12, 8), layout).is_empty(), "the small shed with a table has no problems")
 
 
@@ -87,7 +91,8 @@ func _check_dark_detection() -> void:
 	var crowded: Array[Dictionary] = ShedLighting.ceiling_lamps(grid)
 	for i: int in 10:
 		crowded.append(ShedLighting.task_lamps([{"id": "assembly_table", "x": 12, "z": 8, "turns": 0}])[0])
-	_expect(ShedLighting.max_overlap(grid, crowded) > CompanyTuning.SHED_MAX_LIGHTS_PER_POINT, "too many lamps are counted")
+	_expect(ShedLighting.max_overlap(grid, crowded) > CompanyTuning.SHED_MAX_LIGHTS_PER_POINT,
+		"too many lamps are counted")
 
 
 func _check_shed(state: Node) -> void:
@@ -106,9 +111,11 @@ func _check_shed(state: Node) -> void:
 		shed.queue_free()
 		return
 	var expected: int = ShedLighting.lamps_for(shed.grid, state.get(&"layout")).size()
-	_expect(lights.get_child_count() == expected, "one OmniLight3D per lamp (%d of %d)" % [lights.get_child_count(), expected])
+	_expect(lights.get_child_count() == expected,
+		"one OmniLight3D per lamp (%d of %d)" % [lights.get_child_count(), expected])
 	for child: Node in lights.get_children():
-		_expect(child is OmniLight3D and (child as Node3D).position.y < CompanyShed.WALL_HEIGHT, "%s is a light under the walls" % child.name)
+		_expect(child is OmniLight3D and (child as Node3D).position.y < CompanyShed.WALL_HEIGHT,
+			"%s is a light under the walls" % child.name)
 	var task_before: Vector3 = _task_position(lights)
 	var table: PlaceableDefinition = PlaceableShop.definition(&"assembly_table")
 	_expect(task_before.distance_to(shed.cell_to_local(Vector2(7, 2) + Vector2(table.footprint) * 0.5,
