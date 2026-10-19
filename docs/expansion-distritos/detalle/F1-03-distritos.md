@@ -197,6 +197,9 @@ Se anota en una decisión nueva del día.
 **Hecho cuando:** la decisión está documentada y el número está en `world_tuning.gd`.
 
 ### D-0318 · Física lejos del jugador — B · Opus 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-19, PR pendiente)** — `WorldCellStreamer.track_body/untrack_body/is_body_frozen` (módulo `world_cells`): un `RigidBody3D` registrado se congela (`FREEZE_MODE_STATIC`, velocidades guardadas) mientras su celda no está instanciada y se descongela al volver; lo que el juego ya tenía congelado se respeta. `modules/world_cells/tests/test_world_cells_freeze.gd`.
+**Subtareas abiertas:**
+- **D-0318.1** Registrar las cajas sueltas del modo Empresa (`CompanyCells.track_body`) cuando existan las cajas del galpón/calle (D-0703, D-0214): hoy ningún nodo las suelta en el mapa.
 **Depende de:** D-0303
 **Qué:** las cajas sueltas en celdas sin ancla se congelan (`freeze = true`) con su estado guardado, y se
 descongelan al volver a cargar la celda, para que no se pierdan cuerpos que caen por un piso no cargado.
