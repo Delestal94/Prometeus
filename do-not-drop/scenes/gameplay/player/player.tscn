@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_contact_deformation.gd" id="8_gel_contact"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_environment_response.gd" id="9_gel_environment"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_effects.gd" id="10_gel_effects"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_face_reactions.gd" id="11_face_reactions"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -89,6 +90,9 @@ script = ExtResource("6_gel_proportions")
 
 [node name="GelRagdoll" type="Node" parent="."]
 script = ExtResource("7_gel_ragdoll")
+
+[node name="GelFaceReactions" type="Node" parent="."]
+script = ExtResource("11_face_reactions")
 
 [node name="GelEffects" type="Node" parent="."]
 script = ExtResource("10_gel_effects")
