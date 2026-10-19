@@ -1,16 +1,22 @@
 class_name GelSkinApplier
 extends RefCounted
-## Copies one skin resource into per-instance shader parameters (S-311.66).
+## Copies one skin resource into the two packed per-instance skin parameters.
+
+const ANIMATION_MODE_OFFSET: int = GelSkinDefinition.InteriorMode.BIG_BUBBLES
 
 
 static func apply(target: GeometryInstance3D, definition: Resource) -> bool:
 	if target == null or definition == null or not definition.call(&"is_valid"):
 		return false
 	target.set_instance_shader_parameter(&"gel_color", definition.get(&"color"))
+	var mode: int = int(definition.get(&"interior_mode"))
+	var animation_mode: int = int(definition.get(&"animation_mode"))
+	if animation_mode != GelSkinDefinition.AnimationMode.NONE:
+		mode = ANIMATION_MODE_OFFSET + animation_mode
 	var surface := Vector4(
 		definition.get(&"absorption"),
 		definition.get(&"shine"),
-		float(definition.get(&"interior_mode")),
+		float(mode),
 		definition.get(&"interior_amount")
 	)
 	var color: Color = definition.get(&"interior_color")

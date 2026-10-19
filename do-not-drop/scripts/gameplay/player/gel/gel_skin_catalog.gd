@@ -28,6 +28,12 @@ const INTERIOR_SKINS: Array[Resource] = [
 	preload("res://data/gel_skins/glitter.tres"),
 	preload("res://data/gel_skins/big_bubbles.tres"),
 ]
+const ANIMATED_SKINS: Array[Resource] = [
+	preload("res://data/gel_skins/cycling_rainbow.tres"),
+	preload("res://data/gel_skins/night_neon.tres"),
+	preload("res://data/gel_skins/slow_lava.tres"),
+	preload("res://data/gel_skins/holographic.tres"),
+]
 
 
 static func skin(requested_id: StringName) -> Resource:
@@ -51,7 +57,15 @@ static func interior_ids() -> Array[StringName]:
 	return result
 
 
+static func animated_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for definition: Resource in ANIMATED_SKINS:
+		result.append(definition.get(&"id"))
+	return result
+
+
 static func all_skins() -> Array[Resource]:
 	var result: Array[Resource] = SKINS.duplicate()
 	result.append_array(INTERIOR_SKINS)
+	result.append_array(ANIMATED_SKINS)
 	return result
