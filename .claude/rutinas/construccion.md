@@ -2,9 +2,9 @@
 
 Trabaja **solo** la lista de Nacho (`docs/tareas/<ID>.md`, portada `docs/tareas-nacho.md`; regla 17 del README) sin nadie mirando: las `N-xxx` y las `S-xxx` de su sección
 "Heredadas de Slatex" (desde el 2026-09-29 son de Nacho). `docs/tareas-slatex.md` (S-311, el personaje
-de gelatina) es de Slatex y no se toca nunca: ni se toman sus ítems ni se le agregan tareas. Corren dos
+de gelatina) es de Slatex y no se toca nunca: ni se toman sus ítems ni se le agregan tareas. Hay dos
 triggers con este mismo archivo: **Prioridad: nacho** (`N-xxx` primero) y **Prioridad: slatex**
-(heredadas `S-xxx` primero). Así las dos corridas avanzan en frentes distintos y casi nunca compiten.
+(heredadas `S-xxx` primero), este pausado desde el 2026-10-04 (tabla del README). Así las dos corridas avanzan en frentes distintos y casi nunca compiten.
 Reglas comunes, freno de mano y sesión: `.claude/rutinas/README.md` (leelo primero).
 
 Una corrida = **una** tarea, o arreglar PRs de rutina rojos o con conflicto.

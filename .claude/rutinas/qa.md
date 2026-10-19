@@ -6,8 +6,8 @@ de construcción toma primero. Reglas comunes y sesión: `.claude/rutinas/README
 ## 1. Recorrido
 
 1. `git switch --detach origin/main` y anotá el commit (`git rev-parse --short HEAD`).
-2. **`probador-qa`** con los 5 escenarios de su prompt. Corre dos veces por día (06:00 y 18:00 hora
-   Argentina). Clima de la corrida: índice `(2 × día del mes + (1 si es la de la tarde)) módulo` la
+2. **`probador-qa`** con los 5 escenarios de su prompt. Hoy corre una vez por día (09:00 hora Argentina, tabla del README); lo de "la de la tarde"
+   aplica solo si vuelve una segunda corrida. Clima de la corrida: índice `(2 × día del mes + (1 si es la de la tarde)) módulo` la
    cantidad de climas de `docs/qa-recorrido.md`, así las dos del día prueban climas distintos. La de la
    tarde, además, mira primero lo que se mezcló desde la de la mañana (`git log --since="12 hours ago"
    --first-parent origin/main`) y le pide a `probador-qa` que apunte a esas áreas.

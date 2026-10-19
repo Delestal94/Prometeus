@@ -13,7 +13,7 @@ Ninguna rutina habla con otra: se comunican por archivos del repo y por PRs.
 ```
 revision (lunes) ──► docs/auditorias/AAAA-MM-DD-revision.md ──┐
 qa (diario) ───────► docs/qa-recorrido.md (Hallazgos) ────────┤
-auditoria (diaria) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas/<ID>.md
+auditoria (2 días) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas/<ID>.md
 mantenimiento (jue) ► docs arreglados + hallazgos de código ──┤                              │
 lanzamiento (mes) ─► docs/marketing/ ─────────────────────────┤                              ▼
 pc-build (PC, diaria) ► docs/rendimiento-pc.md ───────────────┘  construccion (2 por hora) ─► PR ─► CI ─► main
@@ -52,18 +52,18 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Primera partida y tutorial | revisión, semana 1 del mes → construcción | `pulidor-jugabilidad`, `constructor-ui` |
 | Accesibilidad | revisión, semana 2 del mes → construcción | `director-arte`, `constructor-ui` |
 | Idiomas y textos (traducciones, glosario, textos que no entran) | revisión, semana 2 del mes → construcción | `localizador`, `revisor-visual` |
-| Incidentes del proceso (postmortems) | auditoría (diaria): `docs/postmortems/` cuando `main` quedó roja > 1 h, cayó una rutina o hubo un revert | `auditor-integral`, `planificador-tareas` |
+| Incidentes del proceso (postmortems) | auditoría (día por medio): `docs/postmortems/` cuando `main` quedó roja > 1 h, cayó una rutina o hubo un revert | `auditor-integral`, `planificador-tareas` |
 | Red y plataforma | construcción (PRs de red) + mantenimiento (jueves) + revisión, semana 3 | `constructor-red`, `auditor-red` |
 | Rendimiento | QA (si hay leak) + revisión, semana 4 + build de la PC (diaria, FPS con GPU) | `perfilador-rendimiento` |
 | Verificar cada cambio | construcción | `ejecutor-tests`, `escritor-tests`, `cazador-bugs`, `revisor-gdscript`, `revisor-visual` |
 | Juego armado de punta a punta | QA (diario) | `probador-qa`, `cazador-bugs` |
 | Confiabilidad y costo del CI (tests inestables, shards, tiempos) | `ci-flaky.yml` (cada run rojo) + `ci-health.yml` (lunes, issue `salud-ci`) → mantenimiento (jueves) → construcción | `ingeniero-ci` |
-| Auditoría del proyecto entero | auditoría (diaria) | `auditor-integral` |
+| Auditoría del proyecto entero | auditoría (día por medio) | `auditor-integral` |
 | Docs, avisos, licencias | mantenimiento (jueves) | `documentador`, `guardian-dominios` |
 | Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
 | Build de prueba | build de la PC (diaria; publicar sigue ⏸ con M5) | `empaquetador-release`, `perfilador-rendimiento`, `revisor-visual` |
 | Versiones y notas de cambios | `release-train.yml` (lunes 07:00, sin modelo): tag `v0.N.0` si `main` está verde + release **borrador** con las notas de `tools/release/changelog.py`; nunca publica (repo público) | — |
-| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (diaria, "latido") + issue `rutina-caida` que abre la PC | `auditor-integral` |
+| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (día por medio, "latido") + issue `rutina-caida` que abre la PC | `auditor-integral` |
 | Decisiones | la rutina decide con su recomendación (regla 3); solo plata, cuentas y licencias abren un issue `decide-usuario` (regla 12); la revisión semanal aplica las respuestas | `planificador-tareas` |
 | Regresiones de lo ya mezclado | QA, build de la PC y auditoría → tarea `Regresión de #PR` → construcción (arreglo o `git revert`, regla 14) | `cazador-bugs`, constructor del área |
 | Dependencias del juego (Godot, GodotSteam, addons) | lanzamiento (mensual) → tarea | `estratega-steam`, `constructor-red` |
