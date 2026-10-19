@@ -114,6 +114,7 @@ camino. Evita aristas detrás de bloqueos cerrados.
 **Hecho cuando:** el test pasa y una captura muestra el GPS con la ruta.
 
 ### D-0309 · Qué vehículo puede ir adónde — A · Opus 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `DispatchRules` (`scripts/gameplay/districts/dispatch_rules.gd`): `check()` / `check_order()` devuelven `{ok, key, args}` según la zona del pedido, el `VehicleDefinition` y los bloqueos de la zona; claves `DISPATCH_NEEDS_*` en `strings_world.csv`; `test_company_dispatch_rules`. Falta que el tablero (D-0310) lo muestre.
 **Depende de:** D-0306, D-0207
 **Qué:** al despachar (D-0310), un pedido cuya casa está en una zona inalcanzable para ese vehículo (por
 bloqueo cerrado o por `gate_key`) se marca y no se puede cargar, con el motivo.
