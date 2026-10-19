@@ -7,6 +7,9 @@ extends SceneTree
 ## hitch (frame > HITCH_MS) with what was going on, so a stutter can be traced
 ## to rendering, physics or a script instead of guessed at.
 ## Optional user args: -- --seconds=60 --seed=1234 --hitch=33
+## (--seconds is wall-clock time of the run, not game time.)
+## The probe keeps running totals and a few capped lists, never a sample per
+## frame or tick, so a long run does not grow its own memory (N-980).
 ## --endless drives Endless instead (level_endless.tscn), following the
 ## streamed road's own centre line (RouteStreamer.point_at()).
 ## --mood=lluvia_noche (world_mood.gd) forces the weather and time of day.
@@ -39,6 +42,31 @@ class PhysicsEnd extends Node:
 		stamp_usec = Time.get_ticks_usec()
 
 
+## Running count / mean / peak (and spread) of a stream of samples, so a long
+## run keeps a few numbers instead of one array entry per tick.
+class RunningStat:
+	var count: int = 0
+	var mean: float = 0.0
+	var peak: float = -INF
+	var _m2: float = 0.0
+
+	func add(value: float) -> void:
+		count += 1
+		var delta: float = value - mean
+		mean += delta / count
+		_m2 += delta * (value - mean)
+		peak = maxf(peak, value)
+
+	func std() -> float:
+		return sqrt(_m2 / count) if count > 0 else 0.0
+
+
+## Hitch lines the report prints, and so the hitch frames worth keeping whole.
+const MAX_HITCH_LINES: int = 40
+## How many process frames of the node-added log stay (a hitch line only looks
+## one frame back).
+const ADDED_KEEP_FRAMES: int = 4
+
 var HITCH_MS: float = 33.0
 var _physics_end: PhysicsEnd = null
 ## What joined the tree, by process frame (the first few nodes and the count): a
@@ -51,7 +79,24 @@ const LOOKAHEAD: float = 14.0
 var _level: Node3D
 var _route: Node3D
 var _van: VehicleBody3D
-var _frames: Array[Dictionary] = []
+## One float per frame (4 bytes), the only per-frame series: the percentiles need it.
+var _frame_ms: PackedFloat32Array = PackedFloat32Array()
+var _total_ms: float = 0.0
+var _sum_draws: float = 0.0
+var _sum_objects: float = 0.0
+var _sum_prims: float = 0.0
+var _physics_ms: float = 0.0
+var _physics_peak: float = 0.0
+var _physics_ticks: int = 0
+var _scripts_total: float = 0.0
+var _scripts_peak: float = 0.0
+var _step_peak: float = 0.0
+var _memory_static_peak: float = 0.0
+var _memory_video_peak: float = 0.0
+var _last_progress: float = 0.0
+var _hitch_count: int = 0
+## The first MAX_HITCH_LINES hitch frames, whole.
+var _hitch_frames: Array[Dictionary] = []
 var _last_usec: int = 0
 var _path: Array[Vector3] = []
 var _path_index: int = 0
@@ -67,23 +112,24 @@ var _physics_start_usec: int = -1
 ## at cruising speed. Without interpolation it only moves on physics ticks,
 ## so at high frame rates most frames repeat a pose and the next one jumps.
 var _last_camera_origin: Vector3 = Vector3.INF
-var _smooth_samples: Array[float] = []
+var _smooth: RunningStat = RunningStat.new()
+var _smooth_frozen: int = 0
 ## How far the seated driver's body drifts from its seat as drawn (should
 ## stay ~0: both must be interpolated the same way).
 var _seat_drift_peak: float = 0.0
 ## Jolt's monitors, one sample per physics tick (_drive).
-var _phys_active: Array[float] = []
-var _phys_pairs: Array[float] = []
-var _phys_islands: Array[float] = []
-var _phys_time_ms: Array[float] = []
+var _phys_active: RunningStat = RunningStat.new()
+var _phys_pairs: RunningStat = RunningStat.new()
+var _phys_islands: RunningStat = RunningStat.new()
+var _phys_time_ms: RunningStat = RunningStat.new()
 ## Jolt's PHYSICS_3D_* monitors read 0 (not implemented by the Jolt server), so
 ## the physics load is read from the bodies themselves once a second: how many
 ## rigid bodies are awake and, with --contacts, how many contacts they report.
 var _tick: int = 0
 var _rigid: Array[RigidBody3D] = []
-var _bodies_awake: Array[float] = []
-var _bodies_total: Array[float] = []
-var _contacts: Array[float] = []
+var _bodies_awake: RunningStat = RunningStat.new()
+var _bodies_total: RunningStat = RunningStat.new()
+var _contacts: RunningStat = RunningStat.new()
 
 
 func _initialize() -> void:
@@ -230,7 +276,10 @@ func _run() -> void:
 			var origin: Vector3 = camera.get_global_transform_interpolated().origin
 			var speed: float = _van.linear_velocity.length()
 			if _last_camera_origin != Vector3.INF and speed > 15.0 and ms > 0.0:
-				_smooth_samples.append(origin.distance_to(_last_camera_origin) / (ms / 1000.0) / speed)
+				var ratio: float = origin.distance_to(_last_camera_origin) / (ms / 1000.0) / speed
+				_smooth.add(ratio)
+				if ratio < 0.2:
+					_smooth_frozen += 1
 			_last_camera_origin = origin
 		var player: Node = _level.get(&"local_player")
 		if player != null and _van.linear_velocity.length() > 15.0:
@@ -239,7 +288,7 @@ func _run() -> void:
 			if body_visual != null and seat != null:
 				var expected: Vector3 = seat.get_global_transform_interpolated().translated_local(Vector3(0.0, -0.55, 0.0)).origin
 				_seat_drift_peak = maxf(_seat_drift_peak, body_visual.get_global_transform_interpolated().origin.distance_to(expected))
-		_frames.append({
+		_record_frame({
 			"ms": ms,
 			"t": elapsed,
 			"process": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
@@ -248,25 +297,57 @@ func _run() -> void:
 			"frame": Engine.get_process_frames(),
 			"draws": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			"objects": Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
-		"prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
-		"memory_static": Performance.get_monitor(Performance.MEMORY_STATIC),
-		"memory_video": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
-		"kmh": _van.linear_velocity.length() * 3.6,
-			"progress": float(_path_index) / maxf(1.0, float(_path.size())),
+			"prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+			"memory_static": Performance.get_monitor(Performance.MEMORY_STATIC),
+			"memory_video": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
+			"kmh": _van.linear_velocity.length() * 3.6,
+			"progress": _progress(),
 			"rescues": _rescues,
 		})
 	_report(first_ms)
 	quit()
 
 
+## Route fraction driven; endless has no end to measure against, so it has none.
+func _progress() -> float:
+	if _endless:
+		return -1.0
+	return float(_path_index) / maxf(1.0, float(_path.size()))
+
+
+## Folds one frame into the running totals; only hitch frames are kept whole
+## (the first MAX_HITCH_LINES, which is all the report prints).
+func _record_frame(f: Dictionary) -> void:
+	_frame_ms.append(f.ms)
+	_total_ms += f.ms
+	_sum_draws += f.draws
+	_sum_objects += f.objects
+	_sum_prims += f.prims
+	_memory_static_peak = maxf(_memory_static_peak, f.memory_static)
+	_memory_video_peak = maxf(_memory_video_peak, f.memory_video)
+	_last_progress = f.progress
+	if f.physics > 0.0:
+		_physics_ms += f.physics
+		_physics_ticks += 1
+		_physics_peak = maxf(_physics_peak, f.physics)
+		_scripts_total += f.phys_scripts
+		_scripts_peak = maxf(_scripts_peak, f.phys_scripts)
+		_step_peak = maxf(_step_peak, f.physics - f.phys_scripts)
+	if f.ms > HITCH_MS:
+		_hitch_count += 1
+		if _hitch_frames.size() < MAX_HITCH_LINES:
+			f["added"] = _added_text(f.frame)
+			_hitch_frames.append(f)
+
+
 ## Pure-pursuit autopilot along the route's own path points.
 func _drive() -> void:
 	if _physics_start_usec < 0:
 		_physics_start_usec = Time.get_ticks_usec()
-	_phys_active.append(Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS))
-	_phys_pairs.append(Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS))
-	_phys_islands.append(Performance.get_monitor(Performance.PHYSICS_3D_ISLAND_COUNT))
-	_phys_time_ms.append(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
+	_phys_active.add(Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS))
+	_phys_pairs.add(Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS))
+	_phys_islands.add(Performance.get_monitor(Performance.PHYSICS_3D_ISLAND_COUNT))
+	_phys_time_ms.add(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
 	_sample_bodies()
 	if _endless:
 		_drive_endless()
@@ -344,13 +425,16 @@ func _sample_bodies() -> void:
 			awake += 1
 		if "--contacts" in OS.get_cmdline_user_args():
 			contacts += PhysicsServer3D.body_get_direct_state(body.get_rid()).get_contact_count()
-	_bodies_awake.append(awake)
-	_bodies_total.append(_rigid.size())
-	_contacts.append(contacts)
+	_bodies_awake.add(awake)
+	_bodies_total.add(_rigid.size())
+	_contacts.add(contacts)
 
 
 func _on_node_added(node: Node) -> void:
 	var frame: int = Engine.get_process_frames()
+	for key: int in _added.keys():
+		if key < frame - ADDED_KEEP_FRAMES:
+			_added.erase(key)
 	var entry: Dictionary = _added.get_or_add(frame, {"count": 0, "names": []})
 	entry.count += 1
 	if entry.names.size() < 5:
@@ -498,71 +582,36 @@ func _census() -> void:
 		gpu_particles, emitting, particle_amount, str(lights), shadowed, bodies])
 
 
-func _stats(values: Array[float]) -> String:
-	if values.is_empty():
+func _stats(values: RunningStat) -> String:
+	if values.count == 0:
 		return "n/a"
-	var sum: float = 0.0
-	var peak: float = 0.0
-	for value: float in values:
-		sum += value
-		peak = maxf(peak, value)
-	return "avg=%.1f max=%.1f" % [sum / values.size(), peak]
+	return "avg=%.1f max=%.1f" % [values.mean, values.peak]
 
 
 func _report(first_ms: float) -> void:
-	if _frames.is_empty():
+	if _frame_ms.is_empty():
 		print("BENCH no frames")
 		return
-	var times: Array[float] = []
-	var total: float = 0.0
-	var draws: float = 0.0
-	var objects: float = 0.0
-	var prims: float = 0.0
-	var process_ms: float = 0.0
-	var physics_ms: float = 0.0
-	var physics_peak: float = 0.0
-	var memory_static_peak: float = 0.0
-	var memory_video_peak: float = 0.0
-	var physics_ticks: int = 0
-	for f: Dictionary in _frames:
-		times.append(f.ms)
-		total += f.ms
-		draws += f.draws
-		objects += f.objects
-		prims += f.prims
-		memory_static_peak = maxf(memory_static_peak, f.memory_static)
-		memory_video_peak = maxf(memory_video_peak, f.memory_video)
-		process_ms += f.process
-		if f.physics > 0.0:
-			physics_ms += f.physics
-			physics_ticks += 1
-			physics_peak = maxf(physics_peak, f.physics)
-	var n: float = float(_frames.size())
+	var times: PackedFloat32Array = _frame_ms.duplicate()
 	times.sort()
+	var n: float = float(times.size())
 	var p: Callable = func(q: float) -> float: return times[clampi(int(q * n), 0, times.size() - 1)]
-	print("BENCH first_frame_ms=%.0f frames=%d avg_ms=%.2f fps=%.0f p50=%.2f p95=%.2f p99=%.2f max=%.1f" % [first_ms, _frames.size(), total / n, 1000.0 * n / total, p.call(0.5), p.call(0.95), p.call(0.99), times[-1]])
-	print("BENCH avg draws=%.0f objects=%.0f prims=%.0f progress=%.2f" % [draws / n, objects / n, prims / n, _frames[-1].progress])
-	print("BENCH physics per tick: avg=%.2fms peak=%.2fms (%d ticks)" % [physics_ms / maxf(1.0, physics_ticks), physics_peak, physics_ticks])
-	var scripts_total: float = 0.0
-	var scripts_peak: float = 0.0
-	var step_peak: float = 0.0
-	for f: Dictionary in _frames:
-		if f.physics > 0.0:
-			scripts_total += f.phys_scripts
-			scripts_peak = maxf(scripts_peak, f.phys_scripts)
-			step_peak = maxf(step_peak, f.physics - f.phys_scripts)
-	var ticks: float = maxf(1.0, physics_ticks)
+	print("BENCH first_frame_ms=%.0f frames=%d avg_ms=%.2f fps=%.0f p50=%.2f p95=%.2f p99=%.2f max=%.1f" % [first_ms, times.size(), _total_ms / n, 1000.0 * n / _total_ms, p.call(0.5), p.call(0.95), p.call(0.99), times[-1]])
+	var progress_text: String = "n/a (endless)" if _endless else "%.2f" % _last_progress
+	print("BENCH avg draws=%.0f objects=%.0f prims=%.0f progress=%s" % [_sum_draws / n, _sum_objects / n, _sum_prims / n, progress_text])
+	print("BENCH physics per tick: avg=%.2fms peak=%.2fms (%d ticks)" % [_physics_ms / maxf(1.0, _physics_ticks), _physics_peak, _physics_ticks])
+	var ticks: float = maxf(1.0, _physics_ticks)
 	print("BENCH physics split: _physics_process scripts avg=%.2fms peak=%.2fms | " % [
-		scripts_total / ticks, scripts_peak]
+		_scripts_total / ticks, _scripts_peak]
 		+ "the rest of the tick (Jolt step and what follows) avg=%.2fms peak=%.2fms" % [
-		(physics_ms - scripts_total) / ticks, step_peak])
+		(_physics_ms - _scripts_total) / ticks, _step_peak])
 	print("BENCH memory_static_peak_mib=%.1f memory_video_peak_mib=%.1f" % [
-		memory_static_peak / 1048576.0,
-		memory_video_peak / 1048576.0,
+		_memory_static_peak / 1048576.0,
+		_memory_video_peak / 1048576.0,
 	])
 	var monitors: String = "PHYSICS_3D_* monitors: active %s, pairs %s, islands %s" % [
 		_stats(_phys_active), _stats(_phys_pairs), _stats(_phys_islands)]
-	if _phys_active.max() == 0.0 and _phys_pairs.max() == 0.0 and _phys_islands.max() == 0.0:
+	if maxf(_phys_active.peak, 0.0) == 0.0 and maxf(_phys_pairs.peak, 0.0) == 0.0 and maxf(_phys_islands.peak, 0.0) == 0.0:
 		monitors = "PHYSICS_3D_* monitors are all 0 under Jolt"
 	print("BENCH physics3d: %s | TIME_PHYSICS_PROCESS ms %s" % [monitors, _stats(_phys_time_ms)])
 	print("BENCH rigid bodies (sampled 1/s): total %s | awake %s | contacts reported %s (only with --contacts)" % [
@@ -573,26 +622,15 @@ func _report(first_ms: float) -> void:
 		Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT),
 		Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
 		Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0])
-	if _smooth_samples.size() > 10:
-		var mean: float = 0.0
-		for v: float in _smooth_samples:
-			mean += v
-		mean /= _smooth_samples.size()
-		var variance: float = 0.0
-		var frozen: int = 0
-		for v: float in _smooth_samples:
-			variance += (v - mean) * (v - mean)
-			if v < 0.2:
-				frozen += 1
-		print("BENCH motion judder=%.2f (0 = perfectly even; std/mean of camera speed vs truck speed) frozen_frames=%.0f%%" % [sqrt(variance / _smooth_samples.size()) / maxf(mean, 0.001), 100.0 * frozen / _smooth_samples.size()])
+	if _smooth.count > 10:
+		print("BENCH motion judder=%.2f (0 = perfectly even; std/mean of camera speed vs truck speed) " % (
+			_smooth.std() / maxf(_smooth.mean, 0.001))
+			+ "frozen_frames=%.0f%%" % (100.0 * _smooth_frozen / _smooth.count))
 	print("BENCH seated body drift from its seat, peak=%.3fm" % _seat_drift_peak)
-	var hitches: int = 0
-	for f: Dictionary in _frames:
-		if f.ms > HITCH_MS:
-			hitches += 1
-			if hitches <= 40:
-				print("HITCH rescue=%d t=%.2fs ms=%.1f process_monitor=%.1f physics=%.1f(scripts %.1f) " % [
-					f.rescues, f.t, f.ms, f.process, f.physics, f.phys_scripts]
-					+ "draws=%d objects=%d kmh=%.0f progress=%.2f %s" % [
-					f.draws, f.objects, f.kmh, f.progress, _added_text(f.frame)])
-	print("BENCH hitches(>%.0fms)=%d rescues=%d" % [HITCH_MS, hitches, _rescues])
+	for f: Dictionary in _hitch_frames:
+		var progress_at: String = "n/a" if _endless else "%.2f" % f.progress
+		print("HITCH rescue=%d t=%.2fs ms=%.1f process_monitor=%.1f physics=%.1f(scripts %.1f) " % [
+			f.rescues, f.t, f.ms, f.process, f.physics, f.phys_scripts]
+			+ "draws=%d objects=%d kmh=%.0f progress=%s %s" % [
+			f.draws, f.objects, f.kmh, progress_at, f.added])
+	print("BENCH hitches(>%.0fms)=%d rescues=%d" % [HITCH_MS, _hitch_count, _rescues])
