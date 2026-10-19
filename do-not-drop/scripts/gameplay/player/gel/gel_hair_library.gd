@@ -113,9 +113,12 @@ static func _curls(root: Node3D, material: Material) -> void:
 static func _pigtails(root: Node3D, material: Material) -> void:
 	_scalp(root, material)
 	for side: float in [-1.0, 1.0]:
-		_blob(root, Vector3(side * 0.245, 0.13, 0.02), Vector3.ONE * 0.075, material)
-		_blob(root, Vector3(side * 0.29, 0.06, 0.035), Vector3(0.09, 0.1, 0.08), material)
-		_blob(root, Vector3(side * 0.3, -0.035, 0.05), Vector3(0.07, 0.09, 0.065), material)
+		var chain: StringName = &"pigtail_l" if side < 0.0 else &"pigtail_r"
+		_spring_piece(_blob(root, Vector3(side * 0.245, 0.13, 0.02), Vector3.ONE * 0.075, material), chain, 0)
+		_spring_piece(_blob(root, Vector3(side * 0.29, 0.06, 0.035),
+			Vector3(0.09, 0.1, 0.08), material), chain, 1)
+		_spring_piece(_blob(root, Vector3(side * 0.3, -0.035, 0.05),
+			Vector3(0.07, 0.09, 0.065), material), chain, 2)
 
 
 static func _mohawk(root: Node3D, material: Material) -> void:
@@ -145,7 +148,8 @@ static func _braid(root: Node3D, material: Material) -> void:
 	for index: int in 7:
 		var y: float = 0.11 - index * 0.075
 		var x: float = 0.022 if index % 2 == 0 else -0.022
-		_blob(root, Vector3(x, y, 0.235), Vector3(0.065, 0.075, 0.055), material)
+		_spring_piece(_blob(root, Vector3(x, y, 0.235),
+			Vector3(0.065, 0.075, 0.055), material), &"braid", index)
 
 
 static func _bun(root: Node3D, material: Material) -> void:
@@ -157,9 +161,11 @@ static func _bun(root: Node3D, material: Material) -> void:
 static func _long_hair(root: Node3D, material: Material) -> void:
 	_scalp(root, material)
 	for side: float in [-1.0, 1.0]:
+		var chain: StringName = &"lock_l" if side < 0.0 else &"lock_r"
 		for index: int in 4:
-			_blob(root, Vector3(side * (0.19 + index * 0.012), 0.09 - index * 0.105, 0.08),
-				Vector3(0.075, 0.115, 0.075), material)
+			_spring_piece(_blob(root,
+				Vector3(side * (0.19 + index * 0.012), 0.09 - index * 0.105, 0.08),
+				Vector3(0.075, 0.115, 0.075), material), chain, index)
 	for index: int in 3:
 		_blob(root, Vector3(lerpf(-0.12, 0.12, float(index) / 2.0), -0.02 - index * 0.02, 0.22),
 			Vector3(0.085, 0.16, 0.055), material)
@@ -188,7 +194,7 @@ static func _root(label: String, group: StringName, style_id: StringName, color:
 	return root
 
 
-static func _blob(root: Node3D, position: Vector3, size: Vector3, material: Material) -> void:
+static func _blob(root: Node3D, position: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
 	var mesh := SphereMesh.new()
 	mesh.radius = 0.5
 	mesh.height = 1.0
@@ -201,6 +207,12 @@ static func _blob(root: Node3D, position: Vector3, size: Vector3, material: Mate
 	instance.scale = size * 2.0
 	instance.material_override = material
 	root.add_child(instance)
+	return instance
+
+
+static func _spring_piece(instance: MeshInstance3D, chain: StringName, index: int) -> void:
+	instance.set_meta(&"gel_spring_chain", chain)
+	instance.set_meta(&"gel_spring_index", index)
 
 
 static func _strand(
