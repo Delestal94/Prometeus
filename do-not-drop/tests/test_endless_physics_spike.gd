@@ -119,9 +119,10 @@ func _run() -> void:
 	_expect(_segment_part_count(sliced) == _segment_part_count(whole),
 			"Sliced and whole merges leave the same parts")
 	_expect(whole_count > 0, "The bridge has parts to merge (%d)" % whole_count)
-	_expect(first_slice_ms <= maxf(whole_ms, 5.0) + 2.0, "The first slice (%.1f ms) is not longer than the whole merge (%.1f ms)"
-			% [first_slice_ms, whole_ms])
-	print("N-979: bridge merge whole %.1f ms, first slice %.1f ms, %d frames later" % [whole_ms, first_slice_ms, waited_frames])
+	_expect(first_slice_ms <= maxf(whole_ms, 5.0) + 2.0,
+			"First slice (%.1f ms) is not longer than the whole merge (%.1f ms)" % [first_slice_ms, whole_ms])
+	print("N-979: bridge merge whole %.1f ms, first slice %.1f ms, %d frames later"
+			% [whole_ms, first_slice_ms, waited_frames])
 
 	network.set(&"world_seed", 0)
 	if _failures == 0:

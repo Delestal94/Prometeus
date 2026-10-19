@@ -317,7 +317,9 @@ func _batch_next(slice_msec: float = 0.0) -> void:
 		# With one (N-979) a heavy segment, a bridge's ~30 ms of
 		# SurfaceTool.append_from, is spread over a few frames; its parts keep
 		# showing unmerged until the end.
-		var slicer: FrameSlicer = FrameSlicer.new(get_tree(), slice_msec) if slice_msec > 0.0 and is_inside_tree() else null
+		var slicer: FrameSlicer = null
+		if slice_msec > 0.0 and is_inside_tree():
+			slicer = FrameSlicer.new(get_tree(), slice_msec)
 		_merging = slicer != null
 		await DressingBatcher.merge_segment_geometry([segment], slicer)
 		_merging = false
