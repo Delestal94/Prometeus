@@ -22,7 +22,7 @@
 | D-0912 | ✅ Electricidad/enchufes como restricción de máquinas (sí/no) | critico-diseno | low | decisión |
 | ✅ D-0913 | Iluminación que se adapta al layout (sin rincones oscuros) | constructor-mundo | medium | captura |
 | D-0914 | ✅ Interacción con objetos colocados igual que con los fijos | constructor-jugador | medium | test |
-| D-0915 | Límite de objetos por etapa (presupuesto de rendimiento) | perfilador-rendimiento | medium | número fijado y medido |
+| ✅ D-0915 | Límite de objetos por etapa (presupuesto de rendimiento) | perfilador-rendimiento | medium | número fijado y medido |
 | ✅ D-0916 | Deshacer la última colocación | constructor-negocio | low | test |
 | D-0917 | Modo construcción con mando | constructor-ui | high | test de input |
 | D-0918 | Reusar `depot_layout.gd`/`depot_zones.gd` como base de las zonas | constructor-mundo | high | sin duplicar lógica (revisión) |

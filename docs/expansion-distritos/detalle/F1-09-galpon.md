@@ -196,3 +196,11 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 - Una pieza movida o girada después se encuentra igual; una vendida entremedio se saltea. Las piezas que no pasaron por `place()` (layout cargado o por defecto) no se deshacen.
 **Decisión:** solo colocaciones, no mover, girar ni vender: es lo que dice la tarea y evita un historial de acciones con dinero. Reembolso completo porque es un error recién cometido, no una venta.
 **Test** `test_build_undo`. **Hecho cuando:** el test pasa.
+
+### D-0915 · Límite de objetos por etapa (presupuesto de rendimiento) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `CompanyTuning.WAREHOUSE_STAGE_MAX_PIECES` (16 / 36 / 64 / 100) + `WarehouseStages.max_pieces_for` + `BuildPlacement.max_pieces` y razón `piece_limit`; `apply_to` lo fija; `test_shed_piece_limit`. El texto en rojo del motivo queda para el adaptador de D-0917.
+**Depende de:** D-0905 (etapas), D-0902 (`BuildPlacement`)
+**Qué:** cada etapa admite como máximo una pieza cada seis casillas de piso. Una pieza más es roja con `piece_limit`; mover, girar y vender no cuentan, y vender libera lugar.
+**Medido** (galpón lleno con estantes, mesas, heladeras y zonas, headless): etapa 0 con 16 piezas, 1 con 36, 2 con 64 y 3 con 100; el de 100 piezas dibuja unos 460 nodos y 110 cuerpos físicos. El test fija un techo holgado por etapa (nodos 300/450/650/900, cuerpos 40/70/110/150) para que sumar un mueble más caro rompa el test. Los FPS con ventana los mide `bench_company` en la PC.
+**Decisión:** un tope fijo por etapa (no por costo de cada pieza) porque es lo que el jugador entiende; se ajusta en `CompanyTuning`.
+**Test** `test_shed_piece_limit`. **Hecho cuando:** el test pasa.
