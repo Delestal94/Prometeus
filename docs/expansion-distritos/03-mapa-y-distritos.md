@@ -25,7 +25,7 @@
 | D-0315 | Adaptar la ruta actual (Campo) como distrito con la misma calidad de hoy | constructor-tramos | high | tests de ruta actuales verdes en modo Empresa |
 | D-0316 | Seguro contra jugadores perdidos: quien se queda en el galpón no se carga ni sufre la ruta | constructor-red | xhigh | test de red: 2 en ruta, 1 en galpón, nadie se teletransporta |
 | ~~D-0317~~ | ~~Jugadores en distintos distritos a la vez (dos vehículos fuera) — sí/no por rendimiento~~ **Fusionada en D-2002 (D-0112, [crítica](diseno/critica-alcance.md))** | Plan | high | decisión con medición de costo; si sí, D-0318 |
-| D-0318 | (Si D-0317 sí) varias instancias de distrito cargadas a la vez con capas de física separadas | constructor-red | xhigh | test de red con 2 vehículos en 2 distritos |
+| D-0318 | ◐ (falta D-0318.1) (Si D-0317 sí) varias instancias de distrito cargadas a la vez con capas de física separadas | constructor-red | xhigh | test de red con 2 vehículos en 2 distritos |
 | D-0319 | Tiempo del viaje cuenta en el reloj del día | constructor-progresion | medium | test: ruta de 5 min avanza 1 h de juego (según D-0105) |
 | D-0320 | Recompensa y resultado por salida (lo que se cobró, lo que se rompió) entra al cierre del día | constructor-progresion | high | resultados de la salida en `CompanyState` (test) |
 

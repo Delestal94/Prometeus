@@ -14,6 +14,11 @@ extends Node3D
 ##
 ## A cell's content is authored in world coordinates (the streamer does not move it).
 ##
+## Loose bodies (crates dropped on a sidewalk) are not part of any cell, so
+## `track_body` hands them to the streamer: while their cell is not instanced
+## (far away, no floor), they are frozen with their velocities saved, and they
+## thaw when the cell is back.
+##
 ## Anchors are set by the game each frame (`anchors`). `step()` is what
 ## `_process` runs; a test calls it with its own clock.
 
@@ -42,6 +47,10 @@ var _ready_queue: Array = []
 var _impostors: Dictionary = {}
 ## Longest single instancing step so far, microseconds (tests and tuning).
 var longest_step_usec: int = 0
+## RigidBody3D -> true, the loose bodies whose cell decides if they run.
+var _tracked: Dictionary = {}
+## RigidBody3D -> {freeze, freeze_mode, linear, angular}, the ones frozen here.
+var _frozen: Dictionary = {}
 
 
 func _process(_delta: float) -> void:
@@ -57,6 +66,7 @@ func step(now_sec: float) -> void:
 		_sync_impostors()
 	_poll_threads()
 	_instance_ready()
+	_sync_bodies()
 
 
 func is_loaded(cell: Vector2i) -> bool:
@@ -81,6 +91,62 @@ func cell_node(cell: Vector2i) -> Node3D:
 
 func impostor_count() -> int:
 	return _impostors.size()
+
+
+## Starts watching a loose body: frozen whenever its cell is not instanced.
+func track_body(body: RigidBody3D) -> void:
+	_tracked[body] = true
+
+
+## Stops watching it, and thaws it if this streamer had frozen it.
+func untrack_body(body: RigidBody3D) -> void:
+	_tracked.erase(body)
+	_thaw(body)
+
+
+func is_body_frozen(body: RigidBody3D) -> bool:
+	return _frozen.has(body)
+
+
+func _sync_bodies() -> void:
+	for key: Variant in _tracked.keys():
+		if not is_instance_valid(key):
+			_tracked.erase(key)
+			_frozen.erase(key)
+			continue
+		var body := key as RigidBody3D
+		if not body.is_inside_tree():
+			continue
+		if _nodes.has(grid.cell_of(body.global_position)):
+			_thaw(body)
+		else:
+			_freeze(body)
+
+
+func _freeze(body: RigidBody3D) -> void:
+	if _frozen.has(body):
+		return
+	_frozen[body] = {
+		"freeze": body.freeze,
+		"freeze_mode": body.freeze_mode,
+		"linear": body.linear_velocity,
+		"angular": body.angular_velocity,
+	}
+	body.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
+	body.freeze = true
+
+
+func _thaw(body: RigidBody3D) -> void:
+	var saved: Variant = _frozen.get(body)
+	if saved == null:
+		return
+	_frozen.erase(body)
+	if not is_instance_valid(body):
+		return
+	body.freeze = saved["freeze"]
+	body.freeze_mode = saved["freeze_mode"]
+	body.linear_velocity = saved["linear"]
+	body.angular_velocity = saved["angular"]
 
 
 func _apply(changes: Dictionary) -> void:
