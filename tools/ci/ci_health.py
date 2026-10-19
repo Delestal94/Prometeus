@@ -22,13 +22,21 @@ import json
 import subprocess
 import sys
 import tempfile
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
 
-def gh(*args, raw=False):
-    out = subprocess.run(["gh", *args], check=True, capture_output=True, text=True, encoding="utf-8").stdout
-    return out if raw else json.loads(out or "null")
+def gh(*args, raw=False, tries=4):
+    """`gh` with retries: a week of runs is hundreds of API calls and one transient 5xx or
+    secondary rate limit used to kill the whole report (2026-10-19)."""
+    for attempt in range(tries):
+        proc = subprocess.run(["gh", *args], capture_output=True, text=True, encoding="utf-8")
+        if proc.returncode == 0:
+            return proc.stdout if raw else json.loads(proc.stdout or "null")
+        if attempt + 1 < tries:
+            time.sleep(5 * 2 ** attempt)
+    raise subprocess.CalledProcessError(proc.returncode, ["gh", *args], proc.stdout, proc.stderr)
 
 
 def api_pages(path, key):
@@ -84,8 +92,12 @@ def main():
     ci_minutes = 0.0
     first_pass = rescued = real_fail = 0
     for run in runs:
-        jobs = api_pages(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=all", "jobs")
-        first = [j for j in jobs if j.get("run_attempt", 1) == 1]
+        try:
+            jobs = api_pages(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=all", "jobs")
+        except subprocess.CalledProcessError as err:
+            print(f"skipping run {run['id']}: {err.stderr.strip()[:200]}", file=sys.stderr)
+            continue
+        first =[j for j in jobs if j.get("run_attempt", 1) == 1]
         first_ok = all(j["conclusion"] in ("success", "skipped") for j in first)
         if first_ok:
             first_pass += 1
