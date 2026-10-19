@@ -30,8 +30,9 @@ extends Node
 ## path, only to know which peers have their world up and when one comes up.
 ##
 ## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section
-## 2; units_drop is critical), snapshot_request and the shed layout's place, move, rotate and sell
-## (D-0910: checked and applied by CompanyLayoutNet, `build`). A task that adds an action appends its kind
+## 2; units_drop is critical), snapshot_request, the shed layout's place, move, rotate and sell
+## (D-0910: checked and applied by CompanyLayoutNet, `build`) and the shared packing tables' box_*
+## (rows 9 to 15, D-0715: CompanyTableNet, `table`). A task that adds an action appends its kind
 ## to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule 8),
 ## checks it in _handle_request() and applies its event in _apply_state().
 ##
@@ -71,7 +72,9 @@ const UNITS_DROP: StringName = &"units_drop"
 ## dropped. Later tasks append theirs.
 const REQUEST_KINDS: Array[StringName] = [
 	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
-	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL,
+	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START,
+	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
+	CompanyTableNet.STAMP, CompanyTableNet.TAPE,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
 ## RpcGuard's critical reserve once the sender's budget is gone.
@@ -84,7 +87,9 @@ const DAY_PHASE: StringName = &"day_phase"
 ## Event kinds every peer applies.
 const EVENT_KINDS: Array[StringName] = [
 	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED,
-	CompanyLayoutNet.SOLD,
+	CompanyLayoutNet.SOLD, CompanyTableNet.STARTED, CompanyTableNet.PLACED,
+	CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED, CompanyTableNet.LABELED,
+	CompanyTableNet.STAMPED, CompanyTableNet.SEALED,
 ]
 ## Event kinds the host may send with publish(), without a request: its own rules (the day's
 ## clock and phases). An event a request leads to (units_moved) only comes from
@@ -147,6 +152,9 @@ var clock: GameClock = null
 var day_cycle: DayCycle = null
 ## The shed layout's build requests (host) and events (every peer) on `company`'s layout (D-0910).
 var build: CompanyLayoutNet = CompanyLayoutNet.new()
+## The shared packing tables' requests (host) and events (every peer), and their state (D-0715). Its
+## tables travel in every snapshot (CompanyTableNet.SNAPSHOT_KEY, added in _init()).
+var table: CompanyTableNet = CompanyTableNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -156,7 +164,8 @@ var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
 ##   spot      Vector3     where reach is measured to: the slot or cell, not the furniture
 ##   accepts   StringName  optional: the only product a store may put there (a slot label)
 ##   capacity  int         optional: units it holds at most (0 or missing: no limit)
-## {} for an unknown station. Unset (no stations exist yet), every request names an unknown
+## A packing table's location is table:<uid>, its spot the box's hollow (D-0715). {} for an
+## unknown station. Unset (no stations exist yet), every request names an unknown
 ## one. The world that places stations (D-0608, D-0609, D-0611) sets it.
 var stations: Callable = Callable()
 ## Host: where `peer`'s reach starts, as Callable(peer: int) -> Variant (a Vector3, or null
@@ -195,6 +204,11 @@ var _rx_id: int = 0
 var _rx_total: int = 0
 var _rx_size: int = 0
 var _rx_chunks: Dictionary = {}
+
+func _init() -> void:
+	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
+		func(value: Variant) -> bool: return table.put_snapshot(value))
+
 
 func _ready() -> void:
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_disconnected):
@@ -397,57 +411,21 @@ func send_snapshot(peer: int) -> bool:
 	return true
 
 
-## A snapshot as _snapshot carries it: {size: its var_to_bytes size, chunks: the compressed
-## bytes cut every `chunk_bytes` (1 to SNAPSHOT_CHUNK_BYTES)}. {} when it is over
-## SNAPSHOT_MAX_BYTES or takes more than SNAPSHOT_MAX_CHUNKS.
+## A snapshot as _snapshot carries it, {size, chunks}, or {} over SNAPSHOT_MAX_BYTES or
+## SNAPSHOT_MAX_CHUNKS (CompanySnapshot.pack()).
 static func pack_snapshot(data: Dictionary, chunk_bytes: int = SNAPSHOT_CHUNK_BYTES) -> Dictionary:
-	var raw: PackedByteArray = var_to_bytes(data)
-	if raw.size() > SNAPSHOT_MAX_BYTES:
-		return {}
-	var packed: PackedByteArray = raw.compress(SNAPSHOT_COMPRESSION)
-	var step: int = clampi(chunk_bytes, 1, SNAPSHOT_CHUNK_BYTES)
-	var chunks: Array[PackedByteArray] = []
-	for start: int in range(0, packed.size(), step):
-		chunks.append(packed.slice(start, start + step))
-	if chunks.is_empty() or chunks.size() > SNAPSHOT_MAX_CHUNKS:
-		return {}
-	return {"size": raw.size(), "chunks": chunks}
+	return CompanySnapshot.pack(data, chunk_bytes)
 
 
-## The snapshot back from its joined chunks and its uncompressed `size`, or {} when they don't
-## make one: a size out of range, bytes that don't decompress to exactly `size`, or anything
-## but a Dictionary. Objects never come back (bytes_to_var, not bytes_to_var_with_objects).
+## The snapshot back from its joined chunks, or {} when they don't make one
+## (CompanySnapshot.unpack()).
 static func unpack_snapshot(packed: PackedByteArray, size: int) -> Dictionary:
-	if packed.is_empty() or size < 1 or size > SNAPSHOT_MAX_BYTES:
-		return {}
-	var raw: PackedByteArray = packed.decompress(size, SNAPSHOT_COMPRESSION)
-	if raw.size() != size:
-		return {}
-	var data: Variant = bytes_to_var(raw)
-	return data if data is Dictionary else {}
+	return CompanySnapshot.unpack(packed, size)
 
 
-## A stock in Inventory.to_dict() form that came over the network (rule 5): a Dictionary with
-## at most `stock` ({product: {location: qty}}) and `reserved` ({order: {product: qty}}), ids
-## as text up to SNAPSHOT_MAX_ID_LENGTH, quantities as positive ints.
+## A stock in Inventory.to_dict() form that came over the network (CompanySnapshot.stock_ok()).
 static func stock_ok(value: Variant) -> bool:
-	if not value is Dictionary:
-		return false
-	var stock: Dictionary = value
-	for part: Variant in stock:
-		if typeof(part) != TYPE_STRING or not ["stock", "reserved"].has(part):
-			return false
-		if not stock[part] is Dictionary:
-			return false
-		var outer: Dictionary = stock[part]
-		for id: Variant in outer:
-			if not _snapshot_name_ok(id) or not outer[id] is Dictionary:
-				return false
-			var inner: Dictionary = outer[id]
-			for sub: Variant in inner:
-				if not _snapshot_name_ok(sub) or typeof(inner[sub]) != TYPE_INT or int(inner[sub]) < 1:
-					return false
-	return true
+	return CompanySnapshot.stock_ok(value)
 
 
 ## Client: puts the host's snapshot (snapshot()) in place of the business state here: the
@@ -594,6 +572,8 @@ func _rejected(rid: int, reason: StringName) -> void:
 func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	if CompanyLayoutNet.REQUEST_KINDS.has(kind):
 		return _build(peer, kind, data)
+	if CompanyTableNet.REQUEST_KINDS.has(kind):
+		return _pack(peer, kind, data)
 	match kind:
 		&"units_take":
 			return _take_units(peer, data)
@@ -608,9 +588,28 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 
 
 ## Host: a build request (D-0910), checked by CompanyLayoutNet (only the host's own goes through),
-## and its one event published.
+## and its one event published. A packing table holding a box is not sold (not_empty, D-0715).
 func _build(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	var ask: Dictionary = build.check(company, inventory, kind, data, peer == multiplayer.get_unique_id())
+	if ask["reason"] == &"" and kind == CompanyLayoutNet.SELL and table.has_box(ask["data"]["uid"]):
+		return CompanyLayoutNet.REASON_NOT_EMPTY
+	return _grant(ask)
+
+
+## Host: a packing-table request (D-0715) at a table within the sender's reach (rule 4, measured
+## as for units), checked by CompanyTableNet with the sender's hands, and its one event published.
+func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
+	var ask: Dictionary = CompanyTableNet.station_ask(data)
+	var station: Dictionary = _lookup_station(ask)
+	var problem: StringName = _station_problem(peer, ask, station)
+	if problem != &"":
+		return problem
+	return _grant(table.check(company, inventory, kind, data, station, hands_location(peer)))
+
+
+## Host: the refusal of a checked request ({reason}), or its one event ({reason: &"", kind, data})
+## published (bad_data when the state here doesn't take it).
+func _grant(ask: Dictionary) -> StringName:
 	if ask["reason"] != &"":
 		return ask["reason"]
 	return &"" if _publish(ask["kind"], ask["data"]) else REASON_BAD_DATA
@@ -760,7 +759,7 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 		poll_snapshot(Time.get_ticks_msec())
 		return
 	event_applied.emit(seq, kind, data)
-	if build.take_drift():
+	if build.take_drift() or table.take_drift():
 		# Its wallet was off the host's (set right now, D-0910): the history it missed comes by snapshot.
 		_start_waiting()
 		poll_snapshot(Time.get_ticks_msec())
@@ -791,6 +790,14 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				applied = day_cycle.apply_phase(data)
 		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD:
 			applied = build.apply(company, kind, data)
+			if applied and kind == CompanyLayoutNet.SOLD:
+				table.forget(_as_id(data.get("uid")))
+		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT:
+			applied = table.apply(company, inventory, kind, data)
+		CompanyTableNet.FILLED, CompanyTableNet.LABELED, CompanyTableNet.STAMPED:
+			applied = table.apply(company, inventory, kind, data)
+		CompanyTableNet.SEALED:
+			applied = table.apply(company, inventory, kind, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
@@ -975,16 +982,8 @@ func _snapshot_ready_peers() -> void:
 		send_snapshot(peer)
 
 
-static func _is_id(value: Variant) -> bool:
-	return CompanyAsk.is_id(value)
-
-
-static func _snapshot_name_ok(value: Variant) -> bool:
-	return _is_id(value) and String(value).length() <= SNAPSHOT_MAX_ID_LENGTH
-
-
 static func _as_id(value: Variant) -> StringName:
-	return StringName(value) if _is_id(value) else &""
+	return StringName(value) if CompanyAsk.is_id(value) else &""
 
 
 static func _as_int(value: Variant) -> int:
