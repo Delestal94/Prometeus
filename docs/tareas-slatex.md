@@ -329,7 +329,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   mohicano, afro, flequillo, trenza, rodete y pelo largo; más 5 cejas y 5 bigotes opcionales. Cada pelo
   ≤ 1500 triángulos.
 - [x] **S-311.63** Mechones, colitas y trenza con huesos de resorte.
-- [ ] **S-311.64** Pelo que sigue a la cabeza: se engancha al hueso de la cabeza y copia sus morphs de
+- [x] **S-311.64** Pelo que sigue a la cabeza: se engancha al hueso de la cabeza y copia sus morphs de
   forma y tamaño; reglas pelo ↔ sombrero (el sombrero aplasta o esconde el pelo, nunca se atraviesan).
   Test con cada combinación y los extremos de cabeza.
 
