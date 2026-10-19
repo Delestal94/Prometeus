@@ -8,17 +8,11 @@ extends SceneTree
 ## care_state every rendered frame, 2-5x the limit, and the truck "kept going"
 ## seconds after the driver let go (docs/investigacion-red.md).
 ##
-## Counted the way SceneMultiplayer sends it (modules/multiplayer, Godot 4.7):
-## - every tick the host packs each synchronizer due for a peer into sync
-##   packets of at most max_sync_packet_size (1350) bytes: 3 bytes of header a
-##   packet, 8 a synchronizer (net id, size), then its always-sent properties
-##   as MultiplayerAPI encodes them (a bool 1 byte, an int 2-9, the rest what
-##   var_to_bytes() gives). Synchronizers on different intervals are packed
-##   apart (a ceiling: sharing a tick they would share a packet);
-## - a player belongs to its owner (player.gd), so another client's pose
-##   reaches this one through the host (server_relay): a packet of its own,
-##   6 bytes more, forwarded to every client but the owner;
-## - every packet is then a datagram on the wire: PACKET_OVERHEAD_BYTES.
+## Counted the way SceneMultiplayer sends it (tests/bandwidth_model.gd, shared
+## with the company's shed budget, test_company_bandwidth_budget.gd): sync
+## packets of at most max_sync_packet_size with their headers, another
+## client's pose relayed by the host in a packet of its own, and a datagram
+## around every packet (PACKET_OVERHEAD_BYTES).
 ## Two worst cases. Steady: the whole crew with a box each moving (carried,
 ## tended), the rest of a full depot at rest (NetRestThrottle in
 ## package.tscn), the truck driving. Pile-up: every box moving at once. Steady
@@ -37,8 +31,9 @@ extends SceneTree
 ## The throttle itself, wired into a real box: one left alone drops to its
 ## rest interval, and moving it puts the full rate back the same tick.
 
+const MODEL := preload("res://tests/bandwidth_model.gd")
 ## Steam's default send rate per connection (SendRateMax).
-const STEAM_SEND_RATE: float = 256.0 * 1024.0
+const STEAM_SEND_RATE: float = MODEL.STEAM_SEND_RATE
 ## Half of it: the other half is for RPCs, ON_CHANGE deltas, voice and
 ## whatever comes next.
 const BUDGET_BYTES_PER_SECOND: float = STEAM_SEND_RATE * 0.5
@@ -50,21 +45,13 @@ const HOST_UPLINK_BYTES_PER_SECOND: float = 0.8 * 10_000_000.0 / 8.0
 ## A property sent every tick is a pose or a flag. Anything bigger (a
 ## Dictionary, a String) belongs in ON_CHANGE.
 const MAX_ALWAYS_PROPERTY_BYTES: int = 64
-const WORST_FPS: float = 144.0
 ## Seven boxes in the level plus the depot's extra stock of seven.
 const FULL_DEPOT: int = 14
-## SceneMultiplayer's framing: scene_replication_interface.cpp (_send_sync)
-## and scene_multiplayer.h (SYS_CMD_SIZE).
-const SYNC_PACKET_HEADER: int = 3
-const SYNC_ENTRY_HEADER: int = 8
-const RELAY_HEADER: int = 6
-## Around each packet, one datagram each: IPv4 + UDP 28; Steam's data header,
-## at most 20 (GameNetworkingSockets: header + 1248-byte encrypted payload +
-## 32 of occasional stats <= 1300); the AES-GCM tag 16; the message's header
-## in the packet, 7 for the first; 9 for acks and stats riding along. Steam may
-## pack several messages in one datagram, and ENet (28 + 12) does, so this is
-## a ceiling. Steam's own rate doesn't even count the 28 of IP and UDP.
-const PACKET_OVERHEAD_BYTES: int = 80
+## The framing (tests/bandwidth_model.gd says where each number comes from).
+const SYNC_PACKET_HEADER: int = MODEL.SYNC_PACKET_HEADER
+const SYNC_ENTRY_HEADER: int = MODEL.SYNC_ENTRY_HEADER
+const RELAY_HEADER: int = MODEL.RELAY_HEADER
+const PACKET_OVERHEAD_BYTES: int = MODEL.PACKET_OVERHEAD_BYTES
 ## A voice RPC's own framing in its packet, a ceiling: SceneMultiplayer's
 ## command byte, the node's and the method's ids, and the PackedByteArray's
 ## header when it isn't sent raw.
@@ -154,27 +141,7 @@ func _initialize() -> void:
 ## [interval, entry bytes, how many] for what the host owns; the other
 ## clients' players (crew - 2 of them) arrive relayed, a packet each.
 func _host_to_client(crew: int, groups: Array, player_interval: float, player_entry: int) -> Dictionary:
-	var by_interval: Dictionary = {}
-	for group: Array in groups:
-		if int(group[2]) <= 0:
-			continue
-		var entries: Array = by_interval.get_or_add(snappedf(float(group[0]), 0.0001), [])
-		for index: int in range(int(group[2])):
-			entries.append(int(group[1]))
-	var data: float = 0.0
-	var packets: float = 0.0
-	for interval: float in by_interval:
-		var packed: Vector2i = _pack(by_interval[interval])
-		packets += packed.x / interval
-		data += packed.y / interval
-	var relayed: int = maxi(crew - 2, 0)
-	var relay_packets: float = relayed / player_interval
-	var relay_data: float = relay_packets * (RELAY_HEADER + SYNC_PACKET_HEADER + player_entry)
-	var framing: float = (packets + relay_packets) * PACKET_OVERHEAD_BYTES
-	return {
-		"host": data, "relayed": relay_data, "framing": framing, "datagrams": packets + relay_packets,
-		"total": data + relay_data + framing,
-	}
+	return MODEL.host_to_client(groups, [[player_interval, player_entry, maxi(crew - 2, 0)]], _sync_mtu)
 
 
 ## Everybody talking at once at SteamVoice's send cap, on top of the steady
@@ -208,24 +175,6 @@ func _check_voice(steady_for: Callable, crew: int) -> void:
 		elif players == crew and not fits:
 			print("NOTE: voice is tested for %d players; %d all talking don't fit: %s" % [VOICE_CREW, players, numbers])
 	print("Voice with everybody talking fits up to %d players" % fits_up_to)
-
-
-## What SceneMultiplayer's _send_sync makes of these entries in one tick:
-## (packets, bytes with their headers).
-func _pack(entries: Array) -> Vector2i:
-	var packets: int = 0
-	var bytes: int = 0
-	var offset: int = SYNC_PACKET_HEADER
-	for entry: int in entries:
-		if offset + entry > _sync_mtu and offset > SYNC_PACKET_HEADER:
-			packets += 1
-			bytes += offset
-			offset = SYNC_PACKET_HEADER
-		offset += entry
-	if offset > SYNC_PACKET_HEADER:
-		packets += 1
-		bytes += offset
-	return Vector2i(packets, bytes)
 
 
 func _breakdown(case: Dictionary) -> String:
@@ -263,39 +212,18 @@ func _payload(node: Node) -> int:
 	if sync == null:
 		push_error("%s has no MultiplayerSynchronizer" % node.name)
 		return 0
-	var synced: Node = sync.get_node(sync.root_path)
-	var config: SceneReplicationConfig = sync.replication_config
+	var sizes: Dictionary = MODEL.always_properties(sync)
 	var bytes: int = 0
-	for path: NodePath in config.get_properties():
-		if config.property_get_replication_mode(path) != SceneReplicationConfig.REPLICATION_MODE_ALWAYS:
-			continue
-		var owner_node: Node = synced.get_node(NodePath(path.get_concatenated_names()))
-		var size: int = _encoded_size(owner_node.get_indexed(NodePath(path.get_concatenated_subnames())))
+	for path: NodePath in sizes:
+		var size: int = sizes[path]
 		_expect(size <= MAX_ALWAYS_PROPERTY_BYTES,
 			"%s %s is sent every tick at %d bytes: make it ON_CHANGE" % [node.name, path, size])
 		bytes += size
 	return bytes
 
 
-static func _encoded_size(value: Variant) -> int:
-	match typeof(value):
-		TYPE_BOOL:
-			return 1
-		TYPE_INT:
-			var number: int = value
-			if number >= -128 and number <= 127:
-				return 2
-			if number >= -32768 and number <= 32767:
-				return 3
-			if number >= -2147483648 and number <= 2147483647:
-				return 5
-			return 9
-	return var_to_bytes(value).size()
-
-
 func _interval(node: Node) -> float:
-	var sync := node.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	return sync.replication_interval if sync.replication_interval > 0.0 else 1.0 / WORST_FPS
+	return MODEL.interval(node.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer)
 
 
 func _expect(condition: bool, description: String) -> void:
