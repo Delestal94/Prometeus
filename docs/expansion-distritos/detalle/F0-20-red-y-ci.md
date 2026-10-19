@@ -166,7 +166,7 @@ de la expansión.
 la salida del hook).
 
 ### D-2016 · Bot `bot_company_day` y guion de QA — A · Opus 5.5 · high · Aviso: no · F0
-**[~] Parcial (2026-10-18, PR pendiente)** — D-2016.1: `tests/bot_company_day.gd` abre `company_root.tscn` (save temporal), espera el `OPENING`, corre las 9 etapas (todas `not_implemented`, cada una con la tarea F1 que la llena), imprime `BOT_COMPANY key=value` y `BOT_OK`/`BOT_FAIL stages_missing=<n>`, con timeout duro; apartado "Modo Empresa" en `docs/qa-recorrido.md`; `test_company_bot_day`. Falta D-2016.2.
+**[~] Parcial (2026-10-18, PR pendiente)** — D-2016.1: `tests/bot_company_day.gd` abre `company_root.tscn` (save temporal), espera el `OPENING`, corre las 9 etapas (todas `not_implemented`, cada una con la tarea F1 que la llena), imprime `BOT_COMPANY key=value` y `BOT_OK`/`BOT_FAIL stages_missing=<n>`, con timeout duro; apartado "Modo Empresa" en `docs/qa-recorrido.md`; `test_company_bot_day`. D-2016.2 en parte (2026-10-19, PR pendiente): `receive_pallet`, `shelve_stock`, `take_orders`, `pack_boxes`, `dispatch` y `close_day` son reales (palets del proveedor, `units_take`/`units_store` por `CompanyNet`, pedidos de `OrderGenerator` en `CompanyTrips.book`, armado con `BoxDispenser`/`PackingStation` hasta PACKED, `DispatchZone` + `DispatchRules` + `load_into`, `DayCycle` hasta SUMMARY y guardado/carga); `drive`, `deliver` y `return` siguen `not_implemented` con su tarea (D-0302.2/D-1501, D-0311, D-0307) y el bot termina `BOT_FAIL stages_missing=3`. Revisar: [`revisar/D-2016.md`](../revisar/D-2016.md).
 **Depende de:** D-0214 (se completa a medida que existen las piezas de F1)
 **Qué:** `tests/bot_company_day.gd` (`extends SceneTree`). Juega el modo Empresa con N jugadores
 simulados (peers ENet locales o actores locales).
@@ -178,7 +178,7 @@ simulados (peers ENet locales o actores locales).
 - **Guion:** un apartado "Modo Empresa" en `docs/qa-recorrido.md` para `probador-qa`.
 - [x] **D-2016.1** Esqueleto: arranca el mundo y espera el `OPENING`. Imprime `BOT_FAIL not_implemented:<etapa>`
   para cada etapa que todavía no existe, sin colgarse.
-- [ ] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya).
+- [ ] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya). Hechas: 6 de 9; faltan `drive`, `deliver`, `return`.
 **Hecho cuando:** con todo F1 cerrado imprime `BOT_OK` con 2 jugadores, y es el criterio de cierre de D-0111.
 
 ### D-2017 · QA de red par y trío en modo Empresa — B · Opus 5.5 · high · Aviso: no · F0

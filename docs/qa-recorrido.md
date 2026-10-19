@@ -150,16 +150,32 @@ Bot `tests/bot_company_day.gd` (headless, termina solo):
 
 - Abre `company_root.tscn` con el save en `user://bot_company_day` (se borra) y espera el `OPENING`
   del día (máx. 10 s; si no llega, `BOT_FAIL no_opening`).
-- Corre las etapas en orden: `receive_pallet`, `shelve_stock`, `take_orders`, `pack_boxes`,
-  `dispatch`, `drive`, `deliver`, `return`, `close_day`. Cada una imprime `BOT_STAGE <etapa> ok`,
-  `BOT_FAIL not_implemented:<etapa>` (todavía no existe; sigue con la próxima) o
-  `BOT_FAIL <etapa>:<motivo>` (corta la corrida).
+- Corre las etapas en orden sobre el mismo mundo, cada una con lo que dejó la anterior. Cada una
+  imprime `BOT_STAGE <etapa> ok`, `BOT_FAIL not_implemented:<etapa>` (todavía no existe; sigue con la
+  próxima) o `BOT_FAIL <etapa>:<motivo>` (corta la corrida).
+- Etapas reales hoy (D-2016.2, solo con las piezas de F1 que ya existen): `receive_pallet` (los
+  palets del proveedor en recepción, se abren y se toma una mano), `shelve_stock` (a los huecos
+  rotulados; un hueco de otro producto rechaza `wrong_product`), `take_orders` (el generador por
+  semilla llena el `OrderBook`), `pack_boxes` (en una mesa: unidades del estante, caja, relleno,
+  etiqueta, sellos y cinta; el pedido queda `PACKED`), `dispatch` (la zona de despacho ata la caja a
+  su pedido, `DispatchRules` habilita la van y la carga queda en `CompanyTrips`) y `close_day` (el
+  reloj salta a las 20:00, `DayCycle` pasa por `CLOSING` a `SUMMARY`, el resumen trae los costos del
+  armado y el día cerrado se guarda y se lee de vuelta).
+- Siguen `not_implemented`, con el motivo que nombra la tarea que falta: `drive` (`D-0302.2/D-1501`),
+  `deliver` (`D-0311`), `return` (`D-0307`). Hasta que existan, la línea final es
+  `BOT_FAIL stages_missing=3` y la salida 1; es lo esperado.
+- Lo que todavía no es un pedido de `CompanyNet` (abrir el palet, la mesa, mover unidades mano a
+  caja, el libro de pedidos, la zona de despacho) lo hace el bot sobre los objetos del host, y las
+  estaciones (`CompanyNet.stations`) las instala el bot porque `CompanyRoot` aún no las pone
+  (D-0611): no se replica a clientes, es una corrida del host.
 - Resumen: líneas `BOT_COMPANY key=value` (jugadores, plata, entregas, roturas, errores de armado,
   ms por etapa) y al final `BOT_OK` (salida 0) o `BOT_FAIL stages_missing=<n>` (salida 1);
-  `BOT_TIMEOUT` (salida 3) si se colgó.
-- Mientras D-2016.2 no llene las etapas, los `not_implemented` son esperables y no son hallazgo. Sí lo
-  son: `no_opening`, `BOT_TIMEOUT`, una etapa que pasa de `ok` a `not_implemented` o a falla, y todo
-  `ERROR`/`SCRIPT ERROR` del log.
+  `BOT_TIMEOUT` (salida 3) si se colgó. `deliveries` y `breaks` valen 0 hasta que existan las
+  entregas; `assembly_errors` cuenta lo que falta o sobra en la caja armada (el bot arma bien: 0).
+- Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa real (las seis de arriba) que pasa de `ok` a
+  falla, una etapa pendiente que cambia de motivo sin que se cierre su tarea, y todo
+  `ERROR`/`SCRIPT ERROR` del log. Los tres `not_implemented` de arriba y los avisos de fin de
+  proceso (`ObjectDB instances were leaked`, `resources still in use`, de todo `--script`) no lo son.
 
 ## Hallazgos
 

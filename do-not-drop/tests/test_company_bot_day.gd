@@ -1,8 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_company_bot_day.gd
 ##
-## Guards the skeleton of the company-day bot (tests/bot_company_day.gd, D-2016.1) so D-2016.2 can
-## fill it in without breaking its contract:
+## Guards the company-day bot (tests/bot_company_day.gd, D-2016) so each stage keeps working:
 ## - the stage list and its order (receive_pallet ... close_day);
 ## - stage_line: not_implemented -> "BOT_FAIL not_implemented:<stage>", fail -> "BOT_FAIL
 ##   <stage>:<reason>", ok -> "" (the bot prints BOT_STAGE <stage> ok instead);
@@ -10,10 +9,23 @@ extends SceneTree
 ##   always said OK would hide the missing stages);
 ## - summary_lines keys and the BOT_COMPANY prefix;
 ## - integration: the bot's own open_world/wait_opening open the company world (company_root.tscn)
-##   and the day reaches OPENING within the bounded wait; closing leaves no error behind.
+##   and the day reaches OPENING within the bounded wait; closing leaves no error behind;
+## - the stages, run in order on that one world (run_stage): receive_pallet, shelve_stock,
+##   take_orders, pack_boxes, dispatch and close_day return ok, and what each leaves is checked
+##   in the world (the pallets open and the stock on the labelled shelf slots, the day's orders
+##   OPEN in the book, one order PACKED by a sealed box with no assembly error and its packaging
+##   in the ledger, the cargo loaded with the trip not started, the day in SUMMARY with the
+##   costs of the packing in its summary and saved); drive, deliver and return stay
+##   not_implemented naming the task they wait for (D-0302.2/D-1501, D-0311, D-0307); a stage
+##   run out of order fails with a reason, and so do a stage name that does not exist and a
+##   world that is not the company's.
 
 const BOT: String = "res://tests/bot_company_day.gd"
 const DAY_CYCLE := preload("res://scripts/core/company/day_cycle.gd")
+## The stages that run, and the ones that wait for a task: stage -> the reason they return.
+const PENDING: Dictionary = {
+	"drive": "D-0302.2/D-1501", "deliver": "D-0311", "return": "D-0307",
+}
 
 var _failures: int = 0
 
@@ -31,7 +43,7 @@ func _run() -> void:
 	_check_pure(bot)
 	await _check_world(bot)
 	if _failures == 0:
-		print("PASS: company bot skeleton contract and OPENING reached")
+		print("PASS: company bot contract, OPENING reached and its stages run")
 	quit(_failures)
 
 
@@ -89,10 +101,138 @@ func _check_world(bot: GDScript) -> void:
 	var cycle: Node = level.get("day_cycle") as Node
 	var phase: int = int(cycle.call(&"phase")) if cycle != null else -1
 	_expect(phase == DAY_CYCLE.Phase.OPENING, "Phase is OPENING (got %d)" % phase)
+	await _check_out_of_order(bot, level)
+	await _check_stages(bot, level)
 	bot.call(&"close_world", self, level)
 	await process_frame
 	_expect(not is_instance_valid(level), "The world is freed on close")
 	_expect(current_scene == null or current_scene != level, "No stale current scene")
+
+
+## A stage that needs what an earlier one leaves fails, with its reason, and changes nothing: so
+## the same world still runs them in order afterwards.
+func _check_out_of_order(bot: GDScript, level: Node3D) -> void:
+	var ctx: Dictionary = bot.call(&"new_context", 2)
+	var money: int = _money(level)
+	var cases: Dictionary = {
+		"shelve_stock": "nothing_in_hands", "pack_boxes": "no_packable_order",
+		"dispatch": "nothing_packed", "no_such_stage": "unknown_stage",
+	}
+	for stage: String in cases:
+		var result: Dictionary = await bot.call(&"run_stage", self, level, stage, ctx)
+		_expect(result.get("status") == "fail" and result.get("reason") == cases[stage],
+			"%s out of order fails with %s (got %s)" % [stage, cases[stage], result])
+	_expect(_money(level) == money, "A stage that failed early charged nothing")
+	var stranger := Node3D.new()
+	var foreign: Dictionary = await bot.call(&"run_stage", self, stranger, "take_orders", ctx)
+	_expect(foreign.get("reason") == "no_company_world",
+		"A world that is not the company's is refused (got %s)" % [foreign])
+	stranger.free()
+
+
+func _check_stages(bot: GDScript, level: Node3D) -> void:
+	var root_level := level as CompanyRoot
+	var ctx: Dictionary = bot.call(&"new_context", 2)
+	var money: int = _money(level)
+	var start: int = Time.get_ticks_msec()
+	for stage: String in bot.call(&"stage_names"):
+		var result: Dictionary = await bot.call(&"run_stage", self, level, stage, ctx)
+		if PENDING.has(stage):
+			var waits: bool = result.get("status") == "not_implemented"
+			_expect(waits and result.get("reason") == PENDING[stage],
+				"%s waits for %s (got %s)" % [stage, PENDING[stage], result])
+			continue
+		_expect(result.get("status") == "ok", "Stage %s is ok (got %s)" % [stage, result])
+		if result.get("status") != "ok":
+			return
+		match stage:
+			"receive_pallet":
+				_check_received(root_level, ctx)
+			"shelve_stock":
+				_check_shelved(root_level, ctx)
+			"take_orders":
+				_check_orders(root_level, ctx)
+			"pack_boxes":
+				_check_packed(root_level, ctx, money)
+			"dispatch":
+				_check_dispatched(root_level, ctx)
+			"close_day":
+				_check_closed(root_level)
+	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
+	_expect(seconds < 15.0, "The stages run in a bounded time (took %.1f s)" % seconds)
+
+
+func _check_received(level: CompanyRoot, ctx: Dictionary) -> void:
+	var opened: Dictionary = ctx["opened"]
+	_expect(opened.size() >= 2, "The day's pallets were opened (got %d)" % opened.size())
+	for id: StringName in opened:
+		_expect(opened[id]["state"] == &"open", "Pallet %s is open" % id)
+	var hands: Dictionary = ctx["hands"]
+	var location: StringName = CompanyNet.hands_location(level.multiplayer.get_unique_id())
+	_expect(level.net.inventory.count(hands["product"], location) == hands["qty"],
+		"The units taken from the pallet are in the bot's hands")
+
+
+func _check_shelved(level: CompanyRoot, ctx: Dictionary) -> void:
+	var location: StringName = CompanyNet.hands_location(level.multiplayer.get_unique_id())
+	_expect(level.net.inventory.contents_at(location).is_empty(), "Nothing is left in the hands")
+	var opened: Dictionary = ctx["opened"]
+	for id: StringName in opened:
+		var product: StringName = opened[id]["product"]
+		var shelved: int = 0
+		for shelf: Shelf in level.shed.shelves.values():
+			shelved += shelf.total_of(level.net.inventory, product)
+		_expect(shelved >= CompanyTuning.HAND_MAX_UNITS,
+			"Units of %s are on the shelf slot labelled for it (got %d)" % [product, shelved])
+
+
+func _check_orders(level: CompanyRoot, ctx: Dictionary) -> void:
+	var book: OrderBook = level.trips.book
+	var orders: Array = ctx["orders"]
+	_expect(orders.size() >= 1 and book.size() == orders.size(),
+		"The day's orders are in the book (got %d of %d)" % [book.size(), orders.size()])
+	for order: Dictionary in orders:
+		_expect(book.state_of(order["id"]) == Order.STATE_OPEN, "Order %s is OPEN" % order["id"])
+
+
+func _check_packed(level: CompanyRoot, ctx: Dictionary, money: int) -> void:
+	var book: OrderBook = level.trips.book
+	var order: Dictionary = ctx["order"]
+	_expect(book.state_of(order["id"]) == Order.STATE_PACKED, "The packed order is PACKED")
+	_expect(book.box_of(order["id"]) == ctx["box_id"], "The order knows its box")
+	var box: PackedBox = ctx["box"]
+	_expect(box != null and box.taped and box.label_order_id == order["id"],
+		"The box is taped and labelled")
+	_expect(int(ctx["assembly_errors"]) == 0, "The bot packs with no assembly error")
+	_expect(_money(level) < money, "The box, padding and tape were paid from the wallet")
+	var state: Node = level.net.company as Node
+	_expect(int(state.call(&"ledger_total", &"boxes")) < 0, "The box is in the ledger as boxes")
+	_expect(int(state.call(&"ledger_total", &"packaging")) < 0,
+		"Tape is in the ledger as packaging")
+	var in_package: StringName = StringName("package:%s" % ctx["box_id"])
+	_expect(level.net.inventory.contents_at(in_package) == box.contents(),
+		"The box's units are the package's in the stock")
+
+
+func _check_dispatched(level: CompanyRoot, ctx: Dictionary) -> void:
+	var order: Dictionary = ctx["order"]
+	_expect(level.trips.book.state_of(order["id"]) == Order.STATE_PACKED,
+		"The loaded order is still PACKED: it goes OUT when the vehicle leaves")
+	_expect(level.trips.trips_out() == 0, "No trip started without a vehicle")
+
+
+func _check_closed(level: CompanyRoot) -> void:
+	var cycle: DayCycle = level.day_cycle
+	_expect(cycle.phase() == DAY_CYCLE.Phase.SUMMARY,
+		"The day is in SUMMARY (got %s)" % cycle.phase_name())
+	_expect(cycle.summary.get("day") == cycle.current_day(), "The summary is of the day played")
+	_expect(int(cycle.summary.get("costs", 0)) > 0, "The summary counts the day's costs")
+	var path: String = CompanySave.path_for(level.save_slot, level.save_dir)
+	_expect(FileAccess.file_exists(path), "The closed day was saved to the temp folder")
+
+
+func _money(level: Node3D) -> int:
+	return int((level as CompanyRoot).net.company.get("money"))
 
 
 func _expect(condition: bool, description: String) -> void:
