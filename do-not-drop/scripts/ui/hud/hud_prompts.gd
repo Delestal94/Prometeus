@@ -72,11 +72,11 @@ func refresh_shortcut_text() -> void:
 	var pause: String = hud.key_hint(tr("HUD_KEY_PAUSE"), tr("HUD_PAD_PAUSE"))
 	var items: PackedStringArray = []
 	if _role == Hud.Role.DRIVER:
-		items.append(hud.key_hint(tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back"), tr("HUD_PAD_LOOK_BACK")))
-		items.append(ping)
+		var look_back: String = tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back")
+		items.append(hud.key_hint(look_back, tr("HUD_PAD_LOOK_BACK")))
 	else:
 		items.append(phone)
-		items.append(ping)
+	items.append(ping)
 	items.append(pause)
 	# Only while the depot is open: it is the one place the crew panel shows.
 	if hud.overlay_mode == "preparation":
