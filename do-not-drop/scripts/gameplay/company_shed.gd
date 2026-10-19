@@ -15,9 +15,10 @@ extends Node3D
 ## host's build) or a snapshot redraws the shed, a units_moved rewrites the stock.
 ##
 ## Grey-box stand-in: boxes in the palette plus the depot's own models (packing table, wrapped
-## pallet, tape and padding). The final models are a pending art task (docs/arte-pendiente). The
-## static geometry goes through DepotKit (one mesh per material); the shelf labels and crates and the
-## pallets are separate nodes because the stock changes them. Everything is freed with the shed.
+## pallet, tape and padding) and the shed shelf's final model. The other final models are a pending
+## art task (docs/arte-pendiente). The static geometry goes through DepotKit (one mesh per material);
+## the shelf labels and crates and the pallets are separate nodes because the stock changes them.
+## Everything is freed with the shed.
 ##
 ## Grid to world: the floor is centred on this node; cell (cx, cz) of the stage's grid, one
 ## CompanyTuning.WAREHOUSE_GRID_M each, is at ((cx - w/2) m, (cz - d/2) m). +Z is the south: the dock
@@ -33,12 +34,18 @@ const PATCH_HEIGHT: float = 0.02
 const LAMP_COLOR: Color = Color(1.0, 0.92, 0.78)
 const SHELF_LEVELS: int = 2
 const SHELF_COLUMNS: int = 4
-## Where the slot's crate and label stand on a shelf: deck height and label height per level.
-const SHELF_DECKS: Array[float] = [0.15, 1.0]
+## Where the slot's crate and label stand on a shelf: the top face of each level's deck and the
+## label rail's height per level, as modelled in MODEL_SHELF (2 x 1 x 2 m).
+const SHELF_DECKS: Array[float] = [0.175, 1.025]
 const SHELF_LABELS: Array[float] = [0.62, 1.47]
+## Label text size: three lines (name in two, then the count) fit the model's 0.24 m label rail.
+const SHELF_LABEL_PIXEL: float = 0.0028
 const CRATE_SIZE: Vector3 = Vector3(0.38, 0.3, 0.4)
 const TABLE_TOP: float = 0.9
 const MODEL_TABLE: String = "sm_env_depot_packing_table"
+## The shed's 8-slot shelf (D-1811): centred on its footprint, front toward +Z, 2 m wide, 1 m deep, 2 m high.
+const MODEL_SHELF: String = "sm_env_shed_shelf"
+const SHELF_MODEL_SIZE: Vector3 = Vector3(2.0, 2.0, 1.0)
 const MODEL_PALLET: String = "sm_env_depot_pallet_wrapped"
 ## Zone names the floor shows (translations/strings_world.csv).
 const ZONE_KEYS: Dictionary = {
@@ -340,19 +347,10 @@ func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 	var metres: float = CompanyTuning.WAREHOUSE_GRID_M
 	var width: float = def.footprint.x * metres
 	var depth: float = def.footprint.y * metres
-	var steel: Material = DepotKit.flat(Color(0.30, 0.36, 0.46), 0.6, 0.3)
-	var wood: Material = DepotKit.flat(Color(0.62, 0.50, 0.34))
-	var post: float = 0.06
-	for sx: float in [-1.0, 1.0]:
-		for sz: float in [-1.0, 1.0]:
-			kit.box_xf(Vector3(post, def.height_m, post), at * Transform3D(Basis.IDENTITY,
-				Vector3(sx * (width * 0.5 - post * 0.5), def.height_m * 0.5, sz * (depth * 0.5 - post * 0.5))), steel)
-	kit.box_xf(Vector3(width, def.height_m, 0.03), at * Transform3D(Basis.IDENTITY,
-		Vector3(0.0, def.height_m * 0.5, -depth * 0.5 + 0.015)), steel)
-	var decks: Array[float] = SHELF_DECKS.duplicate()
-	decks.append(def.height_m - 0.05)
-	for deck_y: float in decks:
-		kit.box_xf(Vector3(width, 0.05, depth), at * Transform3D(Basis.IDENTITY, Vector3(0.0, deck_y, 0.0)), wood)
+	# The model is made for the default shelf (2 x 2 x 1 cells of 1 m); any other footprint or height
+	# stretches it, so the decks and label rails keep their proportions.
+	var fit := Vector3(width / SHELF_MODEL_SIZE.x, def.height_m / SHELF_MODEL_SIZE.y, depth / SHELF_MODEL_SIZE.z)
+	kit.model(DepotKit.depot_model(MODEL_SHELF), at * Transform3D(Basis.from_scale(fit), Vector3.ZERO))
 	# Solid as one block: nobody walks through the rack.
 	kit.collider(Vector3(width, def.height_m, depth), at * Transform3D(Basis.IDENTITY,
 		Vector3(0.0, def.height_m * 0.5, 0.0)))
@@ -384,14 +382,14 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 	mesh.material = DepotKit.flat(Color(0.74, 0.58, 0.38))
 	crate.mesh = mesh
 	crate.name = "Crate_%d" % slot
-	crate.position = Vector3(x, SHELF_DECKS[level] + 0.025 + CRATE_SIZE.y * 0.5, 0.0)
+	crate.position = Vector3(x, SHELF_DECKS[level] + CRATE_SIZE.y * 0.5, 0.0)
 	node.add_child(crate)
 	var label := Label3D.new()
 	label.name = "Label_%d" % slot
 	label.font_size = 22
-	label.pixel_size = 0.0035
+	label.pixel_size = SHELF_LABEL_PIXEL
 	label.outline_size = 8
-	label.width = (slot_w - 0.04) / 0.0035
+	label.width = (slot_w - 0.04) / SHELF_LABEL_PIXEL
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.position = Vector3(x, SHELF_LABELS[level], depth * 0.5 + 0.01)
 	node.add_child(label)
