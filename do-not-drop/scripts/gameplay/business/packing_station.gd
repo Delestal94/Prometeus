@@ -15,6 +15,8 @@ var id: StringName = &""
 var box: PackedBox = null
 ## Product ids waiting on the table, in the order they were put (repeats allowed).
 var staged: Array[StringName] = []
+## Boxes, tape and padding on hand at this table (D-0718).
+var supplies: StationSupplies = StationSupplies.full()
 
 
 ## A free table; null if the id is empty.
@@ -82,7 +84,24 @@ func is_sealed() -> bool:
 ## Tapes the box on the table shut and pays the tape (PackagingSupplies.tape). False, changing
 ## nothing, if the table has no box, it is already taped or the wallet cannot pay.
 func seal(wallet: Object) -> bool:
-	return box != null and PackagingSupplies.tape(box, wallet)
+	if box == null or box.taped or not supplies.has(StationSupplies.TAPE):
+		return false
+	if not PackagingSupplies.tape(box, wallet):
+		return false
+	supplies.take(StationSupplies.TAPE)
+	return true
+
+
+## Pads up to `cells` free cells of the box on the table and pays them (PackagingSupplies.pad),
+## limited by the padding on hand. Returns how many it padded; 0, changing nothing, with no box,
+## no padding left or a wallet that cannot cover them (D-0718).
+func pad(cells: int, wallet: Object) -> int:
+	if box == null:
+		return 0
+	var room: int = mini(cells, supplies.count(StationSupplies.FILL))
+	var padded: int = PackagingSupplies.pad(box, room, wallet)
+	supplies.take(StationSupplies.FILL, padded)
+	return padded
 
 
 ## Sticks the label of `order` (an Order dictionary) on the box on the table and pays it
@@ -130,6 +149,7 @@ func to_dict() -> Dictionary:
 		"id": String(id),
 		"box": box.to_dict() if box != null else {},
 		"staged": waiting,
+		"supplies": supplies.to_dict(),
 	}
 
 
@@ -143,4 +163,7 @@ static func from_dict(d: Dictionary) -> PackingStation:
 		station.box = PackedBox.from_dict(raw_box)
 	for raw: Variant in d.get("staged", []):
 		station.stage_product(StringName(str(raw)))
+	var raw_supplies: Variant = d.get("supplies", {})
+	if raw_supplies is Dictionary:
+		station.supplies = StationSupplies.from_dict(raw_supplies)
 	return station
