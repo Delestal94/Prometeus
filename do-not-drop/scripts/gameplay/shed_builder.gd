@@ -31,6 +31,13 @@ const MOVES: Dictionary = {
 const REPEAT_DELAY: float = 0.35
 const REPEAT_EVERY: float = 0.12
 const ZOOM_STEP: float = 0.1
+## Display names of the placeables; the hint resolves them through def.display_key.
+const PLACEABLE_NAME_KEYS: Array[String] = [
+	"WORLD_PLACEABLE_ASSEMBLY_TABLE",
+	"WORLD_PLACEABLE_SHELF",
+	"WORLD_PLACEABLE_FRIDGE",
+	"WORLD_PLACEABLE_DISPATCH_ZONE",
+]
 const HINT_REASON_KEYS: Dictionary = {
 	&"host_only": "UI_BUILD_REASON_HOST_ONLY",
 	&"overlap": "UI_BUILD_REASON_OVERLAP",
