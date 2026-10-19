@@ -148,15 +148,18 @@ func _test_instances() -> void:
 		_expect(node != null and node.name == String(house.id), "%s instances as a named DeliveryHouse" % house.id)
 		_expect(node.visual_variant == house.variant, "%s keeps its model" % house.id)
 		_expect(node.house_index == _map.index_of(house.id), "%s keeps its index" % house.id)
-		_expect(node.position.is_equal_approx(Vector3(house.position.x, 2.0, house.position.y)), "%s stands on its spot" % house.id)
+		var spot := Vector3(house.position.x, 2.0, house.position.y)
+		_expect(node.position.is_equal_approx(spot), "%s stands on its spot" % house.id)
 		holder.add_child(node)
 	await process_frame
 	var built: int = 0
 	for node: Node in holder.get_children():
-		if node.get_node_or_null(^"HouseBody") != null and node.get_node_or_null(^"HouseVisual") != null:
+		var body: Node = node.get_node_or_null(^"HouseBody")
+		if body != null and node.get_node_or_null(^"HouseVisual") != null:
 			built += 1
-	_expect(built == _map.houses.size(), "Every house built its walls and model (%d of %d)" % [built, _map.houses.size()])
-	_expect(get_nodes_in_group(&"delivery_house").size() >= _map.houses.size(), "The houses joined the delivery_house group")
+	var total: int = _map.houses.size()
+	_expect(built == total, "Every house built its walls and model (%d of %d)" % [built, total])
+	_expect(get_nodes_in_group(&"delivery_house").size() >= total, "The houses joined the delivery_house group")
 	holder.queue_free()
 
 
