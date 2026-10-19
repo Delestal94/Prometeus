@@ -167,20 +167,33 @@ static func publish_net_state(p: Player) -> void:
 	apply_pose_rate(p)
 
 
-## How often the owner sends its pose (D-2002.3, Player.set_on_foot_pose_rate()): on foot, the rate
-## a world asked for; riding a vehicle or seated, player.tscn's own again. Nothing to do while no
-## world changed it (Delivery and Endless never do).
+## How many poses a second a player's owner sends on foot (D-2002.3): a world where nobody goes fast
+## lowers it (the company's shed: CompanyRoot.join_crew()); 0 puts player.tscn's own back. Riding a
+## vehicle or seated it sends at the scene's rate anyway (apply_pose_rate()). Only the owner's copy
+## sends (the host relays at its pace); callable before entering the tree. Kept in the player's meta
+## (&"on_foot_pose_rate", &"scene_pose_interval") so player.gd stays under its line limit.
+static func set_on_foot_pose_rate(p: Player, rate_hz: float) -> void:
+	p.set_meta(&"on_foot_pose_rate", maxf(rate_hz, 0.0))
+	apply_pose_rate(p)
+
+
+## How often the owner sends its pose: on foot, the rate a world asked for; riding a vehicle or
+## seated, player.tscn's own again. Nothing to do while no world changed it (Delivery and Endless
+## never do).
 static func apply_pose_rate(p: Player) -> void:
-	if p._on_foot_pose_rate <= 0.0 and p._scene_pose_interval < 0.0:
+	var on_foot_rate: float = float(p.get_meta(&"on_foot_pose_rate", 0.0))
+	var scene_interval: float = float(p.get_meta(&"scene_pose_interval", -1.0))
+	if on_foot_rate <= 0.0 and scene_interval < 0.0:
 		return
 	var sync := p.get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	if sync == null:
 		return
-	if p._scene_pose_interval < 0.0:
-		p._scene_pose_interval = sync.replication_interval
-	var wanted: float = p._scene_pose_interval
-	if p._on_foot_pose_rate > 0.0 and not p.net_in_vehicle and p.seat_node_path.is_empty():
-		wanted = pose_interval(p._on_foot_pose_rate)
+	if scene_interval < 0.0:
+		scene_interval = sync.replication_interval
+		p.set_meta(&"scene_pose_interval", scene_interval)
+	var wanted: float = scene_interval
+	if on_foot_rate > 0.0 and not p.net_in_vehicle and p.seat_node_path.is_empty():
+		wanted = pose_interval(on_foot_rate)
 	if not is_equal_approx(sync.replication_interval, wanted):
 		sync.replication_interval = wanted
 

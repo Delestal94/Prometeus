@@ -46,6 +46,7 @@ extends Node3D
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
+const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
 ## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here in
 ## gameplay/: once the company HUD exists, the host-gone screen and the way to the menu move
 ## there, as N-222's live in hud_pause.gd.
@@ -462,4 +463,4 @@ func _spawn_player() -> void:
 ## through here too, nothing changes for it.
 static func join_crew(crew_member: Player) -> void:
 	crew_member.add_to_group(CREW_GROUP)
-	crew_member.set_on_foot_pose_rate(CompanyTuning.SHED_POSE_RATE_HZ)
+	Ride.set_on_foot_pose_rate(crew_member, CompanyTuning.SHED_POSE_RATE_HZ)

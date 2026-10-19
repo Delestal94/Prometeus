@@ -198,10 +198,6 @@ var net_yaw: float = 0.0
 var net_time: int = 0
 var _has_net_state: bool = false
 var _net_smoother: NetPoseSmoother = null
-## D-2002.3: poses a second the owner sends on foot (0: player.tscn's own), and the scene's interval
-## once a world changed it (-1 until then). set_on_foot_pose_rate(); Ride.apply_pose_rate().
-var _on_foot_pose_rate: float = 0.0
-var _scene_pose_interval: float = -1.0
 var _vehicle: Node3D = null
 ## Owner only: the truck's pose last physics tick, while standing in its bay.
 var _riding: bool = false
@@ -366,15 +362,6 @@ func pickup_high_weight_for_package(package: DeliveryPackage) -> float:
 
 func is_local() -> bool:
 	return is_multiplayer_authority()
-
-
-## How many poses a second this player's owner sends on foot (D-2002.3): a world where nobody goes
-## fast lowers it (the company's shed: CompanyRoot.join_crew()); 0 puts player.tscn's 30 back.
-## Riding a vehicle or seated it sends at the scene's rate anyway (Ride.apply_pose_rate()). Only
-## the owner's copy sends (the host relays at its pace); callable before entering the tree.
-func set_on_foot_pose_rate(rate_hz: float) -> void:
-	_on_foot_pose_rate = maxf(rate_hz, 0.0)
-	Ride.apply_pose_rate(self)
 
 
 func _unhandled_input(event: InputEvent) -> void:
