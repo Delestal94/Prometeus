@@ -44,7 +44,6 @@ extends Node3D
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
-const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
 ## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here in
@@ -139,15 +138,7 @@ func _ready() -> void:
 
 ## Every zone in data/zones/, in a stable order. A new .tres joins without code.
 static func load_zones() -> Array[ZoneDefinition]:
-	var found: Array[ZoneDefinition] = []
-	var files: PackedStringArray = DirAccess.get_files_at(ZONE_DIR)
-	files.sort()
-	for file: String in files:
-		if file.ends_with(".tres"):
-			var zone := load(ZONE_DIR + file) as ZoneDefinition
-			if zone != null:
-				found.append(zone)
-	return found
+	return CompanyCatalog.load_all().zones()
 
 
 ## Same name on every peer, so its RPCs reach the same node. The host (solo
