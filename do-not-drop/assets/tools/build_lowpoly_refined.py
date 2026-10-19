@@ -4,7 +4,7 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, rock, rock_cluster and mushroom rebuild just that one model.
+tall_fern, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -472,19 +472,126 @@ def tall_grass():
     blades(6, 0.9, 0.3, 11, "straw")
 
 
-def flowers():
+# Wildflowers (N-331.4): 27 meshes and 588 tris -- three capped 5-sided
+# cylinder stems, six subdivided `blob` petals and a `blob` centre per flower
+# (the blobs were most of it), one flat `frond` leaf each, stems and leaves
+# in the pasture's own "grass" green. Now one WildflowerCluster mesh of 129
+# tris: the same three flowers (seed 12, 0.45-0.7 m tall, 0.12 m round the
+# middle), each a 3-sided uncapped stem in two spans that leans its head
+# outward (12 tris), a flat star of 6 blunt-tipped petals cupped upward
+# (3 tris each, 0.21 m across; pointed kites read as a spiky star, not a
+# flower) tilted ~18 deg outward so the heads face different ways, a low
+# 5-sided pyramid centre (5 tris) and two leaves with a V fold (4 tris each). Petals in the palette's orange, double-sided
+# ("flower.doublesided"); leaves double-sided and stem single-sided in an
+# olive of their own ("grass.wildflower" / "grass.wildflower_stem", keyed as
+# "grass") so they don't sink into the green pasture; dark "wood" centre
+# single-sided so the head reads as a flower and not an orange blot. Stems
+# go 1.5 cm into the ground; footprint centred on the origin.
+WILDFLOWER_GREEN = (0.11, 0.18, 0.035, 1)
+# Petal: (radius, half-angle, lift along the head's normal) of the root, the
+# shoulders and the two corners of the blunt tip; the lift cups the star up.
+PETAL_BASE, PETAL_SHOULDER, PETAL_TIP = (0.014, 0.0, 0.0), (0.055, 0.44, 0.012), (0.105, 0.2, 0.026)
+
+
+def _wf_face(bm, verts, slot, outward):
+    f = bm.faces.new(verts)
+    f.normal_update()
+    if f.normal.dot(outward) < 0.0:
+        f.normal_flip()
+    f.material_index = slot
+    return f
+
+
+def wildflower_cluster():
     clear()
-    rng = random.Random(12)
+    mesh = bpy.data.meshes.new("WildflowerCluster")
+    obj = bpy.data.objects.new("WildflowerCluster", mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(_double_sided("flower"))                                        # 0 petals
+    mesh.materials.append(_single_sided("wood"))                                          # 1 centre
+    mesh.materials.append(_double_sided("grass", "wildflower", WILDFLOWER_GREEN))         # 2 leaves
+    mesh.materials.append(_single_sided("grass", "wildflower_stem", WILDFLOWER_GREEN))    # 3 stem
+    bm = bmesh.new()
+    rng = random.Random(12)       # the heights, as before
+    jit = random.Random(1204)     # everything else
+    up = Vector((0, 0, 1))
     for s in range(3):
         a = s * 2.1
-        ox, oy = math.cos(a) * 0.12, math.sin(a) * 0.12
+        out = Vector((math.cos(a), math.sin(a), 0.0))
+        foot = out * 0.12
         h = rng.uniform(0.45, 0.7)
-        cylinder("FlowerStem", (ox, oy, h / 2), 0.012, h, "grass", 5)
+        tilt = 0.32 + jit.uniform(-0.08, 0.08)
+        heading = a + jit.uniform(-0.3, 0.3)
+        normal = Vector((math.cos(heading) * math.sin(tilt), math.sin(heading) * math.sin(tilt), math.cos(tilt)))
+        head = foot + out * 0.045 + Vector((0, 0, h))
+        # Stem: straight to 55 % of the height, then bends toward the head.
+        knee = foot + out * 0.008 + Vector((0, 0, h * 0.55))
+        stations = [foot - Vector((0, 0, 0.015)), knee, head - normal * 0.004]
+        radii = [0.011, 0.009, 0.007]
+        rings = []
+        for p, r in zip(stations, radii):
+            rings.append([bm.verts.new(p + Vector((math.cos(a + 0.5 + i * math.tau / 3),
+                                                    math.sin(a + 0.5 + i * math.tau / 3), 0.0)) * r)
+                          for i in range(3)])
+        for k in range(2):
+            lo, hi = rings[k], rings[k + 1]
+            axis = (stations[k] + stations[k + 1]) / 2
+            for i in range(3):
+                j = (i + 1) % 3
+                mid = (lo[i].co + lo[j].co + hi[i].co + hi[j].co) / 4
+                _wf_face(bm, (lo[i], lo[j], hi[j], hi[i]), 3, mid - axis)
+        # Head frame: t, b span the star, `normal` points out of its face.
+        t = normal.cross(up if abs(normal.z) < 0.99 else Vector((1, 0, 0))).normalized()
+        b = normal.cross(t)
+        spin = jit.uniform(0.0, math.tau)
+
+        def at(radius, angle, lift):
+            return head + (t * math.cos(angle) + b * math.sin(angle)) * radius + normal * lift
+
         for p in range(6):
-            pa = p * math.tau / 6
-            blob("Petal", (ox + math.cos(pa) * 0.06, oy + math.sin(pa) * 0.06, h), (0.05, 0.03, 0.015), "flower")
-        blob("FlowerCenter", (ox, oy, h + 0.01), (0.03, 0.03, 0.02), "trim")
-        frond("FlowerLeaf", 0.18, 0.05, a + 1.2, 0.6, "grass", z=h * 0.3)
+            phi = spin + p * math.tau / 6 + jit.uniform(-0.08, 0.08)
+            reach = jit.uniform(0.9, 1.08)
+            base = bm.verts.new(at(PETAL_BASE[0], phi, PETAL_BASE[2]))
+            left = bm.verts.new(at(PETAL_SHOULDER[0] * reach, phi - PETAL_SHOULDER[1], PETAL_SHOULDER[2]))
+            right = bm.verts.new(at(PETAL_SHOULDER[0] * reach, phi + PETAL_SHOULDER[1], PETAL_SHOULDER[2]))
+            tip_r = bm.verts.new(at(PETAL_TIP[0] * reach, phi + PETAL_TIP[1], PETAL_TIP[2] * reach))
+            tip_l = bm.verts.new(at(PETAL_TIP[0] * reach, phi - PETAL_TIP[1], PETAL_TIP[2] * reach))
+            _wf_face(bm, (base, right, tip_r), 0, normal)
+            _wf_face(bm, (base, tip_r, tip_l), 0, normal)
+            _wf_face(bm, (base, tip_l, left), 0, normal)
+        # Centre: a low 5-sided pyramid over the petals' roots, open below
+        # (the stem top and the petal bases are under it).
+        ring = [bm.verts.new(at(0.027, spin + i * math.tau / 5, 0.004)) for i in range(5)]
+        apex = bm.verts.new(head + normal * 0.024)
+        for i in range(5):
+            _wf_face(bm, (ring[i], ring[(i + 1) % 5], apex), 1, normal)
+        # Leaves: two, off the low stem on opposite sides, rising then drooping,
+        # the midrib raised into a V; 4 tris each.
+        for k, side in enumerate((1.2, 1.2 + math.pi)):
+            ang = a + side + jit.uniform(-0.35, 0.35)
+            d = Vector((math.cos(ang), math.sin(ang), 0.0))
+            n = Vector((-d.y, d.x, 0.0))
+            z0 = h * (0.12 + 0.12 * k) + jit.uniform(0.0, 0.03)
+            length = jit.uniform(0.13, 0.17)
+            width = 0.04
+            root = foot + Vector((0, 0, z0)) + d * 0.006
+            mid = root + d * (length * 0.42) + up * (length * 0.32)
+            tip = root + d * length + up * (length * 0.18)
+            leaf_up = (up - d * 0.5).normalized()
+            vb = bm.verts.new(root)
+            vm = bm.verts.new(mid + leaf_up * (width * 0.35))
+            vl = bm.verts.new(mid + n * width)
+            vr = bm.verts.new(mid - n * width)
+            vt = bm.verts.new(tip)
+            for tri in ((vb, vm, vl), (vb, vr, vm), (vl, vm, vt), (vm, vr, vt)):
+                _wf_face(bm, tri, 2, leaf_up)
+    # Centre the footprint on the origin.
+    for i in range(2):
+        mid = (min(v.co[i] for v in bm.verts) + max(v.co[i] for v in bm.verts)) / 2
+        for v in bm.verts:
+            v.co[i] -= mid
+    bm.to_mesh(mesh)
+    bm.free()
 
 
 # Mushroom cluster (N-331.3): 21 meshes and 444 tris, 300 of them in 15
@@ -619,16 +726,21 @@ def stone_forest(name="stone.forest"):
     return m
 
 
-def _single_sided(name):
+def _single_sided(name, suffix="singlesided", color=None):
     """A copy of palette material `name` that culls back faces (glTF
     doubleSided off), for closed solids. "moss.singlesided" still keys as
     "moss" in LowpolyMaterials. The shared mat(name) is left as it was, so
-    the other models of a run export the same as before."""
-    m = bpy.data.materials.get(name + ".singlesided")
+    the other models of a run export the same as before. `color` replaces
+    the palette albedo in the copy only (as in _double_sided)."""
+    m = bpy.data.materials.get(name + "." + suffix)
     if m is None:
         m = mat(name).copy()
-        m.name = name + ".singlesided"
+        m.name = name + "." + suffix
         m.use_backface_culling = True
+        if color is not None:
+            principled = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+            principled.inputs["Base Color"].default_value = color
+            m.diffuse_color = color
     return m
 
 
@@ -1301,10 +1413,12 @@ GROUPS = {
     "rock_cluster": lambda: (mossy_rock_cluster(), export_forest("mossy_rock_cluster")),
     # Only the mushroom cluster (N-331.3), without rewriting the other plants.
     "mushroom": lambda: (mushroom(), export_forest("mushroom")),
+    # Only the wildflowers (N-331.4), without rewriting the other plants.
+    "wildflower": lambda: (wildflower_cluster(), export_forest("wildflower")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
-PLANTS = {"bush_round": bush, "fern": fern, "grass_clump": grass, "wildflower": flowers, "mushroom": mushroom, "fallen_log": log,
+PLANTS = {"bush_round": bush, "fern": fern, "grass_clump": grass, "wildflower": wildflower_cluster, "mushroom": mushroom, "fallen_log": log,
           "rock": forest_rock, "bramble_thicket": bramble, "tall_fern_cluster": tall_fern_cluster, "mossy_stump": mossy_stump,
           "mossy_rock_cluster": mossy_rock_cluster, "deadfall_branch": deadfall_branch, "tall_grass_clump": tall_grass}
 
