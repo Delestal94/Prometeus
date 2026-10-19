@@ -4,16 +4,14 @@ extends SceneTree
 ## ferns, rocks, logs...) is repeated by the dozen in view, so each model has a
 ## triangle cap of 250. Reads the rule's own path list, so a model added to the
 ## rule is checked without touching this test.
-## Three models were already over when the cap landed: they keep their current
-## count as a ceiling (never grow) until the art session redoes them (N-331.10,
-## needs Blender); delete their entry from LEGACY_OVER_CAP when they fit. The
-## small fern fits since N-331.10 (154 tris), the bramble thicket too (243).
+## Three models were already over when the cap landed (fern, bramble thicket and
+## tall grass clump, 360-448 tris); since N-331.10 the three fit: fern 154,
+## bramble 243, tall_grass 210. LEGACY_OVER_CAP stays empty: a model that goes
+## over the cap again is redone, not given a ceiling here.
 
 const MAX_TRIS: int = 250
 
-const LEGACY_OVER_CAP: Dictionary = {
-	"sm_env_forest_tall_grass_clump.glb": 360,
-}
+const LEGACY_OVER_CAP: Dictionary = {}
 
 var _failures: int = 0
 
