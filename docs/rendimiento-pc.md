@@ -223,3 +223,78 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
    plantas del bosque (3 %), `shadow2`.
 8. Poner `--via-loader` en la corrida diaria de `pc-build` (o sumar una segunda serie) para que "frames de más de 33 ms"
    mida lo que ve el jugador; el cambio es de la rutina, no se tocó.
+
+## Ancho de banda del modo Empresa (D-2002)
+
+**Fecha:** 2026-10-19. **Commit:** base `origin/main` `3d4a242` (rama `exp/D-2002-bandwidth-budget`). Lo mide
+`tests/test_company_bandwidth_budget.gd` (corre en la batería, filtro `company`; imprime líneas `COMPANY_BW`):
+
+```
+bash tools/run-tests.sh company_bandwidth
+<godot> --headless --path do-not-drop --script res://tests/test_company_bandwidth_budget.gd   # con los números
+```
+
+Todo es lo que el host le manda a **cada cliente** (KB/s = 1024 B/s), sin voz (la voz es solo de Steam y tiene su
+propio chequeo en `test_net_bandwidth_budget`). Cada caso da dos números:
+
+- **Modelo:** el mundo real de la empresa (`company_root.tscn`) con cada `MultiplayerSynchronizer` que tiene,
+  contado como lo empaqueta SceneMultiplayer y con un datagrama de Steam en el techo (80 B) alrededor de cada
+  paquete: el mismo modelo que `test_net_bandwidth_budget` (`tests/bandwidth_model.gd`, ahora compartido). Los
+  floats cuentan como de 64 bits y los enteros como de 32 (una pose en movimiento; el reloj en ms del jugador,
+  `net_time`, pasa 32767 a los 33 s de juego). Es un techo: Steam puede juntar mensajes en un datagrama.
+- **Medido (ENet):** 4 u 8 peers ENet en localhost, en un proceso, cada uno con un jugador real (`player.tscn`) por
+  peer y un `CompanyNet`; el host publica `units_moved` reales al ritmo de abajo. Se lee como lo lee el overlay
+  de red en LAN (N-216, `NetStats`) y se le suman los 28 B de IP y UDP de cada datagrama. Los jugadores están
+  quietos y durante la cuenta tienen el proceso en pausa: lo que mandan no depende de eso (con 4 da lo mismo con
+  o sin pausa), y 64 jugadores completos en un proceso bajaban a 61 FPS, menos envíos que los 30 por segundo del
+  juego. Su reloj todavía no pasó los 33 s (`net_time` de 3 B y no de 5): en una partida larga son 2 B más por
+  pose. Con 8 la medición da entre 22,5 y 24,8 KB/s según la corrida (191-211 datagramas por segundo); con 4 es
+  estable (10,8-10,9).
+- **Lo que ninguno de los dos cuenta:** los deltas `ON_CHANGE` (anim_state, face_*, visible); el margen con 4
+  los cubre.
+
+Carga de "galpón a full": cada jugador hace una acción de negocio por segundo (tomar, guardar, poner en la grilla,
+encintar: una petición que el host convierte en un evento para todos) más una por segundo de las reglas del host
+(pedidos, reloj, fases): 5 eventos/s con 4 jugadores, 9 con 8. Cada uno del tamaño del `units_moved` real más
+grande (con `pos`: 181 B con su RPC), en un datagrama propio. `bot_company_day` todavía es un esqueleto: cuando
+tenga etapas, este ritmo se cambia por un día medido.
+
+| Caso | Presupuesto por cliente | 4 jugadores (modelo / ENet) | 8 jugadores (modelo / ENet) | Estado |
+|---|---|---|---|---|
+| Galpón | ≤ 24 KB/s | 16,1 / 10,9 | **37,2 / 22,5-24,8** | 4: entra (el test falla si se pasa). 8: se pasa (se imprime, no falla) |
+| Una salida afuera | ≤ 40 KB/s | pendiente D-2002.2 (sin vehículo en el mundo de la empresa todavía) | pendiente D-2002.2 | — |
+| 2 vehículos lejos | ≤ 64 KB/s | pendiente D-2002.2 (sin vehículo en el mundo de la empresa todavía) | pendiente D-2002.2 | — |
+
+Detalle del galpón:
+
+| | 4 jugadores | 8 jugadores |
+|---|---|---|
+| Por cliente, modelo (de eso, cabeceras de datagrama) | 16,1 KB/s (7,4) | 37,2 KB/s (17,1) |
+| Por cliente, ENet medido (overlay + IP/UDP) | 10,9 KB/s (8,3 + 2,6) | 22,5-24,8 KB/s (17,3-18,9 + 5,2-5,7) |
+| Datagramas por segundo a cada cliente (modelo / ENet) | 95 / 93 | 219 / 191-211 |
+| Subida del host (modelo con datagramas / ENet sin IP/UDP) | 48,4 / 24,9 KB/s | 260,6 / 121-133 KB/s |
+
+Qué se cuenta hoy en el galpón: solo los sincronizadores del jugador. `Player/MultiplayerSynchronizer` manda 82 B
+(con su cabecera) cada 33 ms; el de `GelProportions` es solo `ON_CHANGE` (no manda nada quieto, confirmado en la
+medición). El galpón en sí no tiene sincronizadores: los bultos del piso son estáticos (regla 10 de
+`red-autoridad.md`). Cuando una tarea sume cuerpos sincronizados al galpón (la caja armada de D-0711, el palet en
+la zorra) el modelo los cuenta solo, una vez cada uno. El snapshot de un join tardío del galpón amueblado pesa
+unos 755 B comprimido (2.264 B crudo), una sola vez.
+
+**Culpables, en orden (8 jugadores, modelo):**
+
+1. Las poses de los otros 6 clientes, reenviadas por el host (`server_relay`, un paquete por jugador y por envío,
+   30 por segundo): 30,1 KB/s, de los que 14,1 son cabeceras de datagrama.
+2. La pose del jugador del host: 4,8 KB/s (2,3 de datagramas).
+3. Los eventos de negocio, 9 por segundo: 2,3 KB/s (0,7 de datagramas).
+
+Con 4 jugadores el orden es el mismo (10,0 / 4,8 / 1,3 KB/s). Los eventos no pesan: el galpón se pasa por las poses.
+
+**Qué se podría hacer con 8 (estimado con el mismo modelo, no medido ni aplicado; para planificar):**
+
+- Que el host junte las poses de todos en sus propios paquetes en vez de reenviar uno por jugador: ~21,6 KB/s,
+  entra. SceneMultiplayer no lo hace solo: hay que cambiar quién manda las poses (un espejo de cada jugador del lado
+  del host, o un RPC con todas por lote) y suma un tick de latencia a las poses de los demás.
+- Bajar el envío del jugador en el galpón a 15 por segundo (adentro nadie va rápido): ~19,7 KB/s, entra. A 20 por
+  segundo da ~25,6 KB/s, no alcanza.
+- Aceptar que el presupuesto de 24 KB/s es para 4 (lo que pide D-2002) y fijar uno para 8.
