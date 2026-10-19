@@ -14,6 +14,7 @@ const SAVE_PATH: String = "user://settings.cfg"
 ## Kept explicit so the settings autoload compiles the same in the
 ## editor/game and the isolated test runner.
 const WORLD_QUALITY = preload("res://modules/render_budget/world_quality.gd")
+const PAD_BINDING = preload("res://scripts/core/pad_binding.gd")
 const SECTION: String = "player"
 const LANGUAGE_DEFAULT: String = "es"
 const SUPPORTED_LANGUAGES: Array[String] = ["es", "en"]
@@ -23,7 +24,7 @@ const SAVED_KEYS: Array[StringName] = [
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
 	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log",
 	&"last_join_address",
-	&"newspaper_mode", &"text_backdrop_opacity",
+	&"newspaper_mode", &"text_backdrop_opacity", &"pad_bindings",
 ]
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
@@ -138,12 +139,23 @@ const BINDING_CONTEXTS := {
 	&"crew_panel": CONTEXT_FOOT | CONTEXT_DRIVE | CONTEXT_DEPOT, &"spectate_toggle": CONTEXT_SPECTATE,
 }
 
-## What rebind_key() / reset_binding() report in result["status"].
+## What rebind_key() / reset_binding() (and the pad versions) report in result["status"].
 const BIND_OK: StringName = &"ok"
 const BIND_SWAPPED: StringName = &"swapped"
 const BIND_BLOCKED: StringName = &"blocked"
 const BIND_RESERVED: StringName = &"reserved"
 const BIND_INVALID: StringName = &"invalid"
+
+## The gamepad inputs the player moved (N-966.3): action -> pad_binding.gd code
+## ("b7", "a0-"). Only what differs from project.godot is kept, so an action that
+## was never touched follows the shipped input. Each assignment is applied to the
+## Input Map at once and saved with the rest.
+var pad_bindings: Dictionary = {}:
+	set(value):
+		pad_bindings = _clean_pad_bindings(value)
+		for action: StringName in rebindable_actions:
+			_apply_pad_binding(action)
+		_save()
 
 ## Multiplies whatever each look implementation already uses, so 1.0 is
 ## exactly today's feel and nobody has to re-tune the defaults.
@@ -269,11 +281,25 @@ var last_join_address: String = "":
 const KEY_GLYPHS := {KEY_UP: "↑", KEY_DOWN: "↓", KEY_LEFT: "←", KEY_RIGHT: "→"}
 
 
+## What to print for the input in hand: the gamepad's when it was the last thing
+## touched (and the action has one), the keyboard's otherwise.
 func binding_label(action: StringName) -> String:
+	if using_gamepad and not bound_pad(action).is_empty():
+		return pad_label(action)
+	return key_label(action)
+
+
+func key_label(action: StringName) -> String:
 	var keycode: int = bound_key(action)
 	if keycode == KEY_NONE:
 		return tr("UI_OPT_BIND_RIGHT_CLICK")
-	return String(KEY_GLYPHS.get(keycode, super(action)))
+	return String(KEY_GLYPHS.get(keycode, super.binding_label(action)))
+
+
+## The gamepad input of the action by name ("A", "LB", "Stick izq. ←"), a dash
+## when it has none.
+func pad_label(action: StringName) -> String:
+	return PAD_BINDING.label(bound_pad(action))
 
 
 ## The key an action has now (its default until the player changes it).
@@ -358,6 +384,111 @@ func reset_binding(action: StringName) -> Dictionary:
 	return rebind_key(action, default_key)
 
 
+# --- Gamepad (N-966.3) -------------------------------------------------------------------------
+# Same rules as the keyboard ones above, on buttons and stick / trigger directions:
+# an input another action uses in a shared context is swapped, a swap that can't be
+# clean is refused, and the inputs of the actions Options doesn't offer are reserved.
+
+
+## The gamepad code an action has now (its shipped one until the player moves it).
+func bound_pad(action: StringName) -> String:
+	return String(pad_bindings.get(action, PAD_BINDING.default_code(action)))
+
+
+func is_pad_binding_default(action: StringName) -> bool:
+	return bound_pad(action) == PAD_BINDING.default_code(action)
+
+
+## The other rebindable actions that already use this gamepad input in a context
+## `action` is also read in, leaving out those that ship on the same input.
+func pad_conflicts(action: StringName, code: String) -> Array[StringName]:
+	var found: Array[StringName] = []
+	if code.is_empty():
+		return found
+	var mine: int = int(BINDING_CONTEXTS.get(action, CONTEXT_ALL))
+	for other: StringName in rebindable_actions:
+		if other != action and bound_pad(other) == code \
+				and (mine & int(BINDING_CONTEXTS.get(other, CONTEXT_ALL))) != 0 \
+				and not PAD_BINDING.ship_together(action, other):
+			found.append(other)
+	return found
+
+
+## Binds a gamepad button or stick direction the way Options does. Returns
+## {"status": BIND_*, "other": the action involved, or &""}, like rebind_key().
+func rebind_pad(action: StringName, code: String) -> Dictionary:
+	if action not in rebindable_actions or not PAD_BINDING.is_valid(code):
+		return {"status": BIND_INVALID, "other": &""}
+	if PAD_BINDING.is_reserved(code, action):
+		return {"status": BIND_RESERVED, "other": &""}
+	var old: String = bound_pad(action)
+	if code == old:
+		return {"status": BIND_OK, "other": &""}
+	var owners: Array[StringName] = pad_conflicts(action, code)
+	if owners.is_empty():
+		_assign_pad(action, code)
+		_save()
+		return {"status": BIND_OK, "other": &""}
+	var other: StringName = owners[0]
+	if owners.size() > 1 or old.is_empty():
+		return {"status": BIND_BLOCKED, "other": other}
+	var collisions: Array[StringName] = pad_conflicts(other, old)
+	collisions.erase(action)
+	if not collisions.is_empty() or PAD_BINDING.is_reserved(old, other):
+		return {"status": BIND_BLOCKED, "other": other}
+	_assign_pad(other, old)
+	_assign_pad(action, code)
+	_save()
+	return {"status": BIND_SWAPPED, "other": other}
+
+
+## Puts one action back on the gamepad input it ships with (same swap rule).
+func reset_pad_binding(action: StringName) -> Dictionary:
+	if action not in rebindable_actions:
+		return {"status": BIND_INVALID, "other": &""}
+	var shipped: String = PAD_BINDING.default_code(action)
+	if shipped.is_empty():
+		pad_bindings.erase(action)
+		_apply_pad_binding(action)
+		_save()
+		return {"status": BIND_OK, "other": &""}
+	return rebind_pad(action, shipped)
+
+
+func _assign_pad(action: StringName, code: String) -> void:
+	if code == PAD_BINDING.default_code(action):
+		pad_bindings.erase(action)
+	else:
+		pad_bindings[action] = code
+	_apply_pad_binding(action)
+
+
+## Only what the player moved is kept, and only codes that still mean something.
+func _clean_pad_bindings(value: Dictionary) -> Dictionary:
+	var clean: Dictionary = {}
+	for action: StringName in rebindable_actions:
+		var code: String = String(value.get(action, ""))
+		if PAD_BINDING.is_valid(code) and code != PAD_BINDING.default_code(action):
+			clean[action] = code
+	return clean
+
+
+## Leaves the action with exactly its gamepad input in the Input Map; keyboard
+## and mouse events stay as they are. Nothing happens when it is already right.
+func _apply_pad_binding(action: StringName) -> void:
+	if not InputMap.has_action(action):
+		return
+	var code: String = bound_pad(action)
+	var current: Array[String] = PAD_BINDING.codes_in_map(action)
+	if current == ([code] if not code.is_empty() else ([] as Array[String])):
+		return
+	for event: InputEvent in InputMap.action_get_events(action):
+		if not PAD_BINDING.code_of(event).is_empty():
+			InputMap.action_erase_event(action, event)
+	if not code.is_empty():
+		InputMap.action_add_event(action, PAD_BINDING.make_event(code))
+
+
 func _assign_key(action: StringName, keycode: int) -> void:
 	key_bindings[action] = keycode
 	_apply_key_binding(action, keycode as Key)
@@ -420,6 +551,7 @@ func reset_to_defaults() -> void:
 	voice_push_to_talk = true
 	save_run_log = false
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
+	pad_bindings = {}
 	set_language(LANGUAGE_DEFAULT)
 	_loading = false
 	_save()

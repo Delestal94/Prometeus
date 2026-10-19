@@ -510,7 +510,7 @@ UI_OPT_BIND_GROUP_FOOT,A pie,On foot
 UI_OPT_BIND_GROUP_DRIVE,Manejando,Driving
 UI_OPT_BIND_GROUP_CREW,Tripulación,Crew
 UI_OPT_BIND_DEFAULT,Original,Default
-UI_OPT_BIND_DEFAULT_HINT,Volver a la tecla original,Back to the original key
+UI_OPT_BIND_DEFAULT_HINT,Volver a la tecla y el botón originales,Back to the original key and button
 UI_OPT_BIND_SWAPPED,%s tenía esa tecla: se intercambiaron.,%s had that key: swapped.
 UI_OPT_BIND_BLOCKED,%s ya usa esa tecla. Liberala primero.,%s already uses that key. Free it first.
 UI_OPT_BIND_RESERVED,Esa tecla está reservada. Probá con otra.,That key is reserved. Try another one.
@@ -1278,3 +1278,38 @@ UI_FINANCE_REASON_PLACEABLE_BUY,Piezas del galpón compradas,Shed pieces bought
 UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
 UI_FINANCE_REASON_OTHER,Otros,Other
+UI_OPT_BIND_KEY_TIP,Tecla,Key
+UI_OPT_BIND_PAD_TIP,Botón o stick del mando,Gamepad button or stick
+UI_OPT_PRESS_PAD,Botón…,Button…
+UI_OPT_PRESS_PAD_HINT,Tocá un botón o mové un stick del mando. Start cancela.,Press a gamepad button or push a stick. Start cancels.
+UI_OPT_BIND_PAD_SWAPPED,%s tenía ese botón: se intercambiaron.,%s had that button: swapped.
+UI_OPT_BIND_PAD_BLOCKED,%s ya usa ese botón. Liberalo primero.,%s already uses that button. Free it first.
+UI_OPT_BIND_PAD_RESERVED,Ese botón está reservado. Probá con otro.,That button is reserved. Try another one.
+UI_OPT_PAD_NONE,—,—
+UI_OPT_PAD_BUTTON,Botón %d,Button %d
+UI_OPT_PAD_AXIS,Eje %d%s,Axis %d%s
+UI_OPT_PAD_A,A,A
+UI_OPT_PAD_B,B,B
+UI_OPT_PAD_X,X,X
+UI_OPT_PAD_Y,Y,Y
+UI_OPT_PAD_BACK,Back,Back
+UI_OPT_PAD_GUIDE,Guía,Guide
+UI_OPT_PAD_START,Start,Start
+UI_OPT_PAD_L3,Clic stick izq.,L-stick click
+UI_OPT_PAD_R3,Clic stick der.,R-stick click
+UI_OPT_PAD_LB,LB,LB
+UI_OPT_PAD_RB,RB,RB
+UI_OPT_PAD_LT,LT,LT
+UI_OPT_PAD_RT,RT,RT
+UI_OPT_PAD_DPAD_UP,D-pad ↑,D-pad ↑
+UI_OPT_PAD_DPAD_DOWN,D-pad ↓,D-pad ↓
+UI_OPT_PAD_DPAD_LEFT,D-pad ←,D-pad ←
+UI_OPT_PAD_DPAD_RIGHT,D-pad →,D-pad →
+UI_OPT_PAD_LSTICK_LEFT,Stick izq. ←,L-stick ←
+UI_OPT_PAD_LSTICK_RIGHT,Stick izq. →,L-stick →
+UI_OPT_PAD_LSTICK_UP,Stick izq. ↑,L-stick ↑
+UI_OPT_PAD_LSTICK_DOWN,Stick izq. ↓,L-stick ↓
+UI_OPT_PAD_RSTICK_LEFT,Stick der. ←,R-stick ←
+UI_OPT_PAD_RSTICK_RIGHT,Stick der. →,R-stick →
+UI_OPT_PAD_RSTICK_UP,Stick der. ↑,R-stick ↑
+UI_OPT_PAD_RSTICK_DOWN,Stick der. ↓,R-stick ↓

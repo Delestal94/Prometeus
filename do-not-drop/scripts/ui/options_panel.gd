@@ -208,6 +208,9 @@ func _build() -> void:
 
 	UiTheme.tag(column, tr("UI_OPT_CONTROLS_TITLE"), UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
+	# One long line made the whole panel wider than the screen at 150% text.
+	_controls_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_controls_label.custom_minimum_size.x = 1.0
 	_refresh_controls()
 	_controls_section = OptionsControlsSection.new()
 	column.add_child(_controls_section)
