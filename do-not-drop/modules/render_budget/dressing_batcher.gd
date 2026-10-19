@@ -309,6 +309,9 @@ static func merge_segment_geometry(segments: Array, slicer: FrameSlicer = null) 
 				continue
 			if slicer != null:
 				await slicer.tick()
+				# The segment may be culled while the job waits for a frame.
+				if not is_instance_valid(segment) or segment.is_queued_for_deletion() or not is_instance_valid(part):
+					return merged_count
 			for surface: int in range(part.mesh.get_surface_count()):
 				var material: Material = part.material_override
 				if material == null and surface < part.get_surface_override_material_count():
@@ -324,6 +327,10 @@ static func merge_segment_geometry(segments: Array, slicer: FrameSlicer = null) 
 			merged_parts.append(part)
 		if merged_parts.is_empty():
 			continue
+		if slicer != null:
+			await slicer.tick()
+			if not is_instance_valid(segment) or segment.is_queued_for_deletion():
+				return merged_count
 		var by_shadow: Dictionary = {}
 		for key: String in tools:
 			var shadow: int = shadows[key]
