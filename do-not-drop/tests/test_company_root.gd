@@ -248,11 +248,13 @@ func _check_floor_material(shed: Node) -> void:
 	var material := mesh.material as StandardMaterial3D if mesh != null else null
 	var texture: Texture2D = material.albedo_texture if material != null else null
 	_expect(texture != null and texture.resource_path.ends_with("tx_detail_concrete_512.png"),
-		"The shed floor carries the concrete detail map (got %s)" % (texture.resource_path if texture != null else "none"))
+		"The shed floor carries the concrete detail map (got %s)"
+		% (texture.resource_path if texture != null else "none"))
 	if material == null:
 		return
 	_expect(material.uv1_triplanar and material.uv1_world_triplanar, "The floor's concrete is world triplanar")
 	var cells: float = CompanyShed.FLOOR_SLAB_M / CompanyTuning.WAREHOUSE_GRID_M
-	_expect(is_equal_approx(material.uv1_scale.x, 1.0 / CompanyShed.FLOOR_SLAB_M) and is_equal_approx(cells, roundf(cells)),
+	var per_slab: bool = is_equal_approx(material.uv1_scale.x, 1.0 / CompanyShed.FLOOR_SLAB_M)
+	_expect(per_slab and is_equal_approx(cells, roundf(cells)),
 		"One concrete repetition per %.1f m, a whole number of grid cells" % CompanyShed.FLOOR_SLAB_M)
 	_expect(material == CompanyShed.floor_material(), "The floor material is shared, not one per redraw")
