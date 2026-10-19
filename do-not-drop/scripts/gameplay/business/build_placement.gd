@@ -7,6 +7,7 @@ extends RefCounted
 ## only when the preview is green. `rotate_piece()`, `move_piece()` and `sell_piece()` (D-0903)
 ## act on a piece already in the layout: the same checks, ignoring the piece itself.
 ## A piece that would wall off a station or cut the dock from the exit is red too (D-0907).
+## A stage holds at most `max_pieces` pieces (D-0915): one more is red with `piece_limit`.
 ## The employees' walking grid follows every change that sticks (`navigation`, D-0908).
 ## `undo_last_placement()` (D-0916) takes back the last piece bought here, with a full refund.
 ## The world adapter draws the footprint with `preview_color()`.
@@ -20,6 +21,7 @@ const REASON_FIXED: StringName = &"fixed_area"
 const REASON_NO_DEFINITION: StringName = &"no_definition"
 const REASON_NO_MONEY: StringName = &"no_money"
 const REASON_BLOCKS_PATH: StringName = &"blocks_path"
+const REASON_PIECE_LIMIT: StringName = &"piece_limit"
 
 const REASON_UNDO: StringName = &"placeable_undo"
 ## How many placements can be taken back, newest first.
@@ -35,6 +37,9 @@ var fixed_blocked: Array[Rect2i] = []
 ## Areas people walk in from (loading dock, exit; D-0907). A piece that would leave one of them
 ## cut off from the others, or wall off a placed piece, is red. Empty: no walking check.
 var entry_areas: Array[Rect2i] = []
+## Most pieces the layout may hold (D-0915). 0: no limit. Moving, turning or selling never
+## counts against it; only adding a piece does.
+var max_pieces: int = 0
 ## Walking navigation to keep in step with the layout (D-0908): rebaked after every change that
 ## sticks. Null: nothing to rebake.
 var navigation: WalkNavigation = null
@@ -60,6 +65,8 @@ func preview(layout: Array, def: PlaceableDefinition, x: int, z: int, turns: int
 		return {"ok": false, "reason": REASON_NO_DEFINITION, "rect": Rect2i()}
 	var rect: Rect2i = footprint_rect(def, x, z, turns)
 	var reason: StringName = _reason_for(layout, rect, ignore_index)
+	if reason == REASON_OK and ignore_index < 0 and max_pieces > 0 and layout.size() >= max_pieces:
+		reason = REASON_PIECE_LIMIT
 	if reason == REASON_OK and not _keeps_paths(layout, def, x, z, turns, ignore_index):
 		reason = REASON_BLOCKS_PATH
 	if reason == REASON_OK and money >= 0 and money < def.price:

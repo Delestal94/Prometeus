@@ -33,6 +33,11 @@ static func floor_size_m(stage: int) -> Vector2:
 	return Vector2(grid_size_for(stage)) * CompanyTuning.WAREHOUSE_GRID_M
 
 
+## Most pieces a shed of `stage` can hold (D-0915).
+static func max_pieces_for(stage: int) -> int:
+	return CompanyTuning.WAREHOUSE_STAGE_MAX_PIECES[clampi(stage, 0, stage_count() - 1)]
+
+
 ## Price of upgrading INTO `stage` from the one before it.
 static func price_for(stage: int) -> int:
 	return CompanyTuning.WAREHOUSE_STAGE_PRICE[clampi(stage, 0, stage_count() - 1)]
@@ -108,12 +113,13 @@ static func gate_rects(stage: int) -> Array[Rect2i]:
 
 
 ## Resizes the build grid and the placement checks to the stage the company is at, and sets the
-## fixed areas (dock, exit). Returns the new grid size.
+## fixed areas (dock, exit) and the piece limit. Returns the new grid size.
 static func apply_to(stage: int, placement: BuildPlacement, mode: BuildMode = null) -> Vector2i:
 	var size: Vector2i = grid_size_for(stage)
 	placement.grid_size = size
 	placement.fixed_blocked = fixed_rects(stage)
 	placement.entry_areas = fixed_rects(stage)
+	placement.max_pieces = max_pieces_for(stage)
 	if mode != null:
 		mode.grid_size = size
 	return size
