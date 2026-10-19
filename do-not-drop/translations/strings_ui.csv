@@ -1279,9 +1279,9 @@ UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
 UI_FINANCE_REASON_OTHER,Otros,Other
 UI_OPT_BIND_KEY_TIP,Tecla,Key
-UI_OPT_BIND_PAD_TIP,Botón o palanca del mando,Gamepad button or stick
+UI_OPT_BIND_PAD_TIP,Botón o stick del mando,Gamepad button or stick
 UI_OPT_PRESS_PAD,Botón…,Button…
-UI_OPT_PRESS_PAD_HINT,Tocá un botón o mové una palanca del mando. Start cancela.,Press a gamepad button or push a stick. Start cancels.
+UI_OPT_PRESS_PAD_HINT,Tocá un botón o mové un stick del mando. Start cancela.,Press a gamepad button or push a stick. Start cancels.
 UI_OPT_BIND_PAD_SWAPPED,%s tenía ese botón: se intercambiaron.,%s had that button: swapped.
 UI_OPT_BIND_PAD_BLOCKED,%s ya usa ese botón. Liberalo primero.,%s already uses that button. Free it first.
 UI_OPT_BIND_PAD_RESERVED,Ese botón está reservado. Probá con otro.,That button is reserved. Try another one.

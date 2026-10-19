@@ -171,6 +171,8 @@ func is_listening() -> bool:
 func start_listening(action: StringName) -> void:
 	if not buttons.has(action):
 		return
+	_end_listening()
+	_hide_notes()
 	refresh()
 	_begin_listening(action, false)
 	(buttons[action] as Button).text = tr("UI_OPT_PRESS_KEY")
@@ -180,6 +182,8 @@ func start_listening(action: StringName) -> void:
 func start_listening_pad(action: StringName) -> void:
 	if not pad_buttons.has(action):
 		return
+	_end_listening()
+	_hide_notes()
 	refresh()
 	_begin_listening(action, true)
 	_pad_wait_left = PAD_WAIT_SECONDS
@@ -257,6 +261,7 @@ func _input_pad(event: InputEvent) -> void:
 	elif event is InputEventJoypadMotion \
 			and absf((event as InputEventJoypadMotion).axis_value) >= PAD_BINDING.AXIS_THRESHOLD:
 		if PAD_WAIT_SECONDS - _pad_wait_left < PAD_GRACE_SECONDS:
+			get_viewport().set_input_as_handled()
 			return
 		code = PAD_BINDING.code_of(event)
 	if code.is_empty():
