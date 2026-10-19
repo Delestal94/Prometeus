@@ -177,3 +177,14 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Decisión:** las lámparas dependen de la etapa y de las mesas, no de cada estante: los estantes son bajos y la rejilla ya cubre todo el piso. Sin sombras porque en Compatibility cada sombra cuesta una pasada y no aporta con muebles de menos de 2 m.
 **Test** `test_shed_lighting`: cada etapa sin celda oscura y bajo el tope de luces, más lámparas en etapas grandes; la mesa recibe lámpara que la sigue; estantes, zona de despacho y entradas basura no; quitar una lámpara deja celdas oscuras (el chequeo puede fallar); `CompanyShed` cuelga una `OmniLight3D` por lámpara bajo la pared y las redibuja sin apilar.
 **Hecho cuando:** el test pasa y la captura del galpón (a mano) no muestra rincones oscuros.
+
+### D-0914 · Interacción con objetos colocados igual que con los fijos — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `ShedPiecePoint` (`scripts/gameplay/interaction/shed_piece_point.gd`) + `CompanyShed._add_use_point` / `use_points` / `piece_used`; claves `WORLD_SHED_USE_*`; `test_shed_interaction`. Qué hace cada uso (abrir el estante, trabajar la mesa) es de las tareas de cada estación (D-0703 y el grupo 06); acá solo se dice quién usó qué pieza.
+**Depende de:** D-0911 (`CompanyShed`), D-0903 (mover y vender)
+**Qué:** cada estante, mesa de armado y zona de despacho del layout recibe, al dibujarse, un punto de uso (`Interactable`, la misma sonda, aviso y alcance que el resto del juego). Se cuelga en el mismo dibujado para las piezas por defecto y las que puso la tripulación, así que no hay dos caminos.
+- El punto está **delante de la pieza**, a 0,45 m de su huella (una esfera de 0,8 m): el collider del estante es macizo, un punto adentro no se vería ni se alcanzaría (`Player.within_reach`). Gira con la pieza (sus cuatro giros). La zona de despacho no bloquea el paso: su punto está en el medio.
+- Mover, girar o vender una pieza redibuja el galpón y con él sus puntos: ninguno queda de una pieza vendida ni se duplica.
+- `ShedPiecePoint.used(uid, role, peer_id)` y `CompanyShed.piece_used` dicen quién usó qué. `interact()` corre en el host como todo `Interactable`; no hay RPC nuevo.
+**Decisión:** un punto por pieza en vez de uno por casilla o por estante: es lo que ve la sonda y mantiene el costo en una `Area3D` por mueble. Los bloques sin rol (muebles lisos) no tienen punto.
+**Test** `test_shed_interaction`: un punto por pieza trabajable del layout por defecto; cuatro estantes puestos a mano, uno por giro, reciben el mismo punto (clase, capa, forma, texto) y están dentro del piso y fuera de toda huella; mover cambia el punto de lugar, vender lo saca, sin duplicar; usar el punto de un estante por defecto, una mesa y uno puesto informa uid, rol y peer.
+**Hecho cuando:** el test pasa.

@@ -25,6 +25,8 @@ extends Node3D
 ## is on that wall, the customer exit on the north one (WarehouseStages). A piece turned
 ## `turns` quarter turns faces local +Z, which turns with it.
 
+signal piece_used(uid: StringName, role: StringName, peer_id: int)
+
 const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
 const LINTEL_BOTTOM: float = 3.0
@@ -73,6 +75,8 @@ var shelves: Dictionary = {}
 var stage: int = 0
 var grid: Vector2i = Vector2i.ZERO
 var pieces: Array[Dictionary] = []
+## The point to use each piece drawn, by uid (ShedPiecePoint, D-0914), and who used which.
+var use_points: Dictionary = {}
 ## Where the pallets stood at the last redraw: pallet id -> its node.
 var pallet_nodes: Dictionary = {}
 
@@ -138,6 +142,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 		remove_child(child)
 		child.queue_free()
 	pieces.clear()
+	use_points.clear()
 	_slot_views.clear()
 	pallet_nodes.clear()
 	stage = int(state.warehouse_stage)
@@ -329,6 +334,7 @@ func _build_piece(kit: DepotKit, uid: StringName, def: PlaceableDefinition, piec
 	var center: Vector3 = cell_to_local(Vector2(rect.position) + Vector2(rect.size) * 0.5)
 	var at := Transform3D(Basis(Vector3.UP, turns * PI * 0.5), center)
 	pieces.append({"uid": uid, "id": def.id, "rect": rect})
+	_add_use_point(uid, def, at)
 	match def.role:
 		&"storage":
 			_build_shelf(kit, uid, def, at, furniture)
@@ -340,6 +346,19 @@ func _build_piece(kit: DepotKit, uid: StringName, def: PlaceableDefinition, piec
 		_:
 			kit.box(Vector3(def.footprint.x, def.height_m, def.footprint.y) * CompanyTuning.WAREHOUSE_GRID_M,
 				center + Vector3.UP * def.height_m * 0.5, DepotKit.flat(Color(0.5, 0.5, 0.52)), true)
+
+
+## Every piece the crew can work gets its ShedPiecePoint, placed or default alike (D-0914). The
+## furniture of other roles (a plain block) has nothing to use.
+func _add_use_point(uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:
+	if not ShedPiecePoint.PROMPT_KEYS.has(def.role):
+		return
+	var point := ShedPiecePoint.make(uid, def.role, def.footprint.y * CompanyTuning.WAREHOUSE_GRID_M)
+	point.transform = at * Transform3D(Basis.IDENTITY, point.position)
+	point.used.connect(func(piece_uid: StringName, role: StringName, peer_id: int) -> void:
+		piece_used.emit(piece_uid, role, peer_id))
+	add_child(point)
+	use_points[uid] = point
 
 
 func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D,
