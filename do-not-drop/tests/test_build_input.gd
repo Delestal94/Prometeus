@@ -89,7 +89,7 @@ func _check_cursor() -> void:
 	cursor.set_cell(Vector2i(0, 0))
 	_expect(cursor.sell().is_empty(), "and nothing on a free cell")
 	cursor.chosen = cursor.catalog.find(PlaceableShop.definition(&"shelf"))
-	cursor.set_cell(Vector2i(10, 0))
+	cursor.set_cell(Vector2i(11, 7))
 	_expect(not bool(cursor.ghost()["ok"]) and cursor.ghost()["reason"] == BuildPlacement.REASON_OUT_OF_BOUNDS,
 		"the ghost is red when the object sticks out of the floor")
 	state.call(&"reset")
@@ -135,6 +135,7 @@ func _check_world() -> void:
 	toggle.action = ShedBuilder.ACTION_TOGGLE
 	toggle.pressed = true
 	Input.parse_input_event(toggle)
+	await process_frame  # the event is flushed on the next frame
 	await process_frame
 	_expect(builder.is_building(), "the toggle action enters the mode")
 	_expect(not player.is_processing_unhandled_input(), "the player's own input is off while building")
@@ -145,8 +146,8 @@ func _check_world() -> void:
 
 	builder.cursor.set_cell(Vector2i(0, 0))
 	builder.cursor.chosen = builder.cursor.catalog.find(PlaceableShop.definition(&"shelf"))
-	builder.handle_action(&"walk_right")
-	_expect(builder.cursor.cell == Vector2i(1, 0), "a walk action moves the cursor one cell")
+	builder.handle_action(&"drive_right")
+	_expect(builder.cursor.cell == Vector2i(1, 0), "a strafe action moves the cursor one cell")
 	builder.handle_action(ShedBuilder.ACTION_ZOOM_OUT)
 	_expect(builder.mode.zoom > 1.0, "zoom out raises the camera")
 	var shelf: PlaceableDefinition = PlaceableShop.definition(&"shelf")
@@ -160,7 +161,7 @@ func _check_world() -> void:
 	_expect(level.shed.pieces.size() == (state.get(&"layout") as Array).size(), "the shed drew it")
 
 	builder.handle_action(ShedBuilder.ACTION_CONFIRM)
-	_expect(builder.cursor.held == &"", "confirm on the piece just placed does not break the cursor")
+	_expect(builder.cursor.held != &"", "confirm on the piece just placed grabs it")
 	builder.handle_action(ShedBuilder.ACTION_CANCEL)
 	_expect(builder.cursor.held == &"" and builder.is_building(), "cancel with a piece in hand only lets go of it")
 	builder.cursor.set_cell(Vector2i(5, 5))

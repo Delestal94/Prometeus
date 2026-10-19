@@ -7,7 +7,8 @@ extends Node3D
 ## redraws when the event comes back. A refusal (`request_rejected`) shows its reason in the hint.
 ##
 ## Actions are registered in code (`ensure_actions()`), not in project.godot, so they stay out of
-## the options screen's rebind list; the cursor reuses the walk actions (WASD, left stick, d-pad).
+## the options screen's rebind list; the cursor reuses the walk and strafe actions
+## (WASD, left stick, d-pad: walk_forward/backward, drive_left/right).
 
 signal entered
 signal exited
@@ -24,7 +25,7 @@ const ACTION_ZOOM_OUT: StringName = &"build_zoom_out"
 ## Cursor steps by action; walk_forward is north (-Z), like the stick pushed up.
 const MOVES: Dictionary = {
 	&"walk_forward": Vector2i(0, -1), &"walk_backward": Vector2i(0, 1),
-	&"walk_left": Vector2i(-1, 0), &"walk_right": Vector2i(1, 0),
+	&"drive_left": Vector2i(-1, 0), &"drive_right": Vector2i(1, 0),
 }
 ## Seconds before a held direction repeats, and between repeats.
 const REPEAT_DELAY: float = 0.35
