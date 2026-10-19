@@ -151,6 +151,7 @@ coinciden para 10 pedidos generados.
 **Hecho cuando:** el test pasa.
 
 ### D-0313 · Arranque sin congelar y streaming sin tirones — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `CompanyRoot` suma el hijo `WorldCells` (`CompanyCells`) anclado a la tripulación y a los vehículos de empresa; la carga (menú → `LoadingScreen`) ocurre una sola vez. `test_company_cells` mide 10 celdas seguidas (< 50 ms por paso) y `test_company_root` comprueba el hijo y que no queda loader. Ver `revisar/D-0313.md`.
 **Depende de:** D-0303, D-0214
 **Qué:** el modo Empresa usa la pantalla de carga (N-407/N-408) **una sola vez**, al entrar. Después, todo
 es streaming de celdas (D-0303). Medir el peor frame al cruzar 10 celdas seguidas.

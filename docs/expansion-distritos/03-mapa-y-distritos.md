@@ -20,7 +20,7 @@
 | D-0310 | Mapa del mundo 2D (tablero en el galpón) con distritos, estado y pedidos (incluye D-0327, fusión de D-0112) | constructor-ui | high | captura de `revisor-visual` legible a 1080p y Steam Deck |
 | D-0311 | Casas de entrega por distrito con `DeliveryHouse` y variantes (puerta, buzón, muelle, porche) (incluye D-0247, fusión de D-0112) | constructor-mundo | high | 4 variantes funcionan con el flujo de puerta actual |
 | D-0312 | Direcciones: cada casa tiene calle y número legibles que coinciden con la etiqueta del paquete (incluye D-0326, D-0345, fusión de D-0112) | constructor-mundo | medium | test: etiqueta y cartel de la casa coinciden |
-| D-0313 | Cargar el distrito con la pantalla de carga existente sin congelar (N-408) | constructor-mundo | high | `test_loading_no_freeze` pasa con el distrito |
+| D-0313 | ✅ Cargar el distrito con la pantalla de carga existente sin congelar (N-408) | constructor-mundo | high | `test_loading_no_freeze` pasa con el distrito |
 | D-0314 | Unificar Barrio Centro como primer distrito jugable del corte vertical | constructor-mundo | high | ver D-1501; `--district=centro` arranca |
 | D-0315 | Adaptar la ruta actual (Campo) como distrito con la misma calidad de hoy | constructor-tramos | high | tests de ruta actuales verdes en modo Empresa |
 | D-0316 | Seguro contra jugadores perdidos: quien se queda en el galpón no se carga ni sufre la ruta | constructor-red | xhigh | test de red: 2 en ruta, 1 en galpón, nadie se teletransporta |

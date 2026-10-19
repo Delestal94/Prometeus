@@ -89,6 +89,9 @@ var clock: GameClock
 var day_cycle: DayCycle
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
+## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
+## so leaving the shed never loads the world again (the loading screen shows once, on entering).
+var cells: CompanyCells
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -123,6 +126,7 @@ func _ready() -> void:
 	for zone: ZoneDefinition in zones:
 		_add_zone_slab(zone)
 	_add_shed()
+	_add_cells()
 	_add_trips()
 	_spawn_player()
 	_publish_presence()
@@ -404,6 +408,26 @@ func _add_shed() -> void:
 func _redraw_shed() -> void:
 	if shed != null and net != null and net.company != null:
 		shed.rebuild(net.company, net.inventory)
+
+
+## The streamed cells of the map, on every peer: `anchors` follow whoever is in the crew group or
+## drives a company vehicle (CompanyTrips' group), refreshed each frame by `_process`.
+func _add_cells() -> void:
+	cells = CompanyCells.new()
+	cells.name = "WorldCells"
+	add_child(cells)
+
+
+func _process(_delta: float) -> void:
+	if cells == null:
+		return
+	var found: Array[Vector3] = []
+	for group: StringName in [CREW_GROUP, CompanyTrips.VEHICLE_GROUP]:
+		for node: Node in get_tree().get_nodes_in_group(group):
+			var body := node as Node3D
+			if body != null and body.is_inside_tree():
+				found.append(body.global_position)
+	cells.anchors = found
 
 
 ## Host: the gate across the shed's exit (north wall, centered) and the trips that cross it; the
