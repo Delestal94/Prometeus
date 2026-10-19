@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="GelSkinDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_skin_definition.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = &"peach"
+color = Color(1, 0.7, 0.54, 1)
+absorption = 1.85
+shine = 0.78
