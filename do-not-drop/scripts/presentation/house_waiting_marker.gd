@@ -17,7 +17,8 @@ class_name HouseWaitingMarker
 ##
 ## Presentation only, the same on every peer: it listens to
 ## EventBus.house_delivery_recorded, which the host relays to everyone, since
-## DeliveryHouse.delivered only ever changes on the host.
+## DeliveryHouse.delivered only ever changes on the host; a peer that joined
+## mid-run hears the doors already resolved as EventBus.delivery_restored (N-975).
 ##
 ## Space: the house's own, front facing -Z toward the road (DeliveryHouse).
 
@@ -92,6 +93,7 @@ func _ready() -> void:
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
+		bus.connect(&"delivery_restored", _on_delivery_restored)
 	set_waiting(waiting)
 
 
@@ -136,6 +138,12 @@ func set_waiting(value: bool) -> void:
 
 
 func _on_house_delivery_recorded(index: int, _outcome: StringName, _package_id: StringName) -> void:
+	if index == house_index:
+		set_waiting(false)
+
+
+## A late joiner's copy of a door the run already resolved (N-975): the same.
+func _on_delivery_restored(index: int, _outcome: StringName) -> void:
 	if index == house_index:
 		set_waiting(false)
 

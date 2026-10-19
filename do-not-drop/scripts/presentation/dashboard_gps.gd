@@ -16,7 +16,9 @@ class_name DashboardGps
 ##
 ## Presentation only: every peer works it out from its own copy of the truck
 ## and the route, and hears about finished houses through
-## EventBus.house_delivery_recorded (relayed by the host to everyone).
+## EventBus.house_delivery_recorded (relayed by the host to everyone), or, on a
+## peer that joined mid-run, the ones before it through EventBus.delivery_restored
+## (N-975).
 ##
 ## Space: a screen facing its own -Z (the driver), X to the right, Y up.
 
@@ -55,9 +57,16 @@ func _ready() -> void:
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", func(index: int, _outcome: StringName, _package: StringName) -> void:
-			_done[index] = true
-			refresh())
+			_mark_done(index))
+		bus.connect(&"delivery_restored", func(index: int, _outcome: StringName) -> void: _mark_done(index))
 	refresh.call_deferred()
+
+
+## That house is resolved (delivered, ruined, driven past): the screen moves on
+## to the next one still waiting.
+func _mark_done(index: int) -> void:
+	_done[index] = true
+	refresh()
 
 
 func _process(delta: float) -> void:
