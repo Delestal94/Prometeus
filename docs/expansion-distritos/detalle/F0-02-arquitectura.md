@@ -101,7 +101,7 @@ del mapa.
 **Hecho cuando:** el test pasa.
 
 ### D-0207 · Recurso `VehicleDefinition` sin cambiar la camioneta — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-19, PR pendiente)** — `VehicleDefinition` (+ `fleet_key` y `amplified_trap` de `flota.md`) y `van_classic/agile/vintage.tres` en `data/vehicles/`; `CompanyTuning.STARTING_FLEET`; `test_vehicle_definitions`. Sin tocar `vehicle.gd` ni `UnlockManager.TRUCKS`.
+**[x] Hecho (2026-10-19, PR #499)** — `VehicleDefinition` (+ `fleet_key` y `amplified_trap` de `flota.md`) y `van_classic/agile/vintage.tres` en `data/vehicles/`; `CompanyTuning.STARTING_FLEET`; `test_vehicle_definitions`. Sin tocar `vehicle.gd` ni `UnlockManager.TRUCKS`.
 **Depende de:** D-0115
 **Qué:** `scripts/gameplay/fleet/vehicle_definition.gd`. Campos: `id`, `scene: PackedScene`, `variant:
 StringName` (las de `vehicle.gd` `VARIANTS`), `seats: int`, `cargo_slots: int`, `cargo_kg: float`,
