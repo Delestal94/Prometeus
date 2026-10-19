@@ -112,6 +112,15 @@ func reserve(product: StringName, qty: int, order_id: StringName) -> bool:
 	return true
 
 
+## Lowers what an order holds of a product by up to qty (its units left the stock it draws on:
+## sealed in its box, D-0715). Returns how many it let go; the units themselves don't move.
+func unreserve(product: StringName, qty: int, order_id: StringName) -> int:
+	var own: int = int((_reserved.get(order_id, {}) as Dictionary).get(product, 0))
+	var freed: int = mini(maxi(qty, 0), own)
+	_shrink_reservation(order_id, product, freed)
+	return freed
+
+
 ## Drops every reservation of an order (cancelled or expired).
 func release(order_id: StringName) -> void:
 	_reserved.erase(order_id)

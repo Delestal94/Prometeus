@@ -24,7 +24,7 @@
 | ✅ D-0712 | Error de contenido (falta un producto o sobra) detectable al cerrar o en la puerta | constructor-negocio | medium | test de los dos momentos |
 | ✅ D-0713 | Balanza de control: peso esperado vs. real | constructor-negocio | medium | test |
 | ✅ D-0714 | Hoja de pedido visible en la mesa (qué lleva este paquete) | constructor-ui | medium | captura legible |
-| D-0715 | Varias personas en la misma mesa (uno pone productos, otro cinta) | constructor-red | xhigh | test de red con 2 peers armando la misma caja |
+| ✅ D-0715 | Varias personas en la misma mesa (uno pone productos, otro cinta) | constructor-red | xhigh | test de red con 2 peers armando la misma caja |
 | ✅ D-0716 | Despacho: dejar la caja armada en la zona de salida la asocia a una salida | constructor-negocio | medium | test |
 | D-0717 | Cargar el vehículo desde despacho (reusa la carga actual del depósito) | constructor-mundo | high | camioneta cargada con cajas armadas sale |
 | ✅ D-0718 | Insumos que se gastan (cinta, cajas, relleno) y se reponen | constructor-negocio | medium | test |

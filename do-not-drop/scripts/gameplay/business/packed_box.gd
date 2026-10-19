@@ -59,6 +59,26 @@ func first_fit(product: ProductDefinition) -> Vector3i:
 	return NO_SPOT
 
 
+## Takes out the product that covers `cell` (every cell of its block) and returns its id; &"" when
+## the cell holds no product (empty or padding), changing nothing (D-0715, box_take_out).
+func take_out(cell: Vector3i) -> StringName:
+	for index: int in items.size():
+		var item: Dictionary = items[index]
+		var origin: Vector3i = item["origin"]
+		var size: Vector3i = item["cells"]
+		var local: Vector3i = cell - origin
+		if local.x < 0 or local.y < 0 or local.z < 0 or local.x >= size.x or local.y >= size.y \
+				or local.z >= size.z:
+			continue
+		for x: int in size.x:
+			for y: int in size.y:
+				for z: int in size.z:
+					grid.erase(origin + Vector3i(x, y, z))
+		items.remove_at(index)
+		return item["product"]
+	return &""
+
+
 ## Pads the first n empty cells (x, then y, then z order). Returns how many it filled.
 func fill_free_cells(n: int) -> int:
 	var filled: int = 0

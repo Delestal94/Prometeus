@@ -341,7 +341,10 @@ func _check_event_branches() -> void:
 	if start < 0 or end <= start:
 		return
 	var net_consts: Dictionary = (load(NET_SCRIPT) as GDScript).get_script_constant_map()
-	var layout_consts: Dictionary = (load(LAYOUT_SCRIPT) as GDScript).get_script_constant_map()
+	# Another class's constant (CompanyLayoutNet.PLACED, CompanyTableNet.SEALED...): by class name.
+	var class_paths: Dictionary = {"CompanyLayoutNet": LAYOUT_SCRIPT}
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		class_paths[String(entry["class"])] = String(entry["path"])
 	var covered: Array[StringName] = []
 	var catch_all: bool = false
 	for line: String in text.substr(start, end - start).split("\n"):
@@ -351,10 +354,14 @@ func _check_event_branches() -> void:
 		catch_all = catch_all or pattern == "_"
 		for token: String in pattern.split(","):
 			var name_: String = token.strip_edges()
+			var owner_consts: Dictionary = {}
+			var owner_name: String = name_.get_slice(".", 0)
+			if name_.contains(".") and class_paths.has(owner_name):
+				owner_consts = (load(class_paths[owner_name]) as Script).get_script_constant_map()
 			if name_.begins_with("&\""):
 				covered.append(StringName(name_.trim_prefix("&\"").trim_suffix("\"")))
-			elif name_.begins_with("CompanyLayoutNet.") and layout_consts.has(name_.trim_prefix("CompanyLayoutNet.")):
-				covered.append(layout_consts[name_.trim_prefix("CompanyLayoutNet.")])
+			elif owner_consts.has(name_.get_slice(".", 1)):
+				covered.append(owner_consts[name_.get_slice(".", 1)])
 			elif net_consts.has(name_):
 				covered.append(net_consts[name_])
 	var missing: Array[StringName] = []
