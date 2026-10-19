@@ -103,3 +103,11 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 **Qué:** el paquete que sale de `BoxToPackage.build()` no es un tipo nuevo: se levanta, se asienta en el camión, se cuida y se entrega con el mismo código de hoy (`package.gd`, `PackageHandling`, `PackageCare`). Decisión: no se agrega ninguna clase; se prueba el flujo completo con una caja armada y se deja la garantía en un test.
 **Test** `test_box_package_flow`: una caja armada pasa por levantar, asentar en el camión, cuidado y entrega en la puerta; sus metadatos (`META_PACKED_BOX`, `META_ORDER_ID`) sobreviven.
 **Hecho cuando:** `test_box_package_flow` pasa y los tests de paquete actuales siguen verdes.
+
+### D-0712 · Error de contenido — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-18, PR pendiente)** — `BoxContentCheck` (`scripts/gameplay/business/box_content_check.gd`): `diff` (qué falta y qué sobra, con unidades), `is_correct` y `door_accepts`; `PackingStation.content_errors(order)` para la mesa; `test_box_content_check`.
+**Depende de:** D-0709 (`OrderPenalties.matches_order`), D-0701 (`PackingStation`)
+**Qué:** dos momentos detectan el error. En la mesa, antes de la cinta, `content_errors` avisa qué falta o sobra (solo aviso: se puede sellar igual). En la puerta, `door_accepts` da el veredicto con el mismo criterio que `OrderPenalties.matches_order` (que ya paga 0) y suma el motivo.
+Decisión: el aviso de la mesa no bloquea el cierre, porque el pedido decide el pago y el jugador puede querer despachar igual; la UI que lo muestra es D-0714/D-0744.
+**Test** `test_box_content_check`: caja exacta, falta una unidad, falta un producto, sobra una unidad o un producto, sin caja; los dos momentos con la misma caja.
+**Hecho cuando:** el test pasa para la mesa y para la puerta.

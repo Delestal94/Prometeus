@@ -770,52 +770,82 @@ def bramble():
 
 
 # Tall fern cluster (N-331.2): 24 flat, straight fronds were 960 tris for a
-# prop that ground_plant scatters by the dozen (cap 250, N-331.6). Now 20
-# open fronds of 12 tris each: one-sided blades folded into a shallow V along
-# the midrib (volume without closing the mesh), drawn double-sided, so the
-# triangles go into the number of fronds instead of their thickness. Each
-# frond is a rosette leaf: it leaves the clump centre, arcs out over four
-# spans and droops to the tip; the blade starts at 12 % of the length, is
-# widest at 40 % and tapers to a point. Upright and spreading fronds alternate.
-def _double_sided(name):
+# prop that ground_plant scatters by the dozen (cap 250, N-331.6), so the
+# fronds went one-sided, folded into a shallow V along the midrib (volume
+# without closing the mesh) and drawn double-sided.
+# N-331.8 (director-arte, 2026-10-12): those 20 smooth diamond blades in mint
+# green read as an agave. Now 17 pinnate fronds of 14 tris: the midrib runs
+# over seven spans and each span carries one triangular leaflet per side,
+# swept toward the tip, with the notch between leaflets cut down to the
+# midrib -- a saw-toothed, fishbone edge that reads as a fern from the cab.
+# The midrib still rides above the leaflet tips (the V fold). Leaflets are
+# short at the stipe, widest at a third and shrink to the tip, each a little
+# jittered so no two fronds match. Upright and spreading fronds alternate in
+# three rosettes (6 + 6 + 5): 238 tris, 2.62 x 2.12 m, 0.82 m tall (was
+# 2.66 x 1.90 x 0.91).
+# Colour: its own "fern.tall" (spreading, older fronds) and "fern.tall_young"
+# (upright ones), yellow olive: more red and almost no blue, so the clump
+# stands off the forest lawn (route_terrain.gdshader 0.285/0.43/0.205 ..
+# 0.41/0.54/0.27) by hue, not by value. Passes (2026-10-18): 0.15/0.31/0.08
+# read pale, lighter than the lawn; 0.085/0.18/0.04 went tone on tone with it
+# (lost at night and at 10 m); now olive, its value between the two. The
+# palette's cyan-ish "fern" (0.08/0.34/0.13, the small fern) is left alone. LowpolyMaterials keys
+# both as "fern" (it cuts at the first dot): foliage detail and the autumn
+# tint still apply, and the albedo gets x1.16 there (DETAIL_GAIN).
+FERN_TALL = (0.13, 0.20, 0.03, 1)
+FERN_TALL_YOUNG = (0.17, 0.25, 0.04, 1)
+# Leaflet half-width along the frond (one per span, stipe to tip).
+PINNA_WIDTHS = (0.3, 0.8, 1.0, 0.95, 0.78, 0.55, 0.3)
+
+
+def _double_sided(name, suffix="doublesided", color=None):
     """A copy of palette material `name` that never culls back faces (glTF
-    doubleSided). "fern.doublesided" still keys as "fern" in LowpolyMaterials,
-    which cuts the name at the first dot."""
-    m = bpy.data.materials.get(name + ".doublesided")
+    doubleSided), named "<name>.<suffix>" so LowpolyMaterials still keys it
+    as `name` (it cuts the name at the first dot). `color` replaces the
+    palette albedo in the copy only; the shared mat(name) is left alone."""
+    m = bpy.data.materials.get(name + "." + suffix)
     if m is None:
         m = mat(name).copy()
-        m.name = name + ".doublesided"
+        m.name = name + "." + suffix
         m.use_backface_culling = False
+        if color is not None:
+            principled = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+            principled.inputs["Base Color"].default_value = color
+            m.diffuse_color = color
     return m
 
 
-def _open_frond(bm, slot, root, heading, length, half_width, lift, droop, fold=0.3):
+def _pinnate_frond(bm, slot, root, heading, length, half_width, lift, droop, rng, fold=0.3):
+    """One open fern frond: a midrib arcing out of `root` over len(PINNA_WIDTHS)
+    spans (rising at `lift`, bending down by `droop` per quarter) and one
+    triangular leaflet per span and side, 2 tris a span."""
     ch, sh = math.cos(heading), math.sin(heading)
     side = Vector((-sh, ch, 0.0))
+    spans = len(PINNA_WIDTHS)
+    seg = [0.1] + [0.9 / (spans - 1)] * (spans - 1)
+    angles = [lift - droop * 3.0 * j / (spans - 1) for j in range(spans)]
     spine = [Vector(root)]
-    angles = [lift - droop * j for j in range(4)]
-    for seg, a in zip((0.12, 0.28, 0.30, 0.30), angles):
-        r, z = math.cos(a) * length * seg, math.sin(a) * length * seg
-        spine.append(spine[-1] + Vector((ch * r, sh * r, z)))
-    rows = []
-    for k, w in ((1, 0.55), (2, 1.0), (3, 0.7)):
-        a = (angles[k - 1] + angles[k]) * 0.5
-        up = Vector((-ch * math.sin(a), -sh * math.sin(a), math.cos(a)))
-        w *= half_width
-        rows.append((bm.verts.new(spine[k] + side * -w), bm.verts.new(spine[k] + up * (w * fold)),
-                     bm.verts.new(spine[k] + side * w), up))
-    base, tip = bm.verts.new(spine[0]), bm.verts.new(spine[4])
-    quads = [((base, rows[0][1], rows[0][0]), rows[0][3]), ((base, rows[0][2], rows[0][1]), rows[0][3])]
-    for (l0, m0, r0, up), (l1, m1, r1, _) in zip(rows, rows[1:]):
-        quads += [((l0, m0, m1, l1), up), ((m0, r0, r1, m1), up)]
-    l2, m2, r2, up = rows[2]
-    quads += [((l2, m2, tip), up), ((m2, r2, tip), up)]
-    for verts, up in quads:
-        f = bm.faces.new(verts)
-        f.normal_update()
-        if f.normal.dot(up) < 0.0:
-            f.normal_flip()
-        f.material_index = slot
+    for s, a in zip(seg, angles):
+        spine.append(spine[-1] + Vector((ch * math.cos(a), sh * math.cos(a), math.sin(a))) * length * s)
+    ups = [Vector((-ch * math.sin(a), -sh * math.sin(a), math.cos(a))) for a in angles]
+    # Midrib raised by the fold (not the root at the ground, nor the tip).
+    mid = [bm.verts.new(spine[0])]
+    for j in range(1, spans):
+        w = (PINNA_WIDTHS[j - 1] + PINNA_WIDTHS[j]) * 0.5 * half_width
+        mid.append(bm.verts.new(spine[j] + (ups[j - 1] + ups[j]).normalized() * (w * fold)))
+    mid.append(bm.verts.new(spine[-1]))
+    for j in range(spans):
+        for s in (-1.0, 1.0):
+            w = PINNA_WIDTHS[j] * half_width * rng.uniform(0.85, 1.12)
+            # Tip swept forward to about the next station (a serrated edge),
+            # hanging a little below the midrib.
+            reach = rng.uniform(0.95, 1.15)
+            tooth = bm.verts.new(spine[j].lerp(spine[j + 1], reach) + side * (s * w) - ups[j] * (w * 0.15))
+            f = bm.faces.new((mid[j], mid[j + 1], tooth))
+            f.normal_update()
+            if f.normal.dot(ups[j]) < 0.0:
+                f.normal_flip()
+            f.material_index = slot
 
 
 def tall_fern_cluster():
@@ -823,20 +853,20 @@ def tall_fern_cluster():
     mesh = bpy.data.meshes.new("TallFernCluster")
     obj = bpy.data.objects.new("TallFernCluster", mesh)
     bpy.context.collection.objects.link(obj)
-    mesh.materials.append(_double_sided("leaf"))
-    mesh.materials.append(_double_sided("fern"))
+    mesh.materials.append(_double_sided("fern", "tall", FERN_TALL))
+    mesh.materials.append(_double_sided("fern", "tall_young", FERN_TALL_YOUNG))
     bm = bmesh.new()
-    # Clump centres around the origin (the old ones sat 0.2 m off it in y).
-    for k, (x, y, count) in enumerate([(-0.03, -0.22, 7), (0.52, 0.08, 7), (-0.48, 0.13, 6)]):
+    # Clump centres around the origin.
+    for k, (x, y, count) in enumerate([(-0.03, -0.22, 6), (0.52, 0.08, 6), (-0.48, 0.13, 5)]):
         rng = random.Random(210 + k)
         start = rng.uniform(0.0, math.tau)
         for i in range(count):
             heading = start + i * math.tau / count + rng.uniform(-0.2, 0.2)
             if i % 2:   # spreading: rises ~45 deg, shorter, tip ends ~0.2 m up
-                lift, droop, length = rng.uniform(0.75, 0.9), rng.uniform(0.28, 0.34), 0.88
-            else:       # upright: rises ~70 deg, gives the clump its height
-                lift, droop, length = rng.uniform(1.15, 1.35), rng.uniform(0.22, 0.28), 1.2
-            _open_frond(bm, (i + k) % 2, (x, y, 0.0), heading, length * rng.uniform(0.9, 1.08), 0.15, lift, droop)
+                lift, droop, length, slot = rng.uniform(0.75, 0.9), rng.uniform(0.28, 0.34), 0.85, 0
+            else:       # upright: rises ~65 deg and arches over, gives the clump its height
+                lift, droop, length, slot = rng.uniform(1.12, 1.25), rng.uniform(0.3, 0.34), 1.27, 1
+            _pinnate_frond(bm, slot, (x, y, 0.0), heading, length * rng.uniform(0.9, 1.08), 0.24, lift, droop, rng)
     bm.to_mesh(mesh)
     bm.free()
 
@@ -1263,7 +1293,7 @@ GROUPS = {
                                                         "road_barrier", "bench")]),
     # Only the guardrail (N-332), without rewriting the other props.
     "guardrail": guardrail,
-    # Only the tall fern cluster (N-331.2), without rewriting the other plants.
+    # Only the tall fern cluster (N-331.2, N-331.8), without rewriting the other plants.
     "tall_fern": lambda: (tall_fern_cluster(), export_forest("tall_fern_cluster")),
     # Only the forest rock (N-331.7), without rewriting the other plants.
     "rock": lambda: (forest_rock(), export_forest("rock")),

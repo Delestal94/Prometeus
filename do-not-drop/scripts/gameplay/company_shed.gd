@@ -10,7 +10,9 @@ extends Node3D
 ## DefaultShed before this exists; a client gets both from the snapshot (D-2004) and calls rebuild()
 ## when it lands. Nothing here sends or decides anything, so no RPC and no random roll: two peers
 ## with the same state draw the same shed. rebuild() redraws everything (a layout change, a
-## snapshot); refresh_stock() only rewrites the labels, crates and pallets (a units event).
+## snapshot); refresh_stock() only rewrites the labels, crates and pallets (a units event). With
+## follow(net) it does both by itself on every peer (D-0910): a layout event (CompanyLayoutNet, the
+## host's build) or a snapshot redraws the shed, a units_moved rewrites the stock.
 ##
 ## Grey-box stand-in: boxes in the palette plus the depot's own models (packing table, wrapped
 ## pallet, tape and padding). The final models are a pending art task (docs/arte-pendiente). The
@@ -28,6 +30,7 @@ const LINTEL_BOTTOM: float = 3.0
 const FLOOR_COLOR: Color = Color(0.42, 0.42, 0.44)
 const WALL_COLOR: Color = Color(0.72, 0.68, 0.60)
 const PATCH_HEIGHT: float = 0.02
+const LAMP_COLOR: Color = Color(1.0, 0.92, 0.78)
 const SHELF_LEVELS: int = 2
 const SHELF_COLUMNS: int = 4
 ## Where the slot's crate and label stand on a shelf: deck height and label height per level.
@@ -69,10 +72,37 @@ var pallet_nodes: Dictionary = {}
 var _default: DefaultShed
 var _slot_views: Array[Dictionary] = []
 var _pallet_root: Node3D
+## The CompanyNet this shed follows (follow()), or null.
+var _net: CompanyNet
 
 
 func _init() -> void:
 	_default = DefaultShed.load_default()
+
+
+## Redraws from `company_net` from now on, the same on every peer: the whole shed when a layout event
+## is applied (layout_placed / moved / sold) or a snapshot replaced the state
+## (company_state_restored), the labels and pallets when units move. It only draws.
+func follow(company_net: CompanyNet) -> void:
+	_net = company_net
+	if not company_net.event_applied.is_connected(_on_event_applied):
+		company_net.event_applied.connect(_on_event_applied)
+	if not company_net.company_state_restored.is_connected(_on_state_restored):
+		company_net.company_state_restored.connect(_on_state_restored)
+
+
+func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+	if _net == null or not is_instance_valid(_net) or _net.company == null:
+		return
+	if CompanyLayoutNet.EVENT_KINDS.has(kind):
+		rebuild(_net.company, _net.inventory)
+	elif kind == &"units_moved" and _pallet_root != null:
+		refresh_stock(_net.inventory)
+
+
+func _on_state_restored(_snapshot_seq: int) -> void:
+	if _net != null and is_instance_valid(_net) and _net.company != null:
+		rebuild(_net.company, _net.inventory)
 
 
 ## Cell (may be fractional, the middle of a piece) to a point on the floor of this shed.
@@ -106,6 +136,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	stage = int(state.warehouse_stage)
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
+	_build_lights(state.layout)
 	var furniture := Node3D.new()
 	furniture.name = "Furniture"
 	add_child(furniture)
@@ -131,6 +162,26 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	_pallet_root.name = "Pallets"
 	add_child(_pallet_root)
 	refresh_stock(stock)
+
+
+## Hangs the lamps of ShedLighting (D-0913): a ceiling grid for the stage and a task lamp over each
+## packing table, so no corner of the floor is dark and moving a table moves its light. No shadows
+## (the renderer is GL Compatibility; the table and the shelves are low).
+func _build_lights(layout: Array) -> void:
+	var lights := Node3D.new()
+	lights.name = "Lights"
+	add_child(lights)
+	var index: int = 0
+	for lamp: Dictionary in ShedLighting.lamps_for(grid, layout):
+		var omni := OmniLight3D.new()
+		omni.name = "%sLamp%d" % [String(lamp["kind"]).capitalize(), index]
+		omni.omni_range = float(lamp["range_m"])
+		omni.omni_attenuation = 0.9
+		omni.light_energy = float(lamp["energy"])
+		omni.light_color = LAMP_COLOR
+		omni.position = cell_to_local(lamp["at"], CompanyTuning.SHED_LAMP_HEIGHT_M)
+		lights.add_child(omni)
+		index += 1
 
 
 ## Rewrites what the units change: each labeled slot's text and crate, and the pallets in reception.

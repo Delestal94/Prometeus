@@ -21,7 +21,7 @@
 | ✅ D-0709 | Cálculo de calidad del armado (contenido correcto, hueco, protección, sellos) 0-100 | constructor-negocio | high | test con 6 cajas de calidad conocida |
 | ✅ D-0710 | Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
 | ✅ D-0711 | Caja armada sigue siendo `DeliveryPackage`: se lleva, se cuida y se entrega como hoy | constructor-trampas | xhigh | tests de paquete actuales verdes |
-| D-0712 | Error de contenido (falta un producto o sobra) detectable al cerrar o en la puerta | constructor-negocio | medium | test de los dos momentos |
+| ✅ D-0712 | Error de contenido (falta un producto o sobra) detectable al cerrar o en la puerta | constructor-negocio | medium | test de los dos momentos |
 | D-0713 | Balanza de control: peso esperado vs. real | constructor-negocio | medium | test |
 | D-0714 | Hoja de pedido visible en la mesa (qué lleva este paquete) | constructor-ui | medium | captura legible |
 | D-0715 | Varias personas en la misma mesa (uno pone productos, otro cinta) | constructor-red | xhigh | test de red con 2 peers armando la misma caja |

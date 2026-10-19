@@ -59,6 +59,7 @@ Termina en una tabla "Tomamos / Adaptamos / No tomamos", cada fila con la tarea 
 **Hecho cuando:** el documento tiene la tabla con 15+ filas y cada una cita su fuente.
 
 ### D-0108 · Referencias de armado y logística — B · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR pendiente)** — `diseno/referencias-logistica.md`: Overcooked, Unpacking y encastre, Mini Motorways, shapez, TRDS y Schedule I (crecimiento), cada uno con "lo que copiamos" y su tarea `D-`; tabla de 30 filas, riesgos para un equipo de 2 y 36 fuentes.
 **Depende de:** —
 **Qué:** `diseno/referencias-logistica.md`: qué hacen bien Overcooked (hojas de pedido, estaciones),
 Unpacking/Box-packing (encastre), Mini Motorways/Shapez (cintas, cuellos de botella), Totally Reliable
@@ -95,7 +96,7 @@ o un vehículo que manejar (medible con el bot de D-0111).
 - galpón por defecto, 1 proveedor y los 10 productos de `data/contents/`;
 - cajas S-XL, pedidos para Barrio Centro y Campo, camioneta actual, cierre del día;
 - arte gris permitido.
-Criterio de cierre: el bot `tools/bot_company_day.gd` (lo crea D-2016) juega un día
+Criterio de cierre: el bot `tests/bot_company_day.gd` (lo crea D-2016) juega un día
 completo en headless con 2 jugadores simulados. Debe recibir el palet, armar 6 cajas, despachar una
 salida a Barrio Centro, volver y cerrar el día con ganancia > 0, sin `ERROR`/`SCRIPT ERROR` en el log.
 `bench_company` dentro del presupuesto de D-2012.

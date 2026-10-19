@@ -98,14 +98,16 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** el test pasa.
 
 ### D-0508 · Resumen financiero del cierre del día — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho parcial (2026-10-12, PR pendiente)** — `DaySummary` (`scripts/gameplay/business/day_summary.gd`): ingresos, costos, ganancia y saldo de apertura/cierre del día, por motivo, desde el libro; `test_day_summary`. El panel de pantalla queda como subtarea abierta D-0508.2.
+**[x] Hecho (2026-10-18, PR pendiente)** — `DaySummary` (`scripts/gameplay/business/day_summary.gd`): ingresos, costos, ganancia y saldo de apertura/cierre del día, por motivo, desde el libro; `test_day_summary`. El panel (D-0508.2) es `DaySummaryPanel` (`scripts/ui/day_summary_panel.gd`, claves `finance_*`; `test_day_summary_panel`). Mostrarlo al cerrar el día queda en D-0508.3.
 **Depende de:** D-0501
 **Qué:**
 - **D-0508.1 (hecha)** `DaySummary.build(company, day)` devuelve `{day, income, costs, profit, opening, closing, income_by_reason, cost_by_reason, truncated}`. Parte los movimientos del libro de ese día por signo; `costs` y los montos por motivo son positivos. `sorted_reasons(dict)` ordena los motivos de mayor a menor para listarlos. `truncated` avisa que el libro está lleno y puede faltar parte del día (`LEDGER_MAX` = 200).
-- **D-0508.2 (abierta, `constructor-ui`)** Panel del cierre del día: lista de ingresos y de costos por motivo (nombres traducibles por clave `finance_reason_<motivo>`), ganancia con color, saldo de apertura y cierre. Se arma por código como el resto de la UI, navegable con mando; la lee `CompanyRoot` al cerrar el día (D-0320). Test de UI: los números del panel coinciden con `DaySummary.build`. Captura de `revisor-visual` a 1080p y Steam Deck.
+- **D-0508.2 (hecha, `constructor-ui`)** Panel del cierre del día: lista de ingresos y de costos por motivo (nombres traducibles por clave `finance_reason_<motivo>`), ganancia con color, saldo de apertura y cierre. Se arma por código como el resto de la UI, navegable con mando; la lee `CompanyRoot` al cerrar el día (D-0320). Test de UI: los números del panel coinciden con `DaySummary.build`. Captura de `revisor-visual` a 1080p y Steam Deck.
+  Hecho: `DaySummaryPanel.open(summary)` dibuja el diccionario (el mismo que publica `DayCycle` en SUMMARY), `continued` avisa al cerrar y los motivos sin clave se muestran con su id. Más de 8 motivos por lista se pliegan en una fila "Otros" sin perder plata.
+- **D-0508.3 (abierta, `constructor-ui`)** `CompanyRoot` instancia el panel y lo abre con `EventBus.company_day_summary` (todos los pares muestran lo que cerró el host); `continued` pasa al día siguiente en el host (`DayCycle.next_day`). Captura de `revisor-visual` a 1080p y Steam Deck. Va junto con D-0320 (resultado de la salida al cierre).
 **Decisión:** el resumen se calcula del libro y no se guarda: es una vista, así no hay otro estado que replicar ni migrar. Los motivos no se enumeran acá; el que escriba un cobro nuevo ya aparece solo.
 **Test** `test_day_summary`: ingresos/costos por motivo de un día con otros días alrededor, ganancia, apertura + ganancia = cierre, día sin movimientos, empresa nula, `truncated` y orden.
-**Hecho cuando:** el test pasa y el panel muestra los mismos números (D-0508.2).
+**Hecho cuando:** el test pasa y el panel muestra los mismos números (D-0508.2, hecho); aparece solo al cerrar el día (D-0508.3).
 
 ### D-0509 · Gastos fijos diarios — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `FixedCosts` (`scripts/gameplay/business/fixed_costs.gd`): alquiler diario (`CompanyTuning.RENT_PER_DAY` = 100) con `due`, `total_due`, `shortfall` y `settle`; `test_fixed_costs`.

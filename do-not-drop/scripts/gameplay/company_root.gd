@@ -285,18 +285,17 @@ func _restore_own_company() -> void:
 	_mirrored_state = null
 
 
+## The shed redraws itself from the snapshot (CompanyShed.follow()).
 func _on_host_day_restored(_snapshot_seq: int) -> void:
 	_saw_host_day = true
-	_redraw_shed()
 	_publish_presence()
 
 
-## A new day (or phase) of the company: Steam shows the new day (D-2009).
+## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
+## units and layout events itself (CompanyShed.follow(), D-0910).
 func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		_publish_presence()
-	elif kind == &"units_moved" and shed != null:
-		shed.refresh_stock(net.inventory)
 
 
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on
@@ -389,6 +388,8 @@ func _add_shed() -> void:
 	shed.name = "Shed"
 	_world.add_child(shed)
 	_redraw_shed()
+	if net != null:
+		shed.follow(net)
 
 
 ## The shed from the company as this peer holds it: on the host what it started with; on a client

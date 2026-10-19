@@ -4,3 +4,5 @@ The continuous company map (expansion, D-0220): ZoneDefinition (D-0205), gates a
 Zones and gates are data in data/zones/ and data/gates/; adding a .tres adds content without touching code.
 
 Road graph (D-0304): `road_graph.gd` (`RoadGraph`) is modules/route_gen's `RoadNetwork` with the game's data in `data/world/road_graph.tres` (nodes `junction|dead_end|gate`, Bezier streets with width, surface `asphalt|gravel|dirt|cobble` and the kinds of piece along them). `test_road_graph` checks it; `CompanyCells.pin_streets()` pins the cells under the main streets.
+
+Trips (D-0302): `trip.gd` (`Trip`) is one trip out of the shed over an `OrderBook` (PACKED -> OUT at the start, undelivered -> FAILED at the end); `trip_gate.gd` (`TripGate`) is the shed gate as a line on the ground that tells when a vehicle crossed outward or inward. `test_company_trip` checks both; hooking them to the roller door is D-0302.1.
