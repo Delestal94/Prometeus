@@ -4,7 +4,7 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, fern, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
+tall_fern, fern, bramble, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -39,7 +39,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
-from mathutils import Vector  # noqa: E402
+from mathutils import Quaternion, Vector  # noqa: E402
 from lowpoly_kit import (PALETTE, ROOT, blob, circle_points, clear, cone, cube, cylinder, export,  # noqa: E402
                          flat_poly, gable_roof, jitter, mat, move_new, slab, squash_bottom,
                          triangle_count)
@@ -857,20 +857,194 @@ def mossy_stump():
     crown("StumpMoss", (-0.35, 0.1, 0.35), (0.12, 0.2, 0.18), "moss", 182, 0.2)
 
 
+# Bramble thicket (N-331.10): 14 four-sided canes shooting straight out of
+# the centre, six closed leaf_dark blobs and eight icosphere berries in the
+# signal red "danger" were 448 tris (cap 250, N-331.6), 2.10 x 1.72 m and
+# 0.98 m tall, off-centre, and read as a round bush with Christmas baubles.
+# Now one mesh in the ferns' language: 5 canes rooted across the crown from
+# where they land (so they cross into a tangle) in low, open half-sine arches
+# that come back down to stab into the ground with a bare tip: crest
+# 0.57-0.74 m, no span over ~55 degrees (54 at most), 3-sided tube over three
+# spans, ~0.052 m thick at the root (15 tris each). 23 trifoliate leaves
+# (bramble leaves are compound) of one-sided leaflets folded in a V along the
+# midrib and rolled a little about it, so from the cab they show a face, not
+# an edge (2 tris each, double-sided, ~0.5 m): three clouds of seven over the
+# crests of three canes, two level on top and five hanging round the rim
+# like a skirt, plus one hanging between them on each of the other two
+# crests. 5 small bipyramid berries (6 tris) in two bunches tucked under the
+# cloud edges, four black-violet and one unripe red. 243 tris, 2.11 x 2.03 m
+# and 0.90 m tall (the old size), footprint centred on the origin, base at
+# z = 0.
+# Passes (2026-10-19): 7 canes and 11 small leaves (201 tris) read as a frame
+# of poles; 5 steep canes with 20 leaves spread one per span (219) read as a
+# frayed little tree at 10 m; the low mound at 1.67 x 0.65 m (243) read as a
+# rosette in game once ground_plant scaled it down, with thread-thin canes
+# and lone leaves floating at the cane tips. Leaf area grouped in clouds, low
+# arches and the old footprint are what make it a thicket.
+# Colour: canes in their own "trunk.bramble", reddish violet (bramble stems),
+# still keyed as "trunk" so the bark detail applies; leaves in two
+# "leaf_dark.bramble*" olives with more red than the ferns' (bronze olive,
+# almost no blue; darker than they look here, since Godot's foliage grain and
+# DETAIL_GAIN x1.16 lighten and yellow them), so the thicket stands off the lawn and the ferns by hue,
+# and still takes leaf_dark's autumn tint. Berries in "rubber.blackberry*":
+# no detail or glow rules apply there, the colour is used as authored.
+BRAMBLE_CANE = (0.20, 0.05, 0.07, 1)
+BRAMBLE_LEAF = (0.085, 0.13, 0.025, 1)
+BRAMBLE_LEAF_YOUNG = (0.12, 0.15, 0.03, 1)
+# The mound is laid out at about 1.7 x 0.65 m and then stretched to its game
+# size (ground_plant scales it 0.65-1.2 more): wider by SPREAD, taller by RISE.
+BRAMBLE_SPREAD = 1.23
+BRAMBLE_RISE = 1.35
+BRAMBLE_BERRY = (0.05, 0.01, 0.04, 1)
+BRAMBLE_BERRY_RED = (0.40, 0.03, 0.04, 1)
+
+
+def _outward_face(f, slot, inside):
+    """Points face `f` away from `inside` and gives it material `slot`."""
+    f.normal_update()
+    if f.normal.dot(f.calc_center_median() - inside) < 0:
+        f.normal_flip()
+    f.material_index = slot
+
+
+def _bramble_arc(base, heading, reach, peak, curl):
+    """An arch from `base` (on the ground) up to `peak` and back down to the
+    ground `reach` metres out, heading along `heading` and curling sideways
+    by `curl` toward the tip: a low, open half-sine. With `peak` up to
+    ~0.55 and `reach` from ~1.0 no span of the cane is steeper than ~55
+    degrees (a steeper one reads as a trunk from the cab)."""
+    b = Vector(base)
+
+    def at(t):
+        h = heading + curl * t * t
+        out = reach * t
+        return Vector((b.x + math.cos(h) * out, b.y + math.sin(h) * out, peak * math.sin(math.pi * t)))
+    return at
+
+
+def _bramble_cane(bm, slot, arc, radius):
+    """A 3-sided tapering tube along `arc` over three spans, ending in a point
+    on the ground: 15 tris, no caps (the base sits on the ground)."""
+    rings = []
+    stations = (0.0, 0.36, 0.68, 1.0)
+    for t, r in zip(stations, (radius, radius * 0.7, radius * 0.45)):
+        c = arc(t)
+        tangent = (arc(min(1.0, t + 0.05)) - arc(max(0.0, t - 0.05))).normalized()
+        side = tangent.cross(Vector((0, 0, 1)))
+        side = side.normalized() if side.length > 1e-4 else Vector((1, 0, 0))
+        up = side.cross(tangent).normalized()
+        ring = [c + (side * math.cos(a) + up * math.sin(a)) * r for a in (math.pi / 2, math.pi / 2 + math.tau / 3, math.pi / 2 + 2 * math.tau / 3)]
+        for v in ring:
+            v.z = max(v.z, 0.0)   # the root ring sits on the ground, not under it
+        rings.append([bm.verts.new(v) for v in ring])
+    tip = bm.verts.new(arc(1.0))
+    for k, ring in enumerate(rings):
+        nxt = rings[k + 1] if k + 1 < len(rings) else None
+        for i in range(3):
+            j = (i + 1) % 3
+            verts = (ring[i], ring[j], nxt[j], nxt[i]) if nxt else (ring[i], ring[j], tip)
+            inside = (arc(stations[k]) + arc(stations[k + 1])) / 2
+            _outward_face(bm.faces.new(verts), slot, inside)
+
+
+def _bramble_leaf(bm, slot, stem, heading, length, rng, tilt=(-0.35, 0.1)):
+    """A trifoliate leaf: three V-folded leaflets (2 tris each) fanning out of
+    `stem`, the middle one longest, pitched by `tilt` (radians, down < 0)."""
+    s = Vector(stem)
+    for da, scale in ((-1.0, 0.8), (0.0, 1.0), (1.0, 0.8)):
+        h = heading + da * rng.uniform(0.8, 1.05)
+        pitch = rng.uniform(*tilt)
+        d = Vector((math.cos(h) * math.cos(pitch), math.sin(h) * math.cos(pitch), math.sin(pitch)))
+        # Rolled about its midrib, so from the cab (low, side on) the
+        # leaflets show a face instead of an edge.
+        side = Quaternion(d, rng.uniform(-0.7, 0.7)) @ Vector((-math.sin(h), math.cos(h), 0.0))
+        length_k = length * scale * rng.uniform(0.9, 1.1)
+        w = length_k * 0.45
+        base = bm.verts.new(s)
+        tip = bm.verts.new(s + d * length_k)
+        tip.co.z = max(tip.co.z, 0.01)
+        for sgn in (-1.0, 1.0):
+            p = s + d * (length_k * 0.45) + side * (sgn * w) - Vector((0, 0, w * 0.35))
+            p.z = max(p.z, 0.01)
+            f = bm.faces.new((base, tip, bm.verts.new(p)))
+            f.normal_update()
+            if f.normal.z < 0:
+                f.normal_flip()
+            f.material_index = slot
+
+
+def _bramble_berry(bm, slot, centre, r):
+    """A small 3-sided bipyramid (6 tris)."""
+    c = Vector(centre)
+    top, bottom = bm.verts.new(c + Vector((0, 0, r * 1.1))), bm.verts.new(c - Vector((0, 0, r * 1.1)))
+    ring = [bm.verts.new(c + Vector((math.cos(a) * r, math.sin(a) * r, 0))) for a in (0.3, 0.3 + math.tau / 3, 0.3 + 2 * math.tau / 3)]
+    for i in range(3):
+        a, b = ring[i], ring[(i + 1) % 3]
+        _outward_face(bm.faces.new((a, b, top)), slot, c)
+        _outward_face(bm.faces.new((b, a, bottom)), slot, c)
+
+
 def bramble():
     clear()
+    mesh = bpy.data.meshes.new("BrambleThicket")
+    obj = bpy.data.objects.new("BrambleThicket", mesh)
+    bpy.context.collection.objects.link(obj)
+    for args in (("trunk", "bramble", BRAMBLE_CANE), ("leaf_dark", "bramble", BRAMBLE_LEAF),
+                 ("leaf_dark", "bramble_young", BRAMBLE_LEAF_YOUNG), ("rubber", "blackberry", BRAMBLE_BERRY),
+                 ("rubber", "blackberry_red", BRAMBLE_BERRY_RED)):
+        mesh.materials.append(_double_sided(*args))
+    bm = bmesh.new()
     rng = random.Random(19)
-    for i in range(14):
-        a = rng.uniform(0, math.tau)
-        base = Vector((math.cos(a) * 0.15, math.sin(a) * 0.15, 0.0))
-        # Canes arch up and out from the crown of the plant, never into the ground.
-        rod("BrambleCane", tuple(base), tuple(base + outward(a, rng.uniform(0.45, 0.8)) * rng.uniform(0.8, 1.2)), 0.03, 0.01, "trunk", 4)
-    for i in range(6):
-        a = rng.uniform(0, math.tau)
-        crown("BrambleLeaves", (math.cos(a) * 0.4, math.sin(a) * 0.4, rng.uniform(0.4, 0.8)), (0.35, 0.3, 0.22), "leaf_dark", 190 + i, 0.2)
-    for i in range(8):
-        a = rng.uniform(0, math.tau)
-        blob("Berry", (math.cos(a) * 0.5, math.sin(a) * 0.5, rng.uniform(0.3, 0.8)), (0.04, 0.04, 0.04), "danger")
+    start = rng.uniform(0.0, math.tau)
+    canes = 5
+    arcs = []
+    for i in range(canes):
+        heading = start + i * math.tau / canes + rng.uniform(-0.3, 0.3)
+        # Rooted across the crown from where it lands, so the canes cross
+        # over each other instead of fanning out of one point.
+        root = heading + math.pi + rng.uniform(-0.9, 0.9)
+        base = (math.cos(root) * rng.uniform(0.15, 0.25), math.sin(root) * rng.uniform(0.15, 0.25), 0.0)
+        peak = rng.uniform(0.5, 0.55) if i % 2 == 0 else rng.uniform(0.42, 0.48)
+        arc = _bramble_arc(base, heading, rng.uniform(1.12, 1.22), peak, rng.uniform(-0.4, 0.4))
+        arcs.append((arc, heading))
+        _bramble_cane(bm, 0, arc, 0.042)
+    # Foliage in three clouds over the crests of canes 0, 2 and 4 (six leaves
+    # each, level on top and hanging around the rim), so the middle of the
+    # mound reads nearly solid; one leaf low on the way down of each cane
+    # carries the mass to the ground at the edges.
+    clouds = []
+    for i in (0, 2, 4):
+        arc, heading = arcs[i]
+        centre = arc(0.5)
+        clouds.append(centre)
+        first = rng.uniform(0.0, math.tau)
+        for k in range(7):
+            a = first + k * math.tau / 7 + rng.uniform(-0.3, 0.3)
+            if k < 2:   # on top of the crest, level-ish
+                stem = centre + Vector((math.cos(a) * 0.06, math.sin(a) * 0.06, 0.05))
+                _bramble_leaf(bm, 1 + k % 2, stem, a, 0.44, rng, tilt=(-0.25, 0.15))
+            else:       # round the rim, hanging out and down like a skirt
+                stem = centre + Vector((math.cos(a) * 0.2, math.sin(a) * 0.2, -0.08))
+                _bramble_leaf(bm, 2 - k % 2, stem, a, 0.42, rng, tilt=(-1.05, -0.55))
+    # Canes 1 and 3 carry one hanging leaf each at their crest, between the
+    # clouds; the tips stay bare, stabbing into the ground.
+    for i in (1, 3):
+        arc, heading = arcs[i]
+        _bramble_leaf(bm, 1 + i % 2, arc(0.5), heading + rng.uniform(-0.6, 0.6), 0.42, rng, tilt=(-0.9, -0.4))
+    # Berries in two bunches tucked under the edge of two clouds: three ripe
+    # black-violet, then one ripe and one unripe red.
+    for c, kinds in zip(clouds, ((3, 3, 3), (3, 4))):
+        a = rng.uniform(0.0, math.tau)
+        for k, slot in enumerate(kinds):
+            off = Vector((math.cos(a + k * 2.1) * 0.06, math.sin(a + k * 2.1) * 0.06, -0.04 * k))
+            _bramble_berry(bm, slot, c + Vector((math.cos(a) * 0.3, math.sin(a) * 0.3, -0.12)) + off, 0.045)
+    # Centre the footprint on the origin (the random clouds pull it aside).
+    lo = Vector((min(v.co.x for v in bm.verts), min(v.co.y for v in bm.verts), 0.0))
+    hi = Vector((max(v.co.x for v in bm.verts), max(v.co.y for v in bm.verts), 0.0))
+    bmesh.ops.translate(bm, verts=bm.verts, vec=-(lo + hi) / 2)
+    bmesh.ops.scale(bm, verts=bm.verts, vec=(BRAMBLE_SPREAD, BRAMBLE_SPREAD, BRAMBLE_RISE))
+    bm.to_mesh(mesh)
+    bm.free()
 
 
 # Tall fern cluster (N-331.2): 24 flat, straight fronds were 960 tris for a
@@ -1440,6 +1614,8 @@ GROUPS = {
     "tall_fern": lambda: (tall_fern_cluster(), export_forest("tall_fern_cluster")),
     # Only the small fern (N-331.10), without rewriting the other plants.
     "fern": lambda: (fern(), export_forest("fern")),
+    # Only the bramble thicket (N-331.10), without rewriting the other plants.
+    "bramble": lambda: (bramble(), export_forest("bramble_thicket")),
     # Only the forest rock (N-331.7), without rewriting the other plants.
     "rock": lambda: (forest_rock(), export_forest("rock")),
     # Only the mossy rock cluster (N-331.9), without rewriting the other plants.
