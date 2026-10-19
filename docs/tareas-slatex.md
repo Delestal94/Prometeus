@@ -325,7 +325,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### H. Pelos (62-64)
 
-- [ ] **S-311.62** 10 peinados de gelatina, con su propio color: pelado (defecto), jopo, rulos, colitas,
+- [x] **S-311.62** 10 peinados de gelatina, con su propio color: pelado (defecto), jopo, rulos, colitas,
   mohicano, afro, flequillo, trenza, rodete y pelo largo; más 5 cejas y 5 bigotes opcionales. Cada pelo
   ≤ 1500 triángulos.
 - [ ] **S-311.63** Mechones, colitas y trenza con huesos de resorte.
