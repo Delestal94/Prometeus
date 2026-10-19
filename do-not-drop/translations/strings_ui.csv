@@ -230,7 +230,6 @@ HUD_KEYS_AT_HOUSE,%s  caminar   ·   %s  interactuar   ·   %s  sacar una foto d
 HUD_KEYS_DRIVER,%s  acelerar y frenar   ·   %s  girar   ·   %s  freno de mano   ·   %s  bocina   ·   %s  bajarte,%s  accelerate and brake   ·   %s  steer   ·   %s  handbrake   ·   %s  horn   ·   %s  get out
 HUD_KEYS_ON_FOOT,%s  caminar   ·   %s  saltar   ·   %s  agarrar / dejar   ·   %s  soltar paquete,%s  walk   ·   %s  jump   ·   %s  grab / place   ·   %s  drop package
 HUD_KEYS_PASSENGER,Click izq. (mantener)  cuidar tu paquete   ·   %s  secuencias   ·   %s  bajarte,Left click (hold)  tend your package   ·   %s  sequences   ·   %s  get out
-HUD_KEY_CENTER_VIEW,C  centrar vista,C  centre view
 HUD_KEY_CREW,Mantener %s  tripulación,Hold %s  crew
 HUD_KEY_LOOK_BACK,%s  mirar atrás,%s  look back
 HUD_KEY_PAUSE,Esc  pausa,Esc  pause
@@ -247,7 +246,6 @@ HUD_MODE_ROUTE,PRUEBA DE RUTA,ROUTE TEST
 HUD_NEW_RECORD,¡NUEVO RÉCORD!,NEW RECORD!
 HUD_NO_CARGO_YET,Todavía no hay carga a bordo  ·  %s bajarte a buscar un paquete,No cargo on board yet  ·  %s get out and fetch a package
 HUD_PAD_AT_HOUSE,%s  caminar   ·   %s  interactuar   ·   %s  sacar una foto de la entrega,%s  walk   ·   %s  interact   ·   %s  take a delivery photo
-HUD_PAD_CENTER_VIEW,Clic stick der.  centrar vista,R-stick click  centre view
 HUD_PAD_DRIVER,%s  acelerar   ·   %s  frenar   ·   %s  girar   ·   %s  freno de mano   ·   %s  bocina   ·   %s  bajarte,%s  accelerate   ·   %s  brake   ·   %s  steer   ·   %s  handbrake   ·   %s  horn   ·   %s  get out
 HUD_PAD_LOOK_BACK,Clic stick izq.  mirar atrás,L-stick click  look back
 HUD_PAD_ON_FOOT,%s  caminar   ·   %s  saltar   ·   %s  agarrar / dejar,%s  walk   ·   %s  jump   ·   %s  grab / place
