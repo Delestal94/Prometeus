@@ -18,6 +18,14 @@
 | Mirar alrededor (asiento, primera persona) | Mouse | Stick derecho |
 | Centrar la vista | C | Clic del stick derecho |
 
+> **Reasignación (N-966):** todas las acciones de las tablas se reasignan en Opciones > Controles (teclado y
+> mando, con intercambio si otra acción usa la misma entrada en el mismo contexto, "restablecer" por fila y
+> guardado en `settings.cfg`). Las combinaciones fijas son Esc/Start (pausa), R/Y (reiniciar), F11, mouse y
+> stick derecho (mirar), clic del stick derecho / C (centrar) y el obturador del celular. Las ayudas en pantalla
+> (barra de atajos, pista del rol, resumen de Opciones) se arman con `scripts/ui/control_hints.gd` y
+> `GameSettings.key_label` / `pad_label`, así que muestran lo reasignado. Quedan con teclas fijas las secuencias
+> de cuidado (`care_prompt_view.gd`) y el tutorial (`tutorial_panel.gd`). Test: `test_control_hints`.
+
 ### A pie
 | Acción | Teclado | Gamepad |
 |---|---|---|
