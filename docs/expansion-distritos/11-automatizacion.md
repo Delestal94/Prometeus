@@ -8,9 +8,9 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-1101 | Cinta transportadora colocable (recta, curva, subida) | constructor-negocio | high | ítems avanzan en el grafo; test |
+| D-1101 | Cinta transportadora colocable (recta, curva, subida) (incluye D-0226, fusión de D-0112) | constructor-negocio | high | ítems avanzan en el grafo; test |
 | D-1102 | Ítems en cinta dibujados con MultiMesh, con física solo al caer | perfilador-rendimiento | high | 300 ítems en cinta dentro del presupuesto |
-| D-1103 | Cinta de descarga desde el camión del proveedor | constructor-negocio | medium | test |
+| D-1103 | Cinta de descarga desde el camión del proveedor (incluye D-0634, fusión de D-0112) | constructor-negocio | medium | test |
 | D-1104 | Encintadora automática (cierra cajas que pasan) | constructor-negocio | medium | test |
 | D-1105 | Etiquetadora automática | constructor-negocio | medium | test |
 | D-1106 | Balanza en línea que desvía cajas con peso incorrecto | constructor-negocio | medium | test |
@@ -36,23 +36,23 @@
 | D-1121 | Robot de picking que toma productos de estantes según pedido | constructor-negocio | xhigh | test: arma lista de picking |
 | D-1122 | Brazo robótico armador (mete productos en la caja) | constructor-negocio | xhigh | test |
 | D-1123 | AGV (vehículo autónomo) que lleva palets | constructor-negocio | high | test |
-| D-1124 | Paletizadora para salidas grandes | constructor-negocio | medium | test |
-| D-1125 | Envolvedora de film | constructor-negocio | low | test |
-| D-1126 | Cámara de control de calidad automática | constructor-negocio | medium | test |
-| D-1127 | Lógica programable simple (si-entonces) en clasificadores | constructor-negocio | high | test de reglas |
-| D-1128 | Separadores y uniones de cintas | constructor-negocio | medium | test |
-| D-1129 | Ascensor de cajas entre pisos | constructor-negocio | medium | test |
+| ~~D-1124~~ | ~~Paletizadora para salidas grandes~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1125~~ | ~~Envolvedora de film~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| ~~D-1126~~ | ~~Cámara de control de calidad automática~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1127~~ | ~~Lógica programable simple (si-entonces) en clasificadores~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | high | test de reglas |
+| ~~D-1128~~ | ~~Separadores y uniones de cintas~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1129~~ | ~~Ascensor de cajas entre pisos~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
 | D-1130 | Mejoras de velocidad por máquina | constructor-progresion | low | test |
-| D-1131 | Consumo eléctrico y generador (si D-0912) | constructor-negocio | medium | test |
-| D-1132 | Mantenimiento preventivo | constructor-negocio | low | test |
-| D-1133 | Estadísticas de throughput por hora | constructor-ui | medium | gráfico |
-| D-1134 | Máquinas de distrito (heladera industrial para Nieve, horno de prueba para Volcán) | constructor-negocio | low | 2 máquinas |
-| D-1135 | Galpón completamente automatizado como meta de fin de campaña | constructor-progresion | low | hito |
-| D-1136 | Modo "turbo": ver la línea funcionar acelerada | constructor-ui | low | test |
+| ~~D-1131~~ | ~~Consumo eléctrico y generador (si D-0912)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1132~~ | ~~Mantenimiento preventivo~~ **Fusionada en D-0527 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| ~~D-1133~~ | ~~Estadísticas de throughput por hora~~ **Fusionada en D-0935 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | gráfico |
+| ~~D-1134~~ | ~~Máquinas de distrito (heladera industrial para Nieve, horno de prueba para Volcán)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | 2 máquinas |
+| ~~D-1135~~ | ~~Galpón completamente automatizado como meta de fin de campaña~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | hito |
+| ~~D-1136~~ | ~~Modo "turbo": ver la línea funcionar acelerada~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | test |
 | D-1137 | Cajas que se caen de la cinta si va muy rápido (física de verdad) | constructor-negocio | medium | test |
-| D-1138 | Trampas activas en la cinta (explosiva que explota en el galpón) | constructor-trampas | medium | evento |
+| D-1138 | Trampas activas en la cinta (explosiva que explota en el galpón) (incluye D-0933, fusión de D-0112) | constructor-trampas | medium | evento |
 | D-1139 | Empleado técnico que repara máquinas | constructor-negocio | low | rol |
-| D-1140 | Tutorial de automatización | constructor-ui | medium | flujo guiado |
+| ~~D-1140~~ | ~~Tutorial de automatización~~ **Fusionada en D-1926 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | flujo guiado |
 
 ## Pulido
 
@@ -67,4 +67,4 @@
 | D-1147 | Test de grafo de cintas con ciclos | escritor-tests | medium | test |
 | D-1148 | Test de red con 300 ítems en cintas | escritor-tests | high | test |
 | D-1149 | QA de automatización un día completo | probador-qa | medium | tabla |
-| D-1150 | Documentar cómo agregar una máquina | documentador | low | guía |
+| ~~D-1150~~ | ~~Documentar cómo agregar una máquina~~ **Fusionada en D-0244 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | guía |

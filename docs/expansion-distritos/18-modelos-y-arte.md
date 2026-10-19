@@ -26,9 +26,9 @@
 | D-1815 | Impresora de pedidos y tablero | modelador-blender* | low | 2 modelos |
 | D-1816 | Portapapeles en la mano (primera persona) | modelador-blender* | low | modelo |
 | D-1817 | Kit de paredes del galpón por etapa | modelador-blender* | high | kit |
-| D-1818 | Empleado base (D-1018) con uniforme de la empresa | modelador-blender* | medium | modelo rigueado |
+| ~~D-1818~~ | ~~Empleado base (D-1018) con uniforme de la empresa~~ **Fusionada en D-1018 (D-0112, [crítica](diseno/critica-alcance.md))** | modelador-blender* | medium | modelo rigueado |
 | D-1819 | Clientes NPC en la puerta (6 variantes) | modelador-blender* | high | 6 modelos |
-| D-1820 | Inventario de assets actualizado con todo lo nuevo | documentador | low | `inventario-assets.md` |
+| ~~D-1820~~ | ~~Inventario de assets actualizado con todo lo nuevo~~ **Fusionada en D-0147 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | `inventario-assets.md` |
 
 ## Ampliación
 
@@ -36,14 +36,14 @@
 |---|---|---|---|---|
 | D-1821 | Productos lote 5: 10 de distritos (cocos, quesos, souvenirs volcánicos) | modelador-blender* | high | 10 modelos |
 | D-1822 | Productos lote 6: 10 peligrosos/vivos (garrafa, fuegos, gallina, planta) | modelador-blender* | high | 10 modelos |
-| D-1823 | Máquinas finales (ver D-1141) — coordinación de estilo | director-arte | low | revisión |
+| ~~D-1823~~ | ~~Máquinas finales (ver D-1141) — coordinación de estilo~~ **Fusionada en D-1843 (D-0112, [crítica](diseno/critica-alcance.md))** | director-arte | low | revisión |
 | D-1824 | Decoración del galpón (plantas, cafetera, carteles motivacionales) | modelador-blender* | medium | 10 props |
 | D-1825 | Vestuario y comedor de empleados | modelador-blender* | medium | 6 props |
 | D-1826 | Oficina del jefe | modelador-blender* | medium | kit |
 | D-1827 | Cartel exterior de la empresa por etapa | modelador-blender* | low | 4 variantes |
-| D-1828 | Logo de la empresa (editable por el jugador) | artista-conceptual* | medium | plantillas |
-| D-1829 | Uniformes por rango | artista-conceptual* | low | texturas |
-| D-1830 | Retratos de clientes (D-0847) | artista-conceptual* | medium | 18 retratos |
+| ~~D-1828~~ | ~~Logo de la empresa (editable por el jugador)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | plantillas |
+| ~~D-1829~~ | ~~Uniformes por rango~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | low | texturas |
+| ~~D-1830~~ | ~~Retratos de clientes (D-0847)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | 18 retratos |
 | D-1831 | Arte conceptual de cada distrito (referencia para modelar) | artista-conceptual* | high | 9 imágenes |
 | D-1832 | Arte conceptual de cada vehículo | artista-conceptual* | medium | 5 imágenes |
 | D-1833 | Texturas de productos (marcas ficticias graciosas) | artista-conceptual* | medium | 30 etiquetas |
@@ -61,11 +61,11 @@
 |---|---|---|---|---|
 | D-1841 | LODs de todos los modelos nuevos con más de 2k tris | modelador-blender* | high | LODs exportados |
 | D-1842 | Atlas de texturas de productos (menos draw calls) | artista-shaders | high | medido |
-| D-1843 | Auditoría de arte de la expansión | director-arte | high | lista priorizada |
+| D-1843 | Auditoría de arte de la expansión (incluye D-1746, D-1823, fusión de D-0112) | director-arte | high | lista priorizada |
 | D-1844 | Rehacer lo marcado REHACER por D-1843 | modelador-blender* | high | lista cerrada |
-| D-1845 | Íconos de productos para UI (render automático) | revisor-visual | medium | 60 íconos generados por script |
-| D-1846 | Capturas de producto para Steam | revisor-visual | low | set |
+| D-1845 | Íconos de productos para UI (render automático) (incluye D-0945, fusión de D-0112) | revisor-visual | medium | 60 íconos generados por script |
+| ~~D-1846~~ | ~~Capturas de producto para Steam~~ **Fusionada en D-2031 (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-visual | low | set |
 | D-1847 | Chequeo de pivotes de todo lo nuevo | revisor-visual | low | `check_pivots` verde |
 | D-1848 | Peso de assets: texturas a 512 salvo excepción (lección N-315) | perfilador-rendimiento | medium | informe |
-| D-1849 | Licencias y origen de cada asset descargado | documentador | low | tabla en inventario |
+| ~~D-1849~~ | ~~Licencias y origen de cada asset descargado~~ **Fusionada en D-2046 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | tabla en inventario |
 | D-1850 | Cápsulas de Steam con la expansión | artista-conceptual* | high | cápsulas en `docs/marketing/` |

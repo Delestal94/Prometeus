@@ -103,6 +103,7 @@ salida a Barrio Centro, volver y cerrar el día con ganancia > 0, sin `ERROR`/`S
 **Hecho cuando:** el documento existe y cada ítem nombra su tarea `D-`.
 
 ### D-0112 · Crítica de alcance contra la capacidad del equipo — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR pendiente)** — `diseno/critica-alcance.md`: estimación por grupo, 3 peores costo/valor, 287 tareas tachadas (42 recortadas, 148 pospuestas, 97 fusionadas) sin tocar la fila 5; zona gris y alcance del Early Access en el issue #470 (D-0113).
 **Depende de:** D-0101
 **Qué:** pasada de `critico-diseno` a los 20 grupos. Informe `diseno/critica-alcance.md`:
 - estimación en semanas-persona por grupo;
