@@ -10,6 +10,10 @@ class_name RescueHook
 ## (Interactable.request_interact); the host picks the box and hands it over
 ## with DeliveryPackage.take_by(), the same pickup that closes the overboard
 ## window as rescued (N-213.2).
+##
+## Armed is the host's: arm() tells every peer there then, and a peer whose
+## level comes up later (a mid-run joiner, N-975) is handed it on
+## NetworkManager.peer_level_ready, like the truck radio's mode.
 
 ## Where it hangs, in the van's frame: on the left post of the rear doors,
 ## clear of the door control in the middle so looking at one never picks
@@ -50,6 +54,7 @@ func _ready() -> void:
 	_pole.visible = false
 	add_child(_pole)
 	EventBus.run_ended.connect(_on_run_ended)
+	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
 
 
 func _physics_process(delta: float) -> void:
@@ -125,6 +130,24 @@ func _rear_open() -> bool:
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:
 	_set_armed(false)
+
+
+## Host-only: a peer whose level just came up (it joined mid-run, or reloaded)
+## never heard arm(). Deferred so it lands after the level is up on that peer.
+## This node's own multiplayer, as arm(), so a test can run two in one process.
+func _on_peer_level_ready(peer_id: int) -> void:
+	if not _is_online() or not multiplayer.is_server() or peer_id == multiplayer.get_unique_id():
+		return
+	_send_armed_to.call_deferred(peer_id)
+
+
+## Host-only: hands peer_id the hook as it is now (a run may have ended between
+## their joining and this frame), if they're still here.
+func _send_armed_to(peer_id: int) -> void:
+	if not is_inside_tree() or not _is_online() or not multiplayer.is_server() \
+			or not multiplayer.get_peers().has(peer_id):
+		return
+	_set_armed.rpc_id(peer_id, armed)
 
 
 func _is_online() -> bool:

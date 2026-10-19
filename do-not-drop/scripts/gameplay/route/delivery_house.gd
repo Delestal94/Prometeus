@@ -341,7 +341,8 @@ func _build_house() -> void:
 ## the doorbell's height: plate, house number, intercom grille and the bell
 ## push. The number window and the push glow while the house waits for its
 ## box and go dark once it's resolved -- the same moment the porch light goes
-## out, from the record the host relays to everyone (as HouseWaitingMarker).
+## out, from the record the host relays to everyone (as HouseWaitingMarker), or
+## for a mid-run joiner from the session state (delivery_restored, N-975).
 ## Ringing still happens at `doorbell`, a reach in front of it.
 func _build_doorbell_visual() -> void:
 	var variant: int = posmod(visual_variant, HOUSE_VISUALS.size())
@@ -373,6 +374,7 @@ func _build_doorbell_visual() -> void:
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
+		bus.connect(&"delivery_restored", _on_delivery_restored)
 	set_doorbell_lit(doorbell_lit)
 
 
@@ -409,6 +411,13 @@ func _session_seed() -> int:
 
 
 func _on_house_delivery_recorded(index: int, _outcome: StringName, _package_id: StringName) -> void:
+	if index == house_index:
+		set_doorbell_lit(false)
+
+
+## A late joiner's copy of a door the run already resolved (EventBus.delivery_restored, N-975): the doorbell goes
+## dark as on a delivery, with no neighbour's scene (that was the moment, and it's over).
+func _on_delivery_restored(index: int, _outcome: StringName) -> void:
 	if index == house_index:
 		set_doorbell_lit(false)
 

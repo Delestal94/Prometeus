@@ -150,6 +150,7 @@ func _ready() -> void:
 	var bus: Node = _bus()
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
+		bus.connect(&"delivery_restored", _on_delivery_restored)
 	if network != null:
 		network.roster_changed.connect(func(_peers: Array) -> void:
 			if network.is_host():
@@ -554,6 +555,13 @@ func _on_house_delivery_recorded(house_index: int, outcome: StringName, _package
 			crew.add_team_money(INSURANCE_REFUND)
 			_notice(tr("WORLD_DEPOT_NOTICE_INSURANCE") % INSURANCE_REFUND)
 			_broadcast_supplies()
+
+
+## A mid-run joiner's copy of a door already resolved (EventBus.delivery_restored, N-975): the board ticks it as
+## it would have. Only the mark: the insurance refund was paid on the host when it happened.
+func _on_delivery_restored(house_index: int, outcome: StringName) -> void:
+	if _order_board != null:
+		_order_board.mark(house_index, outcome)
 
 
 func _notice(text: String) -> void:

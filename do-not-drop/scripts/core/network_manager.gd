@@ -78,11 +78,14 @@ const MAX_PLAYERS: int = 8
 ## layout_rotate, layout_sell) and _apply_event three (layout_placed,
 ## layout_moved, layout_sold): the shed layout the host builds (company mode, D-0910);
 ## 35: player.tscn replicates GelFaceReactions:base_face_id (the gel face a
-## player picked, S-311.61 / #475), N-972.
+## player picked, S-311.61 / #475), N-972;
+## 36: a peer whose level comes up mid-run is sent the rescue hook's _set_armed by
+## the host, and restores the doors already resolved from the session state's
+## deliveries (EventBus.delivery_restored, local), N-975.
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 35
+const PROTOCOL_VERSION: int = 36
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
