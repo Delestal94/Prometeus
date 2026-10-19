@@ -167,11 +167,12 @@ func _check_panel() -> void:
 	panel.call(&"close")
 	_expect(String(unlocks.get(&"nickname")) == "Beto", "Closing the panel saves it")
 	# The field sits under the character, left of the cards (N-506): right
-	# reaches the first picked face card (the ready-made "classic" face on a
-	# fresh profile), left from the cards' first column comes back.
+	# reaches the first picked face card (the faceless gel option on a fresh
+	# profile), left from the cards' first column comes back.
 	var eyes: Button = panel.find_child("Eyes_classic", true, false) as Button
 	var right := edit.get_node(edit.focus_neighbor_right) as Button
-	_expect(right != null and right.button_pressed and right.get_meta(&"kind") in ["preset", "eyes"],
+	_expect(right != null and right.button_pressed
+			and right.get_meta(&"kind") in ["gel_face", "preset", "eyes"],
 			"Right from the field reaches the picked face card")
 	_expect(eyes != null and eyes.get_node(eyes.focus_neighbor_left) == edit,
 			"Left from the first eyes reaches the field")

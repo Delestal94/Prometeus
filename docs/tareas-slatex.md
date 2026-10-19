@@ -321,7 +321,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   feliz, caída → sorpresa, ragdoll → mareada, knockout → "X X".
 - [x] **S-311.60** Parpadeo, mirada que sigue al jugador más cercano o a la caja que se lleva, y boca que
   se abre con el chat de voz de proximidad (amplitud → apertura).
-- [ ] **S-311.61** Caras elegibles en la personalización, guardadas en el perfil y replicadas (test).
+- [x] **S-311.61** Caras elegibles en la personalización, guardadas en el perfil y replicadas (test).
 
 ### H. Pelos (62-64)
 

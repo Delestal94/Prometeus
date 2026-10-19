@@ -25,12 +25,14 @@ enum Page { FACE, BODY, UNIFORM, TRUCK }
 ## Card heights by kind: faces are small and many, shirts and vans few and big
 ## (and room for a two-line "earned at..." under them).
 const CARD_HEIGHT: Dictionary = {
-	"preset": 100, "eyes": 92, "mouth": 92, "uniform": 206, "truck": 156, "paint": 156,
+	"gel_face": 100, "preset": 100, "eyes": 92, "mouth": 92,
+	"uniform": 206, "truck": 156, "paint": 156,
 }
 ## The picture's height in each kind of card: the same in every card of a
 ## kind, whatever its text, so a row's pictures line up.
 const SWATCH_HEIGHT: Dictionary = {
-	"preset": 66, "eyes": 56, "mouth": 56, "uniform": 128, "truck": 84, "paint": 84,
+	"gel_face": 66, "preset": 66, "eyes": 56, "mouth": 56,
+	"uniform": 128, "truck": 84, "paint": 84,
 }
 
 ## Picked before the panel enters the tree.
@@ -346,6 +348,12 @@ func _style_scrollbar(bar: VScrollBar) -> void:
 
 
 func _build_face_page(contents: VBoxContainer) -> void:
+	_section(contents, tr("UI_COSM_GEL_FACES"), tr("UI_COSM_GEL_FACES_HINT"))
+	var gel_faces: GridContainer = _grid(contents, Page.FACE, 6)
+	for each: Dictionary in Catalog.GEL_FACES:
+		var gel_face: Control = Swatch.new().setup(Swatch.Kind.FACE, each.eyes)
+		gel_face.set(&"mouth", each.mouth)
+		_card(gel_faces, "gel_face", each.id, gel_face, tr(String(each.title)))
 	_section(contents, tr("UI_COSM_PRESETS"), tr("UI_COSM_PRESETS_HINT"))
 	var presets: GridContainer = _grid(contents, Page.FACE, 8)
 	for each: Dictionary in Catalog.PRESETS:
@@ -426,7 +434,7 @@ func _card(grid: GridContainer, kind: String, id: StringName, swatch: Control, t
 	if kind in ["uniform", "paint"]:
 		available = detail.is_empty()
 	var card := Button.new()
-	card.name = kind.capitalize() + "_" + String(id)
+	card.name = ("GelFace" if kind == "gel_face" else kind.capitalize()) + "_" + String(id)
 	card.toggle_mode = true
 	card.tooltip_text = title if detail.is_empty() else "%s — %s" % [title, detail]
 	card.custom_minimum_size = Vector2(0, CARD_HEIGHT[kind])
@@ -449,7 +457,7 @@ func _card(grid: GridContainer, kind: String, id: StringName, swatch: Control, t
 	column.add_child(swatch)
 	# One line, never broken mid-word: a name that doesn't fit ends in "…"
 	# (the tooltip has it whole).
-	var small: bool = kind in ["preset", "eyes", "mouth"]
+	var small: bool = kind in ["gel_face", "preset", "eyes", "mouth"]
 	var name_label: Label = UiTheme.label(column, title, 13 if small else 15)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -511,6 +519,7 @@ func _style_card(card: Button) -> void:
 func _pick(kind: String, id: StringName) -> void:
 	var changed: bool = false
 	match kind:
+		"gel_face": changed = UnlockManager.select_gel_face(id)
 		"preset":
 			var face: Dictionary = Catalog.preset(id)
 			changed = UnlockManager.select_eyes(face.eyes) and UnlockManager.select_mouth(face.mouth)
@@ -520,16 +529,19 @@ func _pick(kind: String, id: StringName) -> void:
 		"truck": changed = UnlockManager.select_truck(id)
 		"paint": changed = UnlockManager.select_paint(id)
 	_sync()
-	if changed and kind in ["preset", "eyes", "mouth", "uniform"]:
+	if changed and kind in ["gel_face", "preset", "eyes", "mouth", "uniform"]:
 		preview.bounce()
 
 
 ## A face picked at random, never a blank one and never the one you have.
 func _randomize_face() -> void:
+	var gel_faces: Array = Catalog.GEL_FACES.filter(func(face: Dictionary) -> bool:
+		return face.id != &"none" and face.id != UnlockManager.selected_gel_face)
 	var eyes: Array = Catalog.EYES.keys().filter(func(id: StringName) -> bool:
 		return id != &"none" and id != UnlockManager.selected_eyes)
 	var mouths: Array = Catalog.MOUTHS.keys().filter(func(id: StringName) -> bool:
 		return id != &"none" and id != UnlockManager.selected_mouth)
+	UnlockManager.select_gel_face(StringName((gel_faces.pick_random() as Dictionary).id))
 	UnlockManager.select_eyes(eyes.pick_random())
 	UnlockManager.select_mouth(mouths.pick_random())
 	_sync()
@@ -539,6 +551,7 @@ func _randomize_face() -> void:
 ## Everything shown from the saved profile: cards, nickname, the character.
 func _sync() -> void:
 	var selected: Dictionary = {
+		"gel_face": UnlockManager.selected_gel_face,
 		"eyes": UnlockManager.selected_eyes, "mouth": UnlockManager.selected_mouth,
 		"uniform": UnlockManager.selected_cosmetic, "truck": UnlockManager.selected_truck,
 		"paint": UnlockManager.selected_paint,
