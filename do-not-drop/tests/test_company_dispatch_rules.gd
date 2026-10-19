@@ -3,7 +3,7 @@ extends SceneTree
 ##
 ## Which vehicle can go where (expansion D-0309, dispatch_rules.gd, over
 ## data/zones/*.tres and data/gates/*.tres):
-## - a van loads Centro and Campo orders; an Islas order is refused with the
+## - a van loads Centro orders, and Campo ones once its roadblock milestone is done; an Islas order is refused with the
 ##   reason "needs boat", even when the gate is marked open;
 ## - a boat (a VehicleDefinition built here) loads the Islas order and a plane
 ##   the Montana one, while the van gets "needs plane" there;
@@ -72,9 +72,11 @@ func _check(zone: StringName, vehicle: VehicleDefinition, owned: Dictionary, ope
 
 
 func _test_van() -> void:
-	for zone: StringName in [&"centro", &"campo"]:
-		var verdict: Dictionary = _check(zone, _van(), _owned())
-		_expect(verdict["ok"], "van loads " + str(zone) + " (" + str(verdict) + ")")
+	var centro: Dictionary = _check(&"centro", _van(), _owned())
+	_expect(centro["ok"], "van loads Centro (" + str(centro) + ")")
+	var campo: Dictionary = _check(&"campo", _van(), _owned())
+	_expect(not campo["ok"] and campo["args"] == ["reputation_60"], "Campo roadblock closed: " + str(campo))
+	_expect(_check(&"campo", _van(), _owned([&"reputation_60"]))["ok"], "van loads Campo once the works end")
 	var order := {"zone": &"centro"}
 	_expect(DispatchRules.check_order(order, _van(), _zones, _gates, _owned())["ok"], "check_order reads the zone key")
 
