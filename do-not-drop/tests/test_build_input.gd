@@ -60,7 +60,8 @@ func _check_cursor() -> void:
 	var def: PlaceableDefinition = cursor.chosen_definition()
 	cursor.set_cell(Vector2i(2, 2))
 	cursor.turns = 0
-	_expect(cursor.rotate().is_empty() and cursor.turns == 1, "rotating the chosen object asks nothing, it turns the ghost")
+	_expect(cursor.rotate().is_empty() and cursor.turns == 1,
+		"rotating the chosen object asks nothing, it turns the ghost")
 	var ask: Dictionary = cursor.confirm()
 	_expect(ask.get("kind") == CompanyLayoutNet.PLACE and ask["data"] == {"id": def.id, "x": 2, "z": 2, "turns": 1},
 		"confirm on a free cell asks to place the chosen object with its turns (%s)" % str(ask))
@@ -83,7 +84,8 @@ func _check_cursor() -> void:
 	_expect(cursor.cancel() and cursor.held == &"", "cancel lets go of a grabbed piece first")
 	_expect(not cursor.cancel(), "and with nothing in hand it is free to leave the mode")
 	cursor.set_cell(Vector2i(5, 5))
-	_expect(cursor.sell() == {"kind": CompanyLayoutNet.SELL, "data": {"uid": &"shelf_1"}}, "sell asks for the piece under the cursor")
+	_expect(cursor.sell() == {"kind": CompanyLayoutNet.SELL, "data": {"uid": &"shelf_1"}},
+		"sell asks for the piece under the cursor")
 	cursor.set_cell(Vector2i(0, 0))
 	_expect(cursor.sell().is_empty(), "and nothing on a free cell")
 	cursor.chosen = cursor.catalog.find(PlaceableShop.definition(&"shelf"))
@@ -164,7 +166,8 @@ func _check_world() -> void:
 	builder.cursor.set_cell(Vector2i(5, 5))
 	builder._last_refusal = &"overlap"
 	builder._refresh()
-	_expect(builder.hint.text.contains(tr("UI_BUILD_REASON_OVERLAP")) or builder.hint.text.contains("UI_BUILD_REASON_OVERLAP"),
+	var reason: String = "UI_BUILD_REASON_OVERLAP"
+	_expect(builder.hint.text.contains(tr(reason)) or builder.hint.text.contains(reason),
 		"a refusal shows its reason in the hint")
 	_expect(shelf_count >= 1, "the layout has the shelf")
 
