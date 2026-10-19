@@ -17,6 +17,21 @@ const SURFACE_OFFSET: float = 0.0025
 const HEAD_SHAPE_X: float = 0.12
 const HEAD_SHAPE_Y: float = -0.10
 const PATCH_STEPS: int = 16
+const EYE_LINE_V: Dictionary = {
+	&"classic": 0.416, &"joyful": 0.416, &"worried": 0.416,
+	&"wink": 0.416, &"lashes": 0.416, &"determined": 0.43,
+	&"crying": 0.416, &"hearts": 0.416,
+}
+const BLINK_CLOSE: float = 0.06
+const BLINK_HOLD: float = 0.04
+const BLINK_OPEN: float = 0.10
+const GAZE_LIMIT := Vector2(0.035, 0.025)
+const GAZE_SMOOTHING: float = 10.0
+const MOUTH_LINE_V: float = 0.66
+const VOICE_THRESHOLD: float = 0.012
+const VOICE_FULL_OPEN: float = 0.16
+const MOUTH_STRETCH: float = 0.38
+const MOUTH_SMOOTHING: float = 16.0
 
 var eyes_id: StringName = DEFAULT_EYES
 var mouth_id: StringName = DEFAULT_MOUTH
@@ -26,6 +41,16 @@ var mode: Mode = SELECTED_MODE
 var _eyes: MeshInstance3D
 var _brows: MeshInstance3D
 var _mouth: MeshInstance3D
+var _blink_time: float = -1.0
+var _blink_amount: float = 0.0
+var _next_blink: float = 0.0
+var _double_pending: bool = false
+var _has_gaze_target: bool = false
+var _gaze_world_target: Vector3 = Vector3.ZERO
+var _gaze_offset: Vector2 = Vector2.ZERO
+var _voice_amplitude: float = 0.0
+var _mouth_openness: float = 0.0
+var _rng := RandomNumberGenerator.new()
 
 
 func setup(model: Node3D, skeleton: Skeleton3D, layers: int, face_mode: Mode = SELECTED_MODE) -> bool:
@@ -45,6 +70,8 @@ func setup(model: Node3D, skeleton: Skeleton3D, layers: int, face_mode: Mode = S
 	_eyes = _layer("Eyes", mesh, layers)
 	_brows = _layer("Brows", mesh, layers)
 	_mouth = _layer("Mouth", mesh, layers)
+	_rng.randomize()
+	_next_blink = _rng.randf_range(0.8, 4.0)
 	if face_id == &"":
 		set_expression(eyes_id, mouth_id)
 	else:
@@ -65,12 +92,128 @@ func set_expression(eyes: StringName, mouth: StringName) -> void:
 	_eyes.visible = eyes_id != &"none"
 	_brows.visible = brows != null
 	_mouth.visible = mouth_id != &"none"
+	_reset_blink()
+	_apply_eye_uv()
+	_apply_mouth_uv()
 
 
 func set_face(face_name: StringName) -> void:
 	var face: Dictionary = Catalog.gel_face(face_name)
 	set_expression(face.eyes, face.mouth)
 	self.face_id = face.id
+
+
+## Starts a blink immediately when the current eye style can close.
+func blink() -> void:
+	if _eyes != null and EYE_LINE_V.has(eyes_id) and _blink_time < 0.0:
+		_blink_time = 0.0
+
+
+func _reset_blink() -> void:
+	_blink_time = -1.0
+	_blink_amount = 0.0
+
+
+## World-space point followed by the eyes. The player-facing controller picks
+## a carried box first, otherwise the nearest crewmate.
+func set_gaze_target(world_position: Vector3) -> void:
+	_gaze_world_target = world_position
+	_has_gaze_target = true
+
+
+func clear_gaze_target() -> void:
+	_has_gaze_target = false
+
+
+## Recent voice RMS in 0..1, supplied by VoicePlayback.
+func set_voice_amplitude(value: float) -> void:
+	_voice_amplitude = clampf(value, 0.0, 1.0)
+
+
+func gaze_offset() -> Vector2:
+	return _gaze_offset
+
+
+func mouth_openness() -> float:
+	return _mouth_openness
+
+
+func _process(delta: float) -> void:
+	advance_animation(delta)
+
+
+## Separate from _process so headless tests can advance exact intervals.
+func advance_animation(delta: float) -> void:
+	if _eyes == null:
+		return
+	_advance_blink(delta)
+	_advance_gaze(delta)
+	_advance_mouth(delta)
+	_apply_eye_uv()
+	_apply_mouth_uv()
+
+
+func _advance_blink(delta: float) -> void:
+	if _blink_time < 0.0:
+		_next_blink -= delta
+		if _next_blink <= 0.0:
+			blink()
+			_next_blink = 0.5
+		return
+	_blink_time += delta
+	var reopen: float = _blink_time - BLINK_CLOSE - BLINK_HOLD
+	_blink_amount = (
+		smoothstep(0.0, BLINK_CLOSE, _blink_time)
+		if reopen < 0.0
+		else 1.0 - smoothstep(0.0, BLINK_OPEN, reopen)
+	)
+	if reopen >= BLINK_OPEN:
+		_reset_blink()
+		_double_pending = not _double_pending and _rng.randf() < 0.2
+		_next_blink = 0.12 if _double_pending else _rng.randf_range(2.2, 5.5)
+
+
+func _advance_gaze(delta: float) -> void:
+	var desired := Vector2.ZERO
+	if _has_gaze_target:
+		var local: Vector3 = to_local(_gaze_world_target)
+		var depth: float = -local.z
+		if depth > 0.05:
+			desired = Vector2(
+				clampf(local.x / depth, -1.0, 1.0) * GAZE_LIMIT.x,
+				clampf(local.y / depth, -1.0, 1.0) * GAZE_LIMIT.y
+			)
+	var weight: float = 1.0 - exp(-GAZE_SMOOTHING * maxf(delta, 0.0))
+	_gaze_offset = _gaze_offset.lerp(desired, weight)
+
+
+func _advance_mouth(delta: float) -> void:
+	var target: float = inverse_lerp(VOICE_THRESHOLD, VOICE_FULL_OPEN, _voice_amplitude)
+	var weight: float = 1.0 - exp(-MOUTH_SMOOTHING * maxf(delta, 0.0))
+	_mouth_openness = lerpf(_mouth_openness, clampf(target, 0.0, 1.0), weight)
+
+
+func _apply_eye_uv() -> void:
+	if _eyes == null:
+		return
+	var height: float = 1.0 - 0.92 * _blink_amount
+	var line: float = float(EYE_LINE_V.get(eyes_id, 0.416))
+	var material := _eyes.material_override as StandardMaterial3D
+	material.uv1_scale = Vector3(1.0, 1.0 / height, 1.0)
+	material.uv1_offset = Vector3(
+		_gaze_offset.x,
+		line - line / height + _gaze_offset.y,
+		0.0
+	)
+
+
+func _apply_mouth_uv() -> void:
+	if _mouth == null:
+		return
+	var height: float = 1.0 + MOUTH_STRETCH * _mouth_openness
+	var material := _mouth.material_override as StandardMaterial3D
+	material.uv1_scale = Vector3(1.0, 1.0 / height, 1.0)
+	material.uv1_offset = Vector3(0.0, MOUTH_LINE_V - MOUTH_LINE_V / height, 0.0)
 
 
 func apply_proportions(proportions: Resource) -> void:

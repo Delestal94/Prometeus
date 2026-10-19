@@ -46,6 +46,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(face):
 		set_face_target(_find_face())
 	_refresh()
+	_update_animation_inputs()
 
 
 ## Explicit future gameplay hook. Knockout has priority over every transient.
@@ -144,6 +145,48 @@ func _find_face() -> Node:
 			return gel_face
 	var legacy: Node = player.get(&"_character_face")
 	return legacy if is_instance_valid(legacy) else null
+
+
+func _update_animation_inputs() -> void:
+	if not is_instance_valid(face):
+		return
+	if face.has_method(&"set_gaze_target"):
+		var target: Node3D = _gaze_target()
+		if target != null:
+			face.call(&"set_gaze_target", _gaze_position(target))
+		else:
+			face.call(&"clear_gaze_target")
+	if face.has_method(&"set_voice_amplitude"):
+		var playback := player.get_node_or_null(^"VoiceChat") as VoicePlayback
+		face.call(&"set_voice_amplitude", playback.amplitude if playback != null else 0.0)
+
+
+func _gaze_target() -> Node3D:
+	var carried: Variant = player.get(&"carried_package")
+	if is_instance_valid(carried) and carried is Node3D:
+		return carried as Node3D
+	if not player is Node3D:
+		return null
+	var origin := player as Node3D
+	var nearest: Node3D
+	var nearest_squared: float = INF
+	for candidate: Node in get_tree().get_nodes_in_group(&"player"):
+		if candidate == player or not candidate is Node3D or candidate.is_queued_for_deletion():
+			continue
+		var other := candidate as Node3D
+		var distance_squared: float = origin.global_position.distance_squared_to(other.global_position)
+		if distance_squared < nearest_squared:
+			nearest = other
+			nearest_squared = distance_squared
+	return nearest
+
+
+func _gaze_position(target: Node3D) -> Vector3:
+	if target.is_in_group(&"player"):
+		var head := target.get_node_or_null(^"Head") as Node3D
+		if head != null:
+			return head.global_position
+	return target.global_position
 
 
 func _held_box() -> Node:

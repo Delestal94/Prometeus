@@ -45,6 +45,9 @@ const OPEN_AIR_FILTER_HZ: float = 5000.0
 const MUFFLED_FILTER_HZ: float = 1200.0
 ## ...and it is quieter.
 const MUFFLED_DB: float = -6.0
+## Linear envelope exposed to presentation (for example, mouth animation).
+## A fast release keeps syllables readable without leaving a face open.
+const AMPLITUDE_RELEASE_PER_SECOND: float = 3.5
 
 ## The most audio held back (queued here plus handed to the mixer), seconds.
 @export var max_latency_seconds: float = 0.3
@@ -74,6 +77,9 @@ var dropped_frames: int = 0
 var converted_frames: int = 0
 ## Whether carry_in_open(true) is in effect.
 var muffled: bool = false
+## Recent PCM loudness after per-peer gain, 0..1. Presentation may read it;
+## it has no effect on playback or networking.
+var amplitude: float = 0.0
 
 var _generator := AudioStreamGenerator.new()
 var _playback: AudioStreamGeneratorPlayback = null
@@ -114,6 +120,7 @@ func push_pcm(pcm: PackedByteArray, rate: int) -> void:
 		dropped_frames += samples - limit
 		pcm = pcm.slice((samples - limit) << 1, samples << 1)
 		samples = limit
+	amplitude = maxf(amplitude, pcm_amplitude(pcm) * gain)
 	_pending.append_array(pcm_to_frames(pcm, gain))
 	converted_frames += samples
 	_idle = 0.0
@@ -124,6 +131,7 @@ func push_pcm(pcm: PackedByteArray, rate: int) -> void:
 ## One frame: follow the anchor, hand queued audio to the mixer, stop when
 ## the speaker has gone quiet. Separate from _process so tests can drive it.
 func advance(delta: float) -> void:
+	amplitude = move_toward(amplitude, 0.0, maxf(delta, 0.0) * AMPLITUDE_RELEASE_PER_SECOND)
 	if is_instance_valid(follow) and follow.is_inside_tree():
 		global_position = follow.global_position
 	if not playing and _pending.is_empty():
@@ -148,6 +156,7 @@ func silence() -> void:
 	_starved = true
 	_waiting = 0.0
 	_idle = 0.0
+	amplitude = 0.0
 	if playing:
 		stop()
 	_playback = null
@@ -205,6 +214,21 @@ static func pcm_to_frames(pcm: PackedByteArray, scale: float = 1.0) -> PackedVec
 		var sample: float = pcm.decode_s16(index << 1) * factor
 		frames[index] = Vector2(sample, sample)
 	return frames
+
+
+## Root-mean-square loudness of 16-bit mono PCM, independent of sample rate.
+static func pcm_amplitude(pcm: PackedByteArray) -> float:
+	var samples: int = pcm.size() >> 1
+	if samples <= 0:
+		return 0.0
+	var stride: int = maxi(1, samples / 128)
+	var sum_squared: float = 0.0
+	var measured: int = 0
+	for index: int in range(0, samples, stride):
+		var sample: float = pcm.decode_s16(index << 1) * PCM_SCALE
+		sum_squared += sample * sample
+		measured += 1
+	return clampf(sqrt(sum_squared / measured), 0.0, 1.0)
 
 
 ## The ceiling follows the volume: up close, open air is never louder than
