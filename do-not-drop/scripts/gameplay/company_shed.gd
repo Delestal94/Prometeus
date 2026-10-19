@@ -30,6 +30,7 @@ const LINTEL_BOTTOM: float = 3.0
 const FLOOR_COLOR: Color = Color(0.42, 0.42, 0.44)
 const WALL_COLOR: Color = Color(0.72, 0.68, 0.60)
 const PATCH_HEIGHT: float = 0.02
+const LAMP_COLOR: Color = Color(1.0, 0.92, 0.78)
 const SHELF_LEVELS: int = 2
 const SHELF_COLUMNS: int = 4
 ## Where the slot's crate and label stand on a shelf: deck height and label height per level.
@@ -135,6 +136,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	stage = int(state.warehouse_stage)
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
+	_build_lights(state.layout)
 	var furniture := Node3D.new()
 	furniture.name = "Furniture"
 	add_child(furniture)
@@ -160,6 +162,26 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	_pallet_root.name = "Pallets"
 	add_child(_pallet_root)
 	refresh_stock(stock)
+
+
+## Hangs the lamps of ShedLighting (D-0913): a ceiling grid for the stage and a task lamp over each
+## packing table, so no corner of the floor is dark and moving a table moves its light. No shadows
+## (the renderer is GL Compatibility; the table and the shelves are low).
+func _build_lights(layout: Array) -> void:
+	var lights := Node3D.new()
+	lights.name = "Lights"
+	add_child(lights)
+	var index: int = 0
+	for lamp: Dictionary in ShedLighting.lamps_for(grid, layout):
+		var omni := OmniLight3D.new()
+		omni.name = "%sLamp%d" % [String(lamp["kind"]).capitalize(), index]
+		omni.omni_range = float(lamp["range_m"])
+		omni.omni_attenuation = 0.9
+		omni.light_energy = float(lamp["energy"])
+		omni.light_color = LAMP_COLOR
+		omni.position = cell_to_local(lamp["at"], CompanyTuning.SHED_LAMP_HEIGHT_M)
+		lights.add_child(omni)
+		index += 1
 
 
 ## Rewrites what the units change: each labeled slot's text and crate, and the pallets in reception.
