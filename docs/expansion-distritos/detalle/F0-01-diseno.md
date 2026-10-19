@@ -59,6 +59,7 @@ Termina en una tabla "Tomamos / Adaptamos / No tomamos", cada fila con la tarea 
 **Hecho cuando:** el documento tiene la tabla con 15+ filas y cada una cita su fuente.
 
 ### D-0108 · Referencias de armado y logística — B · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR pendiente)** — `diseno/referencias-logistica.md`: Overcooked, Unpacking y encastre, Mini Motorways, shapez, TRDS y Schedule I (crecimiento), cada uno con "lo que copiamos" y su tarea `D-`; tabla de 30 filas, riesgos para un equipo de 2 y 36 fuentes.
 **Depende de:** —
 **Qué:** `diseno/referencias-logistica.md`: qué hacen bien Overcooked (hojas de pedido, estaciones),
 Unpacking/Box-packing (encastre), Mini Motorways/Shapez (cintas, cuellos de botella), Totally Reliable
