@@ -164,6 +164,32 @@ static func publish_net_state(p: Player) -> void:
 	p.net_yaw = angle_difference(yaw_of(vehicle.global_basis), yaw_of(p.global_basis)) if riding \
 			else yaw_of(p.global_basis)
 	p.net_time = NetPoseSmoother.clock_ms()
+	apply_pose_rate(p)
+
+
+## How often the owner sends its pose (D-2002.3, Player.set_on_foot_pose_rate()): on foot, the rate
+## a world asked for; riding a vehicle or seated, player.tscn's own again. Nothing to do while no
+## world changed it (Delivery and Endless never do).
+static func apply_pose_rate(p: Player) -> void:
+	if p._on_foot_pose_rate <= 0.0 and p._scene_pose_interval < 0.0:
+		return
+	var sync := p.get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	if sync == null:
+		return
+	if p._scene_pose_interval < 0.0:
+		p._scene_pose_interval = sync.replication_interval
+	var wanted: float = p._scene_pose_interval
+	if p._on_foot_pose_rate > 0.0 and not p.net_in_vehicle and p.seat_node_path.is_empty():
+		wanted = pose_interval(p._on_foot_pose_rate)
+	if not is_equal_approx(sync.replication_interval, wanted):
+		sync.replication_interval = wanted
+
+
+## Seconds between two sends at `rate_hz`, rounded down to 0.1 ms as player.tscn's 0.0333 is for 30:
+## SceneMultiplayer looks at a synchronizer once a frame and counts from the frame it last sent, so
+## at exactly 1/15 s a frame landing a hair early waits for the next (at 60 fps every 5th: 12/s).
+static func pose_interval(rate_hz: float) -> float:
+	return floorf(10000.0 / rate_hz) / 10000.0
 
 
 ## Standing (or jumping) in the cargo bay, the owner is moved along with the

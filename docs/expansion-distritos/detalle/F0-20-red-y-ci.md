@@ -25,7 +25,7 @@ Cada acción de cliente (tomar producto, colocar en la caja, encintar, despachar
 **Hecho cuando:** la tabla cubre las 20 acciones del corte vertical y `auditor-red` la aprobó.
 
 ### D-2002 · Presupuesto de ancho de banda del modo Empresa — A · Opus 5.5 · high · Aviso: no · F0
-**[~] Parcial (2026-10-19, PR pendiente)** — D-2002.1: `test_company_bandwidth_budget` (modelo compartido `tests/bandwidth_model.gd` + medición ENet real en el proceso con `NetStats`): galpón con 4 jugadores 16,1 KB/s por cliente (modelo, techo Steam) / 10,9 medido, entra; con 8, 37,2 / 22,5-24,8, **no entra** por las poses reenviadas. Tabla y culpables en `docs/rendimiento-pc.md`. Faltan D-2002.2 y D-2002.3.
+**[~] Parcial (2026-10-19, PR pendiente)** — D-2002.1: `test_company_bandwidth_budget` (modelo compartido `tests/bandwidth_model.gd` + medición ENet real en el proceso con `NetStats`): galpón con 4 jugadores 16,1 KB/s por cliente (modelo, techo Steam) / 10,9 medido, entra; con 8, 37,2 / 22,5-24,8, **no entra** por las poses reenviadas. Tabla y culpables en `docs/rendimiento-pc.md`. D-2002.3 (2026-10-19, PR pendiente): el jugador a pie manda su pose a 15/s en el mundo de la empresa (`CompanyTuning.SHED_POSE_RATE_HZ`, `CompanyRoot.join_crew`, `Player.set_on_foot_pose_rate`; en vehículo o sentado vuelve a 30/s); con 8 jugadores 19,8 / 13,1-13,4 KB/s, entra, y el test falla si 4 u 8 se pasan ([decisión](../../decisiones/2026-10-19-pose-galpon-15hz.md)). Falta D-2002.2.
 **Depende de:** D-2001
 **Qué:** medir con el overlay de red (N-216) un día de `bot_company_day` con 4 peers ENet locales. El
 presupuesto queda en `docs/rendimiento-pc.md`:
@@ -35,7 +35,7 @@ presupuesto queda en `docs/rendimiento-pc.md`:
 Si se pasa: lista de culpables, en orden.
 - [x] **D-2002.1** Galpón (4 y 8 jugadores): modelo + medición ENet; falla si con 4 jugadores pasa 24 KB/s.
 - [ ] **D-2002.2** Una salida afuera (≤ 40 KB/s) y 2 vehículos lejos (≤ 64 KB/s): cuando el mundo de la empresa tenga vehículo (D-0302.1, D-1501). Rehacer el galpón con `bot_company_day` cuando tenga etapas.
-- [ ] **D-2002.3** Galpón con 8 jugadores dentro de 24 KB/s: juntar las poses reenviadas en paquetes propios del host (~21,6 KB/s; cambia quién manda las poses: un espejo de cada jugador en el host o un RPC por lote, y suma un tick de latencia) o bajar el envío del jugador en el galpón a 15/s (~19,7 KB/s).
+- [x] **D-2002.3** Galpón con 8 jugadores dentro de 24 KB/s: juntar las poses reenviadas en paquetes propios del host (~21,6 KB/s; cambia quién manda las poses: un espejo de cada jugador en el host o un RPC por lote, y suma un tick de latencia) o bajar el envío del jugador en el galpón a 15/s (~19,7 KB/s).
 **Hecho cuando:** los números están medidos y anotados con commit y fecha.
 
 ### D-2003 · Eventos de negocio por RPC confiable con número de secuencia — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F0

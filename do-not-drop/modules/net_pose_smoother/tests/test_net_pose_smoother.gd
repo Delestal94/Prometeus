@@ -5,8 +5,9 @@ extends SceneTree
 ## with the sender's clock are drawn a cushion in the past and interpolated,
 ## so a body moving at a steady speed is drawn at that speed without jumps.
 ## The cushion adapts (N-217): 2 send intervals + 2 x the measured jitter,
-## between MIN_DELAY and MAX_DELAY, and a sender pausing at rest doesn't
-## inflate it. Out-of-order poses are sorted in; a far pose is a teleport that
+## between MIN_DELAY and MAX_DELAY, a sender going from 30 to 15 Hz is followed
+## (two intervals still under MAX_DELAY, drawn evenly) and a sender pausing at
+## rest doesn't inflate it. Out-of-order poses are sorted in; a far pose is a teleport that
 ## restarts the buffer; `local` poses ride on the moving space they're drawn
 ## on; latest_pose() is the newest as sent; a repeated stamp doesn't move the
 ## jitter; `extra` numbers (animation) are drawn interpolated in step; configure_sim() holds poses back
@@ -50,6 +51,24 @@ func _initialize() -> void:
 		fast.push(tick / 60.0, Transform3D.IDENTITY, tick / 60.0 + 0.01)
 	_expect(is_equal_approx(fast.delay(), NetPoseSmoother.MIN_DELAY),
 		"A quiet 60 Hz link draws MIN_DELAY behind (%.0f ms)" % (fast.delay() * 1000.0))
+
+	# A sender that drops from 30 to 15 Hz (where nothing goes fast): the interval follows the gaps,
+	# the cushion is two of them, under MAX_DELAY, and it's still drawn evenly.
+	var halved := NetPoseSmoother.new()
+	for tick: int in range(60):
+		var sent: float = tick / 30.0 if tick < 30 else 1.0 + (tick - 30) / 15.0
+		halved.push(sent, Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -speed * sent)), sent + transit)
+	_expect(absf(halved.interval() - 1.0 / 15.0) < 0.003 and absf(halved.delay() - 2.0 * halved.interval()) < 0.001
+		and halved.delay() < NetPoseSmoother.MAX_DELAY,
+		"From 30 to 15 Hz the interval follows (%.0f ms) and the cushion is two of them (%.0f ms)" % [
+			halved.interval() * 1000.0, halved.delay() * 1000.0])
+	var even_jump: float = 0.0
+	var at: Vector3 = halved.sample(2.5).origin
+	for step: int in range(1, 60):
+		var origin: Vector3 = halved.sample(2.5 + step / 144.0).origin
+		even_jump = maxf(even_jump, absf(at.distance_to(origin) - speed / 144.0))
+		at = origin
+	_expect(even_jump < 0.01, "At 15 Hz it's drawn evenly too (worst deviation %.4f m)" % even_jump)
 
 	# Jitter widens it; a very bad link hits the ceiling.
 	var rng := RandomNumberGenerator.new()

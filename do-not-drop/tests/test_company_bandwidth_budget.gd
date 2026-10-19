@@ -1,28 +1,32 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_company_bandwidth_budget.gd
 ##
-## Bandwidth budget of the company mode's shed (D-2002.1, the numbers are in docs/rendimiento-pc.md):
-## what the host sends one client while the crew works in the shed fits 24 KB/s.
+## Bandwidth budget of the company mode's shed (D-2002.1, D-2002.3; the numbers are in
+## docs/rendimiento-pc.md): what the host sends one client while the crew works in the shed fits
+## 24 KB/s, with D-2002's 4 players (MEASURED_CREW) and with the full crew (MAX_PLAYERS, 8).
 ## - Model (tests/bandwidth_model.gd, the framing test_net_bandwidth_budget counts with): the real
 ##   company world (company_root.tscn, solo) is opened and every MultiplayerSynchronizer in it is
-##   counted, the shed's own once (the host's) and the player's once per crew member (the host's
-##   own, the other clients' relayed by the host); floats as 64-bit and ints as 32-bit (a pose in
-##   motion, a clock past 33 s) and a datagram at Steam's ceiling around every packet. On top, the
-##   business events (CompanyNet's _apply_event, reliable, sized the same way) of a busy packing
-##   line: every player does a business action a second
-##   (ACTIONS_PER_PLAYER_PER_SECOND) plus the host's own rules, each the size of the largest real
-##   units_moved the root publishes (a drop and a take through CompanyNet), in a datagram of its own.
-## - For the crew D-2002 measures with (MEASURED_CREW, 4 peers) it fits 24 KB/s, and nothing in the
-##   world sends a property of more than 64 bytes every tick. The full crew
-##   (NetworkManager.MAX_PLAYERS) is printed with its culprits in order, and an over_budget line
-##   when it doesn't fit: a finding to plan, not a failure.
+##   counted at the interval the world leaves it on, the shed's own once (the host's) and the
+##   player's once per crew member (the host's own, the other clients' relayed by the host). The
+##   player's is the company world's pose rate (CompanyRoot.join_crew(),
+##   CompanyTuning.SHED_POSE_RATE_HZ: printed as player_pose_rate), not a number of this test.
+##   Floats as 64-bit and ints as 32-bit (a pose in motion, a clock past 33 s) and a datagram at
+##   Steam's ceiling around every packet. On top, the business events (CompanyNet's _apply_event,
+##   reliable, sized the same way) of a busy packing line: every player does a business action a
+##   second (ACTIONS_PER_PLAYER_PER_SECOND) plus the host's own rules, each the size of the largest
+##   real units_moved the root publishes (a drop and a take through CompanyNet), in a datagram of
+##   its own.
+## - For both crews it fits 24 KB/s (culprits printed in order, and an over_budget line when it
+##   doesn't, as well as the failure), and nothing in the world sends a property of more than 64
+##   bytes every tick.
 ## - Measured, for both crews: that many ENet peers on localhost in this process (a SceneMultiplayer
-##   each), each with a real player per peer (player.tscn, standing still) and a CompanyNet, the
-##   host publishing real units_moved at the busy rate, read as the network overlay reads LAN
-##   (NetStats, N-216). For MEASURED_CREW what each client receives (the overlay's KB/s plus IP and
-##   UDP) fits the budget, stays under the model's ceiling and is over half of the model's data (it
-##   did flow; skipped and printed under two frames a player's send), and every client applies
-##   every event. The full crew's run is only printed (`skipped` if its session doesn't come up).
+##   each), each with a real player per peer (player.tscn, joined to the crew as the company world
+##   does it, CompanyRoot.join_crew(), standing still) and a CompanyNet, the host publishing real
+##   units_moved at the busy rate, read as the network overlay reads LAN (NetStats, N-216). What
+##   each client receives (the overlay's KB/s plus IP and UDP) fits the budget, stays under the
+##   model's ceiling and is over half of the model's data (it did flow; skipped and printed under
+##   two frames a player's send), and every client applies every event. A crew whose session
+##   doesn't come up on localhost fails.
 ## - The late-join snapshot of the furnished shed, a one-off burst, is printed.
 ## Prints `COMPANY_BW key=value` lines. Pending (D-2002.2): one trip outside (40 KB/s) and two
 ## vehicles far away (64 KB/s), once the company world has a vehicle.
@@ -38,7 +42,8 @@ const KB: float = 1024.0
 const SHED_BUDGET: float = 24.0 * KB
 const TRIP_BUDGET: float = 40.0 * KB
 const FAR_BUDGET: float = 64.0 * KB
-## The crew D-2002 measures with (4 ENet peers); the full crew is NetworkManager.MAX_PLAYERS.
+## The crew D-2002 sets the budget for (4 ENet peers); the full crew (NetworkManager.MAX_PLAYERS)
+## has to fit it too since the shed's pose rate (D-2002.3).
 const MEASURED_CREW: int = 4
 ## A busy packing line: every player does a business action (take, store, place, tape: a request
 ## the host turns into an event for everyone) a second, plus the host's own rules (orders, the
@@ -87,6 +92,11 @@ func _run() -> void:
 	_expect(not syncs.player.is_empty(), "The local player's synchronizer is found in the company world")
 	_expect(int(events.busy_bytes) > 0,
 		"A drop and a take publish real units_moved events (got %d B)" % events.busy_bytes)
+	var player_interval: float = 1.0
+	for entry: Array in syncs.player:
+		player_interval = minf(player_interval, float(entry[0]))
+	_line("player_pose_rate", "%.1f/s (every %.4f s; CompanyTuning.SHED_POSE_RATE_HZ %d)" % [
+		1.0 / player_interval, player_interval, CompanyTuning.SHED_POSE_RATE_HZ])
 
 	var crews: Array[int] = [MEASURED_CREW]
 	if full_crew > MEASURED_CREW:
@@ -95,28 +105,27 @@ func _run() -> void:
 	for crew: int in crews:
 		shed[crew] = _shed_case(crew, syncs, int(events.busy_bytes))
 		_report(crew, shed[crew])
-	var gated: Dictionary = shed[MEASURED_CREW]
-	_expect(float(gated.total) <= SHED_BUDGET,
-		"With %d players in the shed the host sends each client at most %.0f KB/s (model %.1f KB/s)" % [
-			MEASURED_CREW, SHED_BUDGET / KB, float(gated.total) / KB])
+		_expect(float(shed[crew].total) <= SHED_BUDGET,
+			"With %d players in the shed the host sends each client at most %.0f KB/s (model %.1f KB/s)"
+			% [crew, SHED_BUDGET / KB, float(shed[crew].total) / KB])
 	_line("budget_trip_kbps", "%.0f pending D-2002.2 (no vehicle in the company world yet)" % (TRIP_BUDGET / KB))
 	_line("budget_far_kbps", "%.0f pending D-2002.2 (no vehicle in the company world yet)" % (FAR_BUDGET / KB))
 
 	var measured: Dictionary = {}
 	for index: int in range(crews.size()):
 		var crew: int = crews[index]
-		measured[crew] = await _measure_enet(crew, PORT + index, crew == MEASURED_CREW)
+		measured[crew] = await _measure_enet(crew, PORT + index)
 		if not (measured[crew] as Dictionary).is_empty():
 			_report_measured(crew, measured[crew])
-	var player_interval: float = 1.0
-	for entry: Array in syncs.player:
-		player_interval = minf(player_interval, float(entry[0]))
-	_check_measured(measured.get(MEASURED_CREW, {}), gated, 2.0 / player_interval)
+	for crew: int in crews:
+		_check_measured(crew, measured[crew], shed[crew], 2.0 / player_interval)
 	_clean()
 	if _failures == 0:
-		print("PASS: the company's shed fits %.0f KB/s a client with %d players (model %.1f, ENet %.1f)" % [
-			SHED_BUDGET / KB, MEASURED_CREW, float(gated.total) / KB,
-			float((measured.get(MEASURED_CREW, {}) as Dictionary).get("per_client", 0.0)) / KB])
+		var parts: PackedStringArray = []
+		for crew: int in crews:
+			parts.append("%d players: model %.1f, ENet %.1f" % [
+				crew, float(shed[crew].total) / KB, float(measured[crew].per_client) / KB])
+		print("PASS: the company's shed fits %.0f KB/s a client (%s)" % [SHED_BUDGET / KB, "; ".join(parts)])
 	quit(_failures)
 
 
@@ -314,9 +323,8 @@ func _busy_step(net: CompanyNet, hands: StringName, feet: Vector3, drop: bool) -
 ## `port`: a real player per peer on every side (its owner's authority, standing on one floor:
 ## players don't collide with each other) and a CompanyNet. Once every path is confirmed the host
 ## drops and takes units at the busy rate while ENet counts what each client receives
-## (_count_traffic()). {} when the session didn't come up: a failure when `gated` (the crew the
-## budget is checked for), else only a `skipped` line (the full crew is printed, never checked).
-func _measure_enet(crew: int, port: int, gated: bool) -> Dictionary:
+## (_count_traffic()). {} when the session didn't come up, a failure.
+func _measure_enet(crew: int, port: int) -> Dictionary:
 	var floor_body := StaticBody3D.new()
 	var floor_shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -355,11 +363,7 @@ func _measure_enet(crew: int, port: int, gated: bool) -> Dictionary:
 			return true, CONNECT_SECONDS)
 	if problem.is_empty() and not up:
 		problem = "%d ENet peers don't connect on localhost in %.0f s" % [crew, CONNECT_SECONDS]
-	if not problem.is_empty():
-		if gated:
-			_expect(false, problem)
-		else:
-			_line("enet_crew%d" % crew, "skipped (%s)" % problem)
+	_expect(problem.is_empty(), problem)
 	var result: Dictionary = {}
 	if up:
 		result = await _count_traffic(sides, peers)
@@ -400,11 +404,13 @@ func _count_traffic(sides: Array[Node], peers: Array[ENetMultiplayerPeer]) -> Di
 		world.name = "World"
 		side.add_child(world)
 		for index: int in range(crew):
-			var player := player_scene.instantiate() as Node3D
+			var player := player_scene.instantiate() as Player
 			player.name = "Player_%d" % ids[index]
 			player.position = Vector3(2.0 * index - crew, 0.1, 0.0)
 			player.rotation.y = 0.37 + index
 			player.set_multiplayer_authority(ids[index])
+			# As the company world takes every player in: the shed's pose rate (D-2002.3).
+			CompanyRoot.join_crew(player)
 			world.add_child(player)
 	var host_net := sides[0].get_node(^"CompanyNet") as CompanyNet
 	var hands: StringName = CompanyNet.hands_location(CompanyNet.HOST_ID)
@@ -469,30 +475,31 @@ func _report_measured(crew: int, measured: Dictionary) -> void:
 			" over_budget" if over else ""])
 
 
-## MEASURED_CREW's measurement (`measured`) against the budget and the model's `case`. The check that
-## the streams flowed needs `min_fps` (two frames a player's send): slower, the frame rate holds the
+## `crew`'s measurement (`measured`) against the budget and the model's `case`. The check that the
+## streams flowed needs `min_fps` (two frames a player's send): slower, the frame rate holds the
 ## sync rate down and it is only printed as skipped.
-func _check_measured(measured: Dictionary, case: Dictionary, min_fps: float) -> void:
-	_expect(not measured.is_empty(), "%d players are measured on ENet" % MEASURED_CREW)
+func _check_measured(crew: int, measured: Dictionary, case: Dictionary, min_fps: float) -> void:
+	_expect(not measured.is_empty(), "%d players are measured on ENet" % crew)
 	if measured.is_empty():
 		return
 	var per_client: float = measured.per_client
 	var model_data: float = float(case.host) + float(case.relayed) + float(case.events_data)
 	_expect(per_client <= SHED_BUDGET, "Measured on ENet, %d players: each client gets at most %.0f KB/s (got %.1f)"
-		% [MEASURED_CREW, SHED_BUDGET / KB, per_client / KB])
-	_expect(per_client <= float(case.total), "The measurement stays under the model's ceiling (%.1f <= %.1f KB/s)"
-		% [per_client / KB, float(case.total) / KB])
+		% [crew, SHED_BUDGET / KB, per_client / KB])
+	_expect(per_client <= float(case.total),
+		"%d players: the measurement stays under the model's ceiling (%.1f <= %.1f KB/s)"
+		% [crew, per_client / KB, float(case.total) / KB])
 	if float(measured.fps) < min_fps:
-		_line("enet_crew%d_flow_check" % MEASURED_CREW, "skipped (%.0f fps, under %.0f: fewer sends than the game's)"
+		_line("enet_crew%d_flow_check" % crew, "skipped (%.0f fps, under %.0f: fewer sends than the game's)"
 			% [float(measured.fps), min_fps])
 	else:
 		_expect(float(measured.per_client_enet) >= 0.5 * model_data,
-			"The streams flowed: ENet counted over half the model's data (%.1f of %.1f KB/s)"
-			% [float(measured.per_client_enet) / KB, model_data / KB])
+			"%d players: the streams flowed, ENet counted over half the model's data (%.1f of %.1f KB/s)"
+			% [crew, float(measured.per_client_enet) / KB, model_data / KB])
 	var events: int = measured.events
-	_expect(events > 0 and int(measured.events_seen) == events * (MEASURED_CREW - 1),
-		"Every client applied the host's %d events (applied %d of %d)"
-		% [events, measured.events_seen, events * (MEASURED_CREW - 1)])
+	_expect(events > 0 and int(measured.events_seen) == events * (crew - 1),
+		"%d players: every client applied the host's %d events (applied %d of %d)"
+		% [crew, events, measured.events_seen, events * (crew - 1)])
 
 
 # --- Helpers --------------------------------------------------------------------
