@@ -135,6 +135,7 @@ vehículo; la tercera queda.
 **Hecho cuando:** el test pasa y una captura de `revisor-visual` es legible a 1080p.
 
 ### D-0311 · Casas de entrega del mapa fijo — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `HouseMap` + `HouseSpot` (`scripts/gameplay/districts/`) y `data/world/houses.tres`: 30 casas en Centro y 20 en Campo, a 4-12 m del borde de la calzada de su calle, con la puerta hacia ella; `pick_for_day()` elige por semilla y día, `instance()` arma el `DeliveryHouse` tal cual; `test_company_houses`. Falta que el flujo de pedidos las use (D-0801+) y la dirección legible (D-0312). Ver `revisar/D-0311.md`.
 **Depende de:** D-0304
 **Qué:** las casas son puntos fijos del mapa: `data/world/houses.tres`, con id, zona, posición, frente y
 variante. Usan `DeliveryHouse` tal cual (puerta, timbre, residente, revisión en la puerta). Por día, la

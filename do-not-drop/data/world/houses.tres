@@ -1,0 +1,558 @@
+[gd_resource type="Resource" script_class="HouseMap" load_steps=53 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/house_map.gd" id="1_map"]
+[ext_resource type="Script" path="res://scripts/gameplay/districts/house_spot.gd" id="2_spot"]
+
+[sub_resource type="Resource" id="Resource_centro_01"]
+script = ExtResource("2_spot")
+id = &"centro_01"
+zone = &"centro"
+position = Vector2(316.0, 15.0)
+yaw = -0.0
+variant = 1
+edge = &"avenida_este_2"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_02"]
+script = ExtResource("2_spot")
+id = &"centro_02"
+zone = &"centro"
+position = Vector2(352.0, -15.0)
+yaw = 3.142
+variant = 2
+edge = &"avenida_este_2"
+along = 96.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_03"]
+script = ExtResource("2_spot")
+id = &"centro_03"
+zone = &"centro"
+position = Vector2(444.0, 15.0)
+yaw = -0.0
+variant = 4
+edge = &"avenida_este_3"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_04"]
+script = ExtResource("2_spot")
+id = &"centro_04"
+zone = &"centro"
+position = Vector2(480.0, -15.0)
+yaw = 3.142
+variant = 0
+edge = &"avenida_este_3"
+along = 96.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_05"]
+script = ExtResource("2_spot")
+id = &"centro_05"
+zone = &"centro"
+position = Vector2(700.0, 15.0)
+yaw = -0.0
+variant = 3
+edge = &"avenida_este_4"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_06"]
+script = ExtResource("2_spot")
+id = &"centro_06"
+zone = &"centro"
+position = Vector2(844.0, -15.0)
+yaw = 3.142
+variant = 3
+edge = &"avenida_este_4"
+along = 204.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_07"]
+script = ExtResource("2_spot")
+id = &"centro_07"
+zone = &"centro"
+position = Vector2(920.0, 15.0)
+yaw = -0.0
+variant = 4
+edge = &"avenida_este_5"
+along = 24.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_08"]
+script = ExtResource("2_spot")
+id = &"centro_08"
+zone = &"centro"
+position = Vector2(956.0, 15.0)
+yaw = -0.0
+variant = 2
+edge = &"avenida_este_5"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_09"]
+script = ExtResource("2_spot")
+id = &"centro_09"
+zone = &"centro"
+position = Vector2(408.0, 397.0)
+yaw = -0.0
+variant = 0
+edge = &"calle_h_384_1"
+along = 24.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_10"]
+script = ExtResource("2_spot")
+id = &"centro_10"
+zone = &"centro"
+position = Vector2(444.0, 371.0)
+yaw = 3.142
+variant = 1
+edge = &"calle_h_384_1"
+along = 60.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_11"]
+script = ExtResource("2_spot")
+id = &"centro_11"
+zone = &"centro"
+position = Vector2(736.0, 397.0)
+yaw = -0.0
+variant = 1
+edge = &"calle_h_384_2"
+along = 96.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_12"]
+script = ExtResource("2_spot")
+id = &"centro_12"
+zone = &"centro"
+position = Vector2(808.0, 371.0)
+yaw = 3.142
+variant = 3
+edge = &"calle_h_384_2"
+along = 168.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_13"]
+script = ExtResource("2_spot")
+id = &"centro_13"
+zone = &"centro"
+position = Vector2(552.0, -397.0)
+yaw = 3.142
+variant = 2
+edge = &"calle_h_m384_1"
+along = 168.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_14"]
+script = ExtResource("2_spot")
+id = &"centro_14"
+zone = &"centro"
+position = Vector2(700.0, -397.0)
+yaw = 3.142
+variant = 0
+edge = &"calle_h_m384_2"
+along = 60.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_15"]
+script = ExtResource("2_spot")
+id = &"centro_15"
+zone = &"centro"
+position = Vector2(772.0, -397.0)
+yaw = 3.142
+variant = 4
+edge = &"calle_h_m384_2"
+along = 132.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_16"]
+script = ExtResource("2_spot")
+id = &"centro_16"
+zone = &"centro"
+position = Vector2(397.0, 24.0)
+yaw = 1.571
+variant = 1
+edge = &"calle_v_384_0"
+along = 24.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_17"]
+script = ExtResource("2_spot")
+id = &"centro_17"
+zone = &"centro"
+position = Vector2(397.0, -288.0)
+yaw = 1.571
+variant = 3
+edge = &"calle_v_384_m384"
+along = 96.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_18"]
+script = ExtResource("2_spot")
+id = &"centro_18"
+zone = &"centro"
+position = Vector2(627.0, 204.0)
+yaw = -1.571
+variant = 4
+edge = &"calle_v_640_0"
+along = 204.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_19"]
+script = ExtResource("2_spot")
+id = &"centro_19"
+zone = &"centro"
+position = Vector2(653.0, -288.0)
+yaw = 1.571
+variant = 2
+edge = &"calle_v_640_m384"
+along = 96.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_20"]
+script = ExtResource("2_spot")
+id = &"centro_20"
+zone = &"centro"
+position = Vector2(653.0, -108.0)
+yaw = 1.571
+variant = 0
+edge = &"calle_v_640_m384"
+along = 276.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_21"]
+script = ExtResource("2_spot")
+id = &"centro_21"
+zone = &"centro"
+position = Vector2(883.0, 24.0)
+yaw = -1.571
+variant = 2
+edge = &"calle_v_896_0"
+along = 24.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_22"]
+script = ExtResource("2_spot")
+id = &"centro_22"
+zone = &"centro"
+position = Vector2(909.0, 240.0)
+yaw = 1.571
+variant = 3
+edge = &"calle_v_896_0"
+along = 240.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_23"]
+script = ExtResource("2_spot")
+id = &"centro_23"
+zone = &"centro"
+position = Vector2(909.0, -288.0)
+yaw = 1.571
+variant = 0
+edge = &"calle_v_896_m384"
+along = 96.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_24"]
+script = ExtResource("2_spot")
+id = &"centro_24"
+zone = &"centro"
+position = Vector2(883.0, -216.0)
+yaw = -1.571
+variant = 1
+edge = &"calle_v_896_m384"
+along = 168.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_25"]
+script = ExtResource("2_spot")
+id = &"centro_25"
+zone = &"centro"
+position = Vector2(652.0, -408.0)
+yaw = 1.571
+variant = 4
+edge = &"pasaje_n"
+along = 24.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_26"]
+script = ExtResource("2_spot")
+id = &"centro_26"
+zone = &"centro"
+position = Vector2(652.0, -444.0)
+yaw = 1.571
+variant = 3
+edge = &"pasaje_n"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_27"]
+script = ExtResource("2_spot")
+id = &"centro_27"
+zone = &"centro"
+position = Vector2(396.0, -408.0)
+yaw = 1.571
+variant = 0
+edge = &"pasaje_oeste"
+along = 24.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_28"]
+script = ExtResource("2_spot")
+id = &"centro_28"
+zone = &"centro"
+position = Vector2(396.0, -444.0)
+yaw = 1.571
+variant = 1
+edge = &"pasaje_oeste"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_centro_29"]
+script = ExtResource("2_spot")
+id = &"centro_29"
+zone = &"centro"
+position = Vector2(652.0, 408.0)
+yaw = 1.571
+variant = 4
+edge = &"pasaje_s"
+along = 24.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_centro_30"]
+script = ExtResource("2_spot")
+id = &"centro_30"
+zone = &"centro"
+position = Vector2(628.0, 444.0)
+yaw = -1.571
+variant = 2
+edge = &"pasaje_s"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_01"]
+script = ExtResource("2_spot")
+id = &"campo_01"
+zone = &"campo"
+position = Vector2(-13.5, 680.0)
+yaw = -1.571
+variant = 3
+edge = &"camino_campo_2"
+along = 168.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_02"]
+script = ExtResource("2_spot")
+id = &"campo_02"
+zone = &"campo"
+position = Vector2(13.5, 824.0)
+yaw = 1.571
+variant = 2
+edge = &"camino_campo_2"
+along = 312.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_03"]
+script = ExtResource("2_spot")
+id = &"campo_03"
+zone = &"campo"
+position = Vector2(-124.0, 1187.5)
+yaw = 0.696
+variant = 4
+edge = &"camino_campo_3"
+along = 204.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_04"]
+script = ExtResource("2_spot")
+id = &"campo_04"
+zone = &"campo"
+position = Vector2(-175.8, 1697.8)
+yaw = -0.195
+variant = 1
+edge = &"camino_campo_4"
+along = 492.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_05"]
+script = ExtResource("2_spot")
+id = &"campo_05"
+zone = &"campo"
+position = Vector2(12.5, 1300.0)
+yaw = 1.571
+variant = 0
+edge = &"chacra_1"
+along = 276.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_06"]
+script = ExtResource("2_spot")
+id = &"campo_06"
+zone = &"campo"
+position = Vector2(-12.5, 1444.0)
+yaw = -1.571
+variant = 3
+edge = &"chacra_1"
+along = 420.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_07"]
+script = ExtResource("2_spot")
+id = &"campo_07"
+zone = &"campo"
+position = Vector2(90.5, 1563.9)
+yaw = -0.306
+variant = 1
+edge = &"chacra_2"
+along = 96.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_08"]
+script = ExtResource("2_spot")
+id = &"campo_08"
+zone = &"campo"
+position = Vector2(166.4, 1567.3)
+yaw = 2.702
+variant = 4
+edge = &"chacra_2"
+along = 168.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_09"]
+script = ExtResource("2_spot")
+id = &"campo_09"
+zone = &"campo"
+position = Vector2(-836.7, 1495.2)
+yaw = 2.798
+variant = 0
+edge = &"chacra_3"
+along = 204.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_10"]
+script = ExtResource("2_spot")
+id = &"campo_10"
+zone = &"campo"
+position = Vector2(-901.4, 1467.2)
+yaw = 2.675
+variant = 2
+edge = &"chacra_3"
+along = 276.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_11"]
+script = ExtResource("2_spot")
+id = &"campo_11"
+zone = &"campo"
+position = Vector2(-652.0, 1812.0)
+yaw = -1.571
+variant = 4
+edge = &"chacra_4"
+along = 276.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_12"]
+script = ExtResource("2_spot")
+id = &"campo_12"
+zone = &"campo"
+position = Vector2(-652.0, 1848.0)
+yaw = -1.571
+variant = 3
+edge = &"chacra_4"
+along = 312.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_13"]
+script = ExtResource("2_spot")
+id = &"campo_13"
+zone = &"campo"
+position = Vector2(571.6, 1781.4)
+yaw = 0.323
+variant = 0
+edge = &"chacra_5"
+along = 60.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_14"]
+script = ExtResource("2_spot")
+id = &"campo_14"
+zone = &"campo"
+position = Vector2(848.6, 1700.8)
+yaw = 0.377
+variant = 1
+edge = &"chacra_5"
+along = 348.0
+side = 1
+
+[sub_resource type="Resource" id="Resource_campo_15"]
+script = ExtResource("2_spot")
+id = &"campo_15"
+zone = &"campo"
+position = Vector2(500.0, 1768.0)
+yaw = -1.571
+variant = 2
+edge = &"chacra_6"
+along = 24.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_16"]
+script = ExtResource("2_spot")
+id = &"campo_16"
+zone = &"campo"
+position = Vector2(500.0, 1732.0)
+yaw = -1.571
+variant = 4
+edge = &"chacra_6"
+along = 60.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_17"]
+script = ExtResource("2_spot")
+id = &"campo_17"
+zone = &"campo"
+position = Vector2(-549.0, 1942.4)
+yaw = 2.953
+variant = 1
+edge = &"chacra_7"
+along = 96.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_18"]
+script = ExtResource("2_spot")
+id = &"campo_18"
+zone = &"campo"
+position = Vector2(-407.8, 1954.1)
+yaw = 3.135
+variant = 2
+edge = &"chacra_7"
+along = 240.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_19"]
+script = ExtResource("2_spot")
+id = &"campo_19"
+zone = &"campo"
+position = Vector2(60.0, 1920.5)
+yaw = 3.019
+variant = 3
+edge = &"chacra_8"
+along = 60.0
+side = -1
+
+[sub_resource type="Resource" id="Resource_campo_20"]
+script = ExtResource("2_spot")
+id = &"campo_20"
+zone = &"campo"
+position = Vector2(367.2, 1857.9)
+yaw = -2.719
+variant = 0
+edge = &"chacra_8"
+along = 384.0
+side = -1
+
+[resource]
+script = ExtResource("1_map")
+houses = Array[ExtResource("2_spot")]([SubResource("Resource_centro_01"), SubResource("Resource_centro_02"), SubResource("Resource_centro_03"), SubResource("Resource_centro_04"), SubResource("Resource_centro_05"), SubResource("Resource_centro_06"), SubResource("Resource_centro_07"), SubResource("Resource_centro_08"), SubResource("Resource_centro_09"), SubResource("Resource_centro_10"), SubResource("Resource_centro_11"), SubResource("Resource_centro_12"), SubResource("Resource_centro_13"), SubResource("Resource_centro_14"), SubResource("Resource_centro_15"), SubResource("Resource_centro_16"), SubResource("Resource_centro_17"), SubResource("Resource_centro_18"), SubResource("Resource_centro_19"), SubResource("Resource_centro_20"), SubResource("Resource_centro_21"), SubResource("Resource_centro_22"), SubResource("Resource_centro_23"), SubResource("Resource_centro_24"), SubResource("Resource_centro_25"), SubResource("Resource_centro_26"), SubResource("Resource_centro_27"), SubResource("Resource_centro_28"), SubResource("Resource_centro_29"), SubResource("Resource_centro_30"), SubResource("Resource_campo_01"), SubResource("Resource_campo_02"), SubResource("Resource_campo_03"), SubResource("Resource_campo_04"), SubResource("Resource_campo_05"), SubResource("Resource_campo_06"), SubResource("Resource_campo_07"), SubResource("Resource_campo_08"), SubResource("Resource_campo_09"), SubResource("Resource_campo_10"), SubResource("Resource_campo_11"), SubResource("Resource_campo_12"), SubResource("Resource_campo_13"), SubResource("Resource_campo_14"), SubResource("Resource_campo_15"), SubResource("Resource_campo_16"), SubResource("Resource_campo_17"), SubResource("Resource_campo_18"), SubResource("Resource_campo_19"), SubResource("Resource_campo_20")])
