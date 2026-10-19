@@ -70,6 +70,13 @@ const FILL_COST_PER_CELL: int = 1
 const TAPE_COST: int = 1
 const LABEL_COST: int = 0
 const STAMP_COST: int = 0
+## What one packing table holds (D-0718): empty boxes per size (`box_<size>`), tape (one per box)
+## and padding (one per cell). Restocking is a chore that costs time, not money.
+const SUPPLY_CAPACITY: Dictionary = {
+	&"box_S": 6, &"box_M": 6, &"box_L": 4, &"box_XL": 3, &"tape": 10, &"fill": 30,
+}
+## A supply counts as low at or under this share of its capacity.
+const SUPPLY_LOW_RATIO: float = 0.25
 
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).

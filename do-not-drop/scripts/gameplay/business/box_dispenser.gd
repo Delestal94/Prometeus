@@ -18,12 +18,15 @@ static func cost_of(size: StringName) -> int:
 	return int(CompanyTuning.BOX_COST.get(size, -1))
 
 
-## True when the table is free, the size exists and the wallet covers the box.
+## True when the table is free, the size exists, the table has such a box left (D-0718) and the
+## wallet covers it.
 static func can_dispense(station: PackingStation, size: StringName, wallet: Node) -> bool:
 	if station == null or wallet == null or station.has_box():
 		return false
 	var cost: int = cost_of(size)
-	return cost >= 0 and CompanyTuning.BOX_CELLS.has(size) and wallet.can_afford(cost)
+	if cost < 0 or not CompanyTuning.BOX_CELLS.has(size) or not wallet.can_afford(cost):
+		return false
+	return station.supplies.has(StationSupplies.box_kind(size))
 
 
 ## Opens a box of that size on the table and charges for it. False, changing nothing, when
@@ -34,4 +37,7 @@ static func dispense(station: PackingStation, size: StringName, wallet: Node) ->
 	var cost: int = cost_of(size)
 	if cost > 0 and not wallet.spend(cost, REASON):
 		return false
-	return station.start_box(size)
+	if not station.start_box(size):
+		return false
+	station.supplies.take(StationSupplies.box_kind(size))
+	return true
