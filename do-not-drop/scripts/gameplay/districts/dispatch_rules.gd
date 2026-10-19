@@ -11,9 +11,9 @@ extends RefCounted
 ## - any other gate (barrier, roadblock, gear) must be open or met;
 ## - the zone may also list the fleet keys that can deliver inside it.
 
-const NEEDS_VEHICLE: String = "DISPATCH_NEEDS_VEHICLE"
-const NEEDS_MILESTONE: String = "DISPATCH_NEEDS_MILESTONE"
-const NEEDS_EQUIPMENT: String = "DISPATCH_NEEDS_EQUIPMENT"
+const NEEDS_VEHICLE: String = "WORLD_DISPATCH_NEEDS_VEHICLE"
+const NEEDS_MILESTONE: String = "WORLD_DISPATCH_NEEDS_MILESTONE"
+const NEEDS_EQUIPMENT: String = "WORLD_DISPATCH_NEEDS_EQUIPMENT"
 
 
 ## {"ok": bool, "key": translation key ("" when ok), "args": values to format it with}.
