@@ -20,12 +20,12 @@
 | D-1010 | Despedir empleado | constructor-negocio | low | test |
 | D-1011 | Navegación con navmesh y evitación entre empleados y jugadores | constructor-negocio | high | bot: 8 empleados sin trabarse 1 día |
 | D-1012 | Empleados replicados en red (posición suavizada con `net_pose_smoother`) | constructor-red | xhigh | test de red; ancho de banda medido |
-| D-1013 | Empleado no roba el trabajo que un jugador está haciendo (reservas en `job_board`) | constructor-negocio | high | test |
+| D-1013 | Empleado no roba el trabajo que un jugador está haciendo (reservas en `job_board`) (incluye D-0224, fusión de D-0112) | constructor-negocio | high | test |
 | D-1014 | Jugador puede pedirle algo puntual a un empleado (ping) | constructor-jugador | medium | test |
 | D-1015 | Empleados se van al cerrar el día | constructor-negocio | low | test |
 | D-1016 | Guardar empleados en el save | constructor-progresion | medium | test |
 | D-1017 | Límite de empleados por etapa del galpón | constructor-progresion | low | test |
-| D-1018 | Modelo del empleado base (reusa trabajadores del depósito) | modelador-blender* | medium | malla con uniforme |
+| D-1018 | Modelo del empleado base (reusa trabajadores del depósito) (incluye D-1818, fusión de D-0112) | modelador-blender* | medium | malla con uniforme |
 | D-1019 | Animaciones básicas: caminar, cargar, armar | animador* | high | 3 clips |
 | D-1020 | Rendimiento con 20 empleados | perfilador-rendimiento | high | dentro de presupuesto |
 
@@ -34,24 +34,24 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-1021 | Stats: velocidad, cuidado, fuerza, resistencia | constructor-negocio | medium | afectan el trabajo (test) |
-| D-1022 | Experiencia y subida de nivel | constructor-negocio | medium | test |
-| D-1023 | Moral (sube con descanso, decoración, pagos a tiempo; baja con sobretrabajo) | constructor-negocio | medium | test |
-| D-1024 | Renuncia por moral baja | constructor-negocio | low | test |
-| D-1025 | Necesidades: comedor, vestuario (D-0923) | constructor-negocio | medium | test |
-| D-1026 | Turnos (mañana/tarde) | constructor-negocio | medium | test |
+| ~~D-1022~~ | ~~Experiencia y subida de nivel~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1023~~ | ~~Moral (sube con descanso, decoración, pagos a tiempo; baja con sobretrabajo)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1024~~ | ~~Renuncia por moral baja~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| ~~D-1025~~ | ~~Necesidades: comedor, vestuario (D-0923)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-1026~~ | ~~Turnos (mañana/tarde)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
 | D-1027 | Empleado repartidor NPC que hace entregas fáciles solo (simulado, sin escena) | constructor-negocio | high | sim: entrega con tasa de éxito por stat |
 | D-1028 | Choferes NPC para vehículos (salidas automáticas a distritos dominados) | constructor-negocio | high | sim |
 | D-1029 | Supervisor que reasigna empleados según cuellos de botella | constructor-negocio | high | sim mejora throughput |
-| D-1030 | Rasgos graciosos (torpe, apurado, perfeccionista) | constructor-negocio | low | 8 rasgos |
-| D-1031 | Accidentes de empleados (tira una caja) con consecuencias | constructor-negocio | low | evento |
-| D-1032 | Capacitación pagada | constructor-negocio | low | test |
-| D-1033 | Uniformes personalizables | constructor-negocio | low | cosmético |
+| D-1030 | Rasgos graciosos (torpe, apurado, perfeccionista) (incluye D-1031, fusión de D-0112) | constructor-negocio | low | 8 rasgos |
+| ~~D-1031~~ | ~~Accidentes de empleados (tira una caja) con consecuencias~~ **Fusionada en D-1030 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | evento |
+| ~~D-1032~~ | ~~Capacitación pagada~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| ~~D-1033~~ | ~~Uniformes personalizables~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | cosmético |
 | D-1034 | Nombres y caras variados (reusar `face_catalog.gd`) | constructor-negocio | low | 50 combinaciones |
 | D-1035 | Diálogos/burbujas de empleados | documentador | low | 80 líneas traducibles |
-| D-1036 | Huelga/evento de empleados | constructor-negocio | low | evento |
+| ~~D-1036~~ | ~~Huelga/evento de empleados~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | evento |
 | D-1037 | Empleados especializados por distrito (lanchero, piloto) | constructor-negocio | medium | test |
 | D-1038 | Vista de plantilla en el portapapeles | constructor-ui | medium | captura |
-| D-1039 | Empleados ayudan a un jugador caído (rescate) | constructor-negocio | low | test |
+| ~~D-1039~~ | ~~Empleados ayudan a un jugador caído (rescate)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-1040 | LOD de empleados lejanos (animación reducida) | perfilador-rendimiento | medium | medido |
 
 ## Pulido
@@ -60,11 +60,11 @@
 |---|---|---|---|---|
 | D-1041 | Variedad de modelos de empleados (6 cuerpos) | modelador-blender* | high | 6 variantes |
 | D-1042 | Animaciones extra: descansar, saludar, quejarse | animador* | medium | 3 clips |
-| D-1043 | Voces sintetizadas tipo murmullo | disenador-audio | low | SFX |
+| ~~D-1043~~ | ~~Voces sintetizadas tipo murmullo~~ **Fusionada en D-1928 (D-0112, [crítica](diseno/critica-alcance.md))** | disenador-audio | low | SFX |
 | D-1044 | Íconos de estado sobre la cabeza (zzz, !, ?) | constructor-ui | low | captura |
 | D-1045 | Balance: un empleado cuesta y rinde lo esperado en D-0117 | pulidor-jugabilidad | medium | sim |
 | D-1046 | Test de que empleados no atraviesan paredes tras ampliar galpón | escritor-tests | medium | test |
 | D-1047 | Test de red con 20 empleados y 4 jugadores | escritor-tests | high | test |
 | D-1048 | QA de empleados un día completo | probador-qa | medium | tabla |
 | D-1049 | Auditoría de red de empleados | auditor-red | high | sin P0-P1 |
-| D-1050 | Documentar cómo agregar un rol | documentador | low | guía |
+| ~~D-1050~~ | ~~Documentar cómo agregar un rol~~ **Fusionada en D-0244 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | guía |

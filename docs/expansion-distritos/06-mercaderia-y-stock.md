@@ -22,8 +22,8 @@
 | D-0612 | Vista de stock en el portapapeles (lista por producto) | constructor-ui | medium | captura |
 | D-0613 | Aviso de stock bajo para productos con pedidos pendientes | constructor-negocio | medium | test |
 | D-0614 | Recepción: control de remito (lo que llegó vs. lo pedido) | constructor-negocio | medium | test: faltante se registra |
-| D-0615 | Productos que vienen dañados del proveedor (a separar) | constructor-negocio | low | test |
-| D-0616 | Productos con temperatura (frío) necesitan heladera; se echan a perder si no | constructor-negocio | high | test: producto frío fuera de heladera 2 h → vencido |
+| ~~D-0615~~ | ~~Productos que vienen dañados del proveedor (a separar)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| D-0616 | Productos con temperatura (frío) necesitan heladera; se echan a perder si no (incluye D-0628, fusión de D-0112) | constructor-negocio | high | test: producto frío fuera de heladera 2 h → vencido |
 | D-0617 | Heladera/cámara de frío como estantería especial | constructor-mundo | medium | test |
 | D-0618 | Camión del proveedor se va a una hora; si no se descargó, se lleva lo que quede (o cobra demora) | constructor-negocio | medium | test |
 | D-0619 | Replicación del stock y de los palets en red | auditor-red | xhigh | test de red: 2 peers ven el mismo stock tras 50 movimientos |
@@ -35,24 +35,24 @@
 |---|---|---|---|---|
 | D-0621 | Varios proveedores con productos, precios y puntualidad distintos | constructor-negocio | medium | 5 proveedores `.tres` |
 | D-0622 | Proveedores por distrito (pescado de Islas, artesanías de Montaña) | constructor-negocio | medium | test de filtro |
-| D-0623 | Contenedores marítimos en Puerto como entrada grande | constructor-mundo | high | contenedor se descarga en Puerto |
-| D-0624 | Productos a granel que hay que fraccionar (arroz, tornillos) | constructor-negocio | medium | estación de fraccionar funciona |
-| D-0625 | Productos peligrosos (garrafas, fuegos artificiales) con estante especial | constructor-negocio | medium | test de regla |
-| D-0626 | Productos enormes (heladera, bici, colchón) que van sin caja o en caja especial | constructor-negocio | high | test |
-| D-0627 | Productos vivos (plantas, peces, gallinas — guiño a `ReplacementHen`) | constructor-negocio | medium | test |
-| D-0628 | Vencimientos (lácteos, flores) | constructor-negocio | medium | test |
-| D-0629 | Inventario por escáner de mano (sumar con un clic) | constructor-jugador | medium | test |
-| D-0630 | Ubicaciones dinámicas: el juego sugiere dónde guardar | constructor-negocio | medium | test |
-| D-0631 | Mezanine/segundo piso de estanterías | constructor-mundo | high | escalera y estantes arriba |
-| D-0632 | Robo/pérdida de stock (evento) | constructor-negocio | low | evento en sim |
-| D-0633 | Devolución al proveedor | constructor-negocio | low | test |
-| D-0634 | Cinta de descarga desde el camión (conecta con automatización) | constructor-negocio | medium | ver D-1103 |
-| D-0635 | Palets apilables y altura máxima | constructor-negocio | medium | test de física |
+| ~~D-0623~~ | ~~Contenedores marítimos en Puerto como entrada grande~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | contenedor se descarga en Puerto |
+| ~~D-0624~~ | ~~Productos a granel que hay que fraccionar (arroz, tornillos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | estación de fraccionar funciona |
+| ~~D-0625~~ | ~~Productos peligrosos (garrafas, fuegos artificiales) con estante especial~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test de regla |
+| D-0626 | Productos enormes (heladera, bici, colchón) que van sin caja o en caja especial (incluye D-0730, fusión de D-0112) | constructor-negocio | high | test |
+| ~~D-0627~~ | ~~Productos vivos (plantas, peces, gallinas — guiño a `ReplacementHen`)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-0628~~ | ~~Vencimientos (lácteos, flores)~~ **Fusionada en D-0616 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-0629~~ | ~~Inventario por escáner de mano (sumar con un clic)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-jugador | medium | test |
+| ~~D-0630~~ | ~~Ubicaciones dinámicas: el juego sugiere dónde guardar~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
+| ~~D-0631~~ | ~~Mezanine/segundo piso de estanterías~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | escalera y estantes arriba |
+| ~~D-0632~~ | ~~Robo/pérdida de stock (evento)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | evento en sim |
+| ~~D-0633~~ | ~~Devolución al proveedor~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| ~~D-0634~~ | ~~Cinta de descarga desde el camión (conecta con automatización)~~ **Fusionada en D-1103 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | ver D-1103 |
+| ~~D-0635~~ | ~~Palets apilables y altura máxima~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test de física |
 | D-0636 | Pedido automático de reposición (al desbloquear) | constructor-negocio | medium | test |
-| D-0637 | Pronóstico de demanda simple en el tablero | constructor-ui | medium | captura |
-| D-0638 | Inventario semanal (conteo que corrige diferencias) | constructor-negocio | low | test |
-| D-0639 | Camión de proveedor con chofer NPC que se queja si tardás | constructor-mundo | low | líneas de voz/burbuja |
-| D-0640 | Patio de maniobras: varios camiones a la vez sin trabarse | constructor-mundo | high | bot con 3 camiones sin atascos |
+| ~~D-0637~~ | ~~Pronóstico de demanda simple en el tablero~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | captura |
+| ~~D-0638~~ | ~~Inventario semanal (conteo que corrige diferencias)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
+| ~~D-0639~~ | ~~Camión de proveedor con chofer NPC que se queja si tardás~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | low | líneas de voz/burbuja |
+| D-0640 | Patio de maniobras: varios camiones a la vez sin trabarse (incluye D-0932, fusión de D-0112) | constructor-mundo | high | bot con 3 camiones sin atascos |
 
 ## Pulido
 
@@ -63,8 +63,8 @@
 | D-0643 | Etiquetas de estante legibles a 3 m | revisor-visual | low | captura |
 | D-0644 | Rendimiento con 500 productos en estantes | perfilador-rendimiento | high | FPS dentro del presupuesto en `bench_depot` |
 | D-0645 | Productos en estante como MultiMesh cuando no se tocan | perfilador-rendimiento | high | draw calls bajan medido |
-| D-0646 | Test de stock que no se duplica al soltar/agarrar rápido en red | escritor-tests | high | test |
-| D-0647 | Animación de chofer bajando la rampa | animador | low | clip |
-| D-0648 | Iluminación de dársena de noche | constructor-mundo | low | captura nocturna |
-| D-0649 | Textos de remitos traducibles | constructor-ui | low | `tr()` |
+| ~~D-0646~~ | ~~Test de stock que no se duplica al soltar/agarrar rápido en red~~ **Fusionada en D-2027 (D-0112, [crítica](diseno/critica-alcance.md))** | escritor-tests | high | test |
+| ~~D-0647~~ | ~~Animación de chofer bajando la rampa~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | animador | low | clip |
+| ~~D-0648~~ | ~~Iluminación de dársena de noche~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | low | captura nocturna |
+| ~~D-0649~~ | ~~Textos de remitos traducibles~~ **Fusionada en D-1920 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | `tr()` |
 | D-0650 | QA de recepción de punta a punta | probador-qa | medium | tabla sin P0-P1 |

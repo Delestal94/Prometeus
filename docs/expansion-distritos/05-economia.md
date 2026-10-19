@@ -25,34 +25,34 @@
 | D-0515 | Sueldos de empleados por rol y nivel | constructor-progresion | low | tabla en `.tres` |
 | D-0516 | Cobro al cierre del día o al entregar (según D-0105) | constructor-progresion | medium | test |
 | D-0517 | Plata replicada: todos los clientes ven el mismo saldo | auditor-red | high | test de red |
-| D-0518 | Solo el host (o un voto) puede gastar en compras grandes | constructor-red | high | test: cliente no puede comprar solo |
-| D-0519 | Número de plata en el HUD durante el día | constructor-ui | low | captura |
+| D-0518 | Solo el host (o un voto) puede gastar en compras grandes (incluye D-0428, fusión de D-0112) | constructor-red | high | test: cliente no puede comprar solo |
+| ~~D-0519~~ | ~~Número de plata en el HUD durante el día~~ **Fusionada en D-1903 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | captura |
 | D-0520 | Integrar puntaje de corrida actual (`run_scoring`) como parte del cobro de la salida | constructor-progresion | xhigh | tests de puntaje actuales verdes |
 
 ## Ampliación
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0521 | Préstamos del banco con interés | constructor-progresion | medium | test de cuotas |
-| D-0522 | Seguro de carga (paga una parte de las roturas) | constructor-progresion | medium | test |
-| D-0523 | Precios de proveedores que varían por día y evento | constructor-progresion | medium | sim muestra variación acotada |
-| D-0524 | Compra al por mayor con descuento | constructor-progresion | low | test |
-| D-0525 | Contratos de suministro fijo (palet diario a precio fijo) | constructor-progresion | medium | test |
-| D-0526 | Precio dinámico por demanda del distrito | constructor-progresion | medium | sim |
-| D-0527 | Mantenimiento de vehículos y máquinas como costo | constructor-progresion | medium | test de desgaste y reparación |
-| D-0528 | Venta de vehículos y máquinas usadas | constructor-progresion | low | test |
-| D-0529 | Impuestos semanales simples | constructor-progresion | low | test |
-| D-0530 | Inversiones en publicidad (sube pedidos de un distrito) | constructor-progresion | medium | sim |
-| D-0531 | Libro contable en el portapapeles (gráfico de los últimos 7 días) | constructor-ui | medium | captura |
-| D-0532 | Gráfico de ganancias por distrito | constructor-ui | medium | captura (skill dataviz) |
-| D-0533 | Mercado negro de productos raros (opcional, gracioso) | critico-diseno | low | decisión |
-| D-0534 | Devoluciones y reembolsos | constructor-progresion | medium | test |
-| D-0535 | Pedidos pagados por adelantado vs. contra entrega | constructor-progresion | low | test |
-| D-0536 | Bonificación por racha de días sin roturas | constructor-progresion | low | test |
-| D-0537 | Costo de licencias renovables (¿o compra única?) | critico-diseno | low | decisión |
+| ~~D-0521~~ | ~~Préstamos del banco con interés~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test de cuotas |
+| ~~D-0522~~ | ~~Seguro de carga (paga una parte de las roturas)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test |
+| ~~D-0523~~ | ~~Precios de proveedores que varían por día y evento~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sim muestra variación acotada |
+| ~~D-0524~~ | ~~Compra al por mayor con descuento~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
+| ~~D-0525~~ | ~~Contratos de suministro fijo (palet diario a precio fijo)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test |
+| ~~D-0526~~ | ~~Precio dinámico por demanda del distrito~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sim |
+| D-0527 | Mantenimiento de vehículos y máquinas como costo (incluye D-1132, D-1436, fusión de D-0112) | constructor-progresion | medium | test de desgaste y reparación |
+| ~~D-0528~~ | ~~Venta de vehículos y máquinas usadas~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
+| ~~D-0529~~ | ~~Impuestos semanales simples~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
+| ~~D-0530~~ | ~~Inversiones en publicidad (sube pedidos de un distrito)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sim |
+| ~~D-0531~~ | ~~Libro contable en el portapapeles (gráfico de los últimos 7 días)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | captura |
+| ~~D-0532~~ | ~~Gráfico de ganancias por distrito~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | captura (skill dataviz) |
+| ~~D-0533~~ | ~~Mercado negro de productos raros (opcional, gracioso)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión |
+| ~~D-0534~~ | ~~Devoluciones y reembolsos~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test |
+| ~~D-0535~~ | ~~Pedidos pagados por adelantado vs. contra entrega~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
+| ~~D-0536~~ | ~~Bonificación por racha de días sin roturas~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
+| ~~D-0537~~ | ~~Costo de licencias renovables (¿o compra única?)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión |
 | D-0538 | Economía en modo solo escalada | pulidor-jugabilidad | medium | bot solo no quiebra en 20 días |
 | D-0539 | Economía escalada por cantidad de jugadores (1-8) | pulidor-jugabilidad | high | sim con 1, 2, 4, 8: ganancia por jugador dentro de ±25 % |
-| D-0540 | `tools/sim_economy.gd`: simula N días con un bot de decisiones y saca CSV | constructor-progresion | high | corre 30 días en < 10 s; CSV en `tests/output/` |
+| D-0540 | `tools/sim_economy.gd`: simula N días con un bot de decisiones y saca CSV (incluye D-0231, fusión de D-0112) | constructor-progresion | high | corre 30 días en < 10 s; CSV en `tests/output/` |
 
 ## Pulido
 
