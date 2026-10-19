@@ -317,7 +317,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   la forma de la cabeza. La cara por defecto es **ninguna**, como la referencia.
 - [x] **S-311.58** 12 caras: sin cara, feliz, preocupada, dormida, enojada, sorpresa, guiño, bizca, lengua
   afuera, llorando, enamorada y "X X".
-- [ ] **S-311.59** Expresión por estado del juego: caja por romperse → preocupada, entrega perfecta →
+- [x] **S-311.59** Expresión por estado del juego: caja por romperse → preocupada, entrega perfecta →
   feliz, caída → sorpresa, ragdoll → mareada, knockout → "X X".
 - [ ] **S-311.60** Parpadeo, mirada que sigue al jugador más cercano o a la caja que se lleva, y boca que
   se abre con el chat de voz de proximidad (amplitud → apertura).
