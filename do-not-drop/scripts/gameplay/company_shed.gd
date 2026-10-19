@@ -65,14 +65,18 @@ const ZONE_KEYS: Dictionary = {
 	&"assembly": "WORLD_SHED_ZONE_ASSEMBLY",
 	&"dispatch": "WORLD_SHED_ZONE_DISPATCH",
 }
+## Zone colours come from the depot's palette (DepotLayout), so the shed's floor reads like the
+## depot's: the same colour for the same kind of place (D-0918).
 const ZONE_COLORS: Dictionary = {
-	&"dock": Color(0.74, 0.64, 0.26),
-	&"exit": Color(0.28, 0.55, 0.55),
-	&"reception": Color(0.27, 0.43, 0.62),
-	&"storage": Color(0.32, 0.50, 0.36),
-	&"assembly": Color(0.72, 0.44, 0.22),
-	&"dispatch": Color(0.50, 0.36, 0.60),
+	&"dock": DepotLayout.LANE_YELLOW,
+	&"exit": DepotLayout.TEAL,
+	&"reception": DepotLayout.WALK_GREEN,
+	&"storage": DepotLayout.SHELVES_BLUE,
+	&"assembly": DepotLayout.WORKSHOP_RED,
+	&"dispatch": DepotLayout.OFFICE_ORANGE,
 }
+## The zone name's size on the floor (DepotLabels.floor_text: 0.012 m per pixel, so 0.24 m tall).
+const ZONE_LABEL_SIZE: int = 20
 
 ## Station state of every packing table, by piece uid (D-0701), kept across redraws: the table node
 ## is drawn here, the box in its hollow is PackingStation's. Shelf labels by uid (D-0608) too.
@@ -335,15 +339,11 @@ func _paint_zone(kit: DepotKit, role: StringName, rect: Rect2i, label_at: Vector
 func _zone_label(role: StringName, label_at: Vector2) -> void:
 	if not ZONE_KEYS.has(role):
 		return
-	var label := Label3D.new()
+	var at: Vector3 = cell_to_local(label_at)
+	var label: Label3D = DepotLabels.floor_text(self, tr(ZONE_KEYS[role]), at, 0.0, ZONE_LABEL_SIZE,
+		DepotLayout.PAPER)
 	label.name = "Zone_%s" % role
-	label.text = tr(ZONE_KEYS[role])
-	label.font_size = 48
-	label.pixel_size = 0.005
-	label.outline_size = 6
-	label.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	label.position = cell_to_local(label_at, PATCH_HEIGHT + 0.01)
-	add_child(label)
+	label.position.y = PATCH_HEIGHT + 0.01
 
 
 # --- Pieces ---

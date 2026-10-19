@@ -215,3 +215,10 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Medido** (galpón lleno con estantes, mesas, heladeras y zonas, headless): etapa 0 con 16 piezas, 1 con 36, 2 con 64 y 3 con 100; el de 100 piezas dibuja unos 460 nodos y 110 cuerpos físicos. El test fija un techo holgado por etapa (nodos 300/450/650/900, cuerpos 40/70/110/150) para que sumar un mueble más caro rompa el test. Los FPS con ventana los mide `bench_company` en la PC.
 **Decisión:** un tope fijo por etapa (no por costo de cada pieza) porque es lo que el jugador entiende; se ajusta en `CompanyTuning`.
 **Test** `test_shed_piece_limit`. **Hecho cuando:** el test pasa.
+
+### D-0918 · Reusar `depot_layout.gd`/`depot_zones.gd` como base de las zonas — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — las zonas pintadas del galpón (`CompanyShed`) toman colores y rótulos del depósito (`DepotLayout`, `DepotLabels.floor_text`) en vez de una copia propia; `test_shed_zone_reuse`.
+**Depende de:** D-0911 (layout por defecto con zonas pintadas)
+**Qué:** el galpón ya usaba `DepotKit` para las mallas; lo que duplicaba era la paleta (`ZONE_COLORS` con `Color(...)` sueltos) y el rótulo del piso (un `Label3D` armado a mano). Ahora `ZONE_COLORS` apunta a la paleta de `DepotLayout` (muelle = amarillo de carril, salida = teal, recepción = verde de paso, almacén = azul de estantes, armado = rojo de taller, despacho = naranja de oficina) y el nombre se escribe con `DepotLabels.floor_text` (fuente del depósito, color papel, plano).
+**Decisión:** no se movió geometría de `depot_zones.gd` (cajas del hall, escalera, oficina) porque son medidas en metros del depósito fijo y el galpón trabaja en celdas; compartir eso sería acoplar dos mundos que cambian por separado. Se comparte lo que sí es lo mismo: paleta y rótulos. Si el galpón gana más tipos de zona, el color se agrega en `DepotLayout`.
+**Test** `test_shed_zone_reuse`. **Hecho cuando:** el test pasa y no queda copia de paleta ni de rótulo en el galpón.
