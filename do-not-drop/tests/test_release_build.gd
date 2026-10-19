@@ -9,9 +9,18 @@ extends SceneTree
 ##   exports by name, and keeps tests/ and .blend files out of the build.
 ## - The workflow exports exactly those preset names and stamps the version with
 ##   tools/export/stamp_version.py.
+## - D-2019 (expansion): every preset exports all resources and its exclude_filter leaves in
+##   everything the Modo Empresa loads at run time (the data/ registries, company_root.tscn and
+##   the company scripts), matched like Godot does: the path from res:// or the bare file name.
 
 const PRESETS_PATH: String = "../tools/export/export_presets.cfg"
 const WORKFLOW_PATH: String = "../.github/workflows/release.yml"
+## What the Modo Empresa needs in a build (D-2019): folders are walked recursively.
+const COMPANY_PATHS: Array[String] = [
+	"data/products", "data/zones", "data/vehicles", "data/gates", "data/suppliers", "data/boxes",
+	"data/placeables", "data/shed", "data/world", "scenes/gameplay/company_root.tscn",
+	"scripts/gameplay/company_root.gd", "scripts/core/company", "scripts/gameplay/business",
+]
 const EXPECTED_PRESETS: Dictionary = {
 	"Windows Desktop": "../builds/windows/TakeMyPackage.exe",
 	"Linux": "../builds/linux/TakeMyPackage.x86_64",
@@ -51,6 +60,11 @@ func _run() -> void:
 		var name: String = str(presets.get_value(section, "name", ""))
 		found[name] = true
 		var filter: String = str(presets.get_value(section, "exclude_filter", ""))
+		_expect(str(presets.get_value(section, "export_filter", "")) == "all_resources",
+			"Preset '%s' exports all resources (D-2019)" % name)
+		var excluded: Array[String] = _excluded(_company_files(), filter)
+		_expect(excluded.is_empty(),
+			"Preset '%s' keeps the Modo Empresa in the build (excluded: %s)" % [name, excluded])
 		_expect(filter.contains("tests/*") and filter.contains("*.blend") and filter.contains("scripts/tools/*") and filter.contains("scenes/tools/*"),
 			"Preset '%s' keeps tests/, the debug tools and .blend files out of the build (got '%s')" % [name, filter])
 		if EXPECTED_PRESETS.has(name):
@@ -72,6 +86,40 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: release presets, workflow and menu version line up")
 	quit(_failures)
+
+
+## Every file under COMPANY_PATHS (res://-relative), minus the editor's .uid/.import companions.
+func _company_files() -> Array[String]:
+	var files: Array[String] = []
+	for path: String in COMPANY_PATHS:
+		if FileAccess.file_exists("res://" + path):
+			files.append(path)
+		else:
+			_collect(path, files)
+	_expect(files.size() > 20, "The Modo Empresa files are found (%d)" % files.size())
+	return files
+
+
+func _collect(dir: String, into: Array[String]) -> void:
+	for file: String in DirAccess.get_files_at("res://" + dir):
+		if not file.ends_with(".uid") and not file.ends_with(".import"):
+			into.append(dir.path_join(file))
+	for sub: String in DirAccess.get_directories_at("res://" + dir):
+		_collect(dir.path_join(sub), into)
+
+
+## The files an exclude_filter drops: Godot matches each pattern (case-insensitive) against
+## the path from res:// and against the file name alone.
+func _excluded(files: Array[String], exclude_filter: String) -> Array[String]:
+	var dropped: Array[String] = []
+	for raw: String in exclude_filter.split(",", false):
+		var pattern: String = raw.strip_edges().trim_prefix("res://")
+		if pattern.is_empty():
+			continue
+		for file: String in files:
+			if (file.matchn(pattern) or file.get_file().matchn(pattern)) and not dropped.has(file):
+				dropped.append(file)
+	return dropped
 
 
 func _expect(condition: bool, description: String) -> void:
