@@ -60,8 +60,8 @@ func _run() -> void:
 	await process_frame
 	var slider: HSlider = options._text_backdrop_slider
 	_expect(slider != null and is_equal_approx(slider.value, 0.5), "Options slider shows the setting")
-	slider.value = 0.25
-	_expect(is_equal_approx(settings.text_backdrop_opacity, 0.25), "Moving the slider sets the opacity")
+	slider.value = 0.6
+	_expect(is_equal_approx(settings.text_backdrop_opacity, 0.6), "Moving the slider sets the opacity")
 	options.queue_free()
 
 	settings.text_backdrop_opacity = original
