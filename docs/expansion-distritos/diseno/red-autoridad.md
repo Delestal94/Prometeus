@@ -370,9 +370,11 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   si el suyo era otro lo corrige, avisa y `CompanyNet` pide un snapshot (`CompanyTableNet.take_drift()`).
 - **Join tardío:** las mesas viajan en el snapshot como la parte `packing` (`{serial, tables: {uid: {box_id,
   box, supplies}}}`), que `CompanyNet` suma sola en `_init()`. El cliente la valida antes de tocar nada
-  (`CompanySnapshot.tables_from()`: a lo sumo 256 mesas, ids de texto corto, cada caja tal como la escribe
-  `PackedBox.to_dict()` y que vuelve igual de `from_dict()`, productos del catálogo, un id por caja, insumos
-  en su rango).
+  (`CompanySnapshot.tables_from()`: a lo sumo 256 mesas, más que las 100 piezas del galpón más grande; ids
+  de texto corto; cada caja abierta (sin cinta) tal como la escribe `PackedBox.to_dict()` y que vuelve igual
+  de `from_dict()`, productos del catálogo con sus celdas del catálogo, cada sello una vez; un id por caja;
+  insumos en su rango). Aplicarlo borra el aviso de plata desfasada (`take_drift()`): el snapshot ya trae la
+  del host.
 - **Layout:** vender una mesa con caja es `not_empty` (`CompanyNet._build`); `layout_sold` olvida el estado de
   la mesa vendida (una mesa nueva con el mismo `uid` arranca llena).
 - **Motivos de `_rejected`:** los de `CompanyNet` (`bad_data`, `no_station`, `out_of_reach`, `not_enough`,
@@ -386,11 +388,12 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Test: `test_company_shared_table` (y `test_company_layout_net` lee las ramas `CompanyTableNet.*`).
 - **Pendiente:**
   - **D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10: sincronizador
-    invisible hasta mandar el `seq`, nombre `node_name`), las cajas vivas en el snapshot con
-    `update_visibility` después del último trozo, y `OrderBook` → armado (`order_packed`) cuando el libro de
-    pedidos esté en `CompanyNet`;
-  - **D-0715.c**: reponer los insumos de la mesa por red (D-0718 es local: sin petición, una mesa sin cinta
-    queda inútil en una sesión);
+    invisible hasta mandar el `seq`, nombre `node_name`), validando antes `pos`, `basis`, `quality`, `trap` y
+    `node_name` (hoy nadie los lee); las cajas vivas en el snapshot con `update_visibility` después del
+    último trozo; `OrderBook` → armado (`order_packed`) cuando el libro de pedidos esté en `CompanyNet`; y
+    `CompanyTableNet._serial` guardado con el día (D-0206);
+  - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
+    `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
   - guardar las mesas con el día (D-0206): hoy un día cargado trae unidades en `box:<id>` sin mesa.
