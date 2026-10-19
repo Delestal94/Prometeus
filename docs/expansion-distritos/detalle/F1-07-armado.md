@@ -111,3 +111,11 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 Decisión: el aviso de la mesa no bloquea el cierre, porque el pedido decide el pago y el jugador puede querer despachar igual; la UI que lo muestra es D-0714/D-0744.
 **Test** `test_box_content_check`: caja exacta, falta una unidad, falta un producto, sobra una unidad o un producto, sin caja; los dos momentos con la misma caja.
 **Hecho cuando:** el test pasa para la mesa y para la puerta.
+
+### D-0713 · Balanza de control — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `BoxScale` (`scripts/gameplay/business/box_scale.gd`): `expected_kg`, `real_kg` y `weigh`; `CompanyTuning.SCALE_TOLERANCE_KG`; `test_box_scale`. El objeto de la balanza en la mesa queda para D-0713.b (ver `revisar/D-0713.md`).
+**Depende de:** D-0712 (`BoxContentCheck`), D-0116 (`ProductDefinition.weight_kg`)
+**Qué:** `class_name BoxScale`, `RefCounted` estático. `weigh(order, box, products)` devuelve `{expected, real, delta, ok}`: el peso esperado suma los productos del pedido por cantidad; el real, lo que contiene la caja; `ok` si `|delta| <= SCALE_TOLERANCE_KG` (0,05 kg).
+Decisión: solo pesan los productos (relleno y caja pesan 0) y es solo un aviso, como D-0712. No dice qué falta: un cambio por otro producto del mismo peso pasa (límite documentado y a propósito, para que la balanza sea una pista y no reemplace a `BoxContentCheck`).
+**Test** `test_box_scale`: caja exacta, falta una unidad (delta negativo), sobra una (positivo), cambio de igual peso, tolerancia, sin caja y producto desconocido.
+**Hecho cuando:** el test pasa.

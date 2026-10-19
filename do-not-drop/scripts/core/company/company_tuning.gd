@@ -158,6 +158,8 @@ const QUALITY_WRONG_CONTENT: float = 40.0
 ## Times the share of the box left empty and unpadded; multiplied when a product is fragile.
 const QUALITY_GAP_WEIGHT: float = 30.0
 const QUALITY_GAP_FRAGILE_FACTOR: float = 1.5
+## Control scale (D-0713): the box passes when real and expected weight differ by at most this (kg).
+const SCALE_TOLERANCE_KG: float = 0.05
 ## Per required seal the box lacks.
 const QUALITY_MISSING_SEAL: float = 15.0
 ## Once, when the box has no tape or no label.
