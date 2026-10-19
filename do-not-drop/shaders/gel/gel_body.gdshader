@@ -278,14 +278,13 @@ void fragment() {
 	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
 		EMISSION += gel_interior.rgb * interior_mask * 1.4;
 	}
-	float skin_roughness = roughness;
-	float skin_specular = specular;
+	ROUGHNESS = mix(roughness, 0.025, gel_weather.w * 0.75);
+	SPECULAR = mix(specular, 1.0, gel_weather.w);
 	if (gel_skin_surface.y >= 0.0) {
-		skin_roughness = mix(0.48, 0.025, gel_skin_surface.y);
-		skin_specular = gel_skin_surface.y;
+		float skin_roughness = mix(0.48, 0.025, gel_skin_surface.y);
+		ROUGHNESS = mix(skin_roughness, 0.025, gel_weather.w * 0.75);
+		SPECULAR = mix(gel_skin_surface.y, 1.0, gel_weather.w);
 	}
-	ROUGHNESS = mix(skin_roughness, 0.025, gel_weather.w * 0.75);
-	SPECULAR = mix(skin_specular, 1.0, gel_weather.w);
 	float surface_alpha = gel_color.a * gel_opacity * mix(center_opacity, edge_opacity, fresnel);
 	float final_alpha = clamp(
 		surface_alpha + thickness_absorption * absorption_opacity
