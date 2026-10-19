@@ -34,7 +34,11 @@ func _book(ids: Array[StringName]) -> OrderBook:
 	var book := OrderBook.new()
 	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
 	for id: StringName in ids:
-		book.add(Order.make(id, "Ana", &"centro", &"house_1", [{"product": &"hen", "qty": 1}], 0, products))
+		book.add(
+			Order.make(
+				id, "Ana", &"centro", &"house_1", [{"product": &"hen", "qty": 1}], 0, products
+			)
+		)
 		book.mark_packed(id, StringName("box_" + str(id)))
 	return book
 
@@ -47,15 +51,42 @@ func _test_dispatch() -> void:
 	var zone := _zone()
 	var book := _book([&"o1"])
 	var inside := Vector3(1, 0.2, 5)
-	_expect(zone.update_box(&"box_o1", &"o1", inside, false, true, book) == &"", "open box is not dispatched")
-	_expect(zone.update_box(&"box_o1", &"o1", inside, true, false, book) == &"", "carried box is not dispatched")
-	_expect(zone.update_box(&"box_o1", &"o1", Vector3(9, 0, 5), true, true, book) == &"", "box outside is not dispatched")
-	_expect(zone.update_box(&"box_o1", &"o2", inside, true, true, book) == &"", "unknown order is not dispatched")
-	_expect(zone.update_box(&"box_other", &"o1", inside, true, true, book) == &"", "box that is not the order's is not dispatched")
+	_expect(
+		zone.update_box(&"box_o1", &"o1", inside, false, true, book) == &"",
+		"open box is not dispatched"
+	)
+	_expect(
+		zone.update_box(&"box_o1", &"o1", inside, true, false, book) == &"",
+		"carried box is not dispatched"
+	)
+	_expect(
+		zone.update_box(&"box_o1", &"o1", Vector3(9, 0, 5), true, true, book) == &"",
+		"box outside is not dispatched"
+	)
+	_expect(
+		zone.update_box(&"box_o1", &"o2", inside, true, true, book) == &"",
+		"unknown order is not dispatched"
+	)
+	_expect(
+		zone.update_box(&"box_other", &"o1", inside, true, true, book) == &"",
+		"box that is not the order's is not dispatched"
+	)
 	_expect(not zone.is_dispatched(&"box_o1"), "nothing dispatched yet")
-	_expect(zone.update_box(&"box_o1", &"o1", inside, true, true, book) == DispatchZone.RESULT_DISPATCHED, "sealed box at rest inside is dispatched")
-	_expect(zone.is_dispatched(&"box_o1") and zone.order_of(&"box_o1") == &"o1", "box is tied to its order")
-	_expect(zone.update_box(&"box_o1", &"o1", inside, true, true, book) == &"", "second report changes nothing")
+	_expect(
+		(
+			zone.update_box(&"box_o1", &"o1", inside, true, true, book)
+			== DispatchZone.RESULT_DISPATCHED
+		),
+		"sealed box at rest inside is dispatched"
+	)
+	_expect(
+		zone.is_dispatched(&"box_o1") and zone.order_of(&"box_o1") == &"o1",
+		"box is tied to its order"
+	)
+	_expect(
+		zone.update_box(&"box_o1", &"o1", inside, true, true, book) == &"",
+		"second report changes nothing"
+	)
 	_expect(zone.boxes() == [&"box_o1"] and zone.orders() == [&"o1"], "box and order listed")
 
 
@@ -63,9 +94,23 @@ func _test_leave() -> void:
 	var zone := _zone()
 	var book := _book([&"o1"])
 	zone.update_box(&"box_o1", &"o1", Vector3(1, 0, 5), true, true, book)
-	_expect(zone.update_box(&"box_o1", &"o1", Vector3(9, 0, 5), true, false, book) == DispatchZone.RESULT_UNDISPATCHED, "box out of the area is untied")
-	_expect(not zone.is_dispatched(&"box_o1") and zone.boxes().is_empty(), "zone empty after it left")
-	_expect(zone.update_box(&"box_o1", &"o1", Vector3(2, 0, 6), true, true, book) == DispatchZone.RESULT_DISPATCHED, "it can be dispatched again")
+	_expect(
+		(
+			zone.update_box(&"box_o1", &"o1", Vector3(9, 0, 5), true, false, book)
+			== DispatchZone.RESULT_UNDISPATCHED
+		),
+		"box out of the area is untied"
+	)
+	_expect(
+		not zone.is_dispatched(&"box_o1") and zone.boxes().is_empty(), "zone empty after it left"
+	)
+	_expect(
+		(
+			zone.update_box(&"box_o1", &"o1", Vector3(2, 0, 6), true, true, book)
+			== DispatchZone.RESULT_DISPATCHED
+		),
+		"it can be dispatched again"
+	)
 
 
 func _test_load() -> void:
@@ -83,8 +128,13 @@ func _test_load() -> void:
 	_expect(trips.track(&"van", Vector3(0, 0, -1)) == &"", "van inside the shed")
 	trips.track(&"van", Vector3(0, 0, -8))
 	var trip: Trip = trips.trip_of(&"van")
-	_expect(trip != null and trip.order_ids == [&"o1", &"o2"], "van left with the two dispatched orders")
-	_expect(book.state_of(&"o1") == Order.STATE_OUT and book.state_of(&"o3") == Order.STATE_PACKED, "o1 out, o3 still packed")
+	_expect(
+		trip != null and trip.order_ids == [&"o1", &"o2"], "van left with the two dispatched orders"
+	)
+	_expect(
+		book.state_of(&"o1") == Order.STATE_OUT and book.state_of(&"o3") == Order.STATE_PACKED,
+		"o1 out, o3 still packed"
+	)
 	trips.free()
 
 
@@ -95,4 +145,7 @@ func _test_roundtrip() -> void:
 	zone.update_box(&"box_o2", &"o2", Vector3(2, 0, 5), true, true, book)
 	var copy := _zone()
 	copy.from_dict(JSON.parse_string(JSON.stringify(zone.to_dict())))
-	_expect(copy.boxes() == [&"box_o1", &"box_o2"] and copy.orders() == [&"o1", &"o2"], "json round trip keeps boxes and orders")
+	_expect(
+		copy.boxes() == [&"box_o1", &"box_o2"] and copy.orders() == [&"o1", &"o2"],
+		"json round trip keeps boxes and orders"
+	)
