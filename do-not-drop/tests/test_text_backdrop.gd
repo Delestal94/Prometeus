@@ -25,18 +25,19 @@ func _run() -> void:
 	settings.text_backdrop_opacity = 7.0
 	_expect(is_equal_approx(settings.text_backdrop_opacity, 1.0), "Opacity clamps to 1")
 	settings.text_backdrop_opacity = -1.0
-	_expect(is_equal_approx(settings.text_backdrop_opacity, 0.0), "Opacity clamps to 0")
+	_expect(is_equal_approx(settings.text_backdrop_opacity, settings.TEXT_BACKDROP_MIN),
+		"Opacity never goes below the 0.3 floor (N-977.3)")
 
 	var hud: CanvasLayer = load("res://scripts/ui/hud/hud.gd").new()
 	root.add_child(hud)
 	await process_frame
 	var heard: Array[float] = []
 	settings.text_backdrop_opacity_changed.connect(func(opacity: float) -> void: heard.append(opacity))
-	settings.text_backdrop_opacity = 0.0
+	settings.text_backdrop_opacity = 0.3
 	var plate := hud.interaction_label.get_theme_stylebox("normal") as StyleBoxFlat
-	_expect(heard == [0.0], "The change is announced (got %s)" % [heard])
-	_expect(is_zero_approx(plate.bg_color.a) and is_zero_approx(plate.border_color.a)
-			and is_zero_approx(plate.shadow_color.a), "At 0 the plate draws nothing")
+	_expect(heard == [0.3], "The change is announced (got %s)" % [heard])
+	_expect(is_equal_approx(plate.bg_color.a, 0.3) and is_equal_approx(plate.shadow_color.a, 0.15),
+		"At the floor the plate is still drawn")
 	settings.text_backdrop_opacity = 1.0
 	_expect(is_equal_approx(plate.bg_color.a, 1.0) and is_equal_approx(plate.border_color.a, 1.0),
 		"At 1 the plate is solid")

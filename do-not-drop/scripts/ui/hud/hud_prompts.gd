@@ -64,19 +64,24 @@ func refresh_shortcuts(delta: float = 0.0) -> void:
 
 
 func refresh_shortcut_text() -> void:
-	# Phone, ping, look back and crew follow the player's bindings (N-966.4); center
-	# view, pause and restart are not rebindable.
-	var items: PackedStringArray = [
-		ControlHints.hint("HUD_KEY_PHONE", [&"phone_toggle"], "HUD_PAD_PHONE", [&"phone_toggle"]),
-		ControlHints.hint("HUD_KEY_PING", [&"ui_ping"], "HUD_PAD_PING", [&"ui_ping"]),
-		hud.key_hint(tr("HUD_KEY_CENTER_VIEW"), tr("HUD_PAD_CENTER_VIEW")),
-		hud.key_hint(tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back"), tr("HUD_PAD_LOOK_BACK")),
-		hud.key_hint(tr("HUD_KEY_PAUSE"), tr("HUD_PAD_PAUSE")),
-	]
+	# At most four shortcuts, picked by what the player is doing (N-977.1); the rest
+	# live in the pause menu and the phone. Ping, phone and look back follow the
+	# player's bindings (N-966.4); pause and restart are not rebindable.
+	var ping: String = ControlHints.hint("HUD_KEY_PING", [&"ui_ping"], "HUD_PAD_PING", [&"ui_ping"])
+	var phone: String = ControlHints.hint("HUD_KEY_PHONE", [&"phone_toggle"], "HUD_PAD_PHONE", [&"phone_toggle"])
+	var pause: String = hud.key_hint(tr("HUD_KEY_PAUSE"), tr("HUD_PAD_PAUSE"))
+	var items: PackedStringArray = []
+	if _role == Hud.Role.DRIVER:
+		items.append(hud.key_hint(tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back"), tr("HUD_PAD_LOOK_BACK")))
+		items.append(ping)
+	else:
+		items.append(phone)
+		items.append(ping)
+	items.append(pause)
 	# Only while the depot is open: it is the one place the crew panel shows.
 	if hud.overlay_mode == "preparation":
 		items.append(ControlHints.hint("HUD_KEY_CREW", [&"crew_panel"], "HUD_PAD_CREW", [&"crew_panel"]))
-	if can_restart():
+	elif can_restart() and items.size() < 4:
 		items.append(hud.key_hint(tr("HUD_KEY_RESTART"), tr("HUD_PAD_RESTART")))
 	hud.shortcut_label.text = UiTheme.keycaps("   ·   ".join(items), true)
 
@@ -86,7 +91,12 @@ func can_restart() -> bool:
 
 
 func refresh_role() -> void:
-	_role = _local_role()
+	var role: int = _local_role()
+	if role == _role:
+		return
+	_role = role
+	if hud.shortcut_label != null:
+		refresh_shortcut_text()
 
 
 func _local_role() -> int:
