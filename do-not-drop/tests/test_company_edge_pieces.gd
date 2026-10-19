@@ -13,6 +13,7 @@ extends SceneTree
 ##   differ from them, with a golden for one Campo street;
 ## - build() makes a RouteSegment per piece, placed where the plan says.
 
+const EdgePieces := preload("res://scripts/gameplay/districts/edge_pieces.gd")
 const MAX_GAP: float = 6.0
 const GOLDEN_STREET: StringName = &"camino_campo_3"
 
@@ -47,14 +48,17 @@ func _test_every_street() -> void:
 		var last: Dictionary = pieces[pieces.size() - 1]
 		_expect(float(last.start) + float(last.advance) >= length - EdgePieces.MIN_FILL,
 				"Street %s is covered to its end" % edge.id)
-		_expect(pieces[0].start == 0.0 and (pieces[0].position as Vector2).distance_to(_graph.point_at(edge.id, 0.0)) < 0.01,
+		var first: Vector2 = pieces[0].position
+		_expect(pieces[0].start == 0.0 and first.distance_to(_graph.point_at(edge.id, 0.0)) < 0.01,
 				"Street %s starts on its first node" % edge.id)
 		for i in pieces.size():
 			var piece: Dictionary = pieces[i]
 			var facing: Vector2 = _graph.tangent_at(edge.id, piece.start)
 			var forward := Vector2(-sin(float(piece.yaw)), -cos(float(piece.yaw)))
 			_expect(forward.distance_to(facing) < 0.01, "Piece %d of %s faces along the street" % [i, edge.id])
-			_expect(edge.segments.has(piece.kind), "Piece %d of %s is one of its kinds (%s)" % [i, edge.id, piece.kind])
+			var is_cut: bool = i == pieces.size() - 1 and piece.kind == EdgePieces.FILL_KIND
+			_expect(edge.segments.has(piece.kind) or is_cut,
+					"Piece %d of %s is one of its kinds (%s)" % [i, edge.id, piece.kind])
 			if i > 0:
 				var gap: float = (piece.position as Vector2).distance_to(_graph.point_at(edge.id,
 						float(pieces[i - 1].start) + float(pieces[i - 1].advance)))
@@ -74,12 +78,14 @@ func _test_kinds_and_zones() -> void:
 				campo_kinds[piece.kind] = true
 			elif edge.area == &"centro":
 				centro_kinds[piece.kind] = true
-	_expect(campo_kinds.has(&"gravel") or campo_kinds.has(&"mud"), "Campo lays gravel or mud: %s" % [campo_kinds.keys()])
+	_expect(campo_kinds.has(&"gravel") or campo_kinds.has(&"mud"),
+			"Campo lays gravel or mud: %s" % [campo_kinds.keys()])
 	_expect(not centro_kinds.has(&"mud"), "Centro lays no mud")
 	_expect(campo_kinds.size() > centro_kinds.size() or campo_kinds.keys() != centro_kinds.keys(),
 			"Campo and Centro do not lay the same kinds")
 	var golden: String = EdgePieces.signature(EdgePieces.plan(_graph, GOLDEN_STREET))
-	_expect(golden.begins_with("gravel:30,curve:"), "Golden street %s starts with gravel and a curve: %s" % [GOLDEN_STREET, golden])
+	_expect(golden.begins_with("gravel:30,curve:"),
+			"Golden street %s starts with gravel and a curve: %s" % [GOLDEN_STREET, golden])
 
 
 func _test_curve_turn() -> void:
