@@ -11,6 +11,10 @@ extends SceneTree
 ##   material carries tx_detail_concrete_512.png in world triplanar, one repetition per
 ##   CompanyShed.FLOOR_SLAB_M (a whole number of grid cells, so the slab joints land on cell lines);
 ## - the local player stands inside the shed, on the floor;
+## - D-2002.3: it sends its pose CompanyTuning.SHED_POSE_RATE_HZ times a second on foot (the interval
+##   rounded down, not up), back to the game's 30 while riding a vehicle (a stand-in in the "vehicle"
+##   group that carries everyone) and to the shed's rate off it; a player outside the company's world
+##   (Delivery, Endless) keeps player.tscn's 30 while it walks;
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
 ##   CompanyNet the CompanyState node, whose to_dict() the snapshot carries (D-2004);
@@ -34,6 +38,16 @@ const DIR: String = "user://test_company_root"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 ## Nobody listens here: the client stays connecting, which is enough not to be the host.
 const CLOSED_PORT: int = 24639
+## player.tscn's pose rate, the game's (test_remote_pose_smoothing checks it in the delivery level).
+const GAME_POSE_RATE_HZ: int = 30
+## Physics ticks for the owner to publish its pose (and pick its rate) again.
+const POSE_TICKS: int = 3
+
+
+## A vehicle that carries everyone, wherever they stand (as test_gel_active_ragdoll's).
+class Carrier extends Node3D:
+	func carries(_point: Vector3, _margin: float = 0.0) -> bool:
+		return true
 
 var _failures: int = 0
 
@@ -117,6 +131,7 @@ func _run() -> void:
 			await physics_frame
 		var height: float = player.global_position.y
 		_expect(height > -1.0, "The player stands on the floor, not falling (y=%.2f)" % height)
+		await _check_pose_rate(player as Player, level.get_node(^"World") as Node3D)
 
 	var menu_source: String = FileAccess.get_file_as_string("res://scripts/ui/main_menu.gd")
 	_expect(menu_source.contains(SCENE) and menu_source.contains("--mode=company"),
@@ -128,6 +143,7 @@ func _run() -> void:
 	_expect(CompanySave.was_interrupted(CompanySave.DEFAULT_SLOT, DIR),
 		"Leaving the solo root saves the day as interrupted in its save_dir")
 	_expect_presence(null, true, "Leaving the solo root")
+	await _check_game_pose_rate()
 	await _check_client_restores(state)
 	state.call(&"reset")
 	_expect(_real_slot() == real_slot, "The game's own save slot is never touched")
@@ -135,6 +151,49 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: company root builds the shed and nine zones, company on, player inside, menu flag")
 	quit(_failures)
+
+
+## D-2002.3: the company's `player` sends its pose at the shed's rate on foot, the game's riding a
+## vehicle (a Carrier in `world`) and the shed's again once off it.
+func _check_pose_rate(player: Player, world: Node3D) -> void:
+	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var shed_rate: int = CompanyTuning.SHED_POSE_RATE_HZ
+	_expect(_rate(sync) == shed_rate and sync.replication_interval <= 1.0 / shed_rate,
+		"The company's player sends its pose %d times a second on foot (every %.4f s)"
+		% [shed_rate, sync.replication_interval])
+	var truck := Carrier.new()
+	truck.add_to_group(&"vehicle")
+	world.add_child(truck)
+	for _tick: int in range(POSE_TICKS):
+		await physics_frame
+	_expect(player.net_in_vehicle and _rate(sync) == GAME_POSE_RATE_HZ,
+		"Riding a vehicle it sends the game's %d a second again (in vehicle %s, every %.4f s)"
+		% [GAME_POSE_RATE_HZ, player.net_in_vehicle, sync.replication_interval])
+	truck.free()
+	for _tick: int in range(POSE_TICKS):
+		await physics_frame
+	_expect(not player.net_in_vehicle and _rate(sync) == shed_rate,
+		"Off the vehicle, the shed's %d a second (every %.4f s)" % [shed_rate, sync.replication_interval])
+
+
+## D-2002.3: a player of the game, outside the company's world, sends player.tscn's 30 a second
+## while it plays (its owner publishes and picks the rate every tick).
+func _check_game_pose_rate() -> void:
+	var player := (load(CompanyRoot.PLAYER_SCENE) as PackedScene).instantiate() as Player
+	player.name = "Player_1"
+	root.add_child(player)
+	for _tick: int in range(POSE_TICKS):
+		await physics_frame
+	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	_expect(player.is_local() and _rate(sync) == GAME_POSE_RATE_HZ,
+		"A player outside the company's world sends %d poses a second (every %.4f s)"
+		% [GAME_POSE_RATE_HZ, sync.replication_interval])
+	player.free()
+
+
+## Sends a second `sync` makes at its interval, rounded.
+static func _rate(sync: MultiplayerSynchronizer) -> int:
+	return roundi(1.0 / sync.replication_interval) if sync.replication_interval > 0.0 else 0
 
 
 ## A client loads the host's company from the snapshot; leaving the root puts its own back.

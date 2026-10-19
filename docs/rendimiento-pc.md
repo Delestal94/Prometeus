@@ -226,7 +226,8 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 
 ## Ancho de banda del modo Empresa (D-2002)
 
-**Fecha:** 2026-10-19. **Commit:** base `origin/main` `3d4a242` (rama `exp/D-2002-bandwidth-budget`). Lo mide
+**Fecha:** 2026-10-19. **Commit:** base `origin/main` `425041a` (rama `exp/D-2002-shed-pose-rate`, D-2002.3; la
+primera medición, D-2002.1, fue sobre `3d4a242` en `exp/D-2002-bandwidth-budget`). Lo mide
 `tests/test_company_bandwidth_budget.gd` (corre en la batería, filtro `company`; imprime líneas `COMPANY_BW`):
 
 ```
@@ -238,20 +239,20 @@ Todo es lo que el host le manda a **cada cliente** (KB/s = 1024 B/s), sin voz (l
 propio chequeo en `test_net_bandwidth_budget`). Cada caso da dos números:
 
 - **Modelo:** el mundo real de la empresa (`company_root.tscn`) con cada `MultiplayerSynchronizer` que tiene,
-  contado como lo empaqueta SceneMultiplayer y con un datagrama de Steam en el techo (80 B) alrededor de cada
-  paquete: el mismo modelo que `test_net_bandwidth_budget` (`tests/bandwidth_model.gd`, ahora compartido). Los
-  floats cuentan como de 64 bits y los enteros como de 32 (una pose en movimiento; el reloj en ms del jugador,
-  `net_time`, pasa 32767 a los 33 s de juego). Es un techo: Steam puede juntar mensajes en un datagrama.
+  al intervalo en que el mundo lo deja, contado como lo empaqueta SceneMultiplayer y con un datagrama de Steam en
+  el techo (80 B) alrededor de cada paquete: el mismo modelo que `test_net_bandwidth_budget`
+  (`tests/bandwidth_model.gd`, compartido). Los floats cuentan como de 64 bits y los enteros como de 32 (una pose
+  en movimiento; el reloj en ms del jugador, `net_time`, pasa 32767 a los 33 s de juego). Es un techo: Steam puede
+  juntar mensajes en un datagrama.
 - **Medido (ENet):** 4 u 8 peers ENet en localhost, en un proceso, cada uno con un jugador real (`player.tscn`) por
-  peer y un `CompanyNet`; el host publica `units_moved` reales al ritmo de abajo. Se lee como lo lee el overlay
-  de red en LAN (N-216, `NetStats`) y se le suman los 28 B de IP y UDP de cada datagrama. Los jugadores están
-  quietos y durante la cuenta tienen el proceso en pausa: lo que mandan no depende de eso (con 4 da lo mismo con
-  o sin pausa), y 64 jugadores completos en un proceso bajaban a 61 FPS, menos envíos que los 30 por segundo del
-  juego. Su reloj todavía no pasó los 33 s (`net_time` de 3 B y no de 5): en una partida larga son 2 B más por
-  pose. Con 8 la medición da entre 22,5 y 24,8 KB/s según la corrida (191-211 datagramas por segundo); con 4 es
-  estable (10,8-10,9).
-- **Lo que ninguno de los dos cuenta:** los deltas `ON_CHANGE` (anim_state, face_*, visible); el margen con 4
-  los cubre.
+  peer, sumado a la cuadrilla como lo hace el mundo de la empresa (`CompanyRoot.join_crew()`), y un `CompanyNet`;
+  el host publica `units_moved` reales al ritmo de abajo. Se lee como lo lee el overlay de red en LAN (N-216,
+  `NetStats`) y se le suman los 28 B de IP y UDP de cada datagrama. Los jugadores están quietos y durante la cuenta
+  tienen el proceso en pausa: lo que mandan no depende de eso (con 4 da lo mismo con o sin pausa), y 64 jugadores
+  completos en un proceso bajaban a 61 FPS, menos envíos que los del juego. Su reloj todavía no pasó los 33 s
+  (`net_time` de 3 B y no de 5): en una partida larga son 2 B más por pose. Tres corridas seguidas dan casi lo
+  mismo (abajo, el rango).
+- **Lo que ninguno de los dos cuenta:** los deltas `ON_CHANGE` (anim_state, face_*, visible); el margen los cubre.
 
 Carga de "galpón a full": cada jugador hace una acción de negocio por segundo (tomar, guardar, poner en la grilla,
 encintar: una petición que el host convierte en un evento para todos) más una por segundo de las reglas del host
@@ -259,42 +260,67 @@ encintar: una petición que el host convierte en un evento para todos) más una 
 grande (con `pos`: 181 B con su RPC), en un datagrama propio. `bot_company_day` todavía es un esqueleto: cuando
 tenga etapas, este ritmo se cambia por un día medido.
 
+**D-2002.3 (2026-10-19): en el mundo de la empresa cada jugador manda su pose 15 veces por segundo a pie**
+(`CompanyTuning.SHED_POSE_RATE_HZ`, la opción "bajar el envío en el galpón" de abajo). El juego de siempre
+(Reparto, Infinito) sigue en 30 (`player.tscn`, sin tocar). Desde entonces el test **falla si el galpón pasa
+24 KB/s con 4 o con 8 jugadores**, en el modelo o en la medición.
+
 | Caso | Presupuesto por cliente | 4 jugadores (modelo / ENet) | 8 jugadores (modelo / ENet) | Estado |
 |---|---|---|---|---|
-| Galpón | ≤ 24 KB/s | 16,1 / 10,9 | **37,2 / 22,5-24,8** | 4: entra (el test falla si se pasa). 8: se pasa (se imprime, no falla) |
+| Galpón, poses a 15/s (D-2002.3) | ≤ 24 KB/s | 8,7 / 5,9-6,0 | 19,8 / 13,1-13,4 | Entran los dos (el test falla si alguno se pasa) |
+| Galpón, poses a 30/s (D-2002.1, antes) | ≤ 24 KB/s | 16,1 / 10,8-10,9 | 37,2 / 22,5-25,2 | 4 entraba; 8 se pasaba |
 | Una salida afuera | ≤ 40 KB/s | pendiente D-2002.2 (sin vehículo en el mundo de la empresa todavía) | pendiente D-2002.2 | — |
 | 2 vehículos lejos | ≤ 64 KB/s | pendiente D-2002.2 (sin vehículo en el mundo de la empresa todavía) | pendiente D-2002.2 | — |
 
-Detalle del galpón:
+Detalle del galpón (poses a 15/s; entre paréntesis, a 30/s antes de D-2002.3):
 
 | | 4 jugadores | 8 jugadores |
 |---|---|---|
-| Por cliente, modelo (de eso, cabeceras de datagrama) | 16,1 KB/s (7,4) | 37,2 KB/s (17,1) |
-| Por cliente, ENet medido (overlay + IP/UDP) | 10,9 KB/s (8,3 + 2,6) | 22,5-24,8 KB/s (17,3-18,9 + 5,2-5,7) |
-| Datagramas por segundo a cada cliente (modelo / ENet) | 95 / 93 | 219 / 191-211 |
-| Subida del host (modelo con datagramas / ENet sin IP/UDP) | 48,4 / 24,9 KB/s | 260,6 / 121-133 KB/s |
+| Por cliente, modelo (de eso, cabeceras de datagrama) | 8,7 KB/s (3,9) — antes 16,1 (7,4) | 19,8 KB/s (8,9) — antes 37,2 (17,1) |
+| Por cliente, ENet medido (overlay + IP/UDP) | 5,9-6,0 KB/s (4,6 + 1,4) — antes 10,9 (8,3 + 2,6) | 13,1-13,4 KB/s (10,1-10,3 + 3,0-3,1) — antes 22,5-25,2 |
+| Datagramas por segundo a cada cliente (modelo / ENet) | 50 / 50 — antes 95 / 93 | 114 / 109-112 — antes 219 / 191-214 |
+| Subida del host (modelo con datagramas / ENet sin IP/UDP) | 26,1 / 13,7 KB/s — antes 48,4 / 24,9 | 138,3 / 70,9-72,4 KB/s — antes 260,6 / 121-135 |
 
 Qué se cuenta hoy en el galpón: solo los sincronizadores del jugador. `Player/MultiplayerSynchronizer` manda 82 B
-(con su cabecera) cada 33 ms; el de `GelProportions` es solo `ON_CHANGE` (no manda nada quieto, confirmado en la
-medición). El galpón en sí no tiene sincronizadores: los bultos del piso son estáticos (regla 10 de
-`red-autoridad.md`). Cuando una tarea sume cuerpos sincronizados al galpón (la caja armada de D-0711, el palet en
-la zorra) el modelo los cuenta solo, una vez cada uno. El snapshot de un join tardío del galpón amueblado pesa
-unos 755 B comprimido (2.264 B crudo), una sola vez.
+(con su cabecera) cada 66,6 ms en el galpón (cada 33,3 ms en el juego de siempre); el de `GelProportions` es solo
+`ON_CHANGE` (no manda nada quieto, confirmado en la medición). El galpón en sí no tiene sincronizadores: los bultos
+del piso son estáticos (regla 10 de `red-autoridad.md`). Cuando una tarea sume cuerpos sincronizados al galpón (la
+caja armada de D-0711, el palet en la zorra) el modelo los cuenta solo, una vez cada uno. El snapshot de un join
+tardío del galpón amueblado pesa unos 755 B comprimido (2.264 B crudo), una sola vez.
 
-**Culpables, en orden (8 jugadores, modelo):**
+**Culpables, en orden (8 jugadores, modelo, poses a 15/s):**
 
 1. Las poses de los otros 6 clientes, reenviadas por el host (`server_relay`, un paquete por jugador y por envío,
-   30 por segundo): 30,1 KB/s, de los que 14,1 son cabeceras de datagrama.
-2. La pose del jugador del host: 4,8 KB/s (2,3 de datagramas).
-3. Los eventos de negocio, 9 por segundo: 2,3 KB/s (0,7 de datagramas).
+   15 por segundo): 15,0 KB/s, de los que 7,0 son cabeceras de datagrama (a 30/s eran 30,1 y 14,1).
+2. La pose del jugador del host: 2,4 KB/s (1,2 de datagramas; antes 4,8).
+3. Los eventos de negocio, 9 por segundo: 2,3 KB/s (0,7 de datagramas), igual que antes.
 
-Con 4 jugadores el orden es el mismo (10,0 / 4,8 / 1,3 KB/s). Los eventos no pesan: el galpón se pasa por las poses.
+Con 4 jugadores el orden es el mismo (5,0 / 2,4 / 1,3 KB/s). Las poses siguen siendo lo que más pesa.
 
-**Qué se podría hacer con 8 (estimado con el mismo modelo, no medido ni aplicado; para planificar):**
+**Cómo está hecho D-2002.3:**
 
-- Que el host junte las poses de todos en sus propios paquetes en vez de reenviar uno por jugador: ~21,6 KB/s,
-  entra. SceneMultiplayer no lo hace solo: hay que cambiar quién manda las poses (un espejo de cada jugador del lado
-  del host, o un RPC con todas por lote) y suma un tick de latencia a las poses de los demás.
-- Bajar el envío del jugador en el galpón a 15 por segundo (adentro nadie va rápido): ~19,7 KB/s, entra. A 20 por
-  segundo da ~25,6 KB/s, no alcanza.
-- Aceptar que el presupuesto de 24 KB/s es para 4 (lo que pide D-2002) y fijar uno para 8.
+- `CompanyRoot.join_crew(player)` (lo usa `_spawn_player` y los jugadores de la medición) mete al jugador en
+  `company_crew` y llama `Player.set_on_foot_pose_rate(CompanyTuning.SHED_POSE_RATE_HZ)`. El jugador elige el
+  intervalo cada tick al publicar su pose (`player_ride.gd`, `apply_pose_rate()`): a pie, el pedido; subido a un
+  vehículo (`net_in_vehicle`) o sentado, el de `player.tscn` otra vez (30/s). En el mundo de la empresa no hay
+  vehículo todavía; `test_company_root` lo prueba con uno de mentira. Solo cuenta el del dueño: él manda y el host
+  reenvía al mismo ritmo.
+- El intervalo es 0,0666 s y no 1/15 exacto (`pose_interval()`, redondeado hacia abajo a 0,1 ms como el 0,0333 de
+  la escena): SceneMultiplayer mira el sincronizador una vez por frame y cuenta desde el frame en que mandó, así
+  que con 1/15 exacto un frame que cae un pelo antes espera al siguiente (a 60 FPS, cada 5 frames: 12 por segundo).
+  En la medición headless (145 FPS) salen 14,5 por segundo (cada 10 frames).
+- Los demás lo dibujan igual de suave: `NetPoseSmoother` aprende el intervalo de los huecos entre poses (el primero
+  ya lo fija; un cambio de 30 a 15 lo sigue en 1-2 s) y dibuja 2 intervalos + 2 × jitter atrás. En LAN son ~133 ms
+  en vez de ~67: los otros jugadores se ven ~67 ms más atrás en el galpón. `MAX_DELAY` (200 ms) recorta recién con
+  más de 33 ms de jitter y aun así deja 3 intervalos (nunca menos de 2); `MAX_EXTRAPOLATION` (100 ms) cubre 1,5
+  intervalos, y una pose perdida queda dentro del colchón. Lo prueba `test_net_pose_smoother` (caso de 30 a 15 Hz).
+- No cambia el protocolo: ni RPC ni propiedades ni modos de replicación, solo cada cuánto manda el dueño. Un host
+  y un cliente de builds distintas se entienden (el que manda a 30 solo gasta más).
+
+**Las otras salidas que se habían estimado (no aplicadas):**
+
+- Que el host junte las poses de todos en sus propios paquetes en vez de reenviar uno por jugador: ~21,6 KB/s a
+  30/s. Cambia quién manda las poses (un espejo de cada jugador del lado del host, o un RPC con todas por lote) y
+  suma un tick de latencia. Queda si algún día el galpón necesita volver a 30/s.
+- A 20 por segundo daba ~25,6 KB/s: no alcanzaba.
+- Aceptar que el presupuesto de 24 KB/s es para 4 (lo que pide D-2002) y fijar uno para 8: ya no hace falta.

@@ -37,11 +37,16 @@ extends Node3D
 ## goes to NetworkManager's steam_presence (NetSteamPresence) when the world comes up, on every
 ## day_phase event and on a client's snapshot, and is cleared when the world closes. Without Steam
 ## it is only kept there.
+##
+## Bandwidth (D-2002.3): every player here joins the crew through join_crew(), which has it send
+## its pose at CompanyTuning.SHED_POSE_RATE_HZ on foot instead of the game's 30, so a full crew
+## fits the shed's 24 KB/s a client (test_company_bandwidth_budget).
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
+const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
 ## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here in
 ## gameplay/: once the company HUD exists, the host-gone screen and the way to the menu move
 ## there, as N-222's live in hud_pause.gd.
@@ -447,6 +452,15 @@ func _spawn_player() -> void:
 	player = (load(PLAYER_SCENE) as PackedScene).instantiate() as Node3D
 	player.name = "Player_%d" % id
 	player.position = SPAWN
-	player.add_to_group(CREW_GROUP)
+	join_crew(player as Player)
 	player.set_multiplayer_authority(id)
 	_world.add_child(player)
+
+
+## Every player of the company's world, before it enters the tree: one of the crew (CREW_GROUP),
+## sending its pose at the shed's rate while on foot (D-2002.3, CompanyTuning.SHED_POSE_RATE_HZ;
+## riding a vehicle, the game's again). Only the owner's copy sends: a remote copy may come
+## through here too, nothing changes for it.
+static func join_crew(crew_member: Player) -> void:
+	crew_member.add_to_group(CREW_GROUP)
+	Ride.set_on_foot_pose_rate(crew_member, CompanyTuning.SHED_POSE_RATE_HZ)

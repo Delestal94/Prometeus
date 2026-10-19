@@ -45,6 +45,13 @@ const CELL_IMPOSTOR_RADIUS: int = 5
 ## Instancing budget per frame, in real milliseconds (the N-917 lesson: never a big frame).
 const CELL_SLICE_MSEC: float = 4.0
 
+# --- Network (D-2002) ---
+## Poses a second each player sends on foot in the company's world (D-2002.3): half the game's 30
+## (player.tscn). Nobody goes fast in the shed, and at 30 the poses the host relays sent each client
+## of a full crew 37 KB/s, over the shed's 24 (docs/rendimiento-pc.md). Riding a vehicle a player
+## sends at the game's rate again (player_ride.gd set_on_foot_pose_rate(), CompanyRoot.join_crew()).
+const SHED_POSE_RATE_HZ: int = 15
+
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
 
