@@ -15,6 +15,7 @@ extends SceneTree
 ## - gain scales the samples, not volume_db (which would also turn the
 ##   distance filter up); gain 0 drops what is queued and refuses more; restarted
 ##   from outside (a sound check playing it again) it feeds the new playback;
+## - recent PCM amplitude is exposed as a decaying presentation envelope;
 ## - with nothing coming in it stops after idle_stop_seconds;
 ## - it copies its position from `follow` every frame;
 ## - in a room: no distance attenuation and no filter; in open air: fades with
@@ -37,6 +38,7 @@ func _run() -> void:
 	await _check_jitter_buffer()
 	await _check_latency_cap()
 	await _check_rate_and_gain()
+	await _check_amplitude()
 	await _check_idle_and_follow()
 	_check_carry()
 	if _failures == 0:
@@ -138,6 +140,24 @@ func _check_rate_and_gain() -> void:
 	var before: int = fresh.get_frames_available()
 	voice.push_pcm(_pcm(0.1), RATE)
 	_expect(fresh.get_frames_available() < before, "Restarted from outside, it feeds the new playback")
+	voice.queue_free()
+	await process_frame
+
+
+func _check_amplitude() -> void:
+	var voice := await _new_voice()
+	var packet: PackedByteArray = _pcm(0.02)
+	var expected: float = VoicePlayback.pcm_amplitude(packet)
+	voice.push_pcm(packet, RATE)
+	_expect(is_equal_approx(voice.amplitude, expected),
+		"PCM loudness becomes a presentation envelope (got %.3f, expected %.3f)" % [voice.amplitude, expected])
+	voice.advance(0.01)
+	_expect(voice.amplitude > 0.0 and voice.amplitude < expected, "The voice envelope releases after a packet")
+	voice.silence()
+	_expect(is_zero_approx(voice.amplitude), "Silencing voice closes its presentation envelope")
+	voice.gain = 0.5
+	voice.push_pcm(packet, RATE)
+	_expect(is_equal_approx(voice.amplitude, expected * 0.5), "Per-peer gain also scales the visible voice level")
 	voice.queue_free()
 	await process_frame
 
