@@ -40,6 +40,8 @@ extends Node3D
 
 ## Past this angle off -Z a run of same-way bends would bring the road back
 ## onto itself.
+## Milliseconds of merge work one physics tick may take (N-979).
+const MERGE_SLICE_MSEC: float = 3.0
 const MAX_HEADING_DEG: float = 80.0
 const CURVE_TURN_MIN_DEG: float = 25.0
 const CURVE_TURN_MAX_DEG: float = 70.0
@@ -65,6 +67,9 @@ var _active: Array[RouteSegment] = []
 ## physics tick that spawned nothing, so building a segment and merging it
 ## (~4 and ~8 ms for the heavy ones) never land in the same tick (N-219).
 var _unbatched: Array[RouteSegment] = []
+## True while a sliced merge (_batch_next from the physics tick) is still
+## waiting for its next frame: only one at a time.
+var _merging: bool = false
 ## Where the next segment starts: the pose (this node's space) and how far
 ## along the road that is.
 var _cursor: Transform3D = Transform3D.IDENTITY
@@ -118,8 +123,8 @@ func _physics_process(_delta: float) -> void:
 		return
 	var spawned_before: int = _spawn_count
 	_fill_ahead()
-	if _spawn_count == spawned_before:
-		_batch_next()
+	if _spawn_count == spawned_before and not _merging:
+		_batch_next(MERGE_SLICE_MSEC)
 	_cull_behind()
 
 
@@ -303,13 +308,19 @@ func _pick_next_script() -> Script:
 
 
 ## Merges the oldest segment still waiting for it.
-func _batch_next() -> void:
+func _batch_next(slice_msec: float = 0.0) -> void:
 	if _unbatched.is_empty():
 		return
 	var segment: RouteSegment = _unbatched.pop_front()
 	if is_instance_valid(segment) and not segment.is_queued_for_deletion():
-		# Without a slicer it never waits for a frame: this stays one step.
-		await DressingBatcher.merge_segment_geometry([segment])
+		# Without a slicer (flush_batches) it never waits for a frame: one step.
+		# With one (N-979) a heavy segment, a bridge's ~30 ms of
+		# SurfaceTool.append_from, is spread over a few frames; its parts keep
+		# showing unmerged until the end.
+		var slicer: FrameSlicer = FrameSlicer.new(get_tree(), slice_msec) if slice_msec > 0.0 and is_inside_tree() else null
+		_merging = slicer != null
+		await DressingBatcher.merge_segment_geometry([segment], slicer)
+		_merging = false
 
 
 func _cull_behind() -> void:

@@ -95,10 +95,42 @@ func _run() -> void:
 	streamer.call(&"flush_batches")
 	_expect((streamer.get(&"_unbatched") as Array).is_empty(), "flush_batches() merges everything pending")
 
+	# N-979: a bridge's merge from the physics tick is cut into slices of a few
+	# ms (FrameSlicer), not one 22-30 ms tick; the result is the same.
+	var whole: RouteSegment = NarrowBridgeSegment.new()
+	var sliced: RouteSegment = NarrowBridgeSegment.new()
+	streamer.add_child(whole)
+	streamer.add_child(sliced)
+	var started_whole: int = Time.get_ticks_usec()
+	var whole_count: int = await DressingBatcher.merge_segment_geometry([whole])
+	var whole_ms: float = (Time.get_ticks_usec() - started_whole) / 1000.0
+	var queue: Array[RouteSegment] = [sliced]
+	streamer.set(&"_unbatched", queue)
+	var started_sliced: int = Time.get_ticks_usec()
+	streamer.call(&"_batch_next", SegmentStreamer.MERGE_SLICE_MSEC)
+	var first_slice_ms: float = (Time.get_ticks_usec() - started_sliced) / 1000.0
+	var waited_frames: int = 0
+	while bool(streamer.get(&"_merging")) and waited_frames < 120:
+		waited_frames += 1
+		await process_frame
+	_expect(not bool(streamer.get(&"_merging")), "The sliced merge finishes (%d frames)" % waited_frames)
+	_expect(sliced.find_children("MergedGeometry*", "MeshInstance3D", false, false).size() > 0,
+			"The sliced merge leaves the merged mesh")
+	_expect(_segment_part_count(sliced) == _segment_part_count(whole),
+			"Sliced and whole merges leave the same parts")
+	_expect(whole_count > 0, "The bridge has parts to merge (%d)" % whole_count)
+	_expect(first_slice_ms <= maxf(whole_ms, 5.0) + 2.0, "The first slice (%.1f ms) is not longer than the whole merge (%.1f ms)"
+			% [first_slice_ms, whole_ms])
+	print("N-979: bridge merge whole %.1f ms, first slice %.1f ms, %d frames later" % [whole_ms, first_slice_ms, waited_frames])
+
 	network.set(&"world_seed", 0)
 	if _failures == 0:
 		print("PASS: Endless segment spawns keep their models warm and merge a tick after they build")
 	quit(_failures)
+
+
+func _segment_part_count(segment: Node) -> int:
+	return segment.find_children("*", "MeshInstance3D", true, false).size()
 
 
 func _expect(condition: bool, description: String) -> void:
