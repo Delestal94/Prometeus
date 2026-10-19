@@ -16,6 +16,9 @@ const STARTING_DAY: int = 1
 const STARTING_REPUTATION: float = 50.0
 const REPUTATION_MIN: float = 0.0
 const REPUTATION_MAX: float = 100.0
+## Vehicles the new company owns (data/vehicles/<id>.tres, D-0207): the first van is a gift.
+## CompanyState.new_company() still starts with an empty fleet until the dealer (D-1201) grants these.
+const STARTING_FLEET: Array[StringName] = [&"van_classic"]
 
 ## Movements the wallet history keeps (D-0501); older ones are dropped.
 const LEDGER_MAX: int = 200

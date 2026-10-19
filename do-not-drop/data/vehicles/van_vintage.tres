@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="VehicleDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/fleet/vehicle_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"van_vintage"
+scene = ExtResource("2_scene")
+variant = &"vintage"
+seats = 8
+cargo_slots = 7
+cargo_kg = 300.0
+movement = &"wheels"
+gate_key = &""
+price = 2000
+fleet_key = &"van"
+amplified_trap = &""
