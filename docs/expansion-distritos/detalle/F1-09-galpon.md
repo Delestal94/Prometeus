@@ -188,3 +188,11 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Decisión:** un punto por pieza en vez de uno por casilla o por estante: es lo que ve la sonda y mantiene el costo en una `Area3D` por mueble. Los bloques sin rol (muebles lisos) no tienen punto.
 **Test** `test_shed_interaction`: un punto por pieza trabajable del layout por defecto; cuatro estantes puestos a mano, uno por giro, reciben el mismo punto (clase, capa, forma, texto) y están dentro del piso y fuera de toda huella; mover cambia el punto de lugar, vender lo saca, sin duplicar; usar el punto de un estante por defecto, una mesa y uno puesto informa uid, rol y peer.
 **Hecho cuando:** el test pasa.
+
+### D-0916 · Deshacer la última colocación — A · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `BuildPlacement.undo_last_placement/can_undo` (`scripts/gameplay/business/build_placement.gd`) + `UNDO_DEPTH`; `test_build_undo`. El botón o la tecla (Ctrl+Z) quedan para el adaptador de D-0917/D-0943.
+**Depende de:** D-0902 (`BuildPlacement.place`)
+**Qué:** `place()` recuerda las últimas 8 piezas compradas (las entradas del layout mismas); `undo_last_placement()` saca la más nueva que siga en el layout y devuelve **el precio entero** (vender devuelve el 50 %).
+- Una pieza movida o girada después se encuentra igual; una vendida entremedio se saltea. Las piezas que no pasaron por `place()` (layout cargado o por defecto) no se deshacen.
+**Decisión:** solo colocaciones, no mover, girar ni vender: es lo que dice la tarea y evita un historial de acciones con dinero. Reembolso completo porque es un error recién cometido, no una venta.
+**Test** `test_build_undo`. **Hecho cuando:** el test pasa.
