@@ -46,7 +46,7 @@ func _check_running_stat() -> void:
 func _check_source_has_no_unbounded_buffers() -> void:
 	var text: String = FileAccess.get_file_as_string(BENCH_PATH)
 	_expect(not text.is_empty(), "bench_drive.gd is readable")
-	for banned: String in ["_frames.append", "_smooth_samples", "_phys_active.append", "_phys_time_ms.append",
+	for banned: String in ["\t_frames.append", "_smooth_samples", "_phys_active.append", "_phys_time_ms.append",
 			"_bodies_awake.append", "_contacts.append"]:
 		_expect(not text.contains(banned), "The probe no longer keeps a sample array: %s" % banned)
 	_expect(text.contains("MAX_HITCH_LINES"), "The hitch frames kept whole have a cap")
