@@ -362,6 +362,9 @@ WORLD_GATE_CLOSED,CERRADO,CLOSED
 WORLD_GATE_NEEDS_MILESTONE,CERRADO: falta el hito %s,CLOSED: milestone %s missing
 WORLD_GATE_NEEDS_VEHICLE,CERRADO: se cruza con %s,CLOSED: needs %s to cross
 WORLD_GATE_NEEDS_EQUIPMENT,NO PASA SIN EQUIPO: %s,NO ENTRY WITHOUT GEAR: %s
+WORLD_DISPATCH_NEEDS_VEHICLE,No entra: necesita %s,Can't load: needs %s
+WORLD_DISPATCH_NEEDS_MILESTONE,No entra: falta el hito %s,Can't load: milestone %s missing
+WORLD_DISPATCH_NEEDS_EQUIPMENT,No entra: falta el equipo %s,Can't load: gear %s missing
 WORLD_STREET_CENTRO,Calle Central,Central Street
 WORLD_STREET_CAMPO,Camino Rural,Country Road
 WORLD_STREET_MAIN,Calle Principal,Main Street
@@ -380,3 +383,7 @@ WORLD_SHED_ZONE_DISPATCH,DESPACHO,DISPATCH
 WORLD_SHED_USE_SHELF,Usar estante,Use shelf
 WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
+WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
+WORLD_PLACEABLE_SHELF,Estante,Shelf
+WORLD_PLACEABLE_FRIDGE,Heladera,Fridge
+WORLD_PLACEABLE_DISPATCH_ZONE,Zona de despacho,Dispatch zone
