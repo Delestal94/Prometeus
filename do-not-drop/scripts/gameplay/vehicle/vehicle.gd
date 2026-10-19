@@ -11,6 +11,10 @@ extends VehicleBody3D
 ## input and eases it toward what the host says.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+## Preloaded, not by class_name: a new global class isn't in the class cache until
+## the editor imports again, and headless runs load this script first.
+const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
+const FleetSeats = preload("res://scripts/gameplay/fleet/fleet_seats.gd")
 
 ## Which peer currently holds the wheel, synced to everyone so each client's
 ## VehicleInputComponent knows whether it's the one that should be reading
@@ -241,35 +245,30 @@ const RIDE_HEIGHT: float = 0.666
 ## much below its ray contact under load, and the extra radius cancels it so
 ## the drawn rubber sits exactly on the road.
 const TIRE_RADIUS: float = 0.544
-## A 0.65 m box's half height: rack markers sit that far above their deck.
-const MOUNT_REFERENCE_HALF_HEIGHT: float = 0.325
-## The cargo bay's inside in the truck's own space: side wall to side wall,
-## floor to roof, cab wall to rear doors (vehicle.tscn's collision shapes).
-## Whatever is in here rides with the truck -- see carries().
-const CARGO_BAY: AABB = AABB(Vector3(-1.05, 0.0, -0.35), Vector3(2.1, 2.6, 4.95))
-## Inner face of each side wall (WallCollision at x = ±1.05, 0.1 thick).
-const CARGO_WALL_INNER_X: float = 1.0
-## Room a shelved box keeps from the wall: its tape and straps stick out a
-## few centimetres past the collider (package_feedback.gd).
-const CARGO_WALL_CLEARANCE: float = 0.045
-## The cargo shell's physics layer (7, "vehicle_shell"). What rides in the
-## truck or bumps into it -- boxes, players, loose clutter, a ragdoll -- collides
-## with the shell, never with the truck's own body, whose mask is the
-## environment alone. The shell is kinematic: it carries and stops a box like
-## a wall of infinite mass, and nothing that hits it pushes back on the
-## truck. Before it, an 8-20 kg box sliding about the bay (or a player, who
-## the solver treats as immovable) shoved a 950 kg truck around: it drove in
-## jerks (playtest 2026-09-25).
-const SHELL_LAYER: int = 64
-var _shell: StaticBody3D
+## The cargo constants live in FleetCargo (D-0208); kept here under their names,
+## which the rest of the game reads (Vehicle.CARGO_BAY, van.SHELL_LAYER ...).
+const MOUNT_REFERENCE_HALF_HEIGHT: float = FleetCargo.MOUNT_REFERENCE_HALF_HEIGHT
+const CARGO_BAY: AABB = FleetCargo.CARGO_BAY
+const CARGO_WALL_INNER_X: float = FleetCargo.CARGO_WALL_INNER_X
+const CARGO_WALL_CLEARANCE: float = FleetCargo.CARGO_WALL_CLEARANCE
+const SHELL_LAYER: int = FleetCargo.SHELL_LAYER
+## What this van does for its cargo (carries, the shell, shelving) and who sits where:
+## shared with the other vehicles of the fleet, see scripts/gameplay/fleet/.
+var fleet_cargo: FleetCargo
+var fleet_seats: FleetSeats
 
-@onready var _package_spawn: Marker3D = $CargoBay/LeftSeat1PackageMount
 ## The manual gearbox (N-114): always in the scene, only used by a manual variant.
 @onready var gearbox: VehicleGearbox = $Gearbox
 var _horn_player: AudioStreamPlayer3D
 
 
+func _init() -> void:
+	fleet_cargo = FleetCargo.new(self)
+	fleet_seats = FleetSeats.new(self)
+
+
 func _ready() -> void:
+	fleet_cargo.spawn_point = $CargoBay/LeftSeat1PackageMount
 	if not is_multiplayer_authority():
 		# A remote peer's copy: kinematic from here on, positioned entirely by
 		# the MultiplayerSynchronizer. Letting the physics engine run too would
@@ -302,7 +301,7 @@ func _ready() -> void:
 	reference_truck.name = "ReferenceTruck"
 	add_child(reference_truck)
 	# After the reference truck: it adds the bulkhead's collision.
-	_build_cargo_shell()
+	fleet_cargo.build_shell()
 	# Setters ran before the scene was ready (defaults, spawn sync); apply the
 	# current state to collision and art once everything exists.
 	for door: StringName in [&"rear", &"cab_left", &"cab_right"]:
@@ -313,38 +312,20 @@ func _ready() -> void:
 		EventBus.package_placed.connect(_on_package_placed)
 
 
-## Whether a world point is inside the cargo bay, i.e. riding along: players
-## standing in the back, boxes, loose clutter. Uses this peer's copy of the
-## truck, so on a client it answers for the truck that client actually sees.
-##
-## `margin` grows the bay on every side: whoever's already aboard passes it,
-## so something right at the rear doors doesn't flicker in and out.
+## Whether a world point is inside the cargo bay, i.e. riding along (FleetCargo.carries).
 func carries(world_point: Vector3, margin: float = 0.0) -> bool:
-	return CARGO_BAY.grow(margin).has_point(to_local(world_point))
+	return fleet_cargo.carries(world_point, margin)
 
 
-## How fast a point riding in the truck is moving in the world: what a box
-## let go of in the moving bay has to start with, or it slams into the rear
-## wall as if dropped from a standstill. linear_velocity is replicated, so
-## this holds on a client's copy too.
+## How fast a point riding in the truck is moving in the world (FleetCargo.point_velocity).
 func point_velocity(world_point: Vector3) -> Vector3:
-	return linear_velocity + angular_velocity.cross(world_point - global_transform * center_of_mass)
+	return fleet_cargo.point_velocity(world_point)
 
 
-## Whether a rigid body in or around the truck (a box, loose clutter) should
-## use continuous collision this tick. Jolt sweeps it from last tick's spot
-## to this one against the cargo shell where the shell ends up, so riding
-## along -- a third of a metre a tick at 72 km/h -- the sweep started from
-## behind the rack's rear stop and the shut rear doors, and a box resting
-## against them was stopped on the far side and fell out (playtest
-## 2026-09-27, tests/test_cargo_shell.gd). So: sweep while loose in the
-## world, or while it moves inside the bay faster than the truck carries it
-## (a crash throwing it at the bulkhead); not while it just rides along.
+## Whether a rigid body in or around the truck should use continuous collision
+## this tick (FleetCargo.needs_sweep).
 func needs_sweep(body: RigidBody3D, margin: float = 0.0) -> bool:
-	if not carries(body.global_position, margin):
-		return true
-	var carried: Vector3 = point_velocity(body.global_position)
-	return (body.linear_velocity - carried).length_squared() > carried.length_squared()
+	return fleet_cargo.needs_sweep(body, margin)
 
 
 func is_door_open(door: StringName) -> bool:
@@ -378,7 +359,7 @@ func set_rear_cargo_open(open: bool) -> void:
 
 func _apply_door(door: StringName, open: bool) -> void:
 	if door == &"rear":
-		for owner_body: Node in [self, _shell]:
+		for owner_body: Node in [self, fleet_cargo.shell]:
 			var blocker := owner_body.get_node_or_null(^"RearDoorCollision") as CollisionShape3D if owner_body != null else null
 			if blocker != null:
 				blocker.set_deferred(&"disabled", open)
@@ -387,111 +368,14 @@ func _apply_door(door: StringName, open: bool) -> void:
 		reference_truck.call(&"set_door_open", door, open)
 
 
-## The shell: a copy of every collision shape of the truck's body (sharing
-## the Shape resources), in the same place, on SHELL_LAYER. On the host it's
-## a kinematic body moved each tick to where the truck will be at the end of
-## the step (_follow_with_shell), so it carries its riders at the truck's own
-## speed. On a client the truck is a frozen copy the network teleports; there
-## the shell is a plain static child that jumps along with it, the way the
-## truck's own shapes used to.
-func _build_cargo_shell() -> void:
-	var simulated: bool = is_multiplayer_authority()
-	_shell = AnimatableBody3D.new() if simulated else StaticBody3D.new()
-	_shell.name = "CargoShell"
-	_shell.collision_layer = SHELL_LAYER
-	_shell.collision_mask = 0
-	_shell.physics_material_override = physics_material_override
-	if simulated:
-		(_shell as AnimatableBody3D).sync_to_physics = false
-		_shell.top_level = true
-		_shell.physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
-		# Top level: this is its world pose, from the moment it exists.
-		_shell.transform = global_transform
-	for child: Node in get_children():
-		var source := child as CollisionShape3D
-		if source == null:
-			continue
-		var copy := CollisionShape3D.new()
-		copy.name = source.name
-		copy.shape = source.shape
-		copy.transform = source.transform
-		copy.disabled = source.disabled
-		_shell.add_child(copy)
-	add_child(_shell)
-	if simulated:
-		set_notify_transform(true)
-
-
-## Farther than the truck can travel in a tick: moved by hand (a test, a
-## reset), not driven. The shell jumps there with it before the next step
-## (transform notifications are flushed once a frame) instead of
-## sweeping the whole way in it, which would fling whatever it carries at
-## hundreds of metres a second.
-const SHELL_TELEPORT_DISTANCE: float = 2.0
-
-
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_TRANSFORM_CHANGED and _shell != null and _shell.top_level:
-		if _shell.global_position.distance_to(global_position) > SHELL_TELEPORT_DISTANCE:
-			_teleport_shell(global_transform)
+	if what == NOTIFICATION_TRANSFORM_CHANGED and fleet_cargo != null:
+		fleet_cargo.on_body_transform_changed()
 
 
-func _teleport_shell(to: Transform3D) -> void:
-	var shell_rid: RID = _shell.get_rid()
-	PhysicsServer3D.body_set_mode(shell_rid, PhysicsServer3D.BODY_MODE_STATIC)
-	_shell.global_transform = to
-	PhysicsServer3D.body_set_mode(shell_rid, PhysicsServer3D.BODY_MODE_KINEMATIC)
-	PhysicsServer3D.body_set_state(shell_rid, PhysicsServer3D.BODY_STATE_TRANSFORM, to)
-
-
-## Host, each tick before the step: where the truck will be once the step
-## is done -- its pose now, carried on by its velocity and spin -- so the
-## step moves the shell along with the truck at the truck's own speed.
-## Following the truck's pose as of now instead, it would trail a tick
-## behind (a third of a metre at 72 km/h), and the boxes with it.
-func _follow_with_shell(delta: float) -> void:
-	var ahead: Transform3D = global_transform
-	if not freeze:
-		var centre: Vector3 = global_transform * center_of_mass
-		var turned: Basis = global_basis
-		if angular_velocity.length_squared() > 0.000001:
-			turned = Basis(angular_velocity.normalized(), angular_velocity.length() * delta) * global_basis
-		ahead = Transform3D(turned, centre + linear_velocity * delta - turned * center_of_mass)
-	if _shell.global_position.distance_to(ahead.origin) > SHELL_TELEPORT_DISTANCE:
-		_teleport_shell(ahead)
-		return
-	# Kinematic: this is only the target the step moves it to.
-	_shell.global_transform = ahead
-
-
-## A box set on the rack rests on its deck whatever its shape: the markers
-## are placed for the standard 0.65 m box, so a tall or flat one is raised or
-## lowered by the difference instead of sinking into the deck or hovering.
+## A box set on the rack rests on its deck whatever its shape (FleetCargo.on_package_placed).
 func _on_package_placed(package_id: StringName) -> void:
-	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
-		if package.get(&"package_id") != package_id or not package.has_method(&"get_half_extents"):
-			continue
-		var mount_point: Node = package.get(&"current_mount") as Node
-		# A mount's interaction area hangs off its marker; place_at() may also
-		# have been handed the marker itself.
-		var marker: Node3D = mount_point as Node3D
-		if mount_point is Area3D:
-			marker = mount_point.get_parent() as Node3D
-		if marker == null or not is_ancestor_of(marker):
-			continue
-		var half: Vector3 = package.call(&"get_half_extents")
-		var offset: float = half.y - MOUNT_REFERENCE_HALF_HEIGHT
-		var local_center: Vector3 = to_local(marker.global_transform * Vector3(0.0, offset, 0.0))
-		# A wide box (the flat one is 0.95 m) centred on a marker laid out for
-		# the 0.65 m one reached into the side wall, and its tape and straps
-		# showed through on the outside: slide it in until it clears.
-		var box_basis: Basis = global_basis.inverse() * marker.global_basis
-		var reach_x: float = (absf(box_basis.x.x) * half.x + absf(box_basis.y.x) * half.y
-			+ absf(box_basis.z.x) * half.z + CARGO_WALL_CLEARANCE)
-		var limit_x: float = maxf(CARGO_WALL_INNER_X - reach_x, 0.0)
-		local_center.x = clampf(local_center.x, -limit_x, limit_x)
-		(package as Node3D).global_position = to_global(local_center)
-		(package as Node3D).reset_physics_interpolation()
+	fleet_cargo.on_package_placed(package_id)
 
 
 ## A heavy truck left with nobody at the wheel doesn't roll: VehicleBody3D's
@@ -699,7 +583,7 @@ func gear_text() -> String:
 
 
 func get_cargo_spawn_transform() -> Transform3D:
-	return _package_spawn.global_transform
+	return fleet_cargo.get_cargo_spawn_transform()
 
 
 ## All the parts of a packet in (they travel together, in whatever order
@@ -790,7 +674,7 @@ func _physics_process(delta: float) -> void:
 	net_simulating = not freeze
 	if freeze and not _parked:
 		_pose_frozen_wheels()
-	_follow_with_shell(delta)
+	fleet_cargo.follow(delta)
 	if rear_ramp_deployed and (not rear_cargo_open or speed_kmh > RAMP_STOW_SPEED):
 		rear_ramp_deployed = false
 	elif not rear_ramp_deployed and rear_cargo_open and speed_kmh < RAMP_DEPLOY_SPEED:

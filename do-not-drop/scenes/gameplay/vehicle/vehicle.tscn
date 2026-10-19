@@ -133,7 +133,7 @@ size = Vector3(0.82, 2.223, 0.1)
 size = Vector3(1.1, 0.06, 1.814)
 
 ; Mask: the environment alone. Boxes, players, clutter and ragdolls collide
-; with the cargo shell (vehicle.gd _build_cargo_shell, layer 7), a kinematic
+; with the cargo shell (fleet_cargo.gd build_shell, layer 7), a kinematic
 ; copy of these shapes: they're carried and stopped by it but never push the
 ; truck. A player placed even slightly inside the truck used to launch it,
 ; and loose boxes made it drive in jerks.

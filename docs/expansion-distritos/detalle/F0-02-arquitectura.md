@@ -113,6 +113,7 @@ bloqueo abre: `&"water"`, `&"altitude"`…), `price: int`. Tres `.tres` en `data
 **Hecho cuando:** los dos tests pasan.
 
 ### D-0208 · Base común `FleetVehicle` — B · Opus 5.5 · xhigh · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR pendiente)** — componentes `FleetCargo` (bahía, shell, `carries`/`point_velocity`/`needs_sweep`, acomodo y spawn) y `FleetSeats` (consultas) en `scripts/gameplay/fleet/`; `vehicle.gd` 860 → 744 líneas con la misma API.
 **Depende de:** D-0207
 **Qué:** lo que necesita cualquier vehículo (asientos, carga, red, presentación) a una clase base o
 componente, para que lancha, avioneta y bici no hereden de `VehicleBody3D`. Recomendado: **componente**
