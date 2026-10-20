@@ -6,6 +6,8 @@ extends RefCounted
 
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
+const TEAM_COLOR_STEPS: int = 31
+const TEAM_COLOR_RADIX: int = TEAM_COLOR_STEPS + 1
 
 
 ## Every visual under `node` onto `layers` (RenderLayers.LOCAL_BODY for your
@@ -37,7 +39,63 @@ static func set_gel_look(
 		return
 	mesh_instance.set_instance_shader_parameter(&"gel_color", color)
 	mesh_instance.set_instance_shader_parameter(&"gel_opacity", clampf(opacity, 0.0, 1.0))
-	mesh_instance.set_instance_shader_parameter(&"gel_brightness", clampf(brightness, 0.5, 1.5))
+	var packed: Variant = mesh_instance.get_instance_shader_parameter(&"gel_brightness")
+	var team_color := unpack_gel_team_color(float(packed) if packed is float else 1.0)
+	mesh_instance.set_instance_shader_parameter(
+		&"gel_brightness",
+		pack_gel_team_color(brightness, team_color)
+	)
+
+
+## Adds the player's shirt colour at the gel's Fresnel edge. The colour is
+## quantized into the existing brightness slot so the shared shaders stay at
+## Godot's limit of sixteen per-instance uniforms.
+static func set_gel_team_accent(body: Node, color: Color) -> void:
+	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
+	if mesh_instance == null or not _uses_gel_shader(mesh_instance):
+		return
+	var packed: Variant = mesh_instance.get_instance_shader_parameter(&"gel_brightness")
+	var current: float = float(packed) if packed is float else 1.0
+	mesh_instance.set_instance_shader_parameter(
+		&"gel_brightness",
+		pack_gel_team_color(unpack_gel_brightness(current), color)
+	)
+
+
+static func pack_gel_team_color(brightness: float, color: Color) -> float:
+	var safe_brightness := clampf(brightness, 0.5, 1.5)
+	if color.a <= 0.0:
+		return safe_brightness
+	var red := roundi(clampf(color.r, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var green := roundi(clampf(color.g, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var blue := roundi(clampf(color.b, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var color_code := red + green * TEAM_COLOR_RADIX + blue * TEAM_COLOR_RADIX * TEAM_COLOR_RADIX
+	return float((color_code + 1) * 2) + safe_brightness
+
+
+static func unpack_gel_team_color(packed: float) -> Color:
+	if packed < 2.0:
+		return Color.TRANSPARENT
+	var color_code := maxi(floori(packed * 0.5) - 1, 0)
+	var red := color_code % TEAM_COLOR_RADIX
+	var green := floori(float(color_code) / TEAM_COLOR_RADIX) % TEAM_COLOR_RADIX
+	var blue := floori(float(color_code) / (TEAM_COLOR_RADIX * TEAM_COLOR_RADIX))
+	return Color(
+		float(red) / TEAM_COLOR_STEPS,
+		float(green) / TEAM_COLOR_STEPS,
+		float(blue) / TEAM_COLOR_STEPS,
+		1.0
+	)
+
+
+static func unpack_gel_brightness(packed: float) -> float:
+	return fmod(packed, 2.0) if packed >= 2.0 else clampf(packed, 0.5, 1.5)
+
+
+static func _uses_gel_shader(mesh_instance: MeshInstance3D) -> bool:
+	var material := mesh_instance.material_override as ShaderMaterial
+	return material != null and material.shader != null \
+		and material.shader.code.contains("instance uniform float gel_brightness")
 
 
 ## Swaps between two shared resources. The opaque material has no transparent
@@ -53,6 +111,7 @@ static func set_gel_material(body: Node, opaque: bool) -> void:
 ## override, not a mutation of the shared glTF resource), so tinting one
 ## player's shirt never bleeds into every other instance.
 static func tint_shirt(body: Node, color: Color) -> void:
+	set_gel_team_accent(body, color)
 	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
 	if mesh_instance == null or mesh_instance.mesh == null:
 		return
