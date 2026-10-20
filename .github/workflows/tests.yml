@@ -181,6 +181,19 @@ jobs:
           capture_count=$(find "$RUNNER_TEMP/runtime-audit/captures" -type f -name '*.png' | wc -l)
           test "$capture_count" -ge 5
 
+      - name: Capture gel legibility at 20 metres
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          timeout 180 xvfb-run -a "$GODOT" \
+            --path do-not-drop --resolution 1280x720 \
+            --script res://tests/render_gel_legibility.gd \
+            -- --output="$RUNNER_TEMP/runtime-audit/captures" \
+            2>&1 | tee "$RUNNER_TEMP/runtime-audit/render-gel-legibility.log"
+          test "$(find "$RUNNER_TEMP/runtime-audit/captures" -type f -name 's311_69_*.png' | wc -l)" -eq 7
+
       - name: Measure rendered performance
         if: always()
         env:

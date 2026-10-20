@@ -109,6 +109,26 @@ vec3 team_accent_color() {
 	return vec3(red, green, blue) / 31.0;
 }
 
+float team_accent_signature() {
+	float color_code = max(floor(gel_brightness * 0.5) - 1.0, 0.0);
+	float red = mod(color_code, 32.0);
+	float green = mod(floor(color_code / 32.0), 32.0);
+	float blue = floor(color_code / 1024.0);
+	return mod(red + green * 8.0 + blue * 10.0, 11.0);
+}
+
+float team_core_mask(vec3 point) {
+	float vertical = smoothstep(0.74, 0.80, point.y) * (1.0 - smoothstep(1.20, 1.26, point.y));
+	float horizontal = 1.0 - smoothstep(0.19, 0.29, abs(point.x));
+	return vertical * horizontal;
+}
+
+vec3 team_core_color(vec3 team_color, vec3 point) {
+	float band = floor(clamp((point.y - 0.76) / 0.12, 0.0, 3.0));
+	float bit = mod(floor(team_accent_signature() / pow(2.0, band)), 2.0);
+	return mix(team_color * 0.22, mix(team_color, vec3(1.0), 0.28), bit);
+}
+
 vec3 animated_spectrum(float phase) {
 	return 0.5 + 0.5 * cos(6.28318 * (phase + vec3(0.0, 0.333, 0.667)));
 }
@@ -321,7 +341,10 @@ void fragment() {
 	float team_edge = team_accent_enabled() * smoothstep(0.08, 0.72, fresnel) * 0.5;
 	vec3 team_color = team_accent_color() * visual_brightness;
 	ALBEDO = mix(ALBEDO, team_color, team_edge);
-	EMISSION += team_color * team_edge * 0.06;
+	float team_core = team_accent_enabled() * team_core_mask(model_position);
+	vec3 team_mark = team_core_color(team_color, model_position);
+	ALBEDO = mix(ALBEDO, team_mark, team_core * 0.9);
+	EMISSION += team_color * team_edge * 0.06 + team_mark * team_core * (0.05 + weather_night() * 0.28);
 	float skin_roughness = roughness;
 	float skin_specular = specular;
 	if (gel_skin_surface.y >= 0.0) {
