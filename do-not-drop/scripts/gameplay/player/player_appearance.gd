@@ -8,6 +8,7 @@ const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
 const TEAM_COLOR_STEPS: int = 31
 const TEAM_COLOR_RADIX: int = TEAM_COLOR_STEPS + 1
+const TEAM_SIGNATURE_RADIX: int = 11
 
 
 ## Every visual under `node` onto `layers` (RenderLayers.LOCAL_BODY for your
@@ -90,6 +91,15 @@ static func unpack_gel_team_color(packed: float) -> Color:
 
 static func unpack_gel_brightness(packed: float) -> float:
 	return fmod(packed, 2.0) if packed >= 2.0 else clampf(packed, 0.5, 1.5)
+
+
+## Stable pattern id used by the gel's four chest bands. The multipliers make
+## the eight crew colours unique even after a colour-blind filter narrows hue.
+static func gel_team_signature(color: Color) -> int:
+	var red := roundi(clampf(color.r, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var green := roundi(clampf(color.g, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var blue := roundi(clampf(color.b, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	return posmod(red + green * 8 + blue * 10, TEAM_SIGNATURE_RADIX)
 
 
 static func _uses_gel_shader(mesh_instance: MeshInstance3D) -> bool:

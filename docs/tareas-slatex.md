@@ -344,7 +344,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   holográfica.
 - [x] **S-311.68** Color del equipo sin romper la skin: acento en el borde o en el núcleo con el color que
   hoy tiñe la camiseta.
-- [ ] **S-311.69** Legibilidad: cada jugador distinguible a 20 m, de día y de noche, y con los filtros
+- [x] **S-311.69** Legibilidad: cada jugador distinguible a 20 m, de día y de noche, y con los filtros
   de daltonismo (S-502, ahora en la lista de Nacho). Capturas.
 - [ ] **S-311.70** Vista previa, guardado en el perfil y replicación en `player_appearance.gd` (test de
   red: cada par ve la skin del otro).
