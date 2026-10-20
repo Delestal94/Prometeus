@@ -345,6 +345,7 @@ func _apply_cosmetic() -> void:
 	if profile != null and not profile.cosmetic_is_auto(cosmetic_id):
 		color = profile.cosmetic_color(cosmetic_id)
 	PlayerAppearance.tint_shirt(_body_visual, color)
+	PlayerAppearance.set_gel_team_accent(_body_visual, color)
 
 
 ## How much of PickUpHigh a pickup plays, from the height above the feet at

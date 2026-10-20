@@ -13,6 +13,7 @@ render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_
 
 instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
+// Values >= 2 pack a 15-bit team colour above the fractional brightness.
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 // Packed to stay within Godot's 16 instance-uniform limit:
 // surface = absorption, shine, skin effect mode, effect amount. Negative X/Y
@@ -110,6 +111,22 @@ float weather_rain() {
 
 float weather_night() {
 	return clamp(floor(gel_weather.z * 0.5) * 0.5, 0.0, 1.0);
+}
+
+float skin_brightness() {
+	return gel_brightness >= 2.0 ? mod(gel_brightness, 2.0) : gel_brightness;
+}
+
+float team_accent_enabled() {
+	return step(2.0, gel_brightness);
+}
+
+vec3 team_accent_color() {
+	float color_code = max(floor(gel_brightness * 0.5) - 1.0, 0.0);
+	float red = mod(color_code, 32.0);
+	float green = mod(floor(color_code / 32.0), 32.0);
+	float blue = floor(color_code / 1024.0);
+	return vec3(red, green, blue) / 31.0;
 }
 
 vec3 animated_spectrum(float phase) {
@@ -258,7 +275,8 @@ void fragment() {
 	float fresnel = pow(1.0 - facing, fresnel_power);
 	float density = fresnel * edge_density;
 	vec3 skin_tint = interior_base_tint(gel_color.rgb, model_position);
-	vec3 player_tint = skin_tint * gel_brightness * mix(1.0, 1.08, gel_weather.w);
+	float visual_brightness = skin_brightness();
+	vec3 player_tint = skin_tint * visual_brightness * mix(1.0, 1.08, gel_weather.w);
 	vec2 refraction_offset = NORMAL.xy * refraction_strength * (0.55 + fresnel * 0.45);
 	vec2 refraction_uv = clamp(SCREEN_UV + refraction_offset, vec2(0.001), vec2(0.999));
 	vec3 refracted_background = texture(screen_texture, refraction_uv).rgb;
@@ -307,7 +325,7 @@ void fragment() {
 	float inclusion_mask = clamp(fine_motes + (bubble_outer - bubble_inner) * 0.7, 0.0, 1.0);
 	ALBEDO = mix(ALBEDO, player_tint * 0.82, inclusion_mask * inclusion_contrast);
 	float interior_mask = interior_feature_mask(model_position) * gel_skin_surface.w;
-	ALBEDO = mix(ALBEDO, gel_interior.rgb * gel_brightness, interior_mask * 0.72);
+	ALBEDO = mix(ALBEDO, gel_interior.rgb * visual_brightness, interior_mask * 0.72);
 	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
 		EMISSION += gel_interior.rgb * interior_mask * 1.4;
 	}
@@ -324,6 +342,10 @@ void fragment() {
 		ALBEDO = mix(ALBEDO, holo_color, gel_skin_surface.w * (0.3 + fresnel * 0.35));
 		EMISSION += holo_color * gel_skin_surface.w * (0.08 + fresnel * 0.18);
 	}
+	float team_edge = team_accent_enabled() * smoothstep(0.08, 0.72, fresnel) * 0.62;
+	vec3 team_color = team_accent_color() * visual_brightness;
+	ALBEDO = mix(ALBEDO, team_color, team_edge);
+	EMISSION += team_color * team_edge * 0.1;
 	ROUGHNESS = mix(roughness, 0.025, gel_weather.w * 0.75);
 	SPECULAR = mix(specular, 1.0, gel_weather.w);
 	if (gel_skin_surface.y >= 0.0) {
@@ -368,7 +390,11 @@ void light() {
 	float specular_power = mix(128.0, 8.0, skin_roughness);
 	float specular_lobe = pow(clamp(dot(NORMAL, half_vector), 0.0, 1.0), specular_power);
 	vec3 wrapped_diffuse = ALBEDO * LIGHT_COLOR * wrapped_light;
-	vec3 back_scatter = gel_color.rgb * gel_brightness * LIGHT_COLOR * back_light * backlight_strength;
+	vec3 back_scatter_tint = gel_color.rgb * gel_brightness;
+	if (team_accent_enabled() > 0.5) {
+		back_scatter_tint = gel_color.rgb * skin_brightness();
+	}
+	vec3 back_scatter = back_scatter_tint * LIGHT_COLOR * back_light * backlight_strength;
 	DIFFUSE_LIGHT += (wrapped_diffuse + back_scatter) * ATTENUATION;
 	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * skin_specular * ATTENUATION;
 }
