@@ -111,6 +111,7 @@ static func set_gel_material(body: Node, opaque: bool) -> void:
 ## override, not a mutation of the shared glTF resource), so tinting one
 ## player's shirt never bleeds into every other instance.
 static func tint_shirt(body: Node, color: Color) -> void:
+	set_gel_team_accent(body, color)
 	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
 	if mesh_instance == null or mesh_instance.mesh == null:
 		return

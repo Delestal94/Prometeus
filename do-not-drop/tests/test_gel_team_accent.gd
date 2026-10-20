@@ -19,9 +19,9 @@ func _run() -> void:
 	var skin := Color(0.72, 0.3, 0.9, 0.84)
 	var team := Color(0.96, 0.32, 0.12, 1.0)
 	Appearance.set_gel_look(first, skin, 0.78, 1.12)
-	Appearance.set_gel_team_accent(first, team)
+	Appearance.tint_shirt(first, team)
 	Appearance.set_gel_look(second, skin, 0.78, 1.12)
-	Appearance.set_gel_team_accent(second, Color(0.1, 0.72, 1.0, 1.0))
+	Appearance.tint_shirt(second, Color(0.1, 0.72, 1.0, 1.0))
 
 	var packed: float = first.get_instance_shader_parameter(&"gel_brightness")
 	var decoded: Color = Appearance.unpack_gel_team_color(packed)
@@ -39,8 +39,6 @@ func _run() -> void:
 	var repacked: float = first.get_instance_shader_parameter(&"gel_brightness")
 	_expect(_close_color(Appearance.unpack_gel_team_color(repacked), team), "changing skins preserves the team accent")
 	_expect(is_equal_approx(Appearance.unpack_gel_brightness(repacked), 0.84), "changing skins updates brightness")
-	var player_code := FileAccess.get_file_as_string("res://scripts/gameplay/player/player.gd")
-	_expect(player_code.contains("set_gel_team_accent"), "the runtime feeds its shirt colour to the gel")
 
 	_check_shader(MATERIAL.shader, "transparent")
 	_check_shader(OPAQUE_MATERIAL.shader, "opaque")
