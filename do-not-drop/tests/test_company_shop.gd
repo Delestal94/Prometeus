@@ -71,11 +71,13 @@ func _run() -> void:
 	van.grant_key = &"van"
 	state.money = 1499
 	var poor: Dictionary = CompanyShop.buy(state, van)
-	_expect(not poor["ok"] and poor["key"] == CompanyShop.CANNOT_AFFORD and state.fleet.is_empty(), "1499 does not buy 1500")
+	_expect(not poor["ok"] and poor["key"] == CompanyShop.CANNOT_AFFORD, "1499 does not buy 1500")
+	_expect(state.fleet.is_empty(), "and nothing was granted")
 	state.money = 3000
 	CompanyShop.buy(state, van)
 	CompanyShop.buy(state, van)
-	_expect(state.fleet.size() == 2 and state.gate_owned()["vehicles"] == [&"van", &"van"], "vehicles can be bought again")
+	var owned: Array = state.gate_owned()["vehicles"]
+	_expect(state.fleet.size() == 2 and owned == [&"van", &"van"], "vehicles can be bought again")
 
 	_expect(CompanyShop.check(null, upgrade)["key"] == CompanyShop.NO_COMPANY, "no company, no purchase")
 	state.reset()
