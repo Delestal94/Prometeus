@@ -70,3 +70,20 @@ llama pasa los catálogos ya cargados y las zonas abiertas hoy, así la clase no
 un pedido válido por minuto de llegada con ids únicos, solo zonas abiertas y ninguna sin entregas, requisitos
 por producto, ventana y paga con bono, tope `max_items` y casos vacíos.
 **Hecho cuando:** misma semilla, mismos pedidos; el test pasa.
+
+### D-0804 · Tablero de pedidos en el galpón — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderBoard` (`scripts/gameplay/business/order_board.gd`) + `OrderBoardPanel` (`scripts/ui/order_board_panel.gd`); `test_company_order_board`. Falta colgarlo en una pared del galpón (D-0804.b, junto con la mesa 3D).
+**Depende de:** D-0210 (OrderBook), D-0802
+**Qué:** `OrderBoard.rows(orders, now_min, products)` (estático, sin nodos) recibe los pedidos de
+`OrderBook.to_dict()["orders"]` y devuelve una fila por pedido: cliente, dirección (la de `OrderLabel`),
+productos con nombre, requisitos (claves `WORLD_REQ_*`), minutos que quedan, paga, estado con su clave de
+texto y su marca. Orden: atrasados arriba, después por menos tiempo que queda; los cerrados (entregado,
+fallido, cancelado) al final, solo los 3 más nuevos. `OrderBoardPanel.refresh(rows)` dibuja una tarjeta por
+pedido (hasta 8, después "Y N más"). Cada estado tiene marca además del color (`○ ◐ ● ! ✓ ✗ –`), así se
+lee sin color. Solo muestra: sin foco ni input, igual que la hoja de la mesa; el cliente dibuja lo que el
+anfitrión le replica.
+**Test** `test_company_order_board`: orden y recorte de las filas, datos de cada fila, marca y clave por
+estado, entregado nunca atrasado, entrada rota ignorada, panel vacío / lleno / "Y N más" / inglés, claves
+en los dos idiomas.
+**Hecho cuando:** el test pasa. La captura legible la toma `revisor-visual` cuando el tablero esté en una
+pared (D-0804.b).
