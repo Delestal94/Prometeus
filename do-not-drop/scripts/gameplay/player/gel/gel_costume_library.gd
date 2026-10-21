@@ -118,9 +118,10 @@ static func _dinosaur(root: Node3D, primary: Material, secondary: Material) -> v
 		_sphere(root, "BackSpike", Vector3(0.0, 1.46 - index * 0.23, 0.31),
 			Vector3(0.09, 0.14, 0.16), secondary, &"chest" if index < 3 else &"pelvis")
 	for index: int in 4:
-		_capsule(root, "dino_tail" if index == 0 else "TailSegment", Vector3(0.0, 0.74 - index * 0.07,
-			0.45 + index * 0.20), Vector3(0.22 - index * 0.03, 0.34, 0.22 - index * 0.03), primary,
-			Vector3(PI / 2.0, 0.0, 0.0), &"pelvis")
+		_spring_piece(_capsule(root, "dino_tail" if index == 0 else "TailSegment",
+			Vector3(0.0, 0.74 - index * 0.07, 0.45 + index * 0.20),
+			Vector3(0.22 - index * 0.03, 0.34, 0.22 - index * 0.03), primary,
+			Vector3(PI / 2.0, 0.0, 0.0), &"pelvis"), &"dino_tail", index)
 
 
 static func _bee(root: Node3D, primary: Material, secondary: Material) -> void:
@@ -131,21 +132,28 @@ static func _bee(root: Node3D, primary: Material, secondary: Material) -> void:
 	for side: float in [-1.0, 1.0]:
 		_sphere(root, "bee_wings" if side < 0.0 else "BeeWing", Vector3(side * 0.31, 1.25, 0.30),
 			Vector3(0.34, 0.48, 0.08), wing, &"chest")
-		_capsule(root, "Antenna", Vector3(side * 0.12, 1.90, -0.01), Vector3(0.035, 0.34, 0.035),
-			secondary, Vector3(0.0, 0.0, side * -0.24), &"head")
+		var chain: StringName = &"bee_antenna_l" if side < 0.0 else &"bee_antenna_r"
+		for index: int in 3:
+			_spring_piece(_capsule(root, "Antenna", Vector3(side * (0.10 + index * 0.05),
+				1.88 + index * 0.13, -0.01), Vector3(0.035, 0.20, 0.035), secondary,
+				Vector3(0.0, 0.0, side * (-0.16 - index * 0.10)), &"head"), chain, index)
 
 
 static func _mummy(root: Node3D, primary: Material, secondary: Material) -> void:
 	_torso(root, secondary)
 	for index: int in 7:
 		var y: float = 0.82 + index * 0.10
-		_box(root, "loose_wrap" if index == 6 else "TorsoWrap", Vector3(0.0, y, -0.255),
+		_box(root, "TorsoWrap", Vector3(0.0, y, -0.255),
 			Vector3(0.69, 0.075, 0.045), primary, &"chest" if index > 2 else &"pelvis")
 	for side: float in [-1.0, 1.0]:
 		for index: int in 4:
 			_capsule(root, "LimbWrap", Vector3(side * (0.42 + index * 0.02), 1.23 - index * 0.15, 0.0),
 				Vector3(0.11, 0.24, 0.11), primary, Vector3(0.0, 0.0, side * 0.18),
 				&"upper_arm.L" if side < 0.0 else &"upper_arm.R")
+	for index: int in 3:
+		_spring_piece(_box(root, "loose_wrap" if index == 0 else "HangingWrap",
+			Vector3(0.27 + index * 0.025, 0.88 - index * 0.20, -0.28), Vector3(0.18, 0.26, 0.045),
+			primary, &"pelvis", Vector3(0.0, 0.0, -0.12 - index * 0.06)), &"mummy_wrap", index)
 
 
 static func _robot(root: Node3D, primary: Material, secondary: Material) -> void:
@@ -166,8 +174,11 @@ static func _superhero(root: Node3D, primary: Material, secondary: Material) -> 
 		&"pelvis")
 	_box(root, "HeroEmblem", Vector3(0.0, 1.23, -0.275), Vector3(0.22, 0.22, 0.045), secondary,
 		&"chest", Vector3(0.0, 0.0, PI / 4.0))
-	_box(root, "hero_cape", Vector3(0.0, 1.04, 0.34), Vector3(0.72, 0.92, 0.055), secondary, &"chest",
-		Vector3(0.10, 0.0, 0.0))
+	for index: int in 3:
+		_spring_piece(_box(root, "hero_cape" if index == 0 else "CapePanel",
+			Vector3(0.0, 1.30 - index * 0.32, 0.34 + index * 0.025),
+			Vector3(0.72 - index * 0.07, 0.35, 0.055), secondary, &"chest",
+			Vector3(0.10 + index * 0.035, 0.0, 0.0)), &"hero_cape", index)
 	for side: float in [-1.0, 1.0]:
 		_box(root, "CapeClasp", Vector3(side * 0.24, 1.44, 0.12), Vector3.ONE * 0.11, secondary)
 
@@ -250,6 +261,11 @@ static func _piece(root: Node3D, label: String, mesh: PrimitiveMesh, position: V
 	piece.set_meta(&"gel_costume_bone", bone)
 	root.add_child(piece)
 	return piece
+
+
+static func _spring_piece(instance: MeshInstance3D, chain: StringName, index: int) -> void:
+	instance.set_meta(&"gel_spring_chain", chain)
+	instance.set_meta(&"gel_spring_index", index)
 
 
 static func _material(color: Color, transparent: bool = false) -> StandardMaterial3D:
