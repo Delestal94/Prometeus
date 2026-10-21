@@ -1339,3 +1339,16 @@ UI_BUILD_REASON_MONEY,No alcanza la plata,Not enough money
 UI_BUILD_REASON_LIMIT,Llegaste al límite de piezas de esta etapa,You reached the piece limit of this stage
 UI_BUILD_REASON_NOT_EMPTY,Primero vaciá la pieza,Empty the piece first
 UI_BUILD_REASON_OTHER,No se puede,Not possible
+UI_DISPATCH_TITLE,Tablero de despacho,Dispatch board
+UI_DISPATCH_HINT,Marcá las cajas que salen y después Cargar,Pick the boxes that go out and then Load
+UI_DISPATCH_VEHICLE,Vehículo: %s,Vehicle: %s
+UI_DISPATCH_NO_VEHICLE,No hay vehículo en el playón,No vehicle at the yard
+UI_DISPATCH_CAPACITY,Cajas %d de %d · %.1f de %.0f kg,Boxes %d of %d · %.1f of %.0f kg
+UI_DISPATCH_EMPTY,No hay cajas listas en despacho,No boxes ready in dispatch
+UI_DISPATCH_ROW,%s · %s · %.1f kg,%s · %s · %.1f kg
+UI_DISPATCH_PICK,Elegí al menos una caja,Pick at least one box
+UI_DISPATCH_LOAD,Cargar,Load
+UI_DISPATCH_LOAD_N,Cargar %d,Load %d
+UI_DISPATCH_CLOSE,Cerrar,Close
+UI_DISPATCH_LOADED,Cargadas %d cajas,%d boxes loaded
+UI_DISPATCH_HOST_ONLY,Solo el anfitrión carga el vehículo,Only the host loads the vehicle
