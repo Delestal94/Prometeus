@@ -361,7 +361,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   (transferidos por script desde el cuerpo base) y los mismos pesos de hueso, así calza con cualquier
   combinación. La ropa opaca no rompe el orden de transparencia y el cuerpo se ve a través donde no hay
   ropa.
-- [ ] **S-311.75** Matriz automática disfraz × pelo × proporciones (presets y extremos): ninguna
+- [x] **S-311.75** Matriz automática disfraz × pelo × proporciones (presets y extremos): ninguna
   combinación se atraviesa (test).
 - [ ] **S-311.76** Desbloqueos en la progresión existente (`UnlockManager`) y panel de cosméticos con el
   maniquí de gelatina del ítem 22 en vez de cápsula + esfera.

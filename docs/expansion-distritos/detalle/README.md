@@ -17,6 +17,7 @@
 | [F1-07-armado.md](F1-07-armado.md) | D-0701 a D-0720 | F1 |
 | [F1-08-pedidos.md](F1-08-pedidos.md) | D-0801 a D-0820 | F1 |
 | [F1-09-galpon.md](F1-09-galpon.md) | D-0901 a D-0920 | F1 |
+| [F5-20-red-y-calidad.md](F5-20-red-y-calidad.md) | D-2021, D-2023 a D-2026 (Ampliación) | F5 |
 
 ## Orden recomendado dentro de F0 + F1
 
