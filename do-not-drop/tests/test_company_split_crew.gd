@@ -11,7 +11,7 @@ extends SceneTree
 ## company vehicle doesn't exist yet: D-0302.2). The host and one client ride the vehicle from the
 ## yard to 1.1 km north and back; the other client stays in the shed.
 ## - While the vehicle is far, the shed client receives no update of the vehicle nor of the box (the
-##   counters of their synchronizers stand still) and its copies are hidden; the rider keeps
+##   counters of their synchronizers stand still) and its stale copies end up hidden; the rider keeps
 ##   receiving both. The host stopped sending them to the shed only past the unload radius (3 cells
 ##   from the shed player) and sent them again from the load radius (2 cells) on the way back.
 ## - The shed client's cells never load around the trip (only its own player anchors them); the
@@ -257,11 +257,11 @@ func _watch_flips() -> void:
 				and Engine.get_process_frames() - int(flip["hidden_frame"]) >= IN_FLIGHT_FRAMES:
 			flip["start"] = [int(_received[2][name_key]), int(_received[1][name_key])]
 			flip["shed_copy"] = _node(2, name_key).position
-			flip["shed_shown"] = _node(2, name_key).visible
 		if to_shed and flip.has("start") and not flip.has("end"):
 			flip["shown_z"] = body_z
 			flip["end"] = [int(_received[2][name_key]), int(_received[1][name_key])]
 			flip["shed_copy_end"] = _node(2, name_key).position
+			flip["shed_shown"] = _node(2, name_key).visible
 
 
 func _check_window() -> void:
@@ -287,7 +287,8 @@ func _check_window() -> void:
 			"While far, the rider keeps receiving the %s (%d -> %d)" % [name_key, start[1], end[1]])
 		_expect((flip["shed_copy"] as Vector3).is_equal_approx(flip["shed_copy_end"]),
 			"The shed client's copy of the %s stands still while far" % name_key)
-		_expect(not bool(flip["shed_shown"]), "The shed client hides its stale copy of the %s" % name_key)
+		_expect(not bool(flip["shed_shown"]),
+			"The shed client hides its stale copy of the %s (and takes it out of physics)" % name_key)
 		_expect(int(_received[2][name_key]) > int(end[0]),
 			"Back near, the shed client receives the %s again (%d -> %d)" % [name_key, end[0], _received[2][name_key]])
 		_expect(_node(2, name_key).visible, "Back near, the shed client shows the %s again" % name_key)

@@ -16,22 +16,40 @@ extends Node
 ## - a peer `anchor_of.call(peer)` can't place (null): the game doesn't know where
 ##   that one is yet, so it gets everything, as if this node did not exist.
 ## This node owns the per-peer flags and `public_visibility` of what it tracks
-## (untrack() hands them back). Any other condition the game puts on a synchronizer
-## goes in add_visibility_filter(), which Godot checks on top of these flags.
+## (untrack() hands them back, and leaving the tree untracks everything). Any other
+## condition the game puts on a synchronizer goes in add_visibility_filter(), which
+## Godot checks on top of these flags.
+##
+## RPCs: SceneMultiplayer doesn't send an RPC called on a synchronizer's root to a peer
+## that synchronizer is hidden from, broadcasts included. So a broadcast RPC on a
+## tracked body silently skips the far peers, and a one-shot event or a removal (a box
+## consumed, a vehicle sold) sent that way leaves a stale copy there for good. Such a
+## fact travels as an ON_CHANGE property of the synchronizer (it arrives when the peer
+## sees the body again), as an RPC on a node that isn't tracked, or after untrack().
+##
+## Not for spawned bodies: a body a MultiplayerSpawner put in the world is despawned
+## on a peer that stops seeing it, and spawned again later. track() refuses one whose
+## parent is the spawn path of a spawner next to it (the usual layouts), with a
+## warning; the others are the game's to keep out.
 ##
 ## Keepalive: SceneMultiplayer drops a sync whose 16-bit clock looks older than the
 ## last one that peer got from the synchronizer, and the clock (one tick per network
 ## frame of the authority to that peer) wraps after 65536. A body hidden from a peer
 ## for over half of that (9 min at 60 fps) could be ignored for minutes once it is
 ## back. So every `keepalive_sec` a hidden body is shown to that peer for
-## `keepalive_pulse_sec`: a handful of updates every 20 s, nothing like a stream.
+## `keepalive_pulse_sec` (at least two of its replication intervals): a handful of
+## updates every 20 s, nothing like a stream.
 ##
-## On the peers that don't own it (`hide_far_copies`), the copy of a tracked body is hidden
-## (visible = false) while it lies beyond `grid.load_radius` cells of this peer's own
-## anchor, or while no update reached it yet (a late joiner's copy stands where the scene
-## put it), and shown again only after an update arrived that put it within that radius.
-## The copy the authority stopped updating doesn't stand still in view, and it shows
-## again where it really is: nobody sees it jump.
+## On a client (`hide_far_copies`), the copy of a tracked body the host owns is hidden
+## and taken out of physics (visible = false, and the collision layer and mask of
+## every CollisionObject3D in it zeroed, areas included, so nobody bumps into or sits
+## in a copy that isn't there): past `grid.unload_radius` cells of this peer's own
+## anchor; past `grid.load_radius` once no update came for `copy_stale_sec` (the one
+## left behind when the host stopped sending); and, near, while no update ever reached
+## it `copy_stale_sec` after it was tracked (a late joiner's copy where the scene put
+## it). It shows again within `grid.load_radius` once an update arrived after the last
+## look, so it shows where it really is: nobody sees it jump. Processing is never
+## switched off: whatever moves the copy (a smoother) keeps running.
 ##
 ## Bodies come in through track(), or by themselves while they are in one of
 ## `groups` (each MultiplayerSynchronizer child whose root is the body). Only nodes
@@ -51,12 +69,19 @@ var update_interval_sec: float = 0.25
 ## A body hidden from a peer is shown to it for `keepalive_pulse_sec` this often.
 var keepalive_sec: float = 20.0
 var keepalive_pulse_sec: float = 0.1
-## Hide the local copy of a far body on the peers that don't own it.
+## Hide (and take out of physics) the copy of a far body on the clients.
 var hide_far_copies: bool = true
+## A copy with no update for this long counts as stale: longer than a body at rest is
+## sent (NetRestThrottle's 0.5 s) and than a first update takes to arrive.
+var copy_stale_sec: float = 1.5
 
 ## MultiplayerSynchronizer -> _Entry.
 var _entries: Dictionary = {}
+## MultiplayerSynchronizer -> true: refused by track() (spawned), not asked again.
+var _refused: Dictionary = {}
 var _last_update: float = -1.0e9
+## The clock of the last step(), what an arriving update is stamped with.
+var _clock: float = 0.0
 
 
 class _Entry:
@@ -64,18 +89,20 @@ class _Entry:
 	var from_group: bool = false
 	## public_visibility before track(), given back by untrack().
 	var was_public: bool = true
-	## Authority: peer -> whether it gets the body (the last decision).
+	## Host: peer -> whether it gets the body (the last decision).
 	var near: Dictionary = {}
-	## Authority: peer -> when it was last hidden or pulsed (the keepalive's clock).
+	## Host: peer -> when it was last hidden or pulsed (the keepalive's clock).
 	var hidden_at: Dictionary = {}
-	## Authority: peer -> when the running keepalive pulse ends.
+	## Host: peer -> when the running keepalive pulse ends.
 	var pulse_until: Dictionary = {}
-	## Copy: this node hid the body; an update arrived since it was last far, and ever since tracked;
-	## it was looked at once already (the first look only lets the first update arrive).
+	## Copy: this node hid it; an update arrived since the last look; when it was tracked and when
+	## the last update arrived (-1: never).
 	var hidden_here: bool = false
 	var fresh: bool = false
-	var ever_synced: bool = false
-	var looked: bool = false
+	var tracked_at: float = -1.0
+	var synced_at: float = -1.0
+	## Copy: CollisionObject3D -> [collision_layer, collision_mask] zeroed while hidden.
+	var collisions: Dictionary = {}
 	var on_sync: Callable
 
 
@@ -83,13 +110,28 @@ func _process(_delta: float) -> void:
 	step(Time.get_ticks_msec() / 1000.0)
 
 
+## Hands back everything it holds: public_visibility, the per-peer flags, hidden copies.
+func _exit_tree() -> void:
+	for sync: Variant in _entries.keys():
+		if is_instance_valid(sync):
+			untrack(sync)
+		else:
+			_entries.erase(sync)
+
+
 ## Starts deciding who gets `sync`. `body` is what is measured; unset, the
-## synchronizer's root.
+## synchronizer's root. A body a MultiplayerSpawner put in the world is refused.
 func track(sync: MultiplayerSynchronizer, body: Node3D = null) -> void:
 	if sync == null or _entries.has(sync):
 		return
+	var measured: Node3D = body if body != null else sync.get_node_or_null(sync.root_path) as Node3D
+	if measured != null and _spawned_here(measured):
+		push_warning("WorldCellInterest: %s looks spawned by a MultiplayerSpawner (hiding it would despawn it"
+			% measured.name + " on the peer); not tracked")
+		_refused[sync] = true
+		return
 	var entry := _Entry.new()
-	entry.body = body if body != null else sync.get_node_or_null(sync.root_path) as Node3D
+	entry.body = measured
 	entry.was_public = sync.public_visibility
 	entry.on_sync = _on_synchronized.bind(sync)
 	sync.synchronized.connect(entry.on_sync)
@@ -126,7 +168,7 @@ func tracked_count() -> int:
 	return _entries.size()
 
 
-## Authority: the peers `sync` goes to now, as decided at the last step (a running
+## Host: the peers `sync` goes to now, as decided at the last step (a running
 ## keepalive pulse counts).
 func visible_peers(sync: MultiplayerSynchronizer) -> Array[int]:
 	var out: Array[int] = []
@@ -139,7 +181,7 @@ func visible_peers(sync: MultiplayerSynchronizer) -> Array[int]:
 	return out
 
 
-## Copy: this node hid `sync`'s body because it is far from this peer's anchor.
+## Client: this node hid `sync`'s copy (and took it out of physics).
 func is_hidden_here(sync: MultiplayerSynchronizer) -> bool:
 	var entry: _Entry = _entries.get(sync)
 	return entry != null and entry.hidden_here
@@ -148,11 +190,13 @@ func is_hidden_here(sync: MultiplayerSynchronizer) -> bool:
 ## One tick: ends the keepalive pulses that are due, and, if it is time, looks
 ## at the groups, the anchors and every tracked body.
 func step(now_sec: float) -> void:
+	_clock = now_sec
 	_end_pulses(now_sec)
 	if not is_inside_tree() or now_sec - _last_update < update_interval_sec:
 		return
 	_last_update = now_sec
 	_scan_groups()
+	var is_host: bool = multiplayer.is_server()
 	var peers: Array = []
 	var anchors: Dictionary = {}
 	var local_anchor: Variant = null
@@ -171,12 +215,12 @@ func step(now_sec: float) -> void:
 			for peer: int in peers:
 				anchors[peer] = _anchor(peer)
 			local_anchor = _anchor(multiplayer.get_unique_id())
-		if not typed.is_multiplayer_authority():
-			if hide_far_copies:
-				_follow_copy(entry, local_anchor)
-		elif multiplayer.is_server():
-			# A body a client owns goes to the host whatever the distance: only a host decides.
-			_decide(typed, entry, peers, anchors, now_sec)
+		if typed.is_multiplayer_authority():
+			if is_host:
+				# A body a client owns goes to the host whatever the distance: only a host decides.
+				_decide(typed, entry, peers, anchors, now_sec)
+		elif hide_far_copies and not is_host:
+			_follow_copy(entry, local_anchor, now_sec)
 
 
 ## Chebyshev distance in cells between two world positions.
@@ -203,7 +247,6 @@ func _decide(sync: MultiplayerSynchronizer, entry: _Entry, peers: Array, anchors
 	for peer: int in peers:
 		var near: bool = _is_near(entry, peer, anchors.get(peer), viewers)
 		entry.near[peer] = near
-		var want: bool = near
 		if near:
 			entry.hidden_at.erase(peer)
 			entry.pulse_until.erase(peer)
@@ -211,8 +254,8 @@ func _decide(sync: MultiplayerSynchronizer, entry: _Entry, peers: Array, anchors
 			entry.hidden_at[peer] = now
 		elif now - float(entry.hidden_at[peer]) >= keepalive_sec:
 			entry.hidden_at[peer] = now
-			entry.pulse_until[peer] = now + keepalive_pulse_sec
-		want = want or entry.pulse_until.has(peer)
+			entry.pulse_until[peer] = now + maxf(keepalive_pulse_sec, 2.0 * sync.replication_interval)
+		var want: bool = near or entry.pulse_until.has(peer)
 		if sync.get_visibility_for(peer) != want:
 			sync.set_visibility_for(peer, want)
 
@@ -248,24 +291,44 @@ func _end_pulses(now: float) -> void:
 				typed.set_visibility_for(peer, false)
 
 
-## A copy shows while it is near this peer's anchor and has been updated: one far away, or one no
-## update ever reached since it was tracked (a late joiner's copy still where the scene put it, while
-## the body is far), hides; it shows again once an update put it near. The first look only waits
-## for that first update, so a body in plain view doesn't blink when it is tracked.
-func _follow_copy(entry: _Entry, local_anchor: Variant) -> void:
-	if not entry.looked:
-		entry.looked = true
-		return
+## The client's side, the same hysteresis as the host's: hides past the unload radius, or past the
+## load radius when stale, or near but never updated once the grace is over; shows within the load
+## radius once an update came since the last look.
+func _follow_copy(entry: _Entry, local_anchor: Variant, now: float) -> void:
 	if not (local_anchor is Vector3):
 		_show_copy(entry)
 		return
-	if cell_distance(entry.body.global_position, local_anchor) > grid.load_radius or not entry.ever_synced:
+	if entry.tracked_at < 0.0:
+		entry.tracked_at = now
+	var distance: int = cell_distance(entry.body.global_position, local_anchor)
+	var last: float = entry.synced_at if entry.synced_at >= 0.0 else entry.tracked_at
+	var stale: bool = now - last > copy_stale_sec
+	var out_of_sight: bool = distance > grid.unload_radius or (stale and distance > grid.load_radius) \
+		or (stale and entry.synced_at < 0.0)
+	if out_of_sight:
 		entry.fresh = false
-		if not entry.hidden_here:
-			entry.hidden_here = true
-			entry.body.visible = false
-	elif entry.hidden_here and entry.fresh:
-		_show_copy(entry)
+		_hide_copy(entry)
+	elif entry.hidden_here:
+		if distance <= grid.load_radius and entry.fresh:
+			_show_copy(entry)
+		else:
+			entry.fresh = false
+
+
+func _hide_copy(entry: _Entry) -> void:
+	if entry.hidden_here:
+		return
+	entry.hidden_here = true
+	entry.body.visible = false
+	var found: Array[Node] = entry.body.find_children("*", "CollisionObject3D", true, false)
+	found.append(entry.body)
+	for node: Node in found:
+		var solid := node as CollisionObject3D
+		if solid == null:
+			continue
+		entry.collisions[solid] = [solid.collision_layer, solid.collision_mask]
+		solid.collision_layer = 0
+		solid.collision_mask = 0
 
 
 func _show_copy(entry: _Entry) -> void:
@@ -274,13 +337,34 @@ func _show_copy(entry: _Entry) -> void:
 	entry.hidden_here = false
 	if is_instance_valid(entry.body):
 		entry.body.visible = true
+	for solid: Variant in entry.collisions:
+		if is_instance_valid(solid):
+			var saved: Array = entry.collisions[solid]
+			(solid as CollisionObject3D).collision_layer = int(saved[0])
+			(solid as CollisionObject3D).collision_mask = int(saved[1])
+	entry.collisions.clear()
 
 
 func _on_synchronized(sync: MultiplayerSynchronizer) -> void:
 	var entry: _Entry = _entries.get(sync)
 	if entry != null:
 		entry.fresh = true
-		entry.ever_synced = true
+		entry.synced_at = _clock
+
+
+## Whether a MultiplayerSpawner next to it has the body's parent as its spawn path.
+func _spawned_here(body: Node) -> bool:
+	var parent: Node = body.get_parent()
+	if parent == null:
+		return false
+	for holder: Node in [parent, parent.get_parent()]:
+		if holder == null:
+			continue
+		for child: Node in holder.get_children():
+			var spawner := child as MultiplayerSpawner
+			if spawner != null and spawner.get_node_or_null(spawner.spawn_path) == parent:
+				return true
+	return false
 
 
 func _scan_groups() -> void:
@@ -297,14 +381,18 @@ func _scan_groups() -> void:
 				if sync == null or sync.get_node_or_null(sync.root_path) != body:
 					continue
 				seen[sync] = true
-				if not _entries.has(sync):
+				if not _entries.has(sync) and not _refused.has(sync):
 					track(sync, body)
-					(_entries[sync] as _Entry).from_group = true
+					if _entries.has(sync):
+						(_entries[sync] as _Entry).from_group = true
 	for sync: Variant in _entries.keys():
 		if not is_instance_valid(sync):
 			_entries.erase(sync)
 		elif (_entries[sync] as _Entry).from_group and not seen.has(sync):
 			untrack(sync)
+	for sync: Variant in _refused.keys():
+		if not seen.has(sync):
+			_refused.erase(sync)
 
 
 func _anchor(peer: int) -> Variant:

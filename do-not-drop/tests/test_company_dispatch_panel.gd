@@ -16,7 +16,8 @@ extends SceneTree
 ## - with CompanyTuning.VEHICLES_FAR_MAX (2) vehicles out (CompanyTrips.departure_verdict(), D-0316)
 ##   a box can still be picked but Load is off, the status says why and nothing loads; once one is
 ##   back, Load works again;
-## - both languages have every key the board uses.
+## - both languages have every key the board uses (strings_ui.csv, and strings_world.csv for the
+##   reasons that come from the world, like WORLD_DISPATCH_FAR_LIMIT).
 
 const ZONE_DIR: String = "res://data/zones/"
 const HEN: String = "res://data/products/hen.tres"
@@ -25,8 +26,9 @@ const KEYS: Array[String] = [
 	"UI_DISPATCH_TITLE", "UI_DISPATCH_HINT", "UI_DISPATCH_VEHICLE", "UI_DISPATCH_NO_VEHICLE",
 	"UI_DISPATCH_CAPACITY", "UI_DISPATCH_EMPTY", "UI_DISPATCH_ROW", "UI_DISPATCH_PICK",
 	"UI_DISPATCH_LOAD", "UI_DISPATCH_LOAD_N", "UI_DISPATCH_CLOSE", "UI_DISPATCH_LOADED",
-	"UI_DISPATCH_HOST_ONLY",
+	"UI_DISPATCH_HOST_ONLY", "WORLD_DISPATCH_FAR_LIMIT",
 ]
+const CSVS: Array[String] = ["res://translations/strings_ui.csv", "res://translations/strings_world.csv"]
 
 var _failures: int = 0
 var _zones: Dictionary = {}
@@ -120,11 +122,12 @@ func _focus_name() -> String:
 
 func _test_keys() -> void:
 	var rows: Dictionary = {}
-	var file := FileAccess.open("res://translations/strings_ui.csv", FileAccess.READ)
-	while not file.eof_reached():
-		var cols: PackedStringArray = file.get_csv_line()
-		if cols.size() >= 3:
-			rows[cols[0]] = cols
+	for csv: String in CSVS:
+		var file := FileAccess.open(csv, FileAccess.READ)
+		while not file.eof_reached():
+			var cols: PackedStringArray = file.get_csv_line()
+			if cols.size() >= 3:
+				rows[cols[0]] = cols
 	for key: String in KEYS:
 		var both: bool = rows.has(key) and rows[key][1] != "" and rows[key][2] != ""
 		_expect(both, "translation row with both languages: " + key)

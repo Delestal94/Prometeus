@@ -68,9 +68,14 @@
     trae su posición y no se mueven.
 11. **Lo físico lejos no viaja (D-0316).** El sincronizador de un vehículo (`company_vehicle`) o una caja suelta
     (`company_loose_box`) lo maneja `CompanyInterest`: el host lo manda solo a los peers con su jugador a ≤ 2 celdas
-    (lo deja pasado 3) y al conductor, y un cliente esconde su copia lejana. Sus `public_visibility` y
-    `set_visibility_for` son de `CompanyInterest`; la regla 10 y cualquier otra condición van con
-    `add_visibility_filter` (se suman). El host simula todo igual. Decisión `docs/decisiones/2026-10-21-visibilidad-por-distancia.md`.
+    (lo deja pasado 3) y al conductor, y un cliente esconde su copia lejana (y la saca de la física). Sus
+    `public_visibility` y `set_visibility_for` son de `CompanyInterest`; la regla 10 y cualquier otra condición van con
+    `add_visibility_filter` (se suman). El host simula todo igual. **Un RPC llamado sobre ese cuerpo (la raíz del
+    sincronizador) no llega a los peers que no lo ven, tampoco un broadcast**: un hecho único o una baja de ese cuerpo
+    (una caja entregada, `_remote_consume` de `package_handling.gd`; un vehículo vendido) va como propiedad ON_CHANGE
+    del sincronizador, como evento de `CompanyNet` (un nodo que no se sigue) o después de `untrack()`; si no, el peer
+    lejano se queda con una copia vieja para siempre. Nada que cree un `MultiplayerSpawner` entra a esos grupos (no
+    verlo lo despawnea). Decisión `docs/decisiones/2026-10-21-visibilidad-por-distancia.md`.
 
 ## 2. Las 20 acciones del corte vertical (y las de construir el galpón, 21 a 24)
 

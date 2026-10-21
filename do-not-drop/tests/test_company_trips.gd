@@ -8,10 +8,11 @@ extends SceneTree
 ## - while the trip is out trips_out() counts it; coming back in closes it, the undelivered order
 ##   fails, and trip_started / trip_closed are emitted;
 ## - nodes in group company_vehicle are tracked by themselves every physics tick;
-## - at most CompanyTuning.VEHICLES_FAR_MAX (2) trips are out at once (D-0316): departure_verdict()
-##   refuses a third vehicle with WORLD_DISPATCH_FAR_LIMIT and the cap, never one already out; a
-##   third that crosses anyway starts no trip (departure_refused, same reason, its orders stay
-##   PACKED) and keeps its cargo, which leaves with it once a trip came back;
+## - at most CompanyTuning.VEHICLES_FAR_MAX (2) vehicles are out at once (D-0316):
+##   departure_verdict() refuses a third vehicle with WORLD_DISPATCH_FAR_LIMIT and the cap, never one
+##   already out; a third that crosses anyway starts no trip (departure_refused, same reason, its
+##   orders stay PACKED) but counts as out (trips_out() 3, is_out(), a fourth is refused, it isn't)
+##   until it crosses back in; it keeps its cargo, which leaves with it once a trip came back;
 ## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the exit (north wall)
 ##   and DayCycle.trips_out reads it.
 
@@ -94,13 +95,20 @@ func _test_far_cap() -> void:
 		"a third vehicle may not leave, with the reason and the cap (got %s)" % [verdict])
 	_expect(trips.departure_verdict(&"van_1")["ok"], "a vehicle already out is never refused")
 	trips.track(&"van_3", Vector3(0, 0, -6))
-	_expect(trips.trips_out() == 2 and trips.trip_of(&"van_3") == null, "the third crossing starts no trip")
+	_expect(trips.trip_of(&"van_3") == null, "the third crossing starts no trip")
+	_expect(trips.trips_out() == 3 and trips.is_out(&"van_3"),
+		"...but the refused vehicle counts as out, so the day waits for it (got %d)" % trips.trips_out())
 	_expect(refused.size() == 1 and refused[0][0] == &"van_3" and refused[0][1] == verdict,
 		"departure_refused tells which vehicle and why (got %s)" % [refused])
 	_expect(trips.book.state_of(&"o3") == Order.STATE_PACKED, "its order stays PACKED")
-	trips.track(&"van_3", Vector3(0, 0, -2))
+	_expect(trips.departure_verdict(&"van_3")["ok"], "a refused vehicle already out is not refused again")
+	_expect(not trips.departure_verdict(&"van_4")["ok"], "a fourth is refused")
 	trips.track(&"van_1", Vector3(0, 0, -2))
-	_expect(trips.trips_out() == 1 and trips.departure_verdict(&"van_3")["ok"], "one back: a slot is free")
+	_expect(trips.trips_out() == 2 and not trips.departure_verdict(&"van_4")["ok"],
+		"one trip back with the refused one still out: still full (got %d)" % trips.trips_out())
+	trips.track(&"van_3", Vector3(0, 0, -2))
+	_expect(trips.trips_out() == 1 and not trips.is_out(&"van_3"), "the refused one back: it is in again")
+	_expect(trips.departure_verdict(&"van_3")["ok"], "a slot is free")
 	trips.track(&"van_3", Vector3(0, 0, -6))
 	var third: Trip = trips.trip_of(&"van_3")
 	_expect(third != null and third.order_ids == [&"o3"], "the kept cargo leaves with it now")

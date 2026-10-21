@@ -9,8 +9,18 @@ extends WorldCellInterest
 ## who stays in the shed gets nothing of a trip on the other side of the map, while the host keeps
 ## simulating every vehicle (decision 2026-10-04, point 6). The driver (the vehicle's
 ## driver_peer_id) always gets the vehicle it drives. A peer whose player has no node here yet gets
-## everything, as before. On a client, the copy of a far vehicle or box is hidden until an update
-## puts it back near (nobody sees it jump when the host sends it again).
+## everything, as before. On a client, the copy of a far vehicle or box is hidden and taken out of
+## physics until an update puts it back near (nobody sees it jump, or bumps into it, meanwhile).
+##
+## Contract for what joins those groups (WorldCellInterest's header):
+## - an RPC called on the body itself (the synchronizer's root) skips the peers it is hidden from,
+##   broadcasts included: a one-shot fact or a removal of a vehicle or loose box (a box consumed at a
+##   door, package_handling.gd's _remote_consume; a vehicle sold) goes as an ON_CHANGE property of its
+##   synchronizer, as an RPC on a node that isn't tracked (CompanyNet's events), or after untrack(),
+##   or the far peers keep a stale copy for good;
+## - nothing a MultiplayerSpawner spawns: hiding it would despawn it on that peer;
+## - its synchronizer's public_visibility and per-peer flags are this node's; any other condition
+##   goes in add_visibility_filter() (red-autoridad.md rule 10 and 11).
 ##
 ## cell_anchors() is where the map's cells load around (CompanyRoot feeds CompanyCells with it): on
 ## the host every player and every vehicle; on a client only its own player, so a player in the

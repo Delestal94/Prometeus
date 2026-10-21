@@ -15,14 +15,16 @@ extends Node
 ## state. Boxes are only ids here; where they ride is the vehicle's business.
 ##
 ## At most `far_max` vehicles are out at once (D-0316, CompanyTuning.VEHICLES_FAR_MAX): a vehicle
-## out is one whose trip is out. departure_verdict() is what the dispatch board asks before loading
-## a vehicle; a vehicle that crosses the gate outward with that many already out starts no trip
-## (departure_refused, with the same reason) and keeps its cargo staged for when one comes back.
+## out is one whose trip is out, or one that crossed outward while refused. departure_verdict() is
+## what the dispatch board asks before loading a vehicle; a vehicle that crosses the gate outward
+## with that many already out starts no trip (departure_refused, with the same reason) but counts
+## as out until it crosses back in (trips_out(), so the day waits for it too), and keeps its cargo
+## staged for its next departure. Stopping it at the gate and telling its driver why is D-0316.2.
 
 signal trip_started(trip: Trip)
 signal trip_closed(trip: Trip, failed: Array[StringName])
-## A vehicle crossed outward with `far_max` trips out: no trip started. `reason` is
-## departure_verdict()'s {ok, key, args}.
+## A vehicle crossed outward with `far_max` vehicles out: no trip started, it counts as out until
+## it is back. `reason` is departure_verdict()'s {ok, key, args}.
 signal departure_refused(vehicle_id: StringName, reason: Dictionary)
 
 ## The group of the vehicles the gate watches.
@@ -34,11 +36,13 @@ var book: OrderBook = OrderBook.new()
 var gate: TripGate
 ## Game minute for the trip's times, Callable() -> int. Unset: 0.
 var minute_now: Callable = Callable()
-## Most trips out at once.
+## Most vehicles out at once.
 var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
 
 var _staged: Dictionary = {}
 var _active: Dictionary = {}
+## vehicle id -> true: crossed outward while refused, out without a trip until it is back.
+var _refused_out: Dictionary = {}
 var _closed: Array[Trip] = []
 var _next_id: int = 1
 
@@ -65,14 +69,20 @@ func trip_of(vehicle_id: StringName) -> Trip:
 	return _active.get(vehicle_id)
 
 
+## Vehicles out: those with a trip out and those that left while refused (what DayCycle waits for).
 func trips_out() -> int:
-	return _active.size()
+	return _active.size() + _refused_out.size()
+
+
+## Whether `vehicle_id` is out (with its trip, or without one because it was refused).
+func is_out(vehicle_id: StringName) -> bool:
+	return _active.has(vehicle_id) or _refused_out.has(vehicle_id)
 
 
 ## May `vehicle_id` leave now? {ok, key, args} as DispatchRules answers: not ok, with FAR_LIMIT and
 ## [far_max], while `far_max` other vehicles are out. A vehicle already out is never refused.
 func departure_verdict(vehicle_id: StringName) -> Dictionary:
-	if _active.has(vehicle_id) or _active.size() < far_max:
+	if is_out(vehicle_id) or trips_out() < far_max:
 		return {"ok": true, "key": "", "args": []}
 	return {"ok": false, "key": FAR_LIMIT, "args": [far_max]}
 
@@ -96,10 +106,11 @@ func _physics_process(_delta: float) -> void:
 
 
 func _on_departed(vehicle_id: StringName) -> void:
-	if _active.has(vehicle_id) or not _staged.has(vehicle_id):
+	if is_out(vehicle_id) or not _staged.has(vehicle_id):
 		return
 	var verdict: Dictionary = departure_verdict(vehicle_id)
 	if not verdict["ok"]:
+		_refused_out[vehicle_id] = true
 		departure_refused.emit(vehicle_id, verdict)
 		return
 	var cargo: Dictionary = _staged[vehicle_id]
@@ -114,6 +125,7 @@ func _on_departed(vehicle_id: StringName) -> void:
 
 
 func _on_returned(vehicle_id: StringName) -> void:
+	_refused_out.erase(vehicle_id)
 	var trip: Trip = _active.get(vehicle_id)
 	if trip == null:
 		return
