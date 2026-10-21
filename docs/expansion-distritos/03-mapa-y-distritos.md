@@ -12,14 +12,14 @@
 | D-0302 | ◐ (falta D-0302.2, vehículo y despacho) Portón de salida del galpón como punto de partida (reemplaza el arranque de la entrega actual) | constructor-mundo | high | la camioneta cargada sale por el portón y dispara la carga del distrito |
 | D-0303 | Pantalla/tablero de despacho: elegir distrito, vehículo y pedidos que salen | constructor-ui | high | test de UI: elegir y confirmar con mando y teclado |
 | D-0304 | Generación de ruta por distrito: `RouteStreamer` con conjunto de tramos y decorado del distrito | constructor-tramos | xhigh | Barrio Centro y Campo generan rutas distintas con la misma semilla; `route_golden` por distrito |
-| D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
+| ✅ D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
 | D-0306 | ✅ Orden de paradas: el jugador elige o lo sugiere el GPS | constructor-camion | high | GPS muestra la próxima parada; test cambia el orden |
 | D-0307 | Regreso al galpón: viaje de vuelta corto o salto con pantalla de resumen (según D-0104) | constructor-mundo | high | regreso sin cargar la escena entera dos veces (medido) |
 | D-0308 | Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
 | D-0309 | ✅ Requisito de vehículo por distrito (la lancha solo sale al agua, etc.) | constructor-progresion | medium | test: combinación inválida rechazada |
 | D-0310 | ◐ (falta D-0310.b) Mapa del mundo 2D (tablero en el galpón) con distritos, estado y pedidos (incluye D-0327, fusión de D-0112) | constructor-ui | high | captura de `revisor-visual` legible a 1080p y Steam Deck |
 | D-0311 | ✅ Casas de entrega por distrito con `DeliveryHouse` y variantes (puerta, buzón, muelle, porche) (incluye D-0247, fusión de D-0112) | constructor-mundo | high | 4 variantes funcionan con el flujo de puerta actual |
-| D-0312 | Direcciones: cada casa tiene calle y número legibles que coinciden con la etiqueta del paquete (incluye D-0326, D-0345, fusión de D-0112) | constructor-mundo | medium | test: etiqueta y cartel de la casa coinciden |
+| ✅ D-0312 | Direcciones: cada casa tiene calle y número legibles que coinciden con la etiqueta del paquete (incluye D-0326, D-0345, fusión de D-0112) | constructor-mundo | medium | test: etiqueta y cartel de la casa coinciden |
 | D-0313 | ✅ Cargar el distrito con la pantalla de carga existente sin congelar (N-408) | constructor-mundo | high | `test_loading_no_freeze` pasa con el distrito |
 | D-0314 | Unificar Barrio Centro como primer distrito jugable del corte vertical | constructor-mundo | high | ver D-1501; `--district=centro` arranca |
 | D-0315 | Adaptar la ruta actual (Campo) como distrito con la misma calidad de hoy | constructor-tramos | high | tests de ruta actuales verdes en modo Empresa |

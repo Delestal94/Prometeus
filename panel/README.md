@@ -9,6 +9,11 @@ https://delestal94.github.io/Prometeus/
   paquete que avanza: tomada → probándose → lista → en el juego), **Para mirar** y los **diez pilares**
   (diseño, sistemas, mundo, arte, audio, interfaz, red, calidad, producción, lanzamiento) con un círculo de
   avance del juego actual, una barra de la expansión, quién trabaja ahí ahora y un cajón con el detalle.
+- **Distritos**: cuánto falta de la expansión. Tareas `D-` hechas sobre el total (las tachadas al recortar
+  el alcance no cuentan), ritmo de las últimas 6 h / 24 h / 7 días con la estimación de cuándo se termina,
+  barras por área, tareas cerradas por día, PRs `D-` en camino y lo último que entró. El ritmo sale del
+  historial de main (`build_history`, commits con `D-xxxx` que no dicen "partial") más los PRs fusionados
+  después de armar `data.json`.
 - **Cómo trabajan**: el diagrama de cómo se pasan el trabajo las rutinas, con lo activo en verde, y los
   pasos adentro de una tarea.
 - **Horarios**: la agenda del día de cada rutina, agrupada (expansión, juego actual, control, PC).

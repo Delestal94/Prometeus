@@ -1,0 +1,31 @@
+name: Routine heartbeat
+
+# Every 6 hours tools/ci/routine_heartbeat.py checks that each routine still leaves PRs (table of
+# .claude/rutinas/auditoria.md section 1.5) and keeps one `rutina-caida` issue per routine that
+# went quiet. The only detector that does not live inside a routine, so a routine out of quota
+# cannot hide its own silence (nothing ran between 2026-10-02 and 2026-10-19). No model involved.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  heartbeat:
+    name: Routine heartbeat
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Self-test
+        run: python3 tools/ci/test_routine_heartbeat.py
+
+      - name: Check the routines
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ci/routine_heartbeat.py --repo "$GITHUB_REPOSITORY"

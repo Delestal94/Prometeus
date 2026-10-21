@@ -70,3 +70,34 @@ llama pasa los catálogos ya cargados y las zonas abiertas hoy, así la clase no
 un pedido válido por minuto de llegada con ids únicos, solo zonas abiertas y ninguna sin entregas, requisitos
 por producto, ventana y paga con bono, tope `max_items` y casos vacíos.
 **Hecho cuando:** misma semilla, mismos pedidos; el test pasa.
+
+### D-0804 · Tablero de pedidos en el galpón — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderBoard` (`scripts/gameplay/business/order_board.gd`) + `OrderBoardPanel` (`scripts/ui/order_board_panel.gd`); `test_company_order_board`. Falta colgarlo en una pared del galpón (D-0804.b, junto con la mesa 3D).
+**Depende de:** D-0210 (OrderBook), D-0802
+**Qué:** `OrderBoard.rows(orders, now_min, products)` (estático, sin nodos) recibe los pedidos de
+`OrderBook.to_dict()["orders"]` y devuelve una fila por pedido: cliente, dirección (la de `OrderLabel`),
+productos con nombre, requisitos (claves `WORLD_REQ_*`), minutos que quedan, paga, estado con su clave de
+texto y su marca. Orden: atrasados arriba, después por menos tiempo que queda; los cerrados (entregado,
+fallido, cancelado) al final, solo los 3 más nuevos. `OrderBoardPanel.refresh(rows)` dibuja una tarjeta por
+pedido (hasta 8, después "Y N más"). Cada estado tiene marca además del color (`○ ◐ ● ! ✓ ✗ –`), así se
+lee sin color. Solo muestra: sin foco ni input, igual que la hoja de la mesa; el cliente dibuja lo que el
+anfitrión le replica.
+**Test** `test_company_order_board`: orden y recorte de las filas, datos de cada fila, marca y clave por
+estado, entregado nunca atrasado, entrada rota ignorada, panel vacío / lleno / "Y N más" / inglés, claves
+en los dos idiomas.
+**Hecho cuando:** el test pasa. La captura legible la toma `revisor-visual` cuando el tablero esté en una
+pared (D-0804.b).
+
+### D-0805 · Impresora de pedidos — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderPrinter` (`scripts/gameplay/business/order_printer.gd`) + `PRINTER_TRAY_MAX` y `SHEETS_IN_HAND_MAX` en `CompanyTuning`; `test_order_printer`. Falta el objeto en el galpón (D-0805.b: máquina, bandeja y gesto de tomar/dejar la hoja).
+**Depende de:** D-0802, D-0714
+**Qué:** estado puro (`RefCounted`, sin nodos), así host y clientes aplican las mismas llamadas. Una hoja es solo el
+id de su pedido (lo que dice lo arma `OrderSheet`). `feed(orders)` imprime una hoja por pedido abierto o atrasado
+que nunca se imprimió, en orden de llegada, mientras la bandeja tenga lugar (4); con la bandeja llena la impresora
+"se atasca" y los pedidos esperan (`pending`) hasta que alguien saca una hoja. `take(id, holder)` pasa la hoja de
+la bandeja a una persona (hasta 3 a la vez), `put_on_table(id, holder, mesa)` la deja en una mesa de armado (una
+por mesa) y `clear_table` la retira al despachar. Cada pedido se imprime una sola vez. `to_dict` / `from_dict`
+para guardar y replicar.
+**Test** `test_order_printer`: imprime abiertos y atrasados una vez y en orden, atasco y reanudación, límites de mano
+y de mesa, solo quien la tiene la deja, ida y vuelta por JSON.
+**Hecho cuando:** hoja aparece y se puede llevar a la mesa (la lógica, en este PR; el objeto 3D, en D-0805.b).

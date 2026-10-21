@@ -22,9 +22,9 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 
 | Rutina | Archivo | Cuándo (hora Argentina) | Rama | Qué produce |
 |---|---|---|---|---|
-| Desarrollador 1-5 | `desarrollador.md` (`Carril: 1`…`5`, expansión `docs/expansion-distritos/`) | carriles 2-4 cada 2 h (:14, :26, :38, alternados); 1 y 5 cada 3 h (:02, :50) | `exp/D-xxxx-*` | una tarea `D-` → un PR |
+| Desarrollador 1-5 | `desarrollador.md` (`Carril: 1`…`5`, expansión `docs/expansion-distritos/`) | cada carril cada 30 min, con dos triggers corridos media hora (1 :02/:32, 2 :14/:44, 3 :26/:56, 4 :08/:38, 5 :20/:50) | `exp/D-xxxx-*` | una tarea `D-` → un PR |
 | Construcción A | `construccion.md` (prioridad `nacho`: `N-xxx` primero) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
-| Construcción B ⏸ | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | pausada desde 2026-10-04: su cupo pasó a los desarrolladores | idem | una tarea → un PR |
+| Construcción B | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | cada hora, :37 (de nuevo desde 2026-10-21) | idem | una tarea → un PR |
 | QA (juego actual) | `qa.md` | todos los días 09:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
 | QA expansión A y B | `qa.md` con `Foco: expansión` (§4) | todos los días 13:00 y 01:00 | `rutina/qa-exp-AAAA-MM-DD-HH` | bugs en `docs/expansion-distritos/bugs/` |
 | Auditoría integral | `auditoria.md` | día por medio 07:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 48 h, ≤ 3 tareas |
@@ -44,7 +44,7 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Juzgar ideas antes de construirlas | revisión (lunes, antes de que construcción tome tareas `xhigh` o mecánicas nuevas) | `critico-diseno` |
 | Hacerle la contra a lo hecho | revisión (lunes) | `abogado-del-diablo`, `director-arte` |
 | Planificar | todas las que registran hallazgos | `planificador-tareas`, `guardian-dominios` |
-| Construir la expansión (`D-xxxx`) | desarrollador 1-5 (cada 2 o 3 h, escalonados) | los de la tabla de carriles de `desarrollador.md` |
+| Construir la expansión (`D-xxxx`) | desarrollador 1-5 (cada 30 min por carril, escalonados) | los de la tabla de carriles de `desarrollador.md` |
 | Construir código | construcción (1 por hora) | `constructor-tramos`, `constructor-mundo`, `constructor-camion`, `constructor-jugador`, `constructor-trampas`, `constructor-red`, `constructor-progresion`, `constructor-ui` |
 | Sonido, efectos, animación por código, shaders | construcción | `disenador-audio`, `artista-vfx`, `animador`, `artista-shaders` |
 | Assets con Blender o ComfyUI, música regenerada, capturas de tienda y tráiler | sesión de arte (PC, cada 2 h) | `modelador-blender`, `artista-conceptual`, `artista-shaders`, `artista-vfx`, `animador`, `disenador-audio` |
@@ -63,7 +63,7 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
 | Build de prueba | build de la PC (diaria; publicar sigue ⏸ con M5) | `empaquetador-release`, `perfilador-rendimiento`, `revisor-visual` |
 | Versiones y notas de cambios | `release-train.yml` (lunes 07:00, sin modelo): tag `v0.N.0` si `main` está verde + release **borrador** con las notas de `tools/release/changelog.py`; nunca publica (repo público) | — |
-| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (día por medio, "latido") + issue `rutina-caida` que abre la PC | `auditor-integral` |
+| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (día por medio, "latido") + `routine-heartbeat.yml` (cada 6 h, sin modelo, issue `rutina-caida` por rutina) + el issue que abre la PC | `auditor-integral` |
 | Decisiones | la rutina decide con su recomendación (regla 3); solo plata, cuentas y licencias abren un issue `decide-usuario` (regla 12); la revisión semanal aplica las respuestas | `planificador-tareas` |
 | Regresiones de lo ya mezclado | QA, build de la PC y auditoría → tarea `Regresión de #PR` → construcción (arreglo o `git revert`, regla 14) | `cazador-bugs`, constructor del área |
 | Dependencias del juego (Godot, GodotSteam, addons) | lanzamiento (mensual) → tarea | `estratega-steam`, `constructor-red` |
@@ -241,9 +241,22 @@ Programador de tareas con `tools/pc/rutina-pc.ps1 -Rutina arte|build`, que:
   versión vieja, Opus 5.5 responde 400 y la corrida muere en segundos (pasó el 2026-09-30);
 - corre `claude -p` con Opus 5.5, permisos en modo `auto` (lo que pediría permiso se niega solo) y solo
   los MCP de Blender y ComfyUI, y guarda el log (UTF-8) en `%LOCALAPPDATA%\prometeus-rutinas\logs\`;
-- **si la corrida falla**, abre o comenta el issue "Rutina de PC caída" (etiqueta `rutina-caida`) con el
-  final del log, y lo cierra solo cuando una corrida vuelve a terminar bien. La nube no ve los logs de
-  la PC: ese issue es lo único que avisa (y la auditoría lo reporta).
+- **si la corrida falla**, abre o comenta el issue de **su** rutina, "Rutina de PC caída: build" o
+  "Rutina de PC caída: arte" (etiqueta `rutina-caida`, uno por rutina), con las líneas de error y las
+  últimas 10 líneas del log (300 caracteres cada una; el repo es público), y lo cierra solo cuando una
+  corrida **de la misma rutina** termina bien (un éxito del arte no tapa la caída del build). Si el log
+  muestra el límite de uso del plan (regla 13), el cuerpo arranca con "Cupo del plan agotado ... no es
+  una caída real": se informa igual, pero no hay nada que arreglar. El cuerpo va por un archivo UTF-8
+  (PowerShell 5.1 por tubería lo manda en ASCII y perdía los acentos). El issue viejo sin sufijo
+  ("Rutina de PC caída") lo cierra con una explicación el primer éxito de cualquiera de las dos. La
+  nube no ve los logs de la PC: ese issue es lo único que avisa (y la auditoría lo reporta);
+- **los saltos** (candado ocupado, `PAUSA`, `PRESUPUESTO`) salen con 0 pero dejan una línea (fecha,
+  rutina, motivo) en `%LOCALAPPDATA%\prometeus-rutinas\saltos.log` y, si esa rutina tiene un issue
+  abierto, un comentario "no es una falla" (a lo sumo uno cada 12 h por motivo); un salto nunca abre un
+  issue. Los saltos que decide Claude adentro (main rojo o sin verificar, `pc-build.md` §1) no pasan
+  por el script: quedan en su PR o resumen. Prueba del script: `python3 tools/pc/test_rutina_pc.py`
+  (CI la corre en el job de lint; con `pwsh` corre también `tools/pc/test-rutina-pc.ps1`, con un `gh`
+  falso).
 
 El clon `Prometeus-rutina` tiene que estar marcado como confiable en `~/.claude.json`
 (`projects["D:/Programas/Utilities/Proyectos/Prometeus-rutina"].hasTrustDialogAccepted: true`); si no,

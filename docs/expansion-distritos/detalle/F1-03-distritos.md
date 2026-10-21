@@ -51,7 +51,7 @@ carga (medido con el reloj del motor en headless) ni huérfanos al volver.
 ### D-0304 · Grafo de calles y tramos sobre aristas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/route_gen/`) · F1
 **[~] Parcial (2026-10-12, PR pendiente)** — grafo, datos y test: `modules/route_gen/` suma `RoadNetwork`/`RoadNode`/`RoadEdge` (grafo con aristas Bézier, muestreo por largo, punto más cercano, celdas cruzadas, caminos mínimos que frenan en un bloqueo cerrado, `validate()`, `crossing_pairs()`; test `modules/route_gen/tests/test_road_network.gd`); `scripts/gameplay/districts/road_graph.gd` (`RoadGraph`) + `data/world/road_graph.tres` (27 nodos, 32 calles, ~12,2 km: galpón → Centro (grilla de 3 x 3 con adoquín) → Campo (ripio y barro), más las puntas hasta los bloqueos de Suburbio y Puerto); `RoadGraph.register_terrain()` pone los `add_span` del terreno sobre cada curva; `CompanyCells.pin_streets()`; `test_road_graph`.
 **Subtareas abiertas:**
-- **D-0304.1** Malla de calle por arista (calzada, banquinas y marcas sobre la curva con el terreno de `TerrainField`, sin duplicar la lógica de `StraightSegment`/`route_ground.gd`; la superficie va con shader, no caja de color, N-323) y su entrega por celda (`CompanyCells.content_for`). `constructor-tramos` + `artista-shaders`.
+- ~~**D-0304.1**~~ ✅ (2026-10-21, PR pendiente) Entrega por celda: `EdgeCellContent` (`scripts/gameplay/districts/edge_cell_content.gd`) reparte las piezas de `EdgePieces` a la celda donde empieza cada una y arma el nodo `Cell_<x>_<z>`; `CompanyCells.use_graph(graph)` lo conecta a `content_for` y fija las calles principales. La calzada, banquinas y marcas las dibuja cada `RouteSegment` (no se duplicó su lógica). Queda **D-0304.1b**: la superficie con shader en vez de cajas de color (N-323), `artista-shaders`. `test_company_edge_cells`.
 - ~~**D-0304.2**~~ ✅ (2026-10-19, PR pendiente) `EdgePieces` (`scripts/gameplay/districts/edge_pieces.gd`): `plan()` reparte `edge.segments` a lo largo de la curva (cada pieza es una cuerda recta puesta en el punto de la calle y girada hacia donde sigue; la pieza que no entra al final es un `straight` recortado; `curve` toma el giro de la calle en sus 50 m) y `build()` arma los `RouteSegment`; `signature()` es el golden por arista. `test_company_edge_pieces`. Falta entregarlas por celda (D-0304.1).
 - **D-0304.3** Piloto automático del bot (D-2016) galpón → Centro con `OFF_ROAD` = 0: la línea ya existe (`test_road_graph` arma la polilínea del camino mínimo sin saltos), falta seguirla con el vehículo; depende de D-2016 y de la malla.
 - **D-0304.4** Capturas de `revisor-visual` de 3 aristas (asfalto, ripio, barro) cuando exista D-0304.1.
@@ -69,6 +69,7 @@ Centro sin salirse de la calzada (`OFF_ROAD` = 0).
 **Hecho cuando:** el test pasa y `revisor-visual` mandó capturas de 3 aristas (asfalto, ripio, barro).
 
 ### D-0305 · Varias paradas por salida — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `Trip` suma paradas por casa (`stops`, `pending_stops()`, `next_stop()`, `deliver_stop()`) y `close()` con `Inventory`: lo no entregado vuelve `FAILED` y los productos de una caja sana pasan de `box:<id>` a `dock` (`Trip.RETURN_LOCATION`); si la caja está rota se pierden. `test_company_trip_stops`. Falta que el GPS/tablero use `next_stop()` (D-0308, D-0307).
 **Depende de:** D-0302, D-0311
 **Qué:** un `Trip` tiene una lista de paradas (casa + pedidos). Entregar en una casa saca esos pedidos.
 La salida no termina hasta volver al galpón. Las cajas que no se entregaron vuelven con estado `FAILED`
@@ -146,6 +147,10 @@ pisan entre sí y cada una se puede instanciar con `DeliveryHouse` sin errores.
 **Hecho cuando:** el test pasa.
 
 ### D-0312 · Direcciones legibles — B · Opus 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — `HouseAddresses` (`scripts/gameplay/districts/house_addresses.gd`): calle = etiqueta `street` de la arista de la casa (nombre `WORLD_STREET_<CALLE>`, 9 calles es/en en `strings_world.csv`), número = cuenta por calle y por lado (derecha par, izquierda impar) según el orden de aristas y la distancia; `OrderLabel.address` lo usa para las casas del mapa (las de `<zona>_house_<n>` quedan como antes) y `HouseMap.instance` lo pone en el cartel y el timbre (`DeliveryHouse.address_number` / `sign_number()`); `test_company_addresses`. Ver `revisar/D-0312.md`.
+**Subtareas abiertas:**
+- **D-0312.1** Cuando `OrderGenerator` nombre casas del `HouseMap` (D-0801+), `house_id` pasa a ser su id y desaparece el camino viejo `<zona>_house_<n>` de `OrderLabel`.
+- **D-0312.2** Cartel de calle en las esquinas del mapa (arte: `arte-pendiente`), con la captura de `revisor-visual`.
 **Depende de:** D-0311
 **Qué:** cada arista con nombre de calle (lista traducible por zona, D-0345). Cada casa con número par o
 impar según el lado. La etiqueta de la caja (D-0707) y el cartel de la casa muestran "Calle N".

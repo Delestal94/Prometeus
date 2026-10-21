@@ -63,6 +63,12 @@ const RENT_PER_DAY: int = 100
 ## (docs/expansion-distritos/diseno/economia.md: no reset, no forced loan).
 const BANKRUPT_ORDER_SHARE: float = 0.6
 
+# --- Order printer (D-0805) ---
+## Sheets the printer tray holds; with the tray full the printer jams and new orders wait.
+const PRINTER_TRAY_MAX: int = 4
+## Order sheets one person can carry at once.
+const SHEETS_IN_HAND_MAX: int = 3
+
 # --- Packing grid and boxes ---
 ## Side of one packing-grid cell, in meters (S6).
 const GRID_CELL_M: float = 0.2
@@ -223,6 +229,10 @@ const SUPPLIER_TRUCK_REVERSE_M: float = 10.0
 const SUPPLIER_TRUCK_APPROACH_M: float = 16.0
 const SUPPLIER_DRIVE_IN_MIN: float = 6.0
 const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
+## The pallet jack (D-0605, PalletJack): a pallet's footprint on the floor in meters (width, depth)
+## and how close the jack's holder must stand to pick one up.
+const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
+const PALLET_JACK_REACH_M: float = 1.6
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0

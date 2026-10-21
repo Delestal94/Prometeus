@@ -76,6 +76,9 @@ func instance(house: HouseSpot, height: float = 0.0) -> DeliveryHouse:
 	node.name = String(house.id)
 	node.visual_variant = house.variant
 	node.house_index = maxi(index_of(house.id), 0)
+	var addresses: HouseAddresses = HouseAddresses.load_default()
+	if addresses != null:
+		node.address_number = addresses.number_of(house.id)
 	node.transform = Transform3D(Basis(Vector3.UP, house.yaw), Vector3(house.position.x, height, house.position.y))
 	return node
 

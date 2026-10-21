@@ -1329,6 +1329,17 @@ UI_ORDER_SHEET_LATE,Atrasado %d min,%d min late
 UI_ORDER_SHEET_PAY,Paga $%d,Pays $%d
 UI_ORDER_SHEET_READY,Lista para despachar,Ready to dispatch
 UI_ORDER_SHEET_NOT_READY,Falta completar,Not finished yet
+UI_ORDER_BOARD_TITLE,Pedidos,Orders
+UI_ORDER_BOARD_EMPTY,No hay pedidos,No orders
+UI_ORDER_BOARD_MORE,Y %d más,And %d more
+UI_ORDER_BOARD_ITEM,%s ×%d,%s ×%d
+UI_ORDER_BOARD_OPEN,Por armar,To pack
+UI_ORDER_BOARD_PACKED,Armado,Packed
+UI_ORDER_BOARD_OUT,En camino,On the way
+UI_ORDER_BOARD_LATE,Atrasado,Late
+UI_ORDER_BOARD_DELIVERED,Entregado,Delivered
+UI_ORDER_BOARD_FAILED,Fallido,Failed
+UI_ORDER_BOARD_CANCELLED,Cancelado,Cancelled
 UI_BUILD_HINT,Construir: %s ($%d) · Enter: colocar o tomar · F: girar · Q/E: elegir · Supr: vender · Retroceso: salir,Build: %s ($%d) · Enter: place or grab · F: turn · Q/E: choose · Del: sell · Backspace: exit
 UI_BUILD_HELD,Pieza en la mano: Enter la deja en la celda,Piece in hand: Enter drops it on the cell
 UI_BUILD_REASON_HOST_ONLY,Solo el anfitrión construye,Only the host can build

@@ -370,6 +370,15 @@ WORLD_LOAD_NO_WEIGHT,No entra: pasa los %s kg del vehículo,Can't load: over the
 WORLD_STREET_CENTRO,Calle Central,Central Street
 WORLD_STREET_CAMPO,Camino Rural,Country Road
 WORLD_STREET_MAIN,Calle Principal,Main Street
+WORLD_STREET_AVENIDA_ESTE,Avenida del Este,East Avenue
+WORLD_STREET_CALLE_OESTE,Calle del Oeste,West Street
+WORLD_STREET_CALLE_H_384,Calle de los Álamos,Poplar Street
+WORLD_STREET_CALLE_H_M384,Calle de los Sauces,Willow Street
+WORLD_STREET_CALLE_V_384,Calle de los Fresnos,Ash Street
+WORLD_STREET_CALLE_V_640,Calle de los Pinos,Pine Street
+WORLD_STREET_CALLE_V_896,Calle de los Cedros,Cedar Street
+WORLD_STREET_CAMINO_CAMPO,Camino del Campo,Field Road
+WORLD_STREET_CHACRAS,Camino de las Chacras,Farm Lane
 WORLD_REQ_FRAGILE,Frágil,Fragile
 WORLD_REQ_COLD,Frío,Keep cold
 WORLD_REQ_GIFT,Regalo,Gift

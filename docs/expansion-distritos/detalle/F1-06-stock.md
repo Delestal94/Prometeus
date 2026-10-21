@@ -54,6 +54,15 @@ camión es D-0601 / D-0605, que usan esta clase.
 `validate` con 4 problemas, JSON de ida y vuelta.
 **Hecho cuando:** el test pasa. (La parte "aparece en la caja del camión" queda para D-0601.)
 
+### D-0605 · Descargar palet con la zorra — A · Sonnet 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica de la zorra (`PalletJack`, `scripts/gameplay/business/pallet_jack.gd`) y `test_pallet_jack`. Falta D-0605.b (el objeto en el mundo y la interacción).
+**Depende de:** D-0604 (`Pallet`), D-0601 (`SupplierTruck`, la caja del camión), D-0211 (`Inventory`)
+**Qué:**
+- **D-0605.a (hecha) — la lógica.** `PalletJack` (`RefCounted`, estado puro): dónde está cada palet (`bed` = caja del camión, `jack` = en la zorra, `floor` = piso del galpón con su punto en metros). `load_bed` sube los palets del día, `pick_up(id, holder)` toma uno (de a uno; del piso hay que estar a `PALLET_JACK_REACH_M` = 1,6 m; la caja del camión se alcanza desde el portón y eso lo chequea quien llama), `put_down(pos, floor_rect, inventory)` lo apoya dentro del piso y sin pisar a otro palet (`PALLET_FOOTPRINT_M` = 1,2 × 0,8 m). Las unidades entran al `Inventory` (`Pallet.receive`) **una sola vez**, al apoyar por primera vez un palet que vino de la caja; lo que no se baja queda en `left_on_bed()` y se va con el camión sin contarse. `remove` lo saca del patio cuando está vacío (D-0607). `to_dict`/`from_dict` para el save y la red.
+- **D-0605.b (pendiente) — el mundo.** Zorra como objeto (malla gris placeholder, `arte-pendiente/D-0605.md`), interacción del jugador (agarrar la zorra, subir/bajar el palet, empujarla) y el palet dibujado en la caja del camión (`SupplierTruckView`); el host aplica y replica (D-0619).
+**Test** `test_pallet_jack`: palets válidos y repetidos en la caja; uno por vez y alcance; recepción única en el `Inventory`; soltar fuera del piso o encima de otro palet no cambia nada; lo que queda en la caja no se cuenta; 50 movimientos sin perder ni duplicar unidades; ida y vuelta de JSON.
+**Hecho cuando:** jugador mueve un palet del camión al piso (test de interacción, D-0605.b).
+
 ### D-0607 · Abrir palet — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `Pallet.open/take/is_depleted` en `pallet.gd`; ampliado `test_pallet`.
 **Depende de:** D-0604 (`Pallet`), D-0211 (`Inventory`)
@@ -98,3 +107,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - Cada zona lleva su nombre pintado en el piso (`WORLD_SHED_ZONE_*`); la captura aérea con zonas rotuladas es la de `revisor-visual` sobre `company_root.tscn`.
 **Test** `test_company_default_layout` (y los `test_company_*` de la expansión verdes); los `test_depot_*` no se tocan: el depósito de Entrega no cambia.
 **Hecho cuando:** captura aérea con zonas rotuladas y los tests verdes.
+
+### D-0603 · Pedido a proveedor desde el portapapeles o el tablero — B · Sonnet 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del pedido (`SupplierOrderCart`, `scripts/gameplay/business/supplier_order_cart.gd`) y `test_supplier_order_cart`. Falta D-0603.b (la pantalla).
+**Depende de:** D-0602 (`SupplierSchedule`), D-0503 (`SupplierPurchase`), D-0218 (`SupplierDefinition`), D-0204 (producto)
+**Qué:**
+- **D-0603.a (hecha) — el carrito.** `SupplierOrderCart` (`RefCounted`): líneas producto → unidades con `add`, `set_qty` y `remove`; solo se piden productos del catálogo que el proveedor vende, de 1 a `MAX_LINE_QTY` (240) unidades por línea. `lines()` (id, unidades, precio unitario y costo), `total()`, `pallet_count()` (24 unidades por palet) y `submit(wallet, schedule, día)`: con el saldo que cubre el total pone el pedido en el calendario para el día siguiente (`SupplierSchedule.arrival_day`) y vacía el carrito. No cobra nada: el cobro sigue siendo al recibir cada palet (D-0503), así que un camión que no se descarga no cuesta.
+- **D-0603.b (pendiente) — la pantalla** en el tablero del galpón y en el portapapeles: lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
+**Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
+**Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).
