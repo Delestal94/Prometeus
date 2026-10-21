@@ -3,6 +3,7 @@ class_name TutorialPanel
 
 signal closed
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
+const ControlHints = preload("res://scripts/ui/control_hints.gd")
 
 var _back_button: Button
 var _previous_button: Button
@@ -122,11 +123,12 @@ func _rebuild_pages() -> void:
 	_pages = [
 		_page(tr("UI_TUT_OBJECTIVE_TITLE"), tr("UI_TUT_OBJECTIVE_BODY"), "⌂"),
 		_page(tr("UI_TUT_DRIVER_TITLE"), tr("UI_TUT_DRIVER_BODY")
-				% UiTheme.keycaps(tr("UI_TUT_DRIVER_CONTROL") % GameSettings.prompt("W/S", "RT/LT")), "▰"),
+				% UiTheme.keycaps(tr("UI_TUT_DRIVER_CONTROL") % GameSettings.prompt(
+					ControlHints.name_of([&"drive_accelerate", &"drive_brake"], false), "RT/LT")), "▰"),
 		_page(tr("UI_TUT_PASSENGER_TITLE"), tr("UI_TUT_PASSENGER_BODY")
 				% UiTheme.keycaps(tr("UI_TUT_PASSENGER_CONTROL") % [
 					GameSettings.prompt(tr("UI_TUT_LEFT_CLICK"), "RT"),
-					GameSettings.prompt("T", tr("UI_TUT_DPAD_DOWN"))]), "☺"),
+					GameSettings.prompt(GameSettings.key_label(&"package_open"), tr("UI_TUT_DPAD_DOWN"))]), "☺"),
 	]
 	for trap_id: StringName in TutorialData.available_traps(UnlockManager):
 		var data: Dictionary = TutorialData.card(trap_id)

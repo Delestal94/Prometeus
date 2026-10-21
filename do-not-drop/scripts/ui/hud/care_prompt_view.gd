@@ -21,6 +21,7 @@ extends Control
 
 const SynthAudioScript = preload("res://modules/synth_audio/synth_audio.gd")
 const UiThemeScript = preload("res://scripts/ui/ui_theme.gd")
+## The walk keys as they ship; `walk` in show_step's data replaces them with the player's (N-977.5).
 const KEYS: Dictionary = {Vector2.LEFT: "A", Vector2.UP: "W", Vector2.RIGHT: "D", Vector2.DOWN: "S"}
 const STEP_VECTORS: Dictionary = {&"left": Vector2.LEFT, &"up": Vector2.UP, &"right": Vector2.RIGHT,
 	&"down": Vector2.DOWN}
@@ -60,6 +61,8 @@ var axis: float = 0.0
 var axis_fwd: float = 0.0
 var screen_tilt := Vector2.ZERO
 var interact_key: String = "E"
+## Cap label of each walk direction (Vector2.UP ...), from the current bindings.
+var walk_keys: Dictionary = KEYS
 ## Every cue played, newest last: what the tests read.
 var played: Array[StringName] = []
 
@@ -120,6 +123,7 @@ func show_step(new_step: StringName, data: Dictionary) -> void:
 	holding_tool = bool(data.get("tool_held", false))
 	sway = data.get("sway", Vector2.ZERO)
 	interact_key = String(data.get("interact", "E"))
+	walk_keys = data.get("walk", KEYS)
 	var work: float = clampf(float(data.get("work", 0.0)), 0.0, 1.0)
 	var fixes: int = int(data.get("fixes", 0))
 	var sequence: Dictionary = data.get("sequence", {})
@@ -335,7 +339,7 @@ func _draw_sequence(center: Vector2) -> void:
 	for i: int in count:
 		var direction: Vector2 = STEP_VECTORS.get(StringName(steps[i]), Vector2.ZERO)
 		var key_center := Vector2(x0 + cap * 0.5 + i * (cap + gap), y)
-		var glyph: String = "" if gamepad else String(KEYS.get(direction, "?"))
+		var glyph: String = "" if gamepad else String(walk_keys.get(direction, "?"))
 		if hidden_code:
 			# The driver has the code: here it is only how many are left.
 			direction = Vector2.ZERO
@@ -373,20 +377,20 @@ func lean_key() -> StringName:
 func _draw_lean(center: Vector2) -> void:
 	_draw_primary_button(center + Vector2(-112, 0), holding_primary)
 	var slots: Array[Dictionary] = [
-		{"at": Vector2(-40, -26), "way": Vector2.UP, "glyph": "W", "pressed": axis_fwd},
-		{"at": Vector2(-76, 12), "way": Vector2.LEFT, "glyph": "A", "pressed": -axis},
-		{"at": Vector2(-40, 12), "way": Vector2.DOWN, "glyph": "S", "pressed": -axis_fwd},
-		{"at": Vector2(-4, 12), "way": Vector2.RIGHT, "glyph": "D", "pressed": axis},
+		{"at": Vector2(-40, -26), "way": Vector2.UP, "id": &"W", "pressed": axis_fwd},
+		{"at": Vector2(-76, 12), "way": Vector2.LEFT, "id": &"A", "pressed": -axis},
+		{"at": Vector2(-40, 12), "way": Vector2.DOWN, "id": &"S", "pressed": -axis_fwd},
+		{"at": Vector2(-4, 12), "way": Vector2.RIGHT, "id": &"D", "pressed": axis},
 	]
 	for slot: Dictionary in slots:
 		var way: Vector2 = slot["way"]
-		var wanted: bool = lean_key() == &"" or lean_key() == StringName(slot["glyph"])
+		var wanted: bool = lean_key() == &"" or lean_key() == slot["id"]
 		var key_center: Vector2 = center + (slot["at"] as Vector2) + Vector2(20, 0)
 		if wanted:
 			key_center.y -= absf(sin(_time * 6.0)) * 5.0
 		var lit: bool = float(slot["pressed"]) > 0.5 and holding_primary
-		_draw_key(key_center, "" if gamepad else String(slot["glyph"]), way, lit, lit, UiThemeScript.INK, 0.66,
-			wanted, 1.0 if wanted else 0.4)
+		var glyph: String = "" if gamepad else String(walk_keys.get(way, "?"))
+		_draw_key(key_center, glyph, way, lit, lit, UiThemeScript.INK, 0.66, wanted, 1.0 if wanted else 0.4)
 	_draw_cardboard(center + Vector2(104, 6), clampf(screen_tilt.x, -1.0, 1.0) * 0.3 * (1.0 + 0.2 * sin(_time * 3.0)))
 
 
@@ -399,7 +403,7 @@ func _draw_scrub(center: Vector2) -> void:
 		var key_center: Vector2 = center + Vector2(-46.0 + (way + 1.0) * 46.0, 4.0)
 		if wanted:
 			key_center.y -= 7.0
-		var glyph: String = "" if gamepad else ("A" if way < 0.0 else "D")
+		var glyph: String = "" if gamepad else String(walk_keys.get(Vector2(way, 0.0), "?"))
 		_draw_key(key_center, glyph, Vector2(way, 0.0), axis * way > 0.5, axis * way > 0.5, UiThemeScript.INK, 1.0,
 			wanted, 1.0 if wanted else 0.55)
 	var wipe: float = sin(_time * 8.0) * 22.0
