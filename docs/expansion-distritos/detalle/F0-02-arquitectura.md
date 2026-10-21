@@ -127,6 +127,7 @@ lógica de manejo.
 no tiene hallazgos y `vehicle.gd` bajó de líneas.
 
 ### D-0209 · Interfaz de movimiento del vehículo — B · Opus 5.5 · xhigh · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `fleet_motion.gd` (`speed_kmh`, `forward`, `right`, `to_local`, `ground_contact`, `cargo_acceleration`) expuesto por la furgoneta como `fleet_motion`; `package_rescue.gd` lee espacio local y ejes por la interfaz con respaldo en la transformada; `road_impacts.gd`/`package_impacts.gd` no leían el vehículo, quedan igual; `test_fleet_motion`.
 **Depende de:** D-0208
 **Qué:** `scripts/gameplay/fleet/fleet_motion.gd`, interfaz con `speed_kmh()`, `forward()`,
 `ground_contact() -> float` (0-1; 1 = apoyado), `cargo_acceleration() -> Vector3` (lo que sienten las

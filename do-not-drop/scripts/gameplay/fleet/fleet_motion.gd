@@ -9,16 +9,15 @@ extends RefCounted
 ## Preloaded, not by class_name: a new global class isn't in the class cache until the
 ## editor imports again, and headless runs load the van first.
 ##
-## The interface, as the vehicle node offers it (vehicle.gd keeps thin wrappers; a stand-in
-## in a test offers the same names over its own FleetMotion):
-## - `speed_kmh` (a property, the van's own): how fast it goes;
-## - `motion_forward()` / `motion_right()`: its heading and its right, in the world;
-## - `motion_to_local(v)`: a world direction in the vehicle's own space;
-## - `ground_contact() -> float`: 0..1, 1 = resting on the ground (wheels on the road, hull in
+## The interface is this object's methods, which the vehicle node exposes as its `fleet_motion`
+## property (the van does, and so does a stand-in in a test, over its own FleetMotion; it adds no
+## methods to the van):
+## - speed_kmh(), forward(), right(), to_local(v) (a world direction in the vehicle's own space);
+## - ground_contact() -> float: 0..1, 1 = resting on the ground (wheels on the road, hull in
 ##   the water, skids down); 0 = airborne;
-## - `cargo_acceleration() -> Vector3`: what the boxes feel, in the vehicle's own space.
+## - cargo_acceleration() -> Vector3: what the boxes feel, in the vehicle's own space.
 ## The static `*_of()` readers below are what a consumer that holds the vehicle only by name
-## calls (package_rescue.gd): they ask the interface and, for a Node3D that doesn't offer it
+## calls (package_rescue.gd): they ask `fleet_motion` and, for a Node3D that doesn't have one
 ## (the plain fakes tests put in the "vehicle" group), fall back to its transform.
 ## Not here: how it drives, and who rides along (fleet_cargo.gd).
 
@@ -99,35 +98,36 @@ func linear_velocity() -> Vector3:
 
 ## Readers for a consumer that holds the vehicle by name (see the header).
 static func speed_kmh_of(vehicle: Node3D) -> float:
-	var value: Variant = vehicle.get(&"speed_kmh")
-	return float(value) if value is float else 0.0
+	var motion: Variant = _motion_of(vehicle)
+	return motion.speed_kmh() if motion != null else 0.0
 
 
 static func forward_of(vehicle: Node3D) -> Vector3:
-	if vehicle.has_method(&"motion_forward"):
-		return vehicle.call(&"motion_forward")
-	return -vehicle.global_basis.z
+	var motion: Variant = _motion_of(vehicle)
+	return motion.forward() if motion != null else -vehicle.global_basis.z
 
 
 static func right_of(vehicle: Node3D) -> Vector3:
-	if vehicle.has_method(&"motion_right"):
-		return vehicle.call(&"motion_right")
-	return vehicle.global_basis.x
+	var motion: Variant = _motion_of(vehicle)
+	return motion.right() if motion != null else vehicle.global_basis.x
 
 
 static func local_direction(vehicle: Node3D, direction: Vector3) -> Vector3:
-	if vehicle.has_method(&"motion_to_local"):
-		return vehicle.call(&"motion_to_local", direction)
-	return vehicle.global_basis.inverse() * direction
+	var motion: Variant = _motion_of(vehicle)
+	return motion.to_local(direction) if motion != null else vehicle.global_basis.inverse() * direction
 
 
 static func ground_contact_of(vehicle: Node3D) -> float:
-	if vehicle.has_method(&"ground_contact"):
-		return float(vehicle.call(&"ground_contact"))
-	return 1.0
+	var motion: Variant = _motion_of(vehicle)
+	return motion.ground_contact() if motion != null else 1.0
 
 
 static func cargo_acceleration_of(vehicle: Node3D) -> Vector3:
-	if vehicle.has_method(&"cargo_acceleration"):
-		return vehicle.call(&"cargo_acceleration")
-	return Vector3.ZERO
+	var motion: Variant = _motion_of(vehicle)
+	return motion.cargo_acceleration() if motion != null else Vector3.ZERO
+
+
+## The vehicle's `fleet_motion`, null when it has none.
+static func _motion_of(vehicle: Node3D) -> Variant:
+	var motion: Variant = vehicle.get(&"fleet_motion")
+	return motion if motion is RefCounted else null

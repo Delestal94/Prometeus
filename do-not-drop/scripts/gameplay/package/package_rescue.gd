@@ -13,8 +13,8 @@ extends RefCounted
 ## players in the "player" group (tests put Node3D fakes there) and the truck
 ## radio's mode (truck_radio.gd names autoloads bare: typing it pulls them into
 ## the box's compile graph). Its heading and local space come through the movement interface by name
-## (FleetMotion.right_of / forward_of / local_direction: motion_right, motion_forward, motion_to_local,
-## which a fake without them answers with its transform). Typed: the lap mount (MountPoint, by preload: it
+## (FleetMotion.right_of / forward_of / local_direction read the vehicle's `fleet_motion`; a fake
+## without one is read from its transform). Typed: the lap mount (MountPoint, by preload: it
 ## has no class name) and the session's world_seed (NETWORK_MANAGER).
 
 ## The lap mount's script (package_mount_point.gd has no class name): it names no autoload.

@@ -333,29 +333,8 @@ func needs_sweep(body: RigidBody3D, margin: float = 0.0) -> bool:
 	return fleet_cargo.needs_sweep(body, margin)
 
 
-## The movement interface (FleetMotion, D-0209); `speed_kmh` above is its speed.
-func motion_forward() -> Vector3:
-	return fleet_motion.forward()
-
-
-func motion_right() -> Vector3:
-	return fleet_motion.right()
-
-
-func motion_to_local(direction: Vector3) -> Vector3:
-	return fleet_motion.to_local(direction)
-
-
-## 0..1, 1 = all wheels on the road. A frozen copy (a client's, or parked) rests on it.
-func ground_contact() -> float:
-	return fleet_motion.ground_contact()
-
-
-## What the boxes feel, in the van's space (smoothed; sampled each physics tick).
-func cargo_acceleration() -> Vector3:
-	return fleet_motion.cargo_acceleration()
-
-
+## What fraction of the wheels is on the road: FleetMotion.ground_contact() for this van. A frozen
+## copy (a client's, or parked) is taken to rest on it.
 func _wheels_on_ground() -> float:
 	if freeze or _wheels.is_empty():
 		return 1.0
