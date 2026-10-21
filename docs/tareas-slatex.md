@@ -354,7 +354,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.71** 12 disfraces: repartidor (uniforme del juego), cartero, bombero, astronauta, pirata,
   chef, dinosaurio, abeja, momia, robot, superhéroe con capa y esqueleto (los huesos se ven dentro de la
   gelatina).
-- [ ] **S-311.72** 15 accesorios sueltos: gorra, casco, lentes, bufanda, mochila, moño, corona,
+- [x] **S-311.72** 15 accesorios sueltos: gorra, casco, lentes, bufanda, mochila, moño, corona,
   auriculares, bigote postizo, etc.
 - [ ] **S-311.73** Partes con física: capa, cola del dinosaurio, antenas de abeja, vendas de la momia.
 - [ ] **S-311.74** Ropa que sigue las proporciones: cada prenda lleva los mismos morphs que el cuerpo
