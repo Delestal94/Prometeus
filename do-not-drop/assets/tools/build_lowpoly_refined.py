@@ -763,8 +763,8 @@ def mushroom():
 # white rim -- stone or plastic, not a cut log. Now the trunk's own end caps
 # become the cut face: flattened to x = +-LOG_END (the old discs' outer face,
 # so the bounding box is unchanged), then inset into a thin bark rim
-# ("trunk"), light sawn wood and two slightly darker growth rings, each band
-# 3 mm lower than the last so the rings read in the light as well as by
+# ("trunk"), light sawn wood and a slightly darker growth ring (pass 3), each band
+# 3 mm lower than the last so the ring reads in the light as well as by
 # colour, around a pith a little off-centre. One surface, no overlapping
 # discs, so nothing z-fights. Both wood colours are "wood.*" copies, keyed as
 # "wood" by LowpolyMaterials (planks detail at 1.4 m: grain, not boards, at
@@ -775,12 +775,17 @@ def mushroom():
 # lighter than the bark (the planks map darkens it and the face is mostly
 # side-lit). Now freshly cut pine, ~0.92/0.75/0.52 sRGB in game; the rings
 # keep the same ratio to it (~0.75/0.60/0.41), still well above the bark.
+# Pass 3 (2026-10-21): five insets per cap put the log at 328 tris, over the
+# 250-tri cap for everything RouteDresser's ground_plant rule scatters
+# (N-331.6). Now three: bark rim, light wood, ONE dark ring (a little wider
+# than the old two, so it reads from the road) and a light centre, 68 tris a
+# cap, 248 the model.
 LOG_END = 1.425
 LOG_WOOD = (0.58, 0.37, 0.17, 1)
 LOG_RING = (0.38, 0.23, 0.10, 1)
 # Cut face bands, outside in: (radius as a fraction of the bark, material slot).
 # Slot 0 trunk, 1 light wood, 2 ring.
-LOG_BANDS = [(0.87, 1), (0.66, 2), (0.57, 1), (0.36, 2), (0.29, 1)]
+LOG_BANDS = [(0.87, 1), (0.56, 2), (0.45, 1)]
 
 
 def _log_end_caps(o, seed=978):
