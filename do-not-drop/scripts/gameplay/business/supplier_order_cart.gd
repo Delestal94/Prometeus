@@ -74,7 +74,8 @@ func qty(product: StringName) -> int:
 func lines() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var ids: Array = _lines.keys()
-	ids.sort()
+	# StringName < compares interned pointers, not text: sort by the string.
+	ids.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	for id: StringName in ids:
 		var n: int = qty(id)
 		out.append(

@@ -79,7 +79,8 @@ func _test_totals(cart: SupplierOrderCart) -> void:
 func _test_submit(cart: SupplierOrderCart, state: Node) -> void:
 	state.new_company("Cart Co")
 	var schedule := SupplierSchedule.new()
-	var money: int = state.money
+	# STARTING_MONEY (500) does not cover this 700 cart: give the wallet enough.
+	var money: int = 1000
 	state.money = 10
 	_expect(not cart.can_submit(state), "a poor wallet cannot submit")
 	_expect(not cart.submit(state, schedule, 3), "poor wallet submit refused")
