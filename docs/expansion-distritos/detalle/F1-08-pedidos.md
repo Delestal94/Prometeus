@@ -114,3 +114,9 @@ tope `PENALTY_REPUTATION_CAP`). Uno que ya va en camino no se abandona: se cobra
 camino, no repite, sobrevive a guardar/cargar; veredicto de `abandoned`.
 **Hecho cuando:** el test pasa.
 
+### D-0808 · Asignar pedido a una caja — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderBoxLink` (`scripts/gameplay/business/order_box_link.gd`) + `OrderBook.unpack`; `test_order_box_link`. Falta que la mesa 3D lo llame al cerrar la caja (D-0808.b, junto con el objeto de la mesa).
+**Depende de:** D-0210, D-0707
+**Qué:** funciones estáticas sobre el `OrderBook`; el vínculo vive en el pedido (`box_id`, estado `PACKED`), no en una tabla aparte, así host, clientes y save coinciden. `assign(book, order_id, box_id, box)` exige pedido abierto o atrasado, caja con cinta y con la etiqueta de ese pedido (D-0707), y que la caja no esté ya atada a otro pedido; devuelve `OK` o el motivo (`unknown_order`, `order_not_waiting`, `box_not_taped`, `label_mismatch`, `box_taken`). El contenido no se revisa acá: una caja equivocada se ata igual y paga 0 en la puerta (D-0712). `order_of_box` busca el pedido de una caja y `release` (`OrderBook.unpack`) lo devuelve a abierto, o a atrasado si ya venció, cuando la caja se abre o se desarma (D-0719).
+**Test** `test_order_box_link`: ata abierto y atrasado, cada rechazo sin cambiar nada, caja ocupada, búsqueda por caja, liberar y volver a atar.
+**Hecho cuando:** test (la lógica, en este PR; el llamado desde la mesa, en D-0808.b).
