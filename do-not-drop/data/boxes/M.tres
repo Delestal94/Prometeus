@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BoxDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/box_definition.gd" id="1_box"]
+[ext_resource type="PackedScene" path="res://assets/models/cargo/sm_cargo_box_cube.glb" id="2_model"]
+
+[resource]
+script = ExtResource("1_box")
+id = &"M"
+cells = Vector3i(3, 3, 3)
+cost = 3
+model = ExtResource("2_model")
