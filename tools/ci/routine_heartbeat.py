@@ -6,7 +6,7 @@ Usage: python tools/ci/routine_heartbeat.py [--repo owner/name] [--dry-run]
 No model involved. It applies the alarm table of `.claude/rutinas/auditoria.md` section 1.5
 (the last PR per branch prefix against a maximum age) and keeps one issue per routine, label
 `rutina-caida`, titled "Rutina caída (latido): <name>": opened when the alarm fires, closed when
-the routine leaves a PR again. The PC script opens its own "Rutina de PC caída" issue (N-973);
+the routine leaves a PR again. The PC script opens its own "Rutina de PC caída: build|arte" issues (N-973);
 the titles differ on purpose so the two never overwrite each other.
 `.claude/rutinas/PRESUPUESTO` (regla 1 bis): a routine that the level leaves out is not an alarm.
 `.github/workflows/routine-heartbeat.yml` runs it every 6 hours. Only the standard library.

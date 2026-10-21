@@ -241,9 +241,22 @@ Programador de tareas con `tools/pc/rutina-pc.ps1 -Rutina arte|build`, que:
   versión vieja, Opus 5.5 responde 400 y la corrida muere en segundos (pasó el 2026-09-30);
 - corre `claude -p` con Opus 5.5, permisos en modo `auto` (lo que pediría permiso se niega solo) y solo
   los MCP de Blender y ComfyUI, y guarda el log (UTF-8) en `%LOCALAPPDATA%\prometeus-rutinas\logs\`;
-- **si la corrida falla**, abre o comenta el issue "Rutina de PC caída" (etiqueta `rutina-caida`) con el
-  final del log, y lo cierra solo cuando una corrida vuelve a terminar bien. La nube no ve los logs de
-  la PC: ese issue es lo único que avisa (y la auditoría lo reporta).
+- **si la corrida falla**, abre o comenta el issue de **su** rutina, "Rutina de PC caída: build" o
+  "Rutina de PC caída: arte" (etiqueta `rutina-caida`, uno por rutina), con las líneas de error y las
+  últimas 10 líneas del log (300 caracteres cada una; el repo es público), y lo cierra solo cuando una
+  corrida **de la misma rutina** termina bien (un éxito del arte no tapa la caída del build). Si el log
+  muestra el límite de uso del plan (regla 13), el cuerpo arranca con "Cupo del plan agotado ... no es
+  una caída real": se informa igual, pero no hay nada que arreglar. El cuerpo va por un archivo UTF-8
+  (PowerShell 5.1 por tubería lo manda en ASCII y perdía los acentos). El issue viejo sin sufijo
+  ("Rutina de PC caída") lo cierra con una explicación el primer éxito de cualquiera de las dos. La
+  nube no ve los logs de la PC: ese issue es lo único que avisa (y la auditoría lo reporta);
+- **los saltos** (candado ocupado, `PAUSA`, `PRESUPUESTO`) salen con 0 pero dejan una línea (fecha,
+  rutina, motivo) en `%LOCALAPPDATA%\prometeus-rutinas\saltos.log` y, si esa rutina tiene un issue
+  abierto, un comentario "no es una falla" (a lo sumo uno cada 12 h por motivo); un salto nunca abre un
+  issue. Los saltos que decide Claude adentro (main rojo o sin verificar, `pc-build.md` §1) no pasan
+  por el script: quedan en su PR o resumen. Prueba del script: `python3 tools/pc/test_rutina_pc.py`
+  (CI la corre en el job de lint; con `pwsh` corre también `tools/pc/test-rutina-pc.ps1`, con un `gh`
+  falso).
 
 El clon `Prometeus-rutina` tiene que estar marcado como confiable en `~/.claude.json`
 (`projects["D:/Programas/Utilities/Proyectos/Prometeus-rutina"].hasTrustDialogAccepted: true`); si no,
