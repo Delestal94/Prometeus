@@ -177,3 +177,10 @@ Decisión: reponer **no cuesta plata**, cuesta el tiempo de quien se queda en la
 Decisión: la caja vacía queda abierta en la mesa (se puede rearmar enseguida, sin pagar otra). Decisión: relleno, cinta, etiqueta y sellos **se pierden** y no se reembolsan (ya se pagaron al usarlos, D-0504): equivocarse cuesta un poco y desarmar siempre es posible, también con la caja encintada.
 **Test** `test_box_disassemble`: sin caja no hace nada; los productos vuelven en orden y la caja queda vacía, abierta, sin etiqueta ni sellos; una caja encintada se abre y ya no se despacha; con 6 unidades solo 4 vuelven a la mesa y 2 van a `overflow`; los mismos productos entran de nuevo.
 **Hecho cuando:** el test pasa.
+
+### D-0720 · Tutorial de la mesa (primer armado guiado) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `PackingTutorial` (`scripts/gameplay/business/packing_tutorial.gd`): el paso sale del estado de la mesa y del pedido; siete textos `WORLD_PACKTUT_*`; `test_packing_tutorial`. Mostrar el cartel junto a la mesa visible y marcar el tutorial como visto en el guardado quedan para D-0701.b (ver `revisar/D-0720.md`).
+**Depende de:** D-0701 (`PackingStation`), D-0708 (`BoxSeals`), D-0712 (`BoxContentCheck`), D-0714 (`OrderSheet`)
+**Qué:** `PackingTutorial.step(station, order, dispatched)` devuelve `{id, key, action, index, total, done}`: caja → productos → sellos (solo si el pedido los pide) → etiqueta → cinta → despacho → listo. Decisión: sin estado propio, el paso se deduce de la mesa, así deshacer, desarmar o hacer algo fuera de orden nunca lo desincroniza. Decisión: todos los pasos se hacen con la acción `interact` (teclado y mando), por eso no pide mouse.
+**Test** `test_packing_tutorial`: el flujo completo paso a paso, el paso de sellos solo con requisito, desarmar vuelve a productos, textos en es y en, la acción con evento de teclado y de mando, mesa nula y pedido vacío.
+**Hecho cuando:** el flujo guiado se completa con la lógica y la acción de mando (el test pasa).
