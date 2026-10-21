@@ -53,7 +53,9 @@ func put_down(jack: PalletJack, pos: Vector2, floor_rect: Rect2, inventory: Inve
 
 ## Leaves the carried pallet on rack slot `slot` (front at `slot_pos`, `level` meters up). The forks
 ## have to be at that level and the forklift within reach of the slot.
-func put_on_rack(jack: PalletJack, slot: StringName, slot_pos: Vector2, level: float, from_pos: Vector2, inventory: Inventory) -> bool:
+func put_on_rack(
+	jack: PalletJack, slot: StringName, slot_pos: Vector2, level: float, from_pos: Vector2, inventory: Inventory
+) -> bool:
 	if not at_level(level) or from_pos.distance_to(slot_pos) > CompanyTuning.PALLET_JACK_REACH_M:
 		return false
 	return jack.put_on_rack(slot, slot_pos, inventory)

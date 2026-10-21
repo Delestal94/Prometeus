@@ -3,7 +3,8 @@ extends RefCounted
 ## Where each supplier pallet physically is, and the manual pallet jack that moves it (expansion D-0605).
 ##
 ## Pure data, no node, no autoload: a pallet is on the truck's bed, carried by the jack or standing on
-## the shed floor at a point in meters (or, with the forklift, on a rack slot). The jack takes one pallet at a time. Units reach the Inventory
+## the shed floor at a point in meters, or on a rack slot (D-0606).
+## The jack takes one pallet at a time. Units reach the Inventory
 ## (Pallet.receive) once, when a pallet from the bed is put down on the floor, so a pallet that never
 ## leaves the bed is never counted and leaves with the truck. The nodes that draw and drive it come
 ## with D-0605.b. Host authority: peers apply the same calls in the same order.
