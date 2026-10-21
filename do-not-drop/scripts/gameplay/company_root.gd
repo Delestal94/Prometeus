@@ -8,8 +8,18 @@ extends Node3D
 ## furnished from the company's layout: a new company starts from DefaultShed (D-0911, D-0620):
 ## dock and reception with the first pallets, shelves with stock, two packing tables and the
 ## dispatch zone by the exit. It is a grey-box stand-in until the final models and the district
-## scenes exist; what is final here is the entry: --mode=company or the menu opens this scene, the
-## company is switched on (CompanyState) and the local player stands in the shed.
+## scenes exist; what is final here is the entry: --autostart-company (alias --mode=company) or the
+## menu's Empresa button opens this scene, the company is switched on (CompanyState) and the local
+## player stands in the shed.
+##
+## Online (the D-0214 follow-up): it is one of NetworkManager.LEVEL_SCENES, so a host here (the
+## menu's --host-company) sends every joiner to it. Each peer tells the
+## session its world is up (level_ready(), as level_common.gd does), which on a client is what has
+## the host send CompanyNet's snapshot and spawn its player. The crew is spawned by the host alone,
+## through World/PlayerSpawner (the path LoadingScreen waits on): one player per peer whose world
+## is up, at the first spot around SPAWN nobody stands on (free_spawn()), freed when its peer leaves
+## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
+## one: the same player at SPAWN it always was.
 ##
 ## No vehicle, no route and no run: Delivery and Endless ignore all of this
 ## (level_base.gd / level_endless.gd are untouched).
@@ -31,7 +41,7 @@ extends Node3D
 ## The day (D-0203): the root gives every peer a GameClock and a DayCycle child, both attached to
 ## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
 ## the phases and the clock then run by themselves (DayCycle). The shed's area is not wired as
-## DayCycle.crew_in_shed yet (no remote player nodes exist), so the shed never freezes here.
+## DayCycle.crew_in_shed yet, so the shed never freezes here.
 ##
 ## Steam (D-2009): what the company shows, CompanyLobbyMeta's lobby data (host) and rich presence,
 ## goes to NetworkManager's steam_presence (NetSteamPresence) when the world comes up, on every
@@ -63,11 +73,21 @@ const SAVED_HANDS_LOCATION: StringName = &"floor:0"
 ## The starting shed (stage 0 of WarehouseStages, 12 x 8 cells of 1 m), in meters: centered on the
 ## origin, inside the industrial park. A bigger stage draws a bigger floor (CompanyShed).
 const SHED_SIZE: Vector2 = Vector2(12.0, 8.0)
-## Where the player appears: on the dock floor, facing the shed (north, -Z).
+## Where the player appears: on the dock floor, facing the shed (north, -Z). The first of the
+## roster (the host, solo too) stands right here; the rest side by side (crew_spawn()).
 const SPAWN: Vector3 = Vector3(0.0, 1.0, 2.6)
+## Meters between two crew members spawned side by side along X: a player's capsule is narrower,
+## so nobody lands on anybody, and a crew of 8 spans 6.4 m of the starting shed's 12.
+const CREW_SPACING: float = 0.8
+## A spawn spot is taken while a crew member stands closer than this share of CREW_SPACING to it.
+const SPAWN_CLEARANCE: float = 0.9
+## Spawn spots tried before giving up and using the last (8 players fill the first 8).
+const MAX_SPAWN_SLOTS: int = 16
 ## The group of every player here: this is the company, there is no vehicle to practise for
 ## (the delivery practice card, player_cargo_care.gd, checks it).
 const CREW_GROUP: StringName = &"company_crew"
+## Every player node is named this and its peer id (player.gd takes its authority from it).
+const PLAYER_PREFIX: String = "Player_"
 ## How many days from the first one the stand-in supplier calendar covers (_seed_stand_in_calendar).
 const STAND_IN_DAYS: int = 120
 ## Zone names over the map: size of a pixel of their 256 px letters, and height over the ground.
@@ -85,7 +105,13 @@ const ZONE_COLORS: Dictionary = {
 	&"volcan": Color(0.55, 0.25, 0.20),
 }
 
+## The slot the next company world takes as its save_slot, once (the menu's --slot=<n>, with
+## --autostart-company or --host-company); "" leaves save_slot as it is.
+static var launch_slot: String = ""
+
 var zones: Array[ZoneDefinition] = []
+## This peer's own player: on the host (solo too) from the moment the world is up; on a client once
+## the host's spawn of it arrives (null until then).
 var player: Node3D
 ## The shed the players walk in, drawn from the company's layout and stock.
 var shed: CompanyShed
@@ -113,12 +139,24 @@ var interest: CompanyInterest
 ## of its own before adding the root.
 var save_slot: String = CompanySave.DEFAULT_SLOT
 var save_dir: String = CompanySave.SAVE_DIR
+## The session and the CompanyState this world plays with. Unset, the NetworkManager and the
+## CompanyState autoloads, found by path when the world comes up (N-919). Two peers in one process
+## (a test) hand each root its own before adding it, as they do save_dir.
+var session: NetSession
+var company_state: COMPANY_STATE
 
 var _world: Node3D
+## Every peer: where the host's spawns of the crew land (World/PlayerSpawner, as in the delivery).
+var _spawner: MultiplayerSpawner
+## Decided when the world comes up: this peer is the host (solo too) and spawns the crew. A client
+## whose session ended later stays a client here: it spawns nothing while the menu loads.
+var _spawns_crew: bool = false
 ## Client: the CompanyState node the host's snapshot writes into, and what it held before (its
 ## to_dict(), or {} when no company was on), put back on leaving (_exit_tree()).
 var _mirrored_state: COMPANY_STATE
 var _own_company: Dictionary = {}
+## The slot each crew member last picked from, by "<peer>/<shelf uid>" (ShelfPicking, D-0609).
+var _pick_after: Dictionary = {}
 ## Host (solo too): the CompanyState node it runs, saved when the world closes mid-day. Decided
 ## when the world comes up: a client whose session ended counts as a host to CompanyNet then.
 var _hosted_state: COMPANY_STATE
@@ -126,14 +164,17 @@ var _hosted_state: COMPANY_STATE
 var _saw_host_day: bool = false
 ## Client: the host is gone and the menu is on its way; nothing here runs any more.
 var _host_gone: bool = false
-## The session (the NetworkManager autoload, by path: N-919), or null where there is none.
-var _session: NetSession
 ## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
 var _presence_shown: Array = []
 
 
 func _ready() -> void:
-	_start_company(get_node_or_null(^"/root/CompanyState") as COMPANY_STATE)
+	if not launch_slot.is_empty():
+		save_slot = launch_slot
+		launch_slot = ""
+	if company_state == null:
+		company_state = get_node_or_null(^"/root/CompanyState") as COMPANY_STATE
+	_start_company(company_state)
 	_world = Node3D.new()
 	_world.name = "World"
 	add_child(_world)
@@ -146,10 +187,11 @@ func _ready() -> void:
 	_add_cells()
 	_add_interest()
 	_add_trips()
-	_spawn_player()
+	_add_crew()
 	_add_builder()
 	_publish_presence()
 	_open_company_day.call_deferred()
+	_report_level_ready.call_deferred()
 
 
 ## Every zone in data/zones/, in a stable order. A new .tres joins without code.
@@ -209,6 +251,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.name = "DayCycle"
 	add_child(day_cycle)
 	day_cycle.attach(net, clock, state)
+	day_cycle.opening_notice = _opening_notice
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -226,7 +269,8 @@ func _open_company_day() -> void:
 ## Whichever comes first does it and the other finds _host_gone set; _on_host_lost() only reads
 ## this peer's mirror and changes scene, so it doesn't matter whether the session already ended.
 func _start_company(state: COMPANY_STATE) -> void:
-	_session = get_node_or_null(^"/root/NetworkManager") as NetSession
+	if session == null:
+		session = get_node_or_null(^"/root/NetworkManager") as NetSession
 	_add_net(state)
 	net.event_applied.connect(_on_event_applied)
 	if net.is_host():
@@ -234,8 +278,8 @@ func _start_company(state: COMPANY_STATE) -> void:
 	net.company_state_restored.connect(_on_host_day_restored)
 	if not multiplayer.server_disconnected.is_connected(_on_host_lost):
 		multiplayer.server_disconnected.connect(_on_host_lost)
-	if _session != null and not _session.session_failed.is_connected(_on_session_failed):
-		_session.session_failed.connect(_on_session_failed)
+	if session != null and not session.session_failed.is_connected(_on_session_failed):
+		session.session_failed.connect(_on_session_failed)
 
 
 ## Host (solo too): the day as it stands, at the last applied event, saved as interrupted
@@ -320,6 +364,13 @@ func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
 		_publish_presence()
 
 
+## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
+## a company in the red is told why fewer orders come in (Bankruptcy.opening_text, D-0510.2). The
+## money is the host's, replicated, so every peer reads the same.
+func _opening_notice() -> String:
+	return Bankruptcy.opening_text(_shown_company())
+
+
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on
 ## a client the host's, in its mirror, once a snapshot put it there; null otherwise (none yet, the
 ## host gone, or the world closing).
@@ -337,14 +388,14 @@ func _shown_company() -> COMPANY_STATE:
 ## company_day on the host, the player's rich presence on every peer. Only a change goes out; with
 ## no company to show (_shown_company()) both are cleared, the lobby's keys too.
 func _publish_presence() -> void:
-	if _session == null or not is_instance_valid(_session):
+	if session == null or not is_instance_valid(session):
 		return
 	var company: COMPANY_STATE = _shown_company()
 	var shown: Array = [CompanyLobbyMeta.lobby_meta(company), CompanyLobbyMeta.rich_presence(company)]
 	if shown == _presence_shown:
 		return
 	var as_host: bool = company == null or (net != null and is_instance_valid(net) and net.is_host())
-	CompanyLobbyMeta.publish(_session.steam_presence, company, as_host)
+	CompanyLobbyMeta.publish(session.steam_presence, company, as_host)
 	_presence_shown = shown
 
 
@@ -412,6 +463,27 @@ func _add_shed() -> void:
 	_redraw_shed()
 	if net != null:
 		shed.follow(net)
+		net.stations = shed.station_for
+		shed.piece_used.connect(_on_piece_used)
+
+
+## Host: a crew member used a piece of the shed. A shelf puts the units of one of its slots in their
+## hands (D-0609): the slot rotates over the filled ones while the hands are empty (_pick_after), and
+## the host's own checks (reach, hands, stock) decide in CompanyNet, same as for any units request.
+func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
+	if role != &"storage" or net == null or not net.is_host():
+		return
+	var key: String = "%d/%s" % [peer_id, uid]
+	var plan: Dictionary = ShelfPicking.plan(uid, shed.shelves.get(uid) as Shelf, net.inventory,
+		CompanyNet.hands_location(peer_id), int(_pick_after.get(key, -1)))
+	if plan.has("reason"):
+		return
+	var hands: StringName = CompanyNet.hands_location(peer_id)
+	var before: int = net.inventory.count(plan["product"], hands)
+	net.request_for(peer_id, &"units_take",
+		{"station": plan["station"], "product": plan["product"], "qty": plan["qty"]})
+	if net.inventory.count(plan["product"], hands) > before:
+		_pick_after[key] = plan["slot"]
 
 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
@@ -497,14 +569,157 @@ func _add_builder() -> void:
 	builder.setup(shed, net, player)
 
 
-func _spawn_player() -> void:
-	var id: int = multiplayer.get_unique_id()
-	player = (load(PLAYER_SCENE) as PackedScene).instantiate() as Node3D
-	player.name = "Player_%d" % id
-	player.position = SPAWN
-	join_crew(player as Player)
-	player.set_multiplayer_authority(id)
-	_world.add_child(player)
+## The crew's spawner, on every peer at the same path so the host's spawns land on each client,
+## and the session's news of peers coming and going. The host (solo too) spawns its own player
+## now and the others' as their worlds come up (_sync_crew()); a client takes its own when it
+## arrives (_on_crew_spawned()).
+func _add_crew() -> void:
+	_spawner = MultiplayerSpawner.new()
+	_spawner.name = "PlayerSpawner"
+	_spawner.spawn_path = NodePath("..")
+	_spawner.spawn_function = _create_crew_member
+	_world.add_child(_spawner)
+	_spawner.spawned.connect(_on_crew_spawned)
+	_spawns_crew = net != null and net.is_host()
+	if session != null and not session.peer_level_ready.is_connected(_on_peer_level_ready):
+		session.peer_level_ready.connect(_on_peer_level_ready)
+		session.roster_changed.connect(_on_roster_changed)
+	_sync_crew()
+
+
+## Every peer, from the host's spawn data {peer_id, position}: a player driven by that peer, one
+## of the crew before it enters the tree (join_crew()). A position that isn't a finite Vector3
+## falls back to SPAWN.
+func _create_crew_member(data: Variant) -> Node:
+	var spawn: Dictionary = data if data is Dictionary else {}
+	var id: int = int(spawn.get("peer_id", 0)) if typeof(spawn.get("peer_id")) == TYPE_INT else 0
+	var at: Variant = spawn.get("position")
+	var member := (load(PLAYER_SCENE) as PackedScene).instantiate() as Player
+	member.name = _player_name(id)
+	member.position = at if at is Vector3 and RpcGuard.finite_vec3(at) else SPAWN
+	if id > 0:
+		member.set_multiplayer_authority(id)
+	join_crew(member)
+	return member
+
+
+## The `slot`-th spawn spot: the first at SPAWN, the rest CREW_SPACING apart to either side in
+## turn (+X, -X, then twice as far...).
+static func crew_spawn(slot: int) -> Vector3:
+	var step: int = (maxi(slot, 0) + 1) / 2
+	var side: float = 1.0 if slot % 2 == 1 else -1.0
+	return SPAWN + Vector3(CREW_SPACING * float(step) * side, 0.0, 0.0)
+
+
+## The first spawn spot (crew_spawn(0), 1, 2...) with nobody of `taken` (where the crew stands, in
+## the world's space) closer than SPAWN_CLEARANCE across the floor: a newcomer never lands on
+## someone, whoever left before it. The last spot tried when every one is taken.
+static func free_spawn(taken: Array[Vector3]) -> Vector3:
+	var spot: Vector3 = SPAWN
+	for slot: int in range(MAX_SPAWN_SLOTS):
+		spot = crew_spawn(slot)
+		var clear: bool = true
+		for at: Vector3 in taken:
+			if Vector2(at.x - spot.x, at.z - spot.z).length() < CREW_SPACING * SPAWN_CLEARANCE:
+				clear = false
+				break
+		if clear:
+			return spot
+	return spot
+
+
+## Host (solo too): a player for every peer on the roster whose world is up, in roster order, at
+## the first spawn spot nobody stands on (free_spawn()); a player whose peer left the roster goes
+## first, so its spot is free again. It goes after CompanyNet let go of what it held: the session
+## tells peer_removed (CompanyNet drops the units at the player's feet, D-2006) before
+## roster_changed, and the node is only freed at the end of the frame.
+func _sync_crew() -> void:
+	if not _spawns_crew or _host_gone or not is_inside_tree() or _spawner == null:
+		return
+	var ids: Array[int] = _crew_ids()
+	for child: Node in _world.get_children():
+		var child_name: String = String(child.name)
+		if child_name.begins_with(PLAYER_PREFIX) and not ids.has(int(child_name.trim_prefix(PLAYER_PREFIX))):
+			child.queue_free()
+	for id: int in ids:
+		if _world.has_node(NodePath(_player_name(id))):
+			continue
+		if session != null and not session.is_peer_ready(id):
+			continue
+		_spawner.spawn({"peer_id": id, "position": free_spawn(_crew_spots())})
+	_refresh_local_player()
+
+
+## Where each player of this world stands, in the world's space; those on their way out left out.
+func _crew_spots() -> Array[Vector3]:
+	var spots: Array[Vector3] = []
+	for child: Node in _world.get_children():
+		var member := child as Player
+		if member != null and member.is_in_group(CREW_GROUP) and not member.is_queued_for_deletion():
+			spots.append(_world.to_local(member.global_position))
+	return spots
+
+
+## The session's roster online, else (solo, a host's room closed) this peer alone.
+func _crew_ids() -> Array[int]:
+	var ids: Array[int] = []
+	if session != null and is_instance_valid(session) and session.is_online():
+		ids.assign(session.peer_ids)
+	else:
+		ids.append(multiplayer.get_unique_id())
+	return ids
+
+
+func _on_peer_level_ready(_peer_id: int) -> void:
+	_sync_crew()
+
+
+func _on_roster_changed(_peer_ids: Array) -> void:
+	_sync_crew()
+
+
+## A client: a spawn from the host landed; its own player is the one it drives.
+func _on_crew_spawned(_member: Node) -> void:
+	_refresh_local_player()
+
+
+## `player` is this peer's own, wherever it came from; the build mode keeps it still while it
+## builds (ShedBuilder.player). Both let go of it as it leaves the tree (_on_local_player_leaving()).
+func _refresh_local_player() -> void:
+	var own: Node3D = _world.get_node_or_null(NodePath(_player_name(multiplayer.get_unique_id()))) as Node3D
+	if own != null and own.is_queued_for_deletion():
+		own = null
+	if own == player:
+		return
+	player = own
+	if player != null:
+		player.tree_exiting.connect(_on_local_player_leaving.bind(player), CONNECT_ONE_SHOT)
+	if builder != null:
+		builder.player = player
+
+
+## This peer's own player leaves the tree: the host despawned it, the session that spawned it ended
+## or the world closes. Neither `player` nor the build mode keeps pointing at a node about to be
+## freed. Not the spawner's despawned: that fires while the node is still in place.
+func _on_local_player_leaving(leaving: Node3D) -> void:
+	if player != leaving:
+		return
+	player = null
+	if builder != null and is_instance_valid(builder):
+		builder.player = null
+
+
+## This peer's world is up (everything here is built in _ready(): the shed's floor, the slabs):
+## the session hears it, as level_common.gd's _report_level_ready(). On a client that is what
+## has the host spawn its player and send CompanyNet's snapshot; on the host it records the scene.
+func _report_level_ready() -> void:
+	if not is_inside_tree() or _host_gone or session == null or not is_instance_valid(session):
+		return
+	session.level_ready()
+
+
+static func _player_name(id: int) -> String:
+	return PLAYER_PREFIX + str(id)
 
 
 ## Every player of the company's world, before it enters the tree: one of the crew (CREW_GROUP),

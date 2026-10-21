@@ -22,6 +22,11 @@ const RESTART_HOLD_SECONDS: float = 0.9
 const CAPTURE_MODE_SCRIPT: String = "res://scripts/tools/capture_mode.gd"
 ## The logical height the HUD is laid out for (project.godot's viewport).
 const BASE_HEIGHT: float = 720.0
+## Text size of the two bottom pills (controls and shortcuts), the same as the
+## interaction prompt above them: the HUD draws at GameSettings.HUD_SCALE_DEFAULT
+## (0.48) of this logical size, so 25 comes out at ~12 px on a 1280x720 screen.
+## At 16 the keycaps were 7-8 px (N-977.2).
+const PILL_FONT_SIZE: int = 25
 ## Room kept above and below the overlay card when it has to shrink to fit.
 const OVERLAY_FIT_MARGIN: float = 16.0
 ## Safe margin from every screen edge, in HUD units (redesign 2026-09-28:
@@ -374,7 +379,7 @@ func _build_bottom_bar() -> void:
 	# Context owns the bottom centre, right above the controls in the
 	# dashboard's own flow: pinned at a fixed offset it sat on the route bar,
 	# and it never competes with the critical alerts up top.
-	interaction_label = UiTheme.floating_label(dashboard, "", 25, PAPER, 560, 0)
+	interaction_label = UiTheme.floating_label(dashboard, "", PILL_FONT_SIZE, PAPER, 560, 0)
 	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	interaction_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_plate(interaction_label, Color(INK, 0.88), INK)
@@ -399,7 +404,7 @@ func _build_bottom_bar() -> void:
 	hint_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	hint_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(hint_pill)
-	hint_label = make_rich(hint_pill, 16)
+	hint_label = make_rich(hint_pill, PILL_FONT_SIZE)
 	hint_label.fit_content = true
 	hint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
@@ -421,7 +426,7 @@ func _build_bottom_bar() -> void:
 	shortcut_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	shortcut_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(shortcut_pill)
-	shortcut_label = make_rich(shortcut_pill, 16)
+	shortcut_label = make_rich(shortcut_pill, PILL_FONT_SIZE)
 	shortcut_label.add_theme_color_override("default_color", PAPER)
 	shortcut_label.fit_content = true
 	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF

@@ -9,7 +9,8 @@ extends SceneTree
 ##   emitted once each with the day; OPENING lasts OPENING_REAL_SECONDS of real time, OPERATING
 ##   until the clock reads 20:00; the summary is DaySummary.build() of the day (the money earned in
 ##   it) and stops the clock; next_day() opens day 2 (company.day too, the clock back at 08:00),
-##   and opening twice or moving the day on outside SUMMARY is refused.
+##   and opening twice or moving the day on outside SUMMARY is refused. A new day's opening_notice
+##   (D-0510.2) goes out once as EventBus.depot_notice.
 ## - A trip out at 20:00 keeps the day in CLOSING (the clock keeps running) until trips_out() is 0,
 ##   and only then comes the summary.
 ## - A shed with nobody in it (S4) freezes: shed_minute() stands still while the world clock runs,
@@ -146,10 +147,18 @@ func _check_solo() -> void:
 	_expect(clock.set_speed(SPEED), "The test runs the clock x100")
 	var seq_before: int = net.seq
 	state.call(&"earn", 50, &"order_paid")
+	# D-0510.2: what the opening tells the peer goes out as depot_notice right after the day starts.
+	var notices: Array[String] = []
+	var notice_listener := func(text: String) -> void: notices.append(text)
+	root.get_node(^"EventBus").connect(&"depot_notice", notice_listener)
+	cycle.opening_notice = func() -> String: return "in the red"
 	_expect(cycle.open_day(1) and cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == 1,
 		"open_day(1) is OPENING of day 1 (got %s %d)" % [cycle.phase_name(), cycle.current_day()])
 	_expect(net.seq == seq_before + 2, "...as two events: the clock's anchor and the phase (seq %d)" % net.seq)
 	_expect(_started == [1], "...with company_day_started(1) once (got %s)" % [_started])
+	_expect(notices == ["in the red"], "...and the opening notice once as depot_notice (got %s)" % [notices])
+	root.get_node(^"EventBus").disconnect(&"depot_notice", notice_listener)
+	cycle.opening_notice = Callable()
 	_expect(not clock.is_paused() and is_equal_approx(clock.minute_now(), 480.0),
 		"...and the clock runs from 08:00 (got %.1f)" % clock.minute_now())
 	_expect(not cycle.open_day(1), "A day already opened can't be opened again")

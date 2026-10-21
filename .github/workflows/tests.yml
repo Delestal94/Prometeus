@@ -56,6 +56,9 @@ jobs:
       - name: Hooks know the owner of each folder (file_domain)
         run: bash tools/test-file-domain.sh
 
+      - name: PC routine health reporting (one issue per routine, quota, UTF-8)
+        run: python3 tools/pc/test_rutina_pc.py
+
   # The suite split across four runners (SHARD in run-tests.sh): one runner
   # took ~21 min, a quarter each takes ~6. "Tests headless (Godot 4.7.2)"
   # below is the single check branch protection requires.
@@ -257,6 +260,12 @@ jobs:
         run: |
           set -o pipefail
           bash tools/run-net-pair.sh | tee "$RUNNER_TEMP/network-pair-audit.log"
+
+      # D-0214: the company world as a room, over the menu's own --host-company and --join= flags.
+      - name: Run two-process company world check
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+        run: bash tools/run-net-pair.sh --company
 
       - name: Upload network latency audit
         if: always()

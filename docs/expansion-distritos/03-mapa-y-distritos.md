@@ -12,7 +12,7 @@
 | D-0302 | ◐ (falta D-0302.2, vehículo y despacho) Portón de salida del galpón como punto de partida (reemplaza el arranque de la entrega actual) | constructor-mundo | high | la camioneta cargada sale por el portón y dispara la carga del distrito |
 | D-0303 | Pantalla/tablero de despacho: elegir distrito, vehículo y pedidos que salen | constructor-ui | high | test de UI: elegir y confirmar con mando y teclado |
 | D-0304 | Generación de ruta por distrito: `RouteStreamer` con conjunto de tramos y decorado del distrito | constructor-tramos | xhigh | Barrio Centro y Campo generan rutas distintas con la misma semilla; `route_golden` por distrito |
-| D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
+| ✅ D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
 | D-0306 | ✅ Orden de paradas: el jugador elige o lo sugiere el GPS | constructor-camion | high | GPS muestra la próxima parada; test cambia el orden |
 | D-0307 | Regreso al galpón: viaje de vuelta corto o salto con pantalla de resumen (según D-0104) | constructor-mundo | high | regreso sin cargar la escena entera dos veces (medido) |
 | D-0308 | Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
@@ -27,7 +27,7 @@
 | ~~D-0317~~ | ~~Jugadores en distintos distritos a la vez (dos vehículos fuera) — sí/no por rendimiento~~ **Fusionada en D-2002 (D-0112, [crítica](diseno/critica-alcance.md))** | Plan | high | decisión con medición de costo; si sí, D-0318 |
 | D-0318 | ◐ (falta D-0318.1) (Si D-0317 sí) varias instancias de distrito cargadas a la vez con capas de física separadas | constructor-red | xhigh | test de red con 2 vehículos en 2 distritos |
 | D-0319 | Tiempo del viaje cuenta en el reloj del día | constructor-progresion | medium | test: ruta de 5 min avanza 1 h de juego (según D-0105) |
-| D-0320 | Recompensa y resultado por salida (lo que se cobró, lo que se rompió) entra al cierre del día | constructor-progresion | high | resultados de la salida en `CompanyState` (test) |
+| ✅ D-0320 | Recompensa y resultado por salida (lo que se cobró, lo que se rompió) entra al cierre del día | constructor-progresion | high | resultados de la salida en `CompanyState` (test) |
 
 ## Ampliación
 

@@ -1,5 +1,10 @@
 # Ciudad procedural — seis distritos construidos del spike
 
+> **Spike cerrado (2026-10-21, N-950).** El mapa del juego es el de la expansión: continuo, de trazado fijo y
+> por celdas ([decisión D-0104](decisiones/2026-10-04-mapa-continuo.md)). Este prototipo no se sigue ampliando;
+> queda como referencia portable (`modules/town_gen/`, `character_step`, escenas `town_*.tscn`). Motivo:
+> [decisiones/2026-10-21-n950-spike-superado.md](decisiones/2026-10-21-n950-spike-superado.md).
+
 Decisiones del equipo, 2026-10-02: una ciudad continua con seis distritos;
 contorno asimétrico que varía por semilla, calles diagonales y manzanas de
 tamaños distintos. Plazas, parques, jardines y monumentos forman parte del

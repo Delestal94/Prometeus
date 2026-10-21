@@ -69,6 +69,7 @@ Centro sin salirse de la calzada (`OFF_ROAD` = 0).
 **Hecho cuando:** el test pasa y `revisor-visual` mandó capturas de 3 aristas (asfalto, ripio, barro).
 
 ### D-0305 · Varias paradas por salida — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `Trip` suma paradas por casa (`stops`, `pending_stops()`, `next_stop()`, `deliver_stop()`) y `close()` con `Inventory`: lo no entregado vuelve `FAILED` y los productos de una caja sana pasan de `box:<id>` a `dock` (`Trip.RETURN_LOCATION`); si la caja está rota se pierden. `test_company_trip_stops`. Falta que el GPS/tablero use `next_stop()` (D-0308, D-0307).
 **Depende de:** D-0302, D-0311
 **Qué:** un `Trip` tiene una lista de paradas (casa + pedidos). Entregar en una casa saca esos pedidos.
 La salida no termina hasta volver al galpón. Las cajas que no se entregaron vuelven con estado `FAILED`
@@ -228,6 +229,7 @@ salida muestra la hora de salida y de vuelta, y el GPS estima la llegada en hora
 **Hecho cuando:** el test pasa.
 
 ### D-0320 · Resultado de la salida al cierre del día — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `TripResult` (`scripts/gameplay/districts/trip_result.gd`): `build()` arma el resumen de un `Trip` cerrado (línea por pedido con resultado, estado de la caja intacta/en riesgo/rota/sin entregar, paga, penalidad y reputación, más totales y mérito por jugador), `apply()` da el mérito al que llevó cada caja intacta (`CompanyTuning.TRIP_MERIT_INTACT`, sin repetirse) y `add_to_day()` suma las salidas al resumen del día; `test_company_trip_result`. Falta que el cierre del día lo llame (D-0508.3).
 **Depende de:** D-0305, D-0501
 **Qué:** al cerrar un `Trip` se arma su resumen: pedidos entregados, estado de cada caja (intacta, en
 riesgo, rota; como `RunManager` hoy), paga, penalidades y mérito por jugador (`CrewProgression`). Se suma

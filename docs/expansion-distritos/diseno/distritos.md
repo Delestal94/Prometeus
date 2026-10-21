@@ -72,4 +72,5 @@ adentro. En F1 solo `parque_industrial`, `centro` y `campo` tienen datos complet
   un número de partida para `sim_economy`, no un balance final.
 - **Decisión: Volcán con 2-3 casas.** Es la zona final: pocas paradas, la tensión viene de la zona.
 - **Decisión: el hito de Campo es "reputación 60"**; el de Suburbio, "25 entregas" (README). D-0118
-  define los hitos y puede ajustar los números; los `gates` de la zona solo guardan el id.
+  define los hitos y puede ajustar los números; los `gates` de la zona solo guardan el id
+  (resultado en [hitos.md](hitos.md): se mantienen los dos números).

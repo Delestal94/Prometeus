@@ -191,6 +191,10 @@ const ORDER_ITEMS_MAX: int = 3
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
 const LATE_PENALTY: float = 0.25
+## A late order nobody has put on the road is dropped by the customer this many minutes after its
+## due time (D-0807): one more window. Costs ABANDONED_REPUTATION and pays nothing.
+const ORDER_ABANDON_MIN: int = 240
+const ABANDONED_REPUTATION: float = -3.0
 ## Packing quality 0-100 (D-0709, AssemblyQuality): starts at QUALITY_MAX and loses these.
 const QUALITY_MAX: float = 100.0
 ## Contents that do not match the order.
@@ -224,6 +228,8 @@ const PENALTY_REPUTATION_CAP: float = -10.0
 const TIP_FAST_WINDOW_SHARE: float = 0.5
 const TIP_RATE: float = 0.15
 const TIP_REPUTATION: float = 1.0
+## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
+const TRIP_MERIT_INTACT: int = 10
 
 # --- Supplier ---
 ## One truck a day, at 08:30, with what was ordered the day before.

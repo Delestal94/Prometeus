@@ -33,7 +33,9 @@ extends SceneTree
 ## - D-2009: what Steam shows goes to NetworkManager's steam_presence (only kept here, no Steam):
 ##   solo, the company's lobby data and rich presence (CompanyLobbyMeta) once the world is up; a
 ##   client, the host's company's presence once the snapshot is in, and no lobby data; leaving the
-##   root clears both.
+##   root clears both;
+## - D-0510.2: the root hands its DayCycle the opening notice: the bankruptcy warning with the
+##   company in the red, "" in the black.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 ## The roots save here, never in the game's slot.
@@ -98,6 +100,7 @@ func _run() -> void:
 				% [state.get(&"day"), cycle.phase_name(), clock.minute_now()])
 			_expect(not cycle.is_frozen(), "...and the shed isn't frozen (no area is wired yet)")
 	_expect_presence(state, true, "Solo, with the day open")
+	_check_bankrupt_notice(level as CompanyRoot, state)
 
 	var zone_files: int = 0
 	for file: String in DirAccess.get_files_at("res://data/zones/"):
@@ -155,6 +158,18 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: company root builds the shed and nine zones, company on, player inside, menu flag")
 	quit(_failures)
+
+
+## D-0510.2: the root's DayCycle.opening_notice is the bankruptcy warning in the red, "" in the black.
+func _check_bankrupt_notice(level: CompanyRoot, state: Node) -> void:
+	var notice: Callable = level.day_cycle.opening_notice
+	_expect(notice.is_valid(), "The root gives its DayCycle the day's opening notice")
+	var money: int = int(state.get(&"money"))
+	state.set(&"money", 500)
+	_expect(str(notice.call()).is_empty(), "A day opening in the black shows no warning")
+	state.set(&"money", -1)
+	_expect(not str(notice.call()).is_empty(), "A day opening in the red shows the bankruptcy warning")
+	state.set(&"money", money)
 
 
 ## D-2002.3: the company's `player` sends its pose at the shed's rate on foot, the game's riding a

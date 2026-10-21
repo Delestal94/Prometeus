@@ -16,11 +16,11 @@
 | D-0606 | Descargar con el autoelevador existente (`depot_forklift.gd`) manejado por un jugador | constructor-camion | xhigh | jugador maneja el autoelevador y deja un palet en un rack |
 | D-0607 | ✅ Abrir palet: las cajas del producto pasan a ser tomables | constructor-negocio | medium | test |
 | D-0608 | ✅ Estanterías con huecos etiquetados por producto | constructor-mundo | high | dejar producto en hueco lo suma al `Inventory` (test) |
-| D-0609 | Tomar productos de la estantería (picking) a mano | constructor-jugador | high | test: tomar 3 unidades baja el stock en 3 |
+| D-0609 | ✅ Tomar productos de la estantería (picking) a mano | constructor-jugador | high | test: tomar 3 unidades baja el stock en 3 |
 | D-0610 | Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
 | D-0611 | Stock visible: etiqueta del hueco muestra cantidad | constructor-mundo | medium | captura con números |
 | D-0612 | Vista de stock en el portapapeles (lista por producto) | constructor-ui | medium | captura |
-| D-0613 | Aviso de stock bajo para productos con pedidos pendientes | constructor-negocio | medium | test |
+| ✅ D-0613 | Aviso de stock bajo para productos con pedidos pendientes | constructor-negocio | medium | test |
 | D-0614 | Recepción: control de remito (lo que llegó vs. lo pedido) | constructor-negocio | medium | test: faltante se registra |
 | ~~D-0615~~ | ~~Productos que vienen dañados del proveedor (a separar)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-0616 | Productos con temperatura (frío) necesitan heladera; se echan a perder si no (incluye D-0628, fusión de D-0112) | constructor-negocio | high | test: producto frío fuera de heladera 2 h → vencido |
