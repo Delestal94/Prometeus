@@ -18,7 +18,7 @@
 | D-0608 | ✅ Estanterías con huecos etiquetados por producto | constructor-mundo | high | dejar producto en hueco lo suma al `Inventory` (test) |
 | D-0609 | ✅ Tomar productos de la estantería (picking) a mano | constructor-jugador | high | test: tomar 3 unidades baja el stock en 3 |
 | D-0610 | Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
-| D-0611 | Stock visible: etiqueta del hueco muestra cantidad | constructor-mundo | medium | captura con números |
+| D-0611 | ✅ Stock visible: etiqueta del hueco muestra cantidad | constructor-mundo | medium | captura con números |
 | D-0612 | Vista de stock en el portapapeles (lista por producto) | constructor-ui | medium | captura |
 | ✅ D-0613 | Aviso de stock bajo para productos con pedidos pendientes | constructor-negocio | medium | test |
 | D-0614 | Recepción: control de remito (lo que llegó vs. lo pedido) | constructor-negocio | medium | test: faltante se registra |

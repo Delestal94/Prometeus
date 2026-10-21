@@ -97,6 +97,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Test** `test_shelf_picking`: nombres de estación; el plan topa en 4, completa lo que ya hay en la mano y rechaza manos llenas, ocupadas o estante vacío; rotación de huecos; el galpón resuelve solo huecos etiquetados; de punta a punta, tomar 3 baja el hueco en 3 y sube la mano en 3 sin crear unidades; lejos del estante lo rechaza.
 **Hecho cuando:** tomar 3 unidades baja el stock en 3 (test pasa).
 
+### D-0611 · Stock visible: la etiqueta del hueco muestra la cantidad — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, ya estaba: c52ac048, PR #431; seguimiento en todos los peers con D-0910)** — `CompanyShed._label_slot` dibuja en cada hueco etiquetado el nombre del producto y `×N` debajo, con una caja que se ve solo si hay unidades; `refresh_stock()` reescribe el número (rojizo en cero) y `follow(net)` lo llama en cada `units_moved` y snapshot, en el host y en los clientes. `test_company_default_layout` comprueba el `×N` y que baja al tomar; `tests/render_company_shed.gd` lo captura.
+**Depende de:** D-0608 (`Shelf`), D-0911 (`CompanyShed`)
+**Qué:** cada hueco etiquetado muestra cuántas unidades tiene, y se actualiza al mover stock en cualquier peer.
+**Hecho cuando:** captura con números (render_company_shed) y test.
+
 ### D-0602 · Calendario de entregas de proveedores — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `SupplierSchedule` (`scripts/gameplay/business/supplier_schedule.gd`): lo pedido el día N llega el N + 1; `test_supplier_schedule`.
 **Depende de:** D-0604 (`Pallet.plan`), supuestos (1 camión por día a las 08:30, espera 3 h)
