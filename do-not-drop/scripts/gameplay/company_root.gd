@@ -263,7 +263,6 @@ func _add_business_tick() -> void:
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
 
 
-
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
 ## waits for the host's events.
 func _open_company_day() -> void:
