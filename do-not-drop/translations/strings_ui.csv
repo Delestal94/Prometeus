@@ -365,6 +365,14 @@ UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved 
 UI_COSM_GEL_SKIN,Skin de gelatina,Gel skin
 UI_COSM_GEL_SKIN_HINT,El color y el interior se ven igual para todos.,Everyone sees the same color and interior.
 UI_COSM_BODY,Cuerpo,Body
+UI_COSM_STYLE,Estilo,Style
+UI_COSM_STYLE_HINT,Se aplica en vivo al maniquí de gelatina.,Applied live to the gel mannequin.
+UI_COSM_HAIR,Pelo,Hair
+UI_COSM_EYEBROWS,Cejas,Eyebrows
+UI_COSM_MOUSTACHES,Bigotes,Moustaches
+UI_COSM_COSTUMES,Disfraces,Costumes
+UI_COSM_ACCESSORIES,Accesorios,Accessories
+UI_COSM_UNLOCK_HINT,Avanzá en las entregas para ampliar el vestuario.,Keep delivering to expand the wardrobe.
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face
 UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.

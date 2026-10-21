@@ -21,19 +21,23 @@ const GelSkins = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd"
 signal closed
 
 enum Mode { MENU, DEPOT }
-enum Page { FACE, BODY, UNIFORM, TRUCK }
+enum Page { FACE, BODY, UNIFORM, STYLE, TRUCK }
 
 ## Card heights by kind: faces are small and many, shirts and vans few and big
 ## (and room for a two-line "earned at..." under them).
 const CARD_HEIGHT: Dictionary = {
 	"gel_face": 100, "preset": 100, "eyes": 92, "mouth": 92,
 	"skin": 126, "uniform": 206, "truck": 156, "paint": 156,
+	"gel_hair": 112, "gel_eyebrows": 104, "gel_moustache": 104,
+	"gel_costume": 120, "gel_accessory": 112,
 }
 ## The picture's height in each kind of card: the same in every card of a
 ## kind, whatever its text, so a row's pictures line up.
 const SWATCH_HEIGHT: Dictionary = {
 	"gel_face": 66, "preset": 66, "eyes": 56, "mouth": 56,
 	"skin": 72, "uniform": 128, "truck": 84, "paint": 84,
+	"gel_hair": 68, "gel_eyebrows": 60, "gel_moustache": 60,
+	"gel_costume": 72, "gel_accessory": 68,
 }
 
 ## Picked before the panel enters the tree.
@@ -240,7 +244,7 @@ func _build_editor(parent: HBoxContainer) -> void:
 	rule.custom_minimum_size = Vector2(0, 2)
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(rule)
-	var pages: Array[Page] = [Page.FACE, Page.BODY, Page.UNIFORM]
+	var pages: Array[Page] = [Page.FACE, Page.BODY, Page.UNIFORM, Page.STYLE]
 	if mode == Mode.MENU:
 		pages.append(Page.TRUCK)
 	for each: Page in pages:
@@ -262,6 +266,7 @@ func _build_editor(parent: HBoxContainer) -> void:
 			Page.FACE: _build_face_page(contents)
 			Page.BODY: _build_body_page(contents)
 			Page.UNIFORM: _build_uniform_page(contents)
+			Page.STYLE: _build_style_page(contents)
 			Page.TRUCK: _build_truck_page(contents)
 
 
@@ -271,6 +276,7 @@ func _tab_button(bar: HBoxContainer, which: Page) -> Button:
 		Page.FACE: "UI_COSM_FACE",
 		Page.BODY: "UI_COSM_BODY",
 		Page.UNIFORM: "UI_COSM_UNIFORM",
+		Page.STYLE: "UI_COSM_STYLE",
 		Page.TRUCK: "UI_TRUCK",
 	}
 	var tab := Button.new()
@@ -424,6 +430,46 @@ func _skin_swatch(definition: GelSkinDefinition) -> Control:
 	return swatch
 
 
+func _build_style_page(contents: VBoxContainer) -> void:
+	_section(contents, tr("UI_COSM_HAIR"), tr("UI_COSM_STYLE_HINT"))
+	var hair: GridContainer = _grid(contents, Page.STYLE, 5)
+	for choice: Dictionary in UnlockManager.gel_style_choices(&"gel_hair"):
+		_add_style_choice_card(hair, "gel_hair", choice)
+	_section(contents, tr("UI_COSM_EYEBROWS"), "")
+	var eyebrows: GridContainer = _grid(contents, Page.STYLE, 6)
+	for choice: Dictionary in UnlockManager.gel_style_choices(&"gel_eyebrows"):
+		_add_style_choice_card(eyebrows, "gel_eyebrows", choice)
+	_section(contents, tr("UI_COSM_MOUSTACHES"), "")
+	var moustaches: GridContainer = _grid(contents, Page.STYLE, 6)
+	for choice: Dictionary in UnlockManager.gel_style_choices(&"gel_moustache"):
+		_add_style_choice_card(moustaches, "gel_moustache", choice)
+	_section(contents, tr("UI_COSM_COSTUMES"), tr("UI_COSM_UNLOCK_HINT"))
+	var costumes: GridContainer = _grid(contents, Page.STYLE, 4)
+	for choice: Dictionary in UnlockManager.gel_style_choices(&"gel_costume"):
+		_add_style_choice_card(costumes, "gel_costume", choice)
+	_section(contents, tr("UI_COSM_ACCESSORIES"), tr("UI_COSM_UNLOCK_HINT"))
+	var accessories: GridContainer = _grid(contents, Page.STYLE, 4)
+	for choice: Dictionary in UnlockManager.gel_style_choices(&"gel_accessory"):
+		_add_style_choice_card(accessories, "gel_accessory", choice)
+
+
+func _add_style_choice_card(grid: GridContainer, kind: String, choice: Dictionary) -> void:
+	var id: StringName = choice[&"id"]
+	_card(grid, kind, id, _color_swatch(choice[&"color"]),
+		String(choice[&"title"]), _lock_text(choice), bool(choice[&"available"]))
+
+
+func _color_swatch(color: Color) -> Control:
+	var swatch := Panel.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = color if color.a > 0.0 else Color("d8d1c5")
+	style.set_corner_radius_all(12)
+	style.border_color = Color(UiTheme.INK, 0.2)
+	style.set_border_width_all(2)
+	swatch.add_theme_stylebox_override("panel", style)
+	return swatch
+
+
 func _build_truck_page(contents: VBoxContainer) -> void:
 	_section(contents, tr("UI_TRUCK"), tr("UI_COSM_TRUCK_HINT"))
 	var trucks: GridContainer = _grid(contents, Page.TRUCK, 3)
@@ -462,7 +508,11 @@ func _card(grid: GridContainer, kind: String, id: StringName, swatch: Control, t
 	if kind in ["uniform", "paint"]:
 		available = detail.is_empty()
 	var card := Button.new()
-	card.name = ("GelFace" if kind == "gel_face" else kind.capitalize()) + "_" + String(id)
+	var prefixes: Dictionary = {
+		"gel_face": "GelFace", "gel_hair": "Hair", "gel_eyebrows": "Eyebrows",
+		"gel_moustache": "Moustache", "gel_costume": "Costume", "gel_accessory": "Accessory",
+	}
+	card.name = String(prefixes.get(kind, kind.capitalize())) + "_" + String(id)
 	card.toggle_mode = true
 	card.tooltip_text = title if detail.is_empty() else "%s — %s" % [title, detail]
 	card.custom_minimum_size = Vector2(0, CARD_HEIGHT[kind])
@@ -555,10 +605,13 @@ func _pick(kind: String, id: StringName) -> void:
 		"eyes": changed = UnlockManager.select_eyes(id)
 		"mouth": changed = UnlockManager.select_mouth(id)
 		"uniform": changed = UnlockManager.select_cosmetic(id)
+		"gel_hair", "gel_eyebrows", "gel_moustache", "gel_costume", "gel_accessory":
+			changed = UnlockManager.select_gel_style(StringName(kind), id)
 		"truck": changed = UnlockManager.select_truck(id)
 		"paint": changed = UnlockManager.select_paint(id)
 	_sync()
-	if changed and kind in ["gel_face", "skin", "preset", "eyes", "mouth", "uniform"]:
+	if changed and kind in ["gel_face", "skin", "preset", "eyes", "mouth", "uniform",
+			"gel_hair", "gel_eyebrows", "gel_moustache", "gel_costume", "gel_accessory"]:
 		preview.bounce()
 
 
@@ -585,6 +638,11 @@ func _sync() -> void:
 		"eyes": UnlockManager.selected_eyes, "mouth": UnlockManager.selected_mouth,
 		"uniform": UnlockManager.selected_cosmetic, "truck": UnlockManager.selected_truck,
 		"paint": UnlockManager.selected_paint,
+		"gel_hair": UnlockManager.selected_gel_hair,
+		"gel_eyebrows": UnlockManager.selected_gel_eyebrows,
+		"gel_moustache": UnlockManager.selected_gel_moustache,
+		"gel_costume": UnlockManager.selected_gel_costume,
+		"gel_accessory": UnlockManager.selected_gel_accessory,
 	}
 	for card: Button in _cards:
 		var kind: String = card.get_meta(&"kind")
@@ -599,6 +657,9 @@ func _sync() -> void:
 	var team_color := _shirt_color()
 	preview.show_skin(UnlockManager.selected_gel_skin, team_color)
 	preview.show_look(team_color, UnlockManager.selected_eyes, UnlockManager.selected_mouth)
+	preview.show_cosmetics(UnlockManager.selected_gel_hair, UnlockManager.selected_gel_eyebrows,
+		UnlockManager.selected_gel_moustache, UnlockManager.selected_gel_costume,
+		UnlockManager.selected_gel_accessory, _proportions)
 	if page == Page.BODY:
 		preview.show_proportions(_proportions)
 
