@@ -1364,3 +1364,18 @@ UI_DISPATCH_LOAD_N,Cargar %d,Load %d
 UI_DISPATCH_CLOSE,Cerrar,Close
 UI_DISPATCH_LOADED,Cargadas %d cajas,%d boxes loaded
 UI_DISPATCH_HOST_ONLY,Solo el anfitrión carga el vehículo,Only the host loads the vehicle
+UI_SUPPLIER_TITLE,Pedido al proveedor,Supplier order
+UI_SUPPLIER_FROM,Proveedor: %s,Supplier: %s
+UI_SUPPLIER_HINT,Sumá unidades de cada producto y después Pedir,Add units of each product and then Order
+UI_SUPPLIER_ROW,%s · $%d c/u,%s · $%d each
+UI_SUPPLIER_TOTAL,Total: $%d,Total: $%d
+UI_SUPPLIER_PALLETS,Palets: %d (el cobro es al recibir cada uno),Pallets: %d (you pay when each one is received)
+UI_SUPPLIER_ARRIVAL,Llega el día %d,Arrives on day %d
+UI_SUPPLIER_PICK,Elegí al menos un producto,Pick at least one product
+UI_SUPPLIER_NO_FUNDS,La plata no alcanza para $%d,Not enough money for $%d
+UI_SUPPLIER_LINE_MAX,Máximo %d unidades por producto,At most %d units per product
+UI_SUPPLIER_REFUSED,No se pudo hacer el pedido,The order could not be placed
+UI_SUPPLIER_ORDERED,"Pedido hecho: %d palets, llegan el día %d","Order placed: %d pallets, arriving on day %d"
+UI_SUPPLIER_HOST_ONLY,Solo el anfitrión hace el pedido,Only the host places the order
+UI_SUPPLIER_ORDER,Pedir,Order
+UI_SUPPLIER_CLOSE,Cerrar,Close
