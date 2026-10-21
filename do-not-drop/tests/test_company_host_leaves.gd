@@ -53,8 +53,6 @@ var _catcher := ErrorCatcher.new()
 ## A CompanyRoot without its world (zones, shed, player): only what D-2005 is about, the business
 ## side _start_company() sets up, with the CompanyState this peer runs.
 class NetOnlyRoot extends CompanyRoot:
-	var company_state: Node
-
 	func _ready() -> void:
 		_start_company(company_state)
 
@@ -66,8 +64,6 @@ class NetOnlyRoot extends CompanyRoot:
 
 ## The same root with its GameClock and DayCycle (_add_day() kept) and the host's day opened.
 class LiveDayRoot extends CompanyRoot:
-	var company_state: Node
-
 	func _ready() -> void:
 		_start_company(company_state)
 		_open_company_day.call_deferred()

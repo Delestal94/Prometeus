@@ -22,6 +22,18 @@ const RESTART_HOLD_SECONDS: float = 0.9
 const CAPTURE_MODE_SCRIPT: String = "res://scripts/tools/capture_mode.gd"
 ## The logical height the HUD is laid out for (project.godot's viewport).
 const BASE_HEIGHT: float = 720.0
+## Text size of the two bottom pills (controls and shortcuts), the same as the
+## interaction prompt above them: the HUD draws at GameSettings.HUD_SCALE_DEFAULT
+## (0.48) of this logical size, so 25 comes out at ~12 px on a 1280x720 screen.
+## At 16 the keycaps were 7-8 px (N-977.2).
+const PILL_FONT_SIZE: int = 25
+## Floor for every permanent HUD text (cargo card, chips, active card, section
+## and session tapes, toasts): 25 * 0.48 = 12 px on a 1280x720 screen (N-982).
+const HUD_MIN_FONT_SIZE: int = PILL_FONT_SIZE
+## Floor for the secondary labels that only name a unit next to a big number
+## (the "km/h" beside the speed): 21 * 0.48 = 10 px. They carry no information
+## the number doesn't, and at 25 the unit would shout over the 50-size figure.
+const HUD_SECONDARY_FONT_SIZE: int = 21
 ## Room kept above and below the overlay card when it has to shrink to fit.
 const OVERLAY_FIT_MARGIN: float = 16.0
 ## Safe margin from every screen edge, in HUD units (redesign 2026-09-28:
@@ -321,8 +333,8 @@ func _build_top_bar() -> void:
 	var tags := HBoxContainer.new()
 	tags.add_theme_constant_override("separation", 10)
 	objective.add_child(tags)
-	section_label = UiTheme.tag(tags, tr("HUD_PREPARATION"), MINT, -1.5, 16)
-	session_label = UiTheme.tag(tags, "", MINT, 1.5, 16)
+	section_label = UiTheme.tag(tags, tr("HUD_PREPARATION"), MINT, -1.5, HUD_MIN_FONT_SIZE)
+	session_label = UiTheme.tag(tags, "", MINT, 1.5, HUD_MIN_FONT_SIZE)
 	# Used to open on "220 m hasta la entrega", a leftover from the fixed
 	# route: the real one is random and runs closer to 2000 m.
 	distance_label = UiTheme.title(objective, "", 30)
@@ -342,23 +354,24 @@ func _build_top_bar() -> void:
 	_right_column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_right_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(_right_column)
-	var metrics := make_panel(_right_column, Vector2(210, 0))
+	# 280 (was 210): the chips and the card line grew from 8 to 12 px on screen.
+	var metrics := make_panel(_right_column, Vector2(280, 0))
 	metrics.get_parent().size_flags_horizontal = Control.SIZE_SHRINK_END
 	metrics.add_theme_constant_override("separation", 6)
 	var speed_row := HBoxContainer.new()
 	speed_row.add_theme_constant_override("separation", 6)
 	metrics.add_child(speed_row)
 	speed_label = UiTheme.title(speed_row, "00", 50)
-	speed_unit_label = UiTheme.label(speed_row, "km/h", 16, MUTED)
+	speed_unit_label = UiTheme.label(speed_row, "km/h", HUD_SECONDARY_FONT_SIZE, MUTED)
 	speed_unit_label.size_flags_vertical = Control.SIZE_SHRINK_END
 	var chips := HBoxContainer.new()
 	chips.add_theme_constant_override("separation", 8)
 	metrics.add_child(chips)
-	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, 17)
-	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, 17)
+	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, HUD_MIN_FONT_SIZE)
+	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, HUD_MIN_FONT_SIZE)
 	set_economy_visible(false)
-	card_label = make_rich(metrics, 16)
-	card_label.custom_minimum_size.x = 190
+	card_label = make_rich(metrics, HUD_MIN_FONT_SIZE)
+	card_label.custom_minimum_size.x = 236
 	card_label.add_theme_color_override("default_color", INK)
 
 
@@ -374,7 +387,7 @@ func _build_bottom_bar() -> void:
 	# Context owns the bottom centre, right above the controls in the
 	# dashboard's own flow: pinned at a fixed offset it sat on the route bar,
 	# and it never competes with the critical alerts up top.
-	interaction_label = UiTheme.floating_label(dashboard, "", 25, PAPER, 560, 0)
+	interaction_label = UiTheme.floating_label(dashboard, "", PILL_FONT_SIZE, PAPER, 560, 0)
 	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	interaction_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_plate(interaction_label, Color(INK, 0.88), INK)
@@ -399,19 +412,21 @@ func _build_bottom_bar() -> void:
 	hint_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	hint_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(hint_pill)
-	hint_label = make_rich(hint_pill, 16)
+	hint_label = make_rich(hint_pill, PILL_FONT_SIZE)
 	hint_label.fit_content = true
 	hint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
 	# --- Bottom-left corner: the cargo, out of the centre's flow ---
-	var cargo_panel := make_panel(hud_layer, Vector2(330, 0))
+	# 400 (was 330): rows and title are 12 px on screen now; each row's state
+	# goes on a second line so the card grows up, not across the road.
+	var cargo_panel := make_panel(hud_layer, Vector2(400, 0))
 	cargo_card = cargo_panel.get_parent() as PanelContainer
 	cargo_card.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	cargo_card.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	cargo_card.offset_left = EDGE_MARGIN
 	cargo_card.offset_bottom = -EDGE_MARGIN
 	cargo_card.offset_top = -EDGE_MARGIN
-	UiTheme.tag(cargo_panel, tr("HUD_CARGO_TITLE"), UiTheme.CARDBOARD, -2.0, 16)
+	UiTheme.tag(cargo_panel, tr("HUD_CARGO_TITLE"), UiTheme.CARDBOARD, -2.0, HUD_MIN_FONT_SIZE)
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo_panel.add_child(cargo_rows_box)
@@ -421,7 +436,7 @@ func _build_bottom_bar() -> void:
 	shortcut_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	shortcut_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(shortcut_pill)
-	shortcut_label = make_rich(shortcut_pill, 16)
+	shortcut_label = make_rich(shortcut_pill, PILL_FONT_SIZE)
 	shortcut_label.add_theme_color_override("default_color", PAPER)
 	shortcut_label.fit_content = true
 	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -495,7 +510,7 @@ func _build_floating_labels() -> void:
 	code_label.remove_theme_font_override("font")
 	_plate(code_label, Color(INK, 0.88), INK)
 	# Under the van's numbers, in the same column, sized to its text.
-	toast_label = UiTheme.floating_label(_right_column, "", 18, MINT, 400, 0)
+	toast_label = UiTheme.floating_label(_right_column, "", HUD_MIN_FONT_SIZE, MINT, 400, 0)
 	toast_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	toast_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

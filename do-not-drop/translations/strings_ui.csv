@@ -421,6 +421,7 @@ UI_HOW_TO_PLAY,Cómo jugar,How to play
 UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
 UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
+UI_COMPANY_BANKRUPT_WARNING,Cerraste en rojo: hoy llegan menos pedidos (%d %%).,You closed in the red: fewer orders today (%d%%).
 UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d, balance $%d, %d units in stock."
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
@@ -436,6 +437,7 @@ UI_MENU_GARAGE,Garaje,Garage
 UI_MENU_GARAGE_HINT,"Apariencia, progreso y récords","Appearance, progress and records"
 UI_MENU_HOST,Crear sala,Host a room
 UI_MENU_HOST_ENDLESS,Crear sala Endless,Host an Endless room
+UI_MENU_HOST_COMPANY,Crear sala Empresa,Host a Company room
 UI_MENU_HOST_IP,Código o IP del anfitrión,Host's code or IP
 UI_MENU_JOIN,Unirse a una sala,Join a room
 UI_MENU_JOIN_BUTTON,Unirse,Join
@@ -1363,3 +1365,28 @@ UI_DISPATCH_LOAD_N,Cargar %d,Load %d
 UI_DISPATCH_CLOSE,Cerrar,Close
 UI_DISPATCH_LOADED,Cargadas %d cajas,%d boxes loaded
 UI_DISPATCH_HOST_ONLY,Solo el anfitrión carga el vehículo,Only the host loads the vehicle
+UI_STOCK_TITLE,Stock,Stock
+UI_STOCK_HINT,Unidades por producto,Units per product
+UI_STOCK_EMPTY,Todavía no hay stock,No stock yet
+UI_STOCK_ROW,%s  ·  Estante %d  ·  Recepción %d  ·  Total %d,%s  ·  Shelves %d  ·  Reception %d  ·  Total %d
+UI_STOCK_ROW_MORE,En manos %d  ·  En cajas %d  ·  Otros %d,In hands %d  ·  In boxes %d  ·  Other %d
+UI_STOCK_SHORT,⚠ Faltan %d,⚠ %d missing
+UI_STOCK_SHORT_COMING,⚠ Faltan %d (vienen %d),⚠ %d missing (%d coming)
+UI_STOCK_COVERED,⟳ Viene en camino (%d),⟳ On the way (%d)
+UI_STOCK_TOTALS,%d unidades en %d productos,%d units in %d products
+UI_STOCK_CLOSE,Cerrar,Close
+UI_SUPPLIER_TITLE,Pedido al proveedor,Supplier order
+UI_SUPPLIER_FROM,Proveedor: %s,Supplier: %s
+UI_SUPPLIER_HINT,Sumá unidades de cada producto y después Pedir,Add units of each product and then Order
+UI_SUPPLIER_ROW,%s · $%d c/u,%s · $%d each
+UI_SUPPLIER_TOTAL,Total: $%d,Total: $%d
+UI_SUPPLIER_PALLETS,Palets: %d (el cobro es al recibir cada uno),Pallets: %d (you pay when each one is received)
+UI_SUPPLIER_ARRIVAL,Llega el día %d,Arrives on day %d
+UI_SUPPLIER_PICK,Elegí al menos un producto,Pick at least one product
+UI_SUPPLIER_NO_FUNDS,La plata no alcanza para $%d,Not enough money for $%d
+UI_SUPPLIER_LINE_MAX,Máximo %d unidades por producto,At most %d units per product
+UI_SUPPLIER_REFUSED,No se pudo hacer el pedido,The order could not be placed
+UI_SUPPLIER_ORDERED,"Pedido hecho: %d palets, llegan el día %d","Order placed: %d pallets, arriving on day %d"
+UI_SUPPLIER_HOST_ONLY,Solo el anfitrión hace el pedido,Only the host places the order
+UI_SUPPLIER_ORDER,Pedir,Order
+UI_SUPPLIER_CLOSE,Cerrar,Close

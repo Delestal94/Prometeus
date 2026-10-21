@@ -128,7 +128,7 @@ func enter() -> bool:
 	var checker: BuildPlacement = net.build.placement_for(net.company)
 	cursor = BuildCursor.new(mode, checker, net.company)
 	_previous_camera = get_viewport().get_camera_3d() if is_inside_tree() else null
-	if player != null:
+	if player != null and is_instance_valid(player):
 		player.set_process_unhandled_input(false)
 	_make_view()
 	set_process(true)

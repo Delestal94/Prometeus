@@ -32,6 +32,7 @@ func _run() -> void:
 	_test_clean_and_wrong()
 	_test_broken()
 	_test_late_and_label()
+	_test_abandoned()
 	_test_stacking()
 	_test_reputation(state)
 	state.reset()
@@ -77,6 +78,13 @@ func _test_broken() -> void:
 	_expect(both["reputation"] == CompanyTuning.PENALTY_REPUTATION_CAP, "two broken: -10, the cap")
 	var ghost: Dictionary = OrderPenalties.assess(order, _box(2), 100, [&"nope"], _products)
 	_expect(ghost["pay"] == 200, "an unknown broken product loses no pay")
+
+
+func _test_abandoned() -> void:
+	var v: Dictionary = OrderPenalties.abandoned(_order())
+	_expect(v["pay"] == 0 and v["lost"] == v["base"], "a dropped order pays nothing")
+	_expect(v["kinds"] == [OrderPenalties.KIND_ABANDONED], "the only failure is abandoned")
+	_expect(v["reputation"] == CompanyTuning.ABANDONED_REPUTATION, "it costs the abandon reputation")
 
 
 func _test_late_and_label() -> void:

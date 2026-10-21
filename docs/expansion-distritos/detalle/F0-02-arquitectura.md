@@ -196,6 +196,7 @@ Agregar antes que cambiar: ninguna firma existente cambia.
 **Hecho cuando:** el test pasa y el aviso está en `docs/avisos/`.
 
 ### D-0214 · Escena del mundo de la empresa — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` `LEVEL_SCENES`, `main_menu.gd`) · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — la raíz es `company_root.tscn` (`CompanyRoot`, PR #324); la continuación la pone en línea: en `LEVEL_SCENES` (`PROTOCOL_VERSION` 38), llama a `level_ready()`, el host spawnea un jugador por peer por `World/PlayerSpawner` (`join_crew()`, `crew_spawn()`) y lo saca cuando se va; `--autostart-company [--slot=<n>]` (alias `--mode=company`) y `--host-company` (sin botón: uno más en la página Jugar empuja "Volver" fuera de una pantalla de 720 px; queda para quien reacomode esa página); `test_company_world_boot`, `test_company_online` y `tools/run-net-pair.sh --company`. Aviso `docs/avisos/2026-10-21-d0214-empresa-en-linea.md`.
 **Depende de:** D-0202, D-0301
 **Qué:** `scenes/company/company_world.tscn` con raíz `CompanyWorld` (`scripts/gameplay/districts/company_world.gd`).
 - **Hijos:** `WorldCells` (D-0303), `DayCycle`, `OrderBook`, `Inventory`, el galpón (D-0620), el
@@ -281,3 +282,20 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 (D-0144).
 **Hecho cuando:** las carpetas existen, `python tools/check_modules.py` pasa y `file_domain` clasifica un
 archivo de cada carpeta como Nacho.
+
+### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**Depende de:** D-0206
+**Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
+es de la UI del menú (Jugar → Empresa) y no entra acá.
+- `list_slots(dir)`: una entrada por slot de `user://saves/company/` con `slot`, `name` (el `company_name`,
+  o el slot si está vacío), `day`, `money`, `saved_at`, `interrupted` y `version`, del último jugado al
+  primero. Lee sin mover archivos: cuenta un slot que solo tiene `.bak` (escritura cortada) y deja afuera
+  `.tmp`, `.bad` y JSON que no son saves. Un save de un build más nuevo aparece con su `version` para que la
+  UI lo muestre deshabilitado.
+- `delete(slot, dir)`: borra el `.json` del slot y sus `.bak`, `.tmp` y `.bad`.
+- `new_slot_id(dir)`: `company` si está libre, si no `company_2`, `company_3`…
+**Test** `test_company_slots`: crea 3 slots con nombre, día y plata distintos, los lista en orden de
+`saved_at`, borra uno (con su `.bak`) y después los otros; `.bak` solo cuenta, `.tmp`/`.bad`/no-save no;
+`new_slot_id` y carpeta inexistente.
+**Hecho cuando:** el test pasa.

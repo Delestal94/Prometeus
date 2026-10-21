@@ -116,6 +116,10 @@ var _page: Page = Page.HOME
 var _loading: LoadingScreen
 ## The session already put its own reason on screen for this attempt.
 var _failure_shown: bool = false
+## The command line's --slot=<n> for the company world it starts (D-0214). Handed to
+## CompanyRoot.launch_slot only once its loader is on the way (_go_to_level()); a start that fails
+## or is cancelled drops it, so no later company world takes it by mistake.
+var _launch_slot: String = ""
 ## One VBoxContainer per Page, and the button each one focuses on arrival.
 var _pages: Dictionary = {}
 var _page_focus: Dictionary = {}
@@ -155,10 +159,10 @@ func _ready() -> void:
 	_handle_cmdline_args()
 
 
-func _handle_cmdline_args() -> void:
+## `args` are the command line's (a test hands its own).
+func _handle_cmdline_args(args: PackedStringArray = OS.get_cmdline_user_args()) -> void:
 	# Same shortcut level_base.gd already honours for smoke checks and quick
 	# iteration -- skips the menu the same way it skips on-foot loading.
-	var args: PackedStringArray = OS.get_cmdline_user_args()
 	# A Steam invite accepted before the menu existed (see NetworkManager).
 	var lobby: int = NetworkManager.take_pending_lobby()
 	if lobby != 0:
@@ -170,7 +174,11 @@ func _handle_cmdline_args() -> void:
 	if "--autostart-endless" in args:
 		_play_endless()
 		return
-	if "--mode=company" in args:
+	# Modo Empresa (D-0214, docs/decisiones/2026-10-04-flag-modo-empresa.md):
+	# --autostart-company, or its older alias --mode=company; --slot=<n> picks
+	# the company's save slot.
+	if "--autostart-company" in args or "--mode=company" in args:
+		_launch_slot = _slot_arg(args)
 		_play_company()
 		return
 	if "--host" in args:
@@ -183,11 +191,24 @@ func _handle_cmdline_args() -> void:
 		# anyone who explicitly wants a Steam-free LAN session.
 		_host_session(NetworkManager.Transport.ENET)
 		return
+	if "--host-company" in args:
+		# A company room (D-0214), over ENet for the same reason as --host-lan.
+		_launch_slot = _slot_arg(args)
+		_host_session(NetworkManager.Transport.ENET, COMPANY_SCENE)
+		return
 	for arg: String in args:
 		if arg.begins_with("--join="):
 			_address_field.text = arg.trim_prefix("--join=")
 			_join_by_address()
 			return
+
+
+## The value of --slot=<n> in `args`, "" without one (CompanySave makes it a file name).
+static func _slot_arg(args: PackedStringArray) -> String:
+	for arg: String in args:
+		if arg.begins_with("--slot="):
+			return arg.trim_prefix("--slot=")
+	return ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -333,7 +354,8 @@ func _build_play_page(column: VBoxContainer) -> void:
 	_page_focus[Page.PLAY] = solo_button
 	_entry_buttons.append(_button(play, tr("UI_MENU_ENDLESS"), false))
 	_entry_buttons[-1].pressed.connect(_play_endless)
-	# Modo Empresa (D-0214): in testing, solo only, until it replaces the others (D-0102).
+	# Modo Empresa (D-0214): in testing, solo only, until it replaces the others (D-0102). A company
+	# room opens with --host-company for now: one more button here pushed "Volver" off a 720p screen.
 	_entry_buttons.append(_button(play, tr("UI_MENU_COMPANY"), false))
 	_entry_buttons[-1].pressed.connect(_play_company)
 	_spacer(play, 4)
@@ -584,6 +606,7 @@ func _host_session(transport: int = NetworkManager.Transport.AUTO, scene: String
 	var error: Error = NetworkManager.host_session()
 	if error != OK:
 		_busy = false
+		_drop_launch_slot()
 		_show_failure(tr("UI_MENU_STATUS_HOST_FAILED") % error)
 
 
@@ -648,11 +671,17 @@ func _on_session_ready(is_host: bool) -> void:
 
 
 func _host_tag() -> String:
-	return tr("UI_MENU_HOST_ENDLESS") if NetworkManager.session_scene == ENDLESS_LEVEL_SCENE else tr("UI_MENU_HOST")
+	match NetworkManager.session_scene:
+		ENDLESS_LEVEL_SCENE:
+			return tr("UI_MENU_HOST_ENDLESS")
+		COMPANY_SCENE:
+			return tr("UI_MENU_HOST_COMPANY")
+	return tr("UI_MENU_HOST")
 
 
 func _cancel_connection() -> void:
 	NetworkManager.leave_session()
+	_drop_launch_slot()
 	NetworkManager.transport = NetworkManager.Transport.AUTO
 	_busy = false
 	_set_status(tr("UI_MENU_STATUS_CANCELLED"), MUTED)
@@ -690,6 +719,9 @@ func _go_to_level(scene_path: String, mode: String = "") -> void:
 	if _loading != null and is_instance_valid(_loading):
 		return
 	_busy = true
+	# --slot= reaches only the company world this loader is taking the player to.
+	CompanyRoot.launch_slot = _launch_slot if scene_path == COMPANY_SCENE else ""
+	_launch_slot = ""
 	_loading = LoadingScreen.go(get_tree(), scene_path, mode)
 	_loading.failed.connect(_on_level_load_failed)
 	# The theme plays on under the loading screen and fades under the level
@@ -701,6 +733,7 @@ func _go_to_level(scene_path: String, mode: String = "") -> void:
 ## Too late to cancel (the level is being built), the loading screen goes
 ## back to the menu instead; returns false then.
 func _cancel_loading() -> bool:
+	_drop_launch_slot()
 	if _loading == null or not is_instance_valid(_loading):
 		_loading = null
 		return true
@@ -713,10 +746,18 @@ func _cancel_loading() -> bool:
 
 func _on_level_load_failed(_path: String) -> void:
 	_loading = null
+	_drop_launch_slot()
 	if NetworkManager.is_online():
 		NetworkManager.leave_session()
 	_busy = false
 	_set_status(tr("UI_LOADING_FAILED"), RED)
+
+
+## A start that won't happen (failed, cancelled): its --slot= goes with it, here and in the
+## company world's launch slot (a too-late loader's world already took it).
+func _drop_launch_slot() -> void:
+	_launch_slot = ""
+	CompanyRoot.launch_slot = ""
 
 
 func _set_status(text: String, color: Color) -> void:

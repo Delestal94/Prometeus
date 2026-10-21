@@ -101,3 +101,22 @@ para guardar y replicar.
 **Test** `test_order_printer`: imprime abiertos y atrasados una vez y en orden, atasco y reanudación, límites de mano
 y de mesa, solo quien la tiene la deja, ida y vuelta por JSON.
 **Hecho cuando:** hoja aparece y se puede llevar a la mesa (la lógica, en este PR; el objeto 3D, en D-0805.b).
+
+### D-0807 · Vencimiento del pedido y penalidad por tardanza — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderBook.abandon()` + `OrderPenalties.abandoned()` + `ORDER_ABANDON_MIN` y `ABANDONED_REPUTATION` en `CompanyTuning`; `test_order_book` y `test_order_penalties` ampliados. Lo que ya existía (D-0210, D-0506): `expire()` pasa a `late` y `Order.payout` cobra −25 %. Falta el reloj que llame a `expire`/`abandon` y la barra de ventana en la hoja (D-0807.b, con el objeto 3D de D-0805.b).
+**Depende de:** D-0802, D-0210
+**Qué:** un pedido atrasado que **no salió a la ruta** (`late_from != out`) lo abandona el cliente `ORDER_ABANDON_MIN`
+(240, una ventana más) después de su `due_min`: pasa a `failed`, paga 0 y cuesta `ABANDONED_REPUTATION` (−3,
+tope `PENALTY_REPUTATION_CAP`). Uno que ya va en camino no se abandona: se cobra con la penalidad de siempre.
+`expire()` guarda en el pedido de qué estado vino (`late_from`, también en `to_dict`/`from_dict`).
+`OrderPenalties.abandoned(order)` devuelve el veredicto `{pay: 0, kinds: [abandoned], reputation}`.
+**Test:** `abandon` no actúa en el minuto límite, falla a los atrasados fuera de ruta y no al que está en
+camino, no repite, sobrevive a guardar/cargar; veredicto de `abandoned`.
+**Hecho cuando:** el test pasa.
+
+### D-0808 · Asignar pedido a una caja — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderBoxLink` (`scripts/gameplay/business/order_box_link.gd`) + `OrderBook.unpack`; `test_order_box_link`. Falta que la mesa 3D lo llame al cerrar la caja (D-0808.b, junto con el objeto de la mesa).
+**Depende de:** D-0210, D-0707
+**Qué:** funciones estáticas sobre el `OrderBook`; el vínculo vive en el pedido (`box_id`, estado `PACKED`), no en una tabla aparte, así host, clientes y save coinciden. `assign(book, order_id, box_id, box)` exige pedido abierto o atrasado, caja con cinta y con la etiqueta de ese pedido (D-0707), y que la caja no esté ya atada a otro pedido; devuelve `OK` o el motivo (`unknown_order`, `order_not_waiting`, `box_not_taped`, `label_mismatch`, `box_taken`). El contenido no se revisa acá: una caja equivocada se ata igual y paga 0 en la puerta (D-0712). `order_of_box` busca el pedido de una caja y `release` (`OrderBook.unpack`) lo devuelve a abierto, o a atrasado si ya venció, cuando la caja se abre o se desarma (D-0719).
+**Test** `test_order_box_link`: ata abierto y atrasado, cada rechazo sin cambiar nada, caja ocupada, búsqueda por caja, liberar y volver a atar.
+**Hecho cuando:** test (la lógica, en este PR; el llamado desde la mesa, en D-0808.b).

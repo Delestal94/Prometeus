@@ -8,8 +8,10 @@ extends Node
 ## through this API and never straight into a dictionary.
 ##
 ## Flow: OPEN -> PACKED -> OUT -> DELIVERED. An order past its due_min becomes
-## LATE (still deliverable, paid with the late penalty). FAILED and CANCELLED
-## are final, like DELIVERED.
+## LATE (still deliverable, paid with the late penalty). A late order that is
+## not out on the road CompanyTuning.ORDER_ABANDON_MIN after its due_min is
+## dropped by the customer (abandon(), FAILED). FAILED and CANCELLED are final,
+## like DELIVERED.
 
 signal order_added(id: StringName)
 signal order_changed(id: StringName, state: StringName)
@@ -72,6 +74,19 @@ func mark_packed(id: StringName, box_id: StringName) -> bool:
 	return true
 
 
+## Takes a PACKED order back to waiting (its box was opened or dropped, D-0808): OPEN, or LATE
+## when it is already past due. The box link is cleared.
+func unpack(id: StringName) -> bool:
+	var current: StringName = state_of(id)
+	if current != Order.STATE_PACKED and (current != Order.STATE_LATE or box_of(id) == &""):
+		return false
+	var order: Dictionary = _orders[id]
+	order.erase("box_id")
+	order["state"] = Order.STATE_LATE if _now_min > int(order["due_min"]) else Order.STATE_OPEN
+	order_changed.emit(id, order["state"])
+	return true
+
+
 func mark_out(id: StringName, trip_id: StringName) -> bool:
 	if not _move(id, Order.STATE_OUT):
 		return false
@@ -109,9 +124,26 @@ func expire(now_min: int) -> Array[StringName]:
 		var order: Dictionary = _orders[id]
 		if order["state"] == Order.STATE_LATE or not TRANSITIONS.has(order["state"]):
 			continue
+		var was: StringName = order["state"]
 		if now_min > int(order["due_min"]) and _move(id, Order.STATE_LATE):
+			order["late_from"] = was
 			late.append(id)
 	return late
+
+
+## Fails every late order that is not out on the road and is past its due_min by
+## CompanyTuning.ORDER_ABANDON_MIN at game minute now_min (the customer gave up).
+## Returns the ids that just failed; OrderPenalties.abandoned() prices each one.
+func abandon(now_min: int) -> Array[StringName]:
+	_now_min = maxi(_now_min, now_min)
+	var gone: Array[StringName] = []
+	for id: StringName in _order_ids:
+		var order: Dictionary = _orders[id]
+		if order["state"] != Order.STATE_LATE or order.get("late_from", &"") == Order.STATE_OUT:
+			continue
+		if now_min > int(order["due_min"]) + CompanyTuning.ORDER_ABANDON_MIN and _move(id, Order.STATE_FAILED):
+			gone.append(id)
+	return gone
 
 
 ## Orders still to be delivered (not DELIVERED, FAILED or CANCELLED), oldest
@@ -140,7 +172,7 @@ func from_dict(data: Dictionary) -> void:
 	_now_min = int(data.get("now_min", 0))
 	for raw: Dictionary in data.get("orders", []):
 		var order: Dictionary = Order.normalize(raw)
-		for key: String in ["box_id", "trip_id"]:
+		for key: String in ["box_id", "trip_id", "late_from"]:
 			if raw.has(key):
 				order[key] = StringName(raw[key])
 		for key: String in ["quality", "paid"]:
