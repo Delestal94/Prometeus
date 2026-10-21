@@ -41,6 +41,11 @@ extends Node3D
 ## Bandwidth (D-2002.3): every player here joins the crew through join_crew(), which has it send
 ## its pose at CompanyTuning.SHED_POSE_RATE_HZ on foot instead of the game's 30, so a full crew
 ## fits the shed's 24 KB/s a client (test_company_bandwidth_budget).
+##
+## The crew split between the shed and the street (D-0316): the "Interest" child (CompanyInterest,
+## every peer) sends each company vehicle and loose box only to the players near it (the host still
+## simulates all of them), and the cells load around every player and vehicle on the host but only
+## around its own player on a client (CompanyInterest.cell_anchors()).
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -101,6 +106,8 @@ var trips: CompanyTrips
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
 var cells: CompanyCells
+## Who gets each company vehicle's and loose box's updates (D-0316), on every peer.
+var interest: CompanyInterest
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -137,6 +144,7 @@ func _ready() -> void:
 	_add_shed()
 	_add_supplier_truck()
 	_add_cells()
+	_add_interest()
 	_add_trips()
 	_spawn_player()
 	_add_builder()
@@ -440,24 +448,28 @@ func _redraw_shed() -> void:
 		shed.rebuild(net.company, net.inventory)
 
 
-## The streamed cells of the map, on every peer: `anchors` follow whoever is in the crew group or
-## drives a company vehicle (CompanyTrips' group), refreshed each frame by `_process`.
+## The streamed cells of the map, on every peer: `anchors` follow, on the host, every player (the crew
+## group) and every company vehicle (CompanyTrips' group); on a client only its own player (D-0316).
+## Refreshed each frame by `_process`.
 func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
 
 
+## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
+func _add_interest() -> void:
+	interest = CompanyInterest.new()
+	interest.name = "Interest"
+	interest.crew_group = CREW_GROUP
+	add_child(interest)
+
+
 func _process(_delta: float) -> void:
 	if cells == null:
 		return
-	var found: Array[Vector3] = []
-	for group: StringName in [CREW_GROUP, CompanyTrips.VEHICLE_GROUP]:
-		for node: Node in get_tree().get_nodes_in_group(group):
-			var body := node as Node3D
-			if body != null and body.is_inside_tree():
-				found.append(body.global_position)
-	cells.anchors = found
+	var as_host: bool = net == null or net.is_host()
+	cells.anchors = CompanyInterest.cell_anchors(self, CREW_GROUP, CompanyTrips.VEHICLE_GROUP, as_host)
 
 
 ## Host: the gate across the shed's exit (north wall, centered) and the trips that cross it; the

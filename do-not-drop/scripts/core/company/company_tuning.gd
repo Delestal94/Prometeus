@@ -48,6 +48,20 @@ const CELL_IMPOSTOR_RADIUS: int = 5
 ## Instancing budget per frame, in real milliseconds (the N-917 lesson: never a big frame).
 const CELL_SLICE_MSEC: float = 4.0
 
+# --- Crew split between the shed and the street (D-0316) ---
+## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
+## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
+## D-0317 confirms or raises it with D-2002's measurements.
+const VEHICLES_FAR_MAX: int = 2
+## Who gets a company vehicle's or loose box's updates (CompanyInterest): the peers whose player is
+## within CELL_LOAD_RADIUS cells of it, until it is past CELL_UNLOAD_RADIUS. They look again this often,
+## in real seconds: a vehicle at 100 km/h covers 7 m, far under a cell.
+const INTEREST_UPDATE_REAL_SECONDS: float = 0.25
+## A body hidden from a peer is still sent to it for INTEREST_PULSE_REAL_SECONDS this often, so
+## SceneMultiplayer's 16-bit sync clock never falls half a turn behind (WorldCellInterest).
+const INTEREST_KEEPALIVE_REAL_SECONDS: float = 20.0
+const INTEREST_PULSE_REAL_SECONDS: float = 0.1
+
 # --- Network (D-2002) ---
 ## Poses a second each player sends on foot in the company's world (D-2002.3): half the game's 30
 ## (player.tscn). Nobody goes fast in the shed, and at 30 the poses the host relays sent each client

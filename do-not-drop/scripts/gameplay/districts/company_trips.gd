@@ -13,17 +13,29 @@ extends Node
 ## No company vehicle exists yet (D-0207 and later put it in the world), so nothing joins the group
 ## and the gate stays idle; the OrderBook is this node's own until D-0801 puts the company's in the
 ## state. Boxes are only ids here; where they ride is the vehicle's business.
+##
+## At most `far_max` vehicles are out at once (D-0316, CompanyTuning.VEHICLES_FAR_MAX): a vehicle
+## out is one whose trip is out. departure_verdict() is what the dispatch board asks before loading
+## a vehicle; a vehicle that crosses the gate outward with that many already out starts no trip
+## (departure_refused, with the same reason) and keeps its cargo staged for when one comes back.
 
 signal trip_started(trip: Trip)
 signal trip_closed(trip: Trip, failed: Array[StringName])
+## A vehicle crossed outward with `far_max` trips out: no trip started. `reason` is
+## departure_verdict()'s {ok, key, args}.
+signal departure_refused(vehicle_id: StringName, reason: Dictionary)
 
 ## The group of the vehicles the gate watches.
 const VEHICLE_GROUP: StringName = &"company_vehicle"
+## Translation key (strings_world.csv) of the refusal: "%d vehicles are already out".
+const FAR_LIMIT: String = "WORLD_DISPATCH_FAR_LIMIT"
 
 var book: OrderBook = OrderBook.new()
 var gate: TripGate
 ## Game minute for the trip's times, Callable() -> int. Unset: 0.
 var minute_now: Callable = Callable()
+## Most trips out at once.
+var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
 
 var _staged: Dictionary = {}
 var _active: Dictionary = {}
@@ -57,6 +69,14 @@ func trips_out() -> int:
 	return _active.size()
 
 
+## May `vehicle_id` leave now? {ok, key, args} as DispatchRules answers: not ok, with FAR_LIMIT and
+## [far_max], while `far_max` other vehicles are out. A vehicle already out is never refused.
+func departure_verdict(vehicle_id: StringName) -> Dictionary:
+	if _active.has(vehicle_id) or _active.size() < far_max:
+		return {"ok": true, "key": "", "args": []}
+	return {"ok": false, "key": FAR_LIMIT, "args": [far_max]}
+
+
 func closed_trips() -> Array[Trip]:
 	return _closed.duplicate()
 
@@ -77,6 +97,10 @@ func _physics_process(_delta: float) -> void:
 
 func _on_departed(vehicle_id: StringName) -> void:
 	if _active.has(vehicle_id) or not _staged.has(vehicle_id):
+		return
+	var verdict: Dictionary = departure_verdict(vehicle_id)
+	if not verdict["ok"]:
+		departure_refused.emit(vehicle_id, verdict)
 		return
 	var cargo: Dictionary = _staged[vehicle_id]
 	var trip_id := StringName("trip_%d" % _next_id)

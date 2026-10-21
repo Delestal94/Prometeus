@@ -11,6 +11,9 @@ extends SceneTree
 ##   material carries tx_detail_concrete_512.png in world triplanar, one repetition per
 ##   CompanyShed.FLOOR_SLAB_M (a whole number of grid cells, so the slab joints land on cell lines);
 ## - the local player stands inside the shed, on the floor;
+## - D-0316: it has an Interest child (CompanyInterest) reading CompanyRoot.CREW_GROUP, which tracks a
+##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player and
+##   on that vehicle;
 ## - D-2002.3: it sends its pose CompanyTuning.SHED_POSE_RATE_HZ times a second on foot (the interval
 ##   rounded down, not up), back to the game's 30 while riding a vehicle (a stand-in in the "vehicle"
 ##   group that carries everyone) and to the shed's rate off it; a player outside the company's world
@@ -74,6 +77,7 @@ func _run() -> void:
 		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
 			"The only anchor is the local player")
 		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
+	await _check_interest(level)
 	_expect(root.get_node_or_null(^"SceneLoader") == null, "No loader is left once inside the company")
 	var net: CompanyNet = level.get_node_or_null(^"CompanyNet") as CompanyNet
 	_expect(net != null and net == level.get(&"net"), "The root has its CompanyNet child (D-2003)")
@@ -297,6 +301,36 @@ func _clean() -> void:
 	for file: String in dir.get_files():
 		dir.remove(file)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR))
+
+
+## D-0316: the Interest child, and the host's cells anchored on every company vehicle too.
+func _check_interest(level: Node) -> void:
+	var interest: CompanyInterest = level.get_node_or_null(^"Interest") as CompanyInterest
+	_expect(interest != null and interest == level.get(&"interest"), "The root has its Interest child (D-0316)")
+	if interest == null:
+		return
+	_expect(interest.crew_group == CompanyRoot.CREW_GROUP, "The interest reads the crew group")
+	var van := Node3D.new()
+	van.name = "van_test"
+	van.position = Vector3(300.0, 0.0, -40.0)
+	var sync := MultiplayerSynchronizer.new()
+	var config := SceneReplicationConfig.new()
+	config.add_property(^".:position")
+	sync.replication_config = config
+	van.add_child(sync)
+	van.add_to_group(CompanyTrips.VEHICLE_GROUP)
+	level.add_child(van)
+	# The root's _process runs after process_frame is emitted: two frames for it to have run once.
+	await process_frame
+	await process_frame
+	interest.step(Time.get_ticks_msec() / 1000.0 + 1.0)
+	_expect(interest.is_tracked(sync), "A company vehicle's synchronizer is tracked by the interest")
+	var cells: CompanyCells = level.get(&"cells")
+	_expect(cells.anchors.size() == 2 and cells.anchors.has(van.global_position),
+		"Solo is the host: the cells anchor on the player and the vehicle (got %s)" % [cells.anchors])
+	van.free()
+	interest.step(Time.get_ticks_msec() / 1000.0 + 2.0)
+	_expect(interest.tracked_count() == 0, "A freed vehicle is forgotten (got %d)" % interest.tracked_count())
 
 
 func _expect(condition: bool, message: String) -> void:

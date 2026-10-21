@@ -66,6 +66,11 @@
     resuelve el camino y esa caja no se mueve más ahí (el mismo bug que documenta `package.gd:184`). Con el snapshot, `update_visibility` va después del
     último trozo. Los bultos de unidades en el piso son nodos **estáticos** sin sincronizador: el evento
     trae su posición y no se mueven.
+11. **Lo físico lejos no viaja (D-0316).** El sincronizador de un vehículo (`company_vehicle`) o una caja suelta
+    (`company_loose_box`) lo maneja `CompanyInterest`: el host lo manda solo a los peers con su jugador a ≤ 2 celdas
+    (lo deja pasado 3) y al conductor, y un cliente esconde su copia lejana. Sus `public_visibility` y
+    `set_visibility_for` son de `CompanyInterest`; la regla 10 y cualquier otra condición van con
+    `add_visibility_filter` (se suman). El host simula todo igual. Decisión `docs/decisiones/2026-10-21-visibilidad-por-distancia.md`.
 
 ## 2. Las 20 acciones del corte vertical (y las de construir el galpón, 21 a 24)
 
