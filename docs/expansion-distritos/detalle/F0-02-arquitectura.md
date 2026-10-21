@@ -282,3 +282,19 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 (D-0144).
 **Hecho cuando:** las carpetas existen, `python tools/check_modules.py` pasa y `file_domain` clasifica un
 archivo de cada carpeta como Nacho.
+
+### D-0236 · Guardado automático al cerrar el día y al salir — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanyRoot.save_closed_day()`: el host guarda el slot en cuanto se aplica el SUMMARY, como la apertura del día siguiente (día + 1 a las 08:00, sin `interrupted`, stock con las manos en el piso); al salir durante el resumen guarda eso mismo en vez del día interrumpido; a mitad de día sigue el guardado interrumpido de D-2005; `test_company_autosave`.
+**Depende de:** D-0203, D-0206, D-2005
+**Qué:** en `scripts/gameplay/company_root.gd`, solo el host (también solo):
+- al aplicarse el `day_phase` SUMMARY (`CompanyNet.event_applied`), guardar el slot como **la apertura del
+  día siguiente**: una copia de la empresa con `day + 1` y `clock_minutes = DAY_START_MIN`, sin
+  `interrupted`; la empresa en juego conserva su día hasta `next_day()`. Cargarlo abre ese día, igual que
+  `next_day()`;
+- al cerrarse el mundo (`_exit_tree`, también al cerrar el juego) durante el SUMMARY, ese mismo guardado; en
+  cualquier otra fase, el día interrumpido de D-2005.
+**Test** `test_company_autosave`: un día completo (OPENING → SUMMARY) guarda el día 2 desde la apertura con
+la plata y el stock; matar el proceso a mitad del día 2 (sin el guardado de `_exit_tree`) y cargar da el
+último cierre; salir en el resumen no lo pisa con el día 1 interrumpido; salir a mitad de día sigue guardando
+interrumpido.
+**Hecho cuando:** el test pasa.
