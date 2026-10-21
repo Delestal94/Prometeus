@@ -31,8 +31,8 @@ extends SceneTree
 ##   solo, the company's lobby data and rich presence (CompanyLobbyMeta) once the world is up; a
 ##   client, the host's company's presence once the snapshot is in, and no lobby data; leaving the
 ##   root clears both;
-## - D-0510.2: when the day opens (EventBus.company_day_started) with the company in the red the root
-##   emits one EventBus.depot_notice (the bankruptcy warning); in the black, none.
+## - D-0510.2: the root hands its DayCycle the opening notice: the bankruptcy warning with the
+##   company in the red, "" in the black.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 ## The roots save here, never in the game's slot.
@@ -96,7 +96,7 @@ func _run() -> void:
 				% [state.get(&"day"), cycle.phase_name(), clock.minute_now()])
 			_expect(not cycle.is_frozen(), "...and the shed isn't frozen (no area is wired yet)")
 	_expect_presence(state, true, "Solo, with the day open")
-	_check_bankrupt_notice(state)
+	_check_bankrupt_notice(level as CompanyRoot, state)
 
 	var zone_files: int = 0
 	for file: String in DirAccess.get_files_at("res://data/zones/"):
@@ -156,25 +156,20 @@ func _run() -> void:
 	quit(_failures)
 
 
-## D-2002.3: the company's `player` sends its pose at the shed's rate on foot, the game's riding a
-## vehicle (a Carrier in `world`) and the shed's again once off it.
-func _check_bankrupt_notice(state: Node) -> void:
-	# EventBus by path: a --script compiles before the autoloads exist.
-	var bus: Node = root.get_node(^"/root/EventBus")
-	var heard: Array[String] = []
-	var listener := func(text: String) -> void: heard.append(text)
-	bus.connect(&"depot_notice", listener)
+## D-0510.2: the root's DayCycle.opening_notice is the bankruptcy warning in the red, "" in the black.
+func _check_bankrupt_notice(level: CompanyRoot, state: Node) -> void:
+	var notice: Callable = level.day_cycle.opening_notice
+	_expect(notice.is_valid(), "The root gives its DayCycle the day's opening notice")
 	var money: int = int(state.get(&"money"))
 	state.set(&"money", 500)
-	bus.emit_signal(&"company_day_started", 1)
-	_expect(heard.is_empty(), "A day opening in the black shows no warning")
+	_expect(str(notice.call()).is_empty(), "A day opening in the black shows no warning")
 	state.set(&"money", -1)
-	bus.emit_signal(&"company_day_started", 1)
-	_expect(heard.size() == 1, "A day opening in the red shows the bankruptcy warning once (got %d)" % heard.size())
+	_expect(not str(notice.call()).is_empty(), "A day opening in the red shows the bankruptcy warning")
 	state.set(&"money", money)
-	bus.disconnect(&"depot_notice", listener)
 
 
+## D-2002.3: the company's `player` sends its pose at the shed's rate on foot, the game's riding a
+## vehicle (a Carrier in `world`) and the shed's again once off it.
 func _check_pose_rate(player: Player, world: Node3D) -> void:
 	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	var shed_rate: int = CompanyTuning.SHED_POSE_RATE_HZ
