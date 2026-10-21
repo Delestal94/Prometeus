@@ -389,3 +389,10 @@ WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf
 WORLD_PLACEABLE_FRIDGE,Heladera,Fridge
 WORLD_PLACEABLE_DISPATCH_ZONE,Zona de despacho,Dispatch zone
+WORLD_PACKTUT_BOX,Tomá una caja del dispensador,Take a box from the dispenser
+WORLD_PACKTUT_PRODUCTS,Poné en la caja los productos de la hoja de pedido,Put the products on the order sheet into the box
+WORLD_PACKTUT_SEALS,Pegá los sellos que pide el pedido,Stick the seals the order asks for
+WORLD_PACKTUT_LABEL,Pegá la etiqueta de envío,Stick the shipping label
+WORLD_PACKTUT_DISPATCH,Cerrá la caja con cinta y dejala en la zona de despacho,Tape the box shut and leave it in the dispatch zone
+WORLD_PACKTUT_TAPE,Cerrá la caja con cinta,Tape the box shut
+WORLD_PACKTUT_DONE,¡Listo! Tu primera caja salió,Done! Your first box is on its way
