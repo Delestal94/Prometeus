@@ -134,6 +134,15 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
 **Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).
 
+### D-0612 · Vista de stock en el portapapeles (lista por producto) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — D-0612.a: `StockView` (`scripts/gameplay/business/stock_view.gd`, puro: una fila por producto con unidades en estante, recepción, manos, cajas y otros, más la falta de `StockAlert`) y la pantalla `StockPanel` (`scripts/ui/stock_panel.gd`, datos inyectados, teclado, mouse y mando, marca "⚠ Faltan N" / "⟳ Viene en camino" además del color); `test_company_stock_panel`. Falta D-0612.b. Revisar: [`revisar/D-0612.md`](../revisar/D-0612.md).
+**Depende de:** D-0211 (`Inventory`), D-0613 (`StockAlert`), D-0608 (huecos `shelf:`)
+**Qué:** una lista por producto de cuánto hay y dónde, con el aviso de lo que falta para los pedidos pendientes.
+- [x] **D-0612.a** Modelo y pantalla sin red: `StockView.rows(inventory, shortages)` y `StockPanel.open/refresh(ctx)` con `{inventory, shortages, products}`; solo lee, no manda nada.
+- [ ] **D-0612.b** Abrirla en el mundo: desde el portapapeles (D-0131/D-0413, todavía no existe) o, mientras tanto, desde el tablero del galpón; `refresh` en cada `units_moved` y snapshot de `CompanyNet` (en el cliente sobre su copia del `Inventory`), con `StockAlert.shortages(inventory, book.open_orders(), incoming)` y lo que trae el calendario del proveedor. Captura con `revisor-visual`.
+**Test** `test_company_stock_panel`: reparto por ubicación y totales, orden, un producto sin unidades que falta aparece marcado, cubierto vs. faltante, `refresh` después de mover cambia los números, inventario vacío, foco y `ui_cancel`, claves `UI_STOCK_*` en los dos idiomas.
+**Hecho cuando:** captura con la lista abierta en el galpón (D-0612.b).
+
 ### D-0613 · Aviso de stock bajo para productos con pedidos pendientes — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-21, PR pendiente)** — `StockAlert` (`scripts/gameplay/business/stock_alert.gd`): qué productos faltan para los pedidos pendientes; `test_stock_alert`. El aviso en pantalla (portapapeles, tablero) lo dibuja la UI de stock, D-0612.
 **Depende de:** D-0211 (`Inventory`), D-0210 (`OrderBook`), D-0602 (lo que viene en camino)
