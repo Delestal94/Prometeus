@@ -63,6 +63,12 @@ const RENT_PER_DAY: int = 100
 ## (docs/expansion-distritos/diseno/economia.md: no reset, no forced loan).
 const BANKRUPT_ORDER_SHARE: float = 0.6
 
+# --- Order printer (D-0805) ---
+## Sheets the printer tray holds; with the tray full the printer jams and new orders wait.
+const PRINTER_TRAY_MAX: int = 4
+## Order sheets one person can carry at once.
+const SHEETS_IN_HAND_MAX: int = 3
+
 # --- Packing grid and boxes ---
 ## Side of one packing-grid cell, in meters (S6).
 const GRID_CELL_M: float = 0.2
