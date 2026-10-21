@@ -132,6 +132,25 @@ func sheet_for(order: Dictionary, now_min: int, products: Dictionary = {}) -> Di
 	return OrderSheet.build(order, box, now_min, products)
 
 
+## Takes a badly packed box apart (D-0719): every product goes back to the table as far as the
+## STAGING_SLOTS allow, the rest comes back in `overflow` (for the hands or the shelf). Padding,
+## tape, label and stamps are lost (already paid, nothing is refunded); the empty open box stays
+## on the table. Returns {staged, overflow} as product-id arrays; {}, changing nothing, with no box.
+func disassemble() -> Dictionary:
+	if box == null:
+		return {}
+	var staged_back: Array[StringName] = []
+	var overflow: Array[StringName] = []
+	for item: Dictionary in box.items:
+		var product_id: StringName = item["product"]
+		if stage_product(product_id):
+			staged_back.append(product_id)
+		else:
+			overflow.append(product_id)
+	box = PackedBox.new(box.box_size)
+	return {"staged": staged_back, "overflow": overflow}
+
+
 ## Takes the box off the table to send it away. Null, leaving it in place, if it is not taped
 ## shut: an open box cannot be dispatched (D-0706).
 func dispatch() -> PackedBox:

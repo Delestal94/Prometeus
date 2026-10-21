@@ -16,6 +16,9 @@ extends SceneTree
 ##   control for the actions it lists and stays the same for the others;
 ## - the shared settings are restored at the end (reset_to_defaults).
 ##
+## - the care card (PlayerCargoCare.control_names, N-977.5) names the rebound drop,
+##   next-tool and walk keys, and the tutorial's driver page the rebound pedals.
+##
 ## The row-by-row remap itself is test_options_controls.gd; this one is about what
 ## the texts say afterwards.
 
@@ -58,6 +61,7 @@ func _run() -> void:
 	_test_rebound_pad()
 	await _test_summary_follows()
 	await _test_every_action()
+	_test_care_names()
 
 	_settings.using_gamepad = false
 	_settings.reset_to_defaults()
@@ -107,6 +111,33 @@ func _test_defaults() -> void:
 	_expect(pad_text == tr("HUD_PAD_PHONE") % _settings.pad_label(&"phone_toggle"),
 		"...and the gamepad text with a gamepad in hand (got %s)" % pad_text)
 	_settings.using_gamepad = false
+
+
+# --- The care card ------------------------------------------------------------------------------
+
+
+func _test_care_names() -> void:
+	_settings.reset_to_defaults()
+	_settings.using_gamepad = false
+	var care: GDScript = load("res://scripts/gameplay/player/player_cargo_care.gd")
+	var keys: Dictionary = care.control_names(false, "E", _settings)
+	_expect(keys["drop"] == "Q" and keys["tool_next"] == "X" and keys["sides"] == "WASD" and keys["swing"] == "A / D",
+		"The care card keeps the shipped names by default (got %s)" % keys)
+	_expect(keys["walk"][Vector2.UP] == "W" and keys["walk"][Vector2.RIGHT] == "D", "...and W/D on the caps")
+	_settings.rebind_key(&"package_drop", FREE_KEY)
+	_settings.rebind_key(&"care_tool_next", KEY_F14)
+	_settings.rebind_key(&"drive_left", KEY_LEFT)
+	keys = care.control_names(false, "E", _settings)
+	_expect(keys["drop"] == _settings.key_label(&"package_drop") and keys["drop"] != "Q",
+		"A rebound drop key reaches the care card (got %s)" % keys["drop"])
+	_expect(keys["tool_next"] == _settings.key_label(&"care_tool_next") and keys["tool_next"] != "X",
+		"...and the next-tool key (got %s)" % keys["tool_next"])
+	_expect(keys["walk"][Vector2.LEFT] == _settings.key_label(&"drive_left") and keys["swing"].begins_with(
+		_settings.key_label(&"drive_left")) and not String(keys["sides"]).contains("WASD"),
+		"...and a rebound walk key reaches the caps and the text (got %s / %s)" % [keys["swing"], keys["sides"]])
+	var pad: Dictionary = care.control_names(true, "A", _settings)
+	_expect(pad["drop"] == _settings.pad_label(&"package_drop"), "On the pad the drop button is read from the bindings")
+	_settings.reset_to_defaults()
 
 
 # --- Rebinding changes the text ----------------------------------------------------------------

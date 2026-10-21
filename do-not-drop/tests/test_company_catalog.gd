@@ -3,7 +3,9 @@ extends SceneTree
 ##
 ## Registries of the company read from data/ (expansion D-0216, scripts/core/company/catalog.gd):
 ## - the current 10 products, 9 zones, 3 vehicles and 7 gates load by id, each under its own id,
-##   and suppliers and boxes (README only today) load empty with no error;
+##   and boxes (README only today) load empty with no error;
+## - the supplier distribuidora_central (D-0218) loads by id, sells the 10 products, every one of
+##   them exists in the catalog, and its arrival and wait match CompanyTuning (08:30, 180 min);
 ## - zones() keeps the file name order company_root.gd's load_zones() has always had;
 ## - a ProductDefinition .tres written in user:// and read through the extra root shows up by id
 ##   with no code change, next to the data/ ones;
@@ -24,6 +26,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_clean()
 	_check_data()
+	_check_supplier()
 	_check_extra_root()
 	_check_duplicates()
 	_check_remap()
@@ -38,7 +41,7 @@ func _check_data() -> void:
 	_expect(catalog.errors.is_empty(), "data/ loads with no errors (got %s)" % [catalog.errors])
 	var expected: Dictionary = {
 		CompanyCatalog.PRODUCTS: 10, CompanyCatalog.ZONES: 9, CompanyCatalog.VEHICLES: 3,
-		CompanyCatalog.GATES: 7, CompanyCatalog.SUPPLIERS: 0, CompanyCatalog.BOXES: 0,
+		CompanyCatalog.GATES: 7, CompanyCatalog.SUPPLIERS: 1, CompanyCatalog.BOXES: 0,
 	}
 	for kind: StringName in expected:
 		var count: int = catalog.all(kind).size()
@@ -56,6 +59,27 @@ func _check_data() -> void:
 	_expect(catalog.ids(CompanyCatalog.ZONES) == by_file,
 		"zones() keeps the file name order (got %s)" % [catalog.ids(CompanyCatalog.ZONES)])
 	_expect(catalog.zones().size() == 9, "zones() returns 9 typed zones (got %d)" % catalog.zones().size())
+
+
+func _check_supplier() -> void:
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	var supplier: SupplierDefinition = catalog.supplier(&"distribuidora_central")
+	_expect(supplier != null, "supplier 'distribuidora_central' loads by id")
+	if supplier == null:
+		return
+	_expect(supplier.id == &"distribuidora_central", "the supplier carries its own id")
+	_expect(supplier.products.size() == 10, "it sells 10 products (got %d)" % supplier.products.size())
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		_expect(supplier.sells(id), "it sells catalog product '%s'" % id)
+	for id: StringName in supplier.products:
+		_expect(catalog.product(id) != null, "its product '%s' exists in the catalog" % id)
+	_expect(supplier.arrival_min == CompanyTuning.SUPPLIER_ARRIVAL_MIN,
+		"its truck arrives at 08:30 (got %d)" % supplier.arrival_min)
+	_expect(supplier.wait_minutes == CompanyTuning.SUPPLIER_WAIT_MIN,
+		"it waits 180 min (got %d)" % supplier.wait_minutes)
+	var hen: ProductDefinition = catalog.product(&"hen")
+	_expect(supplier.unit_price(hen) == hen.buy_price,
+		"price factor 1.0 keeps the list price (got %d)" % supplier.unit_price(hen))
 
 
 func _check_extra_root() -> void:

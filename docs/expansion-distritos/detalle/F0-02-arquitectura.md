@@ -242,6 +242,7 @@ ruta alternativa del catálogo) aparece sin tocar código; los ids repetidos dan
 **Hecho cuando:** el test pasa.
 
 ### D-0218 · Proveedores como datos — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `SupplierDefinition` (`scripts/gameplay/business/supplier_definition.gd`: `id`, `products`, `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`, `sells()`, `unit_price()`), `data/suppliers/distribuidora_central.tres` (10 productos, 08:30, 180 min, factor 1,0, camión `null` hasta D-0601) y `CompanyCatalog.supplier()`; `test_company_catalog`.
 **Depende de:** D-0216
 **Qué:** `scripts/gameplay/business/supplier_definition.gd` (`id`, `products: Array[StringName]`,
 `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`). Un `.tres` para F1: `distribuidora_central`,
