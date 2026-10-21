@@ -223,6 +223,10 @@ const SUPPLIER_TRUCK_REVERSE_M: float = 10.0
 const SUPPLIER_TRUCK_APPROACH_M: float = 16.0
 const SUPPLIER_DRIVE_IN_MIN: float = 6.0
 const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
+## The pallet jack (D-0605, PalletJack): a pallet's footprint on the floor in meters (width, depth)
+## and how close the jack's holder must stand to pick one up.
+const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
+const PALLET_JACK_REACH_M: float = 1.6
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0
