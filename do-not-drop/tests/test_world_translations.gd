@@ -39,10 +39,16 @@ func _run() -> void:
 		for file_path: String in _scripts(dir_path):
 			for found: RegExMatch in key_pattern.search_all(FileAccess.get_file_as_string(file_path)):
 				used[found.get_string(1)] = file_path
+	# A quoted key ending in "_" is a prefix the code completes at runtime (WORLD_STREET_<STREET>).
+	var prefixes: Array[String] = []
 	for key: String in used:
-		_expect(table.has(key), "%s (asked for in %s) is in the table" % [key, used[key]])
+		if key.ends_with("_"):
+			prefixes.append(key)
+		else:
+			_expect(table.has(key), "%s (asked for in %s) is in the table" % [key, used[key]])
 	for key: String in table:
-		_expect(used.has(key), "%s is used somewhere (no dead rows)" % key)
+		var by_prefix: bool = prefixes.any(func(prefix: String) -> bool: return key.begins_with(prefix))
+		_expect(used.has(key) or by_prefix, "%s is used somewhere (no dead rows)" % key)
 
 	_expect(TranslationServer.get_locale().begins_with("es"), "The game starts in Spanish until S-509 (locale %s)" % TranslationServer.get_locale())
 	_expect(tr("WORLD_TOWN_WELCOME") == "Bienvenidos a", "Spanish: the town sign says 'Bienvenidos a' (%s)" % tr("WORLD_TOWN_WELCOME"))
