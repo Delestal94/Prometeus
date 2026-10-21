@@ -54,6 +54,15 @@ camión es D-0601 / D-0605, que usan esta clase.
 `validate` con 4 problemas, JSON de ida y vuelta.
 **Hecho cuando:** el test pasa. (La parte "aparece en la caja del camión" queda para D-0601.)
 
+### D-0605 · Descargar palet con la zorra — A · Sonnet 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica de la zorra (`PalletJack`, `scripts/gameplay/business/pallet_jack.gd`) y `test_pallet_jack`. Falta D-0605.b (el objeto en el mundo y la interacción).
+**Depende de:** D-0604 (`Pallet`), D-0601 (`SupplierTruck`, la caja del camión), D-0211 (`Inventory`)
+**Qué:**
+- **D-0605.a (hecha) — la lógica.** `PalletJack` (`RefCounted`, estado puro): dónde está cada palet (`bed` = caja del camión, `jack` = en la zorra, `floor` = piso del galpón con su punto en metros). `load_bed` sube los palets del día, `pick_up(id, holder)` toma uno (de a uno; del piso hay que estar a `PALLET_JACK_REACH_M` = 1,6 m; la caja del camión se alcanza desde el portón y eso lo chequea quien llama), `put_down(pos, floor_rect, inventory)` lo apoya dentro del piso y sin pisar a otro palet (`PALLET_FOOTPRINT_M` = 1,2 × 0,8 m). Las unidades entran al `Inventory` (`Pallet.receive`) **una sola vez**, al apoyar por primera vez un palet que vino de la caja; lo que no se baja queda en `left_on_bed()` y se va con el camión sin contarse. `remove` lo saca del patio cuando está vacío (D-0607). `to_dict`/`from_dict` para el save y la red.
+- **D-0605.b (pendiente) — el mundo.** Zorra como objeto (malla gris placeholder, `arte-pendiente/D-0605.md`), interacción del jugador (agarrar la zorra, subir/bajar el palet, empujarla) y el palet dibujado en la caja del camión (`SupplierTruckView`); el host aplica y replica (D-0619).
+**Test** `test_pallet_jack`: palets válidos y repetidos en la caja; uno por vez y alcance; recepción única en el `Inventory`; soltar fuera del piso o encima de otro palet no cambia nada; lo que queda en la caja no se cuenta; 50 movimientos sin perder ni duplicar unidades; ida y vuelta de JSON.
+**Hecho cuando:** jugador mueve un palet del camión al piso (test de interacción, D-0605.b).
+
 ### D-0607 · Abrir palet — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `Pallet.open/take/is_depleted` en `pallet.gd`; ampliado `test_pallet`.
 **Depende de:** D-0604 (`Pallet`), D-0211 (`Inventory`)
