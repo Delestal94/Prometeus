@@ -197,6 +197,7 @@ que aparezcan en la salida).
 **Hecho cuando:** CI muestra cada módulo nuevo pasando solo en un proyecto vacío.
 
 ### D-2019 · Build de Windows con la expansión — B · Opus 5.5 · medium · Aviso: no · F0
+**[~] Parcial (2026-10-21, PR pendiente)** — `test_release_build` exige `export_filter="all_resources"` en cada preset y que su `exclude_filter` (matcheado como Godot: ruta desde `res://` o nombre suelto) no deje afuera nada del Modo Empresa (`data/` de la expansión, `scenes/company/`, `company_root`, `scripts/core/company/`, `business/`, `districts/`, `fleet/`); hoy no excluye nada. `pc-build.md` suma el segundo smoke (`--mode=company`, 60 s, sin `ERROR`). Falta el arranque real en la build de la PC ([`revisar/D-2019.md`](../revisar/D-2019.md)).
 **Depende de:** D-0214
 **Qué:** verificar que `export_presets.cfg` incluye `data/products|zones|vehicles|boxes|suppliers|gates/`
 y `scenes/company/`; si filtra recursos, agregarlos. Pedido a la rutina `pc-build`.

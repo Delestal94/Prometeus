@@ -18,8 +18,11 @@ const WORKFLOW_PATH: String = "../.github/workflows/release.yml"
 ## What the Modo Empresa needs in a build (D-2019): folders are walked recursively.
 const COMPANY_PATHS: Array[String] = [
 	"data/products", "data/zones", "data/vehicles", "data/gates", "data/suppliers", "data/boxes",
-	"data/placeables", "data/shed", "data/world", "scenes/gameplay/company_root.tscn",
-	"scripts/gameplay/company_root.gd", "scripts/core/company", "scripts/gameplay/business",
+	"data/placeables", "data/shed", "data/world", "data/order_requirements", "scenes/company",
+	"scenes/gameplay/company_root.tscn", "scripts/gameplay/company_root.gd",
+	"scripts/gameplay/company_shed.gd", "scripts/gameplay/shed_builder.gd",
+	"scripts/gameplay/supplier_truck_view.gd", "scripts/core/company", "scripts/gameplay/business",
+	"scripts/gameplay/districts", "scripts/gameplay/fleet",
 ]
 const EXPECTED_PRESETS: Dictionary = {
 	"Windows Desktop": "../builds/windows/TakeMyPackage.exe",
