@@ -52,7 +52,8 @@ func _test_unique_and_parity() -> void:
 		var key: String = "%s %d" % [_street_of(house), number]
 		_expect(not seen.has(key), "%s is not repeated (%s)" % [key, house.id])
 		seen[key] = true
-		_expect(number % 2 == (0 if house.side == 1 else 1), "%s: side %d gives parity of %d" % [house.id, house.side, number])
+		_expect(number % 2 == (0 if house.side == 1 else 1),
+				"%s: side %d gives parity of %d" % [house.id, house.side, number])
 	_expect(_addresses.house_ids().size() == 50, "50 addresses")
 
 
