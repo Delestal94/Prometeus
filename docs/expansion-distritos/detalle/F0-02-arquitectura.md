@@ -234,6 +234,7 @@ ruta alternativa del catálogo) aparece sin tocar código; los ids repetidos dan
 **Hecho cuando:** el test pasa.
 
 ### D-0217 · Cajas como datos — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `BoxDefinition` (`scripts/gameplay/business/box_definition.gd`: `id`, `cells`, `cost`, `model`, `volume()`, `size_m()`), `data/boxes/S|M|L|XL.tres` con los números de `CompanyTuning.BOX_CELLS`/`BOX_COST` y `sm_cargo_box_cube.glb`, y `CompanyCatalog.box()`/`boxes()` (de menor a mayor); `test_company_catalog`. Los usuarios de `BOX_CELLS` siguen igual.
 **Depende de:** D-0216
 **Qué:** `scripts/gameplay/business/box_definition.gd` (`id`, `cells: Vector3i`, `cost`, `model`). Cuatro
 `.tres` en `data/boxes/` (S, M, L, XL con los números de supuestos). `model` usa
