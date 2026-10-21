@@ -40,7 +40,10 @@ func _o(id: String, state: StringName = Order.STATE_OPEN) -> Dictionary:
 
 func _test_feed() -> void:
 	var p := OrderPrinter.new()
-	var orders: Array = [_o("a"), _o("b", Order.STATE_LATE), _o("c", Order.STATE_DELIVERED), _o("d", Order.STATE_FAILED), {"x": 1}, 5]
+	var orders: Array = [
+		_o("a"), _o("b", Order.STATE_LATE), _o("c", Order.STATE_DELIVERED),
+		_o("d", Order.STATE_FAILED), {"x": 1}, 5,
+	]
 	var out := p.feed(orders)
 	_expect(out == [&"a", &"b"], "prints open and late in order, got %s" % [out])
 	_expect(p.tray() == [&"a", &"b"], "tray has both sheets")
