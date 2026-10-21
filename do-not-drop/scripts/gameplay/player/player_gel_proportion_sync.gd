@@ -6,8 +6,10 @@ extends Node
 ## canonical packet at spawn and whenever it changes.
 
 signal proportions_changed(proportions: GelBodyProportions)
+signal skin_changed(skin_id: StringName)
 
 const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
+const Skins := preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
 
 var proportions := Proportions.new()
 var packet: PackedByteArray = proportions.to_packet():
@@ -17,6 +19,10 @@ var packet: PackedByteArray = proportions.to_packet():
 		packet = value.duplicate()
 		proportions.apply_packet(packet)
 		proportions_changed.emit(proportions)
+var skin_id: StringName = Skins.DEFAULT_ID:
+	set(value):
+		skin_id = Skins.valid_id(value)
+		skin_changed.emit(skin_id)
 
 
 func _enter_tree() -> void:
@@ -39,10 +45,13 @@ func _sync_from_profile() -> void:
 	if profile == null:
 		return
 	var requested: PackedByteArray = Proportions.packet_from_dictionary(profile.get(&"gel_proportions"))
+	var requested_skin := Skins.valid_id(StringName(profile.get(&"selected_gel_skin")))
 	if multiplayer.is_server():
 		packet = requested
+		skin_id = requested_skin
 	else:
 		_submit_packet.rpc_id(1, requested)
+		_submit_skin.rpc_id(1, requested_skin)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -58,3 +67,12 @@ func _submit_packet(requested: PackedByteArray) -> void:
 	var accepted := Proportions.new()
 	accepted.apply_packet(requested)
 	packet = accepted.to_packet()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _submit_skin(requested: StringName) -> void:
+	if not multiplayer.is_server() or not RpcGuard.allow_request(self) or not RpcGuard.name_ok(requested):
+		return
+	if multiplayer.get_remote_sender_id() != get_parent().get_multiplayer_authority():
+		return
+	skin_id = Skins.valid_id(requested)

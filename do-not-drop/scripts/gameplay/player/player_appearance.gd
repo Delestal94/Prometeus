@@ -9,6 +9,8 @@ const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_
 const TEAM_COLOR_STEPS: int = 31
 const TEAM_COLOR_RADIX: int = TEAM_COLOR_STEPS + 1
 const TEAM_SIGNATURE_RADIX: int = 11
+const GEL_SKINS = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
+const GEL_SKIN_APPLIER = preload("res://scripts/gameplay/player/gel/gel_skin_applier.gd")
 
 
 ## Every visual under `node` onto `layers` (RenderLayers.LOCAL_BODY for your
@@ -114,6 +116,16 @@ static func set_gel_material(body: Node, opaque: bool) -> void:
 	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
 	if mesh_instance != null:
 		mesh_instance.material_override = GEL_OPAQUE_MATERIAL if opaque else GEL_MATERIAL
+
+
+## Resolves a stable profile/network ID, applies only per-instance uniforms,
+## then restores the crew accent. Shared skin and material resources stay immutable.
+static func apply_gel_skin(body: Node, skin_id: StringName, team_color: Color = Color.TRANSPARENT) -> bool:
+	var mesh_instance := find_mesh_instance(body)
+	if mesh_instance == null or not GEL_SKIN_APPLIER.apply(mesh_instance, GEL_SKINS.skin(skin_id)):
+		return false
+	set_gel_team_accent(body, team_color)
+	return true
 
 
 ## Tints the shirt: surface 0 is the T-shirt; its collar/hem trim follows a

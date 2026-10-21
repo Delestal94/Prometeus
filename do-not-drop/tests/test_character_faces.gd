@@ -63,8 +63,8 @@ func _run() -> void:
 	first.set_physics_process(false); second.set_physics_process(false)
 	first.face_eyes = &"wink"; first.face_mouth = &"tongue"
 	second.face_eyes = &"worried"; second.face_mouth = &"pout"
-	var face1 := first.find_child("CharacterFace", true, false) as BoneAttachment3D
-	var face2 := second.find_child("CharacterFace", true, false) as BoneAttachment3D
+	var face1 := first.find_child("GelFace", true, false) as BoneAttachment3D
+	var face2 := second.find_child("GelFace", true, false) as BoneAttachment3D
 	_expect(face1 != null and face2 != null, "Both players have faces")
 	_expect(face1.bone_name == "head", "Face follows the head bone")
 	_expect(face1.get_node("Eyes").layers == 2 and face2.get_node("Eyes").layers == 1, "First-person and teammate face layers match their bodies")
@@ -89,7 +89,8 @@ func _run() -> void:
 	face2.set_expression(&"joyful", &"pout")
 	face2.blink()
 	face2._process(0.08)
-	_expect(is_equal_approx((material2 as StandardMaterial3D).uv1_scale.y, 1.0), "Happy closed eyes never blink")
+	_expect((material2 as StandardMaterial3D).uv1_scale.y > 5.0,
+		"Every expressive gel-eye sheet supports the same blink animation")
 	face2.set_expression(&"worried", &"pout")
 	var sync: MultiplayerSynchronizer = first.get_node("MultiplayerSynchronizer")
 	for path: NodePath in [^".:face_eyes", ^".:face_mouth"]:

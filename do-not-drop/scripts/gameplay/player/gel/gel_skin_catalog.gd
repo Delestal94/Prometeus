@@ -43,6 +43,10 @@ static func skin(requested_id: StringName) -> Resource:
 	return SKINS[0]
 
 
+static func valid_id(requested_id: StringName) -> StringName:
+	return StringName(skin(requested_id).get(&"id"))
+
+
 static func ids() -> Array[StringName]:
 	var result: Array[StringName] = []
 	for definition: Resource in SKINS:

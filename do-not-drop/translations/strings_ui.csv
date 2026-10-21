@@ -362,6 +362,8 @@ UI_APPEARANCE,Apariencia,Appearance
 UI_BACK,Volver,Back
 UI_CANCEL,Cancelar,Cancel
 UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved automatically
+UI_COSM_GEL_SKIN,Skin de gelatina,Gel skin
+UI_COSM_GEL_SKIN_HINT,El color y el interior se ven igual para todos.,Everyone sees the same color and interior.
 UI_COSM_BODY,Cuerpo,Body
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face

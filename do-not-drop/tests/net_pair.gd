@@ -101,6 +101,7 @@ func _ready() -> void:
 	var profile: Node = get_node(^"/root/UnlockManager")
 	profile.set(&"completed_runs", 6 if _host else 0)
 	profile.set(&"gel_proportions", _gel_values(_host))
+	profile.set(&"selected_gel_skin", &"night_neon" if _host else &"layered_gummy")
 	if not _host:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		profile.set(&"selected_cosmetic", CLIENT_COSMETIC)
@@ -168,6 +169,8 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_gel_proportions",
 		GEL_PROPORTIONS.packet_from_dictionary(_gel_values(true)))
 	await _wait_for_report(&"gel_proportions")
+	_expect(await $SkinCheck.run_host(host_player, client_player, _client_peer_id,
+		&"night_neon", &"layered_gummy"), $SkinCheck.detail)
 	_expect(await $RagdollCheck.run_host(host_player, _client_peer_id),
 		$RagdollCheck.detail)
 

@@ -7,11 +7,9 @@ extends SceneTree
 ## the body actually gets built, colored, and that different peers get
 ## different colors instead of everyone looking identical.
 ##
-## Rewritten 2026-09-22: BodyVisual is the rigged low-poly character now
-## (assets/models/characters/sm_char_player_lowpoly.glb), not a bare capsule
-## -- color lives on a per-instance surface override of the suit material
-## nested inside it, found by walking the tree instead of assumed to be a
-## direct child.
+## S-311.70: BodyVisual is the rigged gel body. Crew identity lives in a
+## compact per-instance shader value, decoded here instead of reading the old
+## rounded character's shirt material.
 ##
 ## N-228.3: the palette has one colour per seat of a full room (>= MAX_PLAYERS),
 ## so slots 5..7 stop repeating 0..2. Checked here: the palette is as big as the
@@ -96,7 +94,8 @@ func _initialize() -> void:
 
 func _suit_color(player: Node) -> Color:
 	var mesh_instance: MeshInstance3D = _find_mesh_instance(player.get_node(^"BodyVisual"))
-	return (mesh_instance.get_surface_override_material(0) as StandardMaterial3D).albedo_color
+	var packed: float = mesh_instance.get_instance_shader_parameter(&"gel_brightness")
+	return PlayerAppearance.unpack_gel_team_color(packed)
 
 
 ## Mirrors Player.PLAYER_COLORS' indexing without importing player.gd's
@@ -107,7 +106,8 @@ func _suit_color_for_peer(peer_id: int) -> Color:
 		Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
 		Color("e8eaf0"), Color("5f7fd0"), Color("4f9a8f"),
 	]
-	return colors[peer_id % colors.size()]
+	var source: Color = colors[peer_id % colors.size()]
+	return PlayerAppearance.unpack_gel_team_color(PlayerAppearance.pack_gel_team_color(1.0, source))
 
 
 ## N-228.3: one distinguishable colour, name and voice per seat.
