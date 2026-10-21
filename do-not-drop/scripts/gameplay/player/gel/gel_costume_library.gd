@@ -16,6 +16,7 @@ static func build_costume(requested_id: StringName) -> Node3D:
 	var root := Node3D.new()
 	root.name = "GelCostume_%s" % costume_id
 	root.add_to_group(&"gel_costume", true)
+	root.add_to_group(&"gel_clothing", true)
 	root.set_meta(&"gel_costume_id", costume_id)
 	root.set_meta(&"gel_costume_signature", definition[&"signature"])
 	root.set_meta(&"gel_hat_rule", definition[&"hat_rule"])
