@@ -123,6 +123,7 @@ lancha"); uno de Suburbio con la barrera cerrada no entra (motivo "barrera: falt
 **Hecho cuando:** el test pasa.
 
 ### D-0310 · Tablero de despacho — A · Opus 5.5 · high · Aviso: sí (`scripts/ui/`) · F1
+**[~] Panel hecho (2026-10-21, PR pendiente)** — `DispatchBoardPanel` (`scripts/ui/dispatch_board_panel.gd`): UI por código sobre datos inyectados (`zone`, `book`, `trips`, `vehicle`, `box_kg`, reglas); filas con marca ✓/○/✗, motivo de `DispatchRules` en las bloqueadas, casilleros y kg del vehículo, "Cargar" por `DispatchZone.load_boxes` -> `stage_cargo`; mando y teclado; cliente con "Cargar" deshabilitado y motivo. `test_company_dispatch_panel`. **Falta D-0310.b** (`constructor-mundo`): la estación `DepotStation` `dispatch` en el galpón (hoy `DispatchZone` no tiene nodo en el mundo, D-0716.b/D-0717.b), el contexto real del panel y la captura de `revisor-visual`. Ver `revisar/D-0310.md`.
 **Depende de:** D-0309, D-0716
 **Qué:** estación `dispatch` (un `DepotStation` con `station_id = &"dispatch"`). Al interactuar abre un
 panel (UI por código, como el resto):
