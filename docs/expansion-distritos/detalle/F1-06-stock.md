@@ -97,6 +97,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Test** `test_shelf_picking`: nombres de estación; el plan topa en 4, completa lo que ya hay en la mano y rechaza manos llenas, ocupadas o estante vacío; rotación de huecos; el galpón resuelve solo huecos etiquetados; de punta a punta, tomar 3 baja el hueco en 3 y sube la mano en 3 sin crear unidades; lejos del estante lo rechaza.
 **Hecho cuando:** tomar 3 unidades baja el stock en 3 (test pasa).
 
+### D-0611 · Stock visible: la etiqueta del hueco muestra la cantidad — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, ya estaba: c52ac048, PR #431; seguimiento en todos los peers con D-0910)** — `CompanyShed._label_slot` dibuja en cada hueco etiquetado el nombre del producto y `×N` debajo, con una caja que se ve solo si hay unidades; `refresh_stock()` reescribe el número (rojizo en cero) y `follow(net)` lo llama en cada `units_moved` y snapshot, en el host y en los clientes. `test_company_default_layout` comprueba el `×N` y que baja al tomar; `tests/render_company_shed.gd` lo captura.
+**Depende de:** D-0608 (`Shelf`), D-0911 (`CompanyShed`)
+**Qué:** cada hueco etiquetado muestra cuántas unidades tiene, y se actualiza al mover stock en cualquier peer.
+**Hecho cuando:** captura con números (render_company_shed) y test.
+
 ### D-0602 · Calendario de entregas de proveedores — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `SupplierSchedule` (`scripts/gameplay/business/supplier_schedule.gd`): lo pedido el día N llega el N + 1; `test_supplier_schedule`.
 **Depende de:** D-0604 (`Pallet.plan`), supuestos (1 camión por día a las 08:30, espera 3 h)
@@ -127,6 +133,15 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - **D-0603.b (partida) — la pantalla.** Hecha la pantalla (b.1): `SupplierOrderPanel` (`scripts/ui/supplier_order_panel.gd`) con una fila por producto del proveedor, + / − con teclado, mouse y mando, total, palets, día de llegada y "Pedir" (`SupplierOrderCart.submit`); `test_company_supplier_panel`. Pendiente b.2: abrirla desde el tablero/portapapeles del galpón, pedir por `CompanyNet` y que el host aplique y replique (D-0619). Pedido original:  lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
 **Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
 **Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).
+
+### D-0612 · Vista de stock en el portapapeles (lista por producto) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — D-0612.a: `StockView` (`scripts/gameplay/business/stock_view.gd`, puro: una fila por producto con unidades en estante, recepción, manos, cajas y otros, más la falta de `StockAlert`) y la pantalla `StockPanel` (`scripts/ui/stock_panel.gd`, datos inyectados, teclado, mouse y mando, marca "⚠ Faltan N" / "⟳ Viene en camino" además del color); `test_company_stock_panel`. Falta D-0612.b. Revisar: [`revisar/D-0612.md`](../revisar/D-0612.md).
+**Depende de:** D-0211 (`Inventory`), D-0613 (`StockAlert`), D-0608 (huecos `shelf:`)
+**Qué:** una lista por producto de cuánto hay y dónde, con el aviso de lo que falta para los pedidos pendientes.
+- [x] **D-0612.a** Modelo y pantalla sin red: `StockView.rows(inventory, shortages)` y `StockPanel.open/refresh(ctx)` con `{inventory, shortages, products}`; solo lee, no manda nada.
+- [ ] **D-0612.b** Abrirla en el mundo: desde el portapapeles (D-0131/D-0413, todavía no existe) o, mientras tanto, desde el tablero del galpón; `refresh` en cada `units_moved` y snapshot de `CompanyNet` (en el cliente sobre su copia del `Inventory`), con `StockAlert.shortages(inventory, book.open_orders(), incoming)` y lo que trae el calendario del proveedor. Captura con `revisor-visual`.
+**Test** `test_company_stock_panel`: reparto por ubicación y totales, orden, un producto sin unidades que falta aparece marcado, cubierto vs. faltante, `refresh` después de mover cambia los números, inventario vacío, foco y `ui_cancel`, claves `UI_STOCK_*` en los dos idiomas.
+**Hecho cuando:** captura con la lista abierta en el galpón (D-0612.b).
 
 ### D-0613 · Aviso de stock bajo para productos con pedidos pendientes — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-21, PR pendiente)** — `StockAlert` (`scripts/gameplay/business/stock_alert.gd`): qué productos faltan para los pedidos pendientes; `test_stock_alert`. El aviso en pantalla (portapapeles, tablero) lo dibuja la UI de stock, D-0612.
