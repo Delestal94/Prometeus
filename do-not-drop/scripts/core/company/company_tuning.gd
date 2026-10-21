@@ -36,6 +36,9 @@ const OPENING_REAL_SECONDS: float = 5.0
 ## a player standing on the shed's door line can't send an event per frame. Shorter than a walk
 ## through the door; long enough that nobody gains by dancing on the line.
 const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
+## Host rules of the company (DayCycle's poll, and what joins it: orders, suppliers, employees) run
+## this many times a real second on BusinessTick (D-0232), not once per frame.
+const BUSINESS_TICK_HZ: float = 4.0
 
 # --- World cells (D-0303) ---
 ## The continuous map is cut in squares of this side, in meters (diseno/mapa.md).

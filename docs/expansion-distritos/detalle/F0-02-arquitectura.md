@@ -282,3 +282,25 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 (D-0144).
 **Hecho cuando:** las carpetas existen, `python tools/check_modules.py` pasa y `file_domain` clasifica un
 archivo de cada carpeta como Nacho.
+
+### D-0232 · Tick de negocio a 4 Hz — B · Opus 5.5 · medium · Aviso: sí (`modules/`, `docs/modulos.md`) · F0 (Ampliación)
+**[x] Hecho (2026-10-21, PR #PRNUM)** — módulo `modules/fixed_tick/` (`FixedTick`) + adaptador `scripts/core/company/business_tick.gd` (`BusinessTick`, solo en el host); `DayCycle.poll` es su primer paso y el `_process` propio del ciclo queda apagado en el mundo Empresa.
+**Depende de:** D-0203, D-0214
+**Qué:** las reglas del host que solo necesitan mirar el mundo unas veces por segundo (fases del día,
+y después pedidos, proveedor, empleados, máquinas) corren en un tick fijo, aparte de la física y del
+frame dibujado.
+- **Módulo `fixed_tick`** (`FixedTick`, puro, sin nodos): pasos con nombre que corren en el orden en que
+  se agregaron; `advance(delta)` acumula y corre un tick por período entero; tras un tirón corre a lo
+  sumo `max_catch_up` (4) ticks y tira el resto (`dropped_ticks`); un paso cuyo objeto se liberó se cae;
+  `last_run_usec` mide lo que costó el último tick, para el perfilador.
+- **Adaptador `BusinessTick`** (nodo, hijo de `CompanyRoot`, solo en el host): ritmo
+  `CompanyTuning.BUSINESS_TICK_HZ = 4.0`. Los pasos son reglas del host que publican por `CompanyNet`;
+  un cliente cambia solo por los eventos del host.
+- `DayCycle` conserva su `_process` (cada `POLL_SECONDS` = 0,25 s) para cuando nadie lo maneja (tests,
+  sin mundo); `CompanyRoot` lo apaga en todos los peers y en el host lo suma como paso `day_cycle`.
+**Test** `modules/fixed_tick/tests/test_fixed_tick.gd`: a 4 Hz, 10 s a 60, 144 y 20 fps corren 40 ticks
+(±1); orden de los pasos, nombres repetidos y Callables inválidos rechazados, paso de objeto liberado
+descartado; un frame de 3 s corre el tope y descarta el resto; deltas negativos, NaN e infinitos no corren
+nada; 10 000 frames cuestan menos de 100 µs por frame en promedio. `test_company_world_boot`: el host
+tiene `BusinessTick` con el paso `day_cycle` y el `_process` del `DayCycle` apagado.
+**Hecho cuando:** los dos tests pasan y `check_modules` / `portability-check` están verdes.
