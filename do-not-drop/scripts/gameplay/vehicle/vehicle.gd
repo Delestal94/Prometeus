@@ -15,6 +15,7 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## the editor imports again, and headless runs load this script first.
 const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
 const FleetSeats = preload("res://scripts/gameplay/fleet/fleet_seats.gd")
+const FleetMotion = preload("res://scripts/gameplay/fleet/fleet_motion.gd")
 
 ## Which peer currently holds the wheel, synced to everyone so each client's
 ## VehicleInputComponent knows whether it's the one that should be reading
@@ -256,6 +257,8 @@ const SHELL_LAYER: int = FleetCargo.SHELL_LAYER
 ## shared with the other vehicles of the fleet, see scripts/gameplay/fleet/.
 var fleet_cargo: FleetCargo
 var fleet_seats: FleetSeats
+## How this van moves, as the cargo reads it (D-0209): heading, ground contact, what the boxes feel.
+var fleet_motion: FleetMotion
 
 ## The manual gearbox (N-114): always in the scene, only used by a manual variant.
 @onready var gearbox: VehicleGearbox = $Gearbox
@@ -265,6 +268,8 @@ var _horn_player: AudioStreamPlayer3D
 func _init() -> void:
 	fleet_cargo = FleetCargo.new(self)
 	fleet_seats = FleetSeats.new(self)
+	fleet_motion = FleetMotion.new(self)
+	fleet_motion.ground_probe = _wheels_on_ground
 
 
 func _ready() -> void:
@@ -326,6 +331,38 @@ func point_velocity(world_point: Vector3) -> Vector3:
 ## this tick (FleetCargo.needs_sweep).
 func needs_sweep(body: RigidBody3D, margin: float = 0.0) -> bool:
 	return fleet_cargo.needs_sweep(body, margin)
+
+
+## The movement interface (FleetMotion, D-0209); `speed_kmh` above is its speed.
+func motion_forward() -> Vector3:
+	return fleet_motion.forward()
+
+
+func motion_right() -> Vector3:
+	return fleet_motion.right()
+
+
+func motion_to_local(direction: Vector3) -> Vector3:
+	return fleet_motion.to_local(direction)
+
+
+## 0..1, 1 = all wheels on the road. A frozen copy (a client's, or parked) rests on it.
+func ground_contact() -> float:
+	return fleet_motion.ground_contact()
+
+
+## What the boxes feel, in the van's space (smoothed; sampled each physics tick).
+func cargo_acceleration() -> Vector3:
+	return fleet_motion.cargo_acceleration()
+
+
+func _wheels_on_ground() -> float:
+	if freeze or _wheels.is_empty():
+		return 1.0
+	var touching: int = 0
+	for wheel: VehicleWheel3D in _wheels:
+		touching += 1 if wheel.is_in_contact() else 0
+	return float(touching) / _wheels.size()
 
 
 func is_door_open(door: StringName) -> bool:
@@ -656,6 +693,7 @@ func _pose_remote_wheels(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	fleet_motion.sample(delta)
 	if not is_multiplayer_authority():
 		# The client at the wheel (N-218): sends its input, and while the host's
 		# truck is simulated too, predicts its own copy with it.
