@@ -99,6 +99,10 @@ section[data-view] { display: grid; gap: 36px; grid-template-columns: minmax(0, 
 .hero { display: grid; gap: 22px; }
 .hero .sum { font-size: 17px; max-width: 72ch; color: var(--muted); }
 .hero .sum b { color: var(--ink); font-weight: 600; }
+.dx-chart { display: flex; align-items: flex-end; gap: 4px; height: 140px; padding-top: 18px; }
+.dx-chart div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; text-align: center; font: 500 10.5px var(--f-mono); color: var(--muted); height: 100%; }
+.dx-chart i { display: block; background: var(--live); border-radius: 4px 4px 0 0; min-height: 2px; }
+.dx-chart b { color: var(--ink); font-weight: 500; }
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .tile { text-align: left; cursor: pointer; padding: 16px 18px; display: grid; gap: 6px; align-content: start; border: 1px solid var(--line); transition: transform .15s, border-color .15s; }
 .tile:hover { transform: translateY(-2px); border-color: var(--muted); }
@@ -338,7 +342,7 @@ footer { color: var(--muted); font-size: 12px; display: flex; gap: 16px; flex-wr
   <div class="bar-in">
     <a class="brand" href="#inicio"><div class="brand-mark" aria-hidden="true"></div><div><b>Take My Package</b><span>sala de control</span></div></a>
     <nav aria-label="Vistas">
-      <a href="#inicio">Inicio</a><a href="#flujo">Cómo trabajan</a><a href="#rutinas">Horarios</a><a href="#agentes">El equipo</a><a href="#actividad">Actividad</a>
+      <a href="#inicio">Inicio</a><a href="#distritos">Distritos</a><a href="#flujo">Cómo trabajan</a><a href="#rutinas">Horarios</a><a href="#agentes">El equipo</a><a href="#actividad">Actividad</a>
     </nav>
     <div class="tools">
       <span class="livepill" title="Cada cuánto se actualiza: botón de la llave"><span id="live-dot" class="dot"></span><span id="live-txt">conectando…</span></span>
@@ -439,6 +443,23 @@ footer { color: var(--muted); font-size: 12px; display: flex; gap: 16px; flex-wr
         <li><span class="n"><svg class="ic sm"><use href="#i-gate"/></svg></span><b>Espera el CI</b><span>El vigilante lo sigue hasta que dé verde.</span></li>
         <li><span class="n"><svg class="ic sm"><use href="#i-play"/></svg></span><b>Entra al juego</b><span>Se mezcla solo en main.</span></li>
       </ol>
+    </div>
+  </section>
+
+  <!-- DISTRITOS -->
+  <section data-view="distritos" hidden>
+    <div class="block">
+      <h1>Distritos <button class="q" data-term="expansion" type="button" aria-label="Qué es">?</button></h1>
+      <p class="muted" style="font-size:16px;max-width:72ch">Cuánto falta para terminar la expansión: tareas D- hechas, a qué ritmo entran y para cuándo estaría todo si se sigue así. Las tareas tachadas al recortar el alcance no cuentan.</p>
+    </div>
+    <div class="tiles" id="dx-tiles"></div>
+    <div class="two">
+      <div class="card"><div class="panel-h"><h3>Por área</h3></div><ul class="rows" id="dx-groups"></ul></div>
+      <div style="display:grid;gap:16px">
+        <div class="card"><div class="panel-h"><h3>Tareas cerradas por día</h3></div><div class="dx-chart" id="dx-chart"></div></div>
+        <div class="card"><div class="panel-h"><h3>En camino</h3></div><ul class="rows flat" id="dx-open"></ul></div>
+        <div class="card"><div class="panel-h"><h3>Lo último que entró</h3></div><ul class="rows flat" id="dx-last"></ul></div>
+      </div>
     </div>
   </section>
 
@@ -769,7 +790,7 @@ function render() {
   attribute();
   const act = activeAgents();
   renderHero(act); renderDecide(); renderBelt(); renderAtt(); renderPillars(act);
-  renderFlow(); renderTimeline(); renderAgents(act); renderActivity();
+  renderFlow(); renderTimeline(); renderAgents(act); renderActivity(); renderDistricts();
   if (openKind === "pillar") renderPillarDrawer(openKey, act);
 }
 
@@ -855,7 +876,7 @@ function renderAtt() {
 }
 
 function pillarStats(key, act) {
-  const n = S.data.tasks.filter((t) => t.pillar === key), d = (S.data.expansion.tasks || []).filter((t) => t.pillar === key);
+  const n = S.data.tasks.filter((t) => t.pillar === key), d = (S.data.expansion.tasks || []).filter((t) => t.pillar === key && t.status !== "fusionada");
   const cnt = (arr, s) => arr.filter((t) => t.status === s).length;
   const ofPillar = (p) => taskOf(p.head.ref)?.pillar === key;
   const agents = S.data.agents.filter((a) => a.pillar === key).map((a) => a.name);
@@ -1088,6 +1109,46 @@ function renderActivity() {
     return `<li><span class="id">${hhmm(new Date(r.created_at))}</span><span><a href="${esc(r.html_url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(r.display_title)}</a><small>${esc(who)}</small></span><span class="chip ${cls}">${lbl}</span></li>`;
   }).join("") || `<li><span></span><span class="muted">Sin datos todavía.</span><span></span></li>`;
   $("#notes").innerHTML = (S.data.notes || []).slice(0, 6).map((n) => `<li><span class="id">${esc(n.date.slice(8))}/${esc(n.date.slice(5, 7))}</span><span><a href="${GH}/blob/main/docs/avisos/${esc(n.file)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(n.title)}</a></span><span></span></li>`).join("");
+}
+
+// ---------- distritos ----------
+const D_RE = /\bD-\d{4}\b/g, PARTIAL_RE = /\bpartial\b|\bparcial\b/i;
+const GROUP_PC = { "01": "diseno", "02": "produccion", "03": "mundo", "04": "sistemas", "05": "sistemas", "06": "sistemas", "07": "sistemas", "08": "sistemas", "09": "mundo", "10": "sistemas", "11": "sistemas", "12": "mundo", "13": "mundo", "14": "mundo", "15": "mundo", "16": "mundo", "17": "mundo", "18": "arte", "19": "ui", "20": "calidad" };
+function districtDone() { // historial del repo + PRs fusionados después de armar data.json
+  const gen = new Date(S.data.generated), seen = new Set(), out = [];
+  const add = (t, id, title) => { if (!seen.has(id)) { seen.add(id); out.push({ t: new Date(t), id, title }); } };
+  for (const p of S.pulls) if (p.merged_at && new Date(p.merged_at) > gen && !PARTIAL_RE.test(p.title)) for (const id of p.title.match(D_RE) || []) add(p.merged_at, id, p.title);
+  for (const h of S.data.expansion.history || []) add(h.t, h.id, "");
+  return out.sort((a, b) => b.t - a.t);
+}
+function renderDistricts() {
+  const groups = S.data.expansion.groups || []; if (!groups.length) return;
+  const hist = districtDone(), now = Date.now(), gen = new Date(S.data.generated);
+  const total = groups.reduce((a, g) => a + g.total, 0), merged = groups.reduce((a, g) => a + (g.merged || 0), 0);
+  const fresh = hist.filter((h) => h.t > gen && IDX.tasks.get(h.id)?.status !== "hecha").length;
+  const done = Math.min(total, groups.reduce((a, g) => a + g.done, 0) + fresh), left = total - done;
+  const since = (h) => hist.filter((x) => now - x.t < h * 36e5).length;
+  const d6 = since(6), d24 = since(24), d7 = since(168); // ritmo por hora: la ventana más corta con datos suficientes
+  const [rate, win] = d6 >= 4 ? [d6 / 6, "últimas 6 h"] : d24 >= 6 ? [d24 / 24, "últimas 24 h"] : [d7 / 168, "últimos 7 días"];
+  const days = rate > 0 ? left / rate / 24 : 0, eta = rate > 0 ? new Date(now + days * 864e5) : null;
+  const pct = total ? Math.round((100 * done) / total) : 0;
+  const tile = (ic, n, l, sub, c = "var(--ink)") => `<div class="card tile" style="cursor:default"><div class="top"><span class="bub" style="background:var(--sunk)">${icon(ic)}</span></div><div class="n" style="color:${c}">${n}</div><div class="l">${l}</div><div class="s">${sub}</div></div>`;
+  $("#dx-tiles").innerHTML =
+    tile("i-list", pct + "%", done + " de " + total + " hechas", "Faltan " + left + ". " + merged + " se recortaron del alcance.", "var(--live)") +
+    tile("i-pulse", d24, "en las últimas 24 h", rate ? "≈ " + (rate * 24).toFixed(0) + " por día al ritmo de las " + win : "sin ritmo todavía") +
+    tile("i-clock", d7, "en los últimos 7 días", "≈ " + (d7 / 7).toFixed(1) + " por día") +
+    tile("i-play", eta ? (days < 1 ? "<1 día" : Math.ceil(days) + " días") : "—", "para terminar si se sigue así",
+      eta ? "≈ " + eta.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" }) + ". Lo que falta es más pesado (vehículos, distritos, arte): tomalo como piso." : "Hace falta ritmo para estimar.");
+  $("#dx-groups").innerHTML = [...groups].sort((a, b) => a.n.localeCompare(b.n)).map((g) => {
+    const c = PC[GROUP_PC[g.n]] || "var(--live)", name = g.title.replace(/^Grupo \d+\s*\S\s*/, "");
+    return `<li><span class="id">${g.n}</span><span>${esc(name)}<div style="margin-top:6px">${track(g.done, g.total, c)}</div></span><span class="id">${g.done}/${g.total}</span></li>`;
+  }).join("");
+  const cal = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); cal.push(d); }
+  const per = cal.map((d) => hist.filter((h) => h.t >= d && h.t < new Date(+d + 864e5)).length), mx = Math.max(1, ...per);
+  $("#dx-chart").innerHTML = cal.map((d, i) => `<div title="${d.toLocaleDateString("es-AR")}: ${per[i]}"><b>${per[i] || ""}</b><i style="height:${Math.round((96 * per[i]) / mx)}px"></i>${d.getDate()}</div>`).join("");
+  const open = S.pulls.filter((p) => p.state === "open" && /\bD-\d{4}\b/.test(p.title));
+  $("#dx-open").innerHTML = open.map((p) => { const st = prState(p); return `<li><span class="id">#${p.number}</span><span><a href="${esc(p.html_url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(p.title)}</a><small>${ago(p.created_at)}</small></span><span class="chip ${st.cls}">${st.label}</span></li>`; }).join("") || `<li><span></span><span class="muted">Nada en camino ahora.</span><span></span></li>`;
+  $("#dx-last").innerHTML = hist.slice(0, 10).map((h) => `<li><span class="id">${esc(h.id)}</span><span>${esc(IDX.tasks.get(h.id)?.title || h.title.replace(/^\w+:\s*/, ""))}<small>${ago(h.t)}</small></span><span></span></li>`).join("") || `<li><span></span><span class="muted">Sin datos todavía.</span><span></span></li>`;
 }
 
 // ---------- vistas, tema, token, ayuda ----------

@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ROUTINES = {
     "Desarrollador 1-5": {"kind": "nube", "lanes": True},
     "Construcción A": {"kind": "nube", "cron": "7 * * * *", "branch": r"^nacho/"},
-    "Construcción B": {"kind": "nube", "cron": "37 * * * *", "branch": r"^nacho/S-", "paused": True},
+    "Construcción B": {"kind": "nube", "cron": "37 * * * *", "branch": r"^nacho/S-"},
     "QA (juego actual)": {"kind": "nube", "cron": "0 12 * * *", "branch": r"^rutina/qa-\d"},
     "QA expansión A y B": {"kind": "nube", "cron": "0 4,16 * * *", "branch": r"^rutina/qa-exp-"},
     "Auditoría integral": {"kind": "nube", "cron": "0 10 */2 * *", "branch": r"^rutina/auditoria-"},
@@ -34,8 +34,9 @@ ROUTINES = {
     "Sesión de arte (PC)": {"kind": "pc", "cron": "30 1,3,5,7,9,11,13,15,17,19,21,23 * * *", "branch": r"^arte/"},
     "Build y rendimiento (PC)": {"kind": "pc", "cron": "15 6 * * *", "branch": r"^rutina/pc-"},
 }
-# Carriles 1 y 5 (Opus) cada 3 h; 2, 3 y 4 cada 2 h, alternados (2026-10-04: repartir el cupo semanal).
-LANE_CRONS = ["2 */3 * * *", "14 */2 * * *", "26 1-23/2 * * *", "38 */2 * * *", "50 1-23/3 * * *"]
+# Cada carril cada 30 min desde 2026-10-21: dos triggers por carril (el mínimo de la API es 1 h), el
+# segundo corrido media hora.
+LANE_CRONS = ["2,32 * * * *", "14,44 * * * *", "26,56 * * * *", "8,38 * * * *", "20,50 * * * *"]
 
 # Pilares del desarrollo: el home del panel. Cada agente pertenece a uno; una tarea, al pilar de su
 # primer agente (o por palabras del título si no nombra ninguno).
@@ -256,21 +257,45 @@ def build_expansion():
         text = f.read_text(encoding="utf-8")
         title = re.search(r"^# (.*)", text, re.M)
         ids = []
-        for cells in (r.split("|")[1:-1] for r in re.findall(r"^\| D-\d{4} \|.*\|$", text, re.M)):
+        # La fila puede venir como "D-0209 | ✅ …", "✅ D-0701 | …" o "~~D-0128~~ | …" (fusionada).
+        for cells in (r.split("|")[1:-1] for r in re.findall(r"^\| (?:✅ )?(?:~~)?D-\d{4}(?:~~)? \|.*\|$", text, re.M)):
             cells = [c.strip() for c in cells]
-            tid, name, agent = cells[0], plain(cells[1]), plain(cells[2]) if len(cells) > 2 else ""
+            tid = re.search(r"D-\d{4}", cells[0]).group(0)
+            name, agent = plain(cells[1]).lstrip("✅ "), plain(cells[2]) if len(cells) > 2 else ""
             st = status.get(tid, "abierta")
+            if cells[0].startswith("~~"):
+                st = "fusionada"  # recortada al achicar el alcance (D-0112): no cuenta para el total
+            elif "✅" in cells[0] or cells[1].startswith("✅"):
+                st = "hecha"
             ids.append(st)
             tasks.append({"id": tid, "title": titles.get(tid, name)[:140], "group": f.name[:2], "status": st,
                           "agent": agent.rstrip("*"), "pillar": pillar_for([agent], name, f.name[:2])})
         groups.append({
-            "n": f.name[:2], "title": plain(title.group(1)) if title else f.stem, "total": len(ids),
+            "n": f.name[:2], "title": plain(title.group(1)) if title else f.stem,
+            "total": len(ids) - ids.count("fusionada"), "merged": ids.count("fusionada"),
             "done": ids.count("hecha"), "paused": ids.count("decide") + ids.count("pausada"),
             "blocked": ids.count("bloqueada"),
         })
     bugs = [p.stem for p in (base / "bugs").glob("*.md") if p.name.lower() != "readme.md"] if (base / "bugs").exists() else []
     art = [p.stem for p in (base / "arte-pendiente").glob("*.md") if p.name.lower() != "readme.md"] if (base / "arte-pendiente").exists() else []
-    return {"groups": groups, "tasks": tasks, "bugs": bugs, "artPending": art}
+    return {"groups": groups, "tasks": tasks, "bugs": bugs, "artPending": art, "history": build_history()}
+
+
+def build_history():
+    """Commits de main que cerraron una tarea D- (los "(partial)" no cuentan), para el ritmo y la estimación."""
+    try:
+        log = subprocess.run(["git", "log", "--since=21 days ago", "--format=%cI%x09%s", "HEAD"], cwd=ROOT,
+                             capture_output=True, text=True, encoding="utf-8", check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    out = []
+    for line in log.splitlines():
+        when, _, subject = line.partition("\t")
+        if re.search(r"\bpartial\b|\bparcial\b", subject, re.I):
+            continue
+        for tid in dict.fromkeys(re.findall(r"\bD-\d{4}\b", subject)):
+            out.append({"t": when, "id": tid})
+    return out
 
 
 def build_notes():
