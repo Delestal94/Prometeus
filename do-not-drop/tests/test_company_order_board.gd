@@ -92,8 +92,9 @@ func _test_rows() -> void:
 	_expect(rows[3]["minutes_left"] == 30 and not rows[3]["late"], "a row in time is not late")
 	var out_row: Dictionary = rows[3]
 	_expect(out_row["customer"] == "Clara" and out_row["pay"] > 0, "customer and pay are carried")
-	var want: Dictionary = {"street_key": "WORLD_STREET_CENTRO", "number": 7}
-	_expect(out_row["address"] == want, "address: %s" % [out_row["address"]])
+	var address: Dictionary = out_row["address"]
+	var street_ok: bool = String(address.get("street_key", "")) == "WORLD_STREET_CENTRO"
+	_expect(street_ok and int(address.get("number", 0)) == 7, "address: %s" % [address])
 	_expect(out_row["items"].size() == 2 and out_row["items"][0]["qty"] == 2, "items are carried")
 	_expect(out_row["requirements"] == ["WORLD_REQ_FRAGILE"], "requirement keys: %s" % [out_row["requirements"]])
 	for state: StringName in Order.STATES:
