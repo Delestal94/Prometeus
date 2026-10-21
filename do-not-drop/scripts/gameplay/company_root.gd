@@ -267,10 +267,15 @@ func _add_summary_panel() -> void:
 	summary_panel.name = "DaySummaryPanel"
 	layer.add_child(summary_panel)
 	summary_panel.continued.connect(_on_summary_continued)
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _event_bus()
 	if bus != null:
 		bus.connect(&"company_day_summary", _on_day_summary)
 		bus.connect(&"company_day_started", _on_day_started)
+
+
+## The EventBus autoload by path (the single lookup of this script; N-919).
+func _event_bus() -> Node:
+	return get_node_or_null(^"/root/EventBus")
 
 
 func _on_day_summary(_day: int, summary: Dictionary) -> void:
@@ -363,7 +368,7 @@ func host_day_seen() -> Dictionary:
 ## host's company behind: its CompanyState goes back to what it had before the snapshot
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _event_bus()
 	if bus != null and bus.is_connected(&"company_day_summary", _on_day_summary):
 		bus.disconnect(&"company_day_summary", _on_day_summary)
 	if bus != null and bus.is_connected(&"company_day_started", _on_day_started):
