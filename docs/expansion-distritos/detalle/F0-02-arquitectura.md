@@ -283,6 +283,23 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 **Hecho cuando:** las carpetas existen, `python tools/check_modules.py` pasa y `file_domain` clasifica un
 archivo de cada carpeta como Nacho.
 
+### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**Depende de:** D-0206
+**Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
+es de la UI del menú (Jugar → Empresa) y no entra acá.
+- `list_slots(dir)`: una entrada por slot de `user://saves/company/` con `slot`, `name` (el `company_name`,
+  o el slot si está vacío), `day`, `money`, `saved_at`, `interrupted` y `version`, del último jugado al
+  primero. Lee sin mover archivos: cuenta un slot que solo tiene `.bak` (escritura cortada) y deja afuera
+  `.tmp`, `.bad` y JSON que no son saves. Un save de un build más nuevo aparece con su `version` para que la
+  UI lo muestre deshabilitado.
+- `delete(slot, dir)`: borra el `.json` del slot y sus `.bak`, `.tmp` y `.bad`.
+- `new_slot_id(dir)`: `company` si está libre, si no `company_2`, `company_3`…
+**Test** `test_company_slots`: crea 3 slots con nombre, día y plata distintos, los lista en orden de
+`saved_at`, borra uno (con su `.bak`) y después los otros; `.bak` solo cuenta, `.tmp`/`.bad`/no-save no;
+`new_slot_id` y carpeta inexistente.
+**Hecho cuando:** el test pasa.
+
 ### D-0236 · Guardado automático al cerrar el día y al salir — B · Opus 5.5 · medium · Aviso: no · F0
 **[x] Hecho (2026-10-21, PR pendiente)** — `CompanyRoot.save_closed_day()`: el host guarda el slot en cuanto se aplica el SUMMARY, como la apertura del día siguiente (día + 1 a las 08:00, sin `interrupted`, stock con las manos en el piso); al salir durante el resumen guarda eso mismo en vez del día interrumpido; a mitad de día sigue el guardado interrumpido de D-2005; `test_company_autosave`.
 **Depende de:** D-0203, D-0206, D-2005
