@@ -22,17 +22,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LABEL = "rutina-caida"
 TITLE = "Rutina caída (latido): "
-# name, branch regex, max hours without a PR, levels (budget) where the routine still runs.
+# name, branch prefix, max hours without a PR, levels (budget) where the routine still runs.
 # Same shape as the table of auditoria.md section 1.5; QA has no alarm (no findings = no PR).
 RULES = [
-    ("Construcción", r"^nacho/", 24, {"normal", "ahorro", "minimo"}),
-    ("Desarrollador", r"^exp/D-", 24, {"normal", "ahorro"}),
-    ("Build de la PC", r"^rutina/pc-", 36, {"normal", "ahorro", "minimo"}),
-    ("Sesión de arte", r"^arte/", 48, {"normal", "ahorro"}),
-    ("Revisión", r"^rutina/revision-", 8 * 24, {"normal", "ahorro"}),
-    ("Mantenimiento", r"^rutina/mant-", 8 * 24, {"normal", "ahorro"}),
-    ("Lanzamiento", r"^rutina/lanzamiento-", 32 * 24, {"normal", "ahorro"}),
+    ("Construcción", "nacho/", 24, {"normal", "ahorro", "minimo"}),
+    ("Desarrollador", "exp/D-", 24, {"normal", "ahorro"}),
+    ("Build de la PC", "rutina/pc-", 36, {"normal", "ahorro", "minimo"}),
+    ("Sesión de arte", "arte/", 48, {"normal", "ahorro"}),
+    ("Revisión", "rutina/revision-", 8 * 24, {"normal", "ahorro"}),
+    ("Mantenimiento", "rutina/mant-", 8 * 24, {"normal", "ahorro"}),
+    ("Lanzamiento", "rutina/lanzamiento-", 32 * 24, {"normal", "ahorro"}),
 ]
+# PRs read per rule. Each rule asks GitHub for its own prefix (`head:` matches by prefix), so a
+# monthly routine stays visible however many developer PRs came after it: one `--limit 200` list of
+# every PR only reached back 16 days on 2026-10-21 and Lanzamiento alarmed at 20 days of 32 (N-974.4).
+PER_RULE = 20
 
 
 def budget_level(text):
@@ -45,18 +49,27 @@ def budget_level(text):
 def evaluate(prs, now, level):
     """Alarms as {name: message}; `prs` is `gh pr list --json headRefName,createdAt`."""
     alarms = {}
-    for name, pattern, max_hours, levels in RULES:
+    for name, prefix, max_hours, levels in RULES:
         if level not in levels:
             continue
         times = [dt.datetime.fromisoformat(p["createdAt"].replace("Z", "+00:00"))
-                 for p in prs if re.search(pattern, p["headRefName"])]
+                 for p in prs if p["headRefName"].startswith(prefix)]
         if not times:
-            alarms[name] = f"ningún PR `{pattern}` entre los últimos {len(prs)} PRs (máximo {max_hours} h)"
+            alarms[name] = f"ningún PR de una rama `{prefix}*` (máximo {max_hours} h)"
             continue
         age = (now - max(times)).total_seconds() / 3600
         if age > max_hours:
-            alarms[name] = f"último PR `{pattern}` hace {age:.0f} h (máximo {max_hours} h)"
+            alarms[name] = f"último PR `{prefix}*` hace {age:.0f} h (máximo {max_hours} h)"
     return alarms
+
+
+def fetch_prs(repo):
+    """The newest PRs of every rule's prefix, newest first per rule (see PER_RULE)."""
+    prs = []
+    for _name, prefix, _hours, _levels in RULES:
+        prs += json.loads(gh("pr", "list", *repo, "--state", "all", "--search", f"head:{prefix} sort:created-desc",
+                             "--limit", str(PER_RULE), "--json", "headRefName,createdAt"))
+    return prs
 
 
 def gh(*args):
@@ -75,9 +88,7 @@ def main():
 
     path = ROOT / ".claude/rutinas/PRESUPUESTO"
     level = budget_level(path.read_text(encoding="utf-8") if path.exists() else "")
-    prs = json.loads(gh("pr", "list", *repo, "--state", "all", "--limit", "200",
-                        "--json", "headRefName,createdAt"))
-    alarms = evaluate(prs, dt.datetime.now(dt.timezone.utc), level)
+    alarms = evaluate(fetch_prs(repo), dt.datetime.now(dt.timezone.utc), level)
     issues = json.loads(gh("issue", "list", *repo, "--label", LABEL, "--state", "open",
                            "--limit", "100", "--json", "number,title"))
     open_by_title = {i["title"]: i["number"] for i in issues if i["title"].startswith(TITLE)}
