@@ -51,15 +51,21 @@ static func plan(graph: RoadGraph, edge_id: StringName) -> Array[Dictionary]:
 static func build(graph: RoadGraph, edge_id: StringName, parent: Node3D) -> Array[RouteSegment]:
 	var built: Array[RouteSegment] = []
 	for piece: Dictionary in plan(graph, edge_id):
-		var segment: RouteSegment = (RoadGraph.SEGMENT_SCRIPTS[piece.kind] as GDScript).new() as RouteSegment
-		segment.length = piece.length
-		if segment is CurveSegment:
-			(segment as CurveSegment).turn_deg = piece.turn_deg
-		var ground: Vector2 = piece.position
-		segment.transform = Transform3D(Basis(Vector3.UP, piece.yaw), Vector3(ground.x, 0.0, ground.y))
+		var segment: RouteSegment = build_piece(piece)
 		parent.add_child(segment)
 		built.append(segment)
 	return built
+
+
+## One piece of a plan() as a RouteSegment, placed in world space, not yet in the tree.
+static func build_piece(piece: Dictionary) -> RouteSegment:
+	var segment: RouteSegment = (RoadGraph.SEGMENT_SCRIPTS[piece.kind] as GDScript).new() as RouteSegment
+	segment.length = piece.length
+	if segment is CurveSegment:
+		(segment as CurveSegment).turn_deg = piece.turn_deg
+	var ground: Vector2 = piece.position
+	segment.transform = Transform3D(Basis(Vector3.UP, piece.yaw), Vector3(ground.x, 0.0, ground.y))
+	return segment
 
 
 ## "kind:length" for every piece, comma separated: the street's golden, which

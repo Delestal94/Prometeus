@@ -62,6 +62,15 @@ func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_S
 	return count
 
 
+## Fills the cells with the graph's streets (EdgeCellContent, D-0304.1) and pins
+## the main streets. Returns the content, for tests and for callers that want it.
+func use_graph(graph: RoadGraph) -> EdgeCellContent:
+	var content := EdgeCellContent.new(graph, grid.cell_size)
+	content_for = content.build_cell
+	pin_streets(graph)
+	return content
+
+
 func _build_cell(cell: Vector2i) -> Node3D:
 	if content_for.is_valid():
 		return content_for.call(cell) as Node3D
