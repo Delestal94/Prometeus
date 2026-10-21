@@ -40,6 +40,9 @@ const TELEPORT_M: float = 100.0
 ## long and this many frames later (a loaded runner draws few frames a second).
 const IN_FLIGHT_SEC: float = 0.3
 const IN_FLIGHT_FRAMES: int = 10
+## Frames the shed client's counter must stay unchanged before the far window starts: a packet
+## the host sent just before hiding can arrive late on a loaded runner, and it is not a leak.
+const QUIET_FRAMES: int = 30
 const SAME_M: float = 0.05
 const SETTLE_SECONDS: float = 3.0
 const FAR_DWELL_SECONDS: float = 1.0
@@ -253,15 +256,29 @@ func _watch_flips() -> void:
 			flip["hidden_at"] = now
 			flip["hidden_frame"] = Engine.get_process_frames()
 			flip["hidden_z"] = body_z
+		var frame: int = Engine.get_process_frames()
+		var shed_count: int = int(_received[2][name_key])
+		if shed_count != int(flip.get("last_count", -1)):
+			flip["last_count"] = shed_count
+			flip["last_change_frame"] = frame
 		if flip.has("hidden_at") and not flip.has("start") and now - float(flip["hidden_at"]) >= IN_FLIGHT_SEC \
-				and Engine.get_process_frames() - int(flip["hidden_frame"]) >= IN_FLIGHT_FRAMES:
+				and frame - int(flip["hidden_frame"]) >= IN_FLIGHT_FRAMES \
+				and frame - int(flip["last_change_frame"]) >= QUIET_FRAMES:
 			flip["start"] = [int(_received[2][name_key]), int(_received[1][name_key])]
 			flip["shed_copy"] = _node(2, name_key).position
+		if not to_shed and flip.has("start") and not flip.has("end"):
+			# Still hidden from the shed client by the host: nothing may reach or move its copy. Judged
+			# here, while the host still hides it, so an update that lands after the host re-shows it
+			# (seen a tick late on a loaded runner) is not taken for a leak.
+			if shed_count != int((flip["start"] as Array)[0]):
+				flip["leaked_update"] = true
+			if not (_node(2, name_key).position as Vector3).is_equal_approx(flip["shed_copy"]):
+				flip["copy_moved"] = true
+			if _node(2, name_key).visible:
+				flip["copy_shown"] = true
 		if to_shed and flip.has("start") and not flip.has("end"):
 			flip["shown_z"] = body_z
 			flip["end"] = [int(_received[2][name_key]), int(_received[1][name_key])]
-			flip["shed_copy_end"] = _node(2, name_key).position
-			flip["shed_shown"] = _node(2, name_key).visible
 
 
 func _check_window() -> void:
@@ -281,13 +298,13 @@ func _check_window() -> void:
 			% [name_key, flip["shown_z"], load_edge])
 		var start: Array = flip["start"]
 		var end: Array = flip["end"]
-		_expect(int(end[0]) == int(start[0]),
-			"While far, the shed client receives no update of the %s (%d -> %d)" % [name_key, start[0], end[0]])
+		_expect(not flip.has("leaked_update"),
+			"While far, the shed client receives no update of the %s (from %d)" % [name_key, start[0]])
 		_expect(int(end[1]) > int(start[1]) + 30,
 			"While far, the rider keeps receiving the %s (%d -> %d)" % [name_key, start[1], end[1]])
-		_expect((flip["shed_copy"] as Vector3).is_equal_approx(flip["shed_copy_end"]),
+		_expect(not flip.has("copy_moved"),
 			"The shed client's copy of the %s stands still while far" % name_key)
-		_expect(not bool(flip["shed_shown"]),
+		_expect(not flip.has("copy_shown"),
 			"The shed client hides its stale copy of the %s (and takes it out of physics)" % name_key)
 		_expect(int(_received[2][name_key]) > int(end[0]),
 			"Back near, the shed client receives the %s again (%d -> %d)" % [name_key, end[0], _received[2][name_key]])
