@@ -262,6 +262,14 @@ func request(kind: StringName, data: Dictionary = {}) -> int:
 	return _next_rid
 
 
+## Host: a request for `peer` from code that runs on the host (D-0609); same checks, refusals carry rid 0.
+func request_for(peer: int, kind: StringName, data: Dictionary = {}) -> bool:
+	if not is_host() or not (peer == multiplayer.get_unique_id() or multiplayer.get_peers().has(peer)):
+		return false
+	_take_request(peer, kind, data.merged({"rid": 0}, true))
+	return true
+
+
 ## Host: an event no request led to, decided by the host's own rules (the clock's pace, D-0219;
 ## the day's phases, D-0203; later the day's orders). It takes the same path as one a request led
 ## to: applied here first, numbered, sent to every ready peer, then event_applied. False, with
