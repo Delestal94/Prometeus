@@ -284,6 +284,7 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 archivo de cada carpeta como Nacho.
 
 ### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
 **Depende de:** D-0206
 **Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
 es de la UI del menú (Jugar → Empresa) y no entra acá.
