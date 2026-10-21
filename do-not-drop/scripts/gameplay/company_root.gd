@@ -121,6 +121,9 @@ var _saw_host_day: bool = false
 var _host_gone: bool = false
 ## The session (the NetworkManager autoload, by path: N-919), or null where there is none.
 var _session: NetSession
+## The EventBus autoload, by path (this script compiles before the autoloads exist in a --script
+## test), or null where there is none: the day's opening reads from it and the notice goes to it.
+var _bus: Node
 ## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
 var _presence_shown: Array = []
 
@@ -221,6 +224,9 @@ func _start_company(state: COMPANY_STATE) -> void:
 	_session = get_node_or_null(^"/root/NetworkManager") as NetSession
 	_add_net(state)
 	net.event_applied.connect(_on_event_applied)
+	_bus = get_node_or_null(^"/root/EventBus")
+	if _bus != null:
+		_bus.connect(&"company_day_started", _on_company_day_started)
 	if net.is_host():
 		return
 	net.company_state_restored.connect(_on_host_day_restored)
@@ -282,6 +288,8 @@ func host_day_seen() -> Dictionary:
 ## host's company behind: its CompanyState goes back to what it had before the snapshot
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
+	if _bus != null and is_instance_valid(_bus) and _bus.is_connected(&"company_day_started", _on_company_day_started):
+		_bus.disconnect(&"company_day_started", _on_company_day_started)
 	if _hosted_state != null:
 		save_interrupted_day()
 		_hosted_state = null
@@ -310,6 +318,15 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		_publish_presence()
+
+
+## The day opens on every peer (EventBus.company_day_started): a company in the red is told why
+## fewer orders come in (Bankruptcy.opening_text, D-0510.2), as a toast of the HUD. The money is the
+## host's, replicated, so every peer reads the same.
+func _on_company_day_started(_day: int) -> void:
+	var text: String = Bankruptcy.opening_text(_shown_company())
+	if not text.is_empty() and _bus != null and is_instance_valid(_bus):
+		_bus.emit_signal(&"depot_notice", text)
 
 
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on
