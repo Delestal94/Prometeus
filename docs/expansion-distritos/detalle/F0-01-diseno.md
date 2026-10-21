@@ -161,7 +161,7 @@ Confirma o corrige los números de [supuestos.md](supuestos.md).
 (D-0202). `sim_economy` (D-0540) la reproduce en F2.
 
 ### D-0118 · Lista de 30 hitos — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `diseno/hitos.md`: 30 hitos con condición, recompensa y día esperado para 1/2/4 jugadores; cada distrito con su hito y tipo nuevo `shop_item`.
+**[x] Hecho (2026-10-21, PR #563)** — `diseno/hitos.md`: 30 hitos con condición, recompensa y día esperado para 1/2/4 jugadores; cada distrito con su hito y tipo nuevo `shop_item`.
 **Depende de:** D-0114, D-0117
 **Qué:** `diseno/hitos.md`: id, condición (de los tipos de D-0402), recompensa (tipos de D-0403) y día
 esperado según D-0117. Los primeros 5 enseñan el bucle (D-0412).
