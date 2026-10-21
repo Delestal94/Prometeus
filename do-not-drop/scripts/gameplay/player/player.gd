@@ -78,15 +78,11 @@ const OnFootInput = preload("res://scripts/gameplay/player/player_input.gd")
 const NetVisibility = preload("res://scripts/gameplay/player/player_net_visibility.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
-const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const CharacterFace = preload("res://scripts/gameplay/player/gel/gel_face.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const UNLOCK_MANAGER := preload("res://scripts/core/unlock_manager.gd")  # What the UnlockManager autoload runs.
-## Astra's rounded character (2026-09-24), game export built by
-## art/rounded_character/build_game_export.py -- see assets/README.md
-## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
-## PickUpHigh/Sit). One skinned
-## mesh; surface 0 is the T-shirt, which carries the crew colour.
-const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
+## Final S-311 gel body. It preserves the gameplay skeleton and clip contract.
+const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
 ## Held-sprint gait (player_sprint.gd); without the clip PlayerAnimator plays a faster Walk.
@@ -303,6 +299,7 @@ func _build_body() -> void:
 	visual.name = "BodyVisual"
 	add_child(visual)
 	_body_visual = visual
+	$GelAppearance.call(&"setup", visual)
 	PlayerAppearance.enable_shadows(visual)
 	_gel_effects_component.setup(visual, get_multiplayer_authority())
 
@@ -344,7 +341,7 @@ func _apply_cosmetic() -> void:
 	var color: Color = PLAYER_COLORS[PlayerColorSlot.slot(get_multiplayer_authority(), PLAYER_COLORS.size())]
 	if profile != null and not profile.cosmetic_is_auto(cosmetic_id):
 		color = profile.cosmetic_color(cosmetic_id)
-	PlayerAppearance.tint_shirt(_body_visual, color)
+	$GelAppearance.call(&"set_team_color", color)
 
 
 ## How much of PickUpHigh a pickup plays, from the height above the feet at

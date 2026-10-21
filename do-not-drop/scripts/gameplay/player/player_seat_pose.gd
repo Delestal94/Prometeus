@@ -113,19 +113,18 @@ func pose_seated_body(delta: float) -> void:
 	configure_driver_ik(seat)
 
 
-## Where the rounded character's root goes, in the seat marker's space, so
-## its Sit pose rests on that seat's cushion. Measured in the truck by
+## Where the character's root goes, in the seat marker's space, so its Sit
+## pose rests on that seat's cushion. Measured in the truck by
 ## tests/render_player_character.gd (2026-09-24): the wall cushions are
 ## ~0.58 m under their eye markers, the rack jump seats ~0.55 m and only
 ## 0.36 m deep, and the driver's cushion sits behind the wheel -- 0.37 m
 ## forward keeps both wrists on the rim at full reach. The cab is too low for
 ## this character fully on the cushion, so the driver sinks into it rather
-## than putting his head through the roof. Re-measured for the chubbier body
-## with hair (2026-09-27): the driver sinks 2 cm more (the cowlick is kept
-## low for him), the passengers sit 7 cm lower and 10 cm further forward.
+## than putting his head through the roof. S-311.70 moves the active gel body
+## two centimetres forward so both wrists land on the rim.
 func seat_body_offset(seat_name: StringName) -> Vector3:
 	if seat_name == &"DriverEyePoint":
-		return Vector3(0.0, -0.75, -0.37)
+		return Vector3(0.0, -0.75, -0.35)
 	if String(seat_name).begins_with("RackSeat"):
 		return Vector3(0.0, -0.42, -0.18)
 	if seat_name == &"CenterSeatEyePoint":

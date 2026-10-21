@@ -346,7 +346,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   hoy tiñe la camiseta.
 - [x] **S-311.69** Legibilidad: cada jugador distinguible a 20 m, de día y de noche, y con los filtros
   de daltonismo (S-502, ahora en la lista de Nacho). Capturas.
-- [ ] **S-311.70** Vista previa, guardado en el perfil y replicación en `player_appearance.gd` (test de
+- [x] **S-311.70** Vista previa, guardado en el perfil y replicación en `player_appearance.gd` (test de
   red: cada par ve la skin del otro).
 
 ### J. Disfraces y accesorios (71-76)

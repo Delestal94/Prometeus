@@ -16,6 +16,7 @@ const PLAYER_SCRIPT = preload("res://scripts/gameplay/player/player.gd")
 const CharacterPreview = preload("res://scripts/ui/customize/character_preview.gd")
 const Swatch = preload("res://scripts/ui/customize/customize_swatch.gd")
 const GelEditor = preload("res://scripts/ui/customize/gel_proportion_editor.gd")
+const GelSkins = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
 
 signal closed
 
@@ -26,13 +27,13 @@ enum Page { FACE, BODY, UNIFORM, TRUCK }
 ## (and room for a two-line "earned at..." under them).
 const CARD_HEIGHT: Dictionary = {
 	"gel_face": 100, "preset": 100, "eyes": 92, "mouth": 92,
-	"uniform": 206, "truck": 156, "paint": 156,
+	"skin": 126, "uniform": 206, "truck": 156, "paint": 156,
 }
 ## The picture's height in each kind of card: the same in every card of a
 ## kind, whatever its text, so a row's pictures line up.
 const SWATCH_HEIGHT: Dictionary = {
 	"gel_face": 66, "preset": 66, "eyes": 56, "mouth": 56,
-	"uniform": 128, "truck": 84, "paint": 84,
+	"skin": 72, "uniform": 128, "truck": 84, "paint": 84,
 }
 
 ## Picked before the panel enters the tree.
@@ -380,6 +381,12 @@ func _build_body_page(contents: VBoxContainer) -> void:
 
 
 func _build_uniform_page(contents: VBoxContainer) -> void:
+	_section(contents, tr("UI_COSM_GEL_SKIN"), tr("UI_COSM_GEL_SKIN_HINT"))
+	var skins: GridContainer = _grid(contents, Page.UNIFORM, 4)
+	for definition: Resource in GelSkins.all_skins():
+		var skin_id: StringName = definition.get(&"id")
+		var skin_name := String(skin_id).replace("_", " ").capitalize()
+		_card(skins, "skin", skin_id, _skin_swatch(definition), skin_name)
 	_section(contents, tr("UI_COSM_YOUR_UNIFORM"),
 			tr("UI_DEPOT_UNIFORM_HINT") if mode == Mode.DEPOT else tr("UI_COSM_UNIFORM_HINT"))
 	# Two by two, big: few uniforms, and the shirt is the point.
@@ -394,6 +401,26 @@ func _build_uniform_page(contents: VBoxContainer) -> void:
 		_card(grid, "uniform", id, Swatch.new().setup(Swatch.Kind.SHIRT, id, fill), tr(String(choice["title"])),
 				_lock_text(choice))
 	_pad(grid)
+
+
+func _skin_swatch(definition: Resource) -> Control:
+	var swatch := Panel.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = definition.get(&"color")
+	style.set_corner_radius_all(12)
+	style.border_color = Color(UiTheme.INK, 0.2)
+	style.set_border_width_all(2)
+	swatch.add_theme_stylebox_override("panel", style)
+	var interior: Color = definition.get(&"interior_color")
+	if interior.a > 0.0:
+		var stripe := ColorRect.new()
+		stripe.color = interior
+		stripe.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		stripe.position = Vector2(-28.0, -6.0)
+		stripe.size = Vector2(56.0, 12.0)
+		stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		swatch.add_child(stripe)
+	return swatch
 
 
 func _build_truck_page(contents: VBoxContainer) -> void:
@@ -520,6 +547,7 @@ func _pick(kind: String, id: StringName) -> void:
 	var changed: bool = false
 	match kind:
 		"gel_face": changed = UnlockManager.select_gel_face(id)
+		"skin": changed = UnlockManager.select_gel_skin(id)
 		"preset":
 			var face: Dictionary = Catalog.preset(id)
 			changed = UnlockManager.select_eyes(face.eyes) and UnlockManager.select_mouth(face.mouth)
@@ -529,7 +557,7 @@ func _pick(kind: String, id: StringName) -> void:
 		"truck": changed = UnlockManager.select_truck(id)
 		"paint": changed = UnlockManager.select_paint(id)
 	_sync()
-	if changed and kind in ["gel_face", "preset", "eyes", "mouth", "uniform"]:
+	if changed and kind in ["gel_face", "skin", "preset", "eyes", "mouth", "uniform"]:
 		preview.bounce()
 
 
@@ -552,6 +580,7 @@ func _randomize_face() -> void:
 func _sync() -> void:
 	var selected: Dictionary = {
 		"gel_face": UnlockManager.selected_gel_face,
+		"skin": UnlockManager.selected_gel_skin,
 		"eyes": UnlockManager.selected_eyes, "mouth": UnlockManager.selected_mouth,
 		"uniform": UnlockManager.selected_cosmetic, "truck": UnlockManager.selected_truck,
 		"paint": UnlockManager.selected_paint,
@@ -566,7 +595,9 @@ func _sync() -> void:
 		(card.get_node(^"Check") as CanvasItem).visible = chosen
 	if is_instance_valid(_nickname_edit) and not _nickname_edit.has_focus():
 		_nickname_edit.text = UnlockManager.nickname
-	preview.show_look(_shirt_color(), UnlockManager.selected_eyes, UnlockManager.selected_mouth)
+	var team_color := _shirt_color()
+	preview.show_skin(UnlockManager.selected_gel_skin, team_color)
+	preview.show_look(team_color, UnlockManager.selected_eyes, UnlockManager.selected_mouth)
 	if page == Page.BODY:
 		preview.show_proportions(_proportions)
 

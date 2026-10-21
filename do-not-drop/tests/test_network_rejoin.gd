@@ -168,10 +168,12 @@ func _run() -> void:
 	# Not Player.PLAYER_COLORS: naming the class would compile player.gd with
 	# this script, before the autoloads it names exist (see test_player_colors).
 	var palette: Array = player.get_script().get_script_constant_map()["PLAYER_COLORS"]
-	_expect(_suit(player) == palette[1], "The rejoined player's suit is its slot's colour again")
+	_expect(_suit(player) == _packed_team_color(palette[1]),
+		"The rejoined player's suit is its slot's colour again")
 	var map: Dictionary = {1: 0, a2: 4}
 	_expect(bool(network.call(&"_apply_color_slots", map)), "A client takes the host's map")
-	_expect(_suit(player) == palette[4], "The suit changes when the host's map arrives after the spawn")
+	_expect(_suit(player) == _packed_team_color(palette[4]),
+		"The suit changes when the host's map arrives after the spawn")
 	_expect(_slot(network, b2) == 2, "A peer missing from the new map keeps its last slot for the results")
 	player.queue_free()
 	await process_frame
@@ -431,10 +433,15 @@ func _slot(network: Node, peer: int) -> int:
 func _suit(player: Node) -> Color:
 	var meshes: Array[Node] = player.get_node(^"BodyVisual").find_children("*", "MeshInstance3D", true, false)
 	for mesh: MeshInstance3D in meshes:
-		var material := mesh.get_surface_override_material(0) as StandardMaterial3D
+		var material := mesh.material_override as ShaderMaterial
 		if material != null:
-			return material.albedo_color
+			var packed: float = mesh.get_instance_shader_parameter(&"gel_brightness")
+			return PlayerAppearance.unpack_gel_team_color(packed)
 	return Color.BLACK
+
+
+func _packed_team_color(color: Color) -> Color:
+	return PlayerAppearance.unpack_gel_team_color(PlayerAppearance.pack_gel_team_color(1.0, color))
 
 
 func _expect(condition: bool, description: String) -> void:
