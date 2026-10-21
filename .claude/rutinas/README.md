@@ -63,7 +63,7 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
 | Build de prueba | build de la PC (diaria; publicar sigue ⏸ con M5) | `empaquetador-release`, `perfilador-rendimiento`, `revisor-visual` |
 | Versiones y notas de cambios | `release-train.yml` (lunes 07:00, sin modelo): tag `v0.N.0` si `main` está verde + release **borrador** con las notas de `tools/release/changelog.py`; nunca publica (repo público) | — |
-| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (día por medio, "latido") + issue `rutina-caida` que abre la PC | `auditor-integral` |
+| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (día por medio, "latido") + `routine-heartbeat.yml` (cada 6 h, sin modelo, issue `rutina-caida` por rutina) + el issue que abre la PC | `auditor-integral` |
 | Decisiones | la rutina decide con su recomendación (regla 3); solo plata, cuentas y licencias abren un issue `decide-usuario` (regla 12); la revisión semanal aplica las respuestas | `planificador-tareas` |
 | Regresiones de lo ya mezclado | QA, build de la PC y auditoría → tarea `Regresión de #PR` → construcción (arreglo o `git revert`, regla 14) | `cazador-bugs`, constructor del área |
 | Dependencias del juego (Godot, GodotSteam, addons) | lanzamiento (mensual) → tarea | `estratega-steam`, `constructor-red` |
