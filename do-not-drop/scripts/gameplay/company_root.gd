@@ -243,6 +243,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.name = "DayCycle"
 	add_child(day_cycle)
 	day_cycle.attach(net, clock, state)
+	day_cycle.opening_notice = _opening_notice
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -353,6 +354,13 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		_publish_presence()
+
+
+## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
+## a company in the red is told why fewer orders come in (Bankruptcy.opening_text, D-0510.2). The
+## money is the host's, replicated, so every peer reads the same.
+func _opening_notice() -> String:
+	return Bankruptcy.opening_text(_shown_company())
 
 
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on

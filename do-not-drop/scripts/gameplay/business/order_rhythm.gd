@@ -22,8 +22,10 @@ static func weight_at(minute: int) -> float:
 	return CompanyTuning.ORDER_HOUR_WEIGHTS[hour]
 
 
-## Sorted arrival minutes (since midnight) of the day's orders.
-static func arrival_minutes(day_seed: int, players: int) -> Array[int]:
+## Sorted arrival minutes (since midnight) of the day's orders. `count` is how many to draw: -1 (the
+## default) means the usual orders_for_day(players); a bankrupt company asks for fewer (Bankruptcy,
+## D-0510).
+static func arrival_minutes(day_seed: int, players: int, count: int = -1) -> Array[int]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = day_seed
 	var weights: Array[float] = CompanyTuning.ORDER_HOUR_WEIGHTS
@@ -31,7 +33,7 @@ static func arrival_minutes(day_seed: int, players: int) -> Array[int]:
 	for weight: float in weights:
 		total += weight
 	var out: Array[int] = []
-	for _i in orders_for_day(players):
+	for _i in (orders_for_day(players) if count < 0 else count):
 		var pick := rng.randf() * total
 		var hour := 0
 		while hour < weights.size() - 1 and pick >= weights[hour]:
