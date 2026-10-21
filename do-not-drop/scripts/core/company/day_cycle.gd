@@ -89,6 +89,10 @@ var ticks: Callable = Callable()
 ## The closing summary of the day (DaySummary.build()), {} outside SUMMARY. A closing screen that
 ## opens after the event (a late joiner) reads it here.
 var summary: Dictionary = {}
+## What a new day's opening tells this peer, as Callable() -> String ("" for nothing): the world
+## sets it (CompanyRoot, Bankruptcy.opening_text, D-0510.2) and it goes out as EventBus.depot_notice
+## right after company_day_started.
+var opening_notice: Callable = Callable()
 
 var _phase: Phase = Phase.IDLE
 var _day: int = 0
@@ -207,6 +211,9 @@ func apply_phase(data: Dictionary) -> bool:
 		match phase:
 			Phase.OPENING:
 				_pending_facts.append([&"company_day_started", [day]])
+				var notice: String = str(opening_notice.call()) if opening_notice.is_valid() else ""
+				if not notice.is_empty():
+					_pending_facts.append([&"depot_notice", [notice]])
 			Phase.CLOSING:
 				_pending_facts.append([&"company_day_closing", [day]])
 			Phase.SUMMARY:
