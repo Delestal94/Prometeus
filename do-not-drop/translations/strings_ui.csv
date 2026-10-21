@@ -436,6 +436,7 @@ UI_MENU_GARAGE,Garaje,Garage
 UI_MENU_GARAGE_HINT,"Apariencia, progreso y récords","Appearance, progress and records"
 UI_MENU_HOST,Crear sala,Host a room
 UI_MENU_HOST_ENDLESS,Crear sala Endless,Host an Endless room
+UI_MENU_HOST_COMPANY,Crear sala Empresa,Host a Company room
 UI_MENU_HOST_IP,Código o IP del anfitrión,Host's code or IP
 UI_MENU_JOIN,Unirse a una sala,Join a room
 UI_MENU_JOIN_BUTTON,Unirse,Join
