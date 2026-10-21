@@ -383,8 +383,9 @@ func _build_body_page(contents: VBoxContainer) -> void:
 func _build_uniform_page(contents: VBoxContainer) -> void:
 	_section(contents, tr("UI_COSM_GEL_SKIN"), tr("UI_COSM_GEL_SKIN_HINT"))
 	var skins: GridContainer = _grid(contents, Page.UNIFORM, 4)
-	for definition: Resource in GelSkins.all_skins():
-		var skin_id: StringName = definition.get(&"id")
+	for resource: Resource in GelSkins.all_skins():
+		var definition := resource as GelSkinDefinition
+		var skin_id: StringName = definition.id
 		var skin_name := String(skin_id).replace("_", " ").capitalize()
 		_card(skins, "skin", skin_id, _skin_swatch(definition), skin_name)
 	_section(contents, tr("UI_COSM_YOUR_UNIFORM"),
@@ -403,15 +404,15 @@ func _build_uniform_page(contents: VBoxContainer) -> void:
 	_pad(grid)
 
 
-func _skin_swatch(definition: Resource) -> Control:
+func _skin_swatch(definition: GelSkinDefinition) -> Control:
 	var swatch := Panel.new()
 	var style := StyleBoxFlat.new()
-	style.bg_color = definition.get(&"color")
+	style.bg_color = definition.color
 	style.set_corner_radius_all(12)
 	style.border_color = Color(UiTheme.INK, 0.2)
 	style.set_border_width_all(2)
 	swatch.add_theme_stylebox_override("panel", style)
-	var interior: Color = definition.get(&"interior_color")
+	var interior: Color = definition.interior_color
 	if interior.a > 0.0:
 		var stripe := ColorRect.new()
 		stripe.color = interior

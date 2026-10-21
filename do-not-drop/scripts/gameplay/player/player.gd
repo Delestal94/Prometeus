@@ -123,6 +123,7 @@ const DRIVER_ARM_BONES: Dictionary = {
 const JUMP_ANIM_LOCK_MS: int = 1500
 const PICKUP_ANIM_LOCK_MS: int = 1550
 var _body_visual: Node3D = null
+@onready var _gel_appearance: PlayerGelAppearance = $GelAppearance
 ## Replicated (see player.tscn) so every peer's own copy of this player's
 ## AnimationPlayer plays the same clip -- movement/jump/pickup state is only
 ## ever computed on the owning peer (is_local()), same authority split as
@@ -299,7 +300,7 @@ func _build_body() -> void:
 	visual.name = "BodyVisual"
 	add_child(visual)
 	_body_visual = visual
-	$GelAppearance.call(&"setup", visual)
+	_gel_appearance.setup(visual)
 	PlayerAppearance.enable_shadows(visual)
 	_gel_effects_component.setup(visual, get_multiplayer_authority())
 
@@ -341,7 +342,7 @@ func _apply_cosmetic() -> void:
 	var color: Color = PLAYER_COLORS[PlayerColorSlot.slot(get_multiplayer_authority(), PLAYER_COLORS.size())]
 	if profile != null and not profile.cosmetic_is_auto(cosmetic_id):
 		color = profile.cosmetic_color(cosmetic_id)
-	$GelAppearance.call(&"set_team_color", color)
+	_gel_appearance.set_team_color(color)
 
 
 ## How much of PickUpHigh a pickup plays, from the height above the feet at
