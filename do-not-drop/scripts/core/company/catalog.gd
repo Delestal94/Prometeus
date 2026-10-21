@@ -92,6 +92,10 @@ func gate(id: StringName) -> GateRequirement:
 	return get_resource(GATES, id) as GateRequirement
 
 
+func supplier(id: StringName) -> SupplierDefinition:
+	return get_resource(SUPPLIERS, id) as SupplierDefinition
+
+
 ## Every zone, in file name order (what the world builds its slabs from).
 func zones() -> Array[ZoneDefinition]:
 	var found: Array[ZoneDefinition] = []
