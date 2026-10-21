@@ -98,3 +98,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - Cada zona lleva su nombre pintado en el piso (`WORLD_SHED_ZONE_*`); la captura aérea con zonas rotuladas es la de `revisor-visual` sobre `company_root.tscn`.
 **Test** `test_company_default_layout` (y los `test_company_*` de la expansión verdes); los `test_depot_*` no se tocan: el depósito de Entrega no cambia.
 **Hecho cuando:** captura aérea con zonas rotuladas y los tests verdes.
+
+### D-0603 · Pedido a proveedor desde el portapapeles o el tablero — B · Sonnet 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del pedido (`SupplierOrderCart`, `scripts/gameplay/business/supplier_order_cart.gd`) y `test_supplier_order_cart`. Falta D-0603.b (la pantalla).
+**Depende de:** D-0602 (`SupplierSchedule`), D-0503 (`SupplierPurchase`), D-0218 (`SupplierDefinition`), D-0204 (producto)
+**Qué:**
+- **D-0603.a (hecha) — el carrito.** `SupplierOrderCart` (`RefCounted`): líneas producto → unidades con `add`, `set_qty` y `remove`; solo se piden productos del catálogo que el proveedor vende, de 1 a `MAX_LINE_QTY` (240) unidades por línea. `lines()` (id, unidades, precio unitario y costo), `total()`, `pallet_count()` (24 unidades por palet) y `submit(wallet, schedule, día)`: con el saldo que cubre el total pone el pedido en el calendario para el día siguiente (`SupplierSchedule.arrival_day`) y vacía el carrito. No cobra nada: el cobro sigue siendo al recibir cada palet (D-0503), así que un camión que no se descarga no cuesta.
+- **D-0603.b (pendiente) — la pantalla** en el tablero del galpón y en el portapapeles: lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
+**Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
+**Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).
