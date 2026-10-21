@@ -442,6 +442,25 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 		"location": shelf.location(slot), "name": content.localized_name() if content != null else String(product)})
 
 
+## The shelf slot a units request names (ShelfPicking.station_id) as CompanyNet's `stations` resolver
+## wants it: where its units lie, the spot to reach (the piece's use point), what it accepts and holds
+## (D-0609). {} for anything else, or a slot with no label.
+func station_for(id: StringName) -> Dictionary:
+	var named: Dictionary = ShelfPicking.parse_station(id)
+	if named.is_empty():
+		return {}
+	var uid: StringName = named["uid"]
+	var shelf: Shelf = shelves.get(uid) as Shelf
+	var point: ShedPiecePoint = use_points.get(uid) as ShedPiecePoint
+	var slot: int = int(named["slot"])
+	if shelf == null or point == null or not point.is_inside_tree() or shelf.label_of(slot) == &"":
+		return {}
+	return {
+		"location": shelf.location(slot), "spot": point.global_position,
+		"accepts": shelf.label_of(slot), "capacity": CompanyTuning.SHELF_SLOT_CAPACITY,
+	}
+
+
 func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:
 	var metres: float = CompanyTuning.WAREHOUSE_GRID_M
 	var width: float = def.footprint.x * metres

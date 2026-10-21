@@ -112,6 +112,8 @@ var _world: Node3D
 ## to_dict(), or {} when no company was on), put back on leaving (_exit_tree()).
 var _mirrored_state: COMPANY_STATE
 var _own_company: Dictionary = {}
+## The slot each crew member last picked from, by "<peer>/<shelf uid>" (ShelfPicking, D-0609).
+var _pick_after: Dictionary = {}
 ## Host (solo too): the CompanyState node it runs, saved when the world closes mid-day. Decided
 ## when the world comes up: a client whose session ended counts as a host to CompanyNet then.
 var _hosted_state: COMPANY_STATE
@@ -404,6 +406,24 @@ func _add_shed() -> void:
 	_redraw_shed()
 	if net != null:
 		shed.follow(net)
+		net.stations = shed.station_for
+		shed.piece_used.connect(_on_piece_used)
+
+
+## Host: a crew member used a piece of the shed. A shelf puts the units of one of its slots in their
+## hands (D-0609): the slot rotates over the filled ones while the hands are empty (_pick_after), and
+## the host's own checks (reach, hands, stock) decide in CompanyNet, same as for any units request.
+func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
+	if role != &"storage" or net == null or not net.is_host():
+		return
+	var key: String = "%d/%s" % [peer_id, uid]
+	var plan: Dictionary = ShelfPicking.plan(uid, shed.shelves.get(uid) as Shelf, net.inventory,
+		CompanyNet.hands_location(peer_id), int(_pick_after.get(key, -1)))
+	if plan.has("reason"):
+		return
+	_pick_after[key] = plan["slot"]
+	net.request_for(peer_id, &"units_take",
+		{"station": plan["station"], "product": plan["product"], "qty": plan["qty"]})
 
 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same

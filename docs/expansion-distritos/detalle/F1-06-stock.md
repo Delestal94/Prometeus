@@ -86,6 +86,17 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Test** `test_shelf_slots`: 8 huecos, etiquetas, depósito solo del producto etiquetado, tope, retiro, 50 movimientos conservan el total, JSON.
 **Hecho cuando:** dejar producto en un hueco lo suma al `Inventory` (test pasa).
 
+### D-0609 · Tomar productos de la estantería (picking) a mano — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `ShelfPicking` (`scripts/gameplay/business/shelf_picking.gd`), `CompanyShed.station_for`, `CompanyNet.request_for` y `CompanyRoot._on_piece_used`; `test_shelf_picking`.
+**Depende de:** D-0608 (`Shelf`), D-0914 (`ShedPiecePoint`), D-2003 (`units_take`, `HAND_MAX_UNITS`)
+**Qué:** usar un estante (la E de siempre sobre su punto de uso) pasa unidades de un hueco a la mano de quien lo usa:
+- `ShelfPicking.plan(uid, shelf, inventory, hands, after)` arma la petición `units_take` `{station, product, qty}`: con las manos vacías toma el siguiente hueco con stock después del último usado (rota y da la vuelta); con producto en la mano sigue en el hueco de ese producto; `qty` = lo que entra hasta `HAND_MAX_UNITS` (4) sin pasar de lo que hay. Sin plan: `empty`, `hands_full` o `hands_busy`.
+- `CompanyShed.station_for(id)` es el `stations` de `CompanyNet`: un hueco etiquetado = `{location, spot (el punto de uso), accepts, capacity}`. Nombre de la estación: `<uid>_slot<n>`.
+- `Interactable.interact()` corre en el host para todos los pares, así que `CompanyNet.request_for(peer, kind, data)` (nuevo, solo host, sin RPC) hace la petición en nombre del par que usó el estante, con las mismas comprobaciones de siempre (alcance, manos, stock). Un rechazo le llega al par con `rid` 0.
+- Guardar de vuelta en el hueco (`units_store`) y elegir un hueco apuntando quedan fuera: ver `revisar/D-0609.md`.
+**Test** `test_shelf_picking`: nombres de estación; el plan topa en 4, completa lo que ya hay en la mano y rechaza manos llenas, ocupadas o estante vacío; rotación de huecos; el galpón resuelve solo huecos etiquetados; de punta a punta, tomar 3 baja el hueco en 3 y sube la mano en 3 sin crear unidades; lejos del estante lo rechaza.
+**Hecho cuando:** tomar 3 unidades baja el stock en 3 (test pasa).
+
 ### D-0602 · Calendario de entregas de proveedores — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `SupplierSchedule` (`scripts/gameplay/business/supplier_schedule.gd`): lo pedido el día N llega el N + 1; `test_supplier_schedule`.
 **Depende de:** D-0604 (`Pallet.plan`), supuestos (1 camión por día a las 08:30, espera 3 h)
