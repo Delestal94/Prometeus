@@ -294,7 +294,8 @@ frame dibujado.
   sumo `max_catch_up` (4) ticks y tira el resto (`dropped_ticks`); un paso cuyo objeto se liberó se cae;
   `last_run_usec` mide lo que costó el último tick, para el perfilador.
 - **Adaptador `BusinessTick`** (nodo, hijo de `CompanyRoot`, solo en el host): ritmo
-  `CompanyTuning.BUSINESS_TICK_HZ = 4.0`. Los pasos son reglas del host que publican por `CompanyNet`;
+  `CompanyTuning.BUSINESS_TICK_HZ = 4.0`, sin recuperación (`max_catch_up` 1): sus pasos miran el mundo,
+  no integran tiempo, y el `DayCycle` no debe cruzar dos fases en un frame. Los pasos son reglas del host que publican por `CompanyNet`;
   un cliente cambia solo por los eventos del host.
 - `DayCycle` conserva su `_process` (cada `POLL_SECONDS` = 0,25 s) para cuando nadie lo maneja (tests,
   sin mundo); `CompanyRoot` lo apaga en todos los peers y en el host lo suma como paso `day_cycle`.

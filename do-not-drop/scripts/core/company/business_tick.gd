@@ -10,10 +10,14 @@ extends Node
 ## root turns off, so the day moves on the same tick as whatever joins it later (orders, the
 ## supplier, employees, machines).
 ##
+## No catch-up: after a hitch it runs one tick and drops the rest. Its steps look at the world as it
+## is (they don't integrate time), so running them again in the same frame would only see the same
+## world, and DayCycle could cross two phases in one frame (CLOSING must last at least one poll).
+##
 ## Profiling: last_run_usec() is what the steps cost on the last frame that ran a tick, and
-## dropped_ticks() what hitches cost in ticks (more than FixedTick.DEFAULT_MAX_CATCH_UP due at once).
+## dropped_ticks() what hitches cost in ticks.
 
-var tick := FixedTick.new(CompanyTuning.BUSINESS_TICK_HZ)
+var tick := FixedTick.new(CompanyTuning.BUSINESS_TICK_HZ, 1)
 
 
 func _process(delta: float) -> void:
