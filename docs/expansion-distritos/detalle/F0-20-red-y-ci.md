@@ -109,6 +109,7 @@ bien con y sin empresa activa.
 **Hecho cuando:** el test pasa. La prueba real con Steam queda para la build de la PC.
 
 ### D-2010 · Save de empresa en la nube de Steam — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR #541)** — la ruta `user://saves/company/<slot>.json` (`CompanySave.SAVE_DIR`) figura en la fila "Guardado en la nube" de [`docs/marketing/estado-steam.md`](../../marketing/estado-steam.md) con su raíz de Auto-Cloud en Windows y Linux; `test_company_cloud_paths` falla si un script de la expansión escribe un `user://` fuera de esa carpeta (o de `EXCLUDED`). N-914 sigue ⏸ M5: al hacerla, copia esta ruta a `steam-cloud.md`. Prueba con Steam real: [`revisar/D-2010.md`](../revisar/D-2010.md).
 **Depende de:** D-0206, N-914
 **Qué:** que `user://saves/company/` quede dentro de las rutas de Auto-Cloud que define N-914. Si N-914
 no está hecha, anotar la ruta en su tarea.
