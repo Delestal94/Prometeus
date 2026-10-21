@@ -162,7 +162,8 @@ func _run() -> void:
 func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
 	var panel: DaySummaryPanel = level.summary_panel
 	var cycle: DayCycle = level.day_cycle
-	_expect(panel != null and not panel.visible, "The root has its closing screen, hidden while the day runs (D-0508.3)")
+	_expect(panel != null and not panel.visible,
+		"The root has its closing screen, hidden while the day runs (D-0508.3)")
 	if panel == null or cycle == null:
 		return
 	var day: int = cycle.current_day()
