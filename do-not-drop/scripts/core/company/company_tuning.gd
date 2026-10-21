@@ -239,6 +239,11 @@ const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
 ## and how close the jack's holder must stand to pick one up.
 const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
 const PALLET_JACK_REACH_M: float = 1.6
+## The forklift (D-0606, PalletForklift): how high the forks go (m), how fast they rise (m/s, the
+## depot's staff forklift speed) and how close to a level they must be to take or leave a pallet.
+const FORKLIFT_MAX_LIFT_M: float = 2.4
+const FORKLIFT_LIFT_SPEED: float = 0.55
+const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0

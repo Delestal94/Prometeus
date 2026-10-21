@@ -63,6 +63,15 @@ camión es D-0601 / D-0605, que usan esta clase.
 **Test** `test_pallet_jack`: palets válidos y repetidos en la caja; uno por vez y alcance; recepción única en el `Inventory`; soltar fuera del piso o encima de otro palet no cambia nada; lo que queda en la caja no se cuenta; 50 movimientos sin perder ni duplicar unidades; ida y vuelta de JSON.
 **Hecho cuando:** jugador mueve un palet del camión al piso (test de interacción, D-0605.b).
 
+### D-0606 · Descargar con el autoelevador manejado por un jugador — A · Sonnet 5.5 · xhigh · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del autoelevador (`PalletForklift`, `scripts/gameplay/business/pallet_forklift.gd`), los huecos de rack en `PalletJack` y `test_pallet_forklift`. Falta D-0606.b (el vehículo en el mundo, manejarlo y dibujar el palet).
+**Depende de:** D-0604 (`Pallet`), D-0605 (`PalletJack`, el mismo libro de palets), D-0608 (estanterías)
+**Qué:**
+- **D-0606.a (hecha) — la lógica.** `PalletForklift` (`RefCounted`): altura de las horquillas (`lift(dirección, delta)` a `FORKLIFT_LIFT_SPEED` = 0,55 m/s, entre 0 y `FORKLIFT_MAX_LIFT_M` = 2,4 m; `set_height`). Un palet se toma de la caja del camión, del piso o de un hueco de rack solo con las horquillas al nivel del palet (± `FORKLIFT_LEVEL_TOLERANCE_M` = 0,12 m; piso y caja a 0, el rack al nivel de su hueco) y a `PALLET_JACK_REACH_M` de él. Se deja en el piso con las horquillas abajo o en un hueco de rack libre a su nivel. El libro es el mismo `PalletJack` de la zorra: `put_on_rack(hueco, pos, inventory)`, `rack_pallet(hueco)` y el lugar `AT_RACK` (con `slot`), que entra en `to_dict`/`from_dict`. Las unidades entran al `Inventory` **una sola vez**, al apoyar el palet por primera vez (piso o rack).
+- **D-0606.b (pendiente) — el mundo.** El autoelevador como vehículo que un jugador maneja (reusa el modelo de `depot_forklift.gd`; el del depósito sigue siendo decorado), entrar y salir, mástil con dos teclas/gatillos, el palet dibujado en las horquillas, y los huecos de rack de `Shelf` con su altura (D-0608). El host aplica y replica (D-0619).
+**Test** `test_pallet_forklift`: las horquillas suben y bajan a su velocidad y paran en el mástil; con las horquillas arriba no se toma del piso ni de la caja, ni se apoya en el piso; el rack pide nivel, alcance y hueco libre; las unidades se reciben una vez; se baja un palet del rack y se comparte el libro con la zorra; 50 viajes caja/piso/rack sin perder ni duplicar; ida y vuelta de JSON con el hueco.
+**Hecho cuando:** jugador maneja el autoelevador y deja un palet en un rack (D-0606.b).
+
 ### D-0607 · Abrir palet — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `Pallet.open/take/is_depleted` en `pallet.gd`; ampliado `test_pallet`.
 **Depende de:** D-0604 (`Pallet`), D-0211 (`Inventory`)
