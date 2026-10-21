@@ -9,13 +9,17 @@ extends SceneTree
 ## the disconnect screen opens, its "back to the menu" enabled. The results
 ## illustration (S-307) shows behind the card only on the results screen, in
 ## delivery and endless alike, and every other screen puts it away again. A
-## results card taller than the screen shrinks to fit, buttons included.
+## results card taller than the screen shrinks to fit, buttons included. The
+## text at the bottom of the screen (interaction prompt, controls pill, shortcuts
+## pill) is at least 12 px on a 1280x720 screen at the default HUD scale (N-977.2).
 
 var failures: int = 0
 var _restarts: int = 0
 const COUCH_HUD_SCALE: float = 0.6
 const SCALE_720_TO_1080: float = 1080.0 / 720.0
 const MIN_EFFECTIVE_FONT_SIZE: float = 14.0
+## Floor for the bottom-of-screen texts at 720p and GameSettings.HUD_SCALE_DEFAULT.
+const MIN_BOTTOM_TEXT_PX: float = 12.0
 
 
 func _initialize() -> void:
@@ -178,6 +182,7 @@ func _run() -> void:
 	_expect(String((accessible_row["label"] as Label).text).contains("EN RIESGO !"),
 		"At-risk cargo has a shape marker as well as a colour")
 	_expect_hud_text_readable(hud)
+	_expect_bottom_text_legible(hud)
 	var original_palette: bool = settings.colorblind_palette
 	settings.colorblind_palette = true
 	var fill := (accessible_row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat
@@ -375,6 +380,24 @@ func _expect_hud_text_readable(hud: CanvasLayer) -> void:
 			too_small.append("%s: %.1f px" % [str(hud.hud_layer.get_path_to(node)), effective_size])
 	_expect(too_small.is_empty(),
 		"Every HUD label stays at least 14 px at 60%% scale and 1080p (%s)" % ", ".join(too_small))
+
+
+## N-977.2: the prompt and the two pills under it (controls, shortcuts) were
+## 16 -> ~7.7 px at 720p; each must now come out at 12 px or more once the
+## HUD layer is scaled by layout_scale() at the default HUD scale.
+func _expect_bottom_text_legible(hud: CanvasLayer) -> void:
+	var default_scale: float = root.get_node("GameSettings").HUD_SCALE_DEFAULT
+	var layer_scale: float = hud.call(&"layout_scale", default_scale, Vector2(1280, 720))
+	var sizes: Dictionary = {
+		"interaction_label": (hud.interaction_label as Label).get_theme_font_size(&"font_size"),
+		"hint_label": (hud.hint_label as RichTextLabel).get_theme_font_size(&"normal_font_size"),
+		"shortcut_label": (hud.shortcut_label as RichTextLabel).get_theme_font_size(&"normal_font_size"),
+	}
+	for label_name: String in sizes:
+		var effective_size: float = float(sizes[label_name]) * layer_scale
+		_expect(effective_size >= MIN_BOTTOM_TEXT_PX - 0.001,
+			"%s is at least %d px at 720p with the default HUD scale (got %.1f px)" % [
+				label_name, int(MIN_BOTTOM_TEXT_PX), effective_size])
 
 
 ## The results illustration is on (with its texture, and the overlay opaque
