@@ -50,7 +50,7 @@ func speed_kmh() -> float:
 
 ## Where the body points, in the world (-Z).
 func forward() -> Vector3:
-	return (-_body.global_basis.z).normalized()
+	return -_body.global_basis.z
 
 
 ## The body's right, in the world (+X).
@@ -78,13 +78,23 @@ func cargo_acceleration() -> Vector3:
 
 ## Once per physics tick, whoever drives the body: updates cargo_acceleration() from the
 ## change of the body's velocity since the last tick.
+## A frozen body (a client's copy, a parked van) feels nothing and starts over when it moves again.
 func sample(delta: float) -> void:
+	if _rigid != null and _rigid.freeze:
+		reset()
+		return
 	var velocity: Vector3 = linear_velocity()
 	if _sampled:
 		var raw: Vector3 = to_local((velocity - _last_velocity) / maxf(delta, 0.001))
 		_acceleration = _acceleration.lerp(raw, minf(1.0, delta * ACCELERATION_SMOOTHING))
 	_last_velocity = velocity
 	_sampled = true
+
+
+## Forget the last tick: after a teleport or a respawn the jump in velocity is not a push.
+func reset() -> void:
+	_acceleration = Vector3.ZERO
+	_sampled = false
 
 
 func linear_velocity() -> Vector3:
@@ -96,7 +106,8 @@ func linear_velocity() -> Vector3:
 	return value if value is Vector3 else Vector3.ZERO
 
 
-## Readers for a consumer that holds the vehicle by name (see the header).
+## Readers for a consumer that holds the vehicle by name (see the header). A null or freed
+## vehicle reads as resting, facing -Z.
 static func speed_kmh_of(vehicle: Node3D) -> float:
 	var motion: Variant = _motion_of(vehicle)
 	return motion.speed_kmh() if motion != null else 0.0
@@ -104,17 +115,19 @@ static func speed_kmh_of(vehicle: Node3D) -> float:
 
 static func forward_of(vehicle: Node3D) -> Vector3:
 	var motion: Variant = _motion_of(vehicle)
-	return motion.forward() if motion != null else -vehicle.global_basis.z
+	return motion.forward() if motion != null else (-vehicle.global_basis.z if _alive(vehicle) else Vector3.FORWARD)
 
 
 static func right_of(vehicle: Node3D) -> Vector3:
 	var motion: Variant = _motion_of(vehicle)
-	return motion.right() if motion != null else vehicle.global_basis.x
+	return motion.right() if motion != null else (vehicle.global_basis.x if _alive(vehicle) else Vector3.RIGHT)
 
 
 static func local_direction(vehicle: Node3D, direction: Vector3) -> Vector3:
 	var motion: Variant = _motion_of(vehicle)
-	return motion.to_local(direction) if motion != null else vehicle.global_basis.inverse() * direction
+	if motion != null:
+		return motion.to_local(direction)
+	return vehicle.global_basis.inverse() * direction if _alive(vehicle) else direction
 
 
 static func ground_contact_of(vehicle: Node3D) -> float:
@@ -129,5 +142,13 @@ static func cargo_acceleration_of(vehicle: Node3D) -> Vector3:
 
 ## The vehicle's `fleet_motion`, null when it has none.
 static func _motion_of(vehicle: Node3D) -> Variant:
+	if not _alive(vehicle):
+		return null
 	var motion: Variant = vehicle.get(&"fleet_motion")
-	return motion if motion is RefCounted else null
+	if motion is RefCounted and (motion as RefCounted).has_method(&"cargo_acceleration"):
+		return motion
+	return null
+
+
+static func _alive(vehicle: Node3D) -> bool:
+	return vehicle != null and is_instance_valid(vehicle)

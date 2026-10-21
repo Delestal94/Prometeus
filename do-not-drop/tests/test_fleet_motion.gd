@@ -10,6 +10,7 @@ extends SceneTree
 ##   PackageRescue.local_acceleration(), the piece simulate_cargo() feeds the care model with;
 ## - a vehicle that doesn't offer the interface (the plain fakes other tests put in the "vehicle"
 ##   group) is read from its transform, as before;
+## - a CharacterBody3D vehicle is read from its `velocity`; a frozen body feels nothing;
 ## - ground_contact() is 1 on the stand-in, stays in 0..1 on the van, is 1 with all four wheels on
 ##   the road and drops once the van is lifted off it; the van keeps its speed_kmh property.
 
@@ -36,6 +37,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_check_same_acceleration()
+	_check_character_body()
 	await _check_ground_contact()
 	quit(_failures)
 
@@ -99,7 +101,7 @@ func _check_same_acceleration() -> void:
 		fake.fleet_motion.sample(delta)
 		var now_van: Vector3 = van.point_velocity(probe)
 		var now_fake: Vector3 = fake.point_velocity(probe)
-		var follow: float = minf(1.0, delta * 8.0)
+		var follow: float = minf(1.0, delta * MotionScript.ACCELERATION_SMOOTHING)
 		box_van = box_van.lerp(RescueScript.local_acceleration(van, now_van, previous_van, delta), follow)
 		box_fake = box_fake.lerp(RescueScript.local_acceleration(fake, now_fake, previous_fake, delta), follow)
 		previous_van = now_van
@@ -121,6 +123,22 @@ func _check_same_acceleration() -> void:
 	for vehicle: Node3D in [van, fake, legacy]:
 		vehicle.queue_free()
 	await process_frame
+
+
+## A walking or pedalled vehicle (CharacterBody3D) is read from its `velocity`.
+func _check_character_body() -> void:
+	var rider := CharacterBody3D.new()
+	root.add_child(rider)
+	var motion: RefCounted = MotionScript.new(rider)
+	rider.velocity = Vector3(0.0, 0.0, -5.0)
+	_expect(is_equal_approx(float(motion.call(&"speed_kmh")), 18.0),
+		"a CharacterBody3D's speed comes from its velocity (%s km/h)" % motion.call(&"speed_kmh"))
+	motion.call(&"sample", 0.5)
+	rider.velocity = Vector3(0.0, 0.0, -6.0)
+	motion.call(&"sample", 0.5)
+	var felt: Vector3 = motion.call(&"cargo_acceleration")
+	_expect(felt.z < -1.0, "...and its acceleration forward is felt (%s)" % felt)
+	rider.free()
 
 
 func _check_ground_contact() -> void:
@@ -146,7 +164,7 @@ func _check_ground_contact() -> void:
 	var van := (load(VAN_SCENE) as PackedScene).instantiate() as VehicleBody3D
 	van.position.y = 1.5
 	world.add_child(van)
-	# Somebody at the wheel, so it isn't parked (frozen, and then resting by definition).
+	# A driver on the host, as in a run (the van's own door and parking logic see one).
 	van.driver_peer_id = 7
 	var contact: float = van.fleet_motion.ground_contact()
 	_expect(contact >= 0.0 and contact <= 1.0, "the van's ground contact is a fraction (%s)" % contact)
@@ -167,6 +185,10 @@ func _check_ground_contact() -> void:
 	await physics_frame
 	contact = van.fleet_motion.ground_contact()
 	_expect(contact < 0.3, "lifted off the road it is airborne (%s)" % contact)
+	# Frozen (a client's copy, parked) it feels nothing and starts over.
+	van.freeze = true
+	van.fleet_motion.sample(1.0 / 60.0)
+	_expect(van.fleet_motion.cargo_acceleration() == Vector3.ZERO, "frozen, the boxes feel nothing")
 	world.queue_free()
 	await process_frame
 

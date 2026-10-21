@@ -40,9 +40,9 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		velocity_now = vehicle.call(&"point_velocity", p.global_position)
 		speed = velocity_now.length()
 		if p._motion_initialized:
-			var acceleration: Vector3 = (velocity_now - p._motion_velocity) / maxf(delta, 0.001)
-			var local_acceleration: Vector3 = vehicle.global_basis.inverse() * acceleration
-			p._motion_acceleration = p._motion_acceleration.lerp(local_acceleration, minf(1.0, delta * 8.0))
+			var felt: Vector3 = local_acceleration(vehicle, velocity_now, p._motion_velocity, delta)
+			p._motion_acceleration = p._motion_acceleration.lerp(felt,
+					minf(1.0, delta * FleetMotion.ACCELERATION_SMOOTHING))
 		p._motion_velocity = velocity_now
 		p._motion_initialized = true
 	else:
@@ -77,8 +77,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 			p.trap_behavior.on_physics_process(p, delta, {
 				"linear_velocity": p.linear_velocity, "angular_velocity": p.angular_velocity, "input": input,
 				"impact_ahead": float(road["eta"]) if not road.is_empty() else INF,
-				"truck_right": vehicle.global_basis.x if vehicle != null else Vector3.RIGHT,
-				"truck_forward": -vehicle.global_basis.z if vehicle != null else Vector3.FORWARD,
+				"truck_right": FleetMotion.right_of(vehicle), "truck_forward": FleetMotion.forward_of(vehicle),
 				"code_reader": code_reader(p, vehicle), "radio_mode": radio_mode(p)})
 			if _road_jolt(p, road, speed):
 				# apply_impact() already reported it.
@@ -397,8 +396,8 @@ static func push_in_truck(p: DeliveryPackage, peer_id: int, sample: Dictionary) 
 		return pressed
 	var view: Basis = view_basis_of(player)
 	var world: Vector3 = view.x * pressed.x + -view.z * pressed.y
-	var right: Vector3 = vehicle.global_basis.x
-	var forward: Vector3 = -vehicle.global_basis.z
+	var right: Vector3 = FleetMotion.right_of(vehicle)
+	var forward: Vector3 = FleetMotion.forward_of(vehicle)
 	return Vector2(world.dot(right), world.dot(forward)).limit_length(1.0)
 
 
