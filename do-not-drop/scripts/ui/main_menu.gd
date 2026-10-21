@@ -155,10 +155,10 @@ func _ready() -> void:
 	_handle_cmdline_args()
 
 
-func _handle_cmdline_args() -> void:
+## `args` are the command line's (a test hands its own).
+func _handle_cmdline_args(args: PackedStringArray = OS.get_cmdline_user_args()) -> void:
 	# Same shortcut level_base.gd already honours for smoke checks and quick
 	# iteration -- skips the menu the same way it skips on-foot loading.
-	var args: PackedStringArray = OS.get_cmdline_user_args()
 	# A Steam invite accepted before the menu existed (see NetworkManager).
 	var lobby: int = NetworkManager.take_pending_lobby()
 	if lobby != 0:
@@ -170,7 +170,11 @@ func _handle_cmdline_args() -> void:
 	if "--autostart-endless" in args:
 		_play_endless()
 		return
-	if "--mode=company" in args:
+	# Modo Empresa (D-0214, docs/decisiones/2026-10-04-flag-modo-empresa.md):
+	# --autostart-company, or its older alias --mode=company; --slot=<n> picks
+	# the company's save slot.
+	if "--autostart-company" in args or "--mode=company" in args:
+		CompanyRoot.launch_slot = _slot_arg(args)
 		_play_company()
 		return
 	if "--host" in args:
@@ -183,11 +187,24 @@ func _handle_cmdline_args() -> void:
 		# anyone who explicitly wants a Steam-free LAN session.
 		_host_session(NetworkManager.Transport.ENET)
 		return
+	if "--host-company" in args:
+		# A company room (D-0214), over ENet for the same reason as --host-lan.
+		CompanyRoot.launch_slot = _slot_arg(args)
+		_host_session(NetworkManager.Transport.ENET, COMPANY_SCENE)
+		return
 	for arg: String in args:
 		if arg.begins_with("--join="):
 			_address_field.text = arg.trim_prefix("--join=")
 			_join_by_address()
 			return
+
+
+## The value of --slot=<n> in `args`, "" without one (CompanySave makes it a file name).
+static func _slot_arg(args: PackedStringArray) -> String:
+	for arg: String in args:
+		if arg.begins_with("--slot="):
+			return arg.trim_prefix("--slot=")
+	return ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -333,7 +350,8 @@ func _build_play_page(column: VBoxContainer) -> void:
 	_page_focus[Page.PLAY] = solo_button
 	_entry_buttons.append(_button(play, tr("UI_MENU_ENDLESS"), false))
 	_entry_buttons[-1].pressed.connect(_play_endless)
-	# Modo Empresa (D-0214): in testing, solo only, until it replaces the others (D-0102).
+	# Modo Empresa (D-0214): in testing, solo only, until it replaces the others (D-0102). A company
+	# room opens with --host-company for now: one more button here pushed "Volver" off a 720p screen.
 	_entry_buttons.append(_button(play, tr("UI_MENU_COMPANY"), false))
 	_entry_buttons[-1].pressed.connect(_play_company)
 	_spacer(play, 4)
@@ -648,7 +666,12 @@ func _on_session_ready(is_host: bool) -> void:
 
 
 func _host_tag() -> String:
-	return tr("UI_MENU_HOST_ENDLESS") if NetworkManager.session_scene == ENDLESS_LEVEL_SCENE else tr("UI_MENU_HOST")
+	match NetworkManager.session_scene:
+		ENDLESS_LEVEL_SCENE:
+			return tr("UI_MENU_HOST_ENDLESS")
+		COMPANY_SCENE:
+			return tr("UI_MENU_HOST_COMPANY")
+	return tr("UI_MENU_HOST")
 
 
 func _cancel_connection() -> void:

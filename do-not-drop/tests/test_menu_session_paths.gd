@@ -8,6 +8,9 @@ extends SceneTree
 ##   (_host_endless_session) sets NetworkManager.session_scene BEFORE host_session
 ##   so the room opens on level_endless.tscn; a session_ready with no scene falls
 ##   back to level_base. The loader's tape says which kind of room it is.
+## - --host-company (ENet, as --host-lan; its --slot=<n> goes to
+##   CompanyRoot.launch_slot) opens the room on company_root.tscn (D-0214), with
+##   the company room's tape.
 ## - A start that fails on the spot (port taken) keeps the session's own reason
 ##   on screen: _show_failure() doesn't overwrite it with the generic "error %d".
 ## - A connection that fails when it is too late to cancel the loader
@@ -95,10 +98,35 @@ func _check_host_scenes() -> void:
 		_abandon(menu)
 	else:
 		_abandon_quietly(menu)
+
+	# --host-company (D-0214): a company room over ENet, as --host-lan, the scene set before
+	# host_session() as Endless's is; its --slot= goes to the company world.
+	menu.call(&"_handle_cmdline_args", PackedStringArray(["--host-company", "--slot=lan_test"]))
+	_expect(_network.get(&"transport") == _network.Transport.ENET
+		and String(_network.get(&"session_scene")) == menu.COMPANY_SCENE,
+		"--host-company opens a company room over ENet (transport %s, scene %s)"
+		% [_network.get(&"transport"), _network.get(&"session_scene")])
+	_expect(CompanyRoot.launch_slot == "lan_test",
+		"...and hands --slot= to the company world (got '%s')" % CompanyRoot.launch_slot)
+	CompanyRoot.launch_slot = ""
+	_check_company_loader(menu)
 	await process_frame
 	await process_frame
 	menu.queue_free()
 	await process_frame
+
+
+## A company room the menu just opened: over ENet it is ready at once and the loader heads for the
+## company world, its tape saying so; with the port taken there is no loader.
+func _check_company_loader(menu: Control) -> void:
+	var loader: LoadingScreen = menu.get(&"_loading")
+	if loader == null:
+		_abandon_quietly(menu)
+		return
+	_expect(loader.target_path == menu.COMPANY_SCENE,
+		"The company room loads the company world (got %s)" % loader.target_path)
+	_expect(loader.mode_text == tr("UI_MENU_HOST_COMPANY"), "The loader's tape says it's a company room")
+	_abandon(menu)
 
 
 ## The room didn't open (or Steam is answering later): nothing to cancel.
