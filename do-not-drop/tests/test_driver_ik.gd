@@ -30,13 +30,18 @@ func _initialize() -> void:
 	# modifier pass and the skin update, so the wrists are read in there.
 	var wrists: Dictionary = {}
 	var shoulders: Dictionary = {}
+	var targets: Dictionary = {}
 	var capture := func() -> void:
-		for bone_name: StringName in [&"hand.L", &"hand.R"]:
+		for pair: Array in [[&"hand.L", "DriverHandTargetLeft"], [&"hand.R", "DriverHandTargetRight"]]:
+			var bone_name: StringName = pair[0]
 			var bone: int = skeleton.find_bone(bone_name)
 			if bone >= 0:
 				wrists[bone_name] = skeleton.to_global(skeleton.get_bone_global_pose(bone).origin)
 				var shoulder: int = skeleton.get_bone_parent(skeleton.get_bone_parent(bone))
 				shoulders[bone_name] = skeleton.to_global(skeleton.get_bone_global_pose(shoulder).origin)
+				# Same instant as the wrist: the truck falls in this test, so a
+				# physics tick between capture and check moves the wheel ~7 cm.
+				targets[bone_name] = (vehicle.find_child(pair[1], true, false) as Node3D).global_position
 	skeleton.skeleton_updated.connect(capture)
 	for _i: int in range(3):
 		await process_frame
@@ -45,9 +50,9 @@ func _initialize() -> void:
 		var target := vehicle.find_child(pair[1], true, false) as Node3D
 		_expect(wrists.has(pair[0]), "Skeleton has bone %s" % pair[0])
 		if wrists.has(pair[0]) and target != null:
-			var gap: float = (wrists[pair[0]] as Vector3).distance_to(target.global_position)
+			var gap: float = (wrists[pair[0]] as Vector3).distance_to(targets[pair[0]])
 			print("driver %s wrist-to-wheel gap: %.3f m, shoulder-to-wheel %.3f m" % [pair[0], gap,
-				(shoulders[pair[0]] as Vector3).distance_to(target.global_position)])
+				(shoulders[pair[0]] as Vector3).distance_to(targets[pair[0]])])
 			_expect(gap < 0.08, "%s reaches its wheel target (gap %.3f m)" % [pair[0], gap])
 	# The horn takes the character's own right hand to the hub, and nothing
 	# else on the wheel is a hand.
