@@ -76,7 +76,8 @@ func _fill(table: PackingStation, ids: Array) -> void:
 func _test_flow(state: Node) -> void:
 	var order: Dictionary = _order()
 	var table: PackingStation = PackingStation.make(&"t1")
-	_expect(PackingTutorial.steps_for(order) == [&"box", &"products", &"label", &"tape", &"dispatch"], "5 steps, no seals")
+	var expected: Array[StringName] = [&"box", &"products", &"label", &"tape", &"dispatch"]
+	_expect(PackingTutorial.steps_for(order) == expected, "5 steps, no seals")
 	_expect(_id(table, order) == PackingTutorial.BOX, "empty table asks for a box")
 	table.start_box(&"M")
 	_expect(_id(table, order) == PackingTutorial.PRODUCTS, "empty box asks for products")
