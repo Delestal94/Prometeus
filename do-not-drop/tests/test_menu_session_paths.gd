@@ -8,9 +8,10 @@ extends SceneTree
 ##   (_host_endless_session) sets NetworkManager.session_scene BEFORE host_session
 ##   so the room opens on level_endless.tscn; a session_ready with no scene falls
 ##   back to level_base. The loader's tape says which kind of room it is.
-## - --host-company (ENet, as --host-lan; its --slot=<n> goes to
-##   CompanyRoot.launch_slot) opens the room on company_root.tscn (D-0214), with
-##   the company room's tape.
+## - --host-company (ENet, as --host-lan) opens the room on company_root.tscn
+##   (D-0214), with the company room's tape; its --slot=<n> reaches
+##   CompanyRoot.launch_slot only once the loader heads there, and is dropped
+##   when the loader is cancelled or the room can't open (port taken).
 ## - A start that fails on the spot (port taken) keeps the session's own reason
 ##   on screen: _show_failure() doesn't overwrite it with the generic "error %d".
 ## - A connection that fails when it is too late to cancel the loader
@@ -106,10 +107,14 @@ func _check_host_scenes() -> void:
 		and String(_network.get(&"session_scene")) == menu.COMPANY_SCENE,
 		"--host-company opens a company room over ENet (transport %s, scene %s)"
 		% [_network.get(&"transport"), _network.get(&"session_scene")])
-	_expect(CompanyRoot.launch_slot == "lan_test",
-		"...and hands --slot= to the company world (got '%s')" % CompanyRoot.launch_slot)
-	CompanyRoot.launch_slot = ""
+	if menu.get(&"_loading") != null:
+		_expect(CompanyRoot.launch_slot == "lan_test",
+			"...and hands --slot= to the company world its loader is taking it to (got '%s')"
+			% CompanyRoot.launch_slot)
 	_check_company_loader(menu)
+	_expect(CompanyRoot.launch_slot.is_empty(),
+		"A company start that is cancelled (or never opened) drops its --slot= (got '%s')"
+		% CompanyRoot.launch_slot)
 	await process_frame
 	await process_frame
 	menu.queue_free()
@@ -162,6 +167,13 @@ func _check_synchronous_failure() -> void:
 		menu.set(&"_failure_shown", true)
 		menu.call(&"_show_failure", "another generic")
 		_expect(status.text == "generic error 7", "With a reason already shown the generic one doesn't replace it")
+		# D-0214: a company room that can't open leaves no --slot= behind for a later company world.
+		menu.set(&"_busy", false)
+		menu.call(&"_handle_cmdline_args", PackedStringArray(["--host-company", "--slot=x"]))
+		_expect(not bool(_network.call(&"is_online")) and CompanyRoot.launch_slot.is_empty()
+			and String(menu.get(&"_launch_slot")).is_empty(),
+			"--host-company --slot=x with the port taken leaves no launch slot (got '%s', pending '%s')"
+			% [CompanyRoot.launch_slot, menu.get(&"_launch_slot")])
 	taken.close()
 	_abandon_quietly(menu)
 	menu.queue_free()

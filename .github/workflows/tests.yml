@@ -258,6 +258,12 @@ jobs:
           set -o pipefail
           bash tools/run-net-pair.sh | tee "$RUNNER_TEMP/network-pair-audit.log"
 
+      # D-0214: the company world as a room, over the menu's own --host-company and --join= flags.
+      - name: Run two-process company world check
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+        run: bash tools/run-net-pair.sh --company
+
       - name: Upload network latency audit
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

@@ -17,9 +17,9 @@ extends Node3D
 ## session its world is up (level_ready(), as level_common.gd does), which on a client is what has
 ## the host send CompanyNet's snapshot and spawn its player. The crew is spawned by the host alone,
 ## through World/PlayerSpawner (the path LoadingScreen waits on): one player per peer whose world
-## is up, spaced around SPAWN (crew_spawn()), freed when its peer leaves the roster, after
-## CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of one: the same
-## player at SPAWN it always was.
+## is up, at the first spot around SPAWN nobody stands on (free_spawn()), freed when its peer leaves
+## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
+## one: the same player at SPAWN it always was.
 ##
 ## No vehicle, no route and no run: Delivery and Endless ignore all of this
 ## (level_base.gd / level_endless.gd are untouched).
@@ -74,6 +74,10 @@ const SPAWN: Vector3 = Vector3(0.0, 1.0, 2.6)
 ## Meters between two crew members spawned side by side along X: a player's capsule is narrower,
 ## so nobody lands on anybody, and a crew of 8 spans 6.4 m of the starting shed's 12.
 const CREW_SPACING: float = 0.8
+## A spawn spot is taken while a crew member stands closer than this share of CREW_SPACING to it.
+const SPAWN_CLEARANCE: float = 0.9
+## Spawn spots tried before giving up and using the last (8 players fill the first 8).
+const MAX_SPAWN_SLOTS: int = 16
 ## The group of every player here: this is the company, there is no vehicle to practise for
 ## (the delivery practice card, player_cargo_care.gd, checks it).
 const CREW_GROUP: StringName = &"company_crew"
@@ -556,34 +560,61 @@ func _create_crew_member(data: Variant) -> Node:
 	return member
 
 
-## Where the crew member at `index` of the roster appears: the first (the host) at SPAWN, the
-## rest CREW_SPACING apart to either side in turn (+X, -X, then twice as far...).
-static func crew_spawn(index: int) -> Vector3:
-	var step: int = (maxi(index, 0) + 1) / 2
-	var side: float = 1.0 if index % 2 == 1 else -1.0
+## The `slot`-th spawn spot: the first at SPAWN, the rest CREW_SPACING apart to either side in
+## turn (+X, -X, then twice as far...).
+static func crew_spawn(slot: int) -> Vector3:
+	var step: int = (maxi(slot, 0) + 1) / 2
+	var side: float = 1.0 if slot % 2 == 1 else -1.0
 	return SPAWN + Vector3(CREW_SPACING * float(step) * side, 0.0, 0.0)
 
 
-## Host (solo too): a player for every peer on the roster whose world is up, in roster order; a
-## player whose peer left the roster goes. It goes after CompanyNet let go of what it held: the
-## session tells peer_removed (CompanyNet drops the units at the player's feet, D-2006) before
+## The first spawn spot (crew_spawn(0), 1, 2...) with nobody of `taken` (where the crew stands, in
+## the world's space) closer than SPAWN_CLEARANCE across the floor: a newcomer never lands on
+## someone, whoever left before it. The last spot tried when every one is taken.
+static func free_spawn(taken: Array[Vector3]) -> Vector3:
+	var spot: Vector3 = SPAWN
+	for slot: int in range(MAX_SPAWN_SLOTS):
+		spot = crew_spawn(slot)
+		var clear: bool = true
+		for at: Vector3 in taken:
+			if Vector2(at.x - spot.x, at.z - spot.z).length() < CREW_SPACING * SPAWN_CLEARANCE:
+				clear = false
+				break
+		if clear:
+			return spot
+	return spot
+
+
+## Host (solo too): a player for every peer on the roster whose world is up, in roster order, at
+## the first spawn spot nobody stands on (free_spawn()); a player whose peer left the roster goes
+## first, so its spot is free again. It goes after CompanyNet let go of what it held: the session
+## tells peer_removed (CompanyNet drops the units at the player's feet, D-2006) before
 ## roster_changed, and the node is only freed at the end of the frame.
 func _sync_crew() -> void:
 	if not _spawns_crew or _host_gone or not is_inside_tree() or _spawner == null:
 		return
 	var ids: Array[int] = _crew_ids()
-	for index: int in range(ids.size()):
-		var id: int = ids[index]
-		if _world.has_node(NodePath(_player_name(id))):
-			continue
-		if session != null and not session.is_peer_ready(id):
-			continue
-		_spawner.spawn({"peer_id": id, "position": crew_spawn(index)})
 	for child: Node in _world.get_children():
 		var child_name: String = String(child.name)
 		if child_name.begins_with(PLAYER_PREFIX) and not ids.has(int(child_name.trim_prefix(PLAYER_PREFIX))):
 			child.queue_free()
+	for id: int in ids:
+		if _world.has_node(NodePath(_player_name(id))):
+			continue
+		if session != null and not session.is_peer_ready(id):
+			continue
+		_spawner.spawn({"peer_id": id, "position": free_spawn(_crew_spots())})
 	_refresh_local_player()
+
+
+## Where each player of this world stands, in the world's space; those on their way out left out.
+func _crew_spots() -> Array[Vector3]:
+	var spots: Array[Vector3] = []
+	for child: Node in _world.get_children():
+		var member := child as Player
+		if member != null and member.is_in_group(CREW_GROUP) and not member.is_queued_for_deletion():
+			spots.append(_world.to_local(member.global_position))
+	return spots
 
 
 ## The session's roster online, else (solo, a host's room closed) this peer alone.
@@ -610,14 +641,29 @@ func _on_crew_spawned(_member: Node) -> void:
 
 
 ## `player` is this peer's own, wherever it came from; the build mode keeps it still while it
-## builds (ShedBuilder.player).
+## builds (ShedBuilder.player). Both let go of it as it leaves the tree (_on_local_player_leaving()).
 func _refresh_local_player() -> void:
 	var own: Node3D = _world.get_node_or_null(NodePath(_player_name(multiplayer.get_unique_id()))) as Node3D
+	if own != null and own.is_queued_for_deletion():
+		own = null
 	if own == player:
 		return
 	player = own
+	if player != null:
+		player.tree_exiting.connect(_on_local_player_leaving.bind(player), CONNECT_ONE_SHOT)
 	if builder != null:
 		builder.player = player
+
+
+## This peer's own player leaves the tree: the host despawned it, the session that spawned it ended
+## or the world closes. Neither `player` nor the build mode keeps pointing at a node about to be
+## freed. Not the spawner's despawned: that fires while the node is still in place.
+func _on_local_player_leaving(leaving: Node3D) -> void:
+	if player != leaving:
+		return
+	player = null
+	if builder != null and is_instance_valid(builder):
+		builder.player = null
 
 
 ## This peer's world is up (everything here is built in _ready(): the shed's floor, the slabs):

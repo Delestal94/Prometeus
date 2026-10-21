@@ -19,7 +19,10 @@ extends SceneTree
 ##   leaves the session: on the host what it held lies in one new floor:<n> bundle where its player
 ##   stood, in one units_moved (CompanyNet, D-2006: peer_removed comes before its player goes), the
 ##   total unchanged; then its player is gone from the host, which keeps its own; the client's
-##   CompanyState is put back as it was.
+##   CompanyState is put back as it was, and with its session gone its world and build mode let go of
+##   its freed player (CompanyRoot.player, ShedBuilder.player).
+## - free_spawn(): a newcomer takes the first spawn spot nobody stands on (host, A and B in spots
+##   0-2, A leaves, C comes: C on A's spot, never on B; someone standing near a spot keeps it taken).
 ## - No engine error on the way (warnings aside).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -84,6 +87,7 @@ func _run() -> void:
 	_host_session.session_scene = SCENE
 	var hosted: bool = _host_session.host_session(PORT) == OK
 	_expect(hosted, "The host opens an ENet room on localhost:%d" % PORT)
+	_check_free_spawn()
 	if hosted:
 		await _check_host_alone()
 		if await _check_join():
@@ -222,10 +226,41 @@ func _check_leave() -> void:
 			and host_net.inventory.count(StringName(source[0]), bundle) == taken,
 			"...its hands empty and the stock's total unchanged (%d, got %d)"
 			% [total, host_net.inventory.total_units()])
+	# The host's spawns go with the client's session: nothing here keeps pointing at its player. A
+	# freed object compares equal to null, so typeof() tells "let go" from "holds a freed one".
+	var let_go: bool = await _wait_for(func() -> bool:
+		return typeof(_client_root.player) == TYPE_NIL and typeof(_client_root.builder.player) == TYPE_NIL)
+	_expect(let_go, "With its session gone the client's world and build mode let go of its freed player"
+		+ " (player %s, build mode's %s)" % [_client_root.player, _client_root.builder.player])
 	_client_root.queue_free()
 	await process_frame
 	_expect(not bool(_client_state.call(&"is_active")),
 		"Leaving the world puts the client's CompanyState back as it was (off)")
+
+
+## free_spawn() alone: a newcomer takes the first spawn spot nobody stands on. With a crew of the
+## host, A and B (spots 0, 1, 2), A leaving and C coming puts C on A's spot, not on B.
+func _check_free_spawn() -> void:
+	var none: Array[Vector3] = []
+	_expect(CompanyRoot.free_spawn(none) == CompanyRoot.SPAWN, "An empty world spawns at SPAWN")
+	var three: Array[Vector3] = [CompanyRoot.crew_spawn(0), CompanyRoot.crew_spawn(1), CompanyRoot.crew_spawn(2)]
+	_expect(CompanyRoot.free_spawn(three) == CompanyRoot.crew_spawn(3),
+		"With spots 0 to 2 taken the next is spot 3 (got %s)" % CompanyRoot.free_spawn(three))
+	var a_left: Array[Vector3] = [CompanyRoot.crew_spawn(0), CompanyRoot.crew_spawn(2)]
+	var for_c: Vector3 = CompanyRoot.free_spawn(a_left)
+	_expect(for_c == CompanyRoot.crew_spawn(1),
+		"A leaves, C comes: C takes A's spot %s, not B's (got %s)" % [CompanyRoot.crew_spawn(1), for_c])
+	var near: float = CompanyRoot.CREW_SPACING * CompanyRoot.SPAWN_CLEARANCE * 0.8
+	var crowded: Array[Vector3] = [CompanyRoot.crew_spawn(0), CompanyRoot.crew_spawn(1) + Vector3(0.0, 0.0, near)]
+	var past: Vector3 = CompanyRoot.free_spawn(crowded)
+	_expect(past == CompanyRoot.crew_spawn(2),
+		"Someone standing %.2f m off spot 1 keeps it taken (got %s)" % [near, past])
+	var clearance: float = CompanyRoot.CREW_SPACING * CompanyRoot.SPAWN_CLEARANCE
+	for taken: Array[Vector3] in [three, a_left, crowded]:
+		var spot: Vector3 = CompanyRoot.free_spawn(taken)
+		for at: Vector3 in taken:
+			_expect(Vector2(at.x - spot.x, at.z - spot.z).length() >= clearance,
+				"A free spot %s is at least %.2f m from %s" % [spot, clearance, at])
 
 
 ## The client asks for up to 2 units of `source` [product, location, qty] at a stand-in station

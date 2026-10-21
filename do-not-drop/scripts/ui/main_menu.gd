@@ -116,6 +116,10 @@ var _page: Page = Page.HOME
 var _loading: LoadingScreen
 ## The session already put its own reason on screen for this attempt.
 var _failure_shown: bool = false
+## The command line's --slot=<n> for the company world it starts (D-0214). Handed to
+## CompanyRoot.launch_slot only once its loader is on the way (_go_to_level()); a start that fails
+## or is cancelled drops it, so no later company world takes it by mistake.
+var _launch_slot: String = ""
 ## One VBoxContainer per Page, and the button each one focuses on arrival.
 var _pages: Dictionary = {}
 var _page_focus: Dictionary = {}
@@ -174,7 +178,7 @@ func _handle_cmdline_args(args: PackedStringArray = OS.get_cmdline_user_args()) 
 	# --autostart-company, or its older alias --mode=company; --slot=<n> picks
 	# the company's save slot.
 	if "--autostart-company" in args or "--mode=company" in args:
-		CompanyRoot.launch_slot = _slot_arg(args)
+		_launch_slot = _slot_arg(args)
 		_play_company()
 		return
 	if "--host" in args:
@@ -189,7 +193,7 @@ func _handle_cmdline_args(args: PackedStringArray = OS.get_cmdline_user_args()) 
 		return
 	if "--host-company" in args:
 		# A company room (D-0214), over ENet for the same reason as --host-lan.
-		CompanyRoot.launch_slot = _slot_arg(args)
+		_launch_slot = _slot_arg(args)
 		_host_session(NetworkManager.Transport.ENET, COMPANY_SCENE)
 		return
 	for arg: String in args:
@@ -602,6 +606,7 @@ func _host_session(transport: int = NetworkManager.Transport.AUTO, scene: String
 	var error: Error = NetworkManager.host_session()
 	if error != OK:
 		_busy = false
+		_drop_launch_slot()
 		_show_failure(tr("UI_MENU_STATUS_HOST_FAILED") % error)
 
 
@@ -676,6 +681,7 @@ func _host_tag() -> String:
 
 func _cancel_connection() -> void:
 	NetworkManager.leave_session()
+	_drop_launch_slot()
 	NetworkManager.transport = NetworkManager.Transport.AUTO
 	_busy = false
 	_set_status(tr("UI_MENU_STATUS_CANCELLED"), MUTED)
@@ -713,6 +719,9 @@ func _go_to_level(scene_path: String, mode: String = "") -> void:
 	if _loading != null and is_instance_valid(_loading):
 		return
 	_busy = true
+	# --slot= reaches only the company world this loader is taking the player to.
+	CompanyRoot.launch_slot = _launch_slot if scene_path == COMPANY_SCENE else ""
+	_launch_slot = ""
 	_loading = LoadingScreen.go(get_tree(), scene_path, mode)
 	_loading.failed.connect(_on_level_load_failed)
 	# The theme plays on under the loading screen and fades under the level
@@ -724,6 +733,7 @@ func _go_to_level(scene_path: String, mode: String = "") -> void:
 ## Too late to cancel (the level is being built), the loading screen goes
 ## back to the menu instead; returns false then.
 func _cancel_loading() -> bool:
+	_drop_launch_slot()
 	if _loading == null or not is_instance_valid(_loading):
 		_loading = null
 		return true
@@ -736,10 +746,18 @@ func _cancel_loading() -> bool:
 
 func _on_level_load_failed(_path: String) -> void:
 	_loading = null
+	_drop_launch_slot()
 	if NetworkManager.is_online():
 		NetworkManager.leave_session()
 	_busy = false
 	_set_status(tr("UI_LOADING_FAILED"), RED)
+
+
+## A start that won't happen (failed, cancelled): its --slot= goes with it, here and in the
+## company world's launch slot (a too-late loader's world already took it).
+func _drop_launch_slot() -> void:
+	_launch_slot = ""
+	CompanyRoot.launch_slot = ""
 
 
 func _set_status(text: String, color: Color) -> void:

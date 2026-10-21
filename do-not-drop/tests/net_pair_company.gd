@@ -11,15 +11,19 @@ extends SceneTree
 ## the client also for its own player (the loader's cover waits for it) and the host's snapshot.
 ## Then the client leaves the session and quits, and the host waits for its player to be gone from
 ## its world. Each prints one `PAIR role=<host|client> PASS|FAIL <why>` line; an engine error on the
-## way (warnings aside) is a FAIL. The host's world saves in its own folder, never the game's slot.
+## way (warnings aside) is a FAIL. The host's world saves in its own folder, never the game's slot,
+## emptied first so every run starts from the same company. Every wait shares one deadline that ends
+## well inside run-net-pair.sh's `timeout 150`: a stall prints its FAIL instead of being killed.
 
 const MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 const COMPANY_SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const SAVE_DIR: String = "user://net_pair_company"
-## The host waits this long for the client to come and go, the client for the host's world.
-const TIMEOUT_MSEC: int = 90000
+## Everything this process waits for (the world, the client coming and going) fits in this long
+## from its start: run-net-pair.sh kills it at 150 s, and the client starts 2 s after the host.
+const DEADLINE_MSEC: int = 120000
 
 var _host: bool = false
+var _deadline_msec: int = 0
 var _catcher := ErrorCatcher.new()
 
 
@@ -46,7 +50,10 @@ class ErrorCatcher extends Logger:
 
 
 func _initialize() -> void:
+	_deadline_msec = Time.get_ticks_msec() + DEADLINE_MSEC
 	_host = "--host-company" in OS.get_cmdline_user_args()
+	if _host:
+		_clean_saves()
 	OS.add_logger(_catcher)
 	root.child_entered_tree.connect(_aim_saves)
 	_run.call_deferred()
@@ -113,12 +120,21 @@ func _crew(world: CompanyRoot) -> int:
 
 
 func _wait_until(done: Callable) -> bool:
-	var deadline: int = Time.get_ticks_msec() + TIMEOUT_MSEC
-	while Time.get_ticks_msec() < deadline:
+	while Time.get_ticks_msec() < _deadline_msec:
 		if done.call():
 			return true
 		await process_frame
 	return bool(done.call())
+
+
+## SAVE_DIR emptied: the host's world loads its slot from there, and a run must not start from the
+## day the last one left.
+static func _clean_saves() -> void:
+	var dir := DirAccess.open(SAVE_DIR)
+	if dir == null:
+		return
+	for file: String in dir.get_files():
+		dir.remove(file)
 
 
 ## The host's world saves in SAVE_DIR, set as it enters the tree (before its _ready()).
