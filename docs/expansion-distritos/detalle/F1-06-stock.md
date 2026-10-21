@@ -138,3 +138,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - `Inventory.locations_of(product)` (nuevo): ubicación → unidades de un producto.
 **Test** `test_stock_alert`: falta y no falta, suma de varios pedidos con el vencimiento más cercano, pedidos armados/entregados/en caja y unidades selladas que no cuentan, `incoming` parcial y total, orden por urgencia, `fresh`.
 **Hecho cuando:** test: un pedido que pide más de lo que hay marca el producto con lo que falta (test pasa).
+
+### D-0614 · Recepción: control de remito (lo que llegó vs. lo pedido) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del remito (`DeliveryNote`, `scripts/gameplay/business/delivery_note.gd`) y `test_delivery_note`. Falta D-0614.b (llamarlo al irse el camión y mostrarlo).
+**Depende de:** D-0602 (`SupplierSchedule.ordered_for`), D-0604 (`Pallet`), D-0605 (`PalletJack.left_on_bed`)
+**Qué:**
+- **D-0614.a (hecha) — la lógica.** `DeliveryNote` (`RefCounted`, sin nodos): `received_units(pallets, received_ids)` suma las unidades de los palets que sí se bajaron; `compare(pedido, recibido)` devuelve una línea por producto (`ordered`, `received`, `missing`, `extra`) en orden de id; `check(día, pedido, recibido)` guarda en el remito solo las líneas que no cierran (un día exacto no deja registro; volver a controlar el mismo día lo reemplaza). `days_with_shortfall()`, `discrepancies(día)`, `missing_totals()`, `is_exact` y `total_missing`. `to_dict`/`from_dict` toleran datos rotos y recalculan `missing`/`extra`.
+- **D-0614.b (pendiente) — el cableado.** Cuando el camión se va (`SupplierSchedule.truck_state` pasa a `left`, D-0618), `CompanyRoot` llama a `check(día, ordered_for(día), received_units(pallets_for(día), ids bajados))`, guarda el `DeliveryNote` en el save de empresa y lo replica con el resto del stock (D-0619). Lo que se muestra (lista de faltantes en el resumen del día o el tablero) es UI; el cobro solo de lo recibido ya lo hace D-0503 por palet.
+**Test** `test_delivery_note`: solo cuentan los palets bajados; faltante de 6 gallinas registrado en su día; entrega exacta sin registro y volver a controlar reemplaza; sobrante como `extra` y no como faltante; totales por producto y días inválidos; ida y vuelta de JSON y save roto.
+**Hecho cuando:** test: un faltante se registra (hecho en la lógica); en el juego, al irse el camión (D-0614.b).
