@@ -284,7 +284,7 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 archivo de cada carpeta como Nacho.
 
 ### D-0232 · Tick de negocio a 4 Hz — B · Opus 5.5 · medium · Aviso: sí (`modules/`, `docs/modulos.md`) · F0 (Ampliación)
-**[x] Hecho (2026-10-21, PR #PRNUM)** — módulo `modules/fixed_tick/` (`FixedTick`) + adaptador `scripts/core/company/business_tick.gd` (`BusinessTick`, solo en el host); `DayCycle.poll` es su primer paso y el `_process` propio del ciclo queda apagado en el mundo Empresa.
+**[x] Hecho (2026-10-21, PR #578)** — módulo `modules/fixed_tick/` (`FixedTick`) + adaptador `scripts/core/company/business_tick.gd` (`BusinessTick`, solo en el host); `DayCycle.poll` es su primer paso y el `_process` propio del ciclo queda apagado en el mundo Empresa.
 **Depende de:** D-0203, D-0214
 **Qué:** las reglas del host que solo necesitan mirar el mundo unas veces por segundo (fases del día,
 y después pedidos, proveedor, empleados, máquinas) corren en un tick fijo, aparte de la física y del
