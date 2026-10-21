@@ -42,7 +42,9 @@ func _inv(stock: Dictionary) -> Inventory:
 func _test_basic() -> void:
 	var inv := _inv({"hen@shelf:a1": 1, "sourdough@shelf:a2": 3})
 	var ok := _order(&"ok", [{"product": &"sourdough", "qty": 3}])
-	var short := _order(&"short", [{"product": &"hen", "qty": 3}, {"product": &"sourdough", "qty": 0}])
+	var short := _order(
+		&"short", [{"product": &"hen", "qty": 3}, {"product": &"sourdough", "qty": 0}]
+	)
 	var result: Dictionary = OrderWaiting.classify(inv, [ok, short])
 	_expect(result["ready"] == [&"ok"], "covered order is ready")
 	_expect(result["waiting"].has(&"short"), "short order waits")
@@ -57,12 +59,23 @@ func _test_shared_stock() -> void:
 	var early := _order(&"a", [{"product": &"hen", "qty": 1}], 200)
 	var result: Dictionary = OrderWaiting.classify(inv, [late, early])
 	_expect(result["ready"] == [&"a"], "the earlier due gets the last hen")
-	_expect(result["waiting"].has(&"b") and result["waiting"][&"b"] == {&"hen": 1}, "the other waits")
-	var tie: Dictionary = OrderWaiting.classify(inv, [_order(&"z", [{"product": &"hen", "qty": 1}]), _order(&"y", [{"product": &"hen", "qty": 1}])])
+	_expect(
+		result["waiting"].has(&"b") and result["waiting"][&"b"] == {&"hen": 1}, "the other waits"
+	)
+	var tie: Dictionary = OrderWaiting.classify(
+		inv,
+		[
+			_order(&"z", [{"product": &"hen", "qty": 1}]),
+			_order(&"y", [{"product": &"hen", "qty": 1}])
+		]
+	)
 	_expect(tie["ready"] == [&"y"], "same due: lower id first")
 	var split: Dictionary = OrderWaiting.classify(
 		_inv({"hen@shelf:a1": 2}),
-		[_order(&"p", [{"product": &"hen", "qty": 2}], 100), _order(&"q", [{"product": &"hen", "qty": 1}], 200)]
+		[
+			_order(&"p", [{"product": &"hen", "qty": 2}], 100),
+			_order(&"q", [{"product": &"hen", "qty": 1}], 200)
+		]
 	)
 	_expect(split["ready"] == [&"p"] and split["waiting"].has(&"q"), "units are not counted twice")
 	var dup: Dictionary = OrderWaiting.classify(
@@ -80,9 +93,13 @@ func _test_ignored() -> void:
 	packed["box_id"] = &"b1"
 	var done := _order(&"d", [{"product": &"hen", "qty": 1}], 240, Order.STATE_DELIVERED)
 	var result: Dictionary = OrderWaiting.classify(inv, [packed, done])
-	_expect(result["ready"].is_empty() and result["waiting"].is_empty(), "packed and closed ignored")
+	_expect(
+		result["ready"].is_empty() and result["waiting"].is_empty(), "packed and closed ignored"
+	)
 	var late := _order(&"l", [{"product": &"hen", "qty": 1}], 240, Order.STATE_LATE)
-	_expect(OrderWaiting.classify(_inv({"hen@shelf:a1": 1}), [late])["ready"] == [&"l"], "late counts")
+	_expect(
+		OrderWaiting.classify(_inv({"hen@shelf:a1": 1}), [late])["ready"] == [&"l"], "late counts"
+	)
 
 
 func _test_single() -> void:
