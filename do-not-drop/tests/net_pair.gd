@@ -51,9 +51,6 @@ const TIMEOUT_SECONDS: float = 40.0
 const CLIENT_BUDGET_SECONDS: float = 150.0
 const CLIENT_COSMETIC: StringName = &"mint_uniform"
 const CLIENT_NICKNAME: String = "Ana"
-const HOST_SKIN: StringName = &"night_neon"
-const CLIENT_SKIN: StringName = &"layered_gummy"
-const GEL_SKINS: Script = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
 const NEWS_DESK: Script = preload("res://scripts/presentation/newspaper/news_desk.gd")
 const GEL_PROPORTIONS: Script = preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 ## N-235.2: the joiner loads its level with ENet's polling blocked, and the
@@ -104,7 +101,7 @@ func _ready() -> void:
 	var profile: Node = get_node(^"/root/UnlockManager")
 	profile.set(&"completed_runs", 6 if _host else 0)
 	profile.set(&"gel_proportions", _gel_values(_host))
-	profile.set(&"selected_gel_skin", HOST_SKIN if _host else CLIENT_SKIN)
+	profile.set(&"selected_gel_skin", &"night_neon" if _host else &"layered_gummy")
 	if not _host:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		profile.set(&"selected_cosmetic", CLIENT_COSMETIC)
@@ -172,11 +169,8 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_gel_proportions",
 		GEL_PROPORTIONS.packet_from_dictionary(_gel_values(true)))
 	await _wait_for_report(&"gel_proportions")
-	var client_skin_arrived: bool = await _wait_until(func() -> bool:
-		return StringName(client_body.get(&"skin_id")) == CLIENT_SKIN and _skin_applied(client_player, CLIENT_SKIN))
-	_expect(client_skin_arrived, "host sees the client's selected gel skin")
-	rpc_id(_client_peer_id, &"_client_check_gel_skin", HOST_SKIN)
-	await _wait_for_report(&"gel_skin")
+	_expect(await $SkinCheck.run_host(host_player, client_player, _client_peer_id,
+		&"night_neon", &"layered_gummy"), $SkinCheck.detail)
 	_expect(await $RagdollCheck.run_host(host_player, _client_peer_id),
 		$RagdollCheck.detail)
 
@@ -740,15 +734,6 @@ func _client_check_gel_proportions(expected_host: PackedByteArray) -> void:
 	_report(&"gel_proportions", arrived, "client sees the host's quantized gel proportions")
 
 
-@rpc("authority", "call_remote", "reliable")
-func _client_check_gel_skin(expected_host: StringName) -> void:
-	var host_player: Player = _player(1)
-	var arrived: bool = host_player != null and await _wait_until(func() -> bool:
-		return StringName(host_player.get_node(^"GelProportions").get(&"skin_id")) == expected_host \
-			and _skin_applied(host_player, expected_host))
-	_report(&"gel_skin", arrived, "client sees the host's selected gel skin")
-
-
 ## Sent the frame the host moved a resting box. The new pose has to get here,
 ## and right behind it the box's full rate: a woken throttle sends every tick
 ## for its settle window, a stuck one only every rest_interval. Counting the
@@ -954,14 +939,6 @@ func _gel_values(host: bool) -> Dictionary:
 	values[&"general_thickness"] = 0.64 if host else -0.72
 	values[&"belly"] = -0.35 if host else 0.48
 	return values
-
-
-func _skin_applied(player: Player, expected_id: StringName) -> bool:
-	var mesh := PlayerAppearance.find_mesh_instance(player.get_node(^"BodyVisual"))
-	if mesh == null:
-		return false
-	var expected: Resource = GEL_SKINS.skin(expected_id)
-	return mesh.get_instance_shader_parameter(&"gel_color") == expected.get(&"color")
 
 
 func _wait_for_report(stage: StringName) -> bool:
