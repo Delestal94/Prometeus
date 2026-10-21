@@ -81,8 +81,8 @@ func _initialize() -> void:
 		_check_vertex_shading(mesh)
 	model.free()
 
-	# In the player: crew colour on shirt and trim, every body mesh on the
-	# right render layer, Sit while seated.
+	# The legacy asset above remains guarded as source art. The active player now
+	# uses the gel body, with the crew colour packed into its shared gel shader.
 	var vehicle: Node = load("res://scenes/gameplay/vehicle/vehicle.tscn").instantiate()
 	var player: Node3D = load("res://scenes/gameplay/player/player.tscn").instantiate()
 	player.set_multiplayer_authority(1)
@@ -90,16 +90,14 @@ func _initialize() -> void:
 	root.add_child(player)
 	await process_frame
 	var body_mesh: MeshInstance3D = _find(player.get_node(^"BodyVisual"), "MeshInstance3D") as MeshInstance3D
-	var shirt := body_mesh.get_surface_override_material(0) as StandardMaterial3D
-	_expect(shirt != null and shirt.albedo_color == Color("83e2ba"), "The host (slot 0) wears the first crew colour")
-	_expect(shirt != null and shirt.vertex_color_use_as_albedo, "The crew-coloured shirt keeps the baked occlusion")
-	var trim_tinted: bool = false
-	for surface: int in body_mesh.mesh.get_surface_count():
-		var source: Material = body_mesh.mesh.surface_get_material(surface)
-		if source != null and source.resource_name == "ShirtTrim":
-			var trim := body_mesh.get_surface_override_material(surface) as StandardMaterial3D
-			trim_tinted = trim != null and trim.albedo_color == Color("83e2ba").darkened(0.18)
-	_expect(trim_tinted, "The T-shirt trim follows the crew colour, a shade darker")
+	var gel_material := body_mesh.material_override as ShaderMaterial
+	_expect(gel_material != null and gel_material.shader != null,
+		"The active body uses the shared gel shader")
+	var packed_accent: float = body_mesh.get_instance_shader_parameter(&"gel_brightness")
+	var actual_accent: Color = PlayerAppearance.unpack_gel_team_color(packed_accent)
+	var expected_accent: Color = PlayerAppearance.unpack_gel_team_color(
+		PlayerAppearance.pack_gel_team_color(1.0, Color("83e2ba")))
+	_expect(actual_accent == expected_accent, "The host (slot 0) wears the first crew accent")
 	_expect(_all_layers(player.get_node(^"BodyVisual"), 2), "Every body mesh of the local player is on LOCAL_BODY")
 
 	var player_anim: AnimationPlayer = _find(player.get_node(^"BodyVisual"), "AnimationPlayer") as AnimationPlayer
@@ -185,7 +183,7 @@ func _initialize() -> void:
 	player.free()
 	vehicle.free()
 	if _failures == 0:
-		print("PASS: the rounded character carries its clips, bones, shirt colour and seated pose")
+		print("PASS: legacy source art stays valid and the active gel carries animation, crew accent and seated pose")
 	quit(_failures)
 
 

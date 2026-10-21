@@ -3,7 +3,11 @@ extends SceneTree
 ##
 ## Registries of the company read from data/ (expansion D-0216, scripts/core/company/catalog.gd):
 ## - the current 10 products, 9 zones, 3 vehicles and 7 gates load by id, each under its own id,
-##   and suppliers and boxes (README only today) load empty with no error;
+##   with no error;
+## - the four boxes S, M, L and XL (D-0217) load by id, match CompanyTuning.BOX_CELLS and BOX_COST,
+##   carry a model, and boxes() returns them smallest first, each bigger and dearer than the last;
+## - the supplier distribuidora_central (D-0218) loads by id, sells the 10 products, every one of
+##   them exists in the catalog, and its arrival and wait match CompanyTuning (08:30, 180 min);
 ## - zones() keeps the file name order company_root.gd's load_zones() has always had;
 ## - a ProductDefinition .tres written in user:// and read through the extra root shows up by id
 ##   with no code change, next to the data/ ones;
@@ -24,6 +28,8 @@ func _initialize() -> void:
 func _run() -> void:
 	_clean()
 	_check_data()
+	_check_supplier()
+	_check_boxes()
 	_check_extra_root()
 	_check_duplicates()
 	_check_remap()
@@ -38,7 +44,7 @@ func _check_data() -> void:
 	_expect(catalog.errors.is_empty(), "data/ loads with no errors (got %s)" % [catalog.errors])
 	var expected: Dictionary = {
 		CompanyCatalog.PRODUCTS: 10, CompanyCatalog.ZONES: 9, CompanyCatalog.VEHICLES: 3,
-		CompanyCatalog.GATES: 7, CompanyCatalog.SUPPLIERS: 0, CompanyCatalog.BOXES: 0,
+		CompanyCatalog.GATES: 7, CompanyCatalog.SUPPLIERS: 1, CompanyCatalog.BOXES: 4,
 	}
 	for kind: StringName in expected:
 		var count: int = catalog.all(kind).size()
@@ -56,6 +62,56 @@ func _check_data() -> void:
 	_expect(catalog.ids(CompanyCatalog.ZONES) == by_file,
 		"zones() keeps the file name order (got %s)" % [catalog.ids(CompanyCatalog.ZONES)])
 	_expect(catalog.zones().size() == 9, "zones() returns 9 typed zones (got %d)" % catalog.zones().size())
+
+
+func _check_supplier() -> void:
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	var supplier: SupplierDefinition = catalog.supplier(&"distribuidora_central")
+	_expect(supplier != null, "supplier 'distribuidora_central' loads by id")
+	if supplier == null:
+		return
+	_expect(supplier.id == &"distribuidora_central", "the supplier carries its own id")
+	_expect(supplier.products.size() == 10, "it sells 10 products (got %d)" % supplier.products.size())
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		_expect(supplier.sells(id), "it sells catalog product '%s'" % id)
+	for id: StringName in supplier.products:
+		_expect(catalog.product(id) != null, "its product '%s' exists in the catalog" % id)
+	_expect(supplier.arrival_min == CompanyTuning.SUPPLIER_ARRIVAL_MIN,
+		"its truck arrives at 08:30 (got %d)" % supplier.arrival_min)
+	_expect(supplier.wait_minutes == CompanyTuning.SUPPLIER_WAIT_MIN,
+		"it waits 180 min (got %d)" % supplier.wait_minutes)
+	var hen: ProductDefinition = catalog.product(&"hen")
+	_expect(supplier.unit_price(hen) == hen.buy_price,
+		"price factor 1.0 keeps the list price (got %d)" % supplier.unit_price(hen))
+
+
+func _check_boxes() -> void:
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	for id: StringName in CompanyTuning.BOX_CELLS:
+		var box: BoxDefinition = catalog.box(id)
+		_expect(box != null, "box '%s' loads by id" % id)
+		if box == null:
+			continue
+		_expect(box.id == id, "box '%s' carries its own id" % id)
+		_expect(box.cells == CompanyTuning.BOX_CELLS[id],
+			"box '%s' cells match BOX_CELLS (got %s)" % [id, box.cells])
+		_expect(box.cost == CompanyTuning.BOX_COST[id],
+			"box '%s' cost matches BOX_COST (got %d)" % [id, box.cost])
+		_expect(box.model != null, "box '%s' has a model" % id)
+	var ordered: Array[BoxDefinition] = catalog.boxes()
+	var ids: Array[StringName] = []
+	for box: BoxDefinition in ordered:
+		ids.append(box.id)
+	_expect(ids == [&"S", &"M", &"L", &"XL"], "boxes() goes S, M, L, XL (got %s)" % [ids])
+	for i: int in range(1, ordered.size()):
+		var prev: BoxDefinition = ordered[i - 1]
+		var box: BoxDefinition = ordered[i]
+		_expect(box.volume() > prev.volume(), "%s holds more cells than %s" % [box.id, prev.id])
+		_expect(box.cost > prev.cost, "%s costs more than %s" % [box.id, prev.id])
+	var s_box: BoxDefinition = catalog.box(&"S")
+	if s_box != null:
+		_expect(s_box.size_m().is_equal_approx(Vector3.ONE * 2.0 * CompanyTuning.GRID_CELL_M),
+			"box S is 2 cells of GRID_CELL_M a side (got %s)" % s_box.size_m())
 
 
 func _check_extra_root() -> void:

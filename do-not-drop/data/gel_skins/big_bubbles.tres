@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GelSkinDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_skin_definition.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+id = &"big_bubbles"
+color = Color(0.32, 0.9, 0.75, 0.86)
+absorption = 1.65
+shine = 0.93
+interior_mode = 5
+interior_color = Color(0.82, 1, 0.96, 1)
+interior_amount = 0.88
+interior_scale = 4.5

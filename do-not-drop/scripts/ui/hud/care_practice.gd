@@ -128,6 +128,7 @@ func advance(delta: float, player: Node, keys: Dictionary, gamepad: bool) -> boo
 	var view_step: StringName = STEP_VIEWS[mini(step, STEP_VIEWS.size() - 1)]
 	prompt_view.show_step(view_step, {"pad": gamepad, "primary": primary and holding_box, "tool_held": tool_held,
 		"work": _tool_time / HOLD_SECONDS, "fixes": step, "interact": keys.get("interact", "E"),
+		"walk": keys.get("walk", CarePromptView.KEYS),
 		"sequence": {"steps": PRACTICE_SEQUENCE, "index": _sequence_index, "mistakes": _mistakes, "solved": 0}})
 	return true
 

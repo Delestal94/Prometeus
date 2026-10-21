@@ -6,6 +6,11 @@ extends RefCounted
 
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
+const TEAM_COLOR_STEPS: int = 31
+const TEAM_COLOR_RADIX: int = TEAM_COLOR_STEPS + 1
+const TEAM_SIGNATURE_RADIX: int = 11
+const GEL_SKINS = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
+const GEL_SKIN_APPLIER = preload("res://scripts/gameplay/player/gel/gel_skin_applier.gd")
 
 
 ## Every visual under `node` onto `layers` (RenderLayers.LOCAL_BODY for your
@@ -37,7 +42,72 @@ static func set_gel_look(
 		return
 	mesh_instance.set_instance_shader_parameter(&"gel_color", color)
 	mesh_instance.set_instance_shader_parameter(&"gel_opacity", clampf(opacity, 0.0, 1.0))
-	mesh_instance.set_instance_shader_parameter(&"gel_brightness", clampf(brightness, 0.5, 1.5))
+	var packed: Variant = mesh_instance.get_instance_shader_parameter(&"gel_brightness")
+	var team_color := unpack_gel_team_color(float(packed) if packed is float else 1.0)
+	mesh_instance.set_instance_shader_parameter(
+		&"gel_brightness",
+		pack_gel_team_color(brightness, team_color)
+	)
+
+
+## Adds the player's shirt colour at the gel's Fresnel edge. The colour is
+## quantized into the existing brightness slot so the shared shaders stay at
+## Godot's limit of sixteen per-instance uniforms.
+static func set_gel_team_accent(body: Node, color: Color) -> void:
+	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
+	if mesh_instance == null or not _uses_gel_shader(mesh_instance):
+		return
+	var packed: Variant = mesh_instance.get_instance_shader_parameter(&"gel_brightness")
+	var current: float = float(packed) if packed is float else 1.0
+	mesh_instance.set_instance_shader_parameter(
+		&"gel_brightness",
+		pack_gel_team_color(unpack_gel_brightness(current), color)
+	)
+
+
+static func pack_gel_team_color(brightness: float, color: Color) -> float:
+	var safe_brightness := clampf(brightness, 0.5, 1.5)
+	if color.a <= 0.0:
+		return safe_brightness
+	var red := roundi(clampf(color.r, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var green := roundi(clampf(color.g, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var blue := roundi(clampf(color.b, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var color_code := red + green * TEAM_COLOR_RADIX + blue * TEAM_COLOR_RADIX * TEAM_COLOR_RADIX
+	return float((color_code + 1) * 2) + safe_brightness
+
+
+static func unpack_gel_team_color(packed: float) -> Color:
+	if packed < 2.0:
+		return Color.TRANSPARENT
+	var color_code := maxi(floori(packed * 0.5) - 1, 0)
+	var red := color_code % TEAM_COLOR_RADIX
+	var green := floori(float(color_code) / TEAM_COLOR_RADIX) % TEAM_COLOR_RADIX
+	var blue := floori(float(color_code) / (TEAM_COLOR_RADIX * TEAM_COLOR_RADIX))
+	return Color(
+		float(red) / TEAM_COLOR_STEPS,
+		float(green) / TEAM_COLOR_STEPS,
+		float(blue) / TEAM_COLOR_STEPS,
+		1.0
+	)
+
+
+static func unpack_gel_brightness(packed: float) -> float:
+	return fmod(packed, 2.0) if packed >= 2.0 else clampf(packed, 0.5, 1.5)
+
+
+## Stable pattern id used by the gel's four chest bands. The multipliers make
+## the eight crew colours unique even after a colour-blind filter narrows hue.
+static func gel_team_signature(color: Color) -> int:
+	var red := roundi(clampf(color.r, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var green := roundi(clampf(color.g, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	var blue := roundi(clampf(color.b, 0.0, 1.0) * TEAM_COLOR_STEPS)
+	return posmod(red + green * 8 + blue * 10, TEAM_SIGNATURE_RADIX)
+
+
+static func _uses_gel_shader(mesh_instance: MeshInstance3D) -> bool:
+	var material := mesh_instance.material_override as ShaderMaterial
+	return material != null and material.shader != null \
+		and material.shader.code.contains("instance uniform float gel_brightness")
 
 
 ## Swaps between two shared resources. The opaque material has no transparent
@@ -48,11 +118,22 @@ static func set_gel_material(body: Node, opaque: bool) -> void:
 		mesh_instance.material_override = GEL_OPAQUE_MATERIAL if opaque else GEL_MATERIAL
 
 
+## Resolves a stable profile/network ID, applies only per-instance uniforms,
+## then restores the crew accent. Shared skin and material resources stay immutable.
+static func apply_gel_skin(body: Node, skin_id: StringName, team_color: Color = Color.TRANSPARENT) -> bool:
+	var mesh_instance := find_mesh_instance(body)
+	if mesh_instance == null or not GEL_SKIN_APPLIER.apply(mesh_instance, GEL_SKINS.skin(skin_id)):
+		return false
+	set_gel_team_accent(body, team_color)
+	return true
+
+
 ## Tints the shirt: surface 0 is the T-shirt; its collar/hem trim follows a
 ## shade darker. The imported material is duplicated per instance (a surface
 ## override, not a mutation of the shared glTF resource), so tinting one
 ## player's shirt never bleeds into every other instance.
 static func tint_shirt(body: Node, color: Color) -> void:
+	set_gel_team_accent(body, color)
 	var mesh_instance: MeshInstance3D = find_mesh_instance(body)
 	if mesh_instance == null or mesh_instance.mesh == null:
 		return

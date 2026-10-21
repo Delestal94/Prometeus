@@ -59,6 +59,7 @@ func _check_profile() -> void:
 		"belly": 0.44,
 		"unknown": 12.0,
 	})
+	_expect(profile.select_gel_skin(&"holographic"), "a skin can be stored with the body shape")
 	_expect(is_equal_approx(float(profile.gel_proportions[&"total_height"]), 1.20),
 		"profile input is clamped to the height maximum")
 	_expect(is_equal_approx(float(profile.gel_proportions[&"leg_length"]), 0.75),
@@ -70,6 +71,7 @@ func _check_profile() -> void:
 	restored.storage_path = PROFILE_PATH
 	restored.load_profile()
 	_expect(restored.gel_proportions == profile.gel_proportions, "all clamped values survive save/load")
+	_expect(restored.selected_gel_skin == &"holographic", "the skin ID survives beside the proportions")
 	profile.free()
 	restored.free()
 
@@ -79,12 +81,15 @@ func _check_player_wire() -> void:
 	var state: Node = player.get_node(^"GelProportions")
 	var sync := state.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	var path := NodePath(".:packet")
+	var skin_path := NodePath(".:skin_id")
 	_expect(state.get(&"packet") is PackedByteArray and (state.get(&"packet") as PackedByteArray).size() == 17,
 		"every player starts with a compact proportion packet")
 	_expect(sync.replication_config.has_property(path), "the compact packet is in the replication contract")
 	_expect(sync.replication_config.property_get_spawn(path), "late joiners receive the packet at spawn")
 	_expect(sync.replication_config.property_get_replication_mode(path) \
 			== SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE, "the packet travels only when it changes")
+	_expect(sync.replication_config.has_property(skin_path), "the stable skin ID shares the appearance contract")
+	_expect(sync.replication_config.property_get_spawn(skin_path), "late joiners receive the skin at spawn")
 	player.free()
 
 

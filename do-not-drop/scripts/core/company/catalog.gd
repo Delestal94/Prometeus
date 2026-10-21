@@ -92,6 +92,26 @@ func gate(id: StringName) -> GateRequirement:
 	return get_resource(GATES, id) as GateRequirement
 
 
+func supplier(id: StringName) -> SupplierDefinition:
+	return get_resource(SUPPLIERS, id) as SupplierDefinition
+
+
+func box(id: StringName) -> BoxDefinition:
+	return get_resource(BOXES, id) as BoxDefinition
+
+
+## Every box, smallest first (by cell count; file name order breaks ties).
+func boxes() -> Array[BoxDefinition]:
+	var found: Array[BoxDefinition] = []
+	for res: Resource in all(BOXES):
+		var box_def := res as BoxDefinition
+		if box_def != null:
+			found.append(box_def)
+	found.sort_custom(func(a: BoxDefinition, b: BoxDefinition) -> bool:
+		return a.volume() < b.volume())
+	return found
+
+
 ## Every zone, in file name order (what the world builds its slabs from).
 func zones() -> Array[ZoneDefinition]:
 	var found: Array[ZoneDefinition] = []

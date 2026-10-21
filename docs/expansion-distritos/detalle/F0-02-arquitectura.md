@@ -113,6 +113,7 @@ bloqueo abre: `&"water"`, `&"altitude"`…), `price: int`. Tres `.tres` en `data
 **Hecho cuando:** los dos tests pasan.
 
 ### D-0208 · Base común `FleetVehicle` — B · Opus 5.5 · xhigh · Aviso: no · F0
+**[x] Hecho (2026-10-19, PR #525)** — componentes `FleetCargo` (bahía, shell, `carries`/`point_velocity`/`needs_sweep`, acomodo y spawn) y `FleetSeats` (consultas) en `scripts/gameplay/fleet/`; `vehicle.gd` 860 → 744 líneas con la misma API.
 **Depende de:** D-0207
 **Qué:** lo que necesita cualquier vehículo (asientos, carga, red, presentación) a una clase base o
 componente, para que lancha, avioneta y bici no hereden de `VehicleBody3D`. Recomendado: **componente**
@@ -126,6 +127,7 @@ lógica de manejo.
 no tiene hallazgos y `vehicle.gd` bajó de líneas.
 
 ### D-0209 · Interfaz de movimiento del vehículo — B · Opus 5.5 · xhigh · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `fleet_motion.gd` (`speed_kmh`, `forward`, `right`, `to_local`, `ground_contact`, `cargo_acceleration`) expuesto por la furgoneta como `fleet_motion`; `package_rescue.gd` lee espacio local y ejes por la interfaz con respaldo en la transformada; `road_impacts.gd`/`package_impacts.gd` no leían el vehículo, quedan igual; `test_fleet_motion`.
 **Depende de:** D-0208
 **Qué:** `scripts/gameplay/fleet/fleet_motion.gd`, interfaz con `speed_kmh()`, `forward()`,
 `ground_contact() -> float` (0-1; 1 = apoyado), `cargo_acceleration() -> Vector3` (lo que sienten las
@@ -233,6 +235,7 @@ ruta alternativa del catálogo) aparece sin tocar código; los ids repetidos dan
 **Hecho cuando:** el test pasa.
 
 ### D-0217 · Cajas como datos — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `BoxDefinition` (`scripts/gameplay/business/box_definition.gd`: `id`, `cells`, `cost`, `model`, `volume()`, `size_m()`), `data/boxes/S|M|L|XL.tres` con los números de `CompanyTuning.BOX_CELLS`/`BOX_COST` y `sm_cargo_box_cube.glb`, y `CompanyCatalog.box()`/`boxes()` (de menor a mayor); `test_company_catalog`. Los usuarios de `BOX_CELLS` siguen igual.
 **Depende de:** D-0216
 **Qué:** `scripts/gameplay/business/box_definition.gd` (`id`, `cells: Vector3i`, `cost`, `model`). Cuatro
 `.tres` en `data/boxes/` (S, M, L, XL con los números de supuestos). `model` usa
@@ -241,6 +244,7 @@ ruta alternativa del catálogo) aparece sin tocar código; los ids repetidos dan
 **Hecho cuando:** el test pasa.
 
 ### D-0218 · Proveedores como datos — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `SupplierDefinition` (`scripts/gameplay/business/supplier_definition.gd`: `id`, `products`, `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`, `sells()`, `unit_price()`), `data/suppliers/distribuidora_central.tres` (10 productos, 08:30, 180 min, factor 1,0, camión `null` hasta D-0601) y `CompanyCatalog.supplier()`; `test_company_catalog`.
 **Depende de:** D-0216
 **Qué:** `scripts/gameplay/business/supplier_definition.gd` (`id`, `products: Array[StringName]`,
 `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`). Un `.tres` para F1: `distribuidora_central`,

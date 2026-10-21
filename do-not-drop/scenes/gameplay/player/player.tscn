@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_environment_response.gd" id="9_gel_environment"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_effects.gd" id="10_gel_effects"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_face_reactions.gd" id="11_face_reactions"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_appearance.gd" id="12_gel_appearance"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -23,6 +24,9 @@ radius = 1.0
 properties/0/path = NodePath(".:packet")
 properties/0/spawn = true
 properties/0/replication_mode = 2
+properties/1/path = NodePath(".:skin_id")
+properties/1/spawn = true
+properties/1/replication_mode = 2
 
 [sub_resource type="SceneReplicationConfig" id="Repl_player"]
 properties/0/path = NodePath(".:net_position")
@@ -94,6 +98,9 @@ script = ExtResource("6_gel_proportions")
 [node name="GelRagdoll" type="Node" parent="."]
 script = ExtResource("7_gel_ragdoll")
 
+[node name="GelAppearance" type="Node" parent="."]
+script = ExtResource("12_gel_appearance")
+
 [node name="GelFaceReactions" type="Node" parent="."]
 script = ExtResource("11_face_reactions")
 
@@ -125,7 +132,7 @@ fov = 78.0
 near = 0.03
 
 [node name="HoldPoint" type="Marker3D" parent="Head/Camera3D"]
-position = Vector3(0, -0.48, -0.64)
+position = Vector3(0, -0.7, -0.64)
 
 [node name="InteractionProbe" type="Area3D" parent="Head"]
 position = Vector3(0, 0, -0.6)

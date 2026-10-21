@@ -7,7 +7,7 @@ extends SubViewportContainer
 
 const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
-const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const CharacterFace = preload("res://scripts/gameplay/player/gel/gel_face.gd")
 const GelShaper = preload("res://scripts/gameplay/player/gel/gel_body_shaper.gd")
 const GelGrounding = preload("res://scripts/gameplay/player/gel/gel_foot_grounding.gd")
 const GelJiggleController = preload("res://scripts/gameplay/player/gel/gel_jiggle.gd")
@@ -73,8 +73,12 @@ func _ready() -> void:
 
 ## Shirt colour and expression, as everybody will see them.
 func show_look(shirt: Color, eyes: StringName, mouth: StringName) -> void:
-	PlayerAppearance.tint_shirt(mannequin, shirt)
+	PlayerAppearance.set_gel_team_accent(gel_mannequin, shirt)
 	face.call(&"set_expression", eyes, mouth)
+
+
+func show_skin(skin_id: StringName, team_color: Color) -> void:
+	PlayerAppearance.apply_gel_skin(gel_mannequin, skin_id, team_color)
 
 
 ## Shows the editable gel body and applies only when its values changed.
@@ -87,8 +91,8 @@ func show_proportions(proportions: GelBodyProportions) -> void:
 
 
 func show_character() -> void:
-	mannequin.visible = true
-	gel_mannequin.visible = false
+	mannequin.visible = false
+	gel_mannequin.visible = true
 
 
 func proportion_application_count() -> int:
@@ -103,9 +107,9 @@ func _set_opaque_gel(use_opaque: bool) -> void:
 func bounce() -> void:
 	if _bounce_tween != null:
 		_bounce_tween.kill()
-	mannequin.scale = Vector3(1.06, 0.93, 1.06)
+	gel_mannequin.scale = Vector3(1.06, 0.93, 1.06)
 	_bounce_tween = create_tween()
-	_bounce_tween.tween_property(mannequin, "scale", Vector3.ONE, 0.45) \
+	_bounce_tween.tween_property(gel_mannequin, "scale", Vector3.ONE, 0.45) \
 		.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	if gel_mannequin.visible and _gel_squash != null:
 		_gel_squash.trigger_landing(4.5)
@@ -195,21 +199,21 @@ func _build_studio(viewport: SubViewport) -> void:
 	world.add_child(_floor_shadow())
 	mannequin = PLAYER_SCENE.instantiate() as Node3D
 	mannequin.name = "Mannequin"
+	mannequin.visible = false
 	world.add_child(mannequin)
-	face = CharacterFace.new()
-	face.call(&"setup", mannequin, PlayerAppearance.find_skeleton(mannequin), 1)
 	var animation: AnimationPlayer = PlayerAppearance.find_animation_player(mannequin)
 	if animation != null and animation.has_animation(&"Idle"):
 		animation.get_animation(&"Idle").loop_mode = Animation.LOOP_LINEAR
 		animation.play(&"Idle")
 	gel_mannequin = GEL_SCENE.instantiate() as Node3D
 	gel_mannequin.name = "GelMannequin"
-	gel_mannequin.visible = false
 	world.add_child(gel_mannequin)
 	var gel_mesh: MeshInstance3D = PlayerAppearance.find_mesh_instance(gel_mannequin)
 	if gel_mesh != null:
 		PlayerAppearance.set_gel_material(gel_mannequin, GameSettings.uses_opaque_gel())
 	PlayerAppearance.set_gel_look(gel_mannequin, Color(0.78, 0.82, 0.92), 1.0, 1.0)
+	face = CharacterFace.new()
+	face.call(&"setup", gel_mannequin, PlayerAppearance.find_skeleton(gel_mannequin), 1)
 	_gel_shaper.setup(gel_mannequin)
 	_gel_jiggle = GelJiggleController.new()
 	_gel_jiggle.name = "GelJiggle"

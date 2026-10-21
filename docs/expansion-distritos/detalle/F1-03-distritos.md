@@ -51,7 +51,7 @@ carga (medido con el reloj del motor en headless) ni huérfanos al volver.
 ### D-0304 · Grafo de calles y tramos sobre aristas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/route_gen/`) · F1
 **[~] Parcial (2026-10-12, PR pendiente)** — grafo, datos y test: `modules/route_gen/` suma `RoadNetwork`/`RoadNode`/`RoadEdge` (grafo con aristas Bézier, muestreo por largo, punto más cercano, celdas cruzadas, caminos mínimos que frenan en un bloqueo cerrado, `validate()`, `crossing_pairs()`; test `modules/route_gen/tests/test_road_network.gd`); `scripts/gameplay/districts/road_graph.gd` (`RoadGraph`) + `data/world/road_graph.tres` (27 nodos, 32 calles, ~12,2 km: galpón → Centro (grilla de 3 x 3 con adoquín) → Campo (ripio y barro), más las puntas hasta los bloqueos de Suburbio y Puerto); `RoadGraph.register_terrain()` pone los `add_span` del terreno sobre cada curva; `CompanyCells.pin_streets()`; `test_road_graph`.
 **Subtareas abiertas:**
-- **D-0304.1** Malla de calle por arista (calzada, banquinas y marcas sobre la curva con el terreno de `TerrainField`, sin duplicar la lógica de `StraightSegment`/`route_ground.gd`; la superficie va con shader, no caja de color, N-323) y su entrega por celda (`CompanyCells.content_for`). `constructor-tramos` + `artista-shaders`.
+- ~~**D-0304.1**~~ ✅ (2026-10-21, PR pendiente) Entrega por celda: `EdgeCellContent` (`scripts/gameplay/districts/edge_cell_content.gd`) reparte las piezas de `EdgePieces` a la celda donde empieza cada una y arma el nodo `Cell_<x>_<z>`; `CompanyCells.use_graph(graph)` lo conecta a `content_for` y fija las calles principales. La calzada, banquinas y marcas las dibuja cada `RouteSegment` (no se duplicó su lógica). Queda **D-0304.1b**: la superficie con shader en vez de cajas de color (N-323), `artista-shaders`. `test_company_edge_cells`.
 - ~~**D-0304.2**~~ ✅ (2026-10-19, PR pendiente) `EdgePieces` (`scripts/gameplay/districts/edge_pieces.gd`): `plan()` reparte `edge.segments` a lo largo de la curva (cada pieza es una cuerda recta puesta en el punto de la calle y girada hacia donde sigue; la pieza que no entra al final es un `straight` recortado; `curve` toma el giro de la calle en sus 50 m) y `build()` arma los `RouteSegment`; `signature()` es el golden por arista. `test_company_edge_pieces`. Falta entregarlas por celda (D-0304.1).
 - **D-0304.3** Piloto automático del bot (D-2016) galpón → Centro con `OFF_ROAD` = 0: la línea ya existe (`test_road_graph` arma la polilínea del camino mínimo sin saltos), falta seguirla con el vehículo; depende de D-2016 y de la malla.
 - **D-0304.4** Capturas de `revisor-visual` de 3 aristas (asfalto, ripio, barro) cuando exista D-0304.1.
@@ -123,6 +123,7 @@ lancha"); uno de Suburbio con la barrera cerrada no entra (motivo "barrera: falt
 **Hecho cuando:** el test pasa.
 
 ### D-0310 · Tablero de despacho — A · Opus 5.5 · high · Aviso: sí (`scripts/ui/`) · F1
+**[~] Panel hecho (2026-10-21, PR pendiente)** — `DispatchBoardPanel` (`scripts/ui/dispatch_board_panel.gd`): UI por código sobre datos inyectados (`zone`, `book`, `trips`, `vehicle`, `box_kg`, reglas); filas con marca ✓/○/✗, motivo de `DispatchRules` en las bloqueadas, casilleros y kg del vehículo, "Cargar" por `DispatchZone.load_boxes` -> `stage_cargo`; mando y teclado; cliente con "Cargar" deshabilitado y motivo. `test_company_dispatch_panel`. **Falta D-0310.b** (`constructor-mundo`): la estación `DepotStation` `dispatch` en el galpón (hoy `DispatchZone` no tiene nodo en el mundo, D-0716.b/D-0717.b), el contexto real del panel y la captura de `revisor-visual`. Ver `revisar/D-0310.md`.
 **Depende de:** D-0309, D-0716
 **Qué:** estación `dispatch` (un `DepotStation` con `station_id = &"dispatch"`). Al interactuar abre un
 panel (UI por código, como el resto):
@@ -135,6 +136,7 @@ vehículo; la tercera queda.
 **Hecho cuando:** el test pasa y una captura de `revisor-visual` es legible a 1080p.
 
 ### D-0311 · Casas de entrega del mapa fijo — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-19, PR pendiente)** — `HouseMap` + `HouseSpot` (`scripts/gameplay/districts/`) y `data/world/houses.tres`: 30 casas en Centro y 20 en Campo, a 4-12 m del borde de la calzada de su calle, con la puerta hacia ella; `pick_for_day()` elige por semilla y día, `instance()` arma el `DeliveryHouse` tal cual; `test_company_houses`. Falta que el flujo de pedidos las use (D-0801+) y la dirección legible (D-0312). Ver `revisar/D-0311.md`.
 **Depende de:** D-0304
 **Qué:** las casas son puntos fijos del mapa: `data/world/houses.tres`, con id, zona, posición, frente y
 variante. Usan `DeliveryHouse` tal cual (puerta, timbre, residente, revisión en la puerta). Por día, la

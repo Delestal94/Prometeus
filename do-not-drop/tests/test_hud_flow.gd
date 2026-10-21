@@ -85,6 +85,14 @@ func _run() -> void:
 	_expect(String(hud.shortcut_label.text).contains("Start"), "Shortcut line switches to gamepad buttons")
 	settings.using_gamepad = false
 	settings.input_device_changed.emit(false)
+	# N-977.1: at most four shortcuts, picked by role.
+	hud.prompts._role = hud.Role.DRIVER
+	hud.prompts.refresh_shortcut_text()
+	var driver_line: String = String(hud.shortcut_label.text)
+	_expect(driver_line.count("   ·   ") <= 3, "The shortcut line shows at most four shortcuts (got %s)" % driver_line)
+	hud.prompts._role = hud.Role.ON_FOOT
+	hud.prompts.refresh_shortcut_text()
+	_expect(String(hud.shortcut_label.text) != driver_line, "The shortcut line changes with the role")
 	bus.interaction_prompt_changed.emit("")
 	_expect(hud.interaction_label.text == "", "An empty prompt clears the line")
 	_expect(not hud.interaction_icon.visible, "An empty prompt clears its action icon")

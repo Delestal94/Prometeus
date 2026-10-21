@@ -4,6 +4,39 @@
 > el resto sigue en la tabla de [06-mercaderia-y-stock.md](../06-mercaderia-y-stock.md) y se detalla
 > cuando le toque a un carril. Números de [supuestos.md](supuestos.md).
 
+### D-0601 · Camión de proveedor NPC que entra al patio, se estaciona en la dársena y espera — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `SupplierTruck` (`scripts/gameplay/business/supplier_truck.gd`: trayectoria por minuto) y `SupplierTruckView` (`scripts/gameplay/supplier_truck_view.gd`: caja gris que la dibuja), cableado en `CompanyRoot`; `test_supplier_truck` (10 corridas). Arte real en [arte-pendiente/D-0601.md](../arte-pendiente/D-0601.md).
+**Depende de:** D-0602 (`SupplierSchedule`: 08:30 llega, espera 3 h), D-0905 (`WarehouseStages.dock_rect` / `gate_rects`), D-0219 (`GameClock`)
+**Qué:** el camión que trae lo pedido, visible en el patio. Es una función del reloj, no un actor con estado:
+- `SupplierTruck.pose(schedule, day, minute, stage)` (`RefCounted`, solo estáticos, sin nodos ni azar) da
+  `{present, phase, position, heading, yaw}` en metros del galpón (X este, Z sur, origen al centro del piso).
+  Fases (`enum Phase`): `ABSENT`, `DRIVING_IN`, `REVERSING`, `PARKED`, `DRIVING_OUT`.
+- **Recorrido:** entra desde el este por un carril al sur de la dársena rumbo al oeste, gira a la izquierda
+  (radio 6 m) hasta apuntar al sur sobre el eje de la dársena, retrocede 10 m hacia el norte y queda con la
+  trasera a 0,6 m del borde del piso (la pared mide 0,3), fuera del galpón. Espera. Sale hacia delante (sur),
+  gira otra vez a la izquierda y se va al este por otro carril 12 m más al sur. No entra a la dársena (las
+  celdas de piso `dock_rect` quedan libres para los palets que bajan de la caja, D-0605) ni toca paredes.
+- **Horario:** estacionado exactamente de `arrival_minute()` a `departure_minute()` (los estados `at_dock` del
+  calendario); entra en los 6 min de juego anteriores y sale en los 4 posteriores (`SUPPLIER_DRIVE_IN_MIN`,
+  `SUPPLIER_DRIVE_OUT_MIN`; un minuto de juego son 1,5 s reales). Frena al llegar y arranca suave al irse.
+  Sin entrega ese día (`none`) no hay camión. Todos los números (tamaño 2,4 × 3,2 × 6,4 m, radio, retroceso,
+  tramo recto, holgura) en `CompanyTuning`.
+- `SupplierTruckView` (`Node3D`, hermano del galpón porque `CompanyShed.rebuild()` libera a sus hijos): camión de
+  cajas primitivas con la paleta del depósito; cada cuadro llama a `pose()` con `GameClock.minute_now()` y
+  `CompanyState.day` y se oculta si no hay camión. **Cero RPC:** los clientes derivan la pose del mismo reloj
+  (ancla del host) y del mismo calendario; no hay nada que decida el host.
+- Hasta que D-0603 meta pedidos reales, `CompanyRoot._seed_stand_in_calendar()` pone el primer pedido del
+  galpón por defecto en los 120 días siguientes al inicial, en todos los peers, para que se vea llegar. No trae
+  stock nuevo (los palets de arranque ya están en recepción).
+- Bajar los palets de la caja es D-0605; que se lleve lo que quede es D-0618; varios camiones a la vez, D-0640.
+**Test** `test_supplier_truck`: 10 corridas (días 1 a 89, las 4 etapas del galpón, pedidos de 1 a 100 unidades):
+sin camión antes de entrar, un día sin entrega ni después de salir; estacionado justo en `arrival_minute()`;
+fases siempre hacia delante; quieto y sin moverse hasta `departure_minute()`; dentro del carril de la
+dársena, de reversa hacia ella, cerca de la pared sin tocarla; en todo el recorrido ninguna esquina toca el
+piso, las paredes ni las celdas de la dársena; sin saltos de posición ni de giro; determinista (dos calendarios
+iguales, el tamaño del pedido no mueve nada); la vista sigue la pose y se oculta.
+**Hecho cuando:** bot: el camión llega y se estaciona sin chocar en 10 corridas (`test_supplier_truck`).
+
 ### D-0604 · Palet con N cajas de producto — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `Pallet` (`scripts/gameplay/business/pallet.gd`): arma, parte un pedido en palets, los recibe en el `Inventory` y los serializa; `test_pallet`.
 **Depende de:** D-0204 (producto), D-0211 (`Inventory`)
@@ -65,3 +98,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - Cada zona lleva su nombre pintado en el piso (`WORLD_SHED_ZONE_*`); la captura aérea con zonas rotuladas es la de `revisor-visual` sobre `company_root.tscn`.
 **Test** `test_company_default_layout` (y los `test_company_*` de la expansión verdes); los `test_depot_*` no se tocan: el depósito de Entrega no cambia.
 **Hecho cuando:** captura aérea con zonas rotuladas y los tests verdes.
+
+### D-0603 · Pedido a proveedor desde el portapapeles o el tablero — B · Sonnet 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del pedido (`SupplierOrderCart`, `scripts/gameplay/business/supplier_order_cart.gd`) y `test_supplier_order_cart`. Falta D-0603.b (la pantalla).
+**Depende de:** D-0602 (`SupplierSchedule`), D-0503 (`SupplierPurchase`), D-0218 (`SupplierDefinition`), D-0204 (producto)
+**Qué:**
+- **D-0603.a (hecha) — el carrito.** `SupplierOrderCart` (`RefCounted`): líneas producto → unidades con `add`, `set_qty` y `remove`; solo se piden productos del catálogo que el proveedor vende, de 1 a `MAX_LINE_QTY` (240) unidades por línea. `lines()` (id, unidades, precio unitario y costo), `total()`, `pallet_count()` (24 unidades por palet) y `submit(wallet, schedule, día)`: con el saldo que cubre el total pone el pedido en el calendario para el día siguiente (`SupplierSchedule.arrival_day`) y vacía el carrito. No cobra nada: el cobro sigue siendo al recibir cada palet (D-0503), así que un camión que no se descarga no cuesta.
+- **D-0603.b (pendiente) — la pantalla** en el tablero del galpón y en el portapapeles: lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
+**Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
+**Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).

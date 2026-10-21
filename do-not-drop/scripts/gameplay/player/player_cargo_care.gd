@@ -152,7 +152,7 @@ func _tick(delta: float) -> void:
 func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: int, input: Dictionary,
 		handling: bool) -> void:
 	var gamepad: bool = _using_gamepad()
-	var keys: Dictionary = control_names(gamepad, _interact_label(gamepad))
+	var keys: Dictionary = control_names(gamepad, _interact_label(gamepad), _settings())
 	var state: Dictionary = target.care_state.duplicate()
 	var cargo_entry: Dictionary = (run.get(&"cargo") as Dictionary).get(target.package_id, {})
 	var entry_state: int = int(cargo_entry.get("state", 0))
@@ -178,7 +178,7 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 		"gesture": gesture, "axis": Input.get_axis(&"drive_left", &"drive_right"),
 		"axis_fwd": Input.get_axis(&"walk_backward", &"walk_forward"), "screen_tilt": _screen_tilt(gesture),
 		"missing": care.missing_parts,
-		"sway": care.balance_target, "interact": keys["interact"]}
+		"sway": care.balance_target, "interact": keys["interact"], "walk": keys["walk"]}
 	card.update(target.trap_definition.localized_name(), entry_state, integrity, step,
 		view_data, footer_items(keys, tool_name, stock, handling, player._seated, care.in_lap))
 
@@ -211,7 +211,8 @@ func _update_practice(delta: float, run: Node) -> void:
 	if not practice.visible:
 		return
 	var gamepad: bool = _using_gamepad()
-	var advancing: bool = practice.advance(delta, player, control_names(gamepad, _interact_label(gamepad)), gamepad)
+	var names: Dictionary = control_names(gamepad, _interact_label(gamepad), _settings())
+	var advancing: bool = practice.advance(delta, player, names, gamepad)
 	tapping = advancing and practice.step == 3 and Input.is_action_pressed(&"package_action_primary") \
 		and is_instance_valid(player.carried_package)
 	if not advancing:
@@ -251,15 +252,37 @@ static func footer_items(keys: Dictionary, tool_name: String, stock: int, handli
 	return items
 
 
-## What each control is called on the device in use.
-static func control_names(gamepad: bool, interact: String) -> Dictionary:
+## What each control is called on the device in use. With `settings` (the
+## GameSettings autoload, N-977.5) the keys the player can rebind read from it;
+## without it the shipped ones (tests, a `--script` before the autoloads).
+static func control_names(gamepad: bool, interact: String, settings: GAME_SETTINGS = null) -> Dictionary:
+	var walk: Dictionary = {Vector2.UP: "W", Vector2.LEFT: "A", Vector2.DOWN: "S", Vector2.RIGHT: "D"}
+	var sides: String = "WASD"
+	var swing: String = "A / D"
+	var tool_next: String = "D-pad →" if gamepad else "X"
+	var drop: String = "B" if gamepad else "Q"
+	if settings != null:
+		walk = {Vector2.UP: settings.key_label(&"walk_forward"), Vector2.LEFT: settings.key_label(&"drive_left"),
+			Vector2.DOWN: settings.key_label(&"walk_backward"), Vector2.RIGHT: settings.key_label(&"drive_right")}
+		var glued: bool = true
+		for label: String in walk.values():
+			glued = glued and label.length() == 1
+		sides = ("" if glued else "/").join(PackedStringArray([walk[Vector2.UP], walk[Vector2.LEFT],
+			walk[Vector2.DOWN], walk[Vector2.RIGHT]]))
+		swing = "%s / %s" % [walk[Vector2.LEFT], walk[Vector2.RIGHT]]
+		if gamepad:
+			tool_next = settings.pad_label(&"care_tool_next")
+			drop = settings.pad_label(&"package_drop")
+		else:
+			tool_next = settings.key_label(&"care_tool_next")
+			drop = settings.key_label(&"package_drop")
 	if gamepad:
-		return {"primary": "RT", "tool": "LT", "interact": interact, "tool_next": "D-pad →", "drop": "B",
-			"sides": TranslationServer.translate("HUD_CARE_KEY_STICK"),
-			"swing": TranslationServer.translate("HUD_CARE_KEY_STICK")}
+		var stick: String = TranslationServer.translate("HUD_CARE_KEY_STICK")
+		return {"primary": "RT", "tool": "LT", "interact": interact, "tool_next": tool_next, "drop": drop,
+			"sides": stick, "swing": stick, "walk": walk}
 	return {"primary": TranslationServer.translate("HUD_CARE_KEY_LEFT_CLICK"),
-		"tool": TranslationServer.translate("HUD_CARE_KEY_RIGHT_CLICK"), "interact": interact, "tool_next": "X",
-		"drop": "Q", "sides": "WASD", "swing": "A / D"}
+		"tool": TranslationServer.translate("HUD_CARE_KEY_RIGHT_CLICK"), "interact": interact, "tool_next": tool_next,
+		"drop": drop, "sides": sides, "swing": swing, "walk": walk}
 
 
 ## The tool after `current` in the kit's order, wrapping around.

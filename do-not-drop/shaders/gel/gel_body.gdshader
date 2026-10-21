@@ -13,7 +13,14 @@ render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_
 
 instance uniform vec4 gel_color : source_color = vec4(0.78, 0.82, 0.92, 1.0);
 instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
+// Values >= 2 pack a 15-bit team colour above the fractional brightness.
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
+// Packed to stay within Godot's 16 instance-uniform limit:
+// surface = absorption, shine, skin effect mode, effect amount. Negative X/Y
+// keep the shared material's legacy absorption and shine until a skin applies.
+instance uniform vec4 gel_skin_surface = vec4(-1.0, -1.0, 0.0, 0.0);
+// interior = RGB feature colour plus object-space feature scale.
+instance uniform vec4 gel_interior = vec4(0.0, 0.0, 0.0, 8.0);
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
 instance uniform float gel_contact_compression : hint_range(0.0, 0.16) = 0.0;
@@ -98,6 +105,116 @@ float object_noise_3d(vec3 point) {
 	return mix(near_z, far_z, blend.z);
 }
 
+float weather_rain() {
+	return mod(gel_weather.z, 2.0);
+}
+
+float weather_night() {
+	return clamp(floor(gel_weather.z * 0.5) * 0.5, 0.0, 1.0);
+}
+
+float skin_brightness() {
+	return gel_brightness >= 2.0 ? mod(gel_brightness, 2.0) : gel_brightness;
+}
+
+float team_accent_enabled() {
+	return step(2.0, gel_brightness);
+}
+
+vec3 team_accent_color() {
+	float color_code = max(floor(gel_brightness * 0.5) - 1.0, 0.0);
+	float red = mod(color_code, 32.0);
+	float green = mod(floor(color_code / 32.0), 32.0);
+	float blue = floor(color_code / 1024.0);
+	return vec3(red, green, blue) / 31.0;
+}
+
+float team_accent_signature() {
+	float color_code = max(floor(gel_brightness * 0.5) - 1.0, 0.0);
+	float red = mod(color_code, 32.0);
+	float green = mod(floor(color_code / 32.0), 32.0);
+	float blue = floor(color_code / 1024.0);
+	return mod(red + green * 8.0 + blue * 10.0, 11.0);
+}
+
+float team_core_mask(vec3 point) {
+	float vertical = smoothstep(0.74, 0.80, point.y) * (1.0 - smoothstep(1.20, 1.26, point.y));
+	float horizontal = 1.0 - smoothstep(0.19, 0.29, abs(point.x));
+	return vertical * horizontal;
+}
+
+vec3 team_core_color(vec3 team_color, vec3 point) {
+	float band = floor(clamp((point.y - 0.76) / 0.12, 0.0, 3.0));
+	float bit = mod(floor(team_accent_signature() / pow(2.0, band)), 2.0);
+	return mix(team_color * 0.22, mix(team_color, vec3(1.0), 0.28), bit);
+}
+
+vec3 animated_spectrum(float phase) {
+	return 0.5 + 0.5 * cos(6.28318 * (phase + vec3(0.0, 0.333, 0.667)));
+}
+
+float animated_lava_mask(vec3 point) {
+	vec3 flow_point = point * vec3(gel_interior.a * 0.65, gel_interior.a * 0.42, gel_interior.a * 0.65);
+	flow_point.y -= TIME * (0.05 + gel_skin_surface.w * 0.08);
+	return smoothstep(0.48, 0.72, object_noise_3d(flow_point));
+}
+
+vec3 animated_skin_tint(vec3 base_tint, vec3 point) {
+	if (gel_skin_surface.z > 5.5 && gel_skin_surface.z < 6.5) {
+		float phase = point.y * gel_interior.a * 0.16 - TIME * (0.08 + gel_skin_surface.w * 0.18);
+		return mix(base_tint, animated_spectrum(phase + gel_weather.y), gel_skin_surface.w);
+	}
+	if (gel_skin_surface.z > 6.5 && gel_skin_surface.z < 7.5) {
+		float pulse = 0.86 + sin(TIME * 2.0 + gel_weather.y * 6.28318) * 0.14;
+		return mix(base_tint, gel_interior.rgb * pulse, weather_night() * gel_skin_surface.w * 0.55);
+	}
+	if (gel_skin_surface.z > 7.5 && gel_skin_surface.z < 8.5) {
+		return mix(base_tint, gel_interior.rgb, animated_lava_mask(point) * gel_skin_surface.w);
+	}
+	return base_tint;
+}
+
+vec3 random_cell_point(vec3 cell) {
+	return vec3(
+		hash_object_cell(cell + vec3(11.0, 3.0, 7.0)),
+		hash_object_cell(cell + vec3(5.0, 17.0, 13.0)),
+		hash_object_cell(cell + vec3(19.0, 23.0, 2.0))
+	) * 0.56 + 0.22;
+}
+
+vec3 interior_base_tint(vec3 base_tint, vec3 point) {
+	if (gel_skin_surface.z > 0.5 && gel_skin_surface.z < 1.5) {
+		float upper_layer = smoothstep(0.72, 0.82, point.y);
+		return mix(mix(base_tint, gel_interior.rgb, gel_skin_surface.w), base_tint, upper_layer);
+	}
+	if (gel_skin_surface.z > 1.5 && gel_skin_surface.z < 2.5) {
+		float height_mix = smoothstep(0.12, 1.55, point.y) * gel_skin_surface.w;
+		return mix(base_tint, gel_interior.rgb, height_mix);
+	}
+	return animated_skin_tint(base_tint, point);
+}
+
+float interior_feature_mask(vec3 point) {
+	vec3 grid_point = point * gel_interior.a;
+	vec3 cell = floor(grid_point);
+	vec3 local_point = fract(grid_point);
+	vec3 delta = local_point - random_cell_point(cell);
+	if (gel_skin_surface.z > 2.5 && gel_skin_surface.z < 3.5) {
+		float chunk_distance = max(max(abs(delta.x), abs(delta.y)), abs(delta.z));
+		return 1.0 - smoothstep(0.11, 0.22, chunk_distance);
+	}
+	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
+		return 1.0 - smoothstep(0.035, 0.095, length(delta));
+	}
+	if (gel_skin_surface.z > 4.5 && gel_skin_surface.z < 5.5) {
+		float bubble_distance = length(delta);
+		float bubble_outer = 1.0 - smoothstep(0.29, 0.36, bubble_distance);
+		float bubble_inner = 1.0 - smoothstep(0.2, 0.27, bubble_distance);
+		return max(bubble_outer - bubble_inner, 0.0);
+	}
+	return 0.0;
+}
+
 float impact_wave(vec3 point, vec4 wave, float strength) {
 	if (wave.w < 0.0 || strength <= 0.0) {
 		return 0.0;
@@ -130,7 +247,7 @@ float environment_drop(vec3 point, float offset) {
 	);
 	float ring_distance = length(point - centre) - age * 0.34;
 	float ring = exp(-pow(ring_distance / 0.028, 2.0));
-	return ring * (1.0 - age) * gel_weather.z;
+	return ring * (1.0 - age) * weather_rain();
 }
 
 float environment_ripple(vec3 point) {
@@ -177,13 +294,18 @@ void fragment() {
 	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
 	float fresnel = pow(1.0 - facing, fresnel_power);
 	float density = fresnel * edge_density;
-	vec3 player_tint = gel_color.rgb * gel_brightness * mix(1.0, 1.08, gel_weather.w);
+	vec3 skin_tint = interior_base_tint(gel_color.rgb, model_position);
+	float visual_brightness = skin_brightness();
+	vec3 player_tint = skin_tint * visual_brightness * mix(1.0, 1.08, gel_weather.w);
 	vec2 refraction_offset = NORMAL.xy * refraction_strength * (0.55 + fresnel * 0.45);
 	vec2 refraction_uv = clamp(SCREEN_UV + refraction_offset, vec2(0.001), vec2(0.999));
 	vec3 refracted_background = texture(screen_texture, refraction_uv).rgb;
 	vec3 surface_tint = mix(player_tint, vec3(1.0), density * 0.48);
 	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters;
 	float thickness_transmission = exp(-absorption_coefficient * thickness_meters);
+	if (gel_skin_surface.x >= 0.0) {
+		thickness_transmission = exp(-gel_skin_surface.x * thickness_meters);
+	}
 	float thickness_absorption = 1.0 - thickness_transmission;
 	vec3 absorbed_tint = mix(
 		surface_tint,
@@ -222,11 +344,42 @@ void fragment() {
 	float bubble_inner = smoothstep(inclusion_threshold + 0.008, inclusion_threshold + 0.02, bubble_field);
 	float inclusion_mask = clamp(fine_motes + (bubble_outer - bubble_inner) * 0.7, 0.0, 1.0);
 	ALBEDO = mix(ALBEDO, player_tint * 0.82, inclusion_mask * inclusion_contrast);
+	float interior_mask = interior_feature_mask(model_position) * gel_skin_surface.w;
+	ALBEDO = mix(ALBEDO, gel_interior.rgb * visual_brightness, interior_mask * 0.72);
+	if (gel_skin_surface.z > 3.5 && gel_skin_surface.z < 4.5) {
+		EMISSION += gel_interior.rgb * interior_mask * 1.4;
+	}
+	if (gel_skin_surface.z > 6.5 && gel_skin_surface.z < 7.5) {
+		float neon_pulse = 0.86 + sin(TIME * 2.0 + gel_weather.y * 6.28318) * 0.14;
+		EMISSION += gel_interior.rgb * weather_night() * gel_skin_surface.w * neon_pulse * (0.7 + fresnel);
+	}
+	if (gel_skin_surface.z > 7.5 && gel_skin_surface.z < 8.5) {
+		EMISSION += gel_interior.rgb * animated_lava_mask(model_position) * gel_skin_surface.w * 0.8;
+	}
+	if (gel_skin_surface.z > 8.5 && gel_skin_surface.z < 9.5) {
+		float holo_phase = fresnel * 1.8 + model_position.y * gel_interior.a * 0.15 - TIME * 0.12;
+		vec3 holo_color = animated_spectrum(holo_phase + gel_weather.y);
+		ALBEDO = mix(ALBEDO, holo_color, gel_skin_surface.w * (0.3 + fresnel * 0.35));
+		EMISSION += holo_color * gel_skin_surface.w * (0.08 + fresnel * 0.18);
+	}
+	float team_edge = team_accent_enabled() * smoothstep(0.08, 0.72, fresnel) * 0.62;
+	vec3 team_color = team_accent_color() * visual_brightness;
+	ALBEDO = mix(ALBEDO, team_color, team_edge);
+	float team_core = team_accent_enabled() * team_core_mask(model_position);
+	vec3 team_mark = team_core_color(team_color, model_position);
+	ALBEDO = mix(ALBEDO, team_mark, team_core * 0.9);
+	EMISSION += team_color * team_edge * 0.1 + team_mark * team_core * (0.08 + weather_night() * 0.38);
 	ROUGHNESS = mix(roughness, 0.025, gel_weather.w * 0.75);
 	SPECULAR = mix(specular, 1.0, gel_weather.w);
+	if (gel_skin_surface.y >= 0.0) {
+		float skin_roughness = mix(0.48, 0.025, gel_skin_surface.y);
+		ROUGHNESS = mix(skin_roughness, 0.025, gel_weather.w * 0.75);
+		SPECULAR = mix(gel_skin_surface.y, 1.0, gel_weather.w);
+	}
 	float surface_alpha = gel_color.a * gel_opacity * mix(center_opacity, edge_opacity, fresnel);
 	float final_alpha = clamp(
-		surface_alpha + thickness_absorption * absorption_opacity + inclusion_mask * inclusion_contrast,
+		surface_alpha + thickness_absorption * absorption_opacity
+			+ inclusion_mask * inclusion_contrast + interior_mask * 0.08,
 		0.0,
 		1.0
 	);
@@ -251,10 +404,20 @@ void light() {
 	);
 	float back_light = pow(clamp(-normal_light, 0.0, 1.0), backlight_power);
 	vec3 half_vector = normalize(LIGHT + VIEW);
-	float specular_power = mix(128.0, 8.0, roughness);
+	float skin_roughness = roughness;
+	float skin_specular = specular;
+	if (gel_skin_surface.y >= 0.0) {
+		skin_roughness = mix(0.48, 0.025, gel_skin_surface.y);
+		skin_specular = gel_skin_surface.y;
+	}
+	float specular_power = mix(128.0, 8.0, skin_roughness);
 	float specular_lobe = pow(clamp(dot(NORMAL, half_vector), 0.0, 1.0), specular_power);
 	vec3 wrapped_diffuse = ALBEDO * LIGHT_COLOR * wrapped_light;
-	vec3 back_scatter = gel_color.rgb * gel_brightness * LIGHT_COLOR * back_light * backlight_strength;
+	vec3 back_scatter_tint = gel_color.rgb * gel_brightness;
+	if (team_accent_enabled() > 0.5) {
+		back_scatter_tint = gel_color.rgb * skin_brightness();
+	}
+	vec3 back_scatter = back_scatter_tint * LIGHT_COLOR * back_light * backlight_strength;
 	DIFFUSE_LIGHT += (wrapped_diffuse + back_scatter) * ATTENUATION;
-	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * specular * ATTENUATION;
+	SPECULAR_LIGHT += LIGHT_COLOR * specular_lobe * skin_specular * ATTENUATION;
 }

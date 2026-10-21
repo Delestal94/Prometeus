@@ -15,8 +15,8 @@
 | D-0205 | ✅ Recurso `DistrictDefinition` (.tres): id, escena, vehículos permitidos, peligros, condición de desbloqueo | constructor-mundo | medium | Barrio Centro y Campo definidos; test los carga |
 | D-0206 | ✅ Guardado de empresa sobre `modules/persistence` con versión de esquema y migraciones | constructor-progresion | xhigh | test guarda, carga y migra un save v1 → v2 sin perder datos |
 | D-0207 | ✅ Recurso `VehicleDefinition` (asientos, carga, escena, física, licencia requerida) | constructor-camion | high | la camioneta actual descrita por un `.tres` sin cambiar su manejo (`test_reference_truck` verde) |
-| D-0208 | Extraer de `vehicle.gd` una base común `FleetVehicle` (asientos, carga, red, presentación) para vehículos que no son de ruedas | constructor-camion | xhigh | camioneta hereda de la base; tests de vehículo verdes; documento `agregar-vehiculo.md` actualizado |
-| D-0209 | Interfaz de "movimiento" del vehículo (ruedas, casco, alas, pedal) para que asientos y carga no sepan cuál es | constructor-camion | xhigh | test con un vehículo falso de cada tipo usa la misma interfaz |
+| D-0208 | ✅ Extraer de `vehicle.gd` una base común `FleetVehicle` (asientos, carga, red, presentación) para vehículos que no son de ruedas | constructor-camion | xhigh | camioneta hereda de la base; tests de vehículo verdes; documento `agregar-vehiculo.md` actualizado |
+| D-0209 | ✅ Interfaz de "movimiento" del vehículo (ruedas, casco, alas, pedal) para que asientos y carga no sepan cuál es | constructor-camion | xhigh | test con un vehículo falso de cada tipo usa la misma interfaz |
 | D-0210 | ✅ `OrderBook`: pedidos activos, estado y vencimiento, autoridad en el host | constructor-progresion | high | test `test_order_book` crea, cumple y vence pedidos |
 | D-0211 | ✅ `Inventory`: stock por producto y ubicación (estante, palet, caja abierta) con autoridad en el host | constructor-negocio | high | test `test_inventory` mueve unidades sin duplicar ni perder |
 | D-0212 | ✅ `PackedBox`: modelo de datos de un paquete armado (caja, contenido, relleno, cinta, etiqueta, sellos, pedido) | constructor-negocio | high | test serializa y compara contra el pedido |
@@ -24,8 +24,8 @@
 | D-0214 | ✅ Escena raíz del modo Empresa (`company_root.tscn`) que carga galpón y distritos con `scene_loader` | constructor-mundo | high | arranca con `--autostart --mode=company` sin errores |
 | D-0215 | ✅ Señales nuevas en `EventBus` para negocio (pedido_entrante, caja_armada, entrega_cobrada, empleado_contratado…) | constructor-progresion | medium | lista documentada; `test_event_bus_signals` las cubre |
 | D-0216 | ✅ Registro de distritos (`DistrictRegistry`) leído de `.tres`, sin listas a mano | constructor-mundo | medium | agregar un `.tres` suma el distrito sin tocar código (test) |
-| D-0217 | Registro de vehículos (`FleetRegistry`) leído de `.tres` | constructor-camion | medium | idem con vehículos |
-| D-0218 | Registro de productos y proveedores leído de `.tres` | constructor-negocio | medium | idem con productos |
+| D-0217 | ✅ Registro de vehículos (`FleetRegistry`) leído de `.tres` | constructor-camion | medium | idem con vehículos |
+| D-0218 | ✅ Registro de productos y proveedores leído de `.tres` | constructor-negocio | medium | idem con productos |
 | D-0219 | ✅ Reloj del juego determinista desde el host (hora del día, aceleración, pausa) | constructor-red | high | test con dos peers ve la misma hora ±1 tick |
 | D-0220 | ✅ Decidir dónde vive cada script nuevo (`business/`, `fleet/`, `districts/`) y qué va a módulos | Plan | medium | árbol de carpetas en `docs/arquitectura.md`; `check_modules` verde |
 

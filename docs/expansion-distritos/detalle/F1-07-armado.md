@@ -169,3 +169,18 @@ Decisión: una caja que no entra por peso no corta la carga; se salta y una más
 Decisión: reponer **no cuesta plata**, cuesta el tiempo de quien se queda en la mesa; lo que cuesta plata es usar el insumo (D-0504, se cobra al usarlo). Así no se cobra dos veces y la reposición es la tarea que pide `diseno/referencias-logistica.md` ("tarea del que se queda"). Decisión: el stock vive en la mesa (`PackingStation.supplies`), no en el `Inventory`, porque no son productos de pedidos ni se reservan; `to_dict` lo guarda y un guardado sin él vuelve lleno. Decisión: el relleno es un solo contador (sin papel/burbuja/espuma, igual que D-0705).
 **Test** `test_station_supplies`: arranca lleno; `take` rechazado no cambia nada; el dispensador se queda sin cajas de un tamaño y otro tamaño sigue; sin cinta no se sella y la caja queda abierta; el relleno se limita a lo que queda; una billetera sin plata no gasta stock; `low_kinds`; reponer no mueve plata; ida y vuelta por JSON y guardado viejo sin `supplies`.
 **Hecho cuando:** el test pasa.
+
+### D-0719 · Desarmar una caja mal armada — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `PackingStation.disassemble()`; `test_box_disassemble`. El gesto, el evento de red y desarmar una caja ya despachada quedan para D-0719.b (ver `revisar/D-0719.md`).
+**Depende de:** D-0701 (`PackingStation`), D-0212 (`PackedBox.items`)
+**Qué:** `disassemble()` devuelve los productos de la caja de la mesa: vuelven a la mesa (`staged`) hasta `STAGING_SLOTS`, en el orden en que se armaron; lo que no entra va en `overflow` (para las manos o el estante), nada se pierde. Devuelve `{staged, overflow}`; `{}` y sin cambios si no hay caja.
+Decisión: la caja vacía queda abierta en la mesa (se puede rearmar enseguida, sin pagar otra). Decisión: relleno, cinta, etiqueta y sellos **se pierden** y no se reembolsan (ya se pagaron al usarlos, D-0504): equivocarse cuesta un poco y desarmar siempre es posible, también con la caja encintada.
+**Test** `test_box_disassemble`: sin caja no hace nada; los productos vuelven en orden y la caja queda vacía, abierta, sin etiqueta ni sellos; una caja encintada se abre y ya no se despacha; con 6 unidades solo 4 vuelven a la mesa y 2 van a `overflow`; los mismos productos entran de nuevo.
+**Hecho cuando:** el test pasa.
+
+### D-0720 · Tutorial de la mesa (primer armado guiado) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `PackingTutorial` (`scripts/gameplay/business/packing_tutorial.gd`): el paso sale del estado de la mesa y del pedido; siete textos `WORLD_PACKTUT_*`; `test_packing_tutorial`. Mostrar el cartel junto a la mesa visible y marcar el tutorial como visto en el guardado quedan para D-0701.b (ver `revisar/D-0720.md`).
+**Depende de:** D-0701 (`PackingStation`), D-0708 (`BoxSeals`), D-0712 (`BoxContentCheck`), D-0714 (`OrderSheet`)
+**Qué:** `PackingTutorial.step(station, order, dispatched)` devuelve `{id, key, action, index, total, done}`: caja → productos → sellos (solo si el pedido los pide) → etiqueta → cinta → despacho → listo. Decisión: sin estado propio, el paso se deduce de la mesa, así deshacer, desarmar o hacer algo fuera de orden nunca lo desincroniza. Decisión: todos los pasos se hacen con la acción `interact` (teclado y mando), por eso no pide mouse.
+**Test** `test_packing_tutorial`: el flujo completo paso a paso, el paso de sellos solo con requisito, desarmar vuelve a productos, textos en es y en, la acción con evento de teclado y de mando, mesa nula y pedido vacío.
+**Hecho cuando:** el flujo guiado se completa con la lógica y la acción de mando (el test pasa).

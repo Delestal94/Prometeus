@@ -63,6 +63,8 @@ const SPAWN: Vector3 = Vector3(0.0, 1.0, 2.6)
 ## The group of every player here: this is the company, there is no vehicle to practise for
 ## (the delivery practice card, player_cargo_care.gd, checks it).
 const CREW_GROUP: StringName = &"company_crew"
+## How many days from the first one the stand-in supplier calendar covers (_seed_stand_in_calendar).
+const STAND_IN_DAYS: int = 120
 ## Zone names over the map: size of a pixel of their 256 px letters, and height over the ground.
 const ZONE_LABEL_PIXEL_SIZE: float = 0.06
 const ZONE_LABEL_HEIGHT: float = 30.0
@@ -84,6 +86,11 @@ var player: Node3D
 var shed: CompanyShed
 ## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
 var builder: ShedBuilder
+## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
+var supplier_truck: SupplierTruckView
+## The supplier calendar the truck follows. Stand-in until the order screen (D-0603) feeds it: see
+## _seed_stand_in_calendar().
+var supplier_schedule: SupplierSchedule = SupplierSchedule.new()
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
@@ -128,6 +135,7 @@ func _ready() -> void:
 	for zone: ZoneDefinition in zones:
 		_add_zone_slab(zone)
 	_add_shed()
+	_add_supplier_truck()
 	_add_cells()
 	_add_trips()
 	_spawn_player()
@@ -396,6 +404,33 @@ func _add_shed() -> void:
 	_redraw_shed()
 	if net != null:
 		shed.follow(net)
+
+
+## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
+## GameClock and CompanyState as every other peer, so there is nothing to send.
+func _add_supplier_truck() -> void:
+	_seed_stand_in_calendar()
+	supplier_truck = SupplierTruckView.new()
+	supplier_truck.schedule = supplier_schedule
+	supplier_truck.origin = shed.position
+	supplier_truck.company = net.company if net != null else null
+	supplier_truck.minute_now = func() -> float:
+		return clock.minute_now() if clock != null and is_instance_valid(clock) else float(CompanyTuning.DAY_START_MIN)
+	_world.add_child(supplier_truck)
+
+
+## Until the order screen (D-0603) puts real orders in the calendar, the first order of the default
+## shed arrives with the truck every day for STAND_IN_DAYS days, the same on every peer, so the
+## truck can be seen driving in. It brings nothing: the stock stays what the shed started with.
+func _seed_stand_in_calendar() -> void:
+	var data: DefaultShed = DefaultShed.load_default()
+	if data == null:
+		return
+	var lines: Array = []
+	for line: Dictionary in data.first_order:
+		lines.append({"product": line.get("product", &""), "qty": line.get("qty", 0)})
+	for day: int in range(CompanyTuning.STARTING_DAY, CompanyTuning.STARTING_DAY + STAND_IN_DAYS):
+		supplier_schedule.place(day - 1, lines)
 
 
 ## The shed from the company as this peer holds it: on the host what it started with; on a client

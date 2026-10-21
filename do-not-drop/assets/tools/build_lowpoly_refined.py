@@ -4,7 +4,7 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, fern, bramble, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
+tall_fern, fern, bramble, tall_grass, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -458,10 +458,100 @@ def grass():
     blades(16, 0.55, 0.22, 9)
 
 
+# Tall grass clump (N-331.10): 30 separate blades, each a flat outline
+# extruded 8 mm (a closed 12-tri prism), were 360 tris (cap 250, N-331.6) in
+# the pasture's own saturated "grass" green, tone on tone with the terrain.
+# Now one TallGrassClump mesh of 42 one-sided blades drawn double-sided, each
+# a strip over three spans (5 tris) that rises out of a tight tussock and
+# arches outward, the tip falling over: a fountain, not a spiky rosette.
+# A first pass with 22 wide V-folded blades (10 tris each) read as an agave;
+# thin, many and arching is what reads as tall grass. Three rings: upright
+# blades in the middle give the height, a middle ring arches out and an outer
+# skirt hangs its tips toward the ground; each blade is rolled about its
+# midrib so some show a face to every side. Colour: an olive of its own,
+# "grass.tall" (older blades) and "grass.tall_young" (the upright middle),
+# more red and almost no blue so it stands off the green pasture by hue
+# (LowpolyMaterials keys them as "grass" and lightens them x1.16, so the
+# linear values sit low), plus a few dry blades and dry tips in "straw.tall".
+# Roots go 1.5 cm into the ground; the footprint is centred on the origin and
+# brought to the old model's size by TALL_GRASS_SPREAD (ground_plant scales
+# it 0.65-1.2 more, a smaller model ends up a rosette).
+TALL_GRASS = (0.15, 0.18, 0.03, 1)
+TALL_GRASS_YOUNG = (0.19, 0.23, 0.04, 1)
+TALL_GRASS_STRAW = (0.36, 0.27, 0.08, 1)
+TALL_GRASS_SPREAD = 0.85
+# Fraction of the blade length per span, and half-width at root, span joints and tip.
+TALL_BLADE_SPANS = (0.38, 0.34, 0.28)
+TALL_BLADE_WIDTHS = (0.7, 1.0, 0.7, 0.0)
+
+
+def _grass_blade(bm, slots, root, heading, length, half_width, lift, droop, roll):
+    """A blade strip: a midrib over three spans out of `root`, rising at `lift`
+    and bending down by `droop` per span (the last span 1.4 times as much),
+    2 tris a span and 1 on the pointed tip. `slots` is the material slot of
+    each span (a dry tip, say)."""
+    ch, sh = math.cos(heading), math.sin(heading)
+    angles = [lift - droop * k for k in (0.0, 1.0, 2.4)]
+    spine = [Vector(root)]
+    for frac, a in zip(TALL_BLADE_SPANS, angles):
+        spine.append(spine[-1] + Vector((ch * math.cos(a), sh * math.cos(a), math.sin(a))) * length * frac)
+    joint = [angles[0]] + [(angles[k] + angles[k + 1]) / 2 for k in range(2)] + [angles[2]]
+    rows, ups = [], []
+    for k, (p, a) in enumerate(zip(spine, joint)):
+        d = Vector((ch * math.cos(a), sh * math.cos(a), math.sin(a)))
+        twist = Quaternion(d, roll)
+        side = twist @ Vector((-sh, ch, 0.0))
+        ups.append(twist @ Vector((-ch * math.sin(a), -sh * math.sin(a), math.cos(a))))
+        w = TALL_BLADE_WIDTHS[k] * half_width
+        if w == 0.0:
+            p.z = max(p.z, 0.02)
+            rows.append((bm.verts.new(p),))
+        else:
+            rows.append((bm.verts.new(p - side * w), bm.verts.new(p + side * w)))
+    for k in range(3):
+        a, b = rows[k], rows[k + 1]
+        faces = ((a[0], a[1], b[1]), (a[0], b[1], b[0])) if len(b) == 2 else ((a[0], a[1], b[0]),)
+        for verts in faces:
+            f = bm.faces.new(verts)
+            f.normal_update()
+            if f.normal.dot(ups[k] + ups[k + 1]) < 0.0:
+                f.normal_flip()
+            f.material_index = slots[k]
+
+
 def tall_grass():
     clear()
-    blades(24, 1.0, 0.35, 10)
-    blades(6, 0.9, 0.3, 11, "straw")
+    mesh = bpy.data.meshes.new("TallGrassClump")
+    obj = bpy.data.objects.new("TallGrassClump", mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(_double_sided("grass", "tall", TALL_GRASS))
+    mesh.materials.append(_double_sided("grass", "tall_young", TALL_GRASS_YOUNG))
+    mesh.materials.append(_double_sided("straw", "tall", TALL_GRASS_STRAW))
+    bm = bmesh.new()
+    rng = random.Random(10)
+    # (blades, root radius, length, lift, droop, slot): upright middle,
+    # arching ring, hanging skirt.
+    rings = ((12, 0.06, 1.1, (1.38, 1.5), (0.18, 0.28), 1),
+             (16, 0.1, 0.82, (1.3, 1.42), (0.45, 0.55), 0),
+             (14, 0.14, 0.62, (1.22, 1.32), (0.65, 0.75), 0))
+    n = 0
+    for count, radius, length, lift, droop, slot in rings:
+        start = rng.uniform(0.0, math.tau)
+        for i in range(count):
+            heading = start + i * math.tau / count + rng.uniform(-0.2, 0.2)
+            r = radius * rng.uniform(0.5, 1.0)
+            root = (math.cos(heading) * r, math.sin(heading) * r, -0.015)
+            # One blade in seven dry all over, one in five with a dry tip.
+            slots = (2, 2, 2) if n % 7 == 3 else (slot, slot, 2) if n % 5 == 1 else (slot, slot, slot)
+            _grass_blade(bm, slots, root, heading, length * rng.uniform(0.85, 1.1), 0.026,
+                         rng.uniform(*lift), rng.uniform(*droop), rng.uniform(-0.8, 0.8))
+            n += 1
+    lo = Vector((min(v.co.x for v in bm.verts), min(v.co.y for v in bm.verts), 0.0))
+    hi = Vector((max(v.co.x for v in bm.verts), max(v.co.y for v in bm.verts), 0.0))
+    bmesh.ops.translate(bm, verts=bm.verts, vec=-(lo + hi) / 2)
+    bmesh.ops.scale(bm, verts=bm.verts, vec=(TALL_GRASS_SPREAD, TALL_GRASS_SPREAD, 1.0))
+    bm.to_mesh(mesh)
+    bm.free()
 
 
 # Wildflowers (N-331.4): 27 meshes and 588 tris -- three capped 5-sided
@@ -1616,6 +1706,8 @@ GROUPS = {
     "fern": lambda: (fern(), export_forest("fern")),
     # Only the bramble thicket (N-331.10), without rewriting the other plants.
     "bramble": lambda: (bramble(), export_forest("bramble_thicket")),
+    # Only the tall grass clump (N-331.10), without rewriting the other plants.
+    "tall_grass": lambda: (tall_grass(), export_forest("tall_grass_clump")),
     # Only the forest rock (N-331.7), without rewriting the other plants.
     "rock": lambda: (forest_rock(), export_forest("rock")),
     # Only the mossy rock cluster (N-331.9), without rewriting the other plants.

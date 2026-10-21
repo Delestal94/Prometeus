@@ -90,7 +90,9 @@ func _run() -> void:
 
 	# 4. Far fewer things to draw.
 	var batched_meshes: int = batched.find_children("*", "MeshInstance3D", true, false).size() + batched.find_children("*", "MultiMeshInstance3D", true, false).size()
-	_expect(batched_meshes * 5 < plain_meshes, "Drawn from a fraction of the instances (%d -> %d)" % [plain_meshes, batched_meshes])
+	# Factor 4: the one-mesh tall grass clump (N-331.10) cut the plain count (30 blades
+	# per clump -> 1 mesh), so the ratio went 5+ -> 4.65 without batching getting worse.
+	_expect(batched_meshes * 4 < plain_meshes, "Drawn from a fraction of the instances (%d -> %d)" % [plain_meshes, batched_meshes])
 
 	# 5. Houses are one mesh each; segments keep their named colliders.
 	for house: Node in batched.get(&"houses"):

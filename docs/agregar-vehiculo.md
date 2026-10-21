@@ -53,3 +53,72 @@ Nada de esto necesita coordinarse con Slatex: `vehicle.tscn` y
   respete todo lo ya construido) sigue abierto por falta de contenido, no
   por falta de diseño: no hay nada que playtestear todavía. Construir el
   vehículo en sí es contenido de arte/diseño (#85, prioridad B).
+
+## Asientos y carga compartidos de la flota (D-0208)
+
+La furgoneta (`vehicle.gd`) no hereda de una base común: usa por composición dos
+componentes de `do-not-drop/scripts/gameplay/fleet/`, para que una lancha, un avión
+o una bici los reutilicen sin ser un `VehicleBody3D`. Son `RefCounted`, reciben
+como dueño cualquier `Node3D` y se cargan con `preload` (sin `class_name`, para no
+depender de la caché de clases). `vehicle.gd` los crea en `_init()` y los expone como
+`fleet_cargo` y `fleet_seats`; su API pública no cambió (`carries()`,
+`point_velocity()`, `needs_sweep()`, `get_cargo_spawn_transform()`, `CARGO_BAY`,
+`SHELL_LAYER`, `CARGO_WALL_*`) y son envoltorios finos hacia ellos.
+
+| Componente | Qué hace | Qué lee del dueño |
+|---|---|---|
+| `fleet_cargo.gd` | `carries()`, `point_velocity()`, `needs_sweep()`, el cascarón de carga `CargoShell` (capa 7, `SHELL_LAYER`), `follow()`, `on_package_placed()`, `get_cargo_spawn_transform()` | `linear_velocity`, `angular_velocity`, `center_of_mass`, `freeze` (RigidBody3D; `velocity` si es CharacterBody3D; propiedades con esos nombres en otro caso) |
+| `fleet_seats.gd` | Consultas: `seat_points()`, `seat_count()`, `driver_seat()`, `occupied_count()`, `free_seats()`, `has_driver()`, `is_driver(peer)` | `driver_peer_id` del dueño; asientos = nodos hijos con `is_occupied()` y `role` (`SeatPoint`) |
+
+El inventario de qué partes de `vehicle.gd` eran asientos y carga, con sus líneas
+de antes de la extracción, está en el encabezado de cada archivo. Los asientos ya
+estaban separados (`seat_point.gd`, nodos en `vehicle.tscn`): `fleet_seats.gd` solo
+consulta, y `driver_peer_id` / `controls_enabled` siguen siendo propiedades
+replicadas del vehículo (no se tocó ninguna ruta del `MultiplayerSynchronizer`).
+
+### Cómo lo usa un vehículo sin ruedas
+
+1. En su `_init()`: `fleet_cargo = FleetCargo.new(self)` y `fleet_seats = FleetSeats.new(self)`
+   (con `const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")`).
+2. En `_ready()`: `fleet_cargo.bay = AABB(...)` con la bodega propia (el valor por
+   defecto es el de la furgoneta), `fleet_cargo.spawn_point = $Marcador`, y
+   `fleet_cargo.build_shell()` cuando las colisiones del casco ya existen.
+3. En `_physics_process()` del host, antes del paso: `fleet_cargo.follow(delta)`; en
+   `_notification()`, ante `NOTIFICATION_TRANSFORM_CHANGED`,
+   `fleet_cargo.on_body_transform_changed()`.
+4. Conectar `EventBus.package_placed` a un método propio que llame a
+   `fleet_cargo.on_package_placed(id)` (un método del nodo, no del `RefCounted`: se
+   desconecta solo al liberar el vehículo).
+5. Exponer `carries()` / `point_velocity()` / `needs_sweep()` con esos nombres: el
+   paquete, el jugador y los animales los buscan por el grupo `vehicle`.
+6. Los asientos son `SeatPoint` hijos del vehículo y un `driver_peer_id` exportado.
+
+Prueba: `tests/test_fleet_components.gd`.
+
+## Cómo se mueve, para la carga (D-0209)
+
+La carga no lee el `VehicleBody3D`: lee `do-not-drop/scripts/gameplay/fleet/fleet_motion.gd`
+(`RefCounted`, `preload` como los otros). El vehículo lo crea con `FleetMotion.new(self)` y lo
+expone como propiedad `fleet_motion` (la furgoneta no sumó métodos públicos; `vehicle.gd` está en
+el tope de `max-public-methods`). Contrato:
+
+| Pregunta | Qué responde |
+|---|---|
+| `speed_kmh()` | velocidad del dueño en km/h (la furgoneta sigue teniendo su propiedad `speed_kmh`) |
+| `forward()` / `right()` | hacia dónde mira y su derecha, en el mundo |
+| `to_local(v)` | una dirección del mundo en el espacio propio del vehículo |
+| `ground_contact()` | 0..1; 1 = apoyado (ruedas en el camino, casco en el agua, patines abajo), 0 = en el aire |
+| `cargo_acceleration()` | lo que sienten las cajas: la aceleración del dueño en su espacio, suavizada |
+
+Para un vehículo nuevo: (1) `fleet_motion = FleetMotion.new(self)` en `_init()` (lee
+`linear_velocity` de un RigidBody3D, `velocity` de un CharacterBody3D o una propiedad
+`linear_velocity` en otro caso); (2) `fleet_motion.sample(delta)` una vez por tick de física
+(sin eso `cargo_acceleration()` queda en cero); (3) `fleet_motion.ground_probe = <Callable>` que
+devuelva 0..1 según su forma de apoyarse (la furgoneta cuenta ruedas con contacto, `_wheels_on_ground()`;
+sin sonda vale 1). Quien tiene el vehículo solo por nombre (`package_rescue.gd`, que lo busca en el
+grupo `vehicle`) usa los lectores estáticos `FleetMotion.right_of()`, `forward_of()`,
+`local_direction()`, `ground_contact_of()`, `cargo_acceleration_of()`: preguntan a `fleet_motion` y,
+si el nodo no lo tiene (los falsos de los tests), leen su transformada como antes.
+
+Prueba: `tests/test_fleet_motion.gd` (un vehículo falso sin ruedas y la furgoneta mueven las
+cajas igual con la misma aceleración, ±5 %).

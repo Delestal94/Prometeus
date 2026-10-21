@@ -338,26 +338,26 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.65** 16 colores de gelatina como `.tres` (color, absorción, brillo): leche (el de la
   referencia, por defecto), frutilla, lima, uva, naranja, menta, limón, arándano, cereza, cola, sandía,
   mora, durazno, cielo, carbón translúcido y arcoíris.
-- [ ] **S-311.66** Skins con interior: bicolor en capas (gomita), degradé vertical, trocitos de fruta
+- [x] **S-311.66** Skins con interior: bicolor en capas (gomita), degradé vertical, trocitos de fruta
   flotando adentro, brillantina, burbujas grandes.
-- [ ] **S-311.67** Skins animadas: arcoíris que cicla, neón que brilla de noche, lava con burbujas lentas,
+- [x] **S-311.67** Skins animadas: arcoíris que cicla, neón que brilla de noche, lava con burbujas lentas,
   holográfica.
-- [ ] **S-311.68** Color del equipo sin romper la skin: acento en el borde o en el núcleo con el color que
+- [x] **S-311.68** Color del equipo sin romper la skin: acento en el borde o en el núcleo con el color que
   hoy tiñe la camiseta.
-- [ ] **S-311.69** Legibilidad: cada jugador distinguible a 20 m, de día y de noche, y con los filtros
+- [x] **S-311.69** Legibilidad: cada jugador distinguible a 20 m, de día y de noche, y con los filtros
   de daltonismo (S-502, ahora en la lista de Nacho). Capturas.
-- [ ] **S-311.70** Vista previa, guardado en el perfil y replicación en `player_appearance.gd` (test de
+- [x] **S-311.70** Vista previa, guardado en el perfil y replicación en `player_appearance.gd` (test de
   red: cada par ve la skin del otro).
 
 ### J. Disfraces y accesorios (71-76)
 
-- [ ] **S-311.71** 12 disfraces: repartidor (uniforme del juego), cartero, bombero, astronauta, pirata,
+- [x] **S-311.71** 12 disfraces: repartidor (uniforme del juego), cartero, bombero, astronauta, pirata,
   chef, dinosaurio, abeja, momia, robot, superhéroe con capa y esqueleto (los huesos se ven dentro de la
   gelatina).
-- [ ] **S-311.72** 15 accesorios sueltos: gorra, casco, lentes, bufanda, mochila, moño, corona,
+- [x] **S-311.72** 15 accesorios sueltos: gorra, casco, lentes, bufanda, mochila, moño, corona,
   auriculares, bigote postizo, etc.
-- [ ] **S-311.73** Partes con física: capa, cola del dinosaurio, antenas de abeja, vendas de la momia.
-- [ ] **S-311.74** Ropa que sigue las proporciones: cada prenda lleva los mismos morphs que el cuerpo
+- [x] **S-311.73** Partes con física: capa, cola del dinosaurio, antenas de abeja, vendas de la momia.
+- [x] **S-311.74** Ropa que sigue las proporciones: cada prenda lleva los mismos morphs que el cuerpo
   (transferidos por script desde el cuerpo base) y los mismos pesos de hueso, así calza con cualquier
   combinación. La ropa opaca no rompe el orden de transparencia y el cuerpo se ve a través donde no hay
   ropa.
