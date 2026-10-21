@@ -356,7 +356,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   gelatina).
 - [x] **S-311.72** 15 accesorios sueltos: gorra, casco, lentes, bufanda, mochila, moño, corona,
   auriculares, bigote postizo, etc.
-- [ ] **S-311.73** Partes con física: capa, cola del dinosaurio, antenas de abeja, vendas de la momia.
+- [x] **S-311.73** Partes con física: capa, cola del dinosaurio, antenas de abeja, vendas de la momia.
 - [ ] **S-311.74** Ropa que sigue las proporciones: cada prenda lleva los mismos morphs que el cuerpo
   (transferidos por script desde el cuerpo base) y los mismos pesos de hueso, así calza con cualquier
   combinación. La ropa opaca no rompe el orden de transparencia y el cuerpo se ve a través donde no hay
