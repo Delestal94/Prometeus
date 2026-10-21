@@ -305,3 +305,20 @@ descartado; un frame de 3 s corre el tope y descarta el resto; deltas negativos,
 nada; 10 000 frames cuestan menos de 100 µs por frame en promedio. `test_company_world_boot`: el host
 tiene `BusinessTick` con el paso `day_cycle` y el `_process` del `DayCycle` apagado.
 **Hecho cuando:** los dos tests pasan y `check_modules` / `portability-check` están verdes.
+
+### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**Depende de:** D-0206
+**Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
+es de la UI del menú (Jugar → Empresa) y no entra acá.
+- `list_slots(dir)`: una entrada por slot de `user://saves/company/` con `slot`, `name` (el `company_name`,
+  o el slot si está vacío), `day`, `money`, `saved_at`, `interrupted` y `version`, del último jugado al
+  primero. Lee sin mover archivos: cuenta un slot que solo tiene `.bak` (escritura cortada) y deja afuera
+  `.tmp`, `.bad` y JSON que no son saves. Un save de un build más nuevo aparece con su `version` para que la
+  UI lo muestre deshabilitado.
+- `delete(slot, dir)`: borra el `.json` del slot y sus `.bak`, `.tmp` y `.bad`.
+- `new_slot_id(dir)`: `company` si está libre, si no `company_2`, `company_3`…
+**Test** `test_company_slots`: crea 3 slots con nombre, día y plata distintos, los lista en orden de
+`saved_at`, borra uno (con su `.bak`) y después los otros; `.bak` solo cuenta, `.tmp`/`.bad`/no-save no;
+`new_slot_id` y carpeta inexistente.
+**Hecho cuando:** el test pasa.
