@@ -177,6 +177,10 @@ const ORDER_ITEMS_MAX: int = 3
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
 const LATE_PENALTY: float = 0.25
+## A late order nobody has put on the road is dropped by the customer this many minutes after its
+## due time (D-0807): one more window. Costs ABANDONED_REPUTATION and pays nothing.
+const ORDER_ABANDON_MIN: int = 240
+const ABANDONED_REPUTATION: float = -3.0
 ## Packing quality 0-100 (D-0709, AssemblyQuality): starts at QUALITY_MAX and loses these.
 const QUALITY_MAX: float = 100.0
 ## Contents that do not match the order.
