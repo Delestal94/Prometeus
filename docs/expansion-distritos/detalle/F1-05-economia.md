@@ -126,3 +126,12 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** sin contador de "N días en rojo": cada cierre se evalúa solo por el saldo, así no hay otro estado que guardar ni replicar. Se cumple la decisión de diseño ya tomada (sin reinicio, 60 %); el préstamo forzado queda para D-0521 si se quiere.
 **Test** `test_bankruptcy`: 0 no es quiebra, -1 sí; 10 pedidos pasan a 6 y 7 a 4; mínimo 1; 0 queda en 0; el alquiler cobrado hasta el rojo la provoca; con plata vuelve el 100 %; sin empresa nada; `generate_day` con la empresa en rojo da el 60 % de los pedidos y sin empresa o con plata, los de siempre; `opening_notice` vacío en 0 y con la clave en -1 (y `test_company_root` comprueba el toast al abrir el día).
 **Hecho cuando:** el test pasa y la apertura usa `orders_for_day` (D-0510.2).
+
+### D-0511 · Tienda de la empresa — B · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `ShopItem` (`scripts/gameplay/business/shop_item.gd`, `.tres` en `data/shop/`) y `CompanyShop` (`company_shop.gd`): `items()` lee el catálogo, `check()` / `buy()` devuelven `{ok, key, args}` (`WORLD_SHOP_*`) y `buy()` cobra con motivo `shop` y entrega lo comprado. Tres ítems de arranque (mejora 1 = 450, lectora de etiquetas = 600, ampliación 1 = 800); `test_company_shop`. Falta la pantalla (D-0511.2), quién puede gastar (D-0518) y los precios del resto (D-0512 a D-0514).
+**Depende de:** D-0501, D-0202
+**Qué:** catálogo de `.tres` con tres tipos: `vehicle` (suma una entrada `{vehicle: fleet_key}` a `CompanyState.fleet`; se puede comprar otra vez), `machine` (suma su clave a `equipment`; una sola vez; `requires` opcional) y `expansion` (sube `warehouse_stage`, de a una etapa). Funciones estáticas sin nodos ni red.
+- **D-0511.2** Pantalla de la tienda en el cierre del día (`constructor-ui`, con D-0508.3 mostrando el resumen).
+**Decisión:** el catálogo vive en `data/shop/` y no en `CompanyCatalog` (sus tipos de ítem no son del registro de la empresa y no hay que tocar `KINDS`); los vehículos y las licencias de distrito se agregan como `.tres` en D-0512 y con las barreras (D-0306).
+**Test** `test_company_shop`: catálogo en orden, compra cobra y entrega, motivo `shop` en el libro, rechazos sin cambiar nada.
+**Hecho cuando:** comprar un ítem en test descuenta la plata y lo otorga (cumplido).
