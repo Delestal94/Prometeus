@@ -351,7 +351,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### J. Disfraces y accesorios (71-76)
 
-- [ ] **S-311.71** 12 disfraces: repartidor (uniforme del juego), cartero, bombero, astronauta, pirata,
+- [x] **S-311.71** 12 disfraces: repartidor (uniforme del juego), cartero, bombero, astronauta, pirata,
   chef, dinosaurio, abeja, momia, robot, superhéroe con capa y esqueleto (los huesos se ven dentro de la
   gelatina).
 - [ ] **S-311.72** 15 accesorios sueltos: gorra, casco, lentes, bufanda, mochila, moño, corona,
