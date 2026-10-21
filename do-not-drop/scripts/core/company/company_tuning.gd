@@ -173,6 +173,10 @@ const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3
+## The first days ask for fewer distinct products (D-0812): up to ORDER_ITEMS_EARLY_MAX on days
+## 1 to ORDER_EARLY_DAYS, so a crew still learning the shed packs one or two products per box.
+const ORDER_EARLY_DAYS: int = 3
+const ORDER_ITEMS_EARLY_MAX: int = 2
 ## Delivery window from the moment the order comes in: 4 game hours.
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
