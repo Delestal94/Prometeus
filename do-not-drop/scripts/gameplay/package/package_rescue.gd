@@ -12,7 +12,9 @@ extends RefCounted
 ## package_autoloads.gd: typing it makes a compile cycle), the seat path of the
 ## players in the "player" group (tests put Node3D fakes there) and the truck
 ## radio's mode (truck_radio.gd names autoloads bare: typing it pulls them into
-## the box's compile graph). Typed: the lap mount (MountPoint, by preload: it
+## the box's compile graph). Its heading and local space come through the movement interface by name
+## (FleetMotion.right_of / forward_of / local_direction read the vehicle's `fleet_motion`; a fake
+## without one is read from its transform). Typed: the lap mount (MountPoint, by preload: it
 ## has no class name) and the session's world_seed (NETWORK_MANAGER).
 
 ## The lap mount's script (package_mount_point.gd has no class name): it names no autoload.
@@ -20,6 +22,9 @@ const MountPoint = preload("res://scripts/gameplay/interaction/package_mount_poi
 ## The session as a type: the script the NetworkManager autoload runs, which declares world_seed
 ## (NetSession does not). test_dynamic_dispatch_budget checks it is that script.
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
+## The vehicle's movement interface (D-0209): its readers ask the van by name and fall back to a
+## plain Node3D's transform. Preloaded: it names no autoload.
+const FleetMotion = preload("res://scripts/gameplay/fleet/fleet_motion.gd")
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -35,9 +40,9 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		velocity_now = vehicle.call(&"point_velocity", p.global_position)
 		speed = velocity_now.length()
 		if p._motion_initialized:
-			var acceleration: Vector3 = (velocity_now - p._motion_velocity) / maxf(delta, 0.001)
-			var local_acceleration: Vector3 = vehicle.global_basis.inverse() * acceleration
-			p._motion_acceleration = p._motion_acceleration.lerp(local_acceleration, minf(1.0, delta * 8.0))
+			var felt: Vector3 = local_acceleration(vehicle, velocity_now, p._motion_velocity, delta)
+			p._motion_acceleration = p._motion_acceleration.lerp(felt,
+					minf(1.0, delta * FleetMotion.ACCELERATION_SMOOTHING))
 		p._motion_velocity = velocity_now
 		p._motion_initialized = true
 	else:
@@ -72,8 +77,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 			p.trap_behavior.on_physics_process(p, delta, {
 				"linear_velocity": p.linear_velocity, "angular_velocity": p.angular_velocity, "input": input,
 				"impact_ahead": float(road["eta"]) if not road.is_empty() else INF,
-				"truck_right": vehicle.global_basis.x if vehicle != null else Vector3.RIGHT,
-				"truck_forward": -vehicle.global_basis.z if vehicle != null else Vector3.FORWARD,
+				"truck_right": FleetMotion.right_of(vehicle), "truck_forward": FleetMotion.forward_of(vehicle),
 				"code_reader": code_reader(p, vehicle), "radio_mode": radio_mode(p)})
 			if _road_jolt(p, road, speed):
 				# apply_impact() already reported it.
@@ -97,6 +101,13 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		p._care_publish_time = 0.0
 		publish_care(p)
 		p._emit_event(&"package_hint_changed", [p.package_id, p.hint_text()])
+
+
+## A box's acceleration over a tick, in the vehicle's own space (what the trap and the care
+## model read): the change of its carried velocity, through the vehicle's movement interface.
+static func local_acceleration(vehicle: Node3D, velocity_now: Vector3, velocity_before: Vector3,
+		delta: float) -> Vector3:
+	return FleetMotion.local_direction(vehicle, (velocity_now - velocity_before) / maxf(delta, 0.001))
 
 
 ## The truck radio's mode (TruckRadio, N-406), for the traps it moves (Ruidoso):
@@ -385,8 +396,8 @@ static func push_in_truck(p: DeliveryPackage, peer_id: int, sample: Dictionary) 
 		return pressed
 	var view: Basis = view_basis_of(player)
 	var world: Vector3 = view.x * pressed.x + -view.z * pressed.y
-	var right: Vector3 = vehicle.global_basis.x
-	var forward: Vector3 = -vehicle.global_basis.z
+	var right: Vector3 = FleetMotion.right_of(vehicle)
+	var forward: Vector3 = FleetMotion.forward_of(vehicle)
 	return Vector2(world.dot(right), world.dot(forward)).limit_length(1.0)
 
 

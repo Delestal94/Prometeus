@@ -94,3 +94,31 @@ replicadas del vehículo (no se tocó ninguna ruta del `MultiplayerSynchronizer`
 6. Los asientos son `SeatPoint` hijos del vehículo y un `driver_peer_id` exportado.
 
 Prueba: `tests/test_fleet_components.gd`.
+
+## Cómo se mueve, para la carga (D-0209)
+
+La carga no lee el `VehicleBody3D`: lee `do-not-drop/scripts/gameplay/fleet/fleet_motion.gd`
+(`RefCounted`, `preload` como los otros). El vehículo lo crea con `FleetMotion.new(self)` y lo
+expone como propiedad `fleet_motion` (la furgoneta no sumó métodos públicos; `vehicle.gd` está en
+el tope de `max-public-methods`). Contrato:
+
+| Pregunta | Qué responde |
+|---|---|
+| `speed_kmh()` | velocidad del dueño en km/h (la furgoneta sigue teniendo su propiedad `speed_kmh`) |
+| `forward()` / `right()` | hacia dónde mira y su derecha, en el mundo |
+| `to_local(v)` | una dirección del mundo en el espacio propio del vehículo |
+| `ground_contact()` | 0..1; 1 = apoyado (ruedas en el camino, casco en el agua, patines abajo), 0 = en el aire |
+| `cargo_acceleration()` | lo que sienten las cajas: la aceleración del dueño en su espacio, suavizada |
+
+Para un vehículo nuevo: (1) `fleet_motion = FleetMotion.new(self)` en `_init()` (lee
+`linear_velocity` de un RigidBody3D, `velocity` de un CharacterBody3D o una propiedad
+`linear_velocity` en otro caso); (2) `fleet_motion.sample(delta)` una vez por tick de física
+(sin eso `cargo_acceleration()` queda en cero); (3) `fleet_motion.ground_probe = <Callable>` que
+devuelva 0..1 según su forma de apoyarse (la furgoneta cuenta ruedas con contacto, `_wheels_on_ground()`;
+sin sonda vale 1). Quien tiene el vehículo solo por nombre (`package_rescue.gd`, que lo busca en el
+grupo `vehicle`) usa los lectores estáticos `FleetMotion.right_of()`, `forward_of()`,
+`local_direction()`, `ground_contact_of()`, `cargo_acceleration_of()`: preguntan a `fleet_motion` y,
+si el nodo no lo tiene (los falsos de los tests), leen su transformada como antes.
+
+Prueba: `tests/test_fleet_motion.gd` (un vehículo falso sin ruedas y la furgoneta mueven las
+cajas igual con la misma aceleración, ±5 %).
