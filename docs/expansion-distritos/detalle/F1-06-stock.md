@@ -127,3 +127,14 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - **D-0603.b (pendiente) — la pantalla** en el tablero del galpón y en el portapapeles: lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
 **Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
 **Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).
+
+### D-0613 · Aviso de stock bajo para productos con pedidos pendientes — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `StockAlert` (`scripts/gameplay/business/stock_alert.gd`): qué productos faltan para los pedidos pendientes; `test_stock_alert`. El aviso en pantalla (portapapeles, tablero) lo dibuja la UI de stock, D-0612.
+**Depende de:** D-0211 (`Inventory`), D-0210 (`OrderBook`), D-0602 (lo que viene en camino)
+**Qué:** `class_name StockAlert`, `RefCounted`, solo funciones estáticas sobre datos:
+- `shortages(inventory, orders, incoming = {})`: `orders` es lo que devuelve `OrderBook.open_orders()`. Cuenta los pedidos pendientes (abiertos o atrasados que todavía no tienen caja, `is_pending`) y suma lo que piden por producto. Lo compara con el stock libre (`free_units`: todo salvo `box:<id>`, que ya es de un pedido armado). Devuelve una entrada por producto que no alcanza: `product`, `needed`, `have`, `incoming`, `missing`, `due_min` (el vencimiento más cercano) y `covered`, ordenadas por urgencia (vencimiento y después id).
+- `incoming` (producto → unidades ya pedidas al proveedor, opcional) baja `missing`; si cierra la brecha entera, `covered` es verdadero ("el camión viene", no "nadie pidió").
+- `fresh(previous, current)`: los productos que antes no faltaban y ahora sí (y no están cubiertos), para avisar una vez y no en cada cambio de stock.
+- `Inventory.locations_of(product)` (nuevo): ubicación → unidades de un producto.
+**Test** `test_stock_alert`: falta y no falta, suma de varios pedidos con el vencimiento más cercano, pedidos armados/entregados/en caja y unidades selladas que no cuentan, `incoming` parcial y total, orden por urgencia, `fresh`.
+**Hecho cuando:** test: un pedido que pide más de lo que hay marca el producto con lo que falta (test pasa).
