@@ -10,6 +10,7 @@ extends SceneTree
 ## - add_to_day() folds several trips into the day's summary.
 
 var _failures: int = 0
+var _hen: Resource = load("res://data/products/hen.tres")
 
 
 func _initialize() -> void:
@@ -37,7 +38,9 @@ func _expect(cond: bool, msg: String) -> void:
 func _closed_trip(book: OrderBook, products: Dictionary) -> Trip:
 	for i in 3:
 		var id := StringName("o%d" % (i + 1))
-		book.add(Order.make(id, "Ana", &"centro", StringName("h%d" % (i + 1)), [{"product": &"hen", "qty": 2}], 0, products))
+		var house := StringName("h%d" % (i + 1))
+		var items: Array = [{"product": &"hen", "qty": 2}]
+		book.add(Order.make(id, "Ana", &"centro", house, items, 0, products))
 		book.mark_packed(id, StringName("b%d" % (i + 1)))
 	var ids: Array[StringName] = [&"o1", &"o2", &"o3"]
 	var boxes: Array[StringName] = [&"b1", &"b2", &"b3"]
@@ -45,7 +48,7 @@ func _closed_trip(book: OrderBook, products: Dictionary) -> Trip:
 
 
 func _test_mixed_trip(crew: Node) -> void:
-	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
+	var products: Dictionary = {&"hen": _hen}
 	var book := OrderBook.new()
 	var trip: Trip = _closed_trip(book, products)
 	var base: int = int(book.get_order(&"o1")["pay"])
@@ -62,7 +65,8 @@ func _test_mixed_trip(crew: Node) -> void:
 	_expect(result["duration_min"] == 90, "the trip lasted 90 minutes")
 	var lines: Array = result["orders"]
 	_expect(lines[0]["pay"] == base and lines[0]["penalty"] == 0, "the intact one pays in full")
-	_expect(lines[1]["box"] == TripResult.BOX_BROKEN and lines[1]["penalty"] == base - base / 2, "the broken one loses its share")
+	_expect(lines[1]["box"] == TripResult.BOX_BROKEN and lines[1]["penalty"] == base - base / 2,
+		"the broken one loses its share")
 	_expect(lines[2]["outcome"] == TripResult.OUTCOME_FAILED and lines[2]["pay"] == 0, "the undelivered one pays 0")
 	_expect(lines[2]["penalty"] == base and lines[2]["box"] == TripResult.BOX_UNDELIVERED, "its whole base pay is lost")
 	_expect(result["pay_total"] == base + base / 2, "pay total adds up")
@@ -81,7 +85,7 @@ func _test_mixed_trip(crew: Node) -> void:
 
 
 func _test_still_out() -> void:
-	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
+	var products: Dictionary = {&"hen": _hen}
 	var book := OrderBook.new()
 	var trip: Trip = _closed_trip(book, products)
 	var result: Dictionary = TripResult.build(trip, book)
