@@ -4,7 +4,8 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, fern, bramble, tall_grass, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
+tall_fern, fern, bramble, tall_grass, rock, rock_cluster, mushroom, wildflower and
+fallen_log rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -757,12 +758,71 @@ def mushroom():
     bm.free()
 
 
+# Fallen log (N-978): each end was a loose 3 cm "trim" disc stuck on the
+# trunk (cream with no detail map in game), which read as a slate disc with a
+# white rim -- stone or plastic, not a cut log. Now the trunk's own end caps
+# become the cut face: flattened to x = +-LOG_END (the old discs' outer face,
+# so the bounding box is unchanged), then inset into a thin bark rim
+# ("trunk"), light sawn wood and two slightly darker growth rings, each band
+# 3 mm lower than the last so the rings read in the light as well as by
+# colour, around a pith a little off-centre. One surface, no overlapping
+# discs, so nothing z-fights. Both wood colours are "wood.*" copies, keyed as
+# "wood" by LowpolyMaterials (planks detail at 1.4 m: grain, not boards, at
+# this size). DetailMaterials keeps a "wood.*" material's own albedo (only
+# the detail map comes from the "wood" key; "wood" is not in LIFTED), so the
+# colour is what's authored here, x DETAIL_GAIN 1.16 in sRGB.
+# Pass 2 (2026-10-21): 0.42/0.24/0.10 came out mid brown in game, barely
+# lighter than the bark (the planks map darkens it and the face is mostly
+# side-lit). Now freshly cut pine, ~0.92/0.75/0.52 sRGB in game; the rings
+# keep the same ratio to it (~0.75/0.60/0.41), still well above the bark.
+LOG_END = 1.425
+LOG_WOOD = (0.58, 0.37, 0.17, 1)
+LOG_RING = (0.38, 0.23, 0.10, 1)
+# Cut face bands, outside in: (radius as a fraction of the bark, material slot).
+# Slot 0 trunk, 1 light wood, 2 ring.
+LOG_BANDS = [(0.87, 1), (0.66, 2), (0.57, 1), (0.36, 2), (0.29, 1)]
+
+
+def _log_end_caps(o, seed=978):
+    rng = random.Random(seed)
+    o.data.materials.append(_single_sided("wood", "log_end", LOG_WOOD))
+    o.data.materials.append(_single_sided("wood", "log_ring", LOG_RING))
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bm.normal_update()
+    # The cylinder runs along its local z (rotated onto world x afterwards).
+    caps = [f for f in bm.faces if abs(f.normal.z) > 0.9]
+    for cap in caps:
+        side = 1.0 if cap.normal.z > 0 else -1.0
+        for v in cap.verts:
+            v.co.z = side * LOG_END
+        centre = cap.calc_center_median()
+        centre += Vector((rng.uniform(-0.03, 0.03), rng.uniform(-0.03, 0.03), 0.0))
+        rim = [v.co.copy() for v in cap.verts]
+        face = cap
+        for depth, (frac, slot) in enumerate(LOG_BANDS):
+            res = bmesh.ops.inset_region(bm, faces=[face], thickness=0.0, depth=0.0)
+            for ring_face in res["faces"]:
+                ring_face.material_index = 0 if depth == 0 else LOG_BANDS[depth - 1][1]
+            # Place the new inner loop at `frac` of the way from the pith to
+            # the bark (along the same spoke), wobbled a little, sunk 3 mm
+            # per band.
+            for v in face.verts:
+                outer = max(rim, key=lambda p: (p - centre).normalized().dot((v.co - centre).normalized()))
+                wobble = 1.0 + rng.uniform(-0.04, 0.04)
+                v.co = centre + (outer - centre) * frac * wobble
+                v.co.z = side * (LOG_END - 0.003 * (depth + 1))
+            face.material_index = slot
+    bm.normal_update()
+    bm.to_mesh(o.data)
+    bm.free()
+
+
 def log():
     clear()
     o = cylinder("FallenLog", (0, 0, 0.3), 0.3, 2.8, "trunk", 10, rot=(0, math.pi / 2, 0))
     jitter(o, 0.03, 14)
-    for x in (-1.41, 1.41):
-        cylinder("LogEnd", (x, 0, 0.3), 0.27, 0.03, "trim", 10, rot=(0, math.pi / 2, 0))
+    _log_end_caps(o)
     cone("LogStub", (-0.5, 0.2, 0.55), 0.08, 0.03, 0.5, "trunk", 5, rot=(0.7, 0, 0))
     cone("LogStub", (0.7, -0.15, 0.5), 0.07, 0.03, 0.4, "trunk", 5, rot=(-0.8, 0.3, 0))
     for i, x in enumerate((-0.9, 0.2, 1.0)):
@@ -1716,6 +1776,8 @@ GROUPS = {
     "mushroom": lambda: (mushroom(), export_forest("mushroom")),
     # Only the wildflowers (N-331.4), without rewriting the other plants.
     "wildflower": lambda: (wildflower_cluster(), export_forest("wildflower")),
+    # Only the fallen log (N-978), without rewriting the other plants.
+    "fallen_log": lambda: (log(), export_forest("fallen_log")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
