@@ -253,7 +253,9 @@ func _send(request: Dictionary) -> void:
 	net.request(request["kind"], request["data"])
 
 
-func _on_request_rejected(_rid: int, reason: StringName) -> void:
+func _on_request_rejected(rid: int, reason: StringName) -> void:
+	if rid == 0:
+		return  # a refusal the host made for something else (a shelf used, D-0609), not ours
 	_last_refusal = reason
 	_refresh()
 

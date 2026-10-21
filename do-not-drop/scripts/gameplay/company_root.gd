@@ -421,9 +421,12 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		CompanyNet.hands_location(peer_id), int(_pick_after.get(key, -1)))
 	if plan.has("reason"):
 		return
-	_pick_after[key] = plan["slot"]
+	var hands: StringName = CompanyNet.hands_location(peer_id)
+	var before: int = net.inventory.count(plan["product"], hands)
 	net.request_for(peer_id, &"units_take",
 		{"station": plan["station"], "product": plan["product"], "qty": plan["qty"]})
+	if net.inventory.count(plan["product"], hands) > before:
+		_pick_after[key] = plan["slot"]
 
 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
