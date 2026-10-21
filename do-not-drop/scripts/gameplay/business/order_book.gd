@@ -74,6 +74,18 @@ func mark_packed(id: StringName, box_id: StringName) -> bool:
 	return true
 
 
+## Takes a PACKED order back to waiting (its box was opened or dropped, D-0808): OPEN, or LATE
+## when it is already past due. The box link is cleared.
+func unpack(id: StringName) -> bool:
+	if state_of(id) != Order.STATE_PACKED:
+		return false
+	var order: Dictionary = _orders[id]
+	order.erase("box_id")
+	order["state"] = Order.STATE_LATE if _now_min > int(order["due_min"]) else Order.STATE_OPEN
+	order_changed.emit(id, order["state"])
+	return true
+
+
 func mark_out(id: StringName, trip_id: StringName) -> bool:
 	if not _move(id, Order.STATE_OUT):
 		return false
