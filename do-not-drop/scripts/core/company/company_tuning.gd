@@ -211,6 +211,18 @@ const SUPPLIER_TRUCKS_PER_DAY: int = 1
 const SUPPLIER_ARRIVAL_MIN: int = 8 * 60 + 30
 ## It waits this long at the dock (3 game hours).
 const SUPPLIER_WAIT_MIN: int = 180
+## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
+## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
+## turn radius, how far it reverses in a straight line, the straight run before the turn, and the
+## game minutes it takes to drive in (it is parked at SUPPLIER_ARRIVAL_MIN) and to drive out (it
+## starts at the departure minute).
+const SUPPLIER_TRUCK_SIZE_M: Vector3 = Vector3(2.4, 3.2, 6.4)
+const SUPPLIER_TRUCK_REAR_GAP_M: float = 0.6
+const SUPPLIER_TRUCK_TURN_RADIUS_M: float = 6.0
+const SUPPLIER_TRUCK_REVERSE_M: float = 10.0
+const SUPPLIER_TRUCK_APPROACH_M: float = 16.0
+const SUPPLIER_DRIVE_IN_MIN: float = 6.0
+const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0
