@@ -77,7 +77,8 @@ func mark_packed(id: StringName, box_id: StringName) -> bool:
 ## Takes a PACKED order back to waiting (its box was opened or dropped, D-0808): OPEN, or LATE
 ## when it is already past due. The box link is cleared.
 func unpack(id: StringName) -> bool:
-	if state_of(id) != Order.STATE_PACKED:
+	var current: StringName = state_of(id)
+	if current != Order.STATE_PACKED and (current != Order.STATE_LATE or box_of(id) == &""):
 		return false
 	var order: Dictionary = _orders[id]
 	order.erase("box_id")
