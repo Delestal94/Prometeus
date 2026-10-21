@@ -262,19 +262,11 @@ func request(kind: StringName, data: Dictionary = {}) -> int:
 	return _next_rid
 
 
-## Host: a request made on behalf of `peer` by something that already runs on the host (a shed piece
-## used by that peer, D-0609: Interactable.interact() runs on the host for every peer). It takes the
-## same path as `peer`'s own request, so the same checks hold; a refusal goes to `peer` with request
-## id 0. False on a client or with a peer that is not in the session.
+## Host: a request for `peer` from code that runs on the host (D-0609); same checks, refusals carry rid 0.
 func request_for(peer: int, kind: StringName, data: Dictionary = {}) -> bool:
-	if not is_inside_tree() or not is_host() or _applying:
+	if not is_host() or not (peer == multiplayer.get_unique_id() or multiplayer.get_peers().has(peer)):
 		return false
-	var host_id: int = multiplayer.get_unique_id()
-	if peer != host_id and not multiplayer.get_peers().has(peer):
-		return false
-	var sent: Dictionary = data.duplicate()
-	sent["rid"] = 0
-	_take_request(peer, kind, sent)
+	_take_request(peer, kind, data.merged({"rid": 0}, true))
 	return true
 
 

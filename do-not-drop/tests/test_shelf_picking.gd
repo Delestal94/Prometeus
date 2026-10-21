@@ -139,7 +139,7 @@ func _test_end_to_end() -> void:
 	net.player_origin = func(_peer: int) -> Variant: return near + Vector3(40.0, 0.0, 0.0)
 	net.request_for(1, &"units_take", {"station": plan["station"], "product": product, "qty": 1})
 	_expect(refusals.size() == 2 and refusals[1][1] == CompanyNet.REASON_OUT_OF_REACH
-		and net.inventory.count(product, shelf.location(slot)) == 1, "Far from the shelf it is refused (%s)" % [refusals])
+		and net.inventory.count(product, shelf.location(slot)) == 1, "Far from the shelf it is refused")
 	_expect(not net.request_for(99, &"units_take", {}), "A peer that is not in the session is ignored")
 	net.free()
 	shed.free()
