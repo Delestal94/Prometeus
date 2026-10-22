@@ -3,6 +3,7 @@ extends SceneTree
 ##
 ## Customer's handwritten note (expansion D-0731, customer_note.gd and PackedBox.note_key):
 ## - an order's note is repeatable (same id, same note) and an order without id has none;
+## - D-0822: 60 texts (48 plain, 12 gift), distinct, translated in es and en, all picked by some order;
 ## - a gift order gets a gift note, any other order a plain one, and every key has a translation;
 ## - attach() writes the note once and refuses a null box, no note or a box that already has one;
 ## - the note survives a JSON round trip; unknown keys and old snapshots come back without a note.
@@ -23,13 +24,30 @@ func _run() -> void:
 	_expect(CustomerNote.key_for(plain) in CustomerNote.PLAIN_KEYS, "a plain order gets a plain note")
 
 	var seen: Dictionary = {}
-	for i in 40:
+	for i in 1000:
 		seen[CustomerNote.key_for({"id": "order_%d" % i})] = true
-	_expect(seen.size() == CustomerNote.PLAIN_KEYS.size(), "40 orders use every plain note")
+	_expect(seen.size() == CustomerNote.PLAIN_KEYS.size(), "1000 orders use every plain note")
+	var seen_gift: Dictionary = {}
+	for i in 1000:
+		seen_gift[CustomerNote.key_for({"id": "order_%d" % i, "requirements": ["gift"]})] = true
+	_expect(seen_gift.size() == CustomerNote.GIFT_KEYS.size(), "1000 gift orders use every gift note")
 
 	var csv: String = FileAccess.get_file_as_string("res://translations/strings_ui.csv")
 	for key: StringName in CustomerNote.KEYS:
 		_expect(csv.contains("\n%s," % key), "%s is in strings_ui.csv" % key)
+	_expect(CustomerNote.KEYS.size() == 60, "D-0822: 60 note texts")
+	var unique: Dictionary = {}
+	var texts: Dictionary = {}
+	for key: StringName in CustomerNote.KEYS:
+		unique[key] = true
+		for lang: String in ["es", "en"]:
+			TranslationServer.set_locale(lang)
+			var text: String = TranslationServer.translate(key)
+			_expect(text != "" and text != String(key), "%s has %s text" % [key, lang])
+			texts["%s:%s" % [lang, text]] = true
+	_expect(unique.size() == 60, "the 60 keys are distinct")
+	_expect(texts.size() == 120, "the 60 texts are distinct in each language")
+	TranslationServer.set_locale("en")
 	var pools: int = CustomerNote.PLAIN_KEYS.size() + CustomerNote.GIFT_KEYS.size()
 	_expect(CustomerNote.KEYS.size() == pools, "KEYS lists both pools")
 

@@ -5,16 +5,20 @@ extends SceneTree
 ## Opens the company world (scenes/gameplay/company_root.tscn, what --mode=company opens) and moves
 ## a camera along a FIXED path for `--seconds` (default 30): a loop around the inside of the shed
 ## and, at the end, a look out of the door at the zone slabs. A second stage, "drive 30 s toward
-## Barrio Centro", has no vehicle or road to run on yet: it prints `drive: not_available` and is
-## skipped without failing (D-2011.1 fills in _stage_drive()).
+## Barrio Centro" (D-2011.1), puts the player at the wheel of the fleet's van (the same driving as
+## tests/bot_company_van.gd: the cab door, SeatPoint.interact, the accelerator held down), lets it
+## roll out of the gate along the street for `--seconds` and follows it with a chase camera (behind and
+## above, chase_pose()). It records its own frames; if there is no van or the player cannot board it,
+## it prints `drive: not_available (<why>)` and is skipped without failing.
 ## Prints one summary block, a line per key with the stable prefix `BENCH_COMPANY key=value`
-## (objects, nodes, draw_calls, physics_bodies, frame_ms_p50, frame_ms_p95, memory_static_kb...),
+## (objects, nodes, draw_calls, physics_bodies, frame_ms_p50, frame_ms_p95, memory_static_kb... of the
+## walk; drive_frames, drive_frame_ms_p50/p95, drive_draw_calls, drive_objects, drive_metres of the drive),
 ## and a final `BENCH_COMPANY_OK`. It quits by itself; a hard wall-clock timeout ends it with
 ## `BENCH_COMPANY_TIMEOUT` (exit code 3) if the world never comes up or a frame never returns.
 ## Optional user args: -- --seconds=30 (per stage) --hard=<seconds> (the hard timeout).
 ## With --headless and -- --cpu-only it measures scripts + physics alone (draw_calls reads 0).
 ## The company saves into a temp folder (user://bench_company), never the game's slot.
-## The camera path and the summary format are static functions (camera_pose(), summary_lines()),
+## The camera paths and the summary format are static functions (camera_pose(), chase_pose(), summary_lines()),
 ## checked without rendering by tests/test_company_bench.gd.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -23,9 +27,27 @@ const PREFIX: String = "BENCH_COMPANY"
 ## The summary block, in this order: one `BENCH_COMPANY key=value` line each.
 const SUMMARY_KEYS: Array[String] = [
 	"mode", "seconds", "frames", "build_ms", "objects", "object_count", "nodes", "draw_calls",
-	"physics_bodies", "frame_ms_p50", "frame_ms_p95", "memory_static_kb", "drive",
+	"physics_bodies", "frame_ms_p50", "frame_ms_p95", "memory_static_kb", "drive", "drive_frames",
+	"drive_frame_ms_p50", "drive_frame_ms_p95", "drive_draw_calls", "drive_objects", "drive_metres",
 ]
-const DRIVE_NOT_AVAILABLE: String = "drive: not_available (no vehicle in the company world yet, D-2011.1)"
+## What the drive stage prints when it is skipped: this prefix, then the reason.
+const DRIVE_NOT_AVAILABLE: String = "drive: not_available"
+## The van the stage drives: the fleet's (CompanyFleet), the same one the company-day bot takes out.
+const VAN_ID: StringName = &"van_classic"
+## The chase camera: this far behind the van and this high over it, looking at a point ahead of it.
+const CHASE_BACK: float = 9.0
+const CHASE_UP: float = 4.0
+const CHASE_LOOK_AHEAD: float = 6.0
+## Barrio Centro lies east (+X) of the shed along the Avenida Este (mapa.md: z = the shed's, from the gate
+## to x = 256 and on), while the van leaves the yard facing north (-Z). The driver steers for the point
+## DRIVE_LOOKAHEAD ahead of it on that avenue.
+const DRIVE_LOOKAHEAD: float = 60.0
+const STEER_LEFT: StringName = &"drive_left"
+const STEER_RIGHT: StringName = &"drive_right"
+## The angle off the nose (radians) at which the steering is at full lock; below it, proportional.
+const STEER_FULL_LOCK: float = 0.5
+## Physics ticks the stage lets the world settle (the van on the ground) before the player boards.
+const DRIVE_SETTLE_TICKS: int = 30
 ## Eye height of the camera over the shed floor, meters.
 const EYE_HEIGHT: float = 1.7
 ## The loop the camera walks, as half extents (x, z) around the shed's centre: down the middle aisle
@@ -42,6 +64,8 @@ const DOOR_LOOK_X: float = 400.0
 const DOOR_LOOK_Z: float = 500.0
 const DEFAULT_SECONDS: float = 30.0
 const WARMUP_FRAMES: int = 3
+## Drives the fleet's van like a player (boards it, holds the pedal): shared with the company-day bot.
+const VAN := preload("res://tests/bot_company_van.gd")
 
 var _camera: Camera3D
 var _hard_seconds: float = 0.0
@@ -106,6 +130,37 @@ static func camera_pose(t: float, seconds: float) -> Transform3D:
 	return Transform3D(Basis.looking_at(target - origin, Vector3.UP), origin)
 
 
+## The chase camera for a van at `van_transform`: CHASE_BACK behind it and CHASE_UP above it
+## (flattened to the ground plane, so the view does not pitch with the van's bounce), looking at a
+## point CHASE_LOOK_AHEAD in front of the van. Pure: the same transform gives the same pose.
+static func chase_pose(van_transform: Transform3D) -> Transform3D:
+	var forward: Vector3 = -van_transform.basis.z
+	forward.y = 0.0
+	forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
+	var origin: Vector3 = van_transform.origin - forward * CHASE_BACK + Vector3.UP * CHASE_UP
+	var target: Vector3 = van_transform.origin + forward * CHASE_LOOK_AHEAD
+	return Transform3D(Basis.looking_at(target - origin, Vector3.UP), origin)
+
+
+## Where the driver aims, from where the van is: the avenue's centre line (z = `avenue_z`)
+## DRIVE_LOOKAHEAD metres east of the van (or of the shed, if the van is still west of it).
+static func drive_target(van_position: Vector3, avenue_z: float) -> Vector3:
+	return Vector3(maxf(van_position.x, 0.0) + DRIVE_LOOKAHEAD, 0.0, avenue_z)
+
+
+## The steering (-1 full left .. 1 full right, as Input.get_axis(drive_left, drive_right)) that points
+## a van at `van_transform` to `target`: proportional to the angle off its nose, on the ground plane.
+static func steer_toward(van_transform: Transform3D, target: Vector3) -> float:
+	var forward: Vector3 = -van_transform.basis.z
+	forward.y = 0.0
+	var wanted: Vector3 = target - van_transform.origin
+	wanted.y = 0.0
+	if forward.length_squared() < 0.0001 or wanted.length_squared() < 0.0001:
+		return 0.0
+	# Counter-clockwise seen from above is to the left, so the steering is the angle with its sign flipped.
+	return clampf(-forward.signed_angle_to(wanted, Vector3.UP) / STEER_FULL_LOCK, -1.0, 1.0)
+
+
 # --- The summary (static too) ---
 
 
@@ -124,6 +179,29 @@ static func summary_lines(stats: Dictionary) -> PackedStringArray:
 		var text: String = "%.2f" % value if value is float else str(value)
 		lines.append("%s %s=%s" % [PREFIX, key, text])
 	return lines
+
+
+## The drive stage's keys of the summary (empty frames: the stage was skipped, they print n/a).
+static func drive_stats(frames: Array[Dictionary], metres: float) -> Dictionary:
+	if frames.is_empty():
+		return {}
+	var times: Array[float] = []
+	var draws: float = 0.0
+	var objects: float = 0.0
+	for frame: Dictionary in frames:
+		times.append(frame.ms)
+		draws += frame.draws
+		objects += frame.objects
+	times.sort()
+	var count: float = float(frames.size())
+	return {
+		"drive_frames": frames.size(),
+		"drive_frame_ms_p50": percentile(times, 0.5),
+		"drive_frame_ms_p95": percentile(times, 0.95),
+		"drive_draw_calls": roundi(draws / count),
+		"drive_objects": roundi(objects / count),
+		"drive_metres": metres,
+	}
 
 
 # --- The run ---
@@ -161,6 +239,7 @@ func _run() -> void:
 		return
 
 	var stats: Dictionary = _collect(walk, level, seconds, build_ms)
+	stats.merge(drive_stats(drive.frames, float(drive.metres)))
 	stats["drive"] = drive.status
 	_close_world(level)
 	if walk.is_empty():
@@ -221,22 +300,76 @@ func _stage_walk(seconds: float) -> Array[Dictionary]:
 	return await _run_stage(seconds, camera_pose)
 
 
-## "Drives 30 s toward Barrio Centro": there is no vehicle or road in the company world yet, so it
-## is skipped (D-2011.1). To fill in: build the pose Callable (t, seconds) -> Transform3D that
-## follows the truck, and `return {"status": "ok", "frames": await _run_stage(seconds, pose)}`.
-func _stage_drive(_seconds: float) -> Dictionary:
-	print(DRIVE_NOT_AVAILABLE)
-	return {"status": "not_available", "frames": [] as Array[Dictionary]}
+## "Drives `seconds` toward Barrio Centro": the player boards the fleet's van and holds the
+## accelerator while the chase camera follows it. It steers for the Avenida Este (drive_target(): the
+## yard opens north and Centro is east) and `metres` says how far the van got. Returns
+## {"status": "ok", "frames": [...], "metres": how far the van went} or {"status": "not_available:
+## <why>"}. The pedal is let go and the van braked at the end, and the player gets out.
+func _stage_drive(seconds: float) -> Dictionary:
+	var level := current_scene as CompanyRoot
+	var why: String = await _board_van(level)
+	if why != "":
+		print("%s (%s)" % [DRIVE_NOT_AVAILABLE, why])
+		return {"status": "not_available: %s" % why, "frames": [] as Array[Dictionary], "metres": 0.0}
+	var van: VehicleBody3D = VAN.van_of(level, VAN_ID)
+	var start: Vector3 = van.global_position
+	var avenue_z: float = level.shed.global_position.z
+	Input.action_press(VAN.ACCELERATE)
+	var frames: Array[Dictionary] = await _run_stage(
+		seconds,
+		func(_t: float, _s: float) -> Transform3D: return chase_pose(van.global_transform),
+		func() -> void: _steer(steer_toward(van.global_transform, drive_target(van.global_position, avenue_z))))
+	Input.action_release(VAN.ACCELERATE)
+	_steer(0.0)
+	var metres: float = van.global_position.distance_to(start)
+	await VAN.stop(self, van)
+	(level.player as Player).leave_seat()
+	await process_frame
+	return {"status": "ok", "frames": frames, "metres": metres}
+
+
+## Holds the steering actions at `amount` (-1 left .. 1 right).
+func _steer(amount: float) -> void:
+	if amount < 0.0:
+		Input.action_release(STEER_RIGHT)
+		Input.action_press(STEER_LEFT, -amount)
+	else:
+		Input.action_release(STEER_LEFT)
+		Input.action_press(STEER_RIGHT, amount)
+
+
+## Lets the van settle and puts the player at its wheel (opens the cab door, takes the seat as the
+## host does). "" when he is at the wheel, else why not.
+func _board_van(level: CompanyRoot) -> String:
+	if level == null:
+		return "no company world"
+	for _tick: int in range(DRIVE_SETTLE_TICKS):
+		await physics_frame
+	var van: VehicleBody3D = VAN.van_of(level, VAN_ID)
+	if van == null:
+		return "no %s in the fleet" % VAN_ID
+	var seat := van.get_node_or_null(VAN.SEAT_PATH) as SeatPoint
+	if seat == null or level.player == null:
+		return "no driver seat"
+	van.call(&"set_door_open", VAN.DRIVER_DOOR, true)
+	seat.interact(level.player)
+	await physics_frame
+	if int(van.get(&"driver_peer_id")) != level.player.get_multiplayer_authority():
+		return "the player could not take the wheel"
+	return ""
 
 
 ## The common stage loop: every frame the camera takes `pose.call(t, seconds)` and the frame time,
-## draw calls and rendered objects are recorded. `t` is wall time since the stage began.
-func _run_stage(seconds: float, pose: Callable) -> Array[Dictionary]:
+## draw calls and rendered objects are recorded. `t` is wall time since the stage began. `each_frame`
+## (optional) is called first, with no arguments (the drive stage steers there).
+func _run_stage(seconds: float, pose: Callable, each_frame: Callable = Callable()) -> Array[Dictionary]:
 	var frames: Array[Dictionary] = []
 	var start: int = Time.get_ticks_usec()
 	var last: int = start
 	var elapsed: float = 0.0
 	while elapsed < seconds and not _finished:
+		if each_frame.is_valid():
+			each_frame.call()
 		var next_pose: Transform3D = pose.call(elapsed, seconds)
 		_camera.global_transform = next_pose
 		await process_frame

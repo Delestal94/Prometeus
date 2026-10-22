@@ -36,17 +36,8 @@ func _exit_tree() -> void:
 
 
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
-	if kind == CompanyOrdersNet.ADDED:
-		var order: Variant = data.get("order")
-		if order is Dictionary:
-			_today[StringName((order as Dictionary).get("id", &""))] = true
-		return
-	if kind != CompanyNet.DAY_PHASE:
-		return
-	if data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
-		_today.clear()
-		return
-	if data.get("phase") != DayCycle.PHASE_NAMES[DayCycle.Phase.CLOSING]:
+	SupplierAutoOrder.note_today(_today, kind, data)
+	if kind != CompanyNet.DAY_PHASE or data.get("phase") != DayCycle.PHASE_NAMES[DayCycle.Phase.CLOSING]:
 		return
 	var day: int = int(data.get("day", 0))
 	if day < 1 or day == _done_day or net == null or not is_instance_valid(net) or not net.is_host():

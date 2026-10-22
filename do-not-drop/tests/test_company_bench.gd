@@ -11,7 +11,12 @@ extends SceneTree
 ## - the summary prints one `BENCH_COMPANY key=value` line per required key (objects, nodes,
 ##   draw_calls, physics_bodies, frame_ms_p50, frame_ms_p95, memory_static_kb...), in order,
 ##   even when a key is missing ("n/a"); the percentile picks as bench_drive.gd does;
-## - the drive stage is skipped, saying why, while the company world has no vehicle (D-2011.1);
+## - the drive stage (D-2011.1: the player boards the fleet's van, holds the pedal and a chase camera
+##   follows it): chase_pose() is deterministic and finite, puts the camera behind and above the van,
+##   looking at it, whatever its heading, and ignores the van's pitch and roll; the steering for the
+##   Avenida Este (drive_target(), steer_toward()) is 0 straight ahead, right for a target on the right,
+##   left for the left, clamped, and finite at any heading; drive_stats() folds the stage's frames into
+##   the summary's drive_* keys (and gives none when the stage was skipped, so they print n/a);
 ## - the bench saves in a temp folder, never in the game's company slot, and CI runs it as an
 ##   informational step.
 
@@ -21,7 +26,8 @@ const SAMPLES: int = 601
 const WALL_MARGIN: float = 1.0
 const REQUIRED_KEYS: Array[String] = [
 	"objects", "nodes", "draw_calls", "physics_bodies", "frame_ms_p50", "frame_ms_p95", "memory_static_kb",
-	"drive",
+	"drive", "drive_frames", "drive_frame_ms_p50", "drive_frame_ms_p95", "drive_draw_calls", "drive_objects",
+	"drive_metres",
 ]
 
 var _failures: int = 0
@@ -36,9 +42,13 @@ func _run() -> void:
 	_check_path_stays_in_shed()
 	_check_door_look()
 	_check_summary()
+	_check_chase_pose()
+	_check_steering()
+	_check_drive_stats()
 	_check_wiring()
 	if _failures == 0:
-		print("PASS: company bench path is fixed and inside the shed, summary prints every key")
+		print("PASS: company bench path is fixed and inside the shed, the chase camera follows the van,"
+			+ " summary prints every key")
 	quit(_failures)
 
 
@@ -117,14 +127,15 @@ func _check_summary() -> void:
 		_expect(key in BENCH.SUMMARY_KEYS, "The summary has the key %s" % key)
 	var stats: Dictionary = {}
 	for key: String in BENCH.SUMMARY_KEYS:
-		stats[key] = 1.5 if key.begins_with("frame_ms") else 7
+		stats[key] = 1.5 if "frame_ms" in key else 7
 	var lines: PackedStringArray = BENCH.summary_lines(stats)
 	_expect(lines.size() == BENCH.SUMMARY_KEYS.size(), "One line per key (%d lines)" % lines.size())
 	for index: int in range(mini(lines.size(), BENCH.SUMMARY_KEYS.size())):
 		var key: String = BENCH.SUMMARY_KEYS[index]
 		_expect(lines[index].begins_with("BENCH_COMPANY %s=" % key) and not lines[index].ends_with("=n/a"),
 			"Line %d is `BENCH_COMPANY %s=value` (got '%s')" % [index, key, lines[index]])
-	_expect("BENCH_COMPANY frame_ms_p95=1.50" in lines, "Times print with two decimals")
+	_expect("BENCH_COMPANY frame_ms_p95=1.50" in lines and "BENCH_COMPANY drive_frame_ms_p95=1.50" in lines,
+		"Times print with two decimals")
 	_expect("BENCH_COMPANY nodes=7" in lines, "Counts print as integers")
 	var sparse: PackedStringArray = BENCH.summary_lines({"nodes": 3})
 	_expect(sparse.size() == BENCH.SUMMARY_KEYS.size() and "BENCH_COMPANY draw_calls=n/a" in sparse,
@@ -137,12 +148,111 @@ func _check_summary() -> void:
 	_expect(BENCH.percentile([] as Array[float], 0.5) == 0.0, "The percentile of nothing is 0")
 
 
-## What the file promises: the drive stage skipped with its reason, a temp save folder, and the
+## A van `yaw` radians turned from facing north (-Z), at `at`.
+func _van_at(at: Vector3, yaw: float) -> Transform3D:
+	return Transform3D(Basis(Vector3.UP, yaw), at)
+
+
+func _check_chase_pose() -> void:
+	var worst_behind: float = 0.0
+	var best_behind: float = INF
+	var lowest_up: float = INF
+	var looks_at_van: bool = true
+	var valid: bool = true
+	var same: bool = true
+	for index: int in range(24):
+		var yaw: float = TAU * float(index) / 24.0
+		var van: Transform3D = _van_at(Vector3(40.0 + index, 0.6, -13.0), yaw)
+		var pose: Transform3D = BENCH.chase_pose(van)
+		same = same and pose == BENCH.chase_pose(van)
+		var forward: Vector3 = -van.basis.z
+		var behind: float = (van.origin - pose.origin).dot(forward)
+		worst_behind = maxf(worst_behind, behind)
+		best_behind = minf(best_behind, behind)
+		lowest_up = minf(lowest_up, pose.origin.y - van.origin.y)
+		looks_at_van = looks_at_van and (van.origin - pose.origin).normalized().dot(-pose.basis.z) > 0.9
+		if not pose.origin.is_finite() or not pose.basis.is_finite() or absf(pose.basis.determinant() - 1.0) > 0.001:
+			valid = false
+	_expect(same, "The same van transform gives the same chase pose")
+	_expect(valid, "Every chase pose is a finite rotation")
+	_expect(best_behind > BENCH.CHASE_BACK - 0.01 and worst_behind < BENCH.CHASE_BACK + 0.01,
+		"The chase camera is %.0f m behind the van at any heading (%.2f..%.2f)"
+		% [BENCH.CHASE_BACK, best_behind, worst_behind])
+	_expect(lowest_up > BENCH.CHASE_UP - 0.01, "...and %.0f m above it (%.2f)" % [BENCH.CHASE_UP, lowest_up])
+	_expect(looks_at_van, "...looking at the van (it stays ahead of the camera, within about 25 degrees)")
+	# A van tipped on its side or nose: the camera keeps to the ground plane, still finite.
+	var flat: Transform3D = _van_at(Vector3(0.0, 0.5, 0.0), 0.7)
+	var tipped := Transform3D(flat.basis * Basis(Vector3.RIGHT, 0.5) * Basis(Vector3.FORWARD, 0.4), flat.origin)
+	var tipped_pose: Transform3D = BENCH.chase_pose(tipped)
+	var flat_pose: Transform3D = BENCH.chase_pose(_van_at(Vector3(0.0, 0.5, 0.0), 0.7))
+	_expect(tipped_pose.origin.y == flat_pose.origin.y and tipped_pose.origin.is_finite(),
+		"The camera height does not follow the van's pitch and roll")
+	var upright := Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(5.0, 1.0, 5.0))
+	var degenerate: Transform3D = BENCH.chase_pose(upright)
+	_expect(degenerate.origin.is_finite() and degenerate.basis.is_finite(),
+		"A van pointing straight up still gives a finite pose")
+	var moved: Transform3D = BENCH.chase_pose(_van_at(Vector3(100.0, 0.5, 0.0), 0.0))
+	var start: Transform3D = BENCH.chase_pose(_van_at(Vector3(0.0, 0.5, 0.0), 0.0))
+	_expect(is_equal_approx(moved.origin.x - start.origin.x, 100.0), "The camera travels with the van")
+
+
+func _check_steering() -> void:
+	# The yard's exit faces north (-Z) and Centro lies east (+X): the first target is to the van's right.
+	var parked: Transform3D = _van_at(Vector3(0.0, 0.5, -11.0), 0.0)
+	var first: Vector3 = BENCH.drive_target(parked.origin, 0.0)
+	_expect(first.x > parked.origin.x + 30.0 and first.z == 0.0 and first.y == 0.0,
+		"The first target is on the Avenida Este, east of the van (%s)" % first)
+	_expect(BENCH.steer_toward(parked, first) > 0.9, "Facing north, the avenue to the east asks for full right (%.2f)"
+		% BENCH.steer_toward(parked, first))
+	_expect(BENCH.drive_target(Vector3(-50.0, 0.0, 0.0), 0.0).x > 0.0, "West of the shed it still aims east of it")
+	_expect(BENCH.drive_target(Vector3(300.0, 0.0, -2.0), 0.0).x > 300.0, "...and further along it keeps aiming ahead")
+	var east: Transform3D = _van_at(Vector3(100.0, 0.5, 0.0), -PI * 0.5)
+	_expect(is_zero_approx(BENCH.steer_toward(east, Vector3(300.0, 0.0, 0.0))),
+		"Facing the target the steering is 0 (%.3f)" % BENCH.steer_toward(east, Vector3(300.0, 0.0, 0.0)))
+	var right: float = BENCH.steer_toward(east, Vector3(300.0, 0.0, 20.0))
+	var left: float = BENCH.steer_toward(east, Vector3(300.0, 0.0, -20.0))
+	_expect(right > 0.0 and left < 0.0 and is_equal_approx(right, -left),
+		"A target on the right steers right, on the left steers left, the same amount (%.3f, %.3f)" % [right, left])
+	_expect(absf(BENCH.steer_toward(east, Vector3(0.0, 0.0, 0.0))) == 1.0, "A target behind is full lock")
+	var small: float = BENCH.steer_toward(east, Vector3(300.0, 0.0, 5.0))
+	_expect(small > 0.0 and small < right, "A small angle steers less than a big one (%.3f < %.3f)" % [small, right])
+	_expect(BENCH.steer_toward(east, east.origin) == 0.0, "On the target it does not steer")
+	var pitched := Transform3D(east.basis * Basis(Vector3.RIGHT, 0.4), east.origin)
+	var pitched_steer: float = BENCH.steer_toward(pitched, Vector3(300.0, 3.0, 20.0))
+	_expect(absf(pitched_steer - right) < 0.2,
+		"The steering is read on the ground plane (a pitched van, a target above: %.3f vs %.3f)"
+		% [pitched_steer, right])
+	var finite: bool = true
+	for index: int in range(24):
+		var steer: float = BENCH.steer_toward(_van_at(Vector3(index, 0.5, 0.0), TAU * float(index) / 24.0),
+			Vector3(250.0, 0.0, 10.0))
+		finite = finite and is_finite(steer) and absf(steer) <= 1.0
+	_expect(finite, "At every heading the steering is a number in -1..1")
+
+
+func _check_drive_stats() -> void:
+	_expect(BENCH.drive_stats([] as Array[Dictionary], 0.0).is_empty(),
+		"A skipped drive stage adds no keys (they print n/a)")
+	var frames: Array[Dictionary] = []
+	for index: int in range(100):
+		frames.append({"ms": float(index + 1), "draws": 10.0, "objects": 20.0})
+	var stats: Dictionary = BENCH.drive_stats(frames, 321.5)
+	_expect(stats.get("drive_frames") == 100 and stats.get("drive_frame_ms_p50") == 51.0
+		and stats.get("drive_frame_ms_p95") == 96.0, "The drive's frames give its count and percentiles (%s)" % stats)
+	_expect(stats.get("drive_draw_calls") == 10 and stats.get("drive_objects") == 20
+		and is_equal_approx(float(stats.get("drive_metres", 0.0)), 321.5), "...the averages and the metres driven")
+	var lines: PackedStringArray = BENCH.summary_lines(stats)
+	_expect("BENCH_COMPANY drive_metres=321.50" in lines and "BENCH_COMPANY drive_frames=100" in lines
+		and "BENCH_COMPANY drive_frame_ms_p50=51.00" in lines, "...and they print as BENCH_COMPANY drive_* lines")
+	_expect(BENCH.SUMMARY_KEYS.find("drive") < BENCH.SUMMARY_KEYS.find("drive_frames"),
+		"The drive's status comes before its numbers")
+
+
+## What the file promises: a skipped drive stage says so with its reason, a temp save folder, and the
 ## step in CI that never fails the job.
 func _check_wiring() -> void:
-	_expect(BENCH.DRIVE_NOT_AVAILABLE.begins_with("drive: not_available")
-		and BENCH.DRIVE_NOT_AVAILABLE.contains("D-2011.1"),
-		"The drive stage says it is not available and why")
+	_expect(BENCH.DRIVE_NOT_AVAILABLE.begins_with("drive: not_available") and BENCH.VAN_ID != &"",
+		"A skipped drive stage says it is not available (and the reason follows it)")
 	_expect(BENCH.SAVE_DIR != CompanySave.SAVE_DIR and BENCH.SAVE_DIR.begins_with("user://"),
 		"The bench saves in a folder of its own, not the game's company slot (%s)" % BENCH.SAVE_DIR)
 	var workflow_path: String = ProjectSettings.globalize_path("res://") + "../.github/workflows/tests.yml"

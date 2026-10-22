@@ -175,7 +175,8 @@ func context() -> Dictionary:
 	return {
 		"zone": zone, "book": _view, "trips": trips, "vehicle_id": StringName(body.name) if body != null else &"",
 		"vehicle": vehicle, "vehicle_name": vehicle_name(vehicle), "box_kg": _kg.duplicate(),
-		"zones": _zones_by_id(), "gates": _gates_by_id(), "owned": owned, "opened_gates": opened,
+		"bay": bay_vehicles(body, vehicle), "zones": _zones_by_id(), "gates": _gates_by_id(), "owned": owned,
+		"opened_gates": opened,
 		"can_act": can_act(),
 	}
 
@@ -212,15 +213,35 @@ func available_vehicle() -> Node3D:
 	if fleet == null or not is_instance_valid(fleet):
 		return null
 	for body: Node3D in fleet.vehicles():
-		var id := StringName(body.name)
-		if trips != null:
-			var inside: bool = trips.gate != null and trips.gate.side_of(body.global_position) == TripGate.INSIDE
-			if trips.is_out(id) or trips.has_cargo(id) or not inside:
-				continue
-		elif trips_view != null and trips_view.is_out(id):
-			continue
-		return body
+		if _in_bay(body):
+			return body
 	return null
+
+
+## The vehicles standing in the loading bay for "Load all" (D-0931.b): `first` (available_vehicle()) and the
+## other fleet vehicles in the yard that are not out and have nothing staged, at most DispatchBay.MAX_VEHICLES,
+## as {"id", "def"} in fleet order. Empty with fewer than two (the board then loads one vehicle as before).
+func bay_vehicles(first: Node3D, first_def: VehicleDefinition) -> Array:
+	var bay: Array = []
+	if first == null or first_def == null or fleet == null or not is_instance_valid(fleet):
+		return bay
+	for body: Node3D in fleet.vehicles():
+		if bay.size() >= DispatchBay.MAX_VEHICLES:
+			break
+		var def: VehicleDefinition = first_def if body == first else definition_of(body)
+		if def == null or not _in_bay(body):
+			continue
+		bay.append({"id": StringName(body.name), "def": def})
+	return bay if bay.size() >= 2 else []
+
+
+## True when `body` can be loaded now: in the yard (inside the gate), not out and with nothing staged.
+func _in_bay(body: Node3D) -> bool:
+	var id := StringName(body.name)
+	if trips != null:
+		var inside: bool = trips.gate != null and trips.gate.side_of(body.global_position) == TripGate.INSIDE
+		return inside and not trips.is_out(id) and not trips.has_cargo(id)
+	return trips_view == null or not trips_view.is_out(id)
 
 
 ## The definition (data/vehicles/) of a fleet vehicle: its node name is the id, or "<id>_2", "<id>_3"...

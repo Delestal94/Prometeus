@@ -34,7 +34,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | ~~D-0821~~ | ~~Clientes recurrentes con nombre y personalidad (D-0122)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | 18 clientes |
-| D-0822 | Cartas/mensajes de clientes con pedidos raros y humor | documentador | low | 60 textos traducibles |
+| ✅ D-0822 | Cartas/mensajes de clientes con pedidos raros y humor | documentador | low | 60 textos traducibles |
 | ~~D-0823~~ | ~~Pedidos encadenados (historias de cliente en 3 entregas)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | 5 cadenas |
 | ~~D-0824~~ | ~~Pedidos corporativos por volumen (ver D-0424)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test |
 | ~~D-0825~~ | ~~Pedidos con horario estricto (tienda que abre a las 9)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |

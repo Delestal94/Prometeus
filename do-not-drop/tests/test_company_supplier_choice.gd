@@ -120,7 +120,8 @@ func _test_calendar() -> void:
 		"suppliers_on() goes by arrival (got %s)" % [s.suppliers_on(5)])
 	_expect(s.truck_state(5, 6 * 60, PANADERIA) == SupplierSchedule.STATE_PENDING
 		and s.truck_state(5, 7 * 60, PANADERIA) == SupplierSchedule.STATE_AT_DOCK
-		and s.truck_state(5, 8 * 60, PANADERIA) == SupplierSchedule.STATE_LEFT, "panaderia: 06:30 to 08:00")
+		and s.truck_state(5, 8 * 60, PANADERIA) == SupplierSchedule.STATE_AT_DOCK
+		and s.truck_state(5, 8 * 60 + 30, PANADERIA) == SupplierSchedule.STATE_LEFT, "panaderia: 07:00 to 08:30")
 	_expect(s.truck_state(5, 8 * 60, MERCADO) == SupplierSchedule.STATE_AT_DOCK
 		and s.truck_state(5, 9 * 60 + 30, MERCADO) == SupplierSchedule.STATE_LEFT, "mercado: 07:30 to 09:30")
 	_expect(s.truck_state(5, 8 * 60) == SupplierSchedule.STATE_PENDING

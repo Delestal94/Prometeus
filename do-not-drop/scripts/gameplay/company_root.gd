@@ -497,12 +497,12 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 
 
 ## A new day (or phase): Steam shows it (D-2009); the shed follows units and layout itself (CompanyShed.follow()).
-## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
-## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
+## Host: SUMMARY or a shop_bought saves the closed day (D-0236, N-989); OPENING plans orders (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
+	var phase: Variant = data.get("phase") if kind == CompanyNet.DAY_PHASE else null
+	if net.is_host() and (phase == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY] or kind == CompanyShopNet.BOUGHT):
+		save_closed_day()
 	if kind == CompanyNet.DAY_PHASE:
-		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
-			save_closed_day()
 		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
 			CompanyDayOrders.plan(net, _hosted_state, day_cycle.current_day(),
 				order_crew if order_crew > 0 else _crew_ids().size())
