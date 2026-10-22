@@ -102,7 +102,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | 16 | Llevar, pasar y soltar una caja armada (D-0711) | jugador | los de hoy: `Interactable.request_interact`, `submit_carry_transform` (unreliable), `request_transfer`, `request_drop` (**crítica**) | como hoy (`PackageHandling`) | — (lo lleva el sincronizador de `DeliveryPackage`) | nada de negocio |
 | 17 | Dejar la caja en la zona de despacho (D-0716) | host (la caja quieta dentro del área) | — | caja sellada, en el área, en el piso o en un estante de despacho; no despachada antes | `box_dispatched` `{package_id, trip}` | `OrderBook`: pedido → salida `trip`. Si la caja sale del área antes de que arranque la salida, `box_undispatched` `{package_id}` la desata |
 | 18 | Cargar la camioneta (D-0717) | jugador, en un punto de carga | los de hoy (`PackageMountPoint`) | como hoy | — | nada de negocio (el pedido ya va con la salida) |
-| 19 | Salir por el portón y volver (D-0302, D-0307) | host (el vehículo cruza el portón) | — | vehículo con al menos una caja de la salida | `trip_started` `{trip, vehicle, packages}` / `trip_returned` `{trip}` | `CompanyState`: salida en curso / cerrada; el reloj sigue (D-0319) |
+| 19 | Salir por el portón y volver (D-0302, D-0307) | host (el vehículo cruza el portón, `CompanyTrips`) | — | vehículo con carga despachada (`stage_cargo`); con `VEHICLES_FAR_MAX` afuera sale negado | `trip_started` `{trip, vehicle, orders, boxes, minute}` / `trip_refused` `{vehicle, minute}` (salió negado: sin salida, cuenta como afuera) / `trip_closed` `{trip, vehicle, failed, minute}` (volvió; `trip` vacío y `failed` vacío si había salido negado). Hechos (D-0302.2.a) | `CompanyTripsView` (`TripsView` de cada peer): el vehículo queda afuera / adentro; `trip_closed` dice qué pedidos fallaron; el reloj sigue (D-0319). El snapshot lleva los que están afuera (parte `trips`) |
 | 20 | Entregar en la casa (D-0340, D-0815, D-0502, D-0506) | jugador toca el timbre (`DoorbellPoint` → `DeliveryHouse` como hoy) | el de hoy (`Interactable.request_interact`) | como hoy, más: contenido contra el pedido, daño, plazo | `order_delivered` `{order, package_id, paid, tip, penalties: {…}}` | `OrderBook`: pedido entregado; `Inventory.consume` de todo lo que hay en `package:<package_id>` (y lo que quede reservado del pedido se libera); `money += paid + tip − penalties` |
 
 ### Fuera de las 20, sin petición de cliente
@@ -227,7 +227,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   pone en su lugar sin señales de hechos, los valida (regla 5) y devuelve `false` si no sirven (el
   cliente espera otro snapshot). Las suman: ~~`OrderBook`~~ (hecho en D-0813: parte `orders`, §10),
   fase del día (D-0203), palets con estado y zona (D-0605 / D-0607), mesas de
-  armado (D-0701 en adelante), cajas vivas con lo de `box_sealed` y `update_visibility` después del
+  armado (D-0701 en adelante), vehículos afuera (~~D-0302.2.a~~: hecho, parte `trips` de `CompanyTripsView`:
+  la lista de los que están afuera, cada uno con la forma de `trip_started`), cajas vivas con lo de `box_sealed` y `update_visibility` después del
   último trozo (regla 10, D-0709 / D-0711) y bultos en el piso con su posición (~~D-2006~~: hecho, clave
   propia `floor`, §7; dibujarlos es D-0611).
 - **Del lado del cliente** (`apply_snapshot()`): valida el `seq` (entero, no menor al aplicado) y el stock

@@ -2,13 +2,16 @@ class_name CompanyTrips
 extends Node
 ## The trips out of the shed, hooked to the world (expansion D-0302.1).
 ##
-## Child of CompanyRoot on the host (a client has none: the host decides, a client only sees the
-## vehicle). It owns the TripGate across the shed's exit and the active Trips, and every physics
+## Child of CompanyRoot on the host only: the host decides. A client has none and sees the trips out
+## through its CompanyTripsView (D-0302.2.a), which the host's view keeps by publishing every
+## trip_started, departure_refused, trip_closed and refused_returned of this node as a CompanyNet
+## event. It owns the TripGate across the shed's exit and the active Trips, and every physics
 ## tick it feeds the gate with the position of each node in group VEHICLE_GROUP (named by its
 ## vehicle id). Cargo the dispatch zone hands a vehicle waits in stage_cargo(); when the vehicle
 ## crosses the gate outward the Trip starts with it (orders go OUT), and when it comes back in the
-## Trip closes (what was not delivered fails). trips_out() is what DayCycle.trips_out reads, so the
-## day waits for a vehicle still out (S3).
+## Trip closes (what was not delivered fails). trips_out() is what the host's DayCycle.trips_out
+## reads, so the day waits for a vehicle still out (S3); this node stays the authority there, the
+## views only follow it. Nothing here sends anything: the host's view publishes (its follow()).
 ##
 ## No company vehicle exists yet (D-0207 and later put it in the world), so nothing joins the group
 ## and the gate stays idle; the OrderBook is this node's own, not the one every peer shares
@@ -20,19 +23,27 @@ extends Node
 ## out is one whose trip is out, or one that crossed outward while refused. departure_verdict() is
 ## what the dispatch board asks before loading a vehicle; a vehicle that crosses the gate outward
 ## with that many already out starts no trip (departure_refused, with the same reason) but counts
-## as out until it crosses back in (trips_out(), so the day waits for it too), and keeps its cargo
-## staged for its next departure. Stopping it at the gate and telling its driver why is D-0316.2.
+## as out until it crosses back in (trips_out(), so the day waits for it too; refused_returned when
+## it does), and keeps its cargo staged for its next departure. Stopping it at the gate and telling
+## its driver why is D-0316.2.
 
 signal trip_started(trip: Trip)
 signal trip_closed(trip: Trip, failed: Array[StringName])
 ## A vehicle crossed outward with `far_max` vehicles out: no trip started, it counts as out until
 ## it is back. `reason` is departure_verdict()'s {ok, key, args}.
 signal departure_refused(vehicle_id: StringName, reason: Dictionary)
+## A vehicle that left while refused crossed back in: it no longer counts as out (no trip closes).
+signal refused_returned(vehicle_id: StringName)
 
 ## The group of the vehicles the gate watches.
 const VEHICLE_GROUP: StringName = &"company_vehicle"
 ## Translation key (strings_world.csv) of the refusal: "%d vehicles are already out".
 const FAR_LIMIT: String = "WORLD_DISPATCH_FAR_LIMIT"
+## Most orders, and most boxes, one vehicle's cargo keeps (stage_cargo()), far over any vehicle's
+## load: what one trip event may carry (CompanyTripsView.MAX_ITEMS). DispatchZone hands no more.
+const MAX_CARGO: int = 64
+## Longest vehicle, order or box id kept (RpcGuard's text limit): what a trip event may carry.
+const MAX_ID_LENGTH: int = RpcGuard.MAX_TEXT_LENGTH
 
 var book: OrderBook = OrderBook.new()
 var gate: TripGate
@@ -58,8 +69,35 @@ func setup(exit_origin: Vector3, width: float) -> void:
 
 
 ## What the dispatch zone loaded on `vehicle_id`: it leaves with this when it crosses the gate.
+## Only what a trip event can carry is kept (one warning when something is left out): the first
+## MAX_CARGO orders and boxes whose ids fit (id_fits()); a vehicle whose own id doesn't fit gets
+## nothing staged, so it never starts a trip the other peers could not be told about.
 func stage_cargo(vehicle_id: StringName, orders: Array[StringName], boxes: Array[StringName]) -> void:
-	_staged[vehicle_id] = {"orders": orders.duplicate(), "boxes": boxes.duplicate()}
+	if not id_fits(vehicle_id):
+		push_warning("CompanyTrips: vehicle id '%s' is empty or over %d characters; nothing staged"
+			% [vehicle_id, MAX_ID_LENGTH])
+		return
+	var kept_orders: Array[StringName] = fitting(orders)
+	var kept_boxes: Array[StringName] = fitting(boxes)
+	if kept_orders.size() < orders.size() or kept_boxes.size() < boxes.size():
+		push_warning("CompanyTrips: %s keeps %d of %d orders and %d of %d boxes (at most %d ids of %d characters)"
+			% [vehicle_id, kept_orders.size(), orders.size(), kept_boxes.size(), boxes.size(), MAX_CARGO,
+				MAX_ID_LENGTH])
+	_staged[vehicle_id] = {"orders": kept_orders, "boxes": kept_boxes}
+
+
+## An id a trip event may carry: not empty, at most MAX_ID_LENGTH characters.
+static func id_fits(id: StringName) -> bool:
+	return id != &"" and String(id).length() <= MAX_ID_LENGTH
+
+
+## The first MAX_CARGO ids of `ids` that fit (id_fits()), in order.
+static func fitting(ids: Array[StringName]) -> Array[StringName]:
+	var kept: Array[StringName] = []
+	for id: StringName in ids:
+		if kept.size() < MAX_CARGO and id_fits(id):
+			kept.append(id)
+	return kept
 
 
 ## Where a vehicle is now. Returns what the gate saw (&"departed", &"returned" or &"").
@@ -117,7 +155,7 @@ func _on_departed(vehicle_id: StringName) -> void:
 		return
 	var cargo: Dictionary = _staged[vehicle_id]
 	var trip_id := StringName("trip_%d" % _next_id)
-	var trip: Trip = Trip.start(trip_id, vehicle_id, cargo["orders"], cargo["boxes"], book, _minute())
+	var trip: Trip = Trip.start(trip_id, vehicle_id, cargo["orders"], cargo["boxes"], book, minute())
 	if trip == null:
 		return
 	_next_id += 1
@@ -127,15 +165,18 @@ func _on_departed(vehicle_id: StringName) -> void:
 
 
 func _on_returned(vehicle_id: StringName) -> void:
-	_refused_out.erase(vehicle_id)
+	if _refused_out.erase(vehicle_id):
+		refused_returned.emit(vehicle_id)
 	var trip: Trip = _active.get(vehicle_id)
 	if trip == null:
 		return
 	_active.erase(vehicle_id)
-	var failed: Array[StringName] = trip.close(book, _minute())
+	var failed: Array[StringName] = trip.close(book, minute())
 	_closed.append(trip)
 	trip_closed.emit(trip, failed)
 
 
-func _minute() -> int:
+## The game minute now (minute_now's, 0 while it is unset): the trips' times, and the minute a
+## refusal or a refused vehicle's return is published with (CompanyTripsView).
+func minute() -> int:
 	return int(minute_now.call()) if minute_now.is_valid() else 0
