@@ -13,7 +13,8 @@ extends WorldCellInterest
 ## its seat, so it gets the vehicle and the boxes it rides with. A peer whose player has no node here
 ## yet gets everything, as before. On a client, the copy of a far vehicle or box is hidden and taken out of
 ## physics until an update puts it back near (nobody sees it jump, or bumps into it, meanwhile); a
-## box shown again derives its own layers again (its is_held setter: copy_shown).
+## box shown again derives its own layers again (its is_held setter, out of physics if consumed:
+## copy_shown).
 ##
 ## Contract for what joins those groups (WorldCellInterest's header):
 ## - an RPC called on the body itself (the synchronizer's root) skips the peers it is hidden from,
@@ -56,7 +57,7 @@ func _init() -> void:
 ## Every peer: `box` (a company DeliveryPackage) is a loose box from now on, sent only to the players
 ## near it: it joins LOOSE_BOX_GROUP. On the host `removing` (the box's consuming signal, emitted before
 ## its removal is broadcast on the box itself) releases it first, so that broadcast reaches the far
-## peers too (D-0316.3). The caller hands the signal in: it names the box's type, this node doesn't.
+## peers too (D-0316.3). The caller hands the signal in (CompanyRoot: the package's consuming).
 func add_loose_box(box: Node3D, removing: Signal) -> void:
 	box.add_to_group(LOOSE_BOX_GROUP)
 	if is_inside_tree() and multiplayer.is_server() and not removing.is_null():
@@ -117,7 +118,14 @@ func _viewers_of(body: Node3D) -> Array:
 
 
 ## A loose box's copy shown again: its own is_held setter derives its layers again (none while held,
-## its own while loose); one written as 0 while the copy was hidden can't be told from the hiding.
+## its own while loose); one written as 0 while the copy was hidden can't be told from the hiding. A
+## box already consumed (play_consume() took it out of physics) stays out.
 func _on_copy_shown(body: Node3D) -> void:
-	if &"is_held" in body:
-		body.set(&"is_held", body.get(&"is_held"))
+	var box := body as DeliveryPackage
+	if box == null:
+		return
+	if box._consumed:
+		box.collision_layer = 0
+		box.collision_mask = 0
+	else:
+		box.is_held = box.is_held

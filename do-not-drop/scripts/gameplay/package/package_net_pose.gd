@@ -40,11 +40,12 @@ func push(p: DeliveryPackage, now: float = NetPoseSmoother.local_now()) -> void:
 	smoother.push(p.net_time / 1000.0, p.net_transform, now, p.net_in_vehicle)
 
 
-## The player holding the box on foot whom this peer doesn't control, or null.
+## The player holding the box on foot whom this peer doesn't control, or null. Null too while the copy is hidden
+## (a far company box, CompanyInterest): a stale copy stays at its last pose instead of following a carrier.
 func remote_carrier(p: DeliveryPackage) -> Node3D:
 	# IDENTITY: the first pose with the hands' offset hasn't come in yet (carrier_peer_id goes by a reliable delta,
 	# hold_offset with the poses).
-	if p.carrier_peer_id <= 0 or not p.is_held or p.hold_offset == Transform3D.IDENTITY \
+	if not p.visible or p.carrier_peer_id <= 0 or not p.is_held or p.hold_offset == Transform3D.IDENTITY \
 			or p.hold_offset.origin.length() > MAX_HOLD_REACH:
 		return null
 	if not is_instance_valid(_carrier) or _carrier.get_multiplayer_authority() != p.carrier_peer_id:

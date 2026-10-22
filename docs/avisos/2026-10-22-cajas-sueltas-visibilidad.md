@@ -3,8 +3,9 @@
 Para Slatex. Desde D-0316.3, cada `DeliveryPackage` que deja `box_sealed` en el modo Empresa
 (`World/Packages/Package_<id>`) entra al grupo `company_loose_box`: el host manda su `MultiplayerSynchronizer`
 solo a los peers con su jugador cerca (regla 11 de `red-autoridad.md`) y un cliente lejos esconde su copia. Toca
-dos archivos tuyos (`package.gd`, `package_handling.gd`), poco y sin cambiar firmas. **Fuera del modo Empresa no
-cambia nada:** nadie conecta la señal nueva y las cajas de Delivery y Endless no entran a ningún grupo.
+cuatro archivos tuyos (`package.gd`, `package_handling.gd`, `package_net_pose.gd`, `package_salvage.gd`), poco y
+sin cambiar firmas. **Fuera del modo Empresa no cambia nada:** nadie conecta la señal nueva, las cajas de Delivery y
+Endless no entran a ningún grupo y nadie las esconde (`visible` de la caja sigue en true).
 
 ## Tu dominio: `do-not-drop/scripts/gameplay/package/`
 
@@ -23,7 +24,13 @@ cambia nada:** nadie conecta la señal nueva y las cajas de Delivery y Endless n
 - La copia escondida de un cliente tiene capa y máscara en 0; si una actualización (el setter de `is_held`) o el
   juego le escribe una capa mientras está escondida, el módulo la guarda y la vuelve a poner en 0, y al mostrarla
   `CompanyInterest` vuelve a correr tu setter de `is_held` (sin tocar tu código) para que las capas queden como las
-  dejaría la caja.
+  dejaría la caja; una caja ya consumida (`_consumed`: `play_consume()` la sacó de la física) queda en capa 0 y
+  máscara 0.
+- `package_net_pose.gd`: `remote_carrier()` devuelve null mientras la copia está escondida (`not p.visible`): una
+  copia vieja escondida se queda en su último `net_transform` en vez de seguir las manos de un portador.
+- `package_salvage.gd`: en `_process`, los puntos de rescate quedan inactivos (escondidos, capa 0) mientras la caja
+  no se ve en el árbol (`is_visible_in_tree()`). Son `top_level`: sin esto, los de una copia escondida volvían a capa
+  16 en cada cuadro.
 
 ## Zona compartida
 

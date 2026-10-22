@@ -37,9 +37,14 @@ extends SceneTree
 ##   With the client's player 5 cells away the host stops sending the box to the client and the client
 ##   hides its copy; the removal consume() broadcasts on the box (_remote_consume) then skips the client,
 ##   which keeps its copy (the ghost box this task is about). The host's consume() lets the box go first
-##   (consuming -> release(): untracked, public again, out of the group), and the same broadcast right
-##   after reaches the client, whose copy goes. The NetworkManager autoload is offline in this process,
-##   so consume() doesn't broadcast by itself: the test sends what it sends online, in the same frame.
+##   (consuming -> release(): untracked, public again, out of the group), and its own broadcast reaches
+##   the client, whose copy goes: so consuming came before the broadcast. consume() broadcasts only for
+##   an online host, and the NetworkManager autoload is offline in this process: while it runs, an
+##   OnlineHost (a NetSession that says so) stands in at /root/NetworkManager (_as_online_host());
+## - D-0316.3: the client's hidden copy of Package_box_2, which nobody holds, gets the host's consume()
+##   with a hand-over and plays it out of physics; shown during the hand-over (the client's player
+##   goes, so its next look shows everything), it stays at layer 0 / mask 0 (CompanyInterest doesn't
+##   give a consumed box its loose layers back), and both copies go when the hand-over ends.
 ## D-0318.1 (the host's package frozen in a cell that isn't loaded) is test_company_root's.
 
 const PORT: int = 24675
@@ -70,6 +75,18 @@ class Peer:
 	var made: Dictionary = {}
 	## {node name: synchronized signals its synchronizer fired here}.
 	var synced: Dictionary = {}
+
+
+## A session that says it is an online host: PackageHandling.consume() broadcasts _remote_consume only for
+## one, and the NetworkManager autoload is offline here (_as_online_host()).
+class OnlineHost:
+	extends NetSession
+
+	func is_online() -> bool:
+		return true
+
+	func is_host() -> bool:
+		return true
 
 
 func _initialize() -> void:
@@ -338,8 +355,9 @@ func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 	for package: Node in _host.packages.get_children():
 		if gates.sends_to(package, client_id):
 			reached.append(package.name)
-	_expect(_host.packages.get_child_count() == 2 and reached.is_empty(),
-		"Once the client left none of the host's packages (box_1 consumed) reaches it (still: %s)" % [reached])
+	_expect(_host.packages.get_child_count() == 1 and reached.is_empty(),
+		"Once the client left none of the host's packages (box_1 and box_2 consumed) reaches it (still: %s)"
+		% [reached])
 
 
 ## The auditor's case (B1): a client waiting for a snapshot holds the box_sealed that reaches it; the
@@ -434,13 +452,56 @@ func _check_far_consume(first: DeliveryPackage, client_id: int) -> void:
 	var reached: bool = await _wait_for(func() -> bool: return not is_instance_valid(copy), 0.5)
 	_expect(not reached and copy.is_inside_tree() and not copy.is_queued_for_deletion(),
 		"A removal broadcast on the box hidden from the client skips it: it would keep a ghost box")
-	first.consume()
+	_as_online_host(first.consume)
 	_expect(not _host.interest.is_tracked(host_sync) and host_sync.public_visibility
 		and not first.is_in_group(CompanyInterest.LOOSE_BOX_GROUP),
 		"The host's consume() lets the box go first (consuming: untracked, public again, out of the group)")
-	first._remote_consume.rpc(null)
 	_expect(await _wait_for(func() -> bool: return not is_instance_valid(copy)),
-		"...so the removal broadcast right after reaches the far client, and its copy goes")
+		"...and its own broadcast reaches the far client, whose copy goes: consuming came before it")
+	await _check_hidden_consumed(client_id)
+
+
+## D-0316.3: the client's hidden copy of Package_box_2 gets the host's consume() with a hand-over; shown
+## during it, it stays out of physics.
+func _check_hidden_consumed(client_id: int) -> void:
+	var second := _host.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
+	var copy := _client.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
+	_expect(second != null and copy != null, "Package_box_2 is on the host and the client")
+	if second == null or copy == null:
+		return
+	var copy_sync := copy.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	_expect(await _wait_for(func() -> bool: return _client.interest.is_hidden_here(copy_sync)) and not copy.is_held,
+		"The client hides its copy of Package_box_2 (its player is far), which nobody holds")
+	_as_online_host(second.consume.bind(Vector3(0.0, 0.0, 3.0)))
+	var handed: bool = await _wait_for(func() -> bool: return copy._consumed)
+	_expect(handed and _client.interest.is_hidden_here(copy_sync)
+		and copy.collision_layer == 0 and copy.collision_mask == 0,
+		"The host's consume() with a hand-over reaches the hidden copy, which plays it out of physics")
+	# The client's player goes (a peer without one gets everything): its next look shows the copy.
+	_client.side.get_node(NodePath("Crew_%d" % client_id)).free()
+	_client.interest.step(Time.get_ticks_msec() / 1000.0 + 1.0)
+	_expect(copy.visible and not _client.interest.is_hidden_here(copy_sync)
+		and copy.collision_layer == 0 and copy.collision_mask == 0,
+		"Shown during the hand-over, the consumed copy stays at layer 0 / mask 0 (got %d, %d)"
+		% [copy.collision_layer, copy.collision_mask])
+	_expect(await _wait_for(func() -> bool: return not is_instance_valid(copy) and not is_instance_valid(second)),
+		"...and both copies go when the hand-over ends")
+
+
+## Runs `action` while /root/NetworkManager is an OnlineHost (the autoload set aside under another name):
+## PackageHandling.consume() looks the session up there and broadcasts only for an online host.
+func _as_online_host(action: Callable) -> void:
+	var real: Node = root.get_node_or_null(^"NetworkManager")
+	if real != null:
+		real.name = "NetworkManagerAside"
+	var stand_in := OnlineHost.new()
+	stand_in.name = "NetworkManager"
+	root.add_child(stand_in)
+	action.call()
+	root.remove_child(stand_in)
+	stand_in.free()
+	if real != null:
+		real.name = "NetworkManager"
 
 
 ## `peer` opens an S box on `table`, takes a hen and puts it in; every step reaches `followers`.
