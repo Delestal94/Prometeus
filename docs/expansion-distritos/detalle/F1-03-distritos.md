@@ -160,7 +160,7 @@ pisan entre sí y cada una se puede instanciar con `DeliveryHouse` sin errores.
 ### D-0312 · Direcciones legibles — B · Opus 5.5 · medium · Aviso: no · F1
 **[~] Parcial (2026-10-21, PR pendiente)** — `HouseAddresses` (`scripts/gameplay/districts/house_addresses.gd`): calle = etiqueta `street` de la arista de la casa (nombre `WORLD_STREET_<CALLE>`, 9 calles es/en en `strings_world.csv`), número = cuenta por calle y por lado (derecha par, izquierda impar) según el orden de aristas y la distancia; `OrderLabel.address` lo usa para las casas del mapa (las de `<zona>_house_<n>` quedan como antes) y `HouseMap.instance` lo pone en el cartel y el timbre (`DeliveryHouse.address_number` / `sign_number()`); `test_company_addresses`. Ver `revisar/D-0312.md`.
 **Subtareas abiertas:**
-- **D-0312.1** Cuando `OrderGenerator` nombre casas del `HouseMap` (D-0801+), `house_id` pasa a ser su id y desaparece el camino viejo `<zona>_house_<n>` de `OrderLabel`.
+- **D-0312.1** Cuando `OrderGenerator` nombre casas del `HouseMap` (D-0801+), `house_id` pasa a ser su id y desaparece el camino viejo `<zona>_house_<n>` de `OrderLabel`. Desde D-2016.2 (2026-10-22) `OrderGenerator` ya nombra casas del `HouseMap` en las zonas que tienen (Centro y Campo); el camino viejo queda solo para zonas sin casas en el mapa.
 - **D-0312.2** Cartel de calle en las esquinas del mapa (arte: `arte-pendiente`), con la captura de `revisor-visual`.
 **Depende de:** D-0311
 **Qué:** cada arista con nombre de calle (lista traducible por zona, D-0345). Cada casa con número par o
