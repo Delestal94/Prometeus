@@ -179,12 +179,17 @@ func release_peer(peer: int) -> void:
 				continue
 			if not is_instance_valid(occupant) or (occupant as Node).get_multiplayer_authority() == peer:
 				seat.set(&"occupant", null)
-		if int(body.get(&"driver_peer_id")) != peer:
-			continue
-		body.set(&"driver_peer_id", 0)
-		body.set(&"controls_enabled", false)
-		if body.has_method(&"set_controls"):
-			body.call(&"set_controls", 0.0, 0.0, true)
+		if int(body.get(&"driver_peer_id")) == peer:
+			release_wheel(body)
+
+
+## Host: nobody drives `body`: no driver, its controls off and neither throttle nor steering, the handbrake on. Whoever
+## sat there stays in the seat; to drive again it gets up and boards again (boarding turns the controls back on).
+func release_wheel(body: Node3D) -> void:
+	body.set(&"driver_peer_id", 0)
+	body.set(&"controls_enabled", false)
+	if body.has_method(&"set_controls"):
+		body.call(&"set_controls", 0.0, 0.0, true)
 
 
 ## Host: the synchronizer of the vehicle `node_name` reaches `peer` (it acked it, ack()).

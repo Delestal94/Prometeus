@@ -11,6 +11,10 @@ extends SceneTree
 ##   waits for it. One second short of the limit, or moving again, is not stuck.
 ## - A wallet short by one is refused (WORLD_TOW_NO_MONEY) and nothing changes; a broken van (set_broken()) is towed
 ##   without being stuck; a van with no trip is WORLD_TOW_NO_TRIP.
+## - Once a van counted TOW_STUCK_SECONDS it stays STUCK with the pedal up or nobody driving, and is cleared only
+##   by moving faster than TOW_STUCK_SPEED for TOW_UNSTUCK_SECONDS in a row (or by its trip closing).
+## - Only the driver, somebody riding in the van or, with nobody at the wheel, anybody may ask (else
+##   WORLD_TOW_NOT_YOURS); after the tow nobody has the wheel (no driver, controls off).
 ## - The request, trip_tow through CompanyNet: it ends in the same tow (the host's own request is a peer's), a refusal
 ##   comes back as request_rejected with the key, a vehicle that is not a short id is bad_data.
 ## - The offer's text (WORLD_TOW_OFFER, the price in it) and the day summary's line for reason `tow`.
@@ -119,7 +123,8 @@ func _check_world(state: Node) -> void:
 		and trips.book.state_of(&"o_a") == Order.STATE_FAILED, "The trip is closed, the order FAILED, nothing out")
 	_expect(van.global_position.distance_to(home.origin) < 0.2 and trips.gate.side_of(van.global_position)
 		== TripGate.INSIDE, "The van is in its place in the playon, inside the gate")
-	_expect(tow.stuck_seconds(VAN) == 0.0, "...and its count starts again")
+	_expect(tow.stuck_seconds(VAN) == 0.0 and tow.vehicle_state(VAN) == TripTow.VEHICLE_OK,
+		"...and its count and its latch start again")
 	for _tick: int in range(10):
 		await physics_frame
 	_expect(trips.closed_trips().size() == 1 and trips.trips_out() == 0,
@@ -136,24 +141,45 @@ func _check_world(state: Node) -> void:
 		"A wallet short by one is refused (NO_MONEY): nothing charged, the trip open")
 	_expect(van.global_position.distance_to(home.origin) > 5.0, "...and the van stays out")
 
-	# A broken van is towed without being stuck, asked over CompanyNet.
+	# Once stuck it stays stuck: the pedal up or the driver gone does not clear it, only really moving.
+	for _tick: int in range(5):
+		tow.feed(VAN, 0.0, 0.0, 0, false, 1.0)
+	_expect(tow.vehicle_state(VAN) == TripTow.VEHICLE_STUCK,
+		"A latched van stays STUCK with the pedal up and nobody driving")
+	tow.feed(VAN, 5.0, 0.0, 0, false, CompanyTuning.TOW_UNSTUCK_SECONDS * 0.5)
+	tow.feed(VAN, 0.0, 0.0, 0, false, 0.1)
+	tow.feed(VAN, 5.0, 0.0, 0, false, CompanyTuning.TOW_UNSTUCK_SECONDS * 0.5)
+	_expect(tow.vehicle_state(VAN) == TripTow.VEHICLE_STUCK,
+		"...and a short jerk (under TOW_UNSTUCK_SECONDS in a row) does not clear it")
+	tow.feed(VAN, 5.0, 0.0, 0, false, CompanyTuning.TOW_UNSTUCK_SECONDS)
+	_expect(tow.vehicle_state(VAN) == TripTow.VEHICLE_OK and tow.stuck_seconds(VAN) == 0.0,
+		"...moving for TOW_UNSTUCK_SECONDS in a row clears it")
+
+	# Asked over CompanyNet: a van that runs is refused; somebody else's is not yours; a broken one is towed.
 	state.earn(1, &"order_paid")
-	tow.feed(VAN, 5.0, 0.0, 0, false, 0.1)
-	_expect(tow.vehicle_state(VAN) == TripTow.VEHICLE_OK, "Setup: moving, no longer stuck")
 	var rid: int = level.net.request(CompanyTowNet.ASK, {"vehicle": String(VAN)})
 	_expect(_rejected.size() == 1 and _rejected[0] == [rid, StringName(TripTow.NOT_STUCK)],
 		"trip_tow of a van that runs comes back as request_rejected with the key (%s)" % [_rejected])
 	tow.set_broken(VAN, true)
+	van.set(&"driver_peer_id", 99)
 	rid = level.net.request(CompanyTowNet.ASK, {"vehicle": String(VAN)})
-	_expect(_rejected.size() == 1 and trips.trips_out() == 0 and state.money == 0
+	_expect(_rejected.size() == 2 and _rejected[1] == [rid, StringName(CompanyTow.NOT_YOURS)]
+		and trips.trips_out() == 1 and state.money == CompanyTuning.TOW_COST,
+		"Another peer drives it: WORLD_TOW_NOT_YOURS, nothing charged, the trip open (%s)" % [_rejected])
+	van.set(&"driver_peer_id", level.net.multiplayer.get_unique_id())
+	van.set(&"controls_enabled", true)
+	rid = level.net.request(CompanyTowNet.ASK, {"vehicle": String(VAN)})
+	_expect(_rejected.size() == 2 and trips.trips_out() == 0 and state.money == 0
 		and van.global_position.distance_to(home.origin) < 0.2,
-		"A broken van asked for over CompanyNet is towed (no refusal, trips out %d, money %d)"
+		"Its own driver asking for a broken van gets the tow (no refusal, trips out %d, money %d)"
 		% [trips.trips_out(), state.money])
+	_expect(int(van.get(&"driver_peer_id")) == 0 and not bool(van.get(&"controls_enabled")),
+		"...and the wheel is let go (no driver, controls off) so the van does not lurch")
 	_expect(tow.vehicle_state(VAN) == TripTow.VEHICLE_OK, "...and its fault is cleared with the tow")
 	level.net.request(CompanyTowNet.ASK, {"vehicle": 5})
 	level.net.request(CompanyTowNet.ASK, {"vehicle": ""})
 	level.net.request(CompanyTowNet.ASK, {})
-	_expect(_rejected.size() == 4 and _rejected.slice(1).all(func(r: Array) -> bool:
+	_expect(_rejected.size() == 5 and _rejected.slice(2).all(func(r: Array) -> bool:
 		return r[1] == CompanyTowNet.REASON_BAD_DATA),
 		"A vehicle that is not a short id is bad_data (%s)" % [_rejected])
 	_free(level)

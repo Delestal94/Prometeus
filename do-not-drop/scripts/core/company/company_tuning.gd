@@ -72,6 +72,10 @@ const TOW_BLACK_SCREEN_SECONDS: float = 3.0
 const TOW_STUCK_SECONDS: float = 6.0
 ## Speed (m/s) under which a van with the pedal down counts as not moving.
 const TOW_STUCK_SPEED: float = 0.3
+## A van that was counted stuck stays stuck (the tow stays on offer) until it really moves: faster than
+## TOW_STUCK_SPEED for this many seconds in a row, or until its trip closes. Lifting the pedal or leaving the wheel
+## does not clear it.
+const TOW_UNSTUCK_SECONDS: float = 1.0
 
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the

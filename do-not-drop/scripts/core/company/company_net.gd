@@ -571,7 +571,7 @@ func _take_request(peer: int, kind: StringName, data: Dictionary) -> void:
 		return
 	if not REQUEST_KINDS.has(kind) or typeof(data.get("rid")) != TYPE_INT:
 		return
-	var reason: StringName = tow.ask(data) if kind == CompanyTowNet.ASK else _handle_request(peer, kind, data)
+	var reason: StringName = tow.ask(peer, data) if kind == CompanyTowNet.ASK else _handle_request(peer, kind, data)
 	if reason != &"":
 		_refuse(peer, int(data["rid"]), reason)
 
