@@ -200,7 +200,6 @@ var _presence_shown: Array = []
 ## Host: the day whose truck pallets are on the bed (_load_truck_pallets()), and the (day, minute) last looked at.
 var _pallets_day: int = 0
 var _pallets_checked: Vector2i = Vector2i.ZERO
-var _departure_checked: Vector2i = Vector2i.ZERO
 
 
 func _ready() -> void:
@@ -668,20 +667,23 @@ func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
 	PalletJackUse.use(net, shed.yard, action, peer_id, from)
 
 
-## Host, once a game minute: the day's truck drove off (SupplierDeparture): what stayed on its bed goes with it and
-## the delivery note keeps the shortfall (D-0618.b, D-0614.b). One jack_departed per day; the day stays in the calendar.
-func _send_truck_off() -> void:
+## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
+## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
+## (CompanyPallets.loaded_event), once per day; and when it drove off, jack_departed (D-0618.b, send_truck_off).
+func _load_truck_pallets() -> void:
 	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
 		return
 	var day: int = _hosted_state.day
 	var minute: int = floori(clock.minute_now())
-	if _departure_checked == Vector2i(day, minute) or not supplier_schedule.has_delivery(day):
+	if _pallets_checked == Vector2i(day, minute):
 		return
-	_departure_checked = Vector2i(day, minute)
-	var planned: Array[Dictionary] = supplier_schedule.pallets_for(day)
-	var event: Dictionary = net.pallets.departed_event(supplier_schedule, day, minute, planned)
-	if not event.is_empty():
-		net.publish(CompanyPallets.DEPARTED, event)
+	_pallets_checked = Vector2i(day, minute)
+	CompanyPallets.send_truck_off(net.pallets, supplier_schedule, day, minute, net.publish)
+	if _pallets_day == day or not CompanyPallets.load_due(supplier_schedule, day, minute):
+		return
+	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
+	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):
+		_pallets_day = day
 
 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
@@ -780,7 +782,6 @@ func _add_interest() -> void:
 
 func _process(_delta: float) -> void:
 	_load_truck_pallets()
-	_send_truck_off()
 	if cells == null:
 		return
 	var as_host: bool = net == null or net.is_host()

@@ -160,6 +160,17 @@ func departed_event(schedule: SupplierSchedule, day: int, minute: int, planned: 
 	return {"day": day, "lines": lines}
 
 
+## Host, once a game minute: publish jack_departed (through `publish`, CompanyNet.publish) when the truck of `day`
+## drove off at `minute`; the check is made every minute and departed_event() answers {} until it is due.
+static func send_truck_off(pallets: CompanyPallets, schedule: SupplierSchedule, day: int, minute: int,
+		publish: Callable) -> void:
+	if not schedule.has_delivery(day):
+		return
+	var event: Dictionary = pallets.departed_event(schedule, day, minute, schedule.pallets_for(day))
+	if not event.is_empty():
+		publish.call(DEPARTED, event)
+
+
 ## Host: the event a request asks for at `station`, or its refusal: {reason: &"", kind, data} or {reason}.
 func check(kind: StringName, data: Dictionary, station: Dictionary) -> Dictionary:
 	var at: Variant = station.get("at")
