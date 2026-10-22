@@ -13,10 +13,12 @@ signal used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3
 const ACTION_LOAD: StringName = &"load"
 const ACTION_PUSH: StringName = &"push"
 const ACTION_TAKE: StringName = &"take"
+const ACTION_RESTOCK: StringName = &"restock"
 const PROMPT_KEYS: Dictionary = {
 	ACTION_LOAD: "WORLD_SHED_USE_CART",
 	ACTION_PUSH: "WORLD_SHED_PUSH_CART",
 	ACTION_TAKE: "WORLD_SHED_TAKE_FROM_CART",
+	ACTION_RESTOCK: "WORLD_SHED_RESTOCK_FROM_CART",
 }
 
 var cart_id: StringName = &""
