@@ -31,6 +31,10 @@ extends SceneTree
 ##   (HUD_HINT_<TRAP>_*) and every route-event prompt (HUD_EVENT_*_PROMPT,
 ##   *_HOUSE, *_REVEALED, *_SWAPPED) has at most 6 words, in Spanish and in
 ##   English, not counting the values inserted at runtime (%d, %s, %.0f);
+## - D-0129: the Company mode words of docs/expansion-distritos/diseno/glosario.md
+##   ("Test: sí" rows): a Spanish text with "palet" says "pallet" in English,
+##   "galpón" says "shed", "remito" says "delivery note"..., and the discarded
+##   words (tarima, albarán, warehouse, licence...) appear nowhere;
 ## - Spanish stays the text the game always showed, and switching the locale
 ##   builds a panel in English.
 
@@ -80,6 +84,28 @@ const DISPLAY_NAME_FILES: Array[String] = [
 	"res://scripts/gameplay/package/package_content.gd",
 	"res://modules/hazards/trap_definition.gd",
 ]
+## D-0129: Company mode glossary (diseno/glosario.md). A Spanish text that uses the
+## word (a regex, plurals included) says the English one.
+const COMPANY_GLOSSARY: Dictionary = {
+	"pedidos?": "order",
+	"proveedor(es)?": "supplier",
+	"remitos?": "delivery note",
+	"palets?": "pallet",
+	"zorras?": "pallet jack",
+	"stock": "stock",
+	"galp(ón|ones)": "shed",
+	"mesas? de armado": "packing table",
+	"relleno": "filler",
+	"etiquetas?": "label",
+	"empleados?": "employee",
+	"hitos?": "milestone",
+	"licencias?": "license",
+	"empresas?": "company",
+}
+const COMPANY_DISCARDED_ES: Array[String] = [
+	"albarán", "tarima", "transpaleta", "existencias", "estación de armado", "operario", "carnet",
+]
+const COMPANY_DISCARDED_EN: Array[String] = ["warehouse", "packing slip", "licence", "purchase order"]
 ## Debug output is for us, not the player.
 const DEBUG_CALLS: Array[String] = ["print(", "push_warning(", "push_error("]
 
@@ -124,6 +150,7 @@ func _run() -> void:
 	_check_content_keys(table)
 	_check_short_warnings(table)
 	_check_glossary(table)
+	_check_company_glossary(table)
 	var menu_constants: Dictionary = load("res://scripts/ui/main_menu.gd").get_script_constant_map()
 	var page_titles: Dictionary = menu_constants.get("PAGE_TITLES", {})
 	_expect(not page_titles.is_empty(), "The main menu has page titles")
@@ -243,6 +270,28 @@ func _check_glossary(table: Dictionary) -> void:
 		_expect(String(table[key][1]).to_lower().contains("truck"), "%s calls the vehicle truck" % key)
 	_expect(not String(table["HUD_CARE_IDLE_DETAIL"][1]).contains("gets at risk"),
 			"HUD_CARE_IDLE_DETAIL reads as natural English")
+
+
+func _check_company_glossary(table: Dictionary) -> void:
+	var letter: String = "a-záéíóúñü"
+	var checked: int = 0
+	for spanish: String in COMPANY_GLOSSARY:
+		var english: String = COMPANY_GLOSSARY[spanish]
+		var word := RegEx.create_from_string("(?<![%s])(?:%s)(?![%s])" % [letter, spanish, letter])
+		for key: String in table:
+			if word.search(String(table[key][0]).to_lower()) == null:
+				continue
+			checked += 1
+			_expect(String(table[key][1]).to_lower().contains(english),
+					"%s says '%s' in English (diseno/glosario.md)" % [key, english])
+	_expect(checked > 50, "The Company glossary sees the shed, order and supplier texts (%d)" % checked)
+	for key: String in table:
+		var es: String = String(table[key][0]).to_lower()
+		var en: String = String(table[key][1]).to_lower()
+		for discarded: String in COMPANY_DISCARDED_ES:
+			_expect(not es.contains(discarded), "%s doesn't say '%s' (diseno/glosario.md)" % [key, discarded])
+		for discarded: String in COMPANY_DISCARDED_EN:
+			_expect(not en.contains(discarded), "%s doesn't say '%s' (diseno/glosario.md)" % [key, discarded])
 
 
 func _check_trap_name_keys(table: Dictionary) -> void:

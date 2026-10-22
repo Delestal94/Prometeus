@@ -261,6 +261,20 @@ asistido, `critica-alcance.md` §4.5):
 Decisión: `docs/decisiones/2026-10-22-dificultad.md`.
 **Hecho cuando:** `diseno/dificultad.md` existe y D-1919 lo puede construir sin preguntar.
 
+### D-0129 · Glosario de la expansión — B · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/glosario.md`: 33 conceptos del modo Empresa en ES/EN con uso y descartados; 14 con chequeo en `test_ui_translations` (`_check_company_glossary`).
+**Depende de:** —
+**Qué:** una palabra por concepto en los textos nuevos (pedido, remito, palet, estación, turno, hito…),
+armado con lo que ya dicen `strings_ui.csv` / `strings_world.csv`:
+- [x] D-0129.1 `diseno/glosario.md`: concepto, ES, EN, uso y descartados; amplía `docs/glosario.md` (que
+  enlaza acá) sin repetirlo.
+- [x] D-0129.2 "Lo usa `loc_text`": las claves que viajan con `LocText` salen de las mismas tablas, así que el
+  chequeo va sobre la tabla de UI: si el español dice "palet" el inglés dice "pallet" (14 pares) y los
+  descartados (tarima, albarán, warehouse, licence…) no aparecen.
+- [x] D-0129.3 El agente `localizador` lo lee junto con `docs/glosario.md`.
+**Test** `test_ui_translations` (`_check_company_glossary`).
+**Hecho cuando:** `diseno/glosario.md` existe y el test lo cumple sobre las tablas actuales.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
