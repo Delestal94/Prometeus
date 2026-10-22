@@ -17,8 +17,8 @@ alcanza, PR "(partial)" con lo hecho y las subtareas abiertas.
 | Carril | Modelo del trigger | Grupos (en orden) | Agentes principales |
 |---|---|---|---|
 | 1 · Arquitectura y diseño | Opus 5.5 | 02, 01 | `Plan`, `constructor-progresion`, `critico-diseno`, `documentador` |
-| 2 · Galpón y stock | Sonnet 5.5 | 09, 06 (después 10, 11) | `constructor-mundo`, `constructor-jugador`, `constructor-camion` (autoelevador) |
-| 3 · Armado y pedidos | Sonnet 5.5 | 07, 08 | `constructor-trampas`, `constructor-jugador`, `constructor-progresion`, `constructor-ui` |
+| 2 · Galpón y stock | Sonnet 5.5 | 09, 06 (después 10, 11) | `constructor-negocio`, `constructor-mundo`, `constructor-jugador`, `constructor-camion` (autoelevador) |
+| 3 · Armado y pedidos | Sonnet 5.5 | 07, 08 | `constructor-negocio`, `constructor-trampas`, `constructor-jugador`, `constructor-progresion`, `constructor-ui` |
 | 4 · Mapa, salidas y economía | Sonnet 5.5 | 03, 05 (después 15, 04) | `constructor-tramos`, `constructor-mundo`, `constructor-progresion`, `constructor-ui` |
 | 5 · Red, CI y calidad | Opus 5.5 | 20 (después 12-14 lo de red) | `constructor-red`, `auditor-red`, `escritor-tests`, `perfilador-rendimiento` |
 
@@ -91,8 +91,9 @@ Una reserva `exp/` abandonada se retoma con la regla 15 del README; nunca se bor
    que el usuario nombró (fila 5 de `2026-10-04-expansion-decisiones-delegadas.md`), no gastar plata
    real, no tocar precio, fecha ni página de Steam.
 3. **Construí** como `construccion.md` §3, con la tabla de agentes de allá. La carpeta
-   `scripts/gameplay/business/` es de `constructor-negocio` cuando exista (D-0141); hasta entonces,
-   `constructor-mundo` para el galpón y `constructor-progresion` para stock, pedidos y plata.
+   `scripts/gameplay/business/` (galpón, stock, armado, empleados, automatización) es de
+   `constructor-negocio` (D-0141); la plata, los precios y el libro de pedidos siguen con
+   `constructor-progresion`.
 4. **Test** nuevo o ampliado (skill `nuevo-test`) que compruebe lo que dice "Hecho cuando". Correlo con
    `ejecutor-tests` y el filtro `company` (o el del área). Nunca la batería entera.
 5. **Red:** `auditor-red` antes del PR. **Zona compartida o archivos de Slatex:** `revisor-gdscript` y

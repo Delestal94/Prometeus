@@ -106,9 +106,9 @@ el 18 junta el arte compartido (productos, cajas, empleados, máquinas, bibliote
 ## Cómo leer las tareas
 
 - **ID** `D-GGNN`: grupo `GG`, tarea `NN` (D-0712 = grupo 07, tarea 12). Sin choque con `N-`/`S-`.
-- **Agente**: el que la construye según la tabla de `CLAUDE.md`. `constructor-negocio` es un agente
-  nuevo (lo crea D-0141) para galpón, stock, armado, empleados y automatización; hasta que exista,
-  esas tareas van con `constructor-mundo` (galpón) o `constructor-progresion` (plata y pedidos).
+- **Agente**: el que la construye según la tabla de `CLAUDE.md`. `constructor-negocio` (D-0141) hace
+  galpón, stock, armado, empleados y automatización; la plata y los pedidos siguen con
+  `constructor-progresion`.
   `*` = necesita Blender/ComfyUI en la PC (rutina `sesion-arte`).
 - **Esf.**: esfuerzo de razonamiento (`low` · `medium` · `high` · `xhigh`), como en `tareas-nacho.md`.
 - **Hecho cuando**: criterio verificable con test, captura, bot o benchmark. Nada se marca por

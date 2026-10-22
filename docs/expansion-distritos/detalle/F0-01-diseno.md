@@ -398,3 +398,15 @@ Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
 con 1 jugador ningún pedido llega después de las 15:00 y con 2 sí puede; el sugerido de un día conocido da las
 unidades esperadas y respeta la reserva; un cierre sin pedido deja uno en `SupplierSchedule` para mañana.
 **Hecho cuando:** el test pasa y el bot de 1 jugador (D-2016) cierra el día 2 con stock comprado sin tocar el tablero.
+
+### D-0141 · Agente `constructor-negocio` — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #724)** — `.claude/agents/constructor-negocio.md` (Sonnet 5.5, `high`, como los demás constructores) para galpón, stock, armado, pedidos puestos en el galpón, empleados y automatización; listado en `CLAUDE.md`, en la tabla de `construccion.md` §3 y en los carriles 2 y 3 de `desarrollador.md`.
+**Depende de:** D-0144 (dominios de `business/`, `fleet/`, `districts/`)
+**Qué:** el agente que construye `scripts/gameplay/business/` y sus vistas, con el mapa de archivos por
+familia, las reglas del modo (host autoritativo, simulación aparte, números en `CompanyTuning`, guardado
+y snapshot, placeholder gris, límite de 1000 líneas) y qué devuelve. La plata, los precios y el libro de
+pedidos siguen con `constructor-progresion`; la red de la Empresa, con `constructor-red`.
+**Test:** no hay código; `tools/panel/build_data.py` ya lo tenía en el pilar "Sistemas". Cierra la
+mitad de A-3.8 (auditoría del 2026-10-19, el agente que no existía); `fleet/`, `districts/` y `town/`
+siguen sin fila en `construccion.md` §3.
+**Hecho cuando:** el archivo está versionado con `model` y `effort`, y `CLAUDE.md` lo nombra.
