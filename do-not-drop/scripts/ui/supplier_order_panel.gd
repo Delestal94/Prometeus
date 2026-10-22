@@ -13,13 +13,17 @@ class_name SupplierOrderPanel
 ## runs headless in a test:
 ##   cart: SupplierOrderCart (the one this panel edits), wallet: Object with can_afford(),
 ##   schedule: SupplierSchedule, day: int (today), supplier_name: String (optional),
-##   can_act: bool (false on a client: Order shows disabled, with the reason, not hidden).
+##   can_act: bool (false on a client: Order shows disabled, with the reason, not hidden),
+##   request: Callable(lines: Array[Dictionary]) -> int (optional, D-0603.b.2): Order asks the host
+##     with the cart's lines instead of calling submit() here, and the screen waits for the answer:
+##     placed() when the host's order event lands, refused() with the reason when it says no. The
+##     cart keeps its lines until then. The callable returns the request id (0: nobody to ask).
 ##
 ## Gamepad first: rows are two buttons (minus, plus) in a grid of focus neighbours, then Order and
 ## Close. Every state has a mark besides its colour: "+" more, "−" less, "✓" ordered.
 
-## The host ordered `lines` ([{product, qty}]) for the truck of `arrival_day`. The world adapter
-## replicates the calendar to the clients (D-0603.c).
+## The order of `lines` ([{product, qty}]) is in the calendar for the truck of `arrival_day`: right away
+## with submit(), or when placed() says the host applied the request (D-0603.b.2).
 signal ordered(lines: Array[Dictionary], arrival_day: int)
 signal closed
 
@@ -30,6 +34,11 @@ var _ctx: Dictionary = {}
 var _rows: Dictionary = {}
 var _status_key: String = ""
 var _status_args: Array = []
+## Request mode: the lines and pallets of the order sent and not answered yet ([] when none).
+var _sent_lines: Array[Dictionary] = []
+var _sent_pallets: int = 0
+## Request mode: refused() came for the order being sent (a host answers its own at once).
+var _refused_now: bool = false
 
 var _supplier_label: Label
 var _rows_box: VBoxContainer
@@ -53,6 +62,9 @@ func _ready() -> void:
 func open(ctx: Dictionary) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_clear_status()
+	if is_waiting():
+		# Closed and opened again while the host's answer is on its way: it still waits for it.
+		_status_key = "UI_SUPPLIER_SENT"
 	refresh(ctx)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
@@ -81,6 +93,15 @@ func refresh(ctx: Dictionary) -> void:
 	_update_view()
 
 
+## Takes a new `ctx` and rewrites the totals, the arrival day, the status line and Order, keeping the rows
+## (and so the focus): for a wallet or a day that changed while the screen is open. The cart and the
+## products must be the same ones.
+func update_totals(ctx: Dictionary) -> void:
+	_ctx = ctx
+	if _rows_box != null:
+		_update_view()
+
+
 ## Adds `STEP` units of a product. Returns {"ok", "key", "args"}: when not ok the cart stays as it
 ## was and key / args say why (also shown on the screen).
 func more(product: StringName) -> Dictionary:
@@ -92,8 +113,10 @@ func less(product: StringName) -> Dictionary:
 	return _edit(product, -STEP)
 
 
-## Puts the order in the schedule for the next day: SupplierOrderCart.submit(). Returns how many
-## pallets will come (0 when the screen may not act, the cart is empty or the wallet is short).
+## Puts the order in the schedule for the next day: SupplierOrderCart.submit(), or with a `request` in
+## the ctx asks the host for it (then the answer is placed() or refused()). Returns how many pallets
+## will come (0 when the screen may not act, the cart is empty, the wallet is short, an answer is
+## still awaited or the request could not be sent).
 func confirm() -> int:
 	if not can_confirm():
 		return 0
@@ -101,6 +124,9 @@ func confirm() -> int:
 	var pallets: int = cart.pallet_count()
 	var lines: Array[Dictionary] = cart.to_array()
 	var arrival: int = SupplierSchedule.arrival_day(_day())
+	var request: Variant = _ctx.get("request")
+	if request is Callable and (request as Callable).is_valid():
+		return _send(request, lines, pallets)
 	if not cart.submit(_ctx.get("wallet"), _ctx.get("schedule"), _day()):
 		_status_key = "UI_SUPPLIER_REFUSED"
 		_status_args = []
@@ -114,10 +140,48 @@ func confirm() -> int:
 	return pallets
 
 
-## True when Order would do something: the screen may act and the cart is orderable.
+## True when Order would do something: the screen may act, no answer is awaited and the cart is orderable.
 func can_confirm() -> bool:
 	var cart: SupplierOrderCart = _cart()
-	return _acts() and cart != null and _ctx.get("schedule") != null and cart.can_submit(_ctx.get("wallet"))
+	return (
+		_acts() and not is_waiting() and cart != null and _ctx.get("schedule") != null
+		and cart.can_submit(_ctx.get("wallet"))
+	)
+
+
+## Request mode: an order was sent and the host has not answered yet.
+func is_waiting() -> bool:
+	return not _sent_lines.is_empty()
+
+
+## Request mode: the host applied the order sent, which is in the calendar for the truck of
+## `arrival_day`. Its units come off the cart (whatever was added meanwhile stays), `ordered` is
+## emitted. Nothing happens when no order was awaited.
+func placed(arrival_day: int) -> void:
+	if not is_waiting():
+		return
+	var lines: Array[Dictionary] = _sent_lines
+	_sent_lines = []
+	var cart: SupplierOrderCart = _cart()
+	if cart != null:
+		for line: Dictionary in lines:
+			cart.remove(line["product"], int(line["qty"]))
+	_status_key = "UI_SUPPLIER_ORDERED"
+	_status_args = [_sent_pallets, arrival_day]
+	ordered.emit(lines, arrival_day)
+	refresh(_ctx)
+	if visible:
+		_focus_first()
+
+
+## Request mode: the host said no; the line shows why (`key` translated with `args`) and the cart is
+## as it was, so Order may be pressed again.
+func refused(key: String, args: Array = []) -> void:
+	_sent_lines = []
+	_refused_now = true
+	_status_key = key
+	_status_args = args
+	_update_view()
 
 
 func qty_of(product: StringName) -> int:
@@ -208,6 +272,25 @@ func _build() -> void:
 	_close_button.pressed.connect(close)
 
 
+## Request mode: asks the host for `lines` and waits. The host (solo too) answers inside the call:
+## placed() or refused() may already have run when it returns. 0 (and the refusal line) when it could
+## not be sent or was refused.
+func _send(request: Callable, lines: Array[Dictionary], pallets: int) -> int:
+	_sent_lines = lines
+	_sent_pallets = pallets
+	_refused_now = false
+	_status_key = "UI_SUPPLIER_SENT"
+	_status_args = []
+	var rid: int = int(request.call(lines))
+	if rid <= 0 and is_waiting():
+		_sent_lines = []
+		_refused_now = true
+		_status_key = "UI_SUPPLIER_REFUSED"
+		_status_args = []
+	_update_view()
+	return 0 if rid <= 0 or _refused_now else pallets
+
+
 func _add_row(product: StringName, cart: SupplierOrderCart) -> void:
 	var row := HBoxContainer.new()
 	row.name = "Row_%s" % product
@@ -238,7 +321,8 @@ func _edit(product: StringName, delta: int) -> Dictionary:
 	var done: bool = cart.add(product, delta) if delta > 0 else cart.remove(product, -delta)
 	var verdict: Dictionary = {"ok": done, "key": "", "args": []}
 	if done:
-		_clear_status()
+		if not is_waiting():
+			_clear_status()
 	elif delta > 0:
 		verdict = {"ok": false, "key": "UI_SUPPLIER_LINE_MAX", "args": [SupplierOrderCart.MAX_LINE_QTY]}
 		_status_key = String(verdict["key"])
