@@ -23,6 +23,8 @@ var session_seed: int
 var spawn_events: bool = false
 ## What Centro holds besides its streets; null: the cells hold the streets only.
 var decor: CentroDecor
+## Ground rectangle the streets leave clear (the shed's, D-0314.a); empty: none.
+var keep_clear: Rect2
 
 ## { Vector2i cell: Array[{ edge: StringName, piece: int }] }, built once.
 var _by_cell: Dictionary = {}
@@ -33,12 +35,13 @@ var _events_by_cell: Dictionary = {}
 
 func _init(
 		road_graph: RoadGraph, size: float, world_seed: int = 0, with_events: bool = false,
-		centro_decor: CentroDecor = null) -> void:
+		centro_decor: CentroDecor = null, clear: Rect2 = Rect2()) -> void:
 	graph = road_graph
 	cell_size = size
 	session_seed = world_seed
 	spawn_events = with_events
 	decor = centro_decor
+	keep_clear = clear
 	_index()
 	_index_events()
 
@@ -104,7 +107,7 @@ func build_cell(cell: Vector2i) -> Node3D:
 
 func _index() -> void:
 	for edge: RoadEdge in graph.edges:
-		var pieces: Array[Dictionary] = EdgePieces.plan(graph, edge.id)
+		var pieces: Array[Dictionary] = EdgePieces.plan(graph, edge.id, keep_clear)
 		_plans[edge.id] = pieces
 		for i in pieces.size():
 			var ground: Vector2 = pieces[i].position

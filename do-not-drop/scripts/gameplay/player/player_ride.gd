@@ -183,13 +183,22 @@ static func set_on_foot_pose_rate(p: Player, rate_hz: float) -> void:
 	apply_pose_rate(p)
 
 
-## How often the owner sends its pose: on foot, the rate a world asked for; riding a vehicle or
-## seated, player.tscn's own again. Nothing to do while no world changed it (Delivery and Endless
-## never do).
+## How many poses a second the owner sends seated (D-2002.4): a world whose seats ride slowly asks
+## for fewer (the company's vehicles: CompanyRoot.join_crew()); 0 puts player.tscn's own back. In the
+## meta &"seated_pose_rate", as set_on_foot_pose_rate().
+static func set_seated_pose_rate(p: Player, rate_hz: float) -> void:
+	p.set_meta(&"seated_pose_rate", maxf(rate_hz, 0.0))
+	apply_pose_rate(p)
+
+
+## How often the owner sends its pose: on foot, the rate a world asked for; seated, the seated one
+## it asked for; standing in a vehicle's bay (or with no rate asked), player.tscn's own again.
+## Nothing to do while no world changed it (Delivery and Endless never do).
 static func apply_pose_rate(p: Player) -> void:
 	var on_foot_rate: float = float(p.get_meta(&"on_foot_pose_rate", 0.0))
+	var seated_rate: float = float(p.get_meta(&"seated_pose_rate", 0.0))
 	var scene_interval: float = float(p.get_meta(&"scene_pose_interval", -1.0))
-	if on_foot_rate <= 0.0 and scene_interval < 0.0:
+	if on_foot_rate <= 0.0 and seated_rate <= 0.0 and scene_interval < 0.0:
 		return
 	var sync := p.get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	if sync == null:
@@ -198,7 +207,10 @@ static func apply_pose_rate(p: Player) -> void:
 		scene_interval = sync.replication_interval
 		p.set_meta(&"scene_pose_interval", scene_interval)
 	var wanted: float = scene_interval
-	if on_foot_rate > 0.0 and not p.net_in_vehicle and p.seat_node_path.is_empty():
+	if not p.seat_node_path.is_empty():
+		if seated_rate > 0.0:
+			wanted = pose_interval(seated_rate)
+	elif on_foot_rate > 0.0 and not p.net_in_vehicle:
 		wanted = pose_interval(on_foot_rate)
 	if not is_equal_approx(sync.replication_interval, wanted):
 		sync.replication_interval = wanted

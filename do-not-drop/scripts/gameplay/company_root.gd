@@ -750,6 +750,8 @@ func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
+	# The map's streets (D-0304.1) and Centro's decor (D-0314), laid as the cells load; events off (D-0315.b).
+	cells.use_graph(RoadGraph.load_default(), CompanyCells.seed_of(session), false, CompanyCells.shed_ground(shed))
 
 
 ## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages
@@ -992,9 +994,10 @@ static func _player_name(id: int) -> String:
 
 
 ## Every player of the company's world, before it enters the tree: one of the crew (CREW_GROUP),
-## sending its pose at the shed's rate while on foot (D-2002.3, CompanyTuning.SHED_POSE_RATE_HZ;
-## riding a vehicle, the game's again). Only the owner's copy sends: a remote copy may come
-## through here too, nothing changes for it.
+## sending its pose at the shed's rate while on foot (D-2002.3, CompanyTuning.SHED_POSE_RATE_HZ),
+## at SEATED_POSE_RATE_HZ seated in a vehicle (D-2002.4) and at the game's standing in its bay. Only
+## the owner's copy sends: a remote copy may come through here too, nothing changes for it.
 static func join_crew(crew_member: Player) -> void:
 	crew_member.add_to_group(CREW_GROUP)
 	Ride.set_on_foot_pose_rate(crew_member, CompanyTuning.SHED_POSE_RATE_HZ)
+	Ride.set_seated_pose_rate(crew_member, CompanyTuning.SEATED_POSE_RATE_HZ)

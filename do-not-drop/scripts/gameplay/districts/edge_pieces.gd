@@ -27,13 +27,16 @@ static var _lengths: Dictionary = {}
 ## The pieces of one street, in order: { kind, start (m along the street), length,
 ## position (Vector2 on the ground), yaw (radians, for a Basis(UP, yaw)), turn_deg
 ## (curves only) }. Empty for a street that is not in the graph or lists no pieces.
-static func plan(graph: RoadGraph, edge_id: StringName) -> Array[Dictionary]:
+##
+## With `keep_clear` (a ground rectangle, D-0314.a: the shed's) a street that starts inside it
+## starts at the point where it leaves it, so no roadway is laid under the shed's floor and walls.
+static func plan(graph: RoadGraph, edge_id: StringName, keep_clear: Rect2 = Rect2()) -> Array[Dictionary]:
 	var pieces: Array[Dictionary] = []
 	var edge: RoadEdge = graph.edge_by_id(edge_id)
 	if edge == null or edge.segments.is_empty():
 		return pieces
 	var total: float = graph.edge_length(edge_id)
-	var at: float = 0.0
+	var at: float = clear_offset(graph, edge_id, keep_clear)
 	var index: int = 0
 	while total - at >= MIN_FILL:
 		var kind: StringName = edge.segments[index % edge.segments.size()]
@@ -47,6 +50,17 @@ static func plan(graph: RoadGraph, edge_id: StringName) -> Array[Dictionary]:
 		pieces.append(piece)
 		at += float(piece.advance)
 	return pieces
+
+
+## How far along the street (m, whole metres) it leaves `keep_clear`: 0 when it does not start inside it.
+static func clear_offset(graph: RoadGraph, edge_id: StringName, keep_clear: Rect2) -> float:
+	if not keep_clear.has_area():
+		return 0.0
+	var total: float = graph.edge_length(edge_id)
+	var at: float = 0.0
+	while at < total and keep_clear.has_point(graph.point_at(edge_id, at)):
+		at += 1.0
+	return at
 
 
 ## Builds the plan under `parent` (one RouteSegment per piece, already placed).
