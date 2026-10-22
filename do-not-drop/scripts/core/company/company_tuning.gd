@@ -266,6 +266,10 @@ const STARS_WRONG_BOX: int = 1
 const STARS_BROKEN: int = 2
 const STARS_LATE: int = 3
 const STARS_MISLABELED: int = 3
+## The customer's reaction at the door, from the stars (D-0817, OrderDoorReaction): 4 or 5 stars cheer,
+## 3 shrugs, 1 or 2 are angry.
+const REACTION_CHEER_MIN_STARS: int = 4
+const REACTION_SHRUG_MIN_STARS: int = 3
 ## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
 const TRIP_MERIT_INTACT: int = 10
 

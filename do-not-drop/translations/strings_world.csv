@@ -434,3 +434,8 @@ WORLD_SHOP_ALREADY_OWNED,Ya lo tenés,Already owned
 WORLD_SHOP_NEEDS_ITEM,Primero hace falta %s,Needs %s first
 WORLD_SHOP_WRONG_STAGE,Falta la ampliación anterior (etapa %s),The previous expansion is missing (stage %s)
 WORLD_SHOP_CANNOT_AFFORD,Faltan monedas: cuesta %s y hay %s,Not enough money: costs %s and you have %s
+WORLD_DOOR_CHEER_1,¡Justo lo que pedí! Gracias,Just what I ordered! Thanks
+WORLD_DOOR_CHEER_2,¡Qué rápido! Muy bien,That was quick! Well done
+WORLD_DOOR_CHEER_3,Todo en orden. ¡Gracias!,All in order. Thank you!
+WORLD_DOOR_SHRUG_1,Bueno... llegó,Well... it arrived
+WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better
