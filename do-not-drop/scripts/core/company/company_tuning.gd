@@ -58,6 +58,15 @@ const SURFACE_SPEED: Dictionary = {&"asphalt": 14.0, &"cobble": 10.0, &"gravel":
 ## How far ahead along the route the GPS arrow points, in meters.
 const GPS_LOOKAHEAD: float = 30.0
 
+# --- Tow home (D-0307) ---
+## "Volver con grua": a vehicle left stuck or broken on a trip is towed back to the shed's yard for this
+## much money (spent from the company wallet, ledger reason `tow`). The undelivered orders fail, as in any
+## trip that comes back with them. Low enough to be a way out, high enough that nobody wrecks a van to skip
+## the drive (a failed order already costs more than it pays, docs/economia-y-contramedidas.md).
+const TOW_COST: int = 50
+## Real seconds of black screen while the vehicle is carried to the yard.
+const TOW_BLACK_SCREEN_SECONDS: float = 3.0
+
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
 ## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
