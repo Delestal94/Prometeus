@@ -12,9 +12,10 @@ extends SceneTree
 ## - a truck that already drove off that day brings nothing again (loaded_event after departed_day): an
 ##   interrupted day loaded back at its opening does not put the left pallets back on the bed;
 ## - the real company world (company_root.tscn, solo): a pallet put on the floor and the note of a short
-##   delivery are saved with the interrupted day; a new world over that slot has the pallet on the floor at the
-##   same spot, its units in the stock once, the note and the departed day; the snapshot's company part does
-##   not carry the pallets (its `pallets` part does).
+##   delivery are not saved with a day cut short (D-0251: a new world over that slot is back at the opening,
+##   no pallet on the floor, the truck not gone); they are saved with the day's close, and a new world over
+##   that slot has the pallet on the floor at the same spot, its units in the stock once, the note and the
+##   departed day; the snapshot's company part does not carry the pallets (its `pallets` part does).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
@@ -142,20 +143,19 @@ func _test_root() -> void:
 	var level: CompanyRoot = await _open()
 	if level == null:
 		return
-	var net: CompanyNet = level.net
-	var planned: Array = [{"id": "d2_1", "product": "hen", "qty": 12}, {"id": "d2_2", "product": "hen", "qty": 6}]
-	_expect(net.publish(CompanyPallets.LOADED, {"day": DAY, "pallets": planned}), "The host loads the bed")
-	# What a player's jack_pick and jack_put lead to (test_company_pallet_jack_world plays the requests).
-	_expect(net.pallets.apply(net.inventory, CompanyPallets.PICKED, {"pallet": &"d2_1"}), "A pallet on the jack")
-	_expect(net.pallets.apply(net.inventory, CompanyPallets.PLACED, {"pallet": &"d2_1", "pos": SPOT}),
-		"and on the floor")
-	_expect(net.publish(CompanyPallets.DEPARTED, {"day": DAY, "lines": [{"product": "hen", "ordered": 18,
-		"received": 12}]}), "The truck drives off short")
-	var units: int = net.inventory.count(&"hen", Pallet.location(&"d2_1"))
-	_expect(units == 12, "The floor pallet's units are in the stock (got %d)" % units)
-	_expect(not (net.snapshot()["company"] as Dictionary).has("pallets")
-		and net.snapshot().has(CompanyPallets.SNAPSHOT_KEY), "The snapshot carries the pallets in its own part")
-	_expect(level.save_interrupted_day(), "The interrupted day is saved")
+	_floor_pallet(level.net)
+	_expect(level.save_interrupted_day(), "A day cut short marks the slot interrupted")
+	await _close(level, state)
+	level = await _open()
+	if level == null:
+		return
+	_expect(level.net.pallets.book.ids_at(PalletJack.AT_FLOOR).is_empty()
+		and level.net.pallets.departed_day != DAY,
+		"...and nothing of it is saved: the world comes back at the opening, no pallet, no truck gone (D-0251)")
+	var net: CompanyNet = _floor_pallet(level.net)
+	_close_day(level)
+	_expect(level.day_cycle.phase() == DayCycle.Phase.SUMMARY,
+		"The day closes (got %s)" % level.day_cycle.phase_name())
 	await _close(level, state)
 	level = await _open()
 	if level == null:
@@ -166,10 +166,37 @@ func _test_root() -> void:
 	_expect(net.pallets.book.ids_at(PalletJack.AT_BED).is_empty() and net.pallets.departed_day == DAY,
 		"The truck stays gone, with nothing on its bed")
 	_expect(net.pallets.note.days_with_shortfall() == [DAY], "The delivery note comes back")
-	units = net.inventory.count(&"hen", Pallet.location(&"d2_1"))
+	var units: int = net.inventory.count(&"hen", Pallet.location(&"d2_1"))
 	_expect(units == 12, "The pallet's units are in the stock once (got %d)" % units)
 	await _close(level, state)
 	_clean()
+
+
+## A pallet of a short delivery put on the floor, as a player's jack_pick and jack_put lead to
+## (test_company_pallet_jack_world plays the requests). Returns `net`.
+func _floor_pallet(net: CompanyNet) -> CompanyNet:
+	var planned: Array = [{"id": "d2_1", "product": "hen", "qty": 12}, {"id": "d2_2", "product": "hen", "qty": 6}]
+	_expect(net.publish(CompanyPallets.LOADED, {"day": DAY, "pallets": planned}), "The host loads the bed")
+	_expect(net.pallets.apply(net.inventory, CompanyPallets.PICKED, {"pallet": &"d2_1"}), "A pallet on the jack")
+	_expect(net.pallets.apply(net.inventory, CompanyPallets.PLACED, {"pallet": &"d2_1", "pos": SPOT}),
+		"and on the floor")
+	_expect(net.publish(CompanyPallets.DEPARTED, {"day": DAY, "lines": [{"product": "hen", "ordered": 18,
+		"received": 12}]}), "The truck drives off short")
+	var units: int = net.inventory.count(&"hen", Pallet.location(&"d2_1"))
+	_expect(units == 12, "The floor pallet's units are in the stock (got %d)" % units)
+	_expect(not (net.snapshot()["company"] as Dictionary).has("pallets")
+		and net.snapshot().has(CompanyPallets.SNAPSHOT_KEY), "The snapshot carries the pallets in its own part")
+	return net
+
+
+## OPENING, OPERATING, CLOSING and SUMMARY of the open day, as test_company_autosave closes it: the
+## SUMMARY saves the next day's opening (D-0236).
+func _close_day(level: CompanyRoot) -> void:
+	level.day_cycle.ticks = func() -> int: return Time.get_ticks_msec() + 60_000
+	level.day_cycle.poll()
+	level.clock.start(float(CompanyTuning.DAY_END_MIN))
+	level.day_cycle.poll()
+	level.day_cycle.poll()
 
 
 func _open() -> CompanyRoot:
