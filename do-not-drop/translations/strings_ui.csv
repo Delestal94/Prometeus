@@ -277,7 +277,7 @@ HUD_PREP_LOAD_AND_DRIVE,Cargá paquetes y tomá el volante,Load packages and tak
 HUD_PREP_MISSING,(falta),(missing)
 HUD_PREP_ORDER,Casa %d: %s %s,House %d: %s %s
 HUD_PROGRESS_REMAINING_ONE,Te falta %s para %s,You need %s to unlock %s
-HUD_PROMPT_DROP,[ %s ]  Soltar paquete,[ %s ]  Drop package
+HUD_PROMPT_DROP,%s  Soltar paquete,%s  Drop package
 HUD_PROMPT_INSIDE,Adentro:  %s,Inside:  %s
 HUD_RESCUED,¡%s a salvo!,%s is safe!
 HUD_RESTART,Reiniciar,Restart
@@ -563,6 +563,10 @@ UI_OPT_SENSITIVITY,Sensibilidad de la mirada,Look sensitivity
 UI_OPT_SHAKE,Sacudida de cámara,Camera shake
 UI_OPT_SOUND_CHECK,Sonidos del juego (uno por uno)…,Game sounds (one by one)…
 UI_OPT_SOUND_SUBTITLES,Subtítulos de sonidos,Sound subtitles
+UI_OPT_SUBTITLE_SIZE,Tamaño de subtítulos,Subtitle size
+UI_OPT_SUBTITLE_SIZE_NORMAL,Normal,Normal
+UI_OPT_SUBTITLE_SIZE_LARGE,Grande,Large
+UI_OPT_SUBTITLE_SIZE_XLARGE,Muy grande,Extra large
 UI_OPT_TEXT_BACKDROP,Fondo del texto,Text backdrop
 UI_OPT_VOICE_CHAT,Chat de voz,Voice chat
 UI_OPT_VOICE_CREW,Voces de la tripulación,Crew voices

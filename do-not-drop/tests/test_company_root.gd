@@ -22,8 +22,16 @@ extends SceneTree
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
 ##   CompanyNet the CompanyState node, whose to_dict() the snapshot carries (D-2004);
 ## - it has a GameClock and a DayCycle child hooked to that CompanyNet (D-0203, D-0219); solo opens the
-##   company's day once the world is up: OPENING of its day, the clock running from 08:00, and no
-##   shed freeze while no shed area is wired;
+##   company's day once the world is up: OPENING of its day, the clock running from 08:00, and the
+##   shed not frozen with its player in it;
+## - D-0316.1: the shed holds (CompanyShed.holds()) the spawn, at any height, and whoever stands in the
+##   dock's or the exit's gate, not a point 20 m out of it; the root wires DayCycle.crew_in_shed: yes
+##   with the player where it spawned, no with it 20 m out, yes again back in; no with it seated on a
+##   seat 20 m out while its body is still in (Player.reach_origin()); yes with another crew member of
+##   the session in and the player out, no with both out; a crew member of another session (its own
+##   SceneMultiplayer) standing in the shed doesn't count; with the player out
+##   during OPERATING the shed freezes (one event; shed_minute() stands still while the world clock
+##   runs) and thaws when it is back (on the test's own ticks, no frame in between);
 ## - on a client (a session that isn't the host) it waits for the snapshot without touching
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
@@ -49,6 +57,10 @@ const CLOSED_PORT: int = 24639
 const GAME_POSE_RATE_HZ: int = 30
 ## Physics ticks for the owner to publish its pose (and pick its rate) again.
 const POSE_TICKS: int = 3
+## D-0316.1: how far out of the shed's floor the player stands on the street, and for how many of the
+## test's seconds it stays out (past CompanyTuning.SHED_FREEZE_SETTLE_REAL_SECONDS, so it can thaw).
+const OUT_M: float = 20.0
+const OUT_SECONDS: float = 3.0
 
 
 ## A vehicle that carries everyone, wherever they stand (as test_gel_active_ragdoll's).
@@ -57,6 +69,10 @@ class Carrier extends Node3D:
 		return true
 
 var _failures: int = 0
+## The test's own ticks (_ticks()) for the root's DayCycle and GameClock: real time stopped at
+## _base_msec, moved on by hand.
+var _base_msec: int = 0
+var _skip_msec: int = 0
 
 
 func _initialize() -> void:
@@ -100,7 +116,7 @@ func _run() -> void:
 				and not clock.is_paused() and clock.minute_now() < float(CompanyTuning.DAY_START_MIN) + 5.0,
 				"Solo opens the company's day: OPENING of day %s with the clock at 08:00 (got %s, %.1f)"
 				% [state.get(&"day"), cycle.phase_name(), clock.minute_now()])
-			_expect(not cycle.is_frozen(), "...and the shed isn't frozen (no area is wired yet)")
+			_expect(not cycle.is_frozen(), "...and the shed isn't frozen: its player stands in it")
 	_expect_presence(state, true, "Solo, with the day open")
 	_check_bankrupt_notice(level as CompanyRoot, state)
 
@@ -141,6 +157,7 @@ func _run() -> void:
 		var height: float = player.global_position.y
 		_expect(height > -1.0, "The player stands on the floor, not falling (y=%.2f)" % height)
 		await _check_pose_rate(player as Player, level.get_node(^"World") as Node3D)
+		_check_crew_in_shed(level as CompanyRoot)
 
 	_check_summary_screen(level, state)
 
@@ -237,6 +254,132 @@ func _check_game_pose_rate() -> void:
 ## Sends a second `sync` makes at its interval, rounded.
 static func _rate(sync: MultiplayerSynchronizer) -> int:
 	return roundi(1.0 / sync.replication_interval) if sync.replication_interval > 0.0 else 0
+
+
+## D-0316.1: the shed holds the spawn and its gates, not the street, and the root's DayCycle reads its
+## crew from it. The player is moved without a frame in between, so it never falls on the street.
+func _check_crew_in_shed(level: CompanyRoot) -> void:
+	var shed: CompanyShed = level.shed
+	var half: Vector2 = WarehouseStages.floor_size_m(shed.stage) * 0.5
+	_expect(shed.holds(CompanyRoot.SPAWN) and shed.holds(CompanyRoot.SPAWN + Vector3.UP * 10.0),
+		"The shed holds the spawn %s, at any height" % CompanyRoot.SPAWN)
+	# The middle of each gate, in the walls' line: dock south, exit north.
+	var gates: Array[Rect2i] = WarehouseStages.gate_rects(shed.stage)
+	var in_wall: float = half.y + CompanyShed.WALL_THICKNESS * 0.5
+	var dock: Vector3 = shed.cell_to_local(Vector2(gates[0].position) + Vector2(gates[0].size) * 0.5)
+	var door: Vector3 = shed.cell_to_local(Vector2(gates[1].position) + Vector2(gates[1].size) * 0.5)
+	dock.z = in_wall
+	door.z = -in_wall
+	_expect(shed.holds(dock) and shed.holds(door),
+		"...and whoever stands in the dock's gate %s or the exit's %s" % [dock, door])
+	var south := Vector3(0.0, 1.0, half.y + OUT_M)
+	var east := Vector3(half.x + OUT_M, 1.0, 0.0)
+	_expect(not shed.holds(south) and not shed.holds(east),
+		"...but not a point %.0f m out of its floor (%s, %s)" % [OUT_M, south, east])
+	var cycle: DayCycle = level.day_cycle
+	var player: Node3D = level.player
+	_expect(cycle.crew_in_shed.is_valid(), "The root wires DayCycle.crew_in_shed")
+	if not cycle.crew_in_shed.is_valid() or player == null:
+		return
+	var home: Vector3 = player.global_position
+	_expect(bool(cycle.crew_in_shed.call()), "With its player where it spawned (%s) the crew is in the shed" % home)
+	var street := Vector3(home.x, home.y, half.y + OUT_M)
+	player.global_position = street
+	_expect(not bool(cycle.crew_in_shed.call()),
+		"With its player %.0f m out (%s) nobody is in the shed" % [OUT_M, street])
+	player.global_position = home
+	_expect(bool(cycle.crew_in_shed.call()), "...and back in, the crew is in again")
+	_check_seated_and_others(level, player as Player, street)
+	_check_frozen_shed(level, street)
+
+
+## A seated player is where its seat is (Player.reach_origin()), not where its body stayed; another
+## crew member of the same session keeps the shed in; one of another session (its own multiplayer)
+## counts for nothing here. Every node added is freed before returning, with no frame in between.
+func _check_seated_and_others(level: CompanyRoot, player: Player, street: Vector3) -> void:
+	var inside: Callable = level.day_cycle.crew_in_shed
+	var home: Vector3 = player.global_position
+	var seat := Node3D.new()
+	seat.name = "StreetSeat"
+	level.get_node(^"World").add_child(seat)
+	seat.global_position = street
+	player.seat_node_path = player.get_path_to(seat)
+	_expect(not bool(inside.call()) and level.shed.holds(player.global_position),
+		"Seated %.0f m out, with its body still in the shed (%s), nobody is in it" % [OUT_M, player.global_position])
+	player.seat_node_path = NodePath()
+	seat.free()
+	_expect(bool(inside.call()), "...and off the seat, its body in the shed, the crew is in again")
+	var mate := Node3D.new()
+	mate.name = "CrewMate"
+	mate.add_to_group(CompanyRoot.CREW_GROUP)
+	level.get_node(^"World").add_child(mate)
+	mate.global_position = CompanyRoot.SPAWN
+	player.global_position = street
+	_expect(bool(inside.call()), "With the player out and another of the crew in, the crew is in the shed")
+	mate.global_position = street
+	_expect(not bool(inside.call()), "...and with both out, nobody is")
+	mate.free()
+	# Another session in this process: its own SceneMultiplayer, a crew member standing in the shed.
+	var side := Node.new()
+	side.name = "OtherSession"
+	root.add_child(side)
+	set_multiplayer(SceneMultiplayer.new(), side.get_path())
+	var stranger := Node3D.new()
+	stranger.name = "Stranger"
+	stranger.add_to_group(CompanyRoot.CREW_GROUP)
+	stranger.position = CompanyRoot.SPAWN
+	side.add_child(stranger)
+	_expect(stranger.multiplayer != level.multiplayer and level.shed.holds(stranger.global_position)
+		and not bool(inside.call()),
+		"A crew member of another session standing in the shed doesn't count: with the player out nobody is in")
+	set_multiplayer(null, side.get_path())
+	side.free()
+	player.global_position = home
+	_expect(bool(inside.call()), "...and the player back in, the crew is in again")
+
+
+## The shed freezes with the player out during OPERATING and thaws once it is back, as the day's own
+## events. The cycle and the clock run on the test's ticks (_ticks()), and no frame passes, so the
+## root's BusinessTick polls nothing in between. They keep those ticks until the root is freed (the
+## real ones would put the clock back by what was skipped).
+func _check_frozen_shed(level: CompanyRoot, street: Vector3) -> void:
+	var cycle: DayCycle = level.day_cycle
+	var clock: GameClock = level.clock
+	var player: Node3D = level.player
+	var home: Vector3 = player.global_position
+	_base_msec = Time.get_ticks_msec()
+	_skip_msec = 0
+	cycle.ticks = _ticks
+	clock.ticks = _ticks
+	# Past the opening's real seconds (the BusinessTick may have got there already).
+	_skip_msec += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0)
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING and not cycle.is_frozen(),
+		"Past the opening the day is OPERATING with the shed running (got %s, frozen %s)"
+		% [cycle.phase_name(), cycle.is_frozen()])
+	var seq: int = level.net.seq
+	player.global_position = street
+	cycle.poll()
+	var frozen_at: float = cycle.shed_minute()
+	_expect(cycle.is_frozen() and level.net.seq == seq + 1 and is_equal_approx(frozen_at, clock.minute_now()),
+		"With its player out the shed freezes at the world's minute, as one event (frozen %s, seq +%d, %.2f)"
+		% [cycle.is_frozen(), level.net.seq - seq, frozen_at])
+	_skip_msec += roundi(OUT_SECONDS * 1000.0)
+	cycle.poll()
+	_expect(clock.minute_now() > frozen_at + 1.0 and is_equal_approx(cycle.shed_minute(), frozen_at)
+		and level.net.seq == seq + 1,
+		"%.0f s later the world is at %.2f and the shed still reads %.2f (seq +%d)"
+		% [OUT_SECONDS, clock.minute_now(), cycle.shed_minute(), level.net.seq - seq])
+	player.global_position = home
+	cycle.poll()
+	_expect(not cycle.is_frozen() and level.net.seq == seq + 2 and is_equal_approx(cycle.shed_minute(), frozen_at),
+		"Back in, the shed thaws from %.2f (frozen %s, seq +%d, shed %.2f)"
+		% [frozen_at, cycle.is_frozen(), level.net.seq - seq, cycle.shed_minute()])
+
+
+## The test's ticks for the root's DayCycle and GameClock: real time stopped, moved on by _skip_msec.
+func _ticks() -> int:
+	return _base_msec + _skip_msec
 
 
 ## A client loads the host's company from the snapshot; leaving the root puts its own back.

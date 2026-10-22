@@ -83,13 +83,13 @@ func _run() -> void:
 
 	# --- prompts follow the device ---
 	bus.interaction_prompt_changed.emit("Agarrar paquete")
-	_expect(hud.interaction_label.text == "[ E ]  Agarrar paquete", "Keyboard prompt shows only the key")
+	_expect(_prompt_has_keycap(hud, "E", "Agarrar paquete"), "Keyboard prompt shows the key as a keycap (N-983.1)")
 	_expect(hud.interaction_icon.visible
 		and hud.interaction_icon.texture == UiTheme.action_icon(&"grab"),
 		"Interaction prompt shows the matching action icon")
 	settings.using_gamepad = true
 	settings.input_device_changed.emit(true)
-	_expect(hud.interaction_label.text == "[ A ]  Agarrar paquete", "Switching to a gamepad re-renders the prompt")
+	_expect(_prompt_has_keycap(hud, "A", "Agarrar paquete"), "Switching to a gamepad re-renders the prompt")
 	_expect(String(hud.shortcut_label.text).contains("Start"), "Shortcut line switches to gamepad buttons")
 	settings.using_gamepad = false
 	settings.input_device_changed.emit(false)
@@ -129,8 +129,9 @@ func _run() -> void:
 		"The player's HUD scale still applies on top of the window shape")
 	# The prompt sits in the dashboard's flow right above the controls pill,
 	# never on it; the cargo card keeps to its corner, out of that flow.
-	var prompt_index: int = hud.interaction_label.get_index()
-	_expect(hud.interaction_label.get_parent() == hud.dashboard
+	var prompt_index: int = hud.prompt_stack.get_index()
+	_expect(hud.prompt_stack.get_parent() == hud.dashboard
+			and hud.interaction_label.get_parent() == hud.prompt_stack
 			and hud.dashboard.get_child(prompt_index + 1).is_ancestor_of(hud.hint_label),
 		"The interaction prompt stands right above the controls")
 	_expect(not hud.dashboard.is_ancestor_of(hud.cargo_rows_box) and hud.hud_layer.is_ancestor_of(hud.cargo_rows_box),
@@ -197,7 +198,7 @@ func _run() -> void:
 	settings.sound_subtitles = true
 	bus.interaction_prompt_changed.emit("")
 	hud.prompts.refresh_sound_subtitle()
-	_expect(String(hud.interaction_label.text).contains("[vidrio que cruje]"),
+	_expect(hud.subtitle_label.get_parsed_text().contains("[vidrio que cruje]"),
 		"An at-risk fragile trap captions its sound in the context zone")
 	run_manager.cargo[&"accessible_box"]["state"] = 2
 	bus.package_state_changed.emit(&"accessible_box", 2)
@@ -364,6 +365,15 @@ func _run() -> void:
 	quit(failures)
 
 
+## The prompt draws its key as a keycap (a coloured chip around it, like the
+## controls bar), not as "[ E ]" text: the key and the action are both there.
+func _prompt_has_keycap(hud: CanvasLayer, key: String, action: String) -> bool:
+	var raw: String = String(hud.interaction_label.text)
+	var shown: String = hud.interaction_label.get_parsed_text()
+	return raw.contains("[bgcolor=") and shown.contains(" %s " % key) and shown.contains(action) \
+		and not shown.contains("[ %s ]" % key)
+
+
 func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
@@ -394,7 +404,8 @@ func _expect_bottom_text_legible(hud: CanvasLayer) -> void:
 	var default_scale: float = root.get_node("GameSettings").HUD_SCALE_DEFAULT
 	var layer_scale: float = hud.call(&"layout_scale", default_scale, Vector2(1280, 720))
 	var sizes: Dictionary = {
-		"interaction_label": (hud.interaction_label as Label).get_theme_font_size(&"font_size"),
+		"interaction_label": hud.interaction_label.get_theme_font_size(&"normal_font_size"),
+		"subtitle_label": hud.subtitle_label.get_theme_font_size(&"normal_font_size"),
 		"hint_label": (hud.hint_label as RichTextLabel).get_theme_font_size(&"normal_font_size"),
 		"shortcut_label": (hud.shortcut_label as RichTextLabel).get_theme_font_size(&"normal_font_size"),
 	}

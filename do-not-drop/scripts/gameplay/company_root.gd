@@ -41,8 +41,10 @@ extends Node3D
 ## The day (D-0203): the root gives every peer a GameClock and a DayCycle child, both attached to
 ## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
 ## the phases and the clock then run by themselves (DayCycle, polled by the host's BusinessTick,
-## D-0232). The shed's area is not wired as DayCycle.crew_in_shed yet, so the shed never freezes
-## here.
+## D-0232). DayCycle.crew_in_shed is _crew_in_shed() (D-0316.1): the shed's minute stands still (S4)
+## while none of the crew stands in it (CompanyShed.holds(): the floor, the gates in the walls'
+## line included), never before anybody is spawned. Only the host's poll reads it; the freeze
+## reaches every peer as the day_phase event it already was.
 ##
 ## Steam (D-2009): what the company shows, CompanyLobbyMeta's lobby data (host) and rich presence,
 ## goes to NetworkManager's steam_presence (NetSteamPresence) when the world comes up, on every
@@ -56,7 +58,9 @@ extends Node3D
 ## The crew split between the shed and the street (D-0316): the "Interest" child (CompanyInterest,
 ## every peer) sends each company vehicle and loose box only to the players near it (the host still
 ## simulates all of them), and the cells load around every player and vehicle on the host but only
-## around its own player on a client (CompanyInterest.cell_anchors()).
+## around its own player on a client (CompanyInterest.cell_anchors()). Every peer's player is a node
+## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
+## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
 ## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the shed's gate and decides
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
@@ -261,7 +265,8 @@ func _add_net(state: COMPANY_STATE) -> void:
 
 
 ## The day's clock and phases, hooked to CompanyNet on every peer in the frame it is added: the
-## snapshot to the peers already up goes out deferred, after this.
+## snapshot to the peers already up goes out deferred, after this. The cycle asks the world for the
+## opening notice and for who is in the shed.
 func _add_day(state: COMPANY_STATE) -> void:
 	clock = GameClock.new()
 	clock.name = "GameClock"
@@ -272,6 +277,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	add_child(day_cycle)
 	day_cycle.attach(net, clock, state)
 	day_cycle.opening_notice = _opening_notice
+	day_cycle.crew_in_shed = _crew_in_shed
 	_add_business_tick()
 
 
@@ -478,6 +484,31 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 ## money is the host's, replicated, so every peer reads the same.
 func _opening_notice() -> String:
 	return Bankruptcy.opening_text(_shown_company())
+
+
+## Host (DayCycle.crew_in_shed, S4): someone of this world's crew is in the shed (CompanyShed.holds()),
+## so the shed's minute runs. A player is where its reach starts (Player.reach_origin(), as
+## CompanyNet's rule 4): its seat while seated, since the body stays where it sat down and only its
+## visual rides along, and on the host a remote one's newest pose. Only the players of this root's
+## multiplayer count, as in CompanyInterest; one whose peer left is out of the tree, or on its way
+## out, and doesn't. With no shed, or nobody spawned yet (the world just up), it is yes: nothing
+## freezes before there is someone to leave. Read when called, so it doesn't matter that the shed and
+## the crew are added after the day.
+func _crew_in_shed() -> bool:
+	if not is_inside_tree() or shed == null or not is_instance_valid(shed) or not shed.is_inside_tree():
+		return true
+	var anyone: bool = false
+	for node: Node in get_tree().get_nodes_in_group(CREW_GROUP):
+		var member := node as Node3D
+		if member == null or not member.is_inside_tree() or member.is_queued_for_deletion():
+			continue
+		if member.multiplayer != multiplayer:
+			continue
+		var at: Vector3 = (member as Player).reach_origin() if member is Player else member.global_position
+		if shed.holds(at):
+			return true
+		anyone = true
+	return not anyone
 
 
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on

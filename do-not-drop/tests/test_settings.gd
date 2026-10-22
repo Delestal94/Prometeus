@@ -92,6 +92,7 @@ func _run() -> void:
 	settings.opaque_gel = true
 	settings.menu_text_scale = 1.5
 	settings.sound_subtitles = true
+	settings.subtitle_scale = 1.5
 	var accessibility_config := ConfigFile.new()
 	accessibility_config.load(original_path)
 	_expect(bool(accessibility_config.get_value("player", "colorblind_palette", false)),
@@ -102,6 +103,14 @@ func _run() -> void:
 		"The menu text scale is saved independently from the HUD scale")
 	_expect(bool(accessibility_config.get_value("player", "sound_subtitles", false)),
 		"The sound-subtitle preference is saved")
+	_expect(is_equal_approx(float(accessibility_config.get_value("player", "subtitle_scale", 0.0)), 1.5),
+		"The subtitle size is saved (N-983.3)")
+	settings.subtitle_scale = 9.0
+	_expect(is_equal_approx(settings.subtitle_scale, 1.5), "Subtitle size never goes past 1.5x")
+	settings.subtitle_scale = 0.1
+	_expect(is_equal_approx(settings.subtitle_scale, 1.0), "Subtitle size never goes below normal")
+	settings.subtitle_scale = 1.2
+	_expect(is_equal_approx(settings.subtitle_scale, 1.25), "Subtitle size snaps to one of the three steps")
 	settings.menu_text_scale = 1.4
 	_expect(is_equal_approx(settings.menu_text_scale, 1.5),
 		"Menu text scale snaps to one of the three supported sizes")
@@ -131,6 +140,7 @@ func _run() -> void:
 	settings.opaque_gel = false
 	settings.menu_text_scale = 1.0
 	settings.sound_subtitles = false
+	settings.subtitle_scale = 1.0
 	settings.call(&"set_language", "es")
 	settings.impact_effects = true
 	settings.master_volume = 0.35
@@ -152,6 +162,7 @@ func _run() -> void:
 	settings.opaque_gel = false
 	settings.menu_text_scale = 1.0
 	settings.sound_subtitles = false
+	settings.subtitle_scale = 1.0
 
 	await create_timer(0.1).timeout
 	if failures == 0:
