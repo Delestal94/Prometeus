@@ -122,3 +122,16 @@ si el nodo no lo tiene (los falsos de los tests), leen su transformada como ante
 
 Prueba: `tests/test_fleet_motion.gd` (un vehículo falso sin ruedas y la furgoneta mueven las
 cajas igual con la misma aceleración, ±5 %).
+
+## Flota de la expansión (Modo Empresa)
+
+Lo de arriba es lo que necesita la **escena** de un vehículo para manejarse y verse bien. En el
+modo empresa, además, cada vehículo tiene una definición de datos (`VehicleDefinition`,
+`do-not-drop/scripts/gameplay/fleet/vehicle_definition.gd`, un `.tres` en `do-not-drop/data/vehicles/`)
+y entra a la flota de la empresa comprándolo en la tienda (`data/shop/`, `kind = vehicle`). Los
+campos, el catálogo y los tests están en [`agregar-contenido-expansion.md`](agregar-contenido-expansion.md),
+sección "Vehículo de la flota".
+
+La bici y el carrito (grupo 12, fase F2, `docs/expansion-distritos/12-flota-bici-carrito.md`) todavía
+no existen; cuando se construyan siguen este mismo camino (escena + `FleetMotion` + definición +
+ítem de tienda), sin una guía aparte. Actualizá esta sección con lo que cambie al hacerlas.
