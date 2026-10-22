@@ -188,6 +188,9 @@ const CART_MAX_UNITS: int = 6
 const CART_PUSH_STEP_M: float = 1.2
 ## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
 const CART_CLEARANCE_M: float = 0.7
+## How close two picking carts may stand, centre to centre on the floor (m, D-0610.c): past the diagonal of the
+## 1.0 x 0.6 m platform, so two carts never overlap whichever way they face.
+const CART_SPACING_M: float = 1.2
 
 # --- Orders ---
 ## Shipping fee added to an order's pay, by zone id (unknown zones pay 0).
