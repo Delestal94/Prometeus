@@ -53,7 +53,7 @@
 | D-0138 | ✅ Ideas de logros de Steam de la expansión (30) | estratega-steam | low | lista en `docs/marketing/` |
 | D-0139 | ✅ Encaje de la expansión en la página de Steam y el tráiler (qué promete y qué no) | estratega-steam | medium | nota en `docs/marketing/` |
 | D-0140 | Revisión de `abogado-del-diablo` del diseño completo una vez escrito D-0101 a D-0139 | abogado-del-diablo | high | informe con lista SIMPLIFICAR/REHACER y tareas ajustadas |
-| D-0151 | Ayudas del modo solo de `diseno/roles-tripulacion.md` §6.2: pausa de verdad sin peers, pedidos que entran antes con 1 jugador, pedido automático al proveedor al cierre | constructor-progresion | high | `test_company_solo_assists` verde; el bot de D-2024 vive del pedido automático |
+| D-0151 | ✅ Ayudas del modo solo de `diseno/roles-tripulacion.md` §6.2: pausa de verdad sin peers, pedidos que entran antes con 1 jugador, pedido automático al proveedor al cierre | constructor-progresion | high | `test_company_solo_assists` verde; el bot de D-2024 vive del pedido automático |
 
 ## Agentes y proceso
 

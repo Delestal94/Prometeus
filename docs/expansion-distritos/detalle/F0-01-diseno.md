@@ -375,6 +375,7 @@ Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
 **Hecho cuando:** la nota existe y la rutina de lanzamiento puede pasar la página a la versión B sin preguntar qué prometer.
 
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
+**[x] Hecho (2026-10-22, PR #723)** — pausa sin peers, pedidos antes de las 15:00 solo, pedido automático al cierre y carrito precargado; falta ver al bot de D-2016 cerrar el día 2 ([revisar](../revisar/D-0151.3c.md)).
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
 - [x] D-0151.1 (2026-10-22) Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
@@ -384,16 +385,16 @@ Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
   `EventBus.pause_requested` la activan, `NetworkManager.roster_changed` (antes del snapshot) la desactiva.
 - [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
-- [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el
-  2026-10-22). **D-0151.3b hecha (2026-10-22):** al pasar a CLOSING (20:00 o cierre anticipado), si no hay camión
-  para mañana, el host manda el sugerido una vez por día (`SupplierAutoOrder` puro + `SupplierAutoOrderHook`, que
-  sigue `event_applied`), por el mismo `ask()` que un pedido de jugador y como evento `ORDERED` con `peer` 0
-  (`CompanySupplierNet.AUTO_PEER`); el resumen del día dice "Pedido automático al proveedor: N unidades". Falta
-  **D-0151.3c**: el carrito que se abre precargado con el sugerido menos lo ya pedido. Lo que decía D-0151.3b: el carrito precargado, **menos lo ya pedido para mañana** con la línea "ya pedido: X"
-  ([portapapeles.md](../diseno/portapapeles.md) §3), y el envío del host al pasar a CLOSING con su línea en el
-  resumen) (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
-  producto, recortado desde el de menos unidades hasta `plata − RENT_PER_DAY − SOLO_ORDER_CASH_RESERVE`; el carrito
-  se abre precargado; al pasar a CLOSING, si no hay pedido para mañana, el host lo manda y lo anota el resumen.
+- [x] D-0151.3 (2026-10-22) Pedido sugerido: la parte pura (`SupplierOrderCart.suggested()` y `ordered_units()`);
+  **D-0151.3b** al pasar a CLOSING (20:00 o cierre anticipado), si no hay camión para mañana, el host manda el
+  sugerido una vez por día (`SupplierAutoOrder` puro + `SupplierAutoOrderHook`, que sigue `event_applied`), por el
+  mismo `ask()` que un pedido de jugador y como evento `ORDERED` con `peer` 0 (`CompanySupplierNet.AUTO_PEER`); el
+  resumen del día dice "Pedido automático al proveedor: N unidades". **D-0151.3c** el carrito del tablero
+  (`SupplierBoard.preload_cart()`) se abre, la primera vez de cada día y si está vacío, con
+  `SupplierAutoOrder.cart_preload()`: el sugerido menos lo ya pedido para mañana (esas unidades cuentan como stock y
+  su costo sale del presupuesto antes del recorte), y la pantalla dice "Ya pedido para mañana: N unidades"
+  ([portapapeles.md](../diseno/portapapeles.md) §3). Los pedidos "de hoy" los anota cada peer al verlos entrar
+  (`SupplierAutoOrder.note_today()`, compartido con el hook).
 **Test** `test_company_solo_assists`: la pausa sin peers frena `minute_now()` y no la despausa el menú en SUMMARY;
 con 1 jugador ningún pedido llega después de las 15:00 y con 2 sí puede; el sugerido de un día conocido da las
 unidades esperadas y respeta la reserva; un cierre sin pedido deja uno en `SupplierSchedule` para mañana.
