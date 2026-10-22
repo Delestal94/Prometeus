@@ -99,10 +99,11 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyShopNet.BOUGHT, CompanyTableNet.RESTOCKED, CompanyTableNet.DISCARDED, CompanyColdNet.SPOILED,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
-## publish_wallet()); never units_moved.
+## publish_wallet(), the supplier order of the day's close: SupplierAutoOrderHook); never units_moved.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.DEPARTED,
 	CompanyPallets.FORK, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
-	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED, WALLET, CompanyColdNet.SPOILED]
+	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED, CompanySupplierNet.ORDERED, WALLET,
+	CompanyColdNet.SPOILED]
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a later snapshot covers them anyway.
