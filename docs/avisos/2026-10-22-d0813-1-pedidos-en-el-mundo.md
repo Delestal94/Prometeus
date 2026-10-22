@@ -6,6 +6,8 @@
 
 - **Sin cambio de protocolo** (`PROTOCOL_VERSION` no se tocó): ningún RPC, `kind` de `CompanyNet`, forma de datos ni
   sincronizador nuevo o distinto. `network_manager.gd` y `modules/net_session/` no se tocaron.
+- **`scripts/core/company/company_net.gd`**: solo el comentario de `event_applied` (también lo escuchan reglas del
+  host, como ya decía el de arriba).
 - **`scripts/core/event_bus.gd`** (zona compartida): solo el comentario de `order_added(order_id: StringName)`, que
   **ahora se emite**: `CompanyRoot` lo emite en cada peer, una vez por pedido y en el orden del host, desde
   `CompanyNet.event_applied` (evento `order_added`); un snapshot no lo emite, un vencimiento tampoco. La firma no
@@ -14,9 +16,11 @@
   y el `BusinessTick` suma el paso `orders` (después de `day_cycle`); nuevo `order_crew` (0 = la tripulación de la
   sesión) para que el bot del día planee para `--players`. Helper nuevo `CompanyDayOrders`
   (`scripts/core/company/company_day_orders.gd`).
-- **Tablero de stock** (`scripts/gameplay/stock_board.gd`, solo el comentario; el cambio está en `CompanyRoot`): las
+- **Tablero de stock** (`scripts/gameplay/stock_board.gd` y `CompanyRoot`): las
   marcas "Faltan N" ahora salen del libro que comparten todos (`CompanyNet.orders.book`), así que un cliente ve las
-  mismas marcas que el host (antes no veía ninguna).
+  mismas marcas que el host (antes no veía ninguna), y solo de los pedidos del día (`StockBoard.only_today`, nuevo;
+  `StockBoard.context()` suma un parámetro opcional `day`, sin romper a quien lo llama). `OrderGenerator` suma
+  `id_prefix(day)` e `is_of_day(id, day)`.
 - Agregados sin cambiar firmas: `OrderBook.prune_closed()` y `CompanyOrdersNet.prune_closed()`; `DayCycle.apply_phase()`
   poda los pedidos cerrados al abrir un día nuevo. `CompanyOrdersNet.MAX_ORDERS` baja de 4096 a 256
   (`docs/decisiones/2026-10-22-pedidos-en-el-mundo.md`).

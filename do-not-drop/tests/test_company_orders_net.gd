@@ -35,7 +35,7 @@ extends SceneTree
 ## Expected in the log: CompanyNet's error for each event the host refuses to publish ("could not apply
 ## its own"), Godot's for the forged _apply_event ("RPC '_apply_event' is not allowed"), CompanyNet's
 ## warning for each event the client refuses ("does not fit this peer's state") and CompanyOrdersNet's
-## for the planned order it drops ("never fits").
+## for the planned order it drops ("never fits") and for the full book ("is full").
 
 const PORT: int = 24681
 const SEED: int = 20261022

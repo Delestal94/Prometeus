@@ -9,9 +9,11 @@ extends Node
 ##
 ## The "missing for pending orders" marks (StockAlert) read the order book every peer shares
 ## (CompanyNet.orders.book, D-0813.1), so a client marks the same as the host; without a book (book_of
-## unset or null) the list has no marks. The units already ordered from a supplier count as "on the
-## way" only when the supplier calendar holds real orders: the stand-in calendar
-## (CompanyRoot._seed_stand_in_calendar) brings nothing, so it is not counted.
+## unset or null) the list has no marks. With only_today (CompanyRoot) only today's pending orders
+## count: nothing closes an order of that book yet (D-0815.b, D-0302), so past days' pile up there.
+## The units already ordered from a supplier count as "on the way" only when the supplier calendar
+## holds real orders: the stand-in calendar (CompanyRoot._seed_stand_in_calendar) brings nothing, so
+## it is not counted.
 
 const ACTION_TOGGLE: StringName = &"company_stock"
 
@@ -19,6 +21,8 @@ var panel: StockPanel
 var net: CompanyNet
 ## Returns the OrderBook to read (CompanyRoot: the shared one, CompanyNet.orders.book), or null.
 var book_of: Callable = Callable()
+## Only the orders of the company's day (OrderGenerator.is_of_day()) count for the marks.
+var only_today: bool = false
 var schedule: SupplierSchedule
 ## False while the calendar is the stand-in one: nothing is "on the way" then.
 var real_calendar: bool = false
@@ -47,13 +51,18 @@ static func ensure_action() -> void:
 
 
 ## The data StockPanel shows, from what this peer holds. `incoming` is product -> units ordered from a
-## supplier for the days from `from_day` on (counted only when `real_calendar`).
+## supplier for the days from `from_day` on (counted only when `real_calendar`). With a `day` over 0 only
+## that day's pending orders count (OrderGenerator.is_of_day()).
 static func context(
-	inventory: Inventory, book: OrderBook, incoming: Dictionary, defs: Dictionary
+	inventory: Inventory, book: OrderBook, incoming: Dictionary, defs: Dictionary, day: int = 0
 ) -> Dictionary:
 	var shortages: Array[Dictionary] = []
 	if inventory != null and book != null:
-		shortages = StockAlert.shortages(inventory, book.open_orders(), incoming)
+		var pending: Array[Dictionary] = []
+		for order: Dictionary in book.open_orders():
+			if day <= 0 or OrderGenerator.is_of_day(order["id"], day):
+				pending.append(order)
+		shortages = StockAlert.shortages(inventory, pending, incoming)
 	return {"inventory": inventory, "shortages": shortages, "products": defs}
 
 
@@ -118,7 +127,8 @@ func _context() -> Dictionary:
 	var incoming: Dictionary = {}
 	if real_calendar and net != null and net.company != null:
 		incoming = incoming_from(schedule, int(net.company.get("day")))
-	return context(net.inventory if net != null else null, book, incoming, products)
+	var today: int = int(net.company.get("day")) if only_today and net != null and net.company != null else 0
+	return context(net.inventory if net != null else null, book, incoming, products, today)
 
 
 func _refresh() -> void:

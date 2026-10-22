@@ -766,10 +766,11 @@ func _add_builder() -> void:
 	builder.setup(shed, net, player)
 
 
-## The stock list (D-0612.b): I / d-pad right opens it on any peer. It marks what the pending orders
+## The stock list (D-0612.b): I / d-pad right opens it on any peer. It marks what today's pending orders
 ## are missing from the book every peer shares (CompanyNet.orders.book, D-0813.1; read only), so a
-## client marks the same as the host; the calendar is the stand-in until D-0603 feeds it, so nothing
-## counts as on the way yet.
+## client marks the same as the host; only today's (only_today) until D-0815.b and D-0302 close orders
+## there, or the past days' would pile up. The calendar is the stand-in until D-0603 feeds it, so
+## nothing counts as on the way yet.
 func _add_stock_board() -> void:
 	if net == null:
 		return
@@ -781,6 +782,7 @@ func _add_stock_board() -> void:
 	stock_board.real_calendar = false
 	stock_board.book_of = func() -> OrderBook:
 		return net.orders.book if net != null and is_instance_valid(net) else null
+	stock_board.only_today = true
 	stock_board.player_of = func() -> Node:
 		return player
 	stock_board.busy = func() -> bool:

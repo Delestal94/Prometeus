@@ -19,9 +19,14 @@ extends SceneTree
 ##   whole plan is in both books, the orders past due late; each world tells its own EventBus (a stand-in
 ##   per peer) order_added once per order, in the host's order, and nothing for an expiry or for a
 ##   snapshot sent again;
+## - poll() with the book full (MAX_ORDERS) keeps the order that came in planned and still sends the
+##   expiries (a due order goes LATE);
 ## - the next day's OPENING drops the closed orders on both peers alike (three closed by hand on both
-##   books, as the events of D-0815.b and D-0302 will) and keeps every other order of the day before; the
-##   new day's orders come in on top, the same on both, each told once on each peer.
+##   books, as the events of D-0815.b and D-0302 will) and keeps every other order of the day before; a
+##   third peer that joined during the summary (its snapshot with the closed orders) drops the same ones
+##   and ends with the same book; the new day's orders come in on top, the same on every peer, each told
+##   once on each, none of the late peer's snapshot.
+## Expected in the log: CompanyOrdersNet's warning for the full book ("is full").
 
 const PORT: int = 24683
 const DIR: String = "user://test_company_orders_world"
@@ -36,6 +41,12 @@ var _failures: int = 0
 ## moved on by hand.
 var _base_msec: int = 0
 var _skip_msec: int = 0
+## The guest that joins during the summary (_join_late()), torn down with the others.
+var _late_side: Node
+var _late_peer: ENetMultiplayerPeer
+var _late_root: OrdersRoot
+var _late_state: Node
+var _late_bus: PeerBus
 
 
 ## A stand-in EventBus for one peer: the signals CompanyRoot touches, and the orders it was told.
@@ -72,6 +83,7 @@ func _run() -> void:
 	RpcGuard.reset()
 	_check_open_zones()
 	_check_prune()
+	await _check_full_book()
 	await _check_solo()
 	await _check_network()
 	RpcGuard.reset()
@@ -122,6 +134,28 @@ func _check_prune() -> void:
 		% [gone, kept])
 	_expect(book.prune_closed().is_empty() and book.size() == 4, "...and a second prune drops nothing")
 	book.free()
+
+
+## poll() with the book full (MAX_ORDERS) brings no order in, keeps it planned and still sends the
+## expiries: a due order goes LATE.
+func _check_full_book() -> void:
+	var net := CompanyNet.new()
+	net.name = "FullNet"
+	root.add_child(net)
+	var full: Array = [_fresh_order(&"due_early", 500)]
+	for index: int in range(CompanyOrdersNet.MAX_ORDERS - 1):
+		full.append(_fresh_order(StringName("f_%d" % index), 900))
+	_expect(net.orders.put_snapshot({"orders": full, "now_min": 0}), "A book of MAX_ORDERS orders fits")
+	net.orders.plan([_fresh_order(&"waiting", 600)])
+	var sent: int = net.orders.poll(net, 800)
+	var book: OrderBook = net.orders.book
+	_expect(sent == 1 and book.state_of(&"due_early") == Order.STATE_LATE and book.state_of(&"f_0") == Order.STATE_OPEN,
+		"With the book full a due order still goes late (sent %d, %s)" % [sent, book.state_of(&"due_early")])
+	_expect(not book.has(&"waiting") and net.orders.planned().size() == 1
+		and book.size() == CompanyOrdersNet.MAX_ORDERS,
+		"...and the order that came in waits in the plan (planned %d)" % net.orders.planned().size())
+	net.queue_free()
+	await process_frame
 
 
 # --- Solo ---
@@ -239,17 +273,21 @@ func _check_network() -> void:
 		host.business_tick.set_process(true)
 		await _play_day_one(host, guest, host_bus, client_bus, client_id)
 		await _play_day_two(host, guest, host_bus, client_bus)
-	guest.queue_free()
-	host.queue_free()
+	for level: Node in [guest, _late_root, host]:
+		if level != null:
+			level.queue_free()
 	await process_frame
-	client.close()
-	server.close()
+	for peer: ENetMultiplayerPeer in [client, _late_peer, server]:
+		if peer != null:
+			peer.close()
 	await process_frame
-	for side: Node in [host_side, client_side]:
-		set_multiplayer(null, side.get_path())
-		side.free()
-	for node: Node in [host_state, client_state, host_bus, client_bus]:
-		node.free()
+	for side: Node in [host_side, client_side, _late_side]:
+		if side != null:
+			set_multiplayer(null, side.get_path())
+			side.free()
+	for node: Node in [host_state, client_state, host_bus, client_bus, _late_state, _late_bus]:
+		if node != null:
+			node.free()
 
 
 func _play_day_one(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, client_bus: PeerBus,
@@ -309,12 +347,19 @@ func _play_day_two(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, clien
 	var summed: bool = await _wait_for(func() -> bool:
 		return host.day_cycle.phase() == DayCycle.Phase.SUMMARY and guest.net.seq == host.net.seq)
 	_expect(summed, "Past 20:00 the day closes on both peers (host %s)" % host.day_cycle.phase_name())
+	var late_guest: OrdersRoot = await _join_late(host)
+	_expect(late_guest != null and late_guest.day_cycle.phase() == DayCycle.Phase.SUMMARY
+		and late_guest.net.orders.book.has(closed[0]),
+		"A guest that joins during the summary gets the book, closed orders and all, in the snapshot")
 	_expect(host.day_cycle.next_day() and await _synced(host, guest), "The host opens day 2")
 	var left: Array = (host.net.orders.book.to_dict()["orders"] as Array).map(
 		func(o: Dictionary) -> StringName: return o["id"])
 	_expect(left == kept, "Day 2's opening drops the three closed orders and keeps the rest of day 1 (%d of %d)"
 		% [left.size(), kept.size() + 3])
 	_expect_books(host, guest, "after day 2's opening")
+	if late_guest != null:
+		_expect(await _synced(host, late_guest), "The late guest follows day 2's opening")
+		_expect_books(host, late_guest, "for the late guest after day 2's opening")
 	var plan: Array[Dictionary] = host.net.orders.planned()
 	_expect(not plan.is_empty() and str(plan[0]["id"]).begins_with("d2_"), "Day 2 has its own plan")
 	var told: int = host_bus.added.size()
@@ -328,6 +373,30 @@ func _play_day_two(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, clien
 	_expect_books(host, guest, "on day 2")
 	_expect(host_bus.added.slice(told) == arrived and client_bus.added == host_bus.added,
 		"...each told once on each peer (host %d, client %d)" % [host_bus.added.size(), client_bus.added.size()])
+	if late_guest != null:
+		_expect_books(host, late_guest, "for the late guest on day 2")
+		_expect(_late_bus.added == arrived,
+			"The late guest was told day 2's orders only, none of its snapshot's (%s)" % [_late_bus.added])
+
+
+## A third peer joins now (during the summary): its world comes up and the host sends it the snapshot, as
+## when its world reports itself up. Null if it doesn't get there.
+func _join_late(host: OrdersRoot) -> OrdersRoot:
+	_late_side = _side("LateSide")
+	_late_peer = ENetMultiplayerPeer.new()
+	if _late_peer.create_client("127.0.0.1", PORT) != OK:
+		return null
+	_late_side.multiplayer.multiplayer_peer = _late_peer
+	_late_state = _new_state()
+	_late_bus = PeerBus.new()
+	_late_root = _peer_root(_late_state, _late_bus)
+	_late_side.add_child(_late_root)
+	var connected: bool = await _wait_for(func() -> bool:
+		return _late_side.multiplayer.get_peers().has(1) and host.multiplayer.get_peers().size() == 2)
+	if not connected:
+		return null
+	host.net.send_snapshot(_late_side.multiplayer.get_unique_id())
+	return _late_root if await _synced(host, _late_root) else null
 
 
 # --- Helpers ---

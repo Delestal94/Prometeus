@@ -4,7 +4,8 @@ extends SceneTree
 ## The stock list in the company's world (expansion D-0612.b), StockBoard:
 ## - the action (I / gamepad d-pad right) is registered once with both devices;
 ## - context() marks the products the host's pending orders are short of, and a peer without the
-##   order book gets the list with no marks;
+##   order book gets the list with no marks; with a day (only_today, as CompanyRoot sets it, D-0813.1) only
+##   that day's orders count (ids d<day>_, OrderGenerator.is_of_day());
 ## - incoming_from() adds up the supplier calendar from a day on; the board counts it as "on the way"
 ##   only with a real calendar (the stand-in one brings nothing);
 ## - open() shows the panel, frees the mouse and turns the local player's input off; close() gives both
@@ -72,6 +73,41 @@ func _test_context() -> void:
 	var no_book: Dictionary = StockBoard.context(_inventory(), null, {}, {})
 	_expect(no_book["shortages"].is_empty(), "without the book there are no marks")
 	_expect(StockBoard.context(null, null, {}, {})["inventory"] == null, "no inventory yet is passed on as null")
+	_test_only_today()
+
+
+## D-0813.1: the shared book keeps the pending orders of past days (nothing closes them yet), so with a
+## day only that day's count: one hen short for day 2's order, not five with day 1's too.
+func _test_only_today() -> void:
+	var book := OrderBook.new()
+	for line: Array in [[&"d1_o01", 4], [&"d2_o01", 2], [&"d12_o01", 7]]:
+		var items: Array = [{"product": &"hen", "qty": line[1]}]
+		var order: Dictionary = Order.make(line[0], "Ana", &"centro", &"h1", items, 0, {})
+		_expect(book.add(order), "order %s goes in the book" % line[0])
+	var today: Array = StockBoard.context(_inventory(), book, {}, {}, 2)["shortages"]
+	var every: Array = StockBoard.context(_inventory(), book, {}, {})["shortages"]
+	_expect(today.size() == 1 and today[0]["missing"] == 1,
+		"day 2 counts only its own order: 1 hen short (got %s)" % [today])
+	_expect(every.size() == 1 and every[0]["missing"] == 12,
+		"with no day every order counts: 12 short (got %s)" % [every])
+	var made: Array = _make_board(book, null)
+	var board: StockBoard = made[0]
+	var net: CompanyNet = made[1]
+	var company: Node = (load("res://scripts/core/company/company_state.gd") as GDScript).new()
+	company.set(&"day", 2)
+	net.company = company
+	board.only_today = true
+	var marks: Array = board.call(&"_context")["shortages"]
+	_expect(marks.size() == 1 and marks[0]["missing"] == 1,
+		"a board with only_today counts the company's day only (got %s)" % [marks])
+	board.only_today = false
+	marks = board.call(&"_context")["shortages"]
+	_expect(marks.size() == 1 and marks[0]["missing"] == 12, "...and every day without it (got %s)" % [marks])
+	net.company = null
+	board.free()
+	net.free()
+	company.free()
+	book.free()
 
 
 func _test_incoming() -> void:
@@ -163,3 +199,4 @@ func _test_root_has_board() -> void:
 	var source: String = FileAccess.get_file_as_string("res://scripts/gameplay/company_root.gd")
 	_expect("stock_board = StockBoard.new()" in source and "_add_stock_board()" in source,
 		"CompanyRoot builds the board on every peer")
+	_expect("stock_board.only_today = true" in source, "CompanyRoot's board counts today's orders only (D-0813.1)")

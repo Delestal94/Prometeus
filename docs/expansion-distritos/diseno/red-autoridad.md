@@ -458,13 +458,16 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   libro suelta los entregados, fallados y cancelados (todos de días anteriores) y se queda con los abiertos, armados,
   en camino y atrasados. Determinista porque fase, día y libro son los mismos en todos en cada `seq` (eventos y
   snapshot), sin `kind` nuevo ni cambio de protocolo. `MAX_ORDERS` baja a 256. `CompanyTrips` y `OrderBoxLink` siguen
-  con su libro (el bot del día le copia los pedidos al de `CompanyTrips`); el tablero de stock lee el compartido. Test:
-  `test_company_orders_world`.
+  con su libro (el bot del día le copia los pedidos al de `CompanyTrips`); el tablero de stock lee el compartido, solo
+  los pedidos del día (`only_today`, por el id `d<día>_`). Con el libro lleno `poll()` no trae pedidos pero sigue
+  mandando los vencimientos. Test: `test_company_orders_world`.
 - **Pendiente:**
   - lo que `CompanyTrips` hace directo sobre su libro (`mark_out` al salir, `close` al volver) y el armado
     (`order_packed`) pasan a eventos con las filas 15, 17, 19 y 20 (D-0715.b, D-0716, D-0302, D-0815): un cambio
     del libro compartido que no sea evento queda solo en el host hasta el próximo snapshot (hoy no pasa: ningún
-    vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro;
+    vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro. **El PR que traiga
+    esos eventos sube `PROTOCOL_VERSION`**: con pedidos que se cierran, la poda del `OPENING` cambia lo que hace un
+    `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
   - guardar el libro con el día (D-0206). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la

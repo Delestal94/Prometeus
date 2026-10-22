@@ -50,8 +50,8 @@ extends Node
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
 ## made there is refused (it would number its event before the one being applied).
 
-## Every peer, the host too, right after an event changed the state here. Presentation (HUD,
-## sounds, the units in a player's hands) listens to this; the simulation never needs it to.
+## Every peer, the host too, right after an event changed the state here: presentation (HUD, sounds)
+## and the host's rules that react to a fact (see above: save_closed_day, _plan_orders) listen to this.
 signal event_applied(seq: int, kind: StringName, data: Dictionary)
 ## The requester only: the host refused request `rid` (what request() returned), and why
 ## (one of the REASON_* names). Only a notice: nothing changed anywhere.
