@@ -255,6 +255,17 @@ const TIP_REPUTATION: float = 1.0
 ## Reputation a delivery with nothing wrong with it earns on top of its pay (D-0815); the tip adds
 ## its own TIP_REPUTATION when it was also quick.
 const CLEAN_DELIVERY_REPUTATION: float = 0.5
+## The customer's rating of a delivery, 1 to 5 stars (D-0816, OrderRating). Only information for now:
+## it moves no money and no reputation. A clean delivery earns 4 stars, 5 when it also tipped (quick);
+## otherwise the worst failure decides: a wrong box 1, a broken product 2, lateness or a label of
+## another order 3.
+const STARS_MIN: int = 1
+const STARS_MAX: int = 5
+const STARS_CLEAN_SLOW: int = 4
+const STARS_WRONG_BOX: int = 1
+const STARS_BROKEN: int = 2
+const STARS_LATE: int = 3
+const STARS_MISLABELED: int = 3
 ## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
 const TRIP_MERIT_INTACT: int = 10
 
