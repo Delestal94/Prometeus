@@ -387,7 +387,7 @@ unidades esperadas y respeta la reserva; un cierre sin pedido deja uno en `Suppl
 **Hecho cuando:** el test pasa y el bot de 1 jugador (D-2016) cierra el día 2 con stock comprado sin tocar el tablero.
 
 ### D-0141 · Agente `constructor-negocio` — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — `.claude/agents/constructor-negocio.md` (Sonnet 5.5, `high`, como los demás constructores) para galpón, stock, armado, pedidos puestos en el galpón, empleados y automatización; listado en `CLAUDE.md`, en la tabla de `construccion.md` §3 y en los carriles 2 y 3 de `desarrollador.md`.
+**[x] Hecho (2026-10-22, PR #724)** — `.claude/agents/constructor-negocio.md` (Sonnet 5.5, `high`, como los demás constructores) para galpón, stock, armado, pedidos puestos en el galpón, empleados y automatización; listado en `CLAUDE.md`, en la tabla de `construccion.md` §3 y en los carriles 2 y 3 de `desarrollador.md`.
 **Depende de:** D-0144 (dominios de `business/`, `fleet/`, `districts/`)
 **Qué:** el agente que construye `scripts/gameplay/business/` y sus vistas, con el mapa de archivos por
 familia, las reglas del modo (host autoritativo, simulación aparte, números en `CompanyTuning`, guardado
