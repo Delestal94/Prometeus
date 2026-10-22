@@ -1443,3 +1443,17 @@ UI_ORDER_STARS_2,Mala,Bad
 UI_ORDER_STARS_3,Regular,Fair
 UI_ORDER_STARS_4,Buena,Good
 UI_ORDER_STARS_5,Excelente,Excellent
+UI_FINANCE_SHOP,Tienda,Shop
+UI_SHOP_TITLE,Tienda de la empresa,Company shop
+UI_SHOP_MONEY,Caja de la empresa: %s,Company cash: %s
+UI_SHOP_ROW,"%s · $%d","%s · $%d"
+UI_SHOP_BUY,Comprar,Buy
+UI_SHOP_CLOSE,Volver al cierre,Back to summary
+UI_SHOP_EMPTY,Todavía no hay nada a la venta,Nothing for sale yet
+UI_SHOP_KIND_VEHICLE,Vehículo,Vehicle
+UI_SHOP_KIND_MACHINE,Máquina,Machine
+UI_SHOP_KIND_EXPANSION,Ampliación,Expansion
+UI_SHOP_BOUGHT,Comprado: %s,Bought: %s
+UI_SHOP_HOST_ONLY,Solo el anfitrión compra por la empresa,Only the host buys for the company
+UI_SHOP_BAD_DATA,Eso no se puede comprar,That cannot be bought
+UI_SHOP_NO_LINK,Sin conexión con el anfitrión,No connection to the host

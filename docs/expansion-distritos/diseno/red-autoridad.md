@@ -158,8 +158,8 @@ voto es D-0518.b).
 
 ## 3. Secuencia, huecos y snapshot
 
-- El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. Se guarda en el slot
-  para que un día cargado siga numerando.
+- El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. No se guarda: un día
+  cargado abre desde la apertura y todo cliente que entra lo hace por snapshot ([guardado.md](guardado.md) §4).
 - `reliable` no pierde mensajes, así que el único hueco real es **el evento que llega antes que el mundo**
   (el peer todavía no tiene `CompanyWorld`). Por eso el host manda eventos solo a peers con
   `is_peer_ready()` y, al quedar listo un peer, le manda el snapshot con el `seq` actual; el peer descarta
@@ -213,7 +213,8 @@ voto es D-0518.b).
   cada 5 s mientras espera). En el host (y solo) arranca la empresa y le pasa `CompanyState.stock()`.
 - **Pendiente:**
   - ~~el snapshot y la llamada a `resume_after_snapshot()` del lado que lo recibe~~ (hecho en D-2004, §6);
-    guardar `seq` en el slot (D-0206);
+    ~~guardar `seq` en el slot (D-0206)~~ (no hace falta: un mundo cargado arranca en `seq` 0 y todo cliente
+    entra por snapshot, [guardado.md](guardado.md) §4);
   - el modo Empresa todavía no es una sesión: `company_root.tscn` no está en `NetworkManager.LEVEL_SCENES` y
     `company_root.gd` no llama a `NetworkManager.level_ready()`. Lo cablea la tarea que lo ponga en línea
     (la continuación de D-0214; D-2004 dejó el gancho listo, §6);
@@ -304,8 +305,8 @@ voto es D-0518.b).
 - **Pendiente:**
   - dibujar los bultos (nodos estáticos, regla 10) leyendo `floor_bundles` en `event_applied` y
     `company_state_restored` (D-0611);
-  - guardar las posiciones con el día (D-0206): un día cargado trae los `floor:<n>` sin posición y no se
-    pueden tomar hasta que el guardado las lleve (lo mismo vale para las manos que D-2005 deja en `floor:0`);
+  - ~~guardar las posiciones con el día (D-0206)~~: no se guardan; al guardar, todo bulto del piso y las manos
+    pasan al bulto de devolución `floor:0`, que sí lleva posición (D-0252, [guardado.md](guardado.md) §3);
   - `company_net.gd` quedó en 967 de las 1000 líneas que permite gdlint (ya salieron `FloorBundles` y
     `CompanyAsk`): la próxima acción grande tiene que sacar algo más a otra clase;
   - el margen de `reach_slack()` en `DROP_REACH` depende del RTT y no tiene test propio.
@@ -425,12 +426,13 @@ voto es D-0518.b).
   - ~~**D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10), validando
     antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §11); de D-0715.b quedan las cajas vivas
     en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
-    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) y `CompanyTableNet._serial` guardado con el día (D-0206);
+    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) (`_serial` no se guarda: [guardado.md](guardado.md) §4);
   - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
     `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
-  - guardar las mesas con el día (D-0206): hoy un día cargado trae unidades en `box:<id>` sin mesa.
+  - ~~guardar las mesas con el día (D-0206)~~: no se guardan; lo de `box:<id>` va al bulto de devolución al
+    guardar (D-0252, [guardado.md](guardado.md) §3).
 
 ## 10. Lo construido (D-0813): los pedidos del día
 
@@ -492,7 +494,7 @@ voto es D-0518.b).
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
-  - guardar el libro con el día (D-0206). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
+ - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
     poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
     sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
 

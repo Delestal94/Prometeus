@@ -145,6 +145,11 @@ const COLD_SPOIL_MINUTES: float = 120.0
 const GIFT_WRAP_BONUS: float = 0.15
 const GIFT_WRAP_COST: int = 3
 
+## Multi-box orders (D-0729, OrderParts): an order whose products need more than MULTI_BOX_FILL of one
+## XL box is split into up to ORDER_BOXES_MAX boxes, all of them delivered together.
+const ORDER_BOXES_MAX: int = 3
+const MULTI_BOX_FILL: float = 0.75
+
 ## Products that must not share a box (D-0726, ProductCompatibility): assembly quality points lost
 ## per incompatible pair found in one box (a pair is two different groups, counted once per kind).
 const INCOMPATIBLE_QUALITY_PENALTY: int = 30

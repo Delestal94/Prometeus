@@ -302,6 +302,20 @@ Decisión: `docs/decisiones/2026-10-22-primera-semana.md`.
 Decisión: `docs/decisiones/2026-10-22-portapapeles.md`.
 **Hecho cuando:** `diseno/portapapeles.md` existe y D-1902 lo puede construir sin preguntar.
 
+### D-0134 · Qué se guarda entre sesiones — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/guardado.md`: el save siempre es la apertura de un día; un día cortado vuelve a su apertura (D-0251); el host puede cerrar el día antes (D-0253); lo suelto va a un bulto de devolución (D-0252); tabla de lo que se guarda y lo que se recalcula.
+**Depende de:** D-0206, D-0236, D-2005
+**Qué:** `diseno/guardado.md` con qué se guarda y qué no (empresa, stock, empleados, día en curso), contrastado con
+`CompanySave`, `CompanyState` y `CompanyRoot`.
+- [x] D-0134.1 Reglas: un punto de guardado por día (la apertura), un día cortado vuelve a su apertura, solo guarda
+  el host, lo que sale de la semilla no se guarda, versión del save.
+- [x] D-0134.2 Tabla de claves de `CompanyState` y de lo que viene (eventos, opciones, empleados, máquinas).
+- [x] D-0134.3 El stock al guardar (bulto de devolución, reservas en 0) y lo que no se guarda con su origen al cargar.
+- [x] D-0134.4 Tareas D-0251 a D-0253, cambios en red-autoridad y riesgos, y bug del autoelevador. Revisado por
+  `critico-diseno`.
+Decisión: `docs/decisiones/2026-10-22-guardado.md`.
+**Hecho cuando:** `diseno/guardado.md` existe y D-0251 a D-0253 se pueden construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.

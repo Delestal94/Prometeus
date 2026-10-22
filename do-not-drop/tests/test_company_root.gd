@@ -43,6 +43,10 @@ extends SceneTree
 ## - D-0508.3: the day's SUMMARY opens the closing screen (DaySummaryPanel) and its "continue" opens the
 ##   next day on the host; D-0614.c: the screen lists the day's delivery note (the root's
 ##   CompanyNet.pallets.note): a product the truck left short shows its row;
+## - D-0511.2: the closing screen has a Shop button that opens the company's shop (CompanyShopScreen, the
+##   root's shop_screen) over it; Buy goes through CompanyNet (solo is the host): the cash, the equipment and
+##   the status line follow, a shed expansion redraws the shed at its new stage, closing the shop gives the
+##   focus back to the closing screen, and the shop goes away with it;
 ## - the main menu knows the scene, the --mode=company flag and has the button;
 ## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
 ##   as interrupted there, and the real slot (user://saves/company/) is never touched;
@@ -247,9 +251,55 @@ func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
 	var note_box: Control = panel.find_child("Note", true, false) as Control
 	_expect(note_box != null and note_box.visible and panel.find_child("Note_hen", true, false) != null,
 		"The closing screen lists the day's delivery note: hen came 6 short (D-0614.c)")
+	_check_shop_screen(level, state)
 	panel.close()
 	_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == day + 1 and not panel.visible,
 		"Its continue opens the next day (day %d, %s)" % [cycle.current_day(), cycle.phase_name()])
+
+
+## D-0511.2: the closing screen's Shop button opens the shop; buying goes through CompanyNet and the shop,
+## the company and the shed follow; the company is put back as it was.
+func _check_shop_screen(level: CompanyRoot, state: Node) -> void:
+	var screen: CompanyShopScreen = level.shop_screen
+	var summary: DaySummaryPanel = level.summary_panel
+	var shop_button: Button = summary.find_child("Shop", true, false) as Button
+	_expect(screen != null and screen.panel != null and not screen.panel.visible,
+		"The root has its shop screen, closed while the closing screen shows (D-0511.2)")
+	_expect(shop_button != null and shop_button.visible, "The closing screen has its Shop button")
+	if screen == null or screen.panel == null or shop_button == null:
+		return
+	var before: Dictionary = state.call(&"to_dict")
+	state.set(&"money", 5000)
+	shop_button.pressed.emit()
+	var shop: CompanyShopPanel = screen.panel
+	_expect(shop.visible and not summary.is_processing_unhandled_input(),
+		"The Shop button opens the shop over the closing screen, which stops listening to ui_cancel")
+	var money_label: Label = shop.find_child("Money", true, false) as Label
+	_expect(money_label != null and money_label.text.contains("$5000"), "The shop shows the company's cash")
+	var host_line: Label = shop.find_child("HostOnly", true, false) as Label
+	_expect(host_line != null and not host_line.visible, "Solo is the host: no only-the-host line")
+	shop.buy(&"upgrade_1")
+	_expect((state.get(&"equipment") as Array).has(&"upgrade_1") and int(state.get(&"money")) == 4550,
+		"Buy goes through CompanyNet: the host bought the machine (money %s)" % state.get(&"money"))
+	_expect(money_label.text.contains("$4550") and shop.buy_button(&"upgrade_1").disabled
+		and shop.status_text().contains(CompanyShopPanel.item_name(CompanyShop.find(&"upgrade_1"))),
+		"...and the shop follows the event: cash, owned row and the status line (%s)" % shop.status_text())
+	_expect(level.shed.stage == 0, "A machine doesn't redraw the shed")
+	shop.buy(&"expansion_1")
+	_expect(int(state.get(&"warehouse_stage")) == 1 and level.shed.stage == 1,
+		"An expansion bought in the shop redraws the shed at stage 1 (shed %d)" % level.shed.stage)
+	shop.close()
+	_expect(not shop.visible and summary.is_processing_unhandled_input(),
+		"Closing the shop gives the closing screen its ui_cancel back")
+	shop_button.pressed.emit()
+	summary.hide()
+	_expect(not shop.visible and summary.is_processing_unhandled_input(),
+		"The shop goes away with the closing screen")
+	summary.show()
+	state.call(&"from_dict", before)
+	level.shed.rebuild(level.net.company, level.net.inventory)
+	_expect(int(state.get(&"warehouse_stage")) == 0 and level.shed.stage == 0,
+		"(the test puts the company and the shed back)")
 
 
 ## D-0510.2: the root's DayCycle.opening_notice is the bankruptcy warning in the red, "" in the black.

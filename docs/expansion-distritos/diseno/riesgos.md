@@ -109,6 +109,8 @@ P3: vigilar.
      entrar en SUMMARY, con el día siguiente como próximo, y al salir.
   2. Un día interrumpido carga el último cierre, o se guarda completo (pedidos, mesas, `_serial`, salidas).
      Nunca a medias.
+     Decidido en [guardado.md](guardado.md) (D-0134): vuelve a su apertura (D-0251); lo suelto va al bulto de
+     devolución (D-0252).
   3. Tests: matar el proceso a mitad de día y recuperar el último cierre (el "hecho cuando" de D-0236), y
      salir en SUMMARY y volver no cobra ni descuenta dos veces.
   4. `bot_company_day` deja de guardar por su cuenta cuando el gancho exista.
@@ -117,7 +119,7 @@ P3: vigilar.
 ## R-04 · Esquema del save sin migraciones — P2 · F2
 
 - **Qué puede salir mal:** F2 agrega empleados con estación (D-1016), máquinas con contenido (D-1116) y,
-  por R-03, pedidos y mesas. Una clave nueva sin subir la versión deja que un save viejo cargue con valores
+  por eventos del día, el plan de mañana (pedidos y mesas no: [guardado.md](guardado.md)). Una clave nueva sin subir la versión deja que un save viejo cargue con valores
   por defecto en silencio: empleados sin estación, unidades en lugares que ya no existen. Con Steam
   Auto-Cloud (D-2010) el mismo save viaja entre builds.
 - **Evidencia:** `scripts/core/company/company_save.gd:29-34` (`VERSION = 1`, `MIGRATIONS = {}`).
@@ -315,7 +317,7 @@ P3: vigilar.
   `detalle/F1-08-pedidos.md:49-52`. `red-autoridad.md` §1, regla 1. `critica-alcance.md:90-94`. La
   decisión del reloj por ancla. `detalle/F0-02-arquitectura.md:268`.
 - **Mitigación:** los pedidos se generan solo en el host al abrir el día y quedan fijos en el `OrderBook`,
-  que viaja en el snapshot y se guarda (D-0807, D-0236). D-0246 audita que nadie más los genere. Para el
+  que viaja en el snapshot; no se guarda, se vuelve a sortear igual con la semilla en cada apertura ([guardado.md](guardado.md)). D-0246 audita que nadie más los genere. Para el
   tránsito, el desfase del reloj se mide en red real y tiene que quedar por debajo del largo de un auto
   (D-1504), con auditoría de red (D-0349).
 - **Tareas:** D-0246, D-0807, D-1504, D-1505, D-0349.

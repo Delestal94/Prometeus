@@ -46,7 +46,7 @@
 | D-0131 | ✅ Diseñar el portapapeles de gestión (inspirado en Schedule I) como objeto en la mano, no menú | critico-diseno | medium | `diseno/portapapeles.md` con wireframes en texto |
 | ~~D-0132~~ | ~~Diseño de sabotaje amistoso coop (esconder cajas, cambiar etiquetas) — sí o no~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión documentada |
 | ~~D-0133~~ | ~~Diseño del mercado de proveedores (precios que varían por día, calidad del proveedor)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sección en `diseno/economia.md` |
-| D-0134 | Definir qué se guarda y qué no entre sesiones (empresa, stock, empleados, día en curso) | constructor-progresion | medium | `diseno/guardado.md`; D-0206 lo implementa |
+| D-0134 | ✅ Definir qué se guarda y qué no entre sesiones (empresa, stock, empleados, día en curso) | constructor-progresion | medium | `diseno/guardado.md`; D-0206 lo implementa |
 | D-0135 | Definir reglas de clima por distrito y su efecto en la carga y el vehículo | constructor-mundo | medium | tabla en `diseno/distritos.md` |
 | D-0136 | Definir reglas de horario de clientes (no reciben de noche, ventanas de entrega) | constructor-progresion | low | sección en `diseno/clientes.md` |
 | D-0137 | Diseño de cosméticos de la empresa (logo, colores de la flota, uniforme) | critico-diseno | low | `diseno/cosmeticos-empresa.md` |

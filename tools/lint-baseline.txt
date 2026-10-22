@@ -59,7 +59,7 @@ do-not-drop/tests/net_pair.gd|max-line-length 5
 do-not-drop/tests/net_smoke.gd|max-line-length 1
 do-not-drop/tests/net_trio.gd|max-line-length 3
 do-not-drop/tests/render_house_waiting.gd|max-line-length 5
-do-not-drop/tests/render_player_character.gd|max-line-length 24
+do-not-drop/tests/render_player_character.gd|max-line-length 3
 do-not-drop/tests/render_route_dressing.gd|max-line-length 3
 do-not-drop/tests/render_terrain_review.gd|max-line-length 1
 do-not-drop/tests/render_world_features.gd|max-line-length 7
@@ -86,12 +86,11 @@ do-not-drop/tests/test_endless_multi_cargo.gd|max-line-length 5
 do-not-drop/tests/test_flock_crossing.gd|max-line-length 4
 do-not-drop/tests/test_fragile.gd|max-line-length 1
 do-not-drop/tests/test_hint_relay.gd|max-line-length 1
-do-not-drop/tests/test_horn.gd|duplicated-load 1
-do-not-drop/tests/test_horn.gd|max-line-length 3
+do-not-drop/tests/test_horn.gd|max-line-length 1
 do-not-drop/tests/test_hostile_trap.gd|max-line-length 3
 do-not-drop/tests/test_house_assignment.gd|max-line-length 7
 do-not-drop/tests/test_house_delivery_flow.gd|max-line-length 5
-do-not-drop/tests/test_house_waiting_marker.gd|max-line-length 22
+do-not-drop/tests/test_house_waiting_marker.gd|max-line-length 1
 do-not-drop/tests/test_hud_flow.gd|max-line-length 3
 do-not-drop/tests/test_interaction.gd|max-line-length 4
 do-not-drop/tests/test_interaction_highlight.gd|max-line-length 1
@@ -117,7 +116,6 @@ do-not-drop/tests/test_package_unboxing.gd|duplicated-load 1
 do-not-drop/tests/test_package_unboxing.gd|max-line-length 2
 do-not-drop/tests/test_phone_camera.gd|max-line-length 3
 do-not-drop/tests/test_player_character.gd|max-line-length 11
-do-not-drop/tests/test_reference_truck.gd|max-line-length 32
 do-not-drop/tests/test_reference_truck.gd|unused-argument 1
 do-not-drop/tests/test_release_build.gd|max-line-length 1
 do-not-drop/tests/test_render_batching.gd|comparison-with-itself 1
@@ -125,7 +123,7 @@ do-not-drop/tests/test_render_batching.gd|max-line-length 11
 do-not-drop/tests/test_ride_sync.gd|duplicated-load 1
 do-not-drop/tests/test_ride_sync.gd|max-line-length 15
 do-not-drop/tests/test_road_hazards.gd|max-line-length 4
-do-not-drop/tests/test_roadside_stories.gd|max-line-length 20
+do-not-drop/tests/test_roadside_stories.gd|max-line-length 1
 do-not-drop/tests/test_route_difficulty.gd|max-line-length 3
 do-not-drop/tests/test_route_dressing_assets.gd|max-line-length 12
 do-not-drop/tests/test_route_duration_budget.gd|max-line-length 1
@@ -150,7 +148,6 @@ do-not-drop/tests/test_stuck_detection.gd|max-line-length 2
 do-not-drop/tests/test_supply_vote.gd|max-line-length 2
 do-not-drop/tests/test_tension_music.gd|max-line-length 1
 do-not-drop/tests/test_town_signs.gd|duplicated-load 1
-do-not-drop/tests/test_town_signs.gd|max-line-length 16
 do-not-drop/tests/test_trailer_shots.gd|max-line-length 20
 do-not-drop/tests/test_trap_audio.gd|duplicated-load 2
 do-not-drop/tests/test_trap_audio.gd|max-line-length 1
