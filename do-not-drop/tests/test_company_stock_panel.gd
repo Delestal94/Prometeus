@@ -10,6 +10,7 @@ extends SceneTree
 ## - StockPanel (stock_panel.gd) shows one row per product with its numbers, a text mark besides
 ##   colour on short products ("⚠" missing, "⟳" on the way), refresh() after a move changes the
 ##   numbers, an empty inventory says so and focuses Close;
+## - a list longer than the panel opens at the top, with the first row in view;
 ## - the focus starts on the first row, ui_down reaches Close, every focus neighbour points at a
 ##   live node and ui_cancel closes the panel;
 ## - both languages have every UI_STOCK_ key the panel uses.
@@ -34,6 +35,7 @@ func _run() -> void:
 	await _test_panel_rows()
 	await _test_panel_refresh_and_focus()
 	await _test_panel_empty()
+	await _test_panel_long_list_at_top()
 	if _failures == 0:
 		print("PASS: stock list buckets units by place, flags short products and the panel follows moves")
 	quit(_failures)
@@ -211,6 +213,28 @@ func _test_panel_empty() -> void:
 	panel.closed.connect(func() -> void: closed.append(true))
 	panel.close_button().pressed.emit()
 	_expect(not panel.visible and closed.size() == 1, "Close hides the panel and emits closed")
+	panel.queue_free()
+	await process_frame
+
+
+func _test_panel_long_list_at_top() -> void:
+	var inv := Inventory.new()
+	for i: int in 14:
+		inv.receive(StringName("p%02d" % i), 3, &"shelf:a")
+	inv.receive(&"p00", 2, &"hands:1")
+	# Opened a frame after it entered the tree, as StockBoard does: opened in the same frame the list
+	# never scrolled, so _panel() would not show the bug.
+	var panel := StockPanel.new()
+	root.add_child(panel)
+	await process_frame
+	panel.open({"inventory": inv, "shortages": [_shortage(&"p01", 4, 0, false)]})
+	for _i: int in 5:
+		await process_frame
+	var scroll: ScrollContainer = panel.list_scroll()
+	var bar_max: float = scroll.get_v_scroll_bar().max_value - scroll.get_v_scroll_bar().page
+	_expect(bar_max > 0.0, "14 products do not fit in the panel (scroll room %.0f)" % bar_max)
+	_expect(scroll.scroll_vertical == 0, "a long list opens at the top (got %d)" % scroll.scroll_vertical)
+	_expect(_focus_name() == "Row_p00", "with the first row focused (got %s)" % _focus_name())
 	panel.queue_free()
 	await process_frame
 
