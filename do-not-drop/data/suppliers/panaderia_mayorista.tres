@@ -7,5 +7,5 @@ script = ExtResource("1_supplier")
 id = &"panaderia_mayorista"
 products = Array[StringName]([&"milk_canister", &"sourdough", &"wedding_cake"])
 price_factor = 1.1
-arrival_min = 390
+arrival_min = 420
 wait_minutes = 90

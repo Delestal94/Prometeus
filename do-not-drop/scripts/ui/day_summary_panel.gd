@@ -35,6 +35,7 @@ const REASON_KEYS: Dictionary = {
 	"placeable_buy": "UI_FINANCE_REASON_PLACEABLE_BUY",
 	"warehouse_expand": "UI_FINANCE_REASON_WAREHOUSE_EXPAND",
 	"penalty": "UI_FINANCE_REASON_PENALTY",
+	"tow": "UI_FINANCE_REASON_TOW",
 	"other": "UI_FINANCE_REASON_OTHER",
 }
 const OTHER_REASON: String = "other"

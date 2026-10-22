@@ -22,7 +22,7 @@ extends SceneTree
 ##   clocks.
 ## Expected in the log: the engine's leak notes at exit.
 
-const PORT: int = 24681
+const PORT: int = 24711
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const DIR: String = "user://test_company_cold_chain_world"
 const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")

@@ -394,6 +394,10 @@ WORLD_SHED_ZONE_RECEPTION,RECEPCIÓN,RECEIVING
 WORLD_SHED_ZONE_STORAGE,ESTANTES,SHELVING
 WORLD_SHED_ZONE_ASSEMBLY,ARMADO,PACKING
 WORLD_SHED_ZONE_DISPATCH,DESPACHO,DISPATCH
+WORLD_SHED_SIGN_SMALL,GALPÓN,SHED
+WORLD_SHED_SIGN_MEDIUM,DEPÓSITO,WAREHOUSE
+WORLD_SHED_SIGN_LARGE,CENTRO DE DISTRIBUCIÓN,DISTRIBUTION CENTER
+WORLD_SHED_SIGN_LOGISTICS,CENTRO LOGÍSTICO,LOGISTICS CENTER
 WORLD_SHED_USE_SHELF,Usar estante,Use shelf
 WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
@@ -457,6 +461,8 @@ WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better
 WORLD_TOW_DONE,La grúa te llevó al playón (-$%d),The tow truck took you to the yard (-$%d)
 WORLD_TOW_NO_TRIP,No hay salida abierta para este vehículo,No open trip for this vehicle
 WORLD_TOW_NOT_STUCK,El vehículo todavía anda: volvé manejando,The vehicle still runs: drive back
+WORLD_TOW_NOT_YOURS,Otro maneja esa camioneta: que lo pida quien va al volante,Someone else drives that van: the driver has to ask
+WORLD_TOW_OFFER,Volver con grúa (-$%d),Tow home (-$%d)
 WORLD_TOW_NO_MONEY,No alcanza para la grúa: hacen falta $%d,Not enough money for the tow: it costs $%d
 WORLD_SPOILED,Se echó a perder: %d %s,Spoiled: %d %s
 WORLD_ZONE_PARQUE_INDUSTRIAL,Parque Industrial,Industrial Park

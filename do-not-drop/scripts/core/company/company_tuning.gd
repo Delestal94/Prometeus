@@ -66,6 +66,16 @@ const GPS_LOOKAHEAD: float = 30.0
 const TOW_COST: int = 50
 ## Real seconds of black screen while the vehicle is carried to the yard.
 const TOW_BLACK_SCREEN_SECONDS: float = 3.0
+## A company van on a trip counts as STUCK (CompanyTow, D-0307.1) after this many seconds with a driver, the
+## pedal down and nearly no speed (level_common.gd's STUCK_SECONDS and STUCK_SPEED of the delivery run, the same
+## numbers): the tow is offered then. Mud is not stuck: the crew pushes there.
+const TOW_STUCK_SECONDS: float = 6.0
+## Speed (m/s) under which a van with the pedal down counts as not moving.
+const TOW_STUCK_SPEED: float = 0.3
+## A van that was counted stuck stays stuck (the tow stays on offer) until it really moves: faster than
+## TOW_STUCK_SPEED for this many seconds in a row, or until its trip closes. Lifting the pedal or leaving the wheel
+## does not clear it.
+const TOW_UNSTUCK_SECONDS: float = 1.0
 
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
@@ -371,6 +381,9 @@ const SUPPLIER_TRUCKS_PER_DAY: int = 1
 const SUPPLIER_ARRIVAL_MIN: int = 8 * 60 + 30
 ## It waits this long at the dock (3 game hours).
 const SUPPLIER_WAIT_MIN: int = 180
+## Docks the shed has for supplier trucks (D-0621.c.a, DockQueue): trucks that overlap in time queue for one.
+## D-0640 (a second dock) raises it.
+const SUPPLIER_DOCK_BAYS: int = 1
 ## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
 ## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
 ## turn radius, how far it reverses in a straight line, the straight run before the turn, and the

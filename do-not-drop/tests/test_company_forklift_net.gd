@@ -17,7 +17,7 @@ extends SceneTree
 ##   the pallet still on the forks;
 ## - every event reaches the client in order.
 
-const PORT: int = 24685
+const PORT: int = 24715
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const HEN: StringName = &"hen"
 const LAMP: StringName = &"antique_lamp"
