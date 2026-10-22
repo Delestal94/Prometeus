@@ -15,7 +15,8 @@ extends SceneTree
 ##   OPEN even though day 1 expired one later in the day;
 ## - open_orders() filters by zone and drops closed orders;
 ## - invalid moves (DELIVERED -> OPEN, packing a closed order) are refused;
-## - to_dict()/from_dict() keep states, box and trip ids.
+## - mark_delivered() keeps the customer's stars (1-5) with the closed order, none out of range (D-0816.b);
+## - to_dict()/from_dict() keep states, box and trip ids and the stars, also through JSON.
 
 var _failures: int = 0
 var _signals: Array = []
@@ -33,6 +34,7 @@ func _run() -> void:
 	_test_abandon()
 	_test_open_orders_by_zone()
 	_test_invalid_transitions()
+	_test_rate()
 	_test_round_trip()
 	quit(_failures)
 
@@ -204,15 +206,35 @@ func _test_invalid_transitions() -> void:
 	book.free()
 
 
+func _test_rate() -> void:
+	var book := _book()
+	for id: StringName in [&"o1", &"o2", &"o3"]:
+		book.add(_order(id))
+		book.mark_packed(id, &"b_%s" % id)
+		book.mark_out(id, &"t")
+	_expect(book.mark_delivered(&"o1", 100, true, 10, -1, 4) >= 0, "a delivery may carry its stars")
+	_expect(book.get_order(&"o1")["stars"] == 4, "and the closed order keeps them")
+	book.mark_delivered(&"o2", 100, true, 10)
+	_expect(not book.get_order(&"o2").has("stars"), "a delivery without stars is unrated")
+	book.mark_delivered(&"o3", 100, true, 10, -1, CompanyTuning.STARS_MAX + 1)
+	_expect(not book.get_order(&"o3").has("stars"), "stars out of 1-5 leave it unrated")
+	book.free()
+
+
 func _test_round_trip() -> void:
 	var book := _book()
 	book.add(_order(&"o1"))
 	book.add(_order(&"o2"))
 	book.mark_packed(&"o1", &"box7")
 	book.mark_out(&"o1", &"trip1")
+	book.add(_order(&"o3"))
+	book.mark_packed(&"o3", &"box8")
+	book.mark_out(&"o3", &"trip1")
+	book.mark_delivered(&"o3", 90, true, 10, -1, 3)
 	var copy := OrderBook.new()
 	copy.from_dict(JSON.parse_string(JSON.stringify(book.to_dict())))
-	_expect(copy.size() == 2, "both orders survive a JSON round trip")
+	_expect(copy.size() == 3, "every order survives a JSON round trip")
+	_expect(copy.get_order(&"o3") == book.get_order(&"o3"), "a delivered order keeps its stars as an int")
 	_expect(copy.state_of(&"o1") == Order.STATE_OUT, "state survives")
 	_expect(copy.box_of(&"o1") == &"box7", "box id survives")
 	_expect(copy.get_order(&"o2") == book.get_order(&"o2"), "an untouched order is equal")

@@ -115,7 +115,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | 17 | Dejar la caja en la zona de despacho (D-0716) | host (la caja quieta dentro del área) | — | caja sellada, en el área, en el piso o en un estante de despacho; no despachada antes | `box_dispatched` `{package_id, trip}` | `OrderBook`: pedido → salida `trip`. Si la caja sale del área antes de que arranque la salida, `box_undispatched` `{package_id}` la desata |
 | 18 | Cargar la camioneta (D-0717) | jugador, en un punto de carga | los de hoy (`PackageMountPoint`) | como hoy | — | nada de negocio (el pedido ya va con la salida) |
 | 19 | Salir por el portón y volver (D-0302, D-0307) | host (el vehículo cruza el portón, `CompanyTrips`) | — | vehículo con carga despachada (`stage_cargo`); con `VEHICLES_FAR_MAX` afuera sale negado | `trip_started` `{trip, vehicle, orders, boxes, minute}` / `trip_refused` `{vehicle, minute}` (salió negado: sin salida, cuenta como afuera) / `trip_closed` `{trip, vehicle, failed, minute}` (volvió; `trip` vacío y `failed` vacío si había salido negado). Hechos (D-0302.2.a) | `CompanyTripsView` (`TripsView` de cada peer): el vehículo queda afuera / adentro; `trip_closed` dice qué pedidos fallaron; el reloj sigue (D-0319). El snapshot lleva los que están afuera (parte `trips`) |
-| 20 | Entregar en la casa (D-0340, D-0815, D-0502, D-0506) | jugador toca el timbre (`DoorbellPoint` → `DeliveryHouse` como hoy) | el de hoy (`Interactable.request_interact`) | como hoy, más: contenido contra el pedido, daño, plazo | `order_delivered` `{order, package_id, paid, tip, penalties: {…}}` | `OrderBook`: pedido entregado; `Inventory.consume` de todo lo que hay en `package:<package_id>` (y lo que quede reservado del pedido se libera); `money += paid + tip − penalties` |
+| 20 | Entregar en la casa (D-0340, D-0815, D-0502, D-0506) | jugador toca el timbre (`DoorbellPoint` → `DeliveryHouse` como hoy) | el de hoy (`Interactable.request_interact`) | como hoy, más: contenido contra el pedido, daño, plazo | `order_delivered` `{order, package_id, paid, tip, stars, penalties: {…}}` (`stars` 1-5 la calcula el host en `OrderSettlement.settle` y cada peer la pasa tal cual a `OrderBook.mark_delivered`, validada como en el snapshot, `CompanyOrdersNet._stars_ok`; no se recalcula, D-0816.b) | `OrderBook`: pedido entregado; `Inventory.consume` de todo lo que hay en `package:<package_id>` (y lo que quede reservado del pedido se libera); `money += paid + tip − penalties` |
 
 ### Fuera de las 20, sin petición de cliente
 
@@ -454,7 +454,7 @@ voto es D-0518.b).
   entero (380 a 550 bytes, medido) y no la semilla: así ningún cliente necesita los mismos catálogos, zonas abiertas,
   tripulación y plata que el host para llegar al mismo pedido, y uno que entra tarde lo recibe igual en el snapshot.
 - **Validación (regla 5)**, `CompanyOrdersNet.order_ok()`: exactamente las claves de `Order.normalize()` (más las que
-  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact`, solo en el snapshot), id y
+  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact` y, en un pedido entregado, `stars` 1-5 (D-0816.b), solo en el snapshot), id y
   cliente de texto de hasta 64, una zona de `data/zones/` y una casa del mapa (`HouseAddresses`) o `<zona>_house_<n>`
   de esa zona con `n` de 1 a 12, de 1 a 3 productos del catálogo distintos con `qty` entera 1..24, requisitos de
   `data/order_requirements/` sin repetir, `created_min < due_min` enteros, paga entera 0..10⁹ y estado conocido (`open`
