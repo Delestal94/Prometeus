@@ -181,3 +181,14 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** "el host o un voto" se resuelve como **solo el host** en esta tarea, igual que construir (D-0910): un cliente pide y oye `host_only` sin que cambie la plata, el inventario ni el `seq`; un `peer` en los datos no cuenta (el remitente lo pone `RpcGuard`). El día no frena la compra: la tienda es la pantalla del cierre (D-0511.2) y la regla `day_closed` del proveedor es por su calendario, no aplica. Un ítem desconocido es `bad_data` (regla 5 del contrato) y no `WORLD_SHOP_UNKNOWN_ITEM`. Para no pasar las 1000 líneas de `company_net.gd`, los chequeos de un trozo del snapshot y su unión salieron a `CompanySnapshot.chunk_ok()` / `join()`.
 **Test** `test_company_shop_net`: el ayudante solo (`host_only`, datos malos, claves de `CompanyShop`, eventos rotos, deriva), solo con el catálogo real, y host + cliente por ENet: el cliente no compra (`host_only`, también con `peer: 1`, sin escribir nada antes), el host compra máquina, ampliación y vehículo y los dos quedan iguales, sus rechazos no cambian nada, la deriva termina en snapshot y un tercero que entra tarde ve todo.
 **Hecho cuando:** test de red: un cliente no puede comprar solo (cumplido).
+
+### D-0516 · Cobro al entregar — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — el cobro es **al entregar**, no al cierre del día: ya era así desde D-0815 (`OrderSettlement.settle()` suma la paga a la billetera con motivo `order_paid` en el momento de la puerta). Se fija con test y decisión; no hubo cambio de código.
+**Depende de:** D-0501, D-0815
+**Qué:** decidir cuándo entra la plata de un pedido (D-0105 deja el reloj de 08:00 a 20:00).
+- La paga (y la propina) entra a `CompanyState.money` en el minuto de la entrega, con el día y la hora del reloj en el historial.
+- El cierre del día no cobra nada: solo suma el alquiler, los sueldos y el resumen (D-0508), que lee el historial del día.
+- Lo que sigue afuera al cierre no cobra: vuelve `FAILED` (D-0302.1).
+**Decisión:** al entregar, porque da el feedback inmediato que el coop necesita ("tengo 230 más") y permite comprar a media jornada; cobrar al cierre agregaría un estado "por cobrar" para replicar y guardar sin cambiar el balance (`diseno/economia.md` ya cuenta la paga el día en que se entrega). Archivo: `docs/decisiones/2026-10-22-cobro-al-entregar.md`.
+**Test** `test_order_settlement` (`_test_cashed_at_the_door`): el movimiento `order_paid` lleva el día y el minuto de la entrega y `DaySummary` de ese día lo cuenta.
+**Hecho cuando:** test y decisión (cumplido).
