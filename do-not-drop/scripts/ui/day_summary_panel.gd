@@ -4,7 +4,7 @@ class_name DaySummaryPanel
 ##
 ## Draws what DaySummary.build() returns (the same dictionary DayCycle publishes in its SUMMARY
 ## phase and EventBus.company_day_summary carries): income and costs by reason, the day's profit
-## and the opening and closing balance. It reads the dictionary and nothing else, so a client
+## and the opening and closing balance. It reads the dictionary and the note lines it is given, so a client
 ## shows what the host closed. Reason names are the translation keys UI_FINANCE_REASON_<REASON> (REASON_KEYS); a
 ## reason without a key shows its own id, so a new charge never needs this file.
 ##
