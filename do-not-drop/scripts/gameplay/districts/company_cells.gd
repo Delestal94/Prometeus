@@ -62,12 +62,14 @@ func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_S
 	return count
 
 
-## Fills the cells with the graph's streets (EdgeCellContent, D-0304.1) and the gray Barrio Centro
-## around them (houses, sidewalks, lights: CentroDecor, D-0314), and pins the main streets. Returns
-## the content, for tests and for callers that want it.
-func use_graph(graph: RoadGraph) -> EdgeCellContent:
+## Fills the cells with the graph's streets (EdgeCellContent, D-0304.1) and pins
+## the gray Barrio Centro around them (CentroDecor, D-0314) and pins
+## the main streets. Returns the content, for tests and for callers that want it.
+## `world_seed` deals the Campo's animals and events (EdgeEvents, D-0315); their
+## nodes are built only with `spawn_events`.
+func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false) -> EdgeCellContent:
 	var decor := CentroDecor.new(graph, HouseMap.load_default(), grid.cell_size)
-	var content := EdgeCellContent.new(graph, grid.cell_size, decor)
+	var content := EdgeCellContent.new(graph, grid.cell_size, world_seed, spawn_events, decor)
 	content_for = content.build_cell
 	pin_streets(graph)
 	return content

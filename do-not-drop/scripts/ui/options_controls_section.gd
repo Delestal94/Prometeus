@@ -41,6 +41,9 @@ const GROUPS: Array[Dictionary] = [
 		[&"look_back", "UI_OPT_BIND_LOOK_BACK"],
 		[&"drive_shift_up", "UI_OPT_BIND_SHIFT_UP"], [&"drive_shift_down", "UI_OPT_BIND_SHIFT_DOWN"],
 	]},
+	{"id": &"forklift", "title": "UI_OPT_BIND_GROUP_FORKLIFT", "rows": [
+		[&"forklift_mast_up", "UI_OPT_BIND_MAST_UP"], [&"forklift_mast_down", "UI_OPT_BIND_MAST_DOWN"],
+	]},
 	{"id": &"crew", "title": "UI_OPT_BIND_GROUP_CREW", "rows": [
 		[&"ui_ping", "UI_OPT_BIND_PING"], [&"voice_talk", "UI_OPT_BIND_VOICE_TALK"],
 		[&"crew_panel", "UI_OPT_BIND_CREW"], [&"spectate_toggle", "UI_OPT_BIND_SPECTATE"],

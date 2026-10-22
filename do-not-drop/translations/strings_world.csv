@@ -403,7 +403,7 @@ WORLD_SHED_RESTOCK_FROM_CART,Devolver al estante lo del carrito,Put the cart's s
 WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
 WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
 WORLD_SHED_BOARD_FORKLIFT,Subir al autoelevador,Get on the forklift
-WORLD_FORKLIFT_DRIVING,"E: tomar o dejar el palet · Flecha arriba/abajo o gatillos: mástil · Q: bajar","E: take or leave the pallet · Up/Down arrow or triggers: mast · Q: get off"
+WORLD_FORKLIFT_DRIVING,"%s: tomar o dejar el palet · %s / %s: mástil · %s: bajar","%s: take or leave the pallet · %s / %s: mast · %s: get off"
 WORLD_FORKLIFT_REFUSED,No se puede hacer eso acá,Can't do that here
 WORLD_FORKLIFT_NO_PALLET,No hay un palet a esa altura,There is no pallet at this height
 WORLD_FORKLIFT_NO_ROOM,No hay lugar para apoyar el palet acá,No room to set the pallet down here
