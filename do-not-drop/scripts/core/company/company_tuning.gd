@@ -149,6 +149,10 @@ const GIFT_WRAP_COST: int = 3
 ## per incompatible pair found in one box (a pair is two different groups, counted once per kind).
 const INCOMPATIBLE_QUALITY_PENALTY: int = 30
 
+## Upright-only products (D-0727, ProductOrientation): assembly quality points lost per such product
+## in a box laid on its side.
+const TIPPED_QUALITY_PENALTY: int = 25
+
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
 const WAREHOUSE_GRID_M: float = 1.0
