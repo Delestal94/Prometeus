@@ -43,6 +43,14 @@ const ACTIONS_PER_PLAYER_PER_SECOND: float = 1.0
 const HOST_EVENTS_PER_SECOND: float = 1.0
 ## A trip event (trip_started, trip_closed) a second per vehicle out: a ceiling, a trip sends two.
 const TRIP_EVENTS_PER_VEHICLE_PER_SECOND: float = 1.0
+## How often a tended box publishes its care_state in a delivery (package_rescue.gd simulate_cargo():
+## every PackageRescue.CARE_PUBLISH_SEC, an ON_CHANGE delta each time something in it moved, as it does
+## while someone tends it; D-2002.4). A company box's rate is world.ride.care_hz (BoxToPackage.tune()).
+const CARE_PUBLISH_HZ: float = 10.0
+## A delta's framing (scene_replication_interface.cpp, _send_delta): the command byte, then per
+## synchronizer its net id (4), its size (4) and the mask of the properties in it (8). Reliable, a
+## packet of its own (a ceiling: two boxes publishing on one frame would share one).
+const DELTA_HEADER: int = 17
 
 
 ## A case for `crew` players, `kind` "shed", "trip" or "far": {kind, crew, budget, held: whether the
@@ -123,9 +131,11 @@ static func client_case(
 	case.events = 0.0
 	case.events_data = 0.0
 	case.keepalive = 0.0
-	for part: String in ["events", "keepalive"]:
+	case.care = 0.0
+	for part: String in ["events", "keepalive", "care"]:
 		var items: Array = (_event_items(world, layout) if part == "events"
-			else _keepalive_items(world, layout, where, client))
+			else _keepalive_items(world, layout, where, client) if part == "keepalive"
+			else _care_items(world, layout, where, client))
 		for item: Array in items:
 			culprits.append([item[0], item[1], item[2]])
 			case.framing = float(case.framing) + float(item[2])
@@ -139,6 +149,12 @@ static func client_case(
 	case.places = where
 	case.client = client
 	return case
+
+
+## Players in the shed of `where` (the host too) while vehicles are out: each loads the next vehicle,
+## a box in its hands moving at a box's full rate (D-2002.4, auditor-red's 3rd caveat of D-2002.2).
+static func loading(layout: Dictionary, where: Array) -> int:
+	return where.count(-1) if not (layout.riders as Array).is_empty() else 0
 
 
 ## The load of the first `out` vehicles of `riders`: (boxes tended, one by each passenger or by a
@@ -213,6 +229,9 @@ static func _host_groups(world: Dictionary, layout: Dictionary, where: Array, cl
 	if riders.is_empty():
 		return [groups, owners]
 	var out: int = riders.size() if aboard or bool(layout.near) else 0
+	var carried: int = loading(layout, where) if not aboard or bool(layout.near) else 0
+	groups.append([ride.box_interval, ride.box_entry, carried])
+	owners.append("%d boxes carried in the shed, loading" % carried)
 	var boxes: Vector2i = cargo(ride, riders, out)
 	groups.append([ride.vehicle[0], ride.vehicle[1], out])
 	owners.append("%d vehicles out, moving (%s)" % [out, ride.vehicle[2]])
@@ -259,13 +278,35 @@ static func _event_items(world: Dictionary, layout: Dictionary) -> Array:
 	return items
 
 
+## The care_state deltas of the tended boxes client `client` of `where` sees (those of the vehicles it
+## gets, as _host_groups()), items as _event_items(): CARE_PUBLISH_HZ each, the size of the largest real
+## one (world.ride.care_bytes: publish_care()'s state of a tended box, the worst trap), in a datagram of
+## its own.
+static func _care_items(world: Dictionary, layout: Dictionary, where: Array, client: int) -> Array:
+	var ride: Dictionary = world.ride
+	var riders: Array = layout.riders
+	if riders.is_empty() or int(ride.get("care_bytes", 0)) <= 0:
+		return []
+	var aboard: bool = int(where[client]) >= 0
+	var tended: int = cargo(ride, riders, riders.size() if aboard or bool(layout.near) else 0).x
+	if tended <= 0:
+		return []
+	var rate: float = tended * float(ride.get("care_hz", CARE_PUBLISH_HZ))
+	var framing: float = rate * MODEL.PACKET_OVERHEAD_BYTES
+	return [["care_state deltas of %d tended boxes (%.0f/s each)" % [tended, rate / tended],
+		rate * (DELTA_HEADER + int(ride.care_bytes)) + framing, framing, rate]]
+
+
 ## CompanyInterest's keepalive while the vehicles are far from the shed, items as _event_items(). A
 ## client in the shed gets every hidden body for its pulse each keepalive (the longer of the pulse
 ## and two of the body's intervals, at its rate; a box riding still sends at the full rate for its
-## settle_seconds of it: the pulse wakes its NetRestThrottle). A rider gets the boxes riding still
-## at the full rate for 2 * settle_seconds each keepalive: every pulse to the shed wakes them, on
-## and off (visibility_changed both times); the shed's clients are hidden at the same look, so their
-## pulses go together. A ceiling: a pulse's sends a packet each.
+## settle_seconds of it if the pulse wakes its NetRestThrottle). A rider gets the boxes riding still
+## at the full rate for settle_seconds each wake a pulse to a client in the shed gives them
+## (ride.pulse_wakes: how many times a pulse, on and off, wakes a resting box's NetRestThrottle, as
+## WorldCellInterest pulses it, 2 before D-2002.4; ride.pulse_wake_on: whether showing it does), for
+## every client in the shed: each one's pulses
+## have their own clock (hidden_at, D-2002.4: the clients hidden at different looks). A ceiling: a
+## pulse's sends a packet each.
 static func _keepalive_items(
 	world: Dictionary, layout: Dictionary, where: Array, client: int
 ) -> Array:
@@ -277,13 +318,15 @@ static func _keepalive_items(
 	var boxes: Vector2i = cargo(ride, riders, riders.size())
 	var settle: float = float(ride.box_settle)
 	var full: float = float(ride.box_interval)
+	var wakes: int = int(ride.get("pulse_wakes", 2))
 	if int(where[client]) >= 0:
-		if not where.slice(1).has(-1) or boxes.y == 0:
+		var shed_clients: int = where.slice(1).count(-1)
+		if shed_clients == 0 or boxes.y == 0 or wakes == 0:
 			return []
 		var extra: float = 1.0 / full - 1.0 / float(ride.box_rest)
-		var woken: float = boxes.y * 2.0 * settle * extra / every
-		return [["keepalive wakes of %d boxes riding still (NetRestThrottle)" % boxes.y,
-			woken * int(ride.box_entry), 0.0, 0.0]]
+		var woken: float = boxes.y * wakes * settle * extra / every * shed_clients
+		return [[("keepalive wakes of %d boxes riding still (NetRestThrottle), %d clients in the shed"
+			+ " pulsed apart") % [boxes.y, shed_clients], woken * int(ride.box_entry), 0.0, 0.0]]
 	# [how many, interval when the pulse starts, entry bytes, woken by it]
 	var bodies: Array = [
 		[riders.size(), float(ride.vehicle[0]), int(ride.vehicle[1]), false],
@@ -294,7 +337,8 @@ static func _keepalive_items(
 	var data: float = 0.0
 	for body: Array in bodies:
 		var span: float = maxf(float(ride.pulse), 2.0 * float(body[1]))
-		var awake: float = minf(span, settle) if body[3] else 0.0
+		var woken: bool = body[3] and bool(ride.get("pulse_wake_on", true))
+		var awake: float = minf(span, settle) if woken else 0.0
 		var count: float = int(body[0]) * (awake / full + (span - awake) / float(body[1]))
 		sends += count
 		data += count * (MODEL.SYNC_PACKET_HEADER + int(body[2]))

@@ -25,6 +25,15 @@ const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 ## The vehicle's movement interface (D-0209): its readers ask the van by name and fall back to a
 ## plain Node3D's transform. Preloaded: it names no autoload.
 const FleetMotion = preload("res://scripts/gameplay/fleet/fleet_motion.gd")
+## Seconds between two care_state publishes of a box under care (its panel, ring and hint on every
+## peer). A world may ask a box for another in this meta (the company's: BoxToPackage.tune(), D-2002.4).
+const CARE_PUBLISH_SEC: float = 0.1
+const CARE_PUBLISH_META: StringName = &"care_publish_sec"
+
+
+## How often `p` publishes its care_state: CARE_PUBLISH_SEC unless its world asked for another.
+static func care_publish_interval(p: Node) -> float:
+	return maxf(float(p.get_meta(CARE_PUBLISH_META, CARE_PUBLISH_SEC)), 0.0)
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -97,7 +106,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 			p.care.message = LocText.make("HUD_CARE_MSG_SUPPLY_TAKEN")
 	p._report_change(before_integrity, before_state, p.tr("HUD_CARE_RUINED_IN_RESCUE"))
 	p._care_publish_time += delta
-	if p._care_publish_time >= 0.1:
+	if p._care_publish_time >= care_publish_interval(p):
 		p._care_publish_time = 0.0
 		publish_care(p)
 		p._emit_event(&"package_hint_changed", [p.package_id, p.hint_text()])
@@ -251,7 +260,7 @@ static func _publish_cushion_change(p: DeliveryPackage) -> void:
 			+ 4 * int(cushion["saved"]) + 4096 * int(cushion["taps"])
 	if signature != p._cushion_signature:
 		p._cushion_signature = signature
-		p._care_publish_time = 0.1
+		p._care_publish_time = care_publish_interval(p)
 
 
 static func check_recovery(p: DeliveryPackage) -> void:

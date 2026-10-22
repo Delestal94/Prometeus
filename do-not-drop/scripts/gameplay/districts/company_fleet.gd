@@ -377,6 +377,8 @@ func _make(definition: VehicleDefinition, node_name: String) -> Node3D:
 	var sync := body.get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
 	if sync == null:
 		return body
+	# About 30 poses a second on the move (D-2002.4), set before the throttle's _ready keeps it as its full rate.
+	sync.replication_interval = CompanyTuning.FLEET_POSE_INTERVAL_SEC
 	var throttle := NetRestThrottle.new()
 	throttle.name = "NetRestThrottle"
 	throttle.watched.assign(REST_WATCHED.filter(func(property: StringName) -> bool: return property in body))
