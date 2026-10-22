@@ -8,7 +8,8 @@ extends RefCounted
 ## - the platform: with something in the hands it loads the cart (units_store, the hands' product, as
 ##   many as fit); with empty hands it unloads (units_take, the first product on the cart, up to the hand
 ##   limit). PickingCart plans what to ask for and says why it cannot (empty, full, hands_busy...).
-## - the handle: cart_push away from the player, one step (CompanyCarts).
+## - the handle: cart_push away from the player, one step (CompanyCarts). The handle's own point grips it
+##   instead (PickingCartGrip, D-0610.c2.b): the cart then follows, with these same requests in short steps.
 ## - a take point (D-0610.c2): units_take of that product, up to the hand limit, also onto hands that
 ##   already hold some of it; other products in the hands are hands_busy.
 ##

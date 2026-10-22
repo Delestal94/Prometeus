@@ -5,6 +5,9 @@ extends SceneTree
 ## picking_cart_use.gd, company_carts.gd, CompanyShed.station_for / cart_can_stand, CompanyNet cart_push):
 ## - the six slots of the platform are inside its rails, above its deck, and none overlaps another: six
 ##   units fit without any physics, so nothing can fall;
+## - the cart's points keep their node names (Use_cart_1_load / _push / _restock, Take_cart_1_<slot>) and the
+##   other peer has them at the same paths: a client's use travels by node path, so the handle, which grips
+##   since D-0610.c2.b, still answers to Use_cart_1_push (a rename would be a protocol change);
 ## - the default shed has one cart near the shelves; loading 4 + 2 units from the hands (the platform's
 ##   point, units_store at the station cart:cart_1) draws six cubes in their slots, sorted by product
 ##   whatever the order they came in, and they are still there after physics frames; the total of units
@@ -127,6 +130,7 @@ func _test_world() -> void:
 	_expect(near_shelf, "The cart is within reach of a shelf's use point")
 	_expect(view.load_point.get_prompt() != "" and view.push_point.get_prompt() != ""
 		and view.load_point.get_prompt() != view.push_point.get_prompt(), "Both points have their own prompt")
+	_check_point_names(view)
 	_expect(_shed.station_for(&"cart:no_such_cart").is_empty(), "An unknown cart is no station")
 	var spots: Array[Vector2] = DefaultShed.load_default().cart_spots
 	for index: int in spots.size():
@@ -286,6 +290,42 @@ func _test_world() -> void:
 
 
 # --- Helpers ---
+
+
+## The cart's points keep their node names: a client's use reaches the host by node path (Interactable
+## request_interact), so a renamed point is a protocol change. The handle grips since D-0610.c2.b and still
+## answers to "Use_<id>_push"; the other peer finds every point at the same path under its shed.
+func _check_point_names(view: PickingCartView) -> void:
+	var wanted: Array[String] = ["Use_cart_1_load", "Use_cart_1_push", "Use_cart_1_restock"]
+	for slot: int in CompanyTuning.CART_MAX_UNITS:
+		wanted.append("Take_cart_1_%d" % slot)
+	var named: Array[String] = [String(view.load_point.name), String(view.push_point.name),
+		String(view.restock_point.name)]
+	for point: PickingCartPoint in view.take_points:
+		named.append(String(point.name))
+	_expect(named == wanted, "The cart's points keep their node names (%s)" % [named])
+	_expect(view.push_point.action == PickingCartPoint.ACTION_GRIP
+		and view.get_node_or_null(^"Use_cart_1_push") == view.push_point
+		and PickingCartView.handle_point_name(CART) == "Use_cart_1_push",
+		"The handle grips under the push point's old name, Use_cart_1_push")
+	var found: Array[String] = _point_paths(_shed)
+	wanted.sort()
+	_expect(found == _point_paths(_mirror_shed) and found.size() == wanted.size(),
+		"The other peer has the same points at the same paths (%s vs %s)" % [found, _point_paths(_mirror_shed)])
+	var leaves: Array[String] = []
+	for path: String in found:
+		leaves.append(path.get_file())
+	leaves.sort()
+	_expect(leaves == wanted, "The cart has no other point than those (%s)" % [leaves])
+
+
+## Every PickingCartPoint under `shed`'s cart, as a path from the shed, sorted.
+func _point_paths(shed: CompanyShed) -> Array[String]:
+	var paths: Array[String] = []
+	for node: Node in _view(shed).find_children("*", "PickingCartPoint", true, false):
+		paths.append(String(shed.get_path_to(node)))
+	paths.sort()
+	return paths
 
 
 func _view(shed: CompanyShed) -> PickingCartView:

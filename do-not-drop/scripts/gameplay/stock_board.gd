@@ -5,7 +5,7 @@ extends Node
 ## One key (I) or the gamepad's d-pad right toggles it, same as the build mode's actions are
 ## registered in code. While it is open the mouse is free and the local player's input is off; closing
 ## it gives both back. Every change the net applies (units moved, snapshot) redraws the list from this
-## peer's own copy of the Inventory, so a client sees what the host sees.
+## peer's own copy of the Inventory, so a client sees what the host sees; a cart that rolls does not.
 ##
 ## The "missing for pending orders" marks (StockAlert) read the order book every peer shares
 ## (CompanyNet.orders.book, D-0813.1), so a client marks the same as the host; without a book (book_of
@@ -15,6 +15,8 @@ extends Node
 ## it: since D-0603.b.2 the calendar holds only real orders, by CompanyNet on every peer).
 
 const ACTION_TOGGLE: StringName = &"company_stock"
+## Events that change nothing the list shows (where a picking cart stands): no redraw for them.
+const IGNORED_EVENTS: Array[StringName] = [CompanyCarts.MOVED]
 
 var panel: StockPanel
 var net: CompanyNet
@@ -157,7 +159,11 @@ func _refresh() -> void:
 		panel.refresh(_context())
 
 
-func _on_event_applied(_seq: int, _kind: StringName, _data: Dictionary) -> void:
+## Every applied event redraws the open list, except the ones that move no unit: a held cart rolls with a
+## cart_moved every CompanyTuning.CART_GRIP_INTERVAL_S (D-0610.c2.b), and the list does not change with it.
+func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+	if IGNORED_EVENTS.has(kind):
+		return
 	_refresh()
 
 
