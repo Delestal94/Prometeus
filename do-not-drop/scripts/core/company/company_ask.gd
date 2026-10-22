@@ -5,7 +5,8 @@ extends RefCounted
 ##
 ## Static only, no state but the product catalog read once. CompanyNet hands each units request
 ## here (units_take, units_store: at_station(); units_drop: drop()) and refuses with bad_data
-## whatever comes back empty. Split out of company_net.gd in D-2006 (station_of() in D-0813).
+## whatever comes back empty; past the station, take() and store() check the stock and the hands.
+## Split out of company_net.gd in D-2006 (station_of() in D-0813, take() and store() in D-0517).
 
 ## Where the product catalog lives: an id in a request must name one of its files.
 const PRODUCTS_DIR: String = "res://data/products/"
@@ -80,6 +81,45 @@ static func station_of(ask: Dictionary, bundles: FloorBundles, stations: Callabl
 	return station if station.get("spot") is Vector3 else {}
 
 
+## Host, row 5 past the station's own checks (CompanyNet._take_units()): `ask`'s units from `station` into
+## `hands`, free or holding only that product, up to the hand's limit. {reason} when it is refused
+## (not_enough, hands_busy, hands_full), else {reason: &"", kind: units_moved, data}. Out of company_net.gd
+## in D-0517.
+static func take(stock: Inventory, ask: Dictionary, station: Dictionary, hands: StringName) -> Dictionary:
+	var product: StringName = ask["product"]
+	var qty: int = ask["qty"]
+	var from: StringName = as_id(station["location"])
+	if stock.count(product, from) < qty:
+		return {"reason": CompanyNet.REASON_NOT_ENOUGH}
+	var held: Dictionary = stock.contents_at(hands)
+	if held.size() > 1 or (held.size() == 1 and not held.has(product)):
+		return {"reason": CompanyNet.REASON_HANDS_BUSY}
+	if stock.count(product, hands) + qty > CompanyTuning.HAND_MAX_UNITS:
+		return {"reason": CompanyNet.REASON_HANDS_FULL}
+	return _moved(product, qty, from, hands)
+
+
+## Host, row 6 past the station's own checks (CompanyNet._store_units()): `ask`'s units from `hands` into a
+## `station` that takes them (not a floor bundle: no_station; a slot labeled for that product, `accepts`:
+## wrong_product; with room under `capacity`: no_room; units in the hand: not_enough). {reason} or
+## {reason: &"", kind: units_moved, data} as take(). Out of company_net.gd in D-0517.
+static func store(stock: Inventory, ask: Dictionary, station: Dictionary, hands: StringName) -> Dictionary:
+	var product: StringName = ask["product"]
+	var qty: int = ask["qty"]
+	var to: StringName = as_id(station["location"])
+	if FloorBundles.is_floor(to):
+		return {"reason": CompanyNet.REASON_NO_STATION}
+	if stock.count(product, hands) < qty:
+		return {"reason": CompanyNet.REASON_NOT_ENOUGH}
+	var accepts: StringName = as_id(station.get("accepts"))
+	if accepts != &"" and accepts != product:
+		return {"reason": CompanyNet.REASON_WRONG_PRODUCT}
+	var capacity: int = as_int(station.get("capacity"))
+	if capacity > 0 and units_at(stock, to) + qty > capacity:
+		return {"reason": CompanyNet.REASON_NO_ROOM}
+	return _moved(product, qty, hands, to)
+
+
 ## The product, quantity and position of a units_drop: units() plus a finite Vector3 `pos`,
 ## or {} when any doesn't fit.
 static func drop(data: Dictionary) -> Dictionary:
@@ -106,3 +146,8 @@ static func units_at(stock: Inventory, location: StringName) -> int:
 	for qty: int in stock.contents_at(location).values():
 		total += qty
 	return total
+
+
+## The one units_moved a granted take() or store() leads to.
+static func _moved(product: StringName, qty: int, from: StringName, to: StringName) -> Dictionary:
+	return {"reason": &"", "kind": &"units_moved", "data": {"product": product, "qty": qty, "from": from, "to": to}}
