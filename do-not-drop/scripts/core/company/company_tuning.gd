@@ -252,6 +252,9 @@ const PENALTY_REPUTATION_CAP: float = -10.0
 const TIP_FAST_WINDOW_SHARE: float = 0.5
 const TIP_RATE: float = 0.15
 const TIP_REPUTATION: float = 1.0
+## Reputation a delivery with nothing wrong with it earns on top of its pay (D-0815); the tip adds
+## its own TIP_REPUTATION when it was also quick.
+const CLEAN_DELIVERY_REPUTATION: float = 0.5
 ## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
 const TRIP_MERIT_INTACT: int = 10
 

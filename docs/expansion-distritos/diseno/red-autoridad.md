@@ -390,20 +390,18 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   la mesa vendida (una mesa nueva con el mismo `uid` arranca llena).
 - **Motivos de `_rejected`:** los de `CompanyNet` (`bad_data`, `no_station`, `out_of_reach`, `not_enough`,
   `hands_busy`, `hands_full`, `no_room`) más `no_money`, `has_box`, `no_box`, `sealed`, `no_supply`,
-  `cell_taken`, `empty_cell`, `reserved_for_other`, `no_order`, `already_stamped` y `empty_box`. Una celda que
-  llega como `Vector3i` no pasa `dict_ok` y se descarta sin aviso (regla 5).
+  `cell_taken`, `empty_cell`, `reserved_for_other`, `no_order`, `already_stamped`, `empty_box` y `no_trap`
+  (D-0715.b, §11). Una celda que llega como `Vector3i` no pasa `dict_ok` y se descarta sin aviso (regla 5).
 - **Líneas:** el empaquetado del snapshot y los chequeos de lo que trae salieron a `CompanySnapshot`
   (`scripts/core/company/company_snapshot.gd`; `CompanyNet.pack_snapshot`, `unpack_snapshot` y `stock_ok`
   siguen con la misma firma). `company_net.gd` queda en 990 de las 1000 líneas de gdlint: la próxima acción
   tiene que sacar algo más (p. ej. el armado de trozos `_take_chunk`).
 - Test: `test_company_shared_table` (y `test_company_layout_net` lee las ramas `CompanyTableNet.*`).
 - **Pendiente:**
-  - **D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10: sincronizador
-    invisible hasta mandar el `seq`, nombre `node_name`), validando antes `pos`, `basis`, `quality`, `trap` y
-    `node_name` (hoy nadie los lee); las cajas vivas en el snapshot con `update_visibility` después del
-    último trozo; `OrderBook` → armado (`order_packed`), ahora que el libro está en `CompanyNet.orders.book`
-    (D-0813, §10); y
-    `CompanyTableNet._serial` guardado con el día (D-0206);
+  - ~~**D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10), validando
+    antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §11); de D-0715.b quedan las cajas vivas
+    en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
+    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) y `CompanyTableNet._serial` guardado con el día (D-0206);
   - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
     `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
@@ -463,3 +461,49 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   - podar del libro los pedidos cerrados de días viejos y guardarlo con el día (D-0206), y bajar `MAX_ORDERS`: hoy
     crece hasta 16 por día y un libro lleno (4096) pesa 2,4 MB de los 4 MB del snapshot (137 KB comprimido) y tarda
     230 ms en validarse en el cliente (medido; `revisar/D-0813.md`).
+
+## 11. Lo construido (D-0715.b): el paquete de la caja encintada
+
+- **Cada peer crea el mismo `DeliveryPackage`** al aplicar `box_sealed` (fila 15, protocolo 42; el evento no
+  cambia): `CompanyPackages` (`scripts/core/company/company_packages.gd`, `CompanyTableNet.packages`) lo arma
+  con `BoxToPackage.build` desde la caja encintada que tiene ese peer y le pone lo que dice el host: nombre
+  `node_name`, `package_id`, trampa, absorción, la pose `pos`/`basis` (espacio del mundo) y calidad e
+  intensidad en la meta `BoxToPackage.META_TRAP_PLAN`. Va bajo `parent`, el mismo camino en todos los peers
+  (`CompanyRoot`: `World/Packages`); sin `parent` no se crea nada y el evento se aplica igual.
+- **Validación (reglas 5 y 6), antes del primer cambio:** `node_name` = `Package_<package_id>`, nombre de
+  nodo válido y libre bajo `parent`; `pos` `Vector3` finito y `basis` `Basis` que juntos pasan
+  `RpcGuard.finite_transform`; `trap` el nombre exacto de un `.tres` de `data/traps/`; `quality` en
+  0..`QUALITY_MAX`; `trap_intensity` y `absorption` en 0..1. El paquete se construye (fuera del árbol)
+  antes de mover plata o unidades; si algo no encaja, no cambia nada y el peer espera un snapshot.
+- **El host no encinta lo que no puede ser paquete:** `box_tape` de una caja cuyo producto principal no
+  nombra una trampa de `data/traps/` (error de catálogo) se rechaza con `no_trap` (motivo nuevo de §9), en
+  vez de fallar su propio `apply()`. Un id de caja cuyo `Package_<id>` sigue en el mundo no se reparte
+  (`_new_box_id` lo saltea): un paquete que sobrevive no traba la mesa.
+- **Regla 10 en el host, con acuse:** el sincronizador entra con un filtro (`add_visibility_filter`, se suma
+  al de `package.gd`) que no deja pasar a nadie hasta que **ese peer** dice que tiene el nodo. El cliente,
+  al crear el paquete, pide `package_ack` `{package, rid}` (un `kind` más de `_request`, ningún RPC nuevo;
+  diferido, porque mientras se aplica un evento no se pide nada); el host comprueba que `package` sea un id
+  cuyo `Package_<id>` es un nombre válido y un paquete suyo, y recién ahí abre el sincronizador a ese peer.
+  Un acuse de algo que no hay no cambia nada y no se contesta (`bad_data` solo si no es un id). **Por qué
+  acuse y no "abrir al mandar el evento"** (auditor-red, B1): un cliente que espera un snapshot guarda el
+  `box_sealed` y lo aplica más tarde (o nunca, si el snapshot ya lo cubre o su copia no lo acepta); el camino
+  del sincronizador que le llega antes que el nodo no se vuelve a mandar y esa copia queda quieta para
+  siempre. Un peer que se va o cuyo mundo vuelve a levantar sale del filtro hasta que acuse de nuevo; el que
+  entra tarde no tiene el nodo y nunca lo recibe (sin filtro: `Node not found:
+  ".../Packages/Package_box_1/MultiplayerSynchronizer"`).
+- **Física lejos (D-0318.1):** el host registra cada paquete en `CompanyRoot.cells` (`track_body`) y lo
+  suelta al salir del árbol.
+- Test: `test_company_sealed_package` (solo, campos malos, `no_trap`, id salteado, host + cliente ENet, el
+  cliente que espera un snapshot mientras se encinta, y un tercero que entra tarde) y `test_company_root`
+  (celdas).
+- **Protocolo:** 42 (sobre el 41 de D-0813).
+- **Pendiente:**
+  - las cajas vivas en el snapshot (hasta entonces el que entra tarde, o un cliente cuyo snapshot cubrió el
+    `box_sealed`, no ve las cajas ya encintadas; con el acuse no recibe errores, solo no las tiene);
+  - **ancho de banda por paquete:** cada `DeliveryPackage` manda su pose a 30 Hz a cada peer que acusó,
+    ~3 KB/s por peer aunque esté quieto; antes de una prueba con muchas cajas tienen que entrar a
+    `company_loose_box` (D-0316.3, regla 11: solo a los peers cerca) o bajar su frecuencia en reposo;
+  - **dónde aparece:** en el `spot` de la estación (el hueco de la caja) con base identidad; un cubo de
+    0,65 m centrado ahí puede quedar metido en la tabla; revisarlo con `probador-qa` cuando exista la mesa
+    visible (D-0701.b);
+  - `order_packed`; `_serial` con el día (D-0206).

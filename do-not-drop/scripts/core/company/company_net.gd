@@ -24,13 +24,14 @@ extends Node
 ## and any other snapshot part (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
 ## path, only to know which peers have their world up and when one comes up.
 ##
-## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section 2; units_drop is
-## critical), snapshot_request, the shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`),
-## the shared packing tables' box_* (rows 9 to 15, D-0715: CompanyTableNet, `table`), the picking carts' cart_push
-## (D-0610.b: CompanyCarts, `carts`; their units move with units_take / units_store at the station cart:<id>) and the
-## pallet jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`; the station `jack`). A task
-## that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player
-## stuck, rule 8), checks it in _handle_request() and applies its event in _apply_state().
+## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of section 2; units_drop is critical),
+## snapshot_request, the shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`), the
+## packing tables' box_* (rows 9 to 15, D-0715: CompanyTableNet, `table`), package_ack (a client has a sealed
+## box's package, D-0715.b: CompanyPackages, `table.packages`), cart_push / cart_moved (D-0610.b: CompanyCarts,
+## `carts`; their units move with units_take / units_store at the station cart:<id>) and the pallet jack's
+## jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`; the station `jack`). A task that adds
+## an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule
+## 8), checks it in _handle_request() and applies its event in _apply_state().
 ##
 ## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its `pos` (a drop, or
 ## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
@@ -67,14 +68,15 @@ const UNITS_DROP: StringName = &"units_drop"
 ## Request kinds the host takes (the contract's section 2 whitelist); anything else is
 ## dropped. Later tasks append theirs.
 const REQUEST_KINDS: Array[StringName] = [
-	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE, CompanyLayoutNet.MOVE,
-	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
-	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
-	CompanyTableNet.TAPE, CompanyCarts.PUSH, CompanyPallets.PICK, CompanyPallets.PUT, CompanyPallets.PUSH,
+	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
+	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START,
+	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
+	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH,
+	CompanyPallets.PICK, CompanyPallets.PUT, CompanyPallets.PUSH,
 ]
-## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
-## RpcGuard's critical reserve once the sender's budget is gone.
-const CRITICAL_KINDS: Array[StringName] = [UNITS_DROP]
+## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
+## They spend RpcGuard's critical reserve once the sender's budget is gone.
+const CRITICAL_KINDS: Array[StringName] = [UNITS_DROP, CompanyPackages.ACK]
 ## The host's day clock changed pace: {minute, speed, paused} (D-0219, GameClock.apply_anchor()).
 const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## The day moved on, or the shed froze or thawed: {day, phase, frozen, lag, frozen_at[, summary]}
@@ -211,6 +213,7 @@ var _rx_chunks: Dictionary = {}
 func _init() -> void:
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
+	table.packages.ask = request
 	add_snapshot_part(CompanyCarts.SNAPSHOT_KEY, carts.to_dict, carts.put_snapshot)
 	add_snapshot_part(CompanyPallets.SNAPSHOT_KEY, pallets.to_dict, pallets.put_snapshot)
 	add_snapshot_part(CompanyOrdersNet.SNAPSHOT_KEY, orders.to_dict, orders.put_snapshot)
@@ -241,13 +244,12 @@ func _process(_delta: float) -> void:
 	poll_snapshot(Time.get_ticks_msec())
 
 
-## Asks the host for `kind` with `data` and returns the request id a refusal will carry
-## (request_rejected), 0 when there is nobody to ask (no tree, or a connection not up). On the
-## host, and playing solo, it goes through the same checks at once, as this peer's own
-## request (also when called while handling another peer's RPC). Nothing changes here until
-## the host's event comes back (rule 1: no prediction). The actor is whoever sends it: a peer
-## field in `data` means nothing. Called while an event is being applied (a stock_changed
-## listener), it is refused with an error and returns 0.
+## Asks the host for `kind` with `data` and returns the request id a refusal will carry (request_rejected), 0
+## when there is nobody to ask (no tree, or a connection not up). On the host, and playing solo, it goes through
+## the same checks at once, as this peer's own request (also when called while handling another peer's RPC).
+## Nothing changes here until the host's event comes back (rule 1: no prediction). The actor is whoever sends
+## it: a peer field in `data` means nothing. Called while an event is being applied (a stock_changed listener),
+## it is refused with an error and returns 0.
 func request(kind: StringName, data: Dictionary = {}) -> int:
 	if not is_inside_tree():
 		return 0
@@ -586,7 +588,7 @@ func _rejected(rid: int, reason: StringName) -> void:
 func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	if CompanyLayoutNet.REQUEST_KINDS.has(kind):
 		return _build(peer, kind, data)
-	if CompanyTableNet.REQUEST_KINDS.has(kind):
+	if CompanyTableNet.REQUEST_KINDS.has(kind) or kind == CompanyPackages.ACK:
 		return _pack(peer, kind, data)
 	if CompanyCarts.REQUEST_KINDS.has(kind):
 		var push: Dictionary = CompanyCarts.push_ask(data)
@@ -620,6 +622,8 @@ func _build(peer: int, kind: StringName, data: Dictionary) -> StringName:
 ## Host: a packing-table request (D-0715) at a table within the sender's reach (rule 4, measured
 ## as for units), checked by CompanyTableNet with the sender's hands, and its one event published.
 func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
+	if kind == CompanyPackages.ACK:
+		return table.packages.ack(peer, data)
 	var ask: Dictionary = CompanyTableNet.station_ask(data)
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
@@ -855,13 +859,11 @@ func _start_waiting() -> void:
 	set_process(true)
 
 
-## Client: keeps one chunk (checked first, rule 5: ids and counts in range, at most
-## SNAPSHOT_CHUNK_BYTES, the same total and size as the rest of its snapshot) and, with the
-## last one in, joins them and applies the snapshot. The first chunk of a newer snapshot drops
-## what was kept of the one before, starts holding events and restarts the wait before asking
-## again. A repeated chunk, or one of an older or finished snapshot, changes nothing. A
-## snapshot that doesn't unpack or apply leaves this peer waiting: it asks again
-## (poll_snapshot()).
+## Client: keeps one chunk (checked first, rule 5: ids and counts in range, at most SNAPSHOT_CHUNK_BYTES, the
+## same total and size as the rest of its snapshot) and, with the last one in, joins them and applies the
+## snapshot. The first chunk of a newer snapshot drops what was kept of the one before, starts holding events
+## and restarts the wait before asking again. A repeated chunk, or one of an older or finished snapshot, changes
+## nothing. A snapshot that doesn't unpack or apply leaves this peer waiting: it asks again (poll_snapshot()).
 func _take_chunk(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
 	if id < 1 or total < 1 or total > SNAPSHOT_MAX_CHUNKS or chunk < 0 or chunk >= total:
 		return
