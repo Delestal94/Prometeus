@@ -33,7 +33,7 @@ extends SceneTree
 ##   the next upgrade; every peer's seqs have no gap or repeat.
 ## Expected in the log: CompanyLayoutNet's warning for the mirror's wallet set right.
 
-const PORT: int = 24693
+const PORT: int = 24731
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const NET_SCRIPT: String = "res://scripts/core/company/company_net.gd"
 ## A clock_minutes no event may write (only the host's clock writes it).
