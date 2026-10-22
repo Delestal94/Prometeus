@@ -7,6 +7,12 @@ extends SceneTree
 ##   order_added / order_changed;
 ## - expire() makes late the orders past their 4 h window, and a late delivery
 ##   pays 75 % while an on-time one pays in full;
+## - overdue() names, without changing anything, the orders expire() would make
+##   late, and expire_one() makes late only the one it is given (refusing one not
+##   due yet, closed, already late or unknown): one per overdue id leaves the book
+##   as expire() does (the host's order_expired events, D-0813), and like expire()
+##   it sets the book's minute, so a day-2 order unpacked before its due goes back
+##   OPEN even though day 1 expired one later in the day;
 ## - open_orders() filters by zone and drops closed orders;
 ## - invalid moves (DELIVERED -> OPEN, packing a closed order) are refused;
 ## - to_dict()/from_dict() keep states, box and trip ids.
@@ -23,6 +29,7 @@ func _run() -> void:
 	_test_add()
 	_test_cycle()
 	_test_expire_and_payout()
+	_test_expire_one()
 	_test_abandon()
 	_test_open_orders_by_zone()
 	_test_invalid_transitions()
@@ -101,6 +108,49 @@ func _test_expire_and_payout() -> void:
 	book.mark_out(&"o1", &"t")
 	_expect(book.mark_delivered(&"o1", 80, true) == roundi(pay * 0.75), "late delivery pays 75 %")
 	book.free()
+
+
+func _test_expire_one() -> void:
+	var book := _book()
+	book.add(_order(&"o1", &"campo", 0))
+	book.add(_order(&"o2", &"campo", 200))
+	book.add(_order(&"o3", &"campo", 0))
+	book.cancel(&"o3")
+	var twin := OrderBook.new()
+	twin.from_dict(book.to_dict())
+	var due: int = book.get_order(&"o1")["due_min"]
+	_expect(book.overdue(due).is_empty(), "nothing is overdue at the due minute")
+	_expect(book.overdue(due + 1) == [&"o1"], "overdue names the open order past due, not the cancelled one")
+	_expect(book.state_of(&"o1") == Order.STATE_OPEN, "overdue changes nothing")
+	_expect(not book.expire_one(&"o1", due), "expire_one refuses an order not due yet")
+	_expect(not book.expire_one(&"o2", due + 1), "...one due later")
+	_expect(not book.expire_one(&"o3", due + 1), "...a closed one")
+	_expect(not book.expire_one(&"nope", due + 1), "...an unknown id")
+	_signals.clear()
+	_expect(book.expire_one(&"o1", due + 1), "expire_one makes the overdue order late")
+	_expect(book.state_of(&"o1") == Order.STATE_LATE
+		and book.get_order(&"o1").get("late_from") == Order.STATE_OPEN,
+		"...LATE, remembering it was open")
+	_expect(_signals == [[&"o1", Order.STATE_LATE]], "...with one order_changed")
+	_expect(not book.expire_one(&"o1", due + 5) and book.overdue(due + 5).is_empty(),
+		"a late order is not expired twice")
+	twin.expire(due + 1)
+	_expect(twin.to_dict() == book.to_dict(), "one expire_one per overdue id leaves the book as expire() does")
+	twin.free()
+	book.free()
+	# The next day starts from midnight again: an order of day 2 (due 12:00) unpacked at 10:00 is not
+	# late because day 1 expired something at 15:00.
+	var days := _book()
+	days.add(_order(&"d1", &"campo", 0))
+	_expect(days.expire_one(&"d1", 900), "day 1: an order expires at 15:00")
+	days.add(_order(&"d2_early", &"campo", 300))
+	days.add(_order(&"d2", &"campo", 480))
+	days.mark_packed(&"d2", &"box2")
+	_expect(days.expire_one(&"d2_early", 600), "day 2: another expires at 10:00")
+	_expect(days.unpack(&"d2") and days.state_of(&"d2") == Order.STATE_OPEN,
+		"day 2: unpacking an order due at %d goes back OPEN, not LATE (got %s)"
+		% [days.get_order(&"d2")["due_min"], days.state_of(&"d2")])
+	days.free()
 
 
 func _test_abandon() -> void:
