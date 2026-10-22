@@ -18,9 +18,12 @@ extends RefCounted
 ##   arrives meanwhile (that trickle, a pose sent just before) is where the hands were, not where it'll be let go:
 ##   not buffered, and the buffer is stale (`_stale`) until the first pose after the hold starts it over.
 ## - **Let go** (dropped, handed over, sat down with it): until a fresh pose of the host's lands, it stays where it
-##   was drawn; then the gap from there to the host's copy (a round trip and a cushion behind the hands) is carried
-##   over and eased out in DROP_BLEND_SECONDS instead of snapping. The carrier's own client did that since N-217;
-##   the others, since D-2002.5 (before, the host's poses of the hold were in their buffer).
+##   was drawn, in the truck's space if the truck carries it there (a box let go of in the bay of a moving truck
+##   rides on with it instead of hanging behind); then the gap from there to the host's copy (a round trip and a
+##   cushion behind the hands) is carried over and eased out in DROP_BLEND_SECONDS instead of snapping. The
+##   carrier's own client did that since N-217; the others, since D-2002.5 (before, the host's poses of the hold
+##   were in their buffer). The carrier's own client between two predictions while still muted (a menu open
+##   skips update_carried_package()) draws it in its player's hands.
 
 ## How long a box let go of takes to ease from where it was drawn in the hands to where the host has it.
 const DROP_BLEND_SECONDS: float = 0.25
@@ -32,6 +35,13 @@ var _following: bool = false
 var _was_in_hands: bool = false
 ## The buffer holds only poses of a muted hold, or from before it: the next fresh one starts it over.
 var _stale: bool = false
+## Stale and not in anyone's hands here: where it stays, in the truck's space when `_held_aboard`.
+var _holding: bool = false
+var _held_aboard: bool = false
+var _held_pose := Transform3D.IDENTITY
+## The truck as drawn the last frame the box was drawn in someone's hands (identity: no truck), and whether it was.
+var _hands_truck := Transform3D.IDENTITY
+var _hands_drawn: bool = false
 var _error_origin := Vector3.ZERO
 var _error_rotation := Quaternion.IDENTITY
 var _error_left: float = 0.0
@@ -61,21 +71,28 @@ func push(p: DeliveryPackage, now: float = NetPoseSmoother.local_now()) -> void:
 
 
 ## The Player holding the box on foot whom this peer doesn't control, or null. Null too while the copy is hidden
-## (a far company box, CompanyInterest): a stale copy stays at its last pose instead of following a carrier. Only
-## a player of the box's own session counts (a test runs several in one tree).
+## (a far company box, CompanyInterest): a stale copy stays at its last pose instead of following a carrier.
 func remote_carrier(p: DeliveryPackage) -> Player:
-	if not p.visible or not muted(p):
+	if not p.visible:
+		return null
+	var carrier: Player = _carrier_of(p)
+	return carrier if carrier != null and not carrier.is_local() else null
+
+
+## The Player on foot holding the box (carrier_peer_id), this peer's or another's, or null. Only a player of the
+## box's own session counts (a test runs several in one tree). Seated here already (its seat came before the
+## host's carrier_peer_id 0): null, the box goes on the lap with the host's poses.
+func _carrier_of(p: DeliveryPackage) -> Player:
+	if not muted(p):
 		return null
 	if not is_instance_valid(_carrier) or _carrier.get_multiplayer_authority() != p.carrier_peer_id:
 		_carrier = null
 		for node: Node in p.get_tree().get_nodes_in_group(&"player"):
 			if node is Player and node.get_multiplayer_authority() == p.carrier_peer_id \
 					and node.multiplayer == p.multiplayer:
-				_carrier = node
+				_carrier = node as Player
 				break
-	# Seated here already (its seat came before the host's carrier_peer_id 0): the box goes on the lap with the
-	# host's poses.
-	if _carrier == null or _carrier.is_local() or not _carrier.seat_node_path.is_empty():
+	if _carrier == null or not _carrier.seat_node_path.is_empty():
 		return null
 	return _carrier
 
@@ -99,9 +116,8 @@ func follow(p: DeliveryPackage) -> bool:
 	# its ticks.
 	var hands: Transform3D = carrier._carry_component.hands_pose(p)
 	p.global_transform = _drawn(carrier) * (carrier.global_transform.affine_inverse() * hands)
-	_was_in_hands = true
 	_stale = true
-	_error_left = 0.0
+	_in_hands(p._find_vehicle())
 	return true
 
 
@@ -112,30 +128,31 @@ func draw(p: DeliveryPackage, delta: float, now: float = NetPoseSmoother.local_n
 	if muted(p):
 		_stale = true
 	var predicted: bool = Engine.get_physics_frames() - p._predicted_frame <= DeliveryPackage.PREDICTION_FRAMES
-	if not predicted and not p._has_net_state:
-		return
 	var vehicle: Node3D = p._find_vehicle()
 	var vehicle_pose: Transform3D = _drawn(vehicle) if vehicle != null else Transform3D.IDENTITY
 	if predicted:
 		var hands: Transform3D = p._predicted_pose
 		p.global_transform = vehicle_pose * hands if p._predicted_in_vehicle and vehicle != null else hands
-		_was_in_hands = true
-		_error_left = 0.0
+		_in_hands(vehicle)
 		return
 	if _stale:
-		# Let go of after a muted hold (or held where the hands can't be drawn): where it was, until the host's
-		# first fresh pose.
+		_hold(p, vehicle, vehicle_pose)
 		return
+	if not p._has_net_state:
+		return
+	var was: Transform3D = _last_drawn(p, vehicle, vehicle_pose)
+	_holding = false
+	_hands_drawn = false
 	var pose: Transform3D = Transform3D.IDENTITY
 	if smoother != null and not smoother.is_empty():
 		pose = smoother.sample(now, vehicle_pose)
 	if pose == Transform3D.IDENTITY:
 		pose = vehicle_pose * p.net_transform if p.net_in_vehicle and vehicle != null else p.net_transform
 	if _was_in_hands:
-		# Just let go of: where it was drawn (in the hands) minus where the host's copy is drawn.
+		# Just let go of: where it was drawn (in the hands, or held since) minus where the host's copy is drawn.
 		_was_in_hands = false
-		_error_origin = p.global_transform.origin - pose.origin
-		var drawn_rotation: Quaternion = p.global_transform.basis.get_rotation_quaternion()
+		_error_origin = was.origin - pose.origin
+		var drawn_rotation: Quaternion = was.basis.get_rotation_quaternion()
 		_error_rotation = drawn_rotation * pose.basis.get_rotation_quaternion().inverse()
 		_error_left = DROP_BLEND_SECONDS
 	if _error_left > 0.0:
@@ -144,6 +161,45 @@ func draw(p: DeliveryPackage, delta: float, now: float = NetPoseSmoother.local_n
 		pose.origin += _error_origin * share
 		pose.basis = Basis(Quaternion.IDENTITY.slerp(_error_rotation, share)) * pose.basis
 	p.global_transform = pose
+
+
+## Stale (let go of after a muted hold, or held where no hands can be drawn): until the host's first fresh pose,
+## where it was drawn, riding the truck if the truck carries it there (in its space as drawn the frame the hands
+## last held it: a frame at 20 m/s is a third of a metre); in the hands of this peer's own player while that
+## player still holds it and isn't predicting it this tick (a menu open skips update_carried_package()).
+func _hold(p: DeliveryPackage, vehicle: Node3D, vehicle_pose: Transform3D) -> void:
+	var own: Player = _carrier_of(p)
+	if own != null and own.is_local() and own.carried_package == p:
+		p.global_transform = own._carry_component.hands_pose(p)
+		_in_hands(vehicle)
+		return
+	if not _holding:
+		var was: Transform3D = _last_drawn(p, vehicle, vehicle_pose)
+		_holding = true
+		_held_aboard = vehicle != null and bool(vehicle.call(&"carries", was.origin, DeliveryPackage.RIDE_MARGIN))
+		_held_pose = vehicle_pose.affine_inverse() * was if _held_aboard else was
+	p.global_transform = vehicle_pose * _held_pose if _held_aboard and vehicle != null else _held_pose
+
+
+## Where it was drawn last frame, as of this frame: carried on by the truck's motion since if it rode in the bay
+## (held there, or in hands there); else where it is. A frame at 20 m/s is a third of a metre.
+func _last_drawn(p: DeliveryPackage, vehicle: Node3D, vehicle_pose: Transform3D) -> Transform3D:
+	if _holding:
+		return vehicle_pose * _held_pose if _held_aboard and vehicle != null else _held_pose
+	if _hands_drawn and vehicle != null:
+		var local: Transform3D = _hands_truck.affine_inverse() * p.global_transform
+		if bool(vehicle.call(&"carries", (vehicle_pose * local).origin, DeliveryPackage.RIDE_MARGIN)):
+			return vehicle_pose * local
+	return p.global_transform
+
+
+## Drawn in someone's hands this frame, against `vehicle` as drawn now (null: no truck).
+func _in_hands(vehicle: Node3D) -> void:
+	_was_in_hands = true
+	_holding = false
+	_hands_drawn = true
+	_hands_truck = _drawn(vehicle) if vehicle != null else Transform3D.IDENTITY
+	_error_left = 0.0
 
 
 ## Where a node is drawn this frame (a frozen client truck isn't interpolated: see Player.Ride.drawn_transform).

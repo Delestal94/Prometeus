@@ -57,9 +57,10 @@ extends SceneTree
 ##   the shed on every side (held on the host by a player there: muted by package.gd itself), the host's
 ##   reaching the clients that see them as CompanyInterest decides. The host publishes real units_moved
 ##   at the busy rate; read as the network overlay reads LAN (NetStats, N-216). Every client stays under
-##   its own model's ceiling and, where held, the worst under the budget; the worst got over half of its
-##   model's data (it did flow; skipped under two frames of the fastest pose); every client applies
-##   every event, and the held boxes' copies got at most a pose per muted_interval each. Trip events
+##   its own model's ceiling and, where held, the worst under the budget; ENet counted over half of what
+##   landed on the worst (each synced send at its model size, and the events: it did flow, at whatever
+##   frame rate); every client applies every event, and the held boxes' copies got at most a pose per
+##   muted_interval each (a burst when shown to a peer is over before the count). Trip events
 ##   and the keepalive are only in the model. If a session of 4 players doesn't come up on localhost
 ##   it fails; the full crew's is then only printed as skipped.
 ## - The late-join snapshot of the furnished shed, a one-off burst, is printed.
@@ -104,6 +105,9 @@ var _product: StringName = &""
 ## those copies got during the count (muted: D-2002.5).
 var _held_copies: int = 0
 var _held_syncs: int = 0
+## Per side, the bytes of the sends that landed there during the count, each sized as the model sizes its
+## synchronizer's entry (_sync_entry()): what ENet had to carry at least, whatever the frame rate let through.
+var _landed: Array[float] = []
 
 
 func _initialize() -> void:
@@ -485,7 +489,7 @@ func _care_and_pulse() -> Dictionary:
 	for show: bool in [true, false]:
 		if not await _wait_rest(throttle):
 			break
-		_pulse(sync, show)
+		CASES.pulse(sync, PULSE_PEER, show)
 		if not throttle.is_resting():
 			found.pulse_wakes = int(found.pulse_wakes) + 1
 			found.pulse_wake_on = bool(found.pulse_wake_on) or show
@@ -507,14 +511,6 @@ func _wait_rest(throttle: NetRestThrottle) -> bool:
 		await physics_frame
 	_expect(throttle.is_resting(), "A box left still rests within %d frames" % PARK_FRAMES)
 	return throttle.is_resting()
-
-
-## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to PULSE_PEER, on or off.
-func _pulse(sync: MultiplayerSynchronizer, show: bool) -> void:
-	# Solo, SceneMultiplayer has no such peer to update and says so: only the throttle's answer counts here.
-	Engine.print_error_messages = false
-	WorldCellInterest.pulse_visibility(sync, PULSE_PEER, show)
-	Engine.print_error_messages = true
 
 
 # --- Reports ------------------------------------------------------------------
@@ -758,6 +754,16 @@ func _count_traffic(
 		stats.append(NetStats.new())
 		stats.back().sample(peer, ids, Time.get_ticks_usec())
 		peer.host.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_PACKETS)
+	_landed.clear()
+	for index: int in range(crew):
+		_landed.append(0.0)
+		for node: Node in sides[index].find_children("*", "MultiplayerSynchronizer", true, false):
+			var copy := node as MultiplayerSynchronizer
+			if index == 0 or copy.is_multiplayer_authority():
+				continue
+			var bytes: int = int(_sync_entry(copy, str(copy.get_path()))[1])
+			if bytes > 0:
+				copy.synchronized.connect(func() -> void: _landed[index] += bytes)
 	var start: int = Time.get_ticks_usec()
 	_held_syncs = 0
 	var sent: int = 0
@@ -792,7 +798,7 @@ func _count_traffic(
 		"clients": clients, "worst": worst.index, "per_client": worst.total,
 		"per_client_enet": worst.enet, "datagrams": worst.datagrams, "host_sent": host_sent,
 		"events": sent, "events_seen": applied[0], "seconds": seconds, "fps": frames / seconds,
-		"held_copies": _held_copies, "held_syncs": _held_syncs,
+		"held_copies": _held_copies, "held_syncs": _held_syncs, "landed": _landed.duplicate(),
 	}
 
 
@@ -901,17 +907,19 @@ func _report_measured(layout: Dictionary) -> void:
 		each.append("%s %.1f-%.1f" % [where, ranges[where].x / KB, ranges[where].y / KB])
 	_line("enet_%s" % CASES.key(layout), ("per_client_kbps=%.1f (ENet %.1f + IP/UDP %.1f; a client"
 		+ " %s) clients_kbps=%s datagrams_s=%.0f host_upload_kbps=%.1f events=%d seconds=%.2f"
-		+ " fps=%.0f%s") % [float(measured.per_client) / KB, float(measured.per_client_enet) / KB,
-			(float(measured.per_client) - float(measured.per_client_enet)) / KB,
+		+ " fps=%.0f landed_syncs_kbps=%.1f%s") % [float(measured.per_client) / KB,
+			float(measured.per_client_enet) / KB, (float(measured.per_client) - float(measured.per_client_enet)) / KB,
 			CASES.place_name(int(places[int(measured.worst)])), ", ".join(each),
-			float(measured.datagrams), float(measured.host_sent) / KB, measured.events,
-			measured.seconds, float(measured.fps), " over_budget" if over else ""])
+			float(measured.datagrams), float(measured.host_sent) / KB, measured.events, measured.seconds,
+			float(measured.fps), float(measured.landed[int(measured.worst)]) / float(measured.seconds) / KB,
+			" over_budget" if over else ""])
 
 
 ## `layout`'s measurement against its budget (where held) and, client by client, against the model's
 ## ceiling for that client (CASES.client_case(); what the model counts on top, trip events and
-## keepalive, isn't sent here). The check that the streams flowed needs two frames of the fastest
-## pose: slower, the frame rate holds the sync rate down and it is only printed as skipped.
+## keepalive, isn't sent here). The check that the streams flowed counts what landed on the worst client
+## (_landed: each send that arrived, at the model's size, and the events sent): a loaded runner's frame
+## rate holds the sends down, and this follows them.
 func _check_measured(world: Dictionary, layout: Dictionary) -> void:
 	var measured: Dictionary = layout.measured
 	var title: String = CASES.title(layout)
@@ -930,19 +938,11 @@ func _check_measured(world: Dictionary, layout: Dictionary) -> void:
 			"%s: client %d (%s) stays under the model's ceiling (%.1f <= %.1f KB/s)" % [title,
 				client.index, CASES.place_name(int(places[int(client.index)])),
 				float(client.total) / KB, float(ceiling.total) / KB])
-	var worst: Dictionary = CASES.client_case(world, layout, places, int(measured.worst))
-	var model_data: float = float(worst.host) + float(worst.relayed) + float(worst.events_data)
-	var fastest: float = CASES.fastest(world.syncs.player)
-	if not (layout.riders as Array).is_empty():
-		fastest = minf(fastest, CASES.fastest(world.ride.player))
-	if float(measured.fps) < 2.0 / fastest:
-		_line("enet_%s_flow_check" % CASES.key(layout),
-			"skipped (%.0f fps, under %.0f: fewer sends than the game's)"
-			% [float(measured.fps), 2.0 / fastest])
-	else:
-		_expect(float(measured.per_client_enet) >= 0.5 * model_data,
-			"%s: the streams flowed, ENet counted over half the model's data (%.1f of %.1f KB/s)"
-			% [title, float(measured.per_client_enet) / KB, model_data / KB])
+	var landed: float = (float(measured.landed[int(measured.worst)])
+		+ int(measured.events) * int(world.events.busy_bytes)) / float(measured.seconds)
+	_expect(float(measured.landed[int(measured.worst)]) > 0.0 and float(measured.per_client_enet) >= 0.5 * landed,
+		"%s: the streams flowed, ENet counted over half of what landed at the model's sizes (%.1f of %.1f KB/s)"
+		% [title, float(measured.per_client_enet) / KB, landed / KB])
 	var most: int = int(measured.held_copies) * (ceili(float(measured.seconds) / float(world.ride.box_held)) + 1)
 	_expect(int(measured.held_copies) > 0 and int(measured.held_syncs) <= most, ("%s: the boxes held in the"
 		+ " shed sent their pose at most every %.1f s (%d poses to %d copies in %.1f s)") % [title,

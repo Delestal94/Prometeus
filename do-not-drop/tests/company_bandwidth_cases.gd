@@ -408,3 +408,11 @@ static func first_product() -> StringName:
 		if file.ends_with(".tres"):
 			return StringName(file.get_basename())
 	return &""
+
+
+## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to `peer`, on or off.
+static func pulse(sync: MultiplayerSynchronizer, peer: int, show: bool) -> void:
+	# Solo, SceneMultiplayer has no such peer to update and says so: only the throttle's answer counts here.
+	Engine.print_error_messages = false
+	WorldCellInterest.pulse_visibility(sync, peer, show)
+	Engine.print_error_messages = true

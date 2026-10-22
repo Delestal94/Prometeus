@@ -30,10 +30,17 @@ class_name NetRestThrottle
 ## Muted (set_muted()), it sends every `muted_interval` whatever the body does:
 ## for a pose the other peers draw some other way meanwhile (a box in someone's
 ## hands, drawn on them). Unmuted it's back to every tick at once, for a whole
-## settle window, as if it had just moved. A visibility change doesn't unmute it.
+## settle window, as if it had just moved. A visibility change doesn't unmute
+## it, but showing it to a peer, a quiet keepalive pulse included, sends a pose
+## at once (every tick for MUTED_SHOW_FRAMES rendered frames, then muted again):
+## a late joiner gets one before a far-copy rule calls its copy stale, and a
+## pulse still moves that peer's sync clock.
 
 ## A synchronizer whose visibility changes while it has this meta set to true doesn't wake its throttle.
 const QUIET_META: StringName = &"net_rest_quiet"
+## Rendered frames a muted synchronizer goes every tick after it's shown to a peer: SceneMultiplayer sends once a
+## frame, so two make sure one send falls after the change.
+const MUTED_SHOW_FRAMES: int = 2
 
 @export var synchronizer_path: NodePath = ^"../MultiplayerSynchronizer"
 ## Properties of the synchronizer's root that make up the pose.
@@ -58,6 +65,7 @@ var _reference: Array = []
 var _still_seconds: float = 0.0
 var _resting: bool = false
 var _muted: bool = false
+var _show_frames: int = 0
 
 
 func _ready() -> void:
@@ -75,7 +83,8 @@ func _ready() -> void:
 	_active_interval = _sync.replication_interval
 	_sync.visibility_changed.connect(_on_visibility_changed)
 	_capture()
-	if _muted:
+	set_process(false)
+	if _muted and _sync.is_multiplayer_authority():
 		_sync.replication_interval = _interval()
 
 
@@ -128,8 +137,19 @@ func _apply() -> void:
 
 func _interval() -> float:
 	if _muted:
-		return muted_interval
+		return _active_interval if _show_frames > 0 else muted_interval
 	return rest_interval if _resting else _active_interval
+
+
+## Muted and just shown to a peer: every tick for MUTED_SHOW_FRAMES frames, then muted again.
+func _process(_delta: float) -> void:
+	_show_frames -= 1
+	if _show_frames > 0:
+		return
+	_show_frames = 0
+	set_process(false)
+	if _sync.is_multiplayer_authority():
+		_sync.replication_interval = _interval()
 
 
 func _capture() -> void:
@@ -164,8 +184,16 @@ func _moved() -> bool:
 ## The game calls update_visibility(peer) when that peer can start receiving
 ## (0 is the synchronizer's own per-frame refresh, not someone new).
 func _on_visibility_changed(for_peer: int) -> void:
-	if for_peer == 0 or bool(_sync.get_meta(QUIET_META, false)):
+	if for_peer == 0:
 		return
 	if not _sync.public_visibility and not _sync.get_visibility_for(for_peer):
+		return
+	if _muted:
+		_show_frames = MUTED_SHOW_FRAMES
+		set_process(true)
+		if _sync.is_multiplayer_authority():
+			_sync.replication_interval = _interval()
+		return
+	if bool(_sync.get_meta(QUIET_META, false)):
 		return
 	wake()

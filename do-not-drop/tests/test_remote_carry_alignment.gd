@@ -18,6 +18,10 @@ extends SceneTree
 ##   (not back where the host had it before the hold, the buffer's stale poses) until the host's first fresh pose,
 ##   then eases to it (never more than 5 cm a frame at 144 fps) and ends there; the carrier's own client, which
 ##   predicted it, does the same;
+## - in the bay of a truck moving at 20 m/s, drawn by hand at 60 fps: a third peer whose copy of the carrier sits
+##   down before the host's carrier_peer_id 0 lands, and the carrier's own client with a menu open (no prediction,
+##   still muted) and then letting go, keep the box within 5 cm of where the hands held it in the truck's space
+##   until the host's first fresh pose, and it stays there once that pose (in the truck's space) lands;
 ## - a late joiner's copy, which never got a pose, is drawn in the carrier's hands;
 ## - dropped on the host, the full rate is back on the next tick (not muted, every tick, not resting) and nobody
 ##   holds it any more.
@@ -91,6 +95,8 @@ func _initialize() -> void:
 		host[0] * 100.0, host[1] * 100.0, third[0] * 100.0])
 	_check_let_go(box, remote, false)
 	_check_let_go(box, level.local_player, true)
+	_check_truck_let_go(box, remote, level.vehicle, false)
+	_check_truck_let_go(box, level.local_player, level.vehicle, true)
 	await _check_late_joiner(world, remote)
 
 	# --- dropped on the host: the full rate is back ---
@@ -225,6 +231,71 @@ func _check_let_go(box: DeliveryPackage, carrier: Player, own: bool) -> void:
 		% [what, worst_jump * 100.0])
 	_expect(box.global_position.distance_to(dropped.origin) < 0.01,
 		"...and %s ends where the host has it (%.2f m off)" % [what, box.global_position.distance_to(dropped.origin)])
+
+
+## A client's copy in the bay of a truck moving at 20 m/s (this process's truck put by hand each frame at FPS, not
+## interpolated, as a client's is). `own`: the carrier is this peer's player, holding it with a menu open (no
+## prediction) and then letting go; else another's, whose copy sits down before the host's carrier_peer_id 0. The
+## box stays where the hands held it in the truck's space, within LIMIT, until the host's fresh pose there.
+func _check_truck_let_go(box: DeliveryPackage, carrier: Player, van: Node3D, own: bool) -> void:
+	var what: String = "the carrier's own client" if own else "a third peer"
+	var view: PackageNetPose = box._net_view
+	var parked: Transform3D = van.global_transform
+	var interpolation: Node.PhysicsInterpolationMode = van.physics_interpolation_mode
+	van.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	carrier.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	var body := Transform3D(Basis(), Vector3(0.0, 0.3, 3.0))
+	var held: DeliveryPackage = carrier.carried_package
+	box.is_held = true
+	box.carrier_peer_id = carrier.get_multiplayer_authority()
+	box._predicted_frame = -100
+	if own:
+		carrier.carried_package = box
+	var dt: float = 1.0 / 60.0
+	var now: float = 80.0 + (10.0 if own else 0.0)
+	var in_truck: Variant = null
+	var worst: float = 0.0
+	var off_hands: float = 0.0
+	for frame: int in range(90):
+		van.global_transform = parked.translated(-parked.basis.z * 20.0 * frame * dt)
+		carrier.global_transform = van.global_transform * body
+		if frame == 30:
+			# Let go here: the seat lands before carrier_peer_id 0 (another's), or the hands let go (own).
+			if own:
+				carrier.carried_package = null
+			else:
+				carrier.seat_node_path = ^"Seat"
+		if frame == 45:
+			box.is_held = false
+			box.carrier_peer_id = 0
+		if frame >= 60 and frame % 2 == 0:
+			box.net_in_vehicle = true
+			box.net_transform = in_truck
+			box.net_time = 3000000 + (100000 if own else 0) + frame * 17
+			view.push(box, now)
+		view.draw(box, dt, now)
+		var here: Transform3D = van.global_transform.affine_inverse() * box.global_transform
+		if frame < 30:
+			var hands: Vector3 = carrier._carry_component.hands_pose(box).origin
+			off_hands = maxf(off_hands, box.global_position.distance_to(hands))
+		if frame == 29:
+			in_truck = here
+		elif frame > 29:
+			worst = maxf(worst, here.origin.distance_to((in_truck as Transform3D).origin))
+		now += dt
+	var bay: Vector3 = (van.global_transform * (in_truck as Transform3D)).origin if in_truck != null else Vector3.INF
+	_expect(in_truck != null and bool(van.call(&"carries", bay, 0.4)),
+		"%s: the hands hold the box in the truck's bay" % what)
+	_expect(off_hands < LIMIT, "Held in a truck at 20 m/s, %s draws the box in the hands (%.1f cm off at worst)%s"
+		% [what, off_hands * 100.0, ", a menu open: no prediction" if own else ""])
+	_expect(worst < LIMIT, ("In a truck at 20 m/s, %s keeps the box let go of where the hands held it in the"
+		+ " truck's space until the host's pose (%.1f cm off at worst)") % [what, worst * 100.0])
+	carrier.seat_node_path = NodePath()
+	carrier.carried_package = held
+	van.global_transform = parked
+	van.physics_interpolation_mode = interpolation
+	van.reset_physics_interpolation()
+	carrier.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_INHERIT
 
 
 ## A late joiner's copy of a held box: no pose ever came (the host sends one every muted_interval), only who holds

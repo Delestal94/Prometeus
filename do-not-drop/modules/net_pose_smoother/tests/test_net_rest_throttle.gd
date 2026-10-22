@@ -10,8 +10,10 @@ extends SceneTree
 ## from a peer, nor a change made with QUIET_META set (a keepalive pulse); a
 ## watched property the body doesn't have leaves the rate alone.
 ## Muted (set_muted(), D-2002.5: a box in someone's hands), it sends every
-## muted_interval moving or still, a peer it's shown to doesn't change that;
-## unmuted, every tick comes back at once and stays for a settle window.
+## muted_interval moving or still; shown to a peer (a quiet keepalive pulse
+## too) it goes every tick for MUTED_SHOW_FRAMES frames and is muted again,
+## hidden from one it doesn't; unmuted, every tick comes back at once and stays
+## for a settle window.
 
 const TICK: float = 1.0 / 60.0
 const ACTIVE: float = 1.0 / 60.0
@@ -124,9 +126,24 @@ func _check_muted(body: Body, sync: MultiplayerSynchronizer, throttle: NetRestTh
 	_settle(throttle)
 	_expect(is_equal_approx(sync.replication_interval, throttle.muted_interval),
 		"Muted, coming to rest doesn't put rest_interval on it (interval %.4f)" % sync.replication_interval)
-	sync.visibility_changed.emit(5)
+	for quiet: bool in [false, true]:
+		if quiet:
+			sync.set_meta(NetRestThrottle.QUIET_META, true)
+		sync.visibility_changed.emit(5)
+		sync.remove_meta(NetRestThrottle.QUIET_META)
+		var how: String = "by a quiet keepalive pulse" if quiet else "for real"
+		_expect(throttle.is_muted() and is_equal_approx(sync.replication_interval, ACTIVE),
+			"Muted and shown to a peer %s, it sends at once (interval %.4f)" % [how, sync.replication_interval])
+		for frame: int in range(NetRestThrottle.MUTED_SHOW_FRAMES):
+			throttle._process(TICK)
+		_expect(is_equal_approx(sync.replication_interval, throttle.muted_interval),
+			"...then, %d frames later, muted again (interval %.4f)" % [NetRestThrottle.MUTED_SHOW_FRAMES,
+				sync.replication_interval])
+	sync.public_visibility = false
+	sync.visibility_changed.emit(6)
 	_expect(is_equal_approx(sync.replication_interval, throttle.muted_interval),
-		"Muted, a peer it's shown to doesn't unmute it (interval %.4f)" % sync.replication_interval)
+		"Muted and hidden from a peer, nothing is sent (interval %.4f)" % sync.replication_interval)
+	sync.public_visibility = true
 	throttle.set_muted(false)
 	_expect(not throttle.is_muted() and not throttle.is_resting()
 		and is_equal_approx(sync.replication_interval, ACTIVE),

@@ -13,6 +13,9 @@
    sale de la replicación de la caja, y `submit_carry_transform` pierde su `in_hands`.
 3. **Al soltarla, cada peer la deja donde la dibujó hasta la primera pose nueva del host** (las de antes de
    tomarla o del goteo de 5 s son viejas: no entran al buffer) y desde ahí la acerca en `DROP_BLEND_SECONDS`.
+   Si estaba en la caja de carga de una camioneta, la deja ahí en el espacio de la camioneta (a 20 m/s, en el
+   espacio del mundo quedaba ~3 m atrás durante un viaje de ida y vuelta: `auditor-red`). El cliente del que la
+   lleva, si deja de predecir sin soltarla (un menú abierto), la dibuja en sus propias manos.
    El host la sigue simulando en la última pose que le manda el que la lleva (`submit_carry_transform`, como antes).
 
 **Por qué:** la salida con 8 jugadores daba 67,3 KB/s de 40 (modelo, techo de Steam; 52,2-54,0 con ENet). Las 6 cajas
@@ -31,10 +34,12 @@ era el más nuevo y la copia del jugador va 50-200 ms atrás).
 
 **Por qué 5 s y no nunca:** el reloj de 16 bits de los paquetes de sincronización de SceneMultiplayer se da vuelta
 cada 65.536 envíos a ese peer (~9 min a 60 por segundo); un sincronizador callado más de la mitad de eso ve
-descartadas sus poses nuevas por un rato. Un goteo cada 5 s lo evita por casi nada (6 cajas: 0,1 KB/s). Un pulso de
-keepalive de `CompanyInterest` a una caja muteada dura dos de sus intervalos (10 s cada 20): manda dos poses; si se
-suelta en medio, ese peer lejano recibe la caja a ritmo completo hasta que se asienta (~1 s) y en reposo el resto
-del pulso.
+descartadas sus poses nuevas por un rato. Un goteo cada 5 s lo evita por casi nada (6 cajas: 0,1 KB/s). Además,
+muteada, mostrarla a un peer (un join tardío, alguien que se acerca, un pulso de keepalive de `CompanyInterest`)
+manda una pose enseguida (2 frames a cada tick, `MUTED_SHOW_FRAMES`): si no, una copia que nunca recibió nada se
+ocultaba por vieja a los 1,5 s y el pulso casi nunca mandaba. El pulso a una caja muteada dura dos de sus intervalos
+(10 s cada 20); si se suelta en medio, ese peer lejano recibe la caja a ritmo completo hasta que se asienta (~1 s) y
+en reposo el resto del pulso.
 
 **Descartado:** solo en la Empresa (el Reparto tiene el mismo problema con 8 y el código es uno solo; bifurcarlo era
 más código para menos); mandarla a 15/s como a su portador (~53, no alcanzaba); un segundo sincronizador para la

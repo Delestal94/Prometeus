@@ -27,15 +27,20 @@ Vale para todos los modos (Reparto, Infinito y Empresa): es el mismo `package.ts
   `Player` (solo de la misma sesión, y no si esa copia ya está sentada). Nueva `static muted(p)`. Las poses que
   llegan mientras está muteada no entran al buffer, y al soltarla la caja queda donde se dibujó hasta la primera
   pose nueva del host y después se acerca en `DROP_BLEND_SECONDS` (antes solo lo hacía el cliente del que la
-  llevaba). Se fueron `MAX_HOLD_REACH` y `_was_predicted` (ahora `_was_in_hands`).
+  llevaba). Si la camioneta la lleva en la caja de carga, ese "donde se dibujó" va en el espacio de la camioneta
+  (sigue andando con ella), y el acercamiento parte de ahí. En el cliente del que la lleva, si deja de predecir
+  pero la sigue teniendo (un menú abierto: `update_carried_package()` no corre), se dibuja en sus manos con
+  `hands_pose()`. Se fueron `MAX_HOLD_REACH` y `_was_predicted` (ahora `_was_in_hands`).
 - `scripts/gameplay/player/player_carry.gd` (Slatex): nueva `hands_pose(package) -> Transform3D` (lo que antes
   armaba `update_carried_package()` adentro: punto de agarre bajo la cámara, el rayo contra lo que estorba, la
   subida de 1,3 s, la falda sentado); la usan el dueño y las copias de los demás. Una copia que nunca recibió una
   pose de la caja (join tardío, al que el host le repite `pick_up`) no hace la subida. `carry_position()` acepta la
   caja como argumento opcional.
 - `modules/net_pose_smoother/net_rest_throttle.gd` (compartido): nuevas `set_muted(bool)`, `is_muted()` y
-  `@export muted_interval` (5 s). Muteado, manda cada `muted_interval` se mueva o no; una visibilidad nueva no lo
-  desmutea; al desmutear vuelve a cada tick en el mismo tick y queda una ventana de `settle_seconds`.
+  `@export muted_interval` (5 s) y `MUTED_SHOW_FRAMES` (2). Muteado, manda cada `muted_interval` se mueva o no;
+  mostrarlo a un peer (también un pulso de keepalive con `QUIET_META`) lo pone a cada tick por 2 frames y vuelve a
+  muteado, para que ese peer reciba una pose enseguida; al desmutear vuelve a cada tick en el mismo tick y queda una
+  ventana de `settle_seconds`.
 - `scripts/core/network_manager.gd` (compartido): solo `PROTOCOL_VERSION` y su línea `## 55`.
 
 Para Slatex: nada que hacer si no tocás el carry. Si cambiás dónde se sostiene la caja, cambialo en
