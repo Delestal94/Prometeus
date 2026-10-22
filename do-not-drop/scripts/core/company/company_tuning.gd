@@ -137,6 +137,11 @@ const COLD_PER_ICE_MINUTES: float = 25.0
 const ICE_PACKS_MAX: int = 2
 const ICE_PACK_COST: int = 2
 
+## Gift wrap (D-0723, GiftWrap): a gift order delivered in a wrapped box pays GIFT_WRAP_BONUS of its
+## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
+const GIFT_WRAP_BONUS: float = 0.15
+const GIFT_WRAP_COST: int = 3
+
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
 const WAREHOUSE_GRID_M: float = 1.0

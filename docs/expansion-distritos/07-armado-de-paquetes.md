@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | ✅ D-0721 | Conservadora con hielo para productos fríos | constructor-negocio | medium | test: frío dura N min en la ruta |
 | D-0722 | Caja térmica para Volcán (calor) (incluye D-1717, fusión de D-0112) | constructor-negocio | medium | test |
-| D-0723 | Envoltorio de regalo (pedido de regalo paga más) | constructor-negocio | medium | test |
+| ✅ D-0723 | Envoltorio de regalo (pedido de regalo paga más) | constructor-negocio | medium | test |
 | D-0724 | Caja impermeable para Islas (agua salpica) | constructor-negocio | medium | test |
 | D-0725 | Paracaídas acoplado para lanzamientos desde la avioneta | constructor-negocio | high | ver D-1420 |
 | D-0726 | Productos que no se pueden juntar (químicos con comida) | constructor-negocio | medium | regla con test |
