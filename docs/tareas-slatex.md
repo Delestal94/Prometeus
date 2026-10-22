@@ -368,7 +368,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### K. Animaciones base y de estudio (77-85)
 
-- [ ] **S-311.77** Clips base con `animation_library.py`: idle, caminar, trotar, correr (N-115), salto
+- [x] **S-311.77** Clips base con `animation_library.py`: idle, caminar, trotar, correr (N-115), salto
   (impulso, aire, aterrizaje), girar en el lugar.
 - [ ] **S-311.78** Clips de juego: levantar caja baja y alta, caminar cargando, lanzar, dejar, sentarse,
   manejar (IK de volante y pedales de Nacho: aviso), subir y bajar del camión, tocar timbre.
