@@ -430,6 +430,10 @@ UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
 UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
 UI_COMPANY_BANKRUPT_WARNING,Cerraste en rojo: hoy llegan menos pedidos (%d %%).,You closed in the red: fewer orders today (%d%%).
+UI_COMPANY_CLOSE_DAY,Cerrar el día,Close the day
+UI_COMPANY_CLOSE_DAY_CONFIRM,"¿Cerrar el día ahora? No entran más pedidos, se espera a que vuelvan las salidas y lo que no se entregó se cobra como a las 20:00.","Close the day now? No more orders come in, the trips out come back and whatever was not delivered is charged as at 20:00."
+UI_COMPANY_CLOSE_DAY_HOST_ONLY,Lo cierra el host,The host closes the day
+UI_COMPANY_EXIT_LOSES_DAY,"Salir ahora pierde lo hecho desde las 08:00. Para guardarlo, cerrá el día.","Leaving now loses everything done since 08:00. To keep it, close the day."
 UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d, balance $%d, %d units in stock."
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
