@@ -376,6 +376,8 @@ const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
 ## so a lost "stop" cannot send the forks to the top).
 const FORKLIFT_TIP_M: float = 1.2
 const FORKLIFT_MAST_BURST_S: float = 0.5
+## How fast its driver goes (m/s, D-0606.c2): a forklift's 8 km/h, under walking pace (3.6), and no running.
+const FORKLIFT_DRIVE_SPEED_MPS: float = 2.2
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0
