@@ -26,16 +26,24 @@ extends SceneTree
 ##                       the player opens the cab door and takes the wheel (SeatPoint.interact), the
 ##                       pedal is pressed (drive_accelerate) and the van leaves the yard under its own
 ##                       physics; CompanyTrips' gate, which follows the node every tick, starts the
-##                       Trip (the order goes OUT) and the van stops outside with the player at the
-##                       wheel. Not yet: the drive to the houses along the street graph (D-2016.3,
-##                       when the graph is in the company world, D-0314.a)
-##   deliver         ok  with the van's Trip out, at each stop the house is one of the
-##                       fixed map's (HouseMap, D-0311) in the order's zone, the door settles each
-##                       order (OrderSettlement: pay into the wallet, reputation) and the Trip
-##                       records it (record_settled), until no stop is left
-##   return          ok  the driver reverses (drive_brake) until the van is back in the yard: the
-##                       gate closes the Trip with nothing failed, no vehicle is out and TripResult
-##                       reports the deliveries and the clock; the player gets out (leave_seat)
+##                       Trip (the order goes OUT). Then the autopilot (D-2016.3, tests/bot_company_van.gd
+##                       and bot_company_trip.gd) drives it along the street graph (RoadNavigator.route
+##                       over the company world's RoadGraph, pure pursuit with analog steering): a Bezier
+##                       leg from the yard to the first avenue (the graph has no street through the
+##                       playon) and then the route to the street point in front of the Trip's first
+##                       stop's house (about 85 s to Centro). Fails if it does not get there or if the van
+##                       leaves the roadway (off_road_max over VAN.OFF_ROAD_LIMIT_M, D-0304.3)
+##   deliver         ok  at each stop of the Trip the van is at the house (the autopilot drives there if
+##                       it is not; within HOUSE_REACH_M), the house is one of the fixed map's (HouseMap,
+##                       D-0311) in the order's zone, the door settles each order (OrderSettlement: pay
+##                       into the wallet, reputation) and the Trip records it (record_settled), until no
+##                       stop is left. Not yet the house's own door: DeliveryHouse is the delivery run's
+##                       (doorbell and carried package) and the company world has no delivery at it
+##   return          ok  the autopilot takes the van back the way it came: a K-turn first if it stands
+##                       facing away (VAN.turn_around, strokes forward and in reverse), the route to the
+##                       avenue, the leg into the playon; the gate closes the Trip with nothing failed, no
+##                       vehicle is out and TripResult reports the deliveries and the clock; the player
+##                       gets out (leave_seat)
 ##   close_day       ok  the clock jumps to 20:00 and DayCycle goes OPERATING, CLOSING, SUMMARY;
 ##                       the summary holds the day's packaging costs and the closed day saves
 ##                       and loads back
@@ -57,9 +65,15 @@ extends SceneTree
 ## D-0252; stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
 ## ok, else `BOT_FAIL stages_missing=<n>`.
 ## The van's crossings are the real node's: nothing feeds the gate by hand (CompanyTrips.track).
+## The day's clock runs in real time while the van drives (90 s an hour): the whole bot takes about 3.5 minutes
+## and the day may reach 20:00 on the way (close_day accepts the phases it finds from there on).
 ## Exit codes: 0 BOT_OK, 1 any BOT_FAIL, 3 hard wall-clock timeout (`BOT_TIMEOUT`).
 ## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders through
-## CompanyRoot.order_crew, the peers come with D-2017) --hard=<seconds> (the hard timeout, default 120).
+## CompanyRoot.order_crew, the peers come with D-2017) --hard=<seconds> (the hard timeout, default 300).
+## new_context(players, drive_cap_m): with drive_cap_m > 0 the autopilot drives only that many metres of
+## street out of the yard instead of the whole way to the house (the way back is always the whole one from
+## wherever the van is): test_company_bot_day uses it to keep the stages near 40 s; the bot run by hand does
+## all of it (cap 0).
 ## The company saves into a temp folder (user://bot_company_day), never the game's slot.
 ## The pure parts (stage_names, stage_line, summary_lines, final_line), the world helpers
 ## (open_world, wait_opening, close_world) and the stages (new_context, run_stage) are static:
@@ -77,7 +91,7 @@ const STAGES: Array[String] = [
 const PENDING: Dictionary = {}
 const OPENING_WAIT_SECONDS: float = 10.0
 const DEFAULT_PLAYERS: int = 2
-const DEFAULT_HARD_SECONDS: float = 120.0
+const DEFAULT_HARD_SECONDS: float = 300.0
 
 const PRODUCTS_DIR: String = "res://data/products/"
 const ZONE_DIR: String = "res://data/zones/"
@@ -97,6 +111,8 @@ const PHASE_FRAMES: int = 120
 const SKIP_OPENING_MSEC: int = 10000
 ## Drives the fleet's van out of the yard and back (drive and return).
 const VAN := preload("res://tests/bot_company_van.gd")
+## The stages that drive it (drive, deliver, return: the autopilot, D-2016.3).
+const TRIP := preload("res://tests/bot_company_trip.gd")
 
 var _players: int = DEFAULT_PLAYERS
 var _hard_seconds: float = DEFAULT_HARD_SECONDS
@@ -275,7 +291,7 @@ func _on_hard_timeout() -> void:
 
 
 ## What the stages hand to each other, and the counters of the summary. `players` sizes the orders.
-static func new_context(players: int) -> Dictionary:
+static func new_context(players: int, drive_cap_m: float = 0.0) -> Dictionary:
 	return {
 		"players": players, "assembly_errors": 0, "breaks": 0, "deliveries": 0, "return_bundle_units": 0,
 		# Pallets the bot opened: id -> the Pallet dictionary (state open).
@@ -287,6 +303,15 @@ static func new_context(players: int) -> Dictionary:
 		"vehicle_id": &"", "trip": null,
 		# Metres the van covered from its parking spot to where it stopped outside the yard.
 		"drive_m": 0.0,
+		# Autopilot (D-2016.3): 0 drives the whole way along the street graph to the houses of the trip and
+		# back (about 85 s each way to Centro); > 0 (a test) ends the way out after that many metres of the
+		# street past the yard's leg, short of the first house, and deliver does not drive nor check the
+		# distance to the house. The way back is always the whole one, from wherever the van stands.
+		"drive_cap_m": drive_cap_m,
+		# Where the van stood parked and where it stopped outside the yard, with the way it looked.
+		"park_point": Vector2.ZERO, "yard_exit": Vector2.ZERO, "yard_dir": Vector2.UP,
+		# What the autopilot reported on each leg: stage -> drive_to()'s result (metres, off_road_max...).
+		"autopilot": {},
 	}
 
 
@@ -312,11 +337,11 @@ static func run_stage(
 		"dispatch":
 			return _dispatch(level as CompanyRoot, ctx)
 		"drive":
-			return await _drive(tree, level as CompanyRoot, ctx)
+			return await TRIP.drive(tree, level as CompanyRoot, ctx)
 		"deliver":
-			return _deliver(level as CompanyRoot, ctx)
+			return await TRIP.deliver(tree, level as CompanyRoot, ctx, _products())
 		"return":
-			return await _return(tree, level as CompanyRoot, ctx)
+			return await TRIP.come_back(tree, level as CompanyRoot, ctx)
 		"close_day":
 			return await _close_day(tree, level as CompanyRoot, ctx)
 	return _fail("unknown_stage")
@@ -601,87 +626,6 @@ static func _dispatch(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	return _ok()
 
 
-## The loaded van, parked in the playon, is driven out of the yard by the player: the gate sees the
-## node cross and starts the Trip (its orders go OUT). The van stops outside with its driver.
-static func _drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var vehicle: StringName = ctx["vehicle_id"]
-	if vehicle == &"" or ctx["box"] == null:
-		return _fail("nothing_loaded")
-	var driven: Dictionary = await VAN.drive_out(tree, level, vehicle)
-	ctx["drive_m"] = float(driven["metres"])
-	if driven["reason"] != "":
-		return _fail(driven["reason"])
-	var trip: Trip = level.trips.trip_of(vehicle)
-	if trip == null:
-		return _fail("trip_not_started")
-	if level.trips.book.state_of(ctx["order"]["id"]) != Order.STATE_OUT:
-		return _fail("order_not_out")
-	ctx["trip"] = trip
-	return _ok()
-
-
-## Stop by stop, each house of the van's Trip is checked against the fixed map and the door settles
-## its orders: the customer pays into the wallet (OrderSettlement) and the Trip records the delivery.
-static func _deliver(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var vehicle: StringName = ctx["vehicle_id"]
-	var box: PackedBox = ctx["box"]
-	if vehicle == &"" or box == null:
-		return _fail("nothing_loaded")
-	var trips: CompanyTrips = level.trips
-	var trip: Trip = ctx["trip"]
-	if trip == null or trips.trip_of(vehicle) != trip:
-		return _fail("not_driven_out")
-	var book: OrderBook = trips.book
-	var houses: HouseMap = HouseMap.load_default()
-	var products: Dictionary = _products()
-	var wallet: Node = level.net.company as Node
-	while trip.next_stop() != &"":
-		var house_id: StringName = trip.next_stop()
-		var house: HouseSpot = houses.spot(house_id) if houses != null else null
-		if house == null:
-			return _fail("unknown_house_%s" % house_id)
-		for stop: Dictionary in trip.stops:
-			if stop["house_id"] != house_id:
-				continue
-			for order_id: StringName in stop["order_ids"]:
-				if house.zone != StringName(book.get_order(order_id)["zone"]):
-					return _fail("house_out_of_zone")
-				var money: int = int(wallet.get("money"))
-				var settled: Dictionary = OrderSettlement.settle(
-					book, wallet, order_id, box, trips.minute(), [], products)
-				if not bool(settled["ok"]) or int(settled["paid"]) <= 0:
-					return _fail("not_settled")
-				if int(wallet.get("money")) != money + int(settled["paid"]) + int(settled["tip"]):
-					return _fail("not_paid")
-				if not trip.record_settled(order_id, book):
-					return _fail("not_recorded")
-				ctx["deliveries"] = int(ctx["deliveries"]) + 1
-	return _ok() if trip.pending_stops().is_empty() else _fail("stops_left")
-
-
-## The driver backs the van into the yard: the gate closes the Trip with nothing failed, no vehicle is
-## out (the day may close) and its summary has the deliveries and both clocks. The player gets out.
-static func _return(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var trip: Trip = ctx["trip"]
-	if trip == null:
-		return _fail("no_trip_out")
-	var trips: CompanyTrips = level.trips
-	var vehicle: StringName = ctx["vehicle_id"]
-	var back: String = await VAN.drive_back(tree, level, vehicle)
-	if back != "":
-		return _fail(back)
-	if trip.is_out() or trips.trips_out() != 0 or trips.trip_of(vehicle) != null:
-		return _fail("trip_not_closed")
-	if not trip.failed_ids.is_empty():
-		return _fail("orders_failed")
-	var result: Dictionary = TripResult.build(trip, trips.book)
-	if int(result["delivered"]) != int(ctx["deliveries"]) or int(result["failed"]) != 0:
-		return _fail("result_counts")
-	if str(result["return_clock"]) == "" or int(result["duration_min"]) < 0:
-		return _fail("result_clock")
-	return _ok()
-
-
 ## The day closes the way its clock does: 20:00 comes, OPERATING goes to CLOSING and, with no trip
 ## out, to SUMMARY. The summary must carry what the day cost and the closed day must save and load.
 static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
@@ -693,6 +637,7 @@ static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 	cycle.ticks = func() -> int: return Time.get_ticks_msec() + SKIP_OPENING_MSEC
 	# The phase it starts from too: after a real drive the day may be OPERATING already.
 	var seen: Array[int] = [int(cycle.phase())]
+	var came: int = seen[0]
 	for _frame: int in PHASE_FRAMES:
 		cycle.poll()
 		if seen.is_empty() or seen[seen.size() - 1] != int(cycle.phase()):
@@ -704,7 +649,9 @@ static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 		DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]
 	if cycle.phase() != DayCycle.Phase.SUMMARY:
 		return _fail("no_summary")
-	if seen.slice(seen.size() - 3) != path:
+	# The real clock runs while the van drives (90 s an hour): the day may be CLOSING, or closed, when it
+	# gets here; the rest of the path must be walked, in order, from the phase it started from.
+	if path.find(came) < 0 or seen != path.slice(path.find(came)):
 		return _fail("phases_skipped")
 	var summary: Dictionary = cycle.summary
 	if int(summary.get("day", -1)) != int(state.get("day")):
