@@ -207,7 +207,7 @@ var _grounded_once: bool = false
 ## _update_parking) instead of creeping downhill on its brakes.
 var _parked: bool = false
 ## Set on every peer by whoever builds the vehicle for a world that is not a delivery (CompanyFleet, D-0302.2.b.2):
-## the van drives, parks and brakes outside a run too (is_drivable()). Off for the delivery's truck, which
+## the van drives, parks and brakes outside a run too (is_drivable). Off for the delivery's truck, which
 ## drives only while RunManager.is_running. Not replicated: each peer's builder sets it; the client at the wheel
 ## predicts from what the host replicates (presentation_engine_running), not from this.
 var drivable_outside_run: bool = false
@@ -408,10 +408,10 @@ func _on_package_placed(package_id: StringName) -> void:
 ## on a slope), out from under the crew and away from the door they'd just
 ## climbed out of. Once it's slow and driverless it is frozen in place, and
 ## let go the moment somebody takes the wheel. Only while the van is driven
-## (is_drivable(): during a delivery, or always for a van built drivable_outside_run, like the
+## (is_drivable: during a delivery, or always for a van built drivable_outside_run, like the
 ## company's) -- before and after a delivery, the level freezes and releases the truck itself.
 func _update_parking(delta: float) -> void:
-	if not is_drivable():
+	if not is_drivable:
 		_parked = false
 		_park_settled_time = 0.0
 		_park_wait_time = 0.0
@@ -446,14 +446,21 @@ func _update_parking(delta: float) -> void:
 ## Whether the van is driven now: during a delivery run, or always when it was built drivable_outside_run (the
 ## company's). The one condition _drive(), the parking and VehicleInputComponent read; what belongs to a run alone
 ## (the HUD's telemetry, the impacts that shake the boxes) keeps asking RunManager.is_running.
-func is_drivable() -> bool:
-	return RunManager.is_running or drivable_outside_run
+var is_drivable: bool:
+	get:
+		return RunManager.is_running or drivable_outside_run
 
 
 ## Host: the van held still where it stands, as _update_parking() leaves one that stopped: frozen, with nobody at the
 ## wheel, and let go the moment somebody takes it or presses the pedal. For a vehicle built parked
-## (CompanyFleet); its wheels are put where the settled suspension holds them on the first tick.
-func park() -> void:
+## (CompanyFleet); its wheels are put where the settled suspension holds them on the first tick. With a Transform3D
+## `at` (world) the van is first put back there and on the ground again on its next tick (_snap_to_ground): one
+## that fell out of the world (CompanyFleet.recover_fallen()); whoever is at its wheel stays.
+func park(at: Variant = null) -> void:
+	if at is Transform3D:
+		global_transform = at
+		reset_physics_interpolation()
+		_grounded_once = false
 	_parked = true
 	_park_settled_time = 0.0
 	_park_wait_time = 0.0
@@ -527,7 +534,11 @@ func _apply_paint() -> void:
 			reference_truck.call(&"set_retro", bool(tuning.get("retro", false)))
 
 
-func _on_horn_honked(_peer_id: int) -> void:
+## A van built drivable_outside_run (the company's fleet, several at once) sounds only for the honk of its own
+## driver; the delivery's single truck sounds for any honk, as ever.
+func _on_horn_honked(peer_id: int) -> void:
+	if drivable_outside_run and peer_id != driver_peer_id:
+		return
 	_horn_player.play()
 
 
@@ -572,12 +583,12 @@ func submit_driver_input(seq: int, throttle: float, steering_input: float, handb
 	if sender_id == 0:
 		set_controls(throttle, steering_input, handbrake)
 	else:
-		receive_driver_input(seq, throttle, steering_input, handbrake)
+		_receive_driver_input(seq, throttle, steering_input, handbrake)
 
 
 ## Host: a numbered input from the client at the wheel, played on its tick
 ## (VehiclePrediction.host_tick).
-func receive_driver_input(seq: int, throttle: float, steering_input: float, handbrake: bool) -> void:
+func _receive_driver_input(seq: int, throttle: float, steering_input: float, handbrake: bool) -> void:
 	_prediction.receive(seq, clampf(throttle, -1.0, 1.0), clampf(steering_input, -1.0, 1.0), handbrake)
 
 
@@ -731,7 +742,7 @@ func _physics_process(delta: float) -> void:
 	# The engine is on during a run, and outside one while somebody holds the wheel or the van still rolls to a stop
 	# (a parked, driverless company van is off); the client at the wheel predicts with this (_drive(), above).
 	presentation_engine_running = running or (drivable_outside_run and (driver_peer_id != 0 or not _parked))
-	_drive(delta, is_drivable())
+	_drive(delta, is_drivable)
 
 	# The HUD's speed, only during a run: parked out of one (the depot before it, the company's yard, D-0302.2.b)
 	# the van told every peer, reliably and however far, its 0 km/h ten times a second. The tick a run ends sends

@@ -28,6 +28,12 @@ extends SceneTree
 ##   and it stops once the run ends.
 ## - The client's player takes the wheel (the seat's interact() on the host) and the client leaves: the host
 ##   frees the wheel (driver_peer_id 0, controls off) and the seat, and closes its vehicles to it.
+## - The client at the wheel drives the host's van outside a run (D-0302.2.b.2): its copy is built
+##   drivable_outside_run; once the host seats it, with its copy's controls set by hand (the input component reads
+##   the host process's peer id here) the host's van is let go (net_simulating, its NetRestThrottle stops
+##   resting), the client predicts its copy (is_predicted()), the host's van moves and the copy stays within a
+##   metre of it; close_to() takes the client off the wheel and the van brakes, freezes within the parking wait
+##   and its engine goes off.
 ## - No engine error on the way (a synchronizer reaching the client before its van existed logs one).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -383,6 +389,7 @@ func _check_copy() -> void:
 	_expect(await _wait_for(follows), "...and follows it when the host moves it (%s vs %s)"
 		% [copy.global_position, host_van.global_position])
 	await _check_run_telemetry(telemetry)
+	await _check_client_drives(host_van, copy, client_id)
 	await _check_driver_leaves(host_van, client_id)
 
 
@@ -418,6 +425,60 @@ func _check_run_telemetry(telemetry: Array[int]) -> void:
 	_expect(during > 0 and telemetry[0] == after_end,
 		"During a run the client gets the van's telemetry (%d), none once it ended (%d more)"
 		% [during, telemetry[0] - after_end])
+
+
+## The client's player takes the wheel and drives its copy (controls set by hand: in this process the input
+## component compares with the host's peer id); close_to() then takes it off the wheel.
+func _check_client_drives(host_van: VehicleBody3D, copy: VehicleBody3D, client_id: int) -> void:
+	_expect(bool(copy.get(&"drivable_outside_run")), "The client's copy is drivable outside a run too")
+	var seat := host_van.get_node_or_null(SEAT_PATH) as SeatPoint
+	var driver: Node = _host_root.get_node_or_null(NodePath("World/Player_%d" % client_id))
+	if seat == null or driver == null:
+		_expect(false, "The host has the van's driver seat and the client's player")
+		return
+	var constants: Dictionary = (host_van.get_script() as GDScript).get_script_constant_map()
+	var park_wait: float = float(constants["PARK_MAX_WAIT_SECONDS"])
+	var throttle := host_van.get_node(^"NetRestThrottle") as NetRestThrottle
+	_expect(host_van.freeze and not host_van.net_simulating, "Parked, the host's van is frozen and not simulating")
+	var start: Vector3 = host_van.global_position
+	host_van.call(&"set_door_open", &"cab_left", true)
+	seat.interact(driver)
+	_expect(int(host_van.get(&"driver_peer_id")) == client_id, "The host seats the client at the wheel")
+	var awake_at: int = -1
+	var predicted_at: int = -1
+	for tick: int in range(150):
+		copy.call(&"set_controls", 1.0, 0.0, false)
+		await physics_frame
+		if awake_at < 0 and not throttle.is_resting():
+			awake_at = tick
+		if predicted_at < 0 and copy.is_predicted():
+			predicted_at = tick
+	_expect(host_van.net_simulating and not host_van.freeze, "The host's van is let go and simulating")
+	_expect(awake_at >= 0 and awake_at < 10,
+		"...its NetRestThrottle stops resting within 10 ticks (tick %d)" % awake_at)
+	_expect(predicted_at >= 0, "...the client predicts its copy (is_predicted, from tick %d)" % predicted_at)
+	var moved: float = host_van.global_position.distance_to(start)
+	var gap: float = copy.global_position.distance_to(host_van.global_position)
+	_expect(moved > 2.0 and gap < 1.0, "...the host's van moved %.1f m and the copy is %.2f m from it" % [moved, gap])
+	_expect(bool(host_van.get(&"presentation_engine_running")), "...with its engine on")
+	_host_root.fleet.close_to(client_id)
+	_expect(int(host_van.get(&"driver_peer_id")) == 0, "close_to() takes the client off the wheel")
+	var froze_at: float = -1.0
+	for tick: int in range(int((park_wait + 4.0) * 60.0)):
+		await physics_frame
+		if host_van.freeze:
+			froze_at = float(tick) / 60.0
+			break
+	_expect(froze_at >= 0.0 and froze_at < park_wait + 1.0 and bool(host_van.get(&"_parked")),
+		"...the van brakes and freezes within the parking wait (after %.1f s)" % froze_at)
+	_expect(not bool(host_van.get(&"presentation_engine_running")), "...and its engine is off")
+	# The client's player climbs out (its own gesture), so the seat is free for the next check.
+	var own: Player = _client_root.get_node_or_null(NodePath("World/Player_%d" % client_id)) as Player
+	if own != null:
+		own.leave_seat()
+	var seat_free: Callable = func() -> bool:
+		return (driver as Player).seat_node_path.is_empty() and seat.occupant == null
+	_expect(await _wait_for(seat_free), "The client's player gets out and the seat is free again")
 
 
 ## The client sits at the wheel of the host's van and leaves: the host takes it off the wheel and the seat.

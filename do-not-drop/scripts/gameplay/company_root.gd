@@ -218,6 +218,7 @@ func _ready() -> void:
 	zones = load_zones()
 	for zone: ZoneDefinition in zones:
 		_add_zone_slab(zone)
+	CompanyGround.add_backup(_world, zones)
 	_add_shed()
 	_add_supplier_truck()
 	_add_cells()
@@ -225,6 +226,8 @@ func _ready() -> void:
 	_add_interest()
 	_add_trips()
 	fleet = CompanyFleet.add_to(_world, net, session, shed)
+	if trips != null:
+		fleet.vehicle_recovered.connect(trips.forget)
 	_add_crew()
 	_add_builder()
 	_add_stock_board()
@@ -806,7 +809,8 @@ func _add_trips() -> void:
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M)
+	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M, -shed.global_basis.z)
+	trips.set_yard(CompanyFleet.yard_back_m(net.company), CompanyFleet.yard_half_width_m(net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out

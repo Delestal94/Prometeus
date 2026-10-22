@@ -7,8 +7,8 @@ extends Node
 ## trip_started, departure_refused, trip_closed and refused_returned of this node as a CompanyNet
 ## event. It owns the TripGate across the playon's far edge (CompanyFleet.gate_of(), the yard outside the shed's
 ## exit) and the active Trips, and every physics tick it feeds the gate with the position of each node in group
-## VEHICLE_GROUP (named by its vehicle id). Cargo the dispatch zone hands a vehicle waits in stage_cargo(); when the vehicle
-## crosses the gate outward the Trip starts with it (orders go OUT), and when it comes back in the
+## VEHICLE_GROUP (named by its vehicle id). Cargo the dispatch zone hands a vehicle waits in stage_cargo(); when
+## the vehicle crosses the gate outward the Trip starts with it (orders go OUT), and when it comes back in the
 ## Trip closes (what was not delivered fails). trips_out() is what the host's DayCycle.trips_out
 ## reads, so the day waits for a vehicle still out (S3); this node stays the authority there, the
 ## views only follow it. Nothing here sends anything: the host's view publishes (its follow()).
@@ -61,12 +61,21 @@ var _closed: Array[Trip] = []
 var _next_id: int = 1
 
 
-## The gate across the playon's far edge (outward is -Z, centered): `exit_origin` is the middle of the
-## opening in world coordinates (CompanyFleet.gate_of()), `width` its width in metres.
-func setup(exit_origin: Vector3, width: float) -> void:
-	gate = TripGate.new(exit_origin, Vector3.FORWARD, width)
+## The gate across the playon's far edge: `exit_origin` is the middle of the opening in world coordinates
+## (CompanyFleet.gate_of()), `width` its width in metres, `outward` the way out (the shed's north, -Z of its basis;
+## default the world's -Z). The yard (set_yard()) makes the whole compound the inside.
+func setup(exit_origin: Vector3, width: float, outward: Vector3 = Vector3.FORWARD) -> void:
+	gate = TripGate.new(exit_origin, outward, width)
 	gate.departed.connect(_on_departed)
 	gate.returned.connect(_on_returned)
+
+
+## The inside is the rectangle of the shed and the playon, `back` metres behind the gate's line and `half_width` to
+## each side of the axis (CompanyFleet.yard_back_m() / yard_half_width_m()): leaving it anywhere is a departure,
+## coming in anywhere a return (TripGate.set_yard()). Call after setup().
+func set_yard(back: float, half_width: float) -> void:
+	if gate != null:
+		gate.set_yard(back, half_width)
 
 
 ## What the dispatch zone loaded on `vehicle_id`: it leaves with this when it crosses the gate.

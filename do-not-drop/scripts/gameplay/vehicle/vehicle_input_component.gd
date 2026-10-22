@@ -40,7 +40,7 @@ func _physics_process(_delta: float) -> void:
 ## drivable_outside_run (the company's) and only with somebody at its wheel: offline, _is_local_driver() is always
 ## true, and a player walking past a parked van must not press its pedal.
 func _reads_input() -> bool:
-	return RunManager.is_running or (_vehicle.is_drivable() and _vehicle.driver_peer_id != 0)
+	return RunManager.is_running or (_vehicle.is_drivable and _vehicle.driver_peer_id != 0)
 
 
 func _is_local_driver() -> bool:

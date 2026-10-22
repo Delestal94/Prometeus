@@ -13,10 +13,11 @@ extends Node3D
 ## CompanyInterest sends it only to the players near it and to its driver, and the host's cells load around it.
 ## Parked side by side in the playon, the yard outside the shed's north exit (park_transform()): rear doors
 ## PARK_GAP_M past the north wall, facing the exit, nose away from the shed. The playon is PLAYON_DEPTH_M deep
-## from the outside of that wall and PLAYON_WIDTH_M wide (three vans side by side), and its far edge is where
+## from the outside of that wall and PLAYON_WIDTH_M wide (PLAYON_SLOTS vans side by side), and its far edge is where
 ## CompanyTrips' gate stands (gate_of()): a parked vehicle is inside it, a trip starts only when one is driven
-## out across that edge. The shed's own exit (2 m) is narrower than a van (2.2 m): the vehicles live and are loaded
-## in the playon, the exit is for people and boxes.
+## out of the compound (the rectangle of the shed and the playon, yard_back_m() / yard_half_width_m(): out across
+## the far edge, round its sides or its back, wherever there is no fence). The shed's own exit (2 m) is narrower
+## than a van (2.2 m): the vehicles live and are loaded in the playon, the exit is for people and boxes.
 ##
 ## Driven (D-0302.2.b.2): each is built drivable_outside_run (vehicle.gd), on every peer, so the van drives, parks
 ## and brakes in this world as it does in a delivery run; its telemetry and impacts stay the run's. The host's is
@@ -46,6 +47,10 @@ extends Node3D
 
 const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
 
+## Host: `vehicle_id` fell out of the world and was put back in the playon (recover_fallen()): CompanyRoot closes
+## its trip (CompanyTrips.forget()), so the day never waits for a vehicle that is not out.
+signal vehicle_recovered(vehicle_id: StringName)
+
 ## This node's name under World, the same on every peer.
 const NODE_NAME: String = "Vehicles"
 ## Most vehicles one fleet builds (rule 5: a snapshot can't make a client build more).
@@ -59,10 +64,15 @@ const PARK_SPACING_M: float = 3.5
 ## where the trips' gate stands (gate_of()). A van parked by park_transform() has its nose 9.3 m past the wall; the
 ## rest is the room between it and the gate.
 const PLAYON_DEPTH_M: float = 12.0
-## ... and its width, centred on the exit: the opening of the gate (CompanyTrips.setup()). Three vans side by side
-## (PARK_SPACING_M) fit; a fourth and beyond stand past its sides, inside the gate's line but not in its opening,
-## until the yard grows with the shed (D-1201).
-const PLAYON_WIDTH_M: float = 12.0
+## ... and its width, centred on the exit: the gate's opening (CompanyTrips.setup()) and, at least, the compound's
+## (yard_half_width_m()). PLAYON_SLOTS vans side by side (PARK_SPACING_M) fit; a vehicle beyond them (an eighth
+## and on: the fleet may have MAX_VEHICLES) stands past the playon's side, outside the compound from the start
+## (its first position only sets its side: no trip), until the dealer (D-1201) limits the fleet to the yard.
+const PLAYON_WIDTH_M: float = 26.0
+const PLAYON_SLOTS: int = 7
+## Height (m) under which a vehicle fell through the world (a zone with no ground under it): it is put back
+## where it parks (recover_fallen()).
+const FALL_Y_M: float = -10.0
 ## Height a parked vehicle is put at: the host's sits on the ground on its first tick (vehicle.gd
 ## _snap_to_ground, RIDE_HEIGHT 0.666 over it), a client's is moved by the host's first pose.
 const PARK_HEIGHT_M: float = 0.7
@@ -276,6 +286,22 @@ static func gate_of(at_shed: Node3D, company: Object) -> Vector3:
 	return exit_of(at_shed, company) + facing * Vector3(0.0, 0.0, -(CompanyShed.WALL_THICKNESS + PLAYON_DEPTH_M))
 
 
+## How far behind the gate's line the compound reaches (the shed's floor and its two walls, then the playon), in
+## metres: the TripGate yard's back edge.
+static func yard_back_m(company: Object) -> float:
+	var stage: Variant = company.get(&"warehouse_stage") if company != null else 0
+	return WarehouseStages.floor_size_m(int(stage) if stage is int else 0).y + 2.0 * CompanyShed.WALL_THICKNESS \
+		+ PLAYON_DEPTH_M
+
+
+## Half of the compound's width: the playon's, or the shed's with its walls when that is wider.
+static func yard_half_width_m(company: Object) -> float:
+	var stage: Variant = company.get(&"warehouse_stage") if company != null else 0
+	var shed_width: float = WarehouseStages.floor_size_m(int(stage) if stage is int else 0).x \
+		+ 2.0 * CompanyShed.WALL_THICKNESS
+	return maxf(PLAYON_WIDTH_M, shed_width) * 0.5
+
+
 ## Where the `index`-th vehicle parks, in world space: centred on the exit (exit_of()), the next ones side by side
 ## (+X, -X, then twice as far...), rear doors PARK_GAP_M past the outside of the north wall and facing the exit,
 ## nose away from the shed (a vehicle's front is its -Z, vehicle.gd).
@@ -289,6 +315,27 @@ static func park_transform(at_shed: Node3D, company: Object, index: int) -> Tran
 	return Transform3D(facing, exit_of(at_shed, company) + facing * offset)
 
 
+## Host: a vehicle under FALL_Y_M (it fell through a hole in the ground) is put back where it parks, still, and
+## vehicle_recovered says which. Returns how many were put back. Done every physics tick.
+func recover_fallen() -> int:
+	var count: int = 0
+	var all: Array[Node3D] = vehicles()
+	for index: int in range(all.size()):
+		var body: Node3D = all[index]
+		if body.global_position.y >= FALL_Y_M or not body.has_method(&"park"):
+			continue
+		var company: Object = net.company if net != null else null
+		body.call(&"park", park_transform(shed, company, index))
+		vehicle_recovered.emit(StringName(body.name))
+		count += 1
+	return count
+
+
+func _physics_process(_delta: float) -> void:
+	if _host:
+		recover_fallen()
+
+
 ## The host (solo too) builds now and gates every synchronizer until each peer acks it, closing a peer that leaves
 ## or whose world comes up again; a client builds once the host's snapshot is in, then acks.
 func _hook(session: Node) -> void:
@@ -296,6 +343,7 @@ func _hook(session: Node) -> void:
 		return
 	_host = net.is_host()
 	_session = session
+	set_physics_process(_host)
 	if not _host:
 		net.company_state_restored.connect(_on_snapshot)
 		return
