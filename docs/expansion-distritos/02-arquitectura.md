@@ -48,7 +48,7 @@
 | ~~D-0233~~ | ~~Pool de objetos para productos y cajas (evitar crear y borrar nodos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | perfilador-rendimiento | high | `bench_depot` sin picos de allocs al armar 100 cajas |
 | ~~D-0234~~ | ~~Migración del save de perfil actual (`unlock_profile`) al save de empresa~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | perfil viejo carga y conserva cosméticos y récords |
 | D-0235 | ✅ Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
-| D-0236 | Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
+| D-0236 | ✅ Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
 | ~~D-0237~~ | ~~Rutas de guardado compatibles con Steam Auto-Cloud (ver N-914)~~ **Fusionada en D-2010 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | rutas bajo `user://saves/company/`; documentado |
 | D-0238 | Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
 | D-0239 | Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |

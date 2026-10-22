@@ -34,9 +34,9 @@ extends Node3D
 ## the world and loads the main menu. The host (solo too) loads its slot when it comes
 ## up without a company (CompanySave) and saves the day as it stood at the last applied
 ## event, marked interrupted, whenever its world closes before the day does: its session
-## ended and it went back to the menu, or the game closed. Every day is still saved as in progress,
-## also one DayCycle (D-0203) already closed (its SUMMARY phase): saving the closed day is D-0206's
-## hook (docs/expansion-distritos/revisar/D-0203.md).
+## ended and it went back to the menu, or the game closed. A day DayCycle (D-0203) closes is saved
+## as soon as its SUMMARY applies, and again if the world closes during the summary, as the next
+## day's opening (save_closed_day(), D-0236): a game killed mid-day comes back at its last close.
 ##
 ## The day (D-0203): the root gives every peer a GameClock and a DayCycle child, both attached to
 ## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
@@ -293,6 +293,32 @@ func save_interrupted_day() -> bool:
 	return saved
 
 
+## Host (solo too), with the day closed (DayCycle in SUMMARY): the company saved as the next day's
+## opening (D-0236), day + 1 at DAY_START_MIN, not interrupted, with the live stock as a save keeps
+## it (stock_for_save()). Loading it opens that day, as next_day() would. The company itself keeps
+## its day: only the saved copy moves on. False on a client, without a company on, outside SUMMARY,
+## over a newer build's save or when the file could not be written.
+func save_closed_day() -> bool:
+	if _hosted_state == null or not is_instance_valid(_hosted_state) or not _hosted_state.is_active():
+		return false
+	if day_cycle == null or not is_instance_valid(day_cycle):
+		return false
+	if day_cycle.phase() != DayCycle.Phase.SUMMARY:
+		return false
+	if net != null and is_instance_valid(net) and net.inventory != null:
+		_hosted_state.store_stock(stock_for_save(net.inventory))
+	var next_opening := COMPANY_STATE.new()
+	next_opening.from_dict(_hosted_state.to_dict())
+	next_opening.day = _hosted_state.day + 1
+	next_opening.clock_minutes = CompanyTuning.DAY_START_MIN
+	var saved: bool = CompanySave.save(next_opening, save_slot, save_dir)
+	next_opening.free()
+	if not saved:
+		push_warning("CompanyRoot: the closed day %d could not be saved to %s"
+			% [_hosted_state.day, CompanySave.path_for(save_slot, save_dir)])
+	return saved
+
+
 ## A copy of `stock` as a save keeps it (D-2005): what every hands:<peer> held lies in
 ## SAVED_HANDS_LOCATION, with the total of each product and the reservations unchanged. `stock`
 ## itself (CompanyNet's live one) is not touched.
@@ -327,7 +353,8 @@ func host_day_seen() -> Dictionary:
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
 	if _hosted_state != null:
-		save_interrupted_day()
+		if not save_closed_day():
+			save_interrupted_day()
 		_hosted_state = null
 	_restore_own_company()
 	_publish_presence()
@@ -351,8 +378,12 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 
 ## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
 ## units and layout events itself (CompanyShed.follow(), D-0910).
-func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
+## the summary takes no other day_phase until next_day().
+func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
+		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
+			save_closed_day()
 		_publish_presence()
 
 
