@@ -66,6 +66,12 @@ const GPS_LOOKAHEAD: float = 30.0
 const TOW_COST: int = 50
 ## Real seconds of black screen while the vehicle is carried to the yard.
 const TOW_BLACK_SCREEN_SECONDS: float = 3.0
+## A company van on a trip counts as STUCK (CompanyTow, D-0307.1) after this many seconds with a driver, the
+## pedal down and nearly no speed (level_common.gd's STUCK_SECONDS and STUCK_SPEED of the delivery run, the same
+## numbers): the tow is offered then. Mud is not stuck: the crew pushes there.
+const TOW_STUCK_SECONDS: float = 6.0
+## Speed (m/s) under which a van with the pedal down counts as not moving.
+const TOW_STUCK_SPEED: float = 0.3
 
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the

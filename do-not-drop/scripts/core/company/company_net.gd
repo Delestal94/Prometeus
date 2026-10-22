@@ -6,11 +6,9 @@ extends Node
 ## even ahead of time: it asks the host (_request, through RpcGuard), the host checks the request with what only it
 ## knows (stock, reach, hands), applies the resulting event and sends it, numbered, to every ready peer (_apply_event),
 ## where the same code applies it again. A refused request tells only its sender why (_rejected); a dropped one
-## (malformed, over budget) tells nobody.
-##
-## Events carry `seq`. Reliable delivery loses nothing, so the only gap is an event sent before this peer's world was
-## up: a peer that sees a number skipped holds what comes next and asks for a snapshot (snapshot_request, at most one
-## per SNAPSHOT_INTERVAL_MSEC per peer on the host).
+## (malformed, over budget) tells nobody. Events carry `seq`. Reliable delivery loses nothing, so the only gap is an
+## event sent before this peer's world was up: a peer that sees a number skipped holds what comes next and asks for a
+## snapshot (snapshot_request, at most one per SNAPSHOT_INTERVAL_MSEC per peer on the host).
 ##
 ## The snapshot (D-2004, the contract's section 3) is the whole business state at the host's current seq (snapshot()).
 ## The host sends it to a peer when that peer's world comes up (NetworkManager.peer_level_ready) and when it asks; it
@@ -21,16 +19,16 @@ extends Node
 ##
 ## Child of the company world (CompanyRoot today, CompanyWorld once it exists), always named "CompanyNet" so its RPC
 ## path is the same on every peer. The owner hands it the live `inventory`, the `company` state, the `stations` lookup
-## and any other snapshot part (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
-## path, only to know which peers have their world up and when one comes up.
+## and any other snapshot part (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached
+## by path, only to know which peers have their world up.
 ##
-## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of section 2; units_drop is critical),
-## snapshot_request, the shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`), the
-## packing tables' box_* (rows 9 to 15b, D-0715: CompanyTableNet, `table`), package_ack (a client has a sealed
-## box's package, D-0715.b: CompanyPackages, `table.packages`), cart_push / cart_moved (D-0610.b: CompanyCarts,
-## `carts`; their units move with units_take / units_store at the station cart:<id>), the pallet jack's
-## jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`; the station `jack`), supplier_order
-## (D-0603.b.2: CompanySupplierNet, `supplier`) and shop_buy (D-0518: CompanyShopNet, `shop`, the host's only).
+## Kinds today: units_take, units_store and units_drop (rows 5 to 7; units_drop is critical), snapshot_request, the
+## shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`), the packing tables' box_* (rows 9
+## to 15b, D-0715: CompanyTableNet, `table`), package_ack (D-0715.b: CompanyPackages, `table.packages`), cart_push
+## (D-0610.b: CompanyCarts, `carts`; units move with units_take / units_store at the station cart:<id>), the pallet
+## jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`), supplier_order (D-0603.b.2:
+## CompanySupplierNet, `supplier`), shop_buy (D-0518: CompanyShopNet, `shop`, the host's only) and trip_tow (D-0307.1:
+## CompanyTowNet, `tow`: a stuck vehicle towed home; its effects go out as wallet_moved and trip_closed).
 ## A task that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a
 ## player stuck, rule 8), checks it in _handle_request() and applies its event in _apply_state().
 ##
@@ -44,9 +42,8 @@ extends Node
 ## orders (D-0813, CompanyOrdersNet, `orders`) and wallet_moved, money in or out that no request led to (D-0517,
 ## CompanyWalletNet, publish_wallet()) and units_spoiled, cold products that rotted (D-0616.b, CompanyColdNet).
 ##
-## A host rule that reacts to a business fact listens to event_applied, never to
-## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
-## made there is refused (it would number its event before the one being applied).
+## A host rule that reacts to a business fact listens to event_applied, never to Inventory.stock_changed: that one
+## fires in the middle of applying an event, and a request made there is refused (it would number its event first).
 
 ## Every peer, the host too, right after an event changed the state here: presentation (HUD, sounds)
 ## and the host's rules that react to a fact (see above: save_closed_day, CompanyDayOrders.plan) listen to this.
@@ -75,7 +72,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
 	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
 	CompanyPallets.PUT, CompanyPallets.PUSH, CompanyPallets.FORK_ACT, CompanyShopNet.BUY,
-	CompanyTableNet.RESTOCK, CompanyTableNet.DISCARD,
+	CompanyTableNet.RESTOCK, CompanyTableNet.DISCARD, CompanyTowNet.ASK,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
@@ -170,6 +167,8 @@ var supplier: CompanySupplierNet = CompanySupplierNet.new()
 var wallet: CompanyWalletNet = CompanyWalletNet.new()
 ## The shop's purchases (D-0518): only the host's go through; what they change is in `company`'s snapshot part.
 var shop: CompanyShopNet = CompanyShopNet.new()
+## The tow home (D-0307.1): a peer asks, the host's world (CompanyTow) does it; no event of its own.
+var tow: CompanyTowNet = CompanyTowNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (tests force small ones).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
 ## Host: a station id -> what the host needs to check a request at it (rule 4), as Callable(station) -> Dictionary:
@@ -572,7 +571,7 @@ func _take_request(peer: int, kind: StringName, data: Dictionary) -> void:
 		return
 	if not REQUEST_KINDS.has(kind) or typeof(data.get("rid")) != TYPE_INT:
 		return
-	var reason: StringName = _handle_request(peer, kind, data)
+	var reason: StringName = tow.ask(data) if kind == CompanyTowNet.ASK else _handle_request(peer, kind, data)
 	if reason != &"":
 		_refuse(peer, int(data["rid"]), reason)
 

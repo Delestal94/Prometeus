@@ -64,10 +64,9 @@ extends Node3D
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
 ## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the playon's gate (its far edge) and decides
-## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
-## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
-## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips; its "GateBrake"
-## (CompanyGateBrake, D-0316.4) brakes the copy it drives at the same gate while the host holds it there.
+## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every peer, the host
+## too, knows which vehicles are out (CompanyNet events and the snapshot). A client has no CompanyTrips; its
+## "GateBrake" (D-0316.4) brakes its copy at the gate. The host's "Tow" (CompanyTow, D-0307.1) takes a stuck van home.
 ##
 ## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
 ## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
@@ -233,6 +232,7 @@ func _ready() -> void:
 	fleet = CompanyFleet.add_to(_world, net, session, shed)
 	if trips != null:
 		fleet.vehicle_recovered.connect(trips.forget)
+		CompanyTow.add_to(self, trips, fleet, net)
 	CompanyGpsLink.add_to(_world, fleet, trips_view, net)
 	_add_crew()
 	_add_builder()

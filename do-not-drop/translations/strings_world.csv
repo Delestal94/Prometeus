@@ -457,5 +457,6 @@ WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better
 WORLD_TOW_DONE,La grúa te llevó al playón (-$%d),The tow truck took you to the yard (-$%d)
 WORLD_TOW_NO_TRIP,No hay salida abierta para este vehículo,No open trip for this vehicle
 WORLD_TOW_NOT_STUCK,El vehículo todavía anda: volvé manejando,The vehicle still runs: drive back
+WORLD_TOW_OFFER,Volver con grúa (-$%d),Tow home (-$%d)
 WORLD_TOW_NO_MONEY,No alcanza para la grúa: hacen falta $%d,Not enough money for the tow: it costs $%d
 WORLD_SPOILED,Se echó a perder: %d %s,Spoiled: %d %s

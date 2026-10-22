@@ -178,6 +178,22 @@ func forget(vehicle_id: StringName) -> void:
 	_on_returned(vehicle_id)
 
 
+## Host: `vehicle_id`'s open trip closes by a tow home (TripTow.tow_home(), D-0307.1) instead of by crossing the
+## gate back: `vehicle_state` is TripTow's (STUCK or BROKEN) and `wallet` the company's (can_afford() and spend()).
+## Answers as tow_home() does; only when it went through (ok) the trip leaves the active ones and trip_closed says what
+## failed, so the day stops waiting for it. The vehicle is put in the yard by the caller (CompanyFleet.send_home()):
+## when the gate then sees it come in, there is no trip left to close. The products of the boxes are not moved (no
+## Inventory is handed: that move is an event of its own, as when the gate closes a trip).
+func tow(vehicle_id: StringName, vehicle_state: StringName, wallet: Object) -> Dictionary:
+	var trip: Trip = _active.get(vehicle_id)
+	var answer: Dictionary = TripTow.tow_home(trip, vehicle_state, wallet, book, minute())
+	if bool(answer["ok"]):
+		_active.erase(vehicle_id)
+		_closed.append(trip)
+		trip_closed.emit(trip, answer["failed_ids"] as Array[StringName])
+	return answer
+
+
 func _physics_process(_delta: float) -> void:
 	if gate == null or not is_inside_tree():
 		return
