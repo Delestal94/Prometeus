@@ -106,6 +106,13 @@ var net_engine_force: float:
 	set(value):
 		if not _prediction.active:
 			engine_force = value
+## Client predicting: the host's pose in the newest state its prediction was
+## compared with, as late as the link brings it (Transform3D.IDENTITY until
+## the first one each time it starts predicting; stale after it stops).
+## CompanyGateBrake tells by it that the host let a held truck go (D-0316.4). Read only, not replicated.
+var predicted_host_pose: Transform3D:
+	get:
+		return _prediction.host_pose
 ## Host: whether its truck is simulated (not frozen for loading, parking or a
 ## run's end), replicated on change: the client at the wheel predicts only
 ## while it is.

@@ -3,9 +3,9 @@ extends SceneTree
 ##
 ## The five suppliers of data/suppliers/ (expansion D-0621, "Varios proveedores"):
 ## - the catalog loads with no error and has five suppliers, each under its own id;
-## - distribuidora_central is still the first by file name (the order screen uses the first one
-##   until D-0621.b lets the crew pick) and keeps the single-supplier numbers: everything, list
-##   price, 08:30, waits 180 min;
+## - distribuidora_central is still the first by file name and keeps the single-supplier numbers:
+##   everything, list price, 08:30, waits 180 min (it is SupplierIds.DEFAULT, the truck the shed
+##   draws, which keeps CompanyTuning's times: D-0621.b);
 ## - every catalog product has at least one seller, and the specialists sell a part of it;
 ## - they differ in price (factor), punctuality (arrival) and patience (wait), and every truck's
 ##   stay fits inside the day;

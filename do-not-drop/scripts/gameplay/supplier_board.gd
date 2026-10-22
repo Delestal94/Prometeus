@@ -50,12 +50,14 @@ var player_of: Callable = Callable()
 var busy: Callable = Callable()
 
 ## The order awaited: CompanyNet.request()'s id (0 for none), when it was sent (msec), the lines and total
-## it was sent with, the day its truck comes and what that truck carried before ({product: units}).
+## it was sent with, the day its truck comes, whose truck it is (a supplier id, D-0621.b) and what that
+## truck carried before ({product: units}).
 var _pending_rid: int = 0
 var _sent_msec: int = 0
 var _sent_lines: Array[Dictionary] = []
 var _sent_total: int = 0
 var _sent_arrival: int = 0
+var _sent_truck: StringName = SupplierSchedule.DEFAULT_SUPPLIER
 var _sent_before: Dictionary = {}
 ## True inside send(): a host answers its own request before request() returns.
 var _sending: bool = false
@@ -147,7 +149,8 @@ func preload_cart() -> bool:
 	var book_orders: Array = net.orders.book.to_dict().get("orders", [])
 	var wanted: Dictionary = SupplierAutoOrder.cart_preload(
 		int(company.get(&"money")), net.supplier.schedule, SupplierAutoOrder.todays_orders(book_orders, _today),
-		SupplierAutoOrder.stock_units(net.inventory, cart.products), cart.products, cart.supplier, day)
+		SupplierAutoOrder.stock_units(net.inventory, cart.products), cart.products, cart.supplier, day,
+		net.supplier.truck_of(cart.supplier))
 	for id: StringName in wanted:
 		cart.set_qty(id, int(wanted[id]))
 	if not cart.is_empty():
@@ -155,16 +158,19 @@ func preload_cart() -> bool:
 	return not cart.is_empty()
 
 
-## The panel's `request`: asks the host for an order of `lines` (CompanySupplierNet.ORDER) and returns
-## the request id (0 when nobody could be asked or the lines do not make an order).
+## The panel's `request`: asks the host for an order of `lines` from the cart's supplier (its truck:
+## CompanySupplierNet.truck_of(), named in the request) and returns the request id (0 when nobody could be
+## asked or the lines do not make an order).
 func send(lines: Array[Dictionary]) -> int:
-	var data: Dictionary = CompanySupplierNet.request_data(lines)
+	var truck: StringName = net.supplier.truck_of(cart.supplier) if net != null else &""
+	var data: Dictionary = CompanySupplierNet.request_data(lines, truck)
 	if net == null or data.is_empty():
 		return 0
 	_sent_lines = lines.duplicate(true)
 	_sent_total = cart.total()
 	_sent_arrival = SupplierSchedule.arrival_day(_day())
-	_sent_before = net.supplier.schedule.ordered_for(_sent_arrival)
+	_sent_truck = truck
+	_sent_before = net.supplier.schedule.ordered_for(_sent_arrival, truck)
 	_sent_msec = Time.get_ticks_msec()
 	_answered = false
 	_sending = true
@@ -228,7 +234,7 @@ func _on_rejected(rid: int, reason: StringName) -> void:
 ## True when the truck of the order's day now carries, for every line sent, at least what it carried
 ## before plus that line.
 func _calendar_took_order() -> bool:
-	var now: Dictionary = net.supplier.schedule.ordered_for(_sent_arrival)
+	var now: Dictionary = net.supplier.schedule.ordered_for(_sent_arrival, _sent_truck)
 	for line: Dictionary in _sent_lines:
 		var product := StringName(line["product"])
 		if int(now.get(product, 0)) < int(_sent_before.get(product, 0)) + int(line["qty"]):
@@ -248,7 +254,8 @@ func _tomorrow_lines() -> Array:
 	var out: Array = []
 	if net == null or net.supplier.schedule == null:
 		return out
-	var already: Dictionary = net.supplier.schedule.ordered_for(SupplierSchedule.arrival_day(_day()))
+	var already: Dictionary = net.supplier.schedule.ordered_for(
+		SupplierSchedule.arrival_day(_day()), net.supplier.truck_of(cart.supplier))
 	for id: StringName in already:
 		out.append({"product": id, "qty": int(already[id])})
 	return out

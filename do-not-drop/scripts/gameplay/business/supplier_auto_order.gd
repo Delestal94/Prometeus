@@ -35,11 +35,11 @@ static func lines(money: int, schedule: SupplierSchedule, orders: Array, stock: 
 ## off `money` before the trim, so ordering the suggested on top never asks for more than the rule would.
 ## Same rule and values as lines() (SupplierOrderCart.suggested); {} when nothing is missing.
 static func cart_preload(money: int, schedule: SupplierSchedule, orders: Array, stock: Dictionary, products: Dictionary,
-		supplier: SupplierDefinition, day: int) -> Dictionary:
+		supplier: SupplierDefinition, day: int, truck: StringName = SupplierSchedule.DEFAULT_SUPPLIER) -> Dictionary:
 	var have: Dictionary = stock.duplicate()
 	var budget: int = money
 	if schedule != null:
-		var already: Dictionary = schedule.ordered_for(SupplierSchedule.arrival_day(day))
+		var already: Dictionary = schedule.ordered_for(SupplierSchedule.arrival_day(day), truck)
 		for id: Variant in already:
 			have[id] = int(have.get(id, 0)) + int(already[id])
 			budget -= SupplierPurchase.cost(StringName(id), int(already[id]), products)

@@ -3,7 +3,8 @@ extends RefCounted
 ## The supplier order being filled in on the board or the clipboard (expansion D-0603,
 ## "Modo Empresa").
 ##
-## What the order screen reads and writes: lines product -> units, the total, how many
+## What the order screen reads and writes: lines product -> units, the total (at the
+## supplier's prices, its price_factor: D-0621.b), how many
 ## pallets the truck will bring, and submit(), which checks the wallet and puts the order
 ## in the SupplierSchedule for the next day (arrival_day). Nothing is charged here: the
 ## bill is paid when each pallet is received (SupplierPurchase.receive, D-0503), so a
@@ -70,7 +71,21 @@ func qty(product: StringName) -> int:
 	return int(_lines.get(product, 0))
 
 
-## The lines, products in id order: {product, qty, unit_price, cost}.
+## What one unit of `product` costs from `supplier` (its price_factor: SupplierDefinition.unit_price, D-0621.b)
+## or, with no supplier, at list price (buy_price). 0 for a product not in `catalog`.
+static func unit_cost(product: StringName, catalog: Dictionary, seller: SupplierDefinition = null) -> int:
+	var def: ProductDefinition = catalog.get(product) as ProductDefinition
+	if def == null:
+		return 0
+	return seller.unit_price(def) if seller != null else def.buy_price
+
+
+## What one unit of `product` costs from this cart's supplier (unit_cost()).
+func unit_price(product: StringName) -> int:
+	return unit_cost(product, products, supplier)
+
+
+## The lines, products in id order: {product, qty, unit_price, cost}, at the supplier's prices.
 func lines() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var ids: Array = _lines.keys()
@@ -78,14 +93,7 @@ func lines() -> Array[Dictionary]:
 	ids.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	for id: StringName in ids:
 		var n: int = qty(id)
-		out.append(
-			{
-				"product": id,
-				"qty": n,
-				"unit_price": SupplierPurchase.cost(id, 1, products),
-				"cost": SupplierPurchase.cost(id, n, products),
-			}
-		)
+		out.append({"product": id, "qty": n, "unit_price": unit_price(id), "cost": unit_price(id) * n})
 	return out
 
 
@@ -110,16 +118,17 @@ func can_submit(wallet: Object) -> bool:
 	return not is_empty() and wallet != null and wallet.can_afford(total())
 
 
-## Puts the order in the schedule for the day after order_day and empties the cart. False,
-## changing nothing, when the cart is empty, the wallet does not cover it or the schedule
-## refuses it.
-func submit(wallet: Object, schedule: SupplierSchedule, order_day: int) -> bool:
+## Puts the order in the schedule for the day after order_day, in the truck of `truck` (a supplier id:
+## SupplierSchedule.DEFAULT_SUPPLIER's unless told), and empties the cart. False, changing nothing, when
+## the cart is empty, the wallet does not cover it or the schedule refuses it.
+func submit(wallet: Object, schedule: SupplierSchedule, order_day: int,
+		truck: StringName = SupplierSchedule.DEFAULT_SUPPLIER) -> bool:
 	if schedule == null or not can_submit(wallet):
 		return false
 	var order: Array = []
 	for line: Dictionary in lines():
 		order.append({"product": line["product"], "qty": line["qty"]})
-	if not schedule.place(order_day, order):
+	if not schedule.place(order_day, order, truck):
 		return false
 	clear()
 	return true
@@ -140,7 +149,7 @@ static func suggested(ordered: Dictionary, stock: Dictionary, money: int, produc
 		var units: int = mini(maxi(0, int(ordered[id]) - int(stock.get(id, 0))), MAX_LINE_QTY)
 		if units > 0:
 			out[id] = units
-			cost += SupplierPurchase.cost(id, units, products)
+			cost += unit_cost(id, products, supplier) * units
 	var over: int = cost - (money - CompanyTuning.RENT_PER_DAY - CompanyTuning.SOLO_ORDER_CASH_RESERVE)
 	var ids: Array = out.keys()
 	ids.sort_custom(
@@ -152,7 +161,7 @@ static func suggested(ordered: Dictionary, stock: Dictionary, money: int, produc
 	for id: StringName in ids:
 		if over <= 0:
 			break
-		var price: int = SupplierPurchase.cost(id, 1, products)
+		var price: int = unit_cost(id, products, supplier)
 		if price <= 0:
 			continue
 		var off: int = mini(int(out[id]), ceili(float(over) / price))
