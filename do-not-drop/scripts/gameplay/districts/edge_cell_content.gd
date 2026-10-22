@@ -31,7 +31,9 @@ var _plans: Dictionary = {}
 var _events_by_cell: Dictionary = {}
 
 
-func _init(road_graph: RoadGraph, size: float, world_seed: int = 0, with_events: bool = false, centro_decor: CentroDecor = null) -> void:
+func _init(
+		road_graph: RoadGraph, size: float, world_seed: int = 0, with_events: bool = false,
+		centro_decor: CentroDecor = null) -> void:
 	graph = road_graph
 	cell_size = size
 	session_seed = world_seed
