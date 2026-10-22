@@ -41,9 +41,10 @@ extends Node
 ## `pos` (a drop, or what a peer that left held), kept on every peer (floor_bundles) and taken
 ## back with units_take (a bundle is its own station).
 ##
-## Events nobody asks for (the contract's "without a client request"; later, orders) are the host's
-## own rules, sent with publish() by the same path: clock_anchor (D-0219, GameClock, given as `clock`),
-## day_phase (D-0203, DayCycle, `day_cycle`) and trip_* (D-0302.2.a, CompanyTripsView, `trips_view`).
+## Events nobody asks for (the contract's "without a client request") are the host's own rules, sent
+## with publish() by the same path: clock_anchor (D-0219, GameClock, given as `clock`), day_phase
+## (D-0203, DayCycle, `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`) and
+## order_added / order_expired, the day's orders (D-0813, CompanyOrdersNet, `orders`).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -89,11 +90,13 @@ const EVENT_KINDS: Array[StringName] = [
 	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
 	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
-	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
+	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
+	CompanyOrdersNet.EXPIRED,
 ]
-## Kinds the host may publish() with no request, its own rules (clock, phases, trips out); units_moved never.
+## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, its orders);
+## units_moved never.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyTripsView.STARTED,
-	CompanyTripsView.REFUSED, CompanyTripsView.CLOSED]
+	CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -158,6 +161,8 @@ var build: CompanyLayoutNet = CompanyLayoutNet.new()
 var table: CompanyTableNet = CompanyTableNet.new()
 ## Where the picking carts stand after a push (D-0610.b); a snapshot part.
 var carts: CompanyCarts = CompanyCarts.new()
+## The day's orders (D-0813): the book every peer shares, the host's plan and their events; in every snapshot.
+var orders: CompanyOrdersNet = CompanyOrdersNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -212,6 +217,7 @@ func _init() -> void:
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
 	add_snapshot_part(CompanyCarts.SNAPSHOT_KEY, carts.to_dict, carts.put_snapshot)
+	add_snapshot_part(CompanyOrdersNet.SNAPSHOT_KEY, orders.to_dict, orders.put_snapshot)
 
 
 func _ready() -> void:
@@ -275,7 +281,7 @@ func request_for(peer: int, kind: StringName, data: Dictionary = {}) -> bool:
 
 
 ## Host: an event no request led to, decided by the host's own rules (the clock's pace, D-0219;
-## the day's phases, D-0203; later the day's orders). It takes the same path as one a request led
+## the day's phases, D-0203; the day's orders, D-0813). It takes the same path as one a request led
 ## to: applied here first, numbered, sent to every ready peer, then event_applied. False, with
 ## nothing sent, on a client, for a kind not in HOST_EVENT_KINDS, while another event is applied or when the
 ## state here doesn't take it.
@@ -521,6 +527,12 @@ func resume_after_snapshot(snapshot_seq: int) -> void:
 ## Client: true while it holds events waiting for a snapshot.
 func awaiting_snapshot() -> bool:
 	return _awaiting_snapshot
+
+
+## True while an event changes the state here: nothing may request or publish now (a host rule
+## the business tick polls checks it first, CompanyOrdersNet.poll()).
+func is_applying() -> bool:
+	return _applying
 
 
 ## Host: a request from another peer. Dropped silently when it reaches a client or the
@@ -823,6 +835,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
 			applied = carts.apply(data)
+		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED:
+			applied = orders.apply(kind, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
@@ -914,26 +928,9 @@ func _connected_client() -> bool:
 	)
 
 
-## The station a checked request names, as the owner describes it (`stations`), or {} when it
-## is unknown or the description is unusable. A floor bundle with a position here is its own
-## station (row 5): its id is its location and its spot is where it lies.
+## The station a checked request names, or {} (CompanyAsk.station_of(): `stations` and the floor bundles).
 func _lookup_station(ask: Dictionary) -> Dictionary:
-	if ask.is_empty():
-		return {}
-	var id: StringName = ask["station"]
-	var bundle: Variant = floor_bundles.position_of(id)
-	if bundle is Vector3:
-		return {"location": id, "spot": bundle}
-	if not stations.is_valid():
-		return {}
-	var found: Variant = stations.call(id)
-	if not found is Dictionary:
-		return {}
-	var station: Dictionary = found
-	var location: StringName = CompanyAsk.as_id(station.get("location"))
-	if location == &"" or String(location).begins_with(HANDS_PREFIX):
-		return {}
-	return station if station.get("spot") is Vector3 else {}
+	return CompanyAsk.station_of(ask, floor_bundles, stations)
 
 
 ## Why a units request can't be done at that station: bad data, an unknown station or one out

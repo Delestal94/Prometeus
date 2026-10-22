@@ -95,11 +95,14 @@ const MAX_PLAYERS: int = 8
 ## 40: CompanyNet's _apply_event carries three new kinds, trip_started,
 ## trip_refused and trip_closed, and its snapshot a "trips" part: the company
 ## vehicles out of the shed, as the host's CompanyTrips decides them (company
-## mode, D-0302.2).
+## mode, D-0302.2);
+## 41: CompanyNet's _apply_event carries two new kinds, order_added and
+## order_expired, and its snapshot an "orders" part: the day's order book from
+## the host (company mode, D-0813).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 40
+const PROTOCOL_VERSION: int = 41
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
