@@ -341,7 +341,7 @@ Decisión: `docs/decisiones/2026-10-22-horario-clientes.md`.
 **Hecho cuando:** `diseno/clientes.md` existe y D-0851 se puede construir sin preguntar.
 
 ### D-0137 · Cosméticos de la empresa — A · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/cosmeticos-empresa.md`: cuatro ranuras (pintura, franja, logo, uniforme) que salen de los hitos cumplidos, las elige el host en el cierre desde un bloque de la tienda, una pintura para toda la flota (solo carrocería), logo de lista cerrada, uniforme solo en empleados y copa fija del volcán. Lo construyen D-0437 y D-1234.
+**[x] Hecho (2026-10-22, PR #700)** — `diseno/cosmeticos-empresa.md`: cuatro ranuras (pintura, franja, logo, uniforme) que salen de los hitos cumplidos, las elige el host en el cierre desde un bloque de la tienda, una pintura para toda la flota (solo carrocería), logo de lista cerrada, uniforme solo en empleados y copa fija del volcán. Lo construyen D-0437 y D-1234.
 **Depende de:** D-0118 (`diseno/hitos.md`), D-0112 (P8 de la crítica de alcance)
 **Qué:** qué cosméticos hay, de quién son, quién y dónde los elige, cómo se ven en cada vehículo y cómo viajan por la red, contrastado con `UnlockManager`, `CompanyShopPanel`, `vehicle.gd`, `reference_truck.gd` y `red-autoridad.md`.
 - [x] D-0137.1 Reglas 1 a 9, los 10 cosméticos de los hitos más los 4 de base (18 elegibles), dónde va cada cosa en cada vehículo, datos, guardado y red.
