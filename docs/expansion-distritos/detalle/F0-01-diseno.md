@@ -244,7 +244,7 @@ Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 **Hecho cuando:** `diseno/roles-tripulacion.md` dice qué automatiza el modo solo y cómo lo mide el bot de D-2024.
 
 ### D-0127 · Dificultad y modificadores — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/dificultad.md`: una sola dificultad; dos modificadores de la empresa (armado asistido con absorción mínima 0,75, días tranquilos), elegidos por el host fuera de la partida, en `CompanyState.options` sin RPC; lo construye D-1919.
+**[x] Hecho (2026-10-22, PR #654)** — `diseno/dificultad.md`: una sola dificultad; dos modificadores de la empresa (armado asistido con absorción mínima 0,75, días tranquilos), elegidos por el host fuera de la partida, en `CompanyState.options` sin RPC; lo construye D-1919.
 **Depende de:** D-0112, D-0123, D-0126
 **Qué:** `diseno/dificultad.md` (máx. 120 líneas), dentro del recorte de D-0112 (una sola dificultad con armado
 asistido, `critica-alcance.md` §4.5):
