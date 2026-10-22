@@ -185,10 +185,20 @@ func _link_focus() -> void:
 
 
 func _focus_first() -> void:
-	if not _order.is_empty():
-		(_rows[_order[0]] as Button).grab_focus()
-	else:
+	if _order.is_empty():
 		_close_button.grab_focus()
+		return
+	(_rows[_order[0]] as Button).grab_focus()
+	# follow_focus runs before the new rows are laid out and left a long list at its end (D-0612
+	# capture): once they are, the list starts at the top with the first row.
+	await get_tree().process_frame
+	if is_instance_valid(_scroll) and visible:
+		_scroll.scroll_vertical = 0
+
+
+## The scrolling list (tests read its offset).
+func list_scroll() -> ScrollContainer:
+	return _scroll
 
 
 func _focused_product() -> StringName:

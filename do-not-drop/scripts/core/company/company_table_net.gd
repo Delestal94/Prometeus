@@ -597,22 +597,16 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 
 ## The host's balance before the event's movement: a copy that holds another missed something; it
 ## takes the host's (so the movement ends on the host's balance) and remembers it (take_drift()).
+## The same step as every wallet event's (CompanyWalletNet.set_balance()).
 func _set_balance(state: Object, before: int) -> void:
-	var here: int = int(state.get(&"money"))
-	if here == before:
-		return
-	push_warning("CompanyTableNet: this wallet held %d, the host's %d; set to the host's"
-		% [here, before])
-	state.set(&"money", before)
-	_drifted = true
+	_drifted = CompanyWalletNet.set_balance(state, before, "CompanyTableNet") or _drifted
 
 
 ## The wallet entry the event just wrote (if it cost anything) takes the host's minute;
 ## clock_minutes stays as it is.
 static func _entry_minute(state: Object, cost: int, minute: int) -> void:
-	var ledger: Array = state.get(&"ledger")
-	if cost > 0 and not ledger.is_empty():
-		ledger[ledger.size() - 1]["minute"] = minute
+	if cost > 0:
+		CompanyWalletNet.entry_minute(state, minute)
 
 
 ## A paid step's event: `data` with the host's balance after the step and its clock minute.

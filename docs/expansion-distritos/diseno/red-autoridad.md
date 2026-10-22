@@ -28,7 +28,7 @@
      petición se descarta en silencio, sin `_rejected`). No gasta `seq`. Si el que pidió es el propio host,
      el aviso se llama directo a la UI (el RPC es `call_remote` y no le llegaría).
    - No hay otro `@rpc("any_peer")` de negocio: pedir un snapshot es un `kind` de `_request`
-     (`snapshot_request`, §3).
+     (`snapshot_request`, §3). `CompanyFleet._have_fleet` (regla 10) no es de negocio: solo abre sincronizadores.
 3. **El actor es `RpcGuard.sender(self)`, nunca un campo de `data`.** Toda ubicación `hands:<peer>` la arma
    el host con ese número. Un cliente que manda `peer: 3` en `data` se ignora.
 4. **Alcance físico lo mide el host.** Toda acción en una estación (palet, estante, mesa, tablero,
@@ -64,8 +64,15 @@
     todavía no les mandó ese `seq` (filtro de visibilidad), manda el evento por el mismo canal reliable y recién
     después llama a `update_visibility(peer)`. Si el sincronizador llega antes que el nodo, el cliente no
     resuelve el camino y esa caja no se mueve más ahí (el mismo bug que documenta `package.gd:184`). Con el snapshot, `update_visibility` va después del
-    último trozo. Los bultos de unidades en el piso son nodos **estáticos** sin sincronizador: el evento
-    trae su posición y no se mueven.
+    último trozo. Así entran los vehículos de la flota (`CompanyFleet`, `World/Vehicles/<id>`, D-0302.2.b): cada
+    peer los arma desde el snapshot (la flota de `CompanyState`) y avisa cuáles tiene con `_have_fleet` (un RPC del
+    nodo `World/Vehicles`, que no tiene sincronizador y existe en cada peer desde el `_ready` del mundo;
+    `RpcGuard.allow_critical_request`, hasta `MAX_VEHICLES` nombres de vehículos que existen); el host abre el
+    sincronizador de cada uno a ese peer recién entonces y con su mundo arriba (`is_peer_ready()`). No alcanza con
+    abrirlo después de mandar el snapshot: puede no salir (muy grande) o no aplicarse allá. Uno que el host arme
+    después queda cerrado hasta que ese peer lo avise; al irse un peer (o volver a levantar su mundo) se cierra y el
+    host lo saca del volante. Los bultos de unidades en el piso
+    son nodos **estáticos** sin sincronizador: el evento trae su posición y no se mueven.
 11. **Lo físico lejos no viaja (D-0316).** El sincronizador de un vehículo (`company_vehicle`) o una caja suelta
     (`company_loose_box`) lo maneja `CompanyInterest`: el host lo manda solo a los peers con su jugador a ≤ 2 celdas
     (lo deja pasado 3) y al conductor, y un cliente esconde su copia lejana (y la saca de la física). Sus
@@ -137,6 +144,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 | 22 | Mover una pieza (D-0903) | host | `layout_move` `{uid, x: int, z: int, rid}` | que lo pida el host; la pieza existe; `preview` ignorando la pieza | `layout_moved` `{uid, x, z, turns}` | la pieza cambia de celda; conserva `uid` (y con él su stock y su estación) |
 | 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
 | 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
+| 25 | Movimiento de plata del host sin pedido propio (cobro al entregar, propina, alquiler, proveedor, tienda; D-0517) | solo el host (`CompanyNet.publish_wallet`) | — (no hay pedido: lo decide el host) | quien cobra comprueba `can_afford` antes; `amount` ≠ 0, `reason` id corto, `money` y `minute` en rango | `wallet_moved` `{amount, reason, money, minute}` (plata absoluta como D-0910) | cada peer parte de `money − amount` y hace un solo `earn` / `charge`; libro con el `minute` del host; deriva → `take_drift()` y snapshot |
 
 ## 3. Secuencia, huecos y snapshot
 

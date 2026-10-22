@@ -58,6 +58,15 @@ const SURFACE_SPEED: Dictionary = {&"asphalt": 14.0, &"cobble": 10.0, &"gravel":
 ## How far ahead along the route the GPS arrow points, in meters.
 const GPS_LOOKAHEAD: float = 30.0
 
+# --- Tow home (D-0307) ---
+## "Volver con grua": a vehicle left stuck or broken on a trip is towed back to the shed's yard for this
+## much money (spent from the company wallet, ledger reason `tow`). The undelivered orders fail, as in any
+## trip that comes back with them. Low enough to be a way out, high enough that nobody wrecks a van to skip
+## the drive (a failed order already costs more than it pays, docs/economia-y-contramedidas.md).
+const TOW_COST: int = 50
+## Real seconds of black screen while the vehicle is carried to the yard.
+const TOW_BLACK_SCREEN_SECONDS: float = 3.0
+
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
 ## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
@@ -81,6 +90,9 @@ const SHED_POSE_RATE_HZ: int = 15
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
+## Money the suggested supplier order leaves untouched besides the rent (D-0151,
+## roles-tripulacion.md §6.3): the reserve of the economy curve.
+const SOLO_ORDER_CASH_RESERVE: int = 100
 
 # --- Bankruptcy (D-0510) ---
 ## A company that closes the day in the red opens the next one with this share of its orders
@@ -117,6 +129,18 @@ const SUPPLY_CAPACITY: Dictionary = {
 }
 ## A supply counts as low at or under this share of its capacity.
 const SUPPLY_LOW_RATIO: float = 0.25
+
+## Cooler with ice (D-0721, ColdPack): a cold product lasts COLD_BASE_MINUTES in a box without ice
+## and COLD_PER_ICE_MINUTES more per ice pack (up to ICE_PACKS_MAX); an ice pack costs ICE_PACK_COST.
+const COLD_BASE_MINUTES: float = 15.0
+const COLD_PER_ICE_MINUTES: float = 25.0
+const ICE_PACKS_MAX: int = 2
+const ICE_PACK_COST: int = 2
+
+## Gift wrap (D-0723, GiftWrap): a gift order delivered in a wrapped box pays GIFT_WRAP_BONUS of its
+## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
+const GIFT_WRAP_BONUS: float = 0.15
+const GIFT_WRAP_COST: int = 3
 
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
@@ -188,6 +212,23 @@ const CART_MAX_UNITS: int = 6
 const CART_PUSH_STEP_M: float = 1.2
 ## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
 const CART_CLEARANCE_M: float = 0.7
+## Holding the cart's handle (D-0610.c2.b, PickingCartGrip): the cart keeps at least CART_GRIP_DISTANCE_M from
+## whoever holds it (centre of the cart to their feet, m, on the floor), pushed ahead at most once every
+## CART_GRIP_INTERVAL_S, plus a lead: how far they walk towards it in CART_GRIP_LEAD_S (the interval and the
+## cushion a remote player is drawn with on the host) plus their round trip, at most CART_GRIP_MAX_LEAD_M. So
+## the step their peer sees late is already ahead of where they walk by then, and the next one comes in time.
+## The deck is solid: a player (radius 0.35) touches it at most 0.93 m from the centre (towards a corner), so
+## (CART_GRIP_DISTANCE_M - 0.93) / CART_GRIP_INTERVAL_S stays over Player.WALK_SPEED: even with no lead a
+## holder pressed against the deck gets room faster than they walk and is never held back.
+## The shortest step worth a request; who is CART_GRIP_RELEASE_M away lets go (past DISTANCE + MAX_LEAD, where
+## a cart that ran ahead stops, and within reach of it); after a `blocked` the grip waits CART_GRIP_BLOCKED_PAUSE_S.
+const CART_GRIP_DISTANCE_M: float = 1.5
+const CART_GRIP_LEAD_S: float = 0.25
+const CART_GRIP_MAX_LEAD_M: float = 1.5
+const CART_GRIP_RELEASE_M: float = 3.6
+const CART_GRIP_MIN_STEP_M: float = 0.1
+const CART_GRIP_INTERVAL_S: float = 0.15
+const CART_GRIP_BLOCKED_PAUSE_S: float = 0.6
 ## How close two picking carts may stand, centre to centre on the floor (m, D-0610.c): past the diagonal of the
 ## 1.0 x 0.6 m platform, so two carts never overlap whichever way they face.
 const CART_SPACING_M: float = 1.2
@@ -204,6 +245,10 @@ const ORDERS_MAX_PER_DAY: int = 16
 const ORDER_HOUR_WEIGHTS: Array[float] = [1.0, 2.0, 3.0, 3.0, 2.5, 1.0, 1.0, 2.0, 2.5, 2.0, 0.5]
 ## Orders do not arrive in the last hour of the day: the crew would have no time to ship them.
 const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
+## With a crew of one the day's arrival hours are squeezed so the last order comes in by 15:00 of the
+## shed (D-0151, roles-tripulacion.md §6.2): the shed stands still while the only player drives (S4),
+## and with three trips the afternoon orders would never come in. The count does not change.
+const SOLO_ORDER_LAST_ARRIVAL_MIN: int = 15 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3
@@ -303,6 +348,11 @@ const JACK_PUSH_STEP_M: float = 1.3
 const FORKLIFT_MAX_LIFT_M: float = 2.4
 const FORKLIFT_LIFT_SPEED: float = 0.55
 const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
+## The forklift in the world (D-0606.b): how far ahead of its driver the middle of a pallet on the forks lies
+## (m), and how long one mast request moves the forks at most (s: the driver asks again while the key is held,
+## so a lost "stop" cannot send the forks to the top).
+const FORKLIFT_TIP_M: float = 1.2
+const FORKLIFT_MAST_BURST_S: float = 0.5
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0

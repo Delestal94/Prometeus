@@ -21,8 +21,8 @@ extends Node3D
 ## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
 ## one: the same player at SPAWN it always was.
 ##
-## No vehicle, no route and no run: Delivery and Endless ignore all of this
-## (level_base.gd / level_endless.gd are untouched).
+## The company's vehicles (`fleet`) park outside the shed's exit on every peer (CompanyFleet, D-0302.2.b);
+## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
 ## starts from the company's stock and, until stations exist, refuses every units
@@ -153,6 +153,7 @@ var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
 var trips_view: CompanyTripsView
+var fleet: CompanyFleet
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
 var cells: CompanyCells
@@ -222,6 +223,7 @@ func _ready() -> void:
 	_add_packages()
 	_add_interest()
 	_add_trips()
+	fleet = CompanyFleet.add_to(_world, net, session, shed)
 	_add_crew()
 	_add_builder()
 	_add_stock_board()
@@ -276,6 +278,7 @@ func _add_net(state: COMPANY_STATE) -> void:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
 	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
+	net.pallets.load_save(state.pallets)
 	_hosted_state = state
 
 
@@ -293,6 +296,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.attach(net, clock, state)
 	day_cycle.opening_notice = _opening_notice
 	day_cycle.crew_in_shed = _crew_in_shed
+	add_child(CompanySoloPause.create(clock, day_cycle))
 	_add_business_tick()
 
 
@@ -339,9 +343,9 @@ func _event_bus() -> Node:
 	return get_node_or_null(^"/root/EventBus")
 
 
-func _on_day_summary(_day: int, summary: Dictionary) -> void:
+func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
-		summary_panel.open(summary)
+		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [])
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.
@@ -389,6 +393,7 @@ func save_interrupted_day() -> bool:
 		return false
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
+		_hosted_state.pallets = net.pallets.to_save()
 	var saved: bool = CompanySave.save(_hosted_state, save_slot, save_dir, true)
 	if not saved:
 		push_warning("CompanyRoot: the interrupted day %d could not be saved to %s"
@@ -410,6 +415,7 @@ func save_closed_day() -> bool:
 		return false
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
+		_hosted_state.pallets = net.pallets.to_save()
 	var next_opening := COMPANY_STATE.new()
 	next_opening.from_dict(_hosted_state.to_dict())
 	next_opening.day = _hosted_state.day + 1
@@ -628,7 +634,7 @@ func _add_shed() -> void:
 		shed.follow(net)
 		net.stations = shed.station_for
 		shed.piece_used.connect(_on_piece_used)
-		shed.cart_used.connect(_on_cart_used)
+		shed.cart_used.connect(PickingCartGrip.attach(self, net, shed).on_cart_used)
 		shed.jack_used.connect(_on_jack_used)
 
 
@@ -651,14 +657,6 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		_pick_after[key] = plan["slot"]
 
 
-## Host: a crew member worked a picking cart (D-0610.b, take D-0610.c2). PickingCartUse asks the host's own
-## CompanyNet on their behalf, which checks reach, hands and room.
-func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, what: StringName) -> void:
-	if net == null or not net.is_host():
-		return
-	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from, what)
-
-
 ## Host: a crew member worked the pallet jack (D-0605.b): pick a pallet up or put it down, or push the jack.
 ## PalletJackUse asks the host's own CompanyNet on their behalf, which checks reach, the truck and the floor.
 func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
@@ -669,17 +667,17 @@ func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
 
 ## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
 ## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
-## (CompanyPallets.loaded_event: not the ones the shed started with, not the ones already loaded). Once per day,
-## even when nothing loads; never after the truck left.
+## (CompanyPallets.loaded_event), once per day; and when it drove off, jack_departed (D-0618.b, send_truck_off).
 func _load_truck_pallets() -> void:
 	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
 		return
 	var day: int = _hosted_state.day
 	var minute: int = floori(clock.minute_now())
-	if _pallets_day == day or _pallets_checked == Vector2i(day, minute):
+	if _pallets_checked == Vector2i(day, minute):
 		return
 	_pallets_checked = Vector2i(day, minute)
-	if not CompanyPallets.load_due(supplier_schedule, day, minute):
+	CompanyPallets.send_truck_off(net.pallets, supplier_schedule, day, minute, net.publish)
+	if _pallets_day == day or not CompanyPallets.load_due(supplier_schedule, day, minute):
 		return
 	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
 	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):
@@ -803,13 +801,11 @@ func _add_trips() -> void:
 	if not net.is_host():
 		day_cycle.trips_out = trips_view.trips_out
 		return
-	var stage: int = net.company.warehouse_stage if net.company != null else 0
-	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
 	var width: float = float(CompanyTuning.WAREHOUSE_EXIT_CELLS.x) * CompanyTuning.WAREHOUSE_GRID_M
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(shed.to_global(Vector3(0.0, 0.0, -half_depth)), width)
+	trips.setup(CompanyFleet.exit_of(shed, net.company), width)
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out

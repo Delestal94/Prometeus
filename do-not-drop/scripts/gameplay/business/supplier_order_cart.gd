@@ -125,6 +125,55 @@ func submit(wallet: Object, schedule: SupplierSchedule, order_day: int) -> bool:
 	return true
 
 
+## The suggested order for the next day (D-0151, roles-tripulacion.md §6.3), product -> units: per
+## product of `products` (the ones `supplier` sells, any when null), max(0, units `ordered` today -
+## units in `stock`), at most MAX_LINE_QTY. When it costs more than money - RENT_PER_DAY -
+## SOLO_ORDER_CASH_RESERVE it is trimmed unit by unit from the product with the fewest units ordered
+## (ties by id). `ordered` and `stock` are product -> units (ordered_units(), Inventory.count()).
+static func suggested(ordered: Dictionary, stock: Dictionary, money: int, products: Dictionary,
+		supplier: SupplierDefinition = null) -> Dictionary:
+	var out: Dictionary = {}
+	var cost: int = 0
+	for id: StringName in ordered:
+		if not products.has(id) or (supplier != null and not supplier.sells(id)):
+			continue
+		var units: int = mini(maxi(0, int(ordered[id]) - int(stock.get(id, 0))), MAX_LINE_QTY)
+		if units > 0:
+			out[id] = units
+			cost += SupplierPurchase.cost(id, units, products)
+	var over: int = cost - (money - CompanyTuning.RENT_PER_DAY - CompanyTuning.SOLO_ORDER_CASH_RESERVE)
+	var ids: Array = out.keys()
+	ids.sort_custom(
+		func(a: StringName, b: StringName) -> bool:
+			if int(ordered[a]) != int(ordered[b]):
+				return int(ordered[a]) < int(ordered[b])
+			return String(a) < String(b)
+	)
+	for id: StringName in ids:
+		if over <= 0:
+			break
+		var price: int = SupplierPurchase.cost(id, 1, products)
+		if price <= 0:
+			continue
+		var off: int = mini(int(out[id]), ceili(float(over) / price))
+		over -= off * price
+		if off == int(out[id]):
+			out.erase(id)
+		else:
+			out[id] = int(out[id]) - off
+	return out
+
+
+## Units per product the `orders` asked for (Order dictionaries, their "items" [{product, qty}]).
+static func ordered_units(orders: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for order: Dictionary in orders:
+		for item: Dictionary in order.get("items", []):
+			var id := StringName(item.get("product", &""))
+			out[id] = int(out.get(id, 0)) + int(item.get("qty", 0))
+	return out
+
+
 ## The cart as the order screen sends it to the host: [{product, qty}, ...].
 func to_array() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []

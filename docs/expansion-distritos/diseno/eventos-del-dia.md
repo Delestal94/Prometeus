@@ -488,7 +488,8 @@ para tests, que no queda en release, D-2045) y con `sim_economy` a 20 días.
 - Si las cajas forzadas (`box_shortage`) divierten o cansan.
 - Si la línea "Mañana:" del resumen se lee: si nadie la lee, los eventos de víspera también se anuncian en la
   pizarra a media tarde del día anterior.
-- Si hace falta una opción "sin eventos" al crear la empresa. Hoy no la hay (D-0127: una sola dificultad).
+- Si hace falta una opción "sin eventos" al crear la empresa. D-0127 la sumó como modificador "Días tranquilos"
+  (`calm_days`, [dificultad.md](dificultad.md)): queda ver si alguien la usa.
 - La dificultad de la feria rural (Hostil y Ruidoso juntos) antes del día 8.
 
 ## Decisiones

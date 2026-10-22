@@ -13,6 +13,10 @@ extends SceneTree
 ##   already out; a third that crosses anyway starts no trip (departure_refused, same reason, its
 ##   orders stay PACKED) but counts as out (trips_out() 3, is_out(), a fourth is refused, it isn't)
 ##   until it crosses back in; it keeps its cargo, which leaves with it once a trip came back;
+## - forget() (D-0302.2.b): a vehicle that leaves the world no longer counts as out: its trip closes as if
+##   it came back (what wasn't delivered fails, trip_closed), one out refused is back (refused_returned),
+##   its staged cargo is dropped and the gate starts over with it (its next position only sets the side);
+## - only the vehicles of CompanyTrips' own multiplayer are tracked (another session's copy isn't);
 ## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the exit (north wall)
 ##   and DayCycle.trips_out reads it.
 
@@ -26,6 +30,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_cycle()
 	_test_far_cap()
+	_test_forget()
 	await _test_group_tracking()
 	await _test_root()
 	quit(_failures)
@@ -116,6 +121,43 @@ func _test_far_cap() -> void:
 	trips.free()
 
 
+func _test_forget() -> void:
+	var trips := CompanyTrips.new()
+	trips.setup(Vector3(0, 0, -4), 2.0)
+	trips.far_max = 1
+	_packed(trips, [&"o1", &"o2", &"o3"])
+	var closed: Array = []
+	var back: Array[StringName] = []
+	trips.trip_closed.connect(func(t: Trip, f: Array[StringName]) -> void: closed.append([t.vehicle_id, f]))
+	trips.refused_returned.connect(func(id: StringName) -> void: back.append(id))
+	trips.stage_cargo(&"van_out", [&"o1"], [&"box_o1"])
+	trips.stage_cargo(&"van_refused", [&"o2"], [&"box_o2"])
+	for van: StringName in [&"van_out", &"van_refused"]:
+		trips.track(van, Vector3(0, 0, -2))
+		trips.track(van, Vector3(0, 0, -6))
+	_expect(trips.trip_of(&"van_out") != null and trips.is_out(&"van_refused") and trips.trips_out() == 2,
+		"one vehicle out on a trip, one out refused (got %d out)" % trips.trips_out())
+	trips.forget(&"van_out")
+	_expect(trips.trips_out() == 1 and trips.trip_of(&"van_out") == null
+		and closed == [[&"van_out", [&"o1"] as Array[StringName]]]
+		and trips.book.state_of(&"o1") == Order.STATE_FAILED,
+		"forgetting a vehicle on a trip closes it, its undelivered order failed (got %s)" % [closed])
+	trips.forget(&"van_refused")
+	_expect(trips.trips_out() == 0 and back == [&"van_refused"] and closed.size() == 1,
+		"forgetting one out refused brings it back, no trip closes (back %s)" % [back])
+	trips.track(&"van_refused", Vector3(0, 0, -2))
+	trips.track(&"van_refused", Vector3(0, 0, -6))
+	_expect(trips.trips_out() == 0 and trips.book.state_of(&"o2") == Order.STATE_PACKED,
+		"...its staged cargo was dropped: crossing again starts nothing")
+	trips.stage_cargo(&"van_new", [&"o3"], [&"box_o3"])
+	trips.track(&"van_new", Vector3(0, 0, -6))
+	trips.forget(&"van_new")
+	trips.track(&"van_new", Vector3(0, 0, -2))
+	_expect(trips.trips_out() == 0 and closed.size() == 1,
+		"a forgotten vehicle's next position only sets its side (got %d out)" % trips.trips_out())
+	trips.free()
+
+
 func _test_group_tracking() -> void:
 	var trips := CompanyTrips.new()
 	trips.setup(Vector3(0, 0, -4), 4.0)
@@ -137,6 +179,26 @@ func _test_group_tracking() -> void:
 	await physics_frame
 	await physics_frame
 	_expect(trips.trips_out() == 0, "...and its return closes the trip")
+	# Another session in this tree (its own SceneMultiplayer): its copy of a vehicle is not this gate's.
+	var side := Node.new()
+	side.name = "OtherSession"
+	root.add_child(side)
+	set_multiplayer(SceneMultiplayer.new(), side.get_path())
+	_packed(trips, [&"o2"])
+	trips.stage_cargo(&"van", [&"o2"], [&"box_o2"])
+	var started: Array[int] = [0]
+	trips.trip_started.connect(func(_trip: Trip) -> void: started[0] += 1)
+	var copy := Node3D.new()
+	copy.name = "van"
+	copy.add_to_group(CompanyTrips.VEHICLE_GROUP)
+	side.add_child(copy)
+	copy.global_position = Vector3(0, 0, -7)
+	await physics_frame
+	await physics_frame
+	_expect(started[0] == 0 and trips.trips_out() == 0,
+		"another session's copy, out there under the same name, is not tracked (%d trips started)" % started[0])
+	set_multiplayer(null, side.get_path())
+	side.free()
 	van.queue_free()
 	trips.queue_free()
 	await process_frame

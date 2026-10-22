@@ -17,11 +17,11 @@ extends SceneTree
 ##   (CompanyInterest.LOOSE_BOX_GROUP), and solo is the host, so its consuming signal (what consume()
 ##   emits before broadcasting the removal) releases it: untracked and out of the group;
 ## - D-0316: it has an Interest child (CompanyInterest) reading CompanyRoot.CREW_GROUP, which tracks a
-##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player and
-##   on that vehicle;
+##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player, on the
+##   company's own vehicles (World/Vehicles, D-0302.2.b: test_company_fleet) and on that vehicle;
 ## - D-2002.3: it sends its pose CompanyTuning.SHED_POSE_RATE_HZ times a second on foot (the interval
-##   rounded down, not up), back to the game's 30 while riding a vehicle (a stand-in in the "vehicle"
-##   group that carries everyone) and to the shed's rate off it; a player outside the company's world
+##   rounded down, not up), back to the game's 30 while riding a vehicle (standing in the cargo bay of
+##   the company's van) and to the shed's rate off it; a player outside the company's world
 ##   (Delivery, Endless) keeps player.tscn's 30 while it walks;
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
@@ -41,7 +41,8 @@ extends SceneTree
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
 ## - D-0508.3: the day's SUMMARY opens the closing screen (DaySummaryPanel) and its "continue" opens the
-##   next day on the host;
+##   next day on the host; D-0614.c: the screen lists the day's delivery note (the root's
+##   CompanyNet.pallets.note): a product the truck left short shows its row;
 ## - the main menu knows the scene, the --mode=company flag and has the button;
 ## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
 ##   as interrupted there, and the real slot (user://saves/company/) is never touched;
@@ -67,11 +68,6 @@ const POSE_TICKS: int = 3
 const OUT_M: float = 20.0
 const OUT_SECONDS: float = 3.0
 
-
-## A vehicle that carries everyone, wherever they stand (as test_gel_active_ragdoll's).
-class Carrier extends Node3D:
-	func carries(_point: Vector3, _margin: float = 0.0) -> bool:
-		return true
 
 var _failures: int = 0
 ## The test's own ticks (_ticks()) for the root's DayCycle and GameClock: real time stopped at
@@ -99,8 +95,10 @@ func _run() -> void:
 	_expect(cells != null and cells == level.get(&"cells"), "The root has its WorldCells child (D-0313)")
 	if cells != null:
 		var spawned: Node3D = level.get(&"player") as Node3D
-		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
-			"The only anchor is the local player")
+		var vans: Array[Node3D] = (level as CompanyRoot).fleet.vehicles()
+		_expect(cells.anchors.size() == 1 + vans.size() and cells.anchors[0].distance_to(spawned.global_position) < 0.01
+			and not vans.is_empty() and _near_any(cells.anchors, vans[0].global_position),
+			"The anchors are the local player and the company's vehicles (got %s)" % [cells.anchors])
 		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
 		_check_package_cells(level as CompanyRoot, cells)
 	await _check_interest(level)
@@ -162,7 +160,7 @@ func _run() -> void:
 			await physics_frame
 		var height: float = player.global_position.y
 		_expect(height > -1.0, "The player stands on the floor, not falling (y=%.2f)" % height)
-		await _check_pose_rate(player as Player, level.get_node(^"World") as Node3D)
+		await _check_pose_rate(player as Player, (level as CompanyRoot).fleet.vehicles()[0])
 		_check_crew_in_shed(level as CompanyRoot)
 
 	_check_summary_screen(level, state)
@@ -240,10 +238,15 @@ func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
 		return
 	var day: int = cycle.current_day()
 	state.call(&"earn", 120, &"order_paid")
+	if level.net != null:
+		level.net.pallets.note.check(day, {&"hen": 10}, {&"hen": 4})
 	for next: DayCycle.Phase in [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]:
 		cycle.call(&"_transition", next)
 	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and panel.visible,
 		"SUMMARY opens the closing screen (phase %s)" % cycle.phase_name())
+	var note_box: Control = panel.find_child("Note", true, false) as Control
+	_expect(note_box != null and note_box.visible and panel.find_child("Note_hen", true, false) != null,
+		"The closing screen lists the day's delivery note: hen came 6 short (D-0614.c)")
 	panel.close()
 	_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == day + 1 and not panel.visible,
 		"Its continue opens the next day (day %d, %s)" % [cycle.current_day(), cycle.phase_name()])
@@ -262,22 +265,21 @@ func _check_bankrupt_notice(level: CompanyRoot, state: Node) -> void:
 
 
 ## D-2002.3: the company's `player` sends its pose at the shed's rate on foot, the game's riding a
-## vehicle (a Carrier in `world`) and the shed's again once off it.
-func _check_pose_rate(player: Player, world: Node3D) -> void:
+## vehicle (standing in the bay of `van`, the company's) and the shed's again once off it.
+func _check_pose_rate(player: Player, van: Node3D) -> void:
 	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	var shed_rate: int = CompanyTuning.SHED_POSE_RATE_HZ
 	_expect(_rate(sync) == shed_rate and sync.replication_interval <= 1.0 / shed_rate,
 		"The company's player sends its pose %d times a second on foot (every %.4f s)"
 		% [shed_rate, sync.replication_interval])
-	var truck := Carrier.new()
-	truck.add_to_group(&"vehicle")
-	world.add_child(truck)
+	var home: Vector3 = player.global_position
+	player.global_position = van.to_global(Vector3(0.0, 0.6, 2.0))
 	for _tick: int in range(POSE_TICKS):
 		await physics_frame
 	_expect(player.net_in_vehicle and _rate(sync) == GAME_POSE_RATE_HZ,
 		"Riding a vehicle it sends the game's %d a second again (in vehicle %s, every %.4f s)"
 		% [GAME_POSE_RATE_HZ, player.net_in_vehicle, sync.replication_interval])
-	truck.free()
+	player.global_position = home
 	for _tick: int in range(POSE_TICKS):
 		await physics_frame
 	_expect(not player.net_in_vehicle and _rate(sync) == shed_rate,
@@ -556,11 +558,21 @@ func _check_interest(level: Node) -> void:
 	interest.step(Time.get_ticks_msec() / 1000.0 + 1.0)
 	_expect(interest.is_tracked(sync), "A company vehicle's synchronizer is tracked by the interest")
 	var cells: CompanyCells = level.get(&"cells")
-	_expect(cells.anchors.size() == 2 and cells.anchors.has(van.global_position),
-		"Solo is the host: the cells anchor on the player and the vehicle (got %s)" % [cells.anchors])
+	var fleet: int = (level as CompanyRoot).fleet.vehicles().size()
+	_expect(cells.anchors.size() == 2 + fleet and cells.anchors.has(van.global_position),
+		"Solo is the host: the cells anchor on the player, the fleet and the vehicle (got %s)" % [cells.anchors])
 	van.free()
 	interest.step(Time.get_ticks_msec() / 1000.0 + 2.0)
-	_expect(interest.tracked_count() == 0, "A freed vehicle is forgotten (got %d)" % interest.tracked_count())
+	_expect(interest.tracked_count() == fleet,
+		"A freed vehicle is forgotten, the fleet's stay tracked (got %d)" % interest.tracked_count())
+
+
+## Whether one of `points` is within a centimetre of `at`.
+static func _near_any(points: Array[Vector3], at: Vector3) -> bool:
+	for point: Vector3 in points:
+		if point.distance_to(at) < 0.01:
+			return true
+	return false
 
 
 func _expect(condition: bool, message: String) -> void:

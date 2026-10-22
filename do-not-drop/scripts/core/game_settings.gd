@@ -98,6 +98,8 @@ const REBINDABLE_ACTIONS := [
 	&"drive_accelerate", &"drive_brake", &"drive_handbrake",
 	&"package_drop", &"package_open", &"care_work", &"care_tool_next", &"phone_toggle", &"crew_panel",
 	&"spectate_toggle",
+	# D-0606.c1: the shed forklift's mast.
+	&"forklift_mast_up", &"forklift_mast_down",
 ]
 ## Actions that carry a key in the Input Map but are not offered in Options: no
 ## action may be moved onto their key (a notice says it is reserved, like Esc / F11).
@@ -116,6 +118,7 @@ const DEFAULT_KEY_BINDINGS := {
 	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"care_tool_next": KEY_X,
 	&"phone_toggle": KEY_F,
 	&"crew_panel": KEY_TAB, &"spectate_toggle": KEY_TAB,
+	&"forklift_mast_up": KEY_UP, &"forklift_mast_down": KEY_DOWN,
 }
 
 ## Where each action is read. Two actions only clash over a key when they share
@@ -137,6 +140,8 @@ const BINDING_CONTEXTS := {
 		&"care_tool_next": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"phone_toggle": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"crew_panel": CONTEXT_FOOT | CONTEXT_DRIVE | CONTEXT_DEPOT, &"spectate_toggle": CONTEXT_SPECTATE,
+	# Driven only inside the shed (the van's shift keys share the arrows out on the road).
+	&"forklift_mast_up": CONTEXT_DEPOT, &"forklift_mast_down": CONTEXT_DEPOT,
 }
 
 ## What rebind_key() / reset_binding() (and the pad versions) report in result["status"].

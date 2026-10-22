@@ -38,9 +38,10 @@ extends Node
 ##
 ## Events nobody asks for (the contract's "without a client request") are the host's own rules: they go out
 ## through publish(), the same path: clock_anchor (D-0219, GameClock, `clock`), day_phase (D-0203, DayCycle,
-## `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`), jack_loaded, the pallets of the day's
-## truck (D-0605.b, CompanyRoot) and order_added / order_expired, the day's orders (D-0813, CompanyOrdersNet,
-## `orders`).
+## `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`), jack_loaded and jack_departed, the pallets of
+## the day's truck and its leaving (D-0605.b, D-0618.b, CompanyRoot), order_added / order_expired, the day's
+## orders (D-0813, CompanyOrdersNet, `orders`) and wallet_moved, money in or out that no request led to (D-0517,
+## CompanyWalletNet, publish_wallet()).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -72,7 +73,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
 	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
 	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
-	CompanyPallets.PUT, CompanyPallets.PUSH,
+	CompanyPallets.PUT, CompanyPallets.PUSH, CompanyPallets.FORK_ACT,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
@@ -82,24 +83,25 @@ const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## The day moved on, or the shed froze or thawed: {day, phase, frozen, lag, frozen_at[, summary]}
 ## (D-0203, DayCycle.apply_phase()).
 const DAY_PHASE: StringName = &"day_phase"
+## The host's wallet moved: {amount (signed), reason, money (its balance after), minute} (D-0517, CompanyWalletNet).
+const WALLET: StringName = CompanyWalletNet.MOVED
 ## Event kinds every peer applies.
 const EVENT_KINDS: Array[StringName] = [
 	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
 	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
-	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED,
-	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
-	CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED,
+	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, CompanyPallets.FORK,
+	CompanyPallets.DEPARTED, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
+	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED, WALLET,
 ]
-## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, the truck's pallets,
-## its orders); units_moved never.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED,
-	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
-	CompanyOrdersNet.EXPIRED]
+## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
+## publish_wallet()); never units_moved.
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.DEPARTED,
+	CompanyPallets.FORK, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
+	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, WALLET]
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
-## Events a peer holds while it waits for a snapshot. Past this the oldest go: a snapshot
-## taken later covers them anyway.
+## Events a peer holds while it waits for a snapshot. Past this the oldest go: a later snapshot covers them anyway.
 const MAX_HELD_EVENTS: int = 4096
 ## A snapshot travels as var_to_bytes, compressed with this and cut into chunks of at most
 ## SNAPSHOT_CHUNK_BYTES, so one _snapshot RPC stays under 64 KB with its own header.
@@ -160,6 +162,8 @@ var pallets: CompanyPallets = CompanyPallets.new()
 var orders: CompanyOrdersNet = CompanyOrdersNet.new()
 ## The supplier orders (D-0603.b.2) on the calendar `supplier.schedule` (the truck's); a snapshot part.
 var supplier: CompanySupplierNet = CompanySupplierNet.new()
+## The wallet's own events (D-0517): wallet_moved, built and applied there (publish_wallet()).
+var wallet: CompanyWalletNet = CompanyWalletNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (tests force small ones).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
 ## Host: a station id -> what the host needs to check a request at it (rule 4), as Callable(station) -> Dictionary:
@@ -288,6 +292,15 @@ func publish(kind: StringName, data: Dictionary) -> bool:
 	return _publish(kind, data)
 
 
+## Host: moves the company's money by `amount` (signed; a charge may leave it in the red) for the ledger's `reason`
+## on every peer, as one wallet_moved (D-0517). The way in for every payment, tip, rent or purchase no request led
+## to (CompanyWalletNet), never CompanyState.earn() / charge() straight: those move the host's wallet alone. False,
+## moving nothing, as publish(), and for 0, a reason that isn't a short id (CompanyWalletNet.reason_ok()) or no company.
+func publish_wallet(amount: int, reason: StringName) -> bool:
+	var data: Dictionary = wallet.moved(company, amount, reason) if is_host() else {}
+	return not data.is_empty() and publish(WALLET, data)
+
+
 ## True on the host and when playing solo: the only place business state is decided.
 func is_host() -> bool:
 	if not is_inside_tree():
@@ -367,7 +380,8 @@ func remove_snapshot_part(key: String) -> bool:
 ## Host: the business state as a snapshot carries it (section 3), as plain data:
 ##   seq        int: the last event it covers; the peer drops every event up to it
 ##   inventory  the live stock with its reservations (Inventory.to_dict())
-##   company    CompanyState.to_dict() without its stored stock and calendar (live: `inventory`, `supplier`):
+##   company    CompanyState.to_dict() without its stored stock, calendar and pallets (live: `inventory`,
+##              `supplier`, `pallets`):
 ##              money, day and clock, reputation, gates (the locks), fleet, employees,
 ##              milestones, layout, ledger. Missing without a `company`
 ##   floor      {floor:<n>: Vector3}: where each bundle on the floor lies (FloorBundles)
@@ -381,6 +395,7 @@ func snapshot() -> Dictionary:
 			var stored: Dictionary = state
 			stored.erase("inventory")
 			stored.erase("supplier_calendar")
+			stored.erase("pallets")
 			data["company"] = stored
 	for key: String in _parts:
 		var take: Callable = _parts[key][0]
@@ -630,8 +645,8 @@ func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
 ## within the sender's reach (as for units), then the object's own check gives the refusal or the one event.
 func _on_object(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	var push: Dictionary = CompanyCarts.push_ask(data)
-	var ask: Dictionary = {"station": CompanyPallets.STATION}
-	var check: Callable = func(station: Dictionary) -> Dictionary: return pallets.check(kind, data, station)
+	var ask: Dictionary = {"station": CompanyPallets.station_for(kind)}
+	var check: Callable = func(s: Dictionary) -> Dictionary: return pallets.check_for(self, peer, kind, data, s)
 	if kind == CompanyCarts.PUSH:
 		ask = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
 		check = func(station: Dictionary) -> Dictionary: return carts.check(push, station)
@@ -658,19 +673,7 @@ func _take_units(peer: int, data: Dictionary) -> StringName:
 	var problem: StringName = _station_problem(peer, ask, station)
 	if problem != &"":
 		return problem
-	var product: StringName = ask["product"]
-	var qty: int = ask["qty"]
-	var from: StringName = CompanyAsk.as_id(station["location"])
-	var hands: StringName = hands_location(peer)
-	if inventory.count(product, from) < qty:
-		return REASON_NOT_ENOUGH
-	var held: Dictionary = inventory.contents_at(hands)
-	if held.size() > 1 or (held.size() == 1 and not held.has(product)):
-		return REASON_HANDS_BUSY
-	if inventory.count(product, hands) + qty > CompanyTuning.HAND_MAX_UNITS:
-		return REASON_HANDS_FULL
-	var moved: Dictionary = {"product": product, "qty": qty, "from": from, "to": hands}
-	return &"" if _publish(&"units_moved", moved) else REASON_BAD_DATA
+	return _grant(CompanyAsk.take(inventory, ask, station, hands_location(peer)))
 
 
 ## Host, section 2 row 6: units from the sender's hands into a station that takes them (a
@@ -682,22 +685,7 @@ func _store_units(peer: int, data: Dictionary) -> StringName:
 	var problem: StringName = _station_problem(peer, ask, station)
 	if problem != &"":
 		return problem
-	var product: StringName = ask["product"]
-	var qty: int = ask["qty"]
-	var to: StringName = CompanyAsk.as_id(station["location"])
-	if FloorBundles.is_floor(to):
-		return REASON_NO_STATION
-	var hands: StringName = hands_location(peer)
-	if inventory.count(product, hands) < qty:
-		return REASON_NOT_ENOUGH
-	var accepts: StringName = CompanyAsk.as_id(station.get("accepts"))
-	if accepts != &"" and accepts != product:
-		return REASON_WRONG_PRODUCT
-	var capacity: int = CompanyAsk.as_int(station.get("capacity"))
-	if capacity > 0 and CompanyAsk.units_at(inventory, to) + qty > capacity:
-		return REASON_NO_ROOM
-	var moved: Dictionary = {"product": product, "qty": qty, "from": hands, "to": to}
-	return &"" if _publish(&"units_moved", moved) else REASON_BAD_DATA
+	return _grant(CompanyAsk.store(inventory, ask, station, hands_location(peer)))
 
 
 ## Host, section 2 row 7 (D-2006): units from the sender's hands into a new floor bundle at
@@ -732,9 +720,9 @@ func _drop_from_hands(peer: int, product: StringName, qty: int, pos: Vector3) ->
 	return _publish(&"units_moved", moved)
 
 
-## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second
-## finds empty hands). What it held goes onto the floor, one units_moved per product into a new
-## bundle at its feet (_feet_of()), else the origin. Mid-event it waits for the next frame.
+## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second finds empty hands and
+## no forklift). What it held goes onto the floor, one units_moved per product into a new bundle at its feet
+## (_feet_of()), else the origin; the forklift it drove stays where it is. Mid-event it waits for the next frame.
 func _let_go(peer: int) -> void:
 	if _applying:
 		_let_go.call_deferred(peer)
@@ -742,6 +730,7 @@ func _let_go(peer: int) -> void:
 	var held: Dictionary = {}
 	if is_host() and peer != multiplayer.get_unique_id() and inventory != null:
 		held = inventory.contents_at(hands_location(peer))
+		_grant(pallets.let_go(peer, _lookup_station({"station": CompanyPallets.FORK_STATION})))
 	var pos: Variant = _feet_of(peer) if not held.is_empty() else null
 	for product: StringName in held:
 		if not _drop_from_hands(peer, product, int(held[product]), pos if pos != null else Vector3.ZERO):
@@ -792,10 +781,9 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 		poll_snapshot(Time.get_ticks_msec())
 		return
 	event_applied.emit(seq, kind, data)
-	var layout_drift: bool = build.take_drift()
-	var table_drift: bool = table.take_drift()
-	if layout_drift or table_drift:
-		# Its wallet was off the host's (set right now, D-0910): the history it missed comes by snapshot.
+	var drifts: Array[bool] = [build.take_drift(), table.take_drift(), wallet.take_drift()]
+	if drifts.has(true):
+		# Its wallet was off the host's (set right now, D-0910, D-0517): the history it missed comes by snapshot.
 		_start_waiting()
 		poll_snapshot(Time.get_ticks_msec())
 
@@ -835,12 +823,16 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
 			applied = carts.apply(data)
-		CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED:
+		CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, CompanyPallets.FORK:
+			applied = pallets.apply(inventory, kind, data)
+		CompanyPallets.DEPARTED:
 			applied = pallets.apply(inventory, kind, data)
 		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED:
 			applied = orders.apply(kind, data)
 		CompanySupplierNet.ORDERED:
 			applied = supplier.apply(data)
+		WALLET:
+			applied = wallet.apply(company, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false

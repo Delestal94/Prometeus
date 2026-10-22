@@ -13,7 +13,8 @@ extends Node3D
 ## and nothing falls, whatever order they came in. Moving the cart is a jump of its node to the spot the
 ## host decided (place_at()); only the look slides, so the reach spot and the colliders are already there.
 ##
-## Interaction: a PickingCartPoint for the platform (load or unload), one for the handle (push) and a take
+## Interaction: a PickingCartPoint for the platform (load or unload), one for the handle (grip, D-0610.c2.b;
+## its node still named as the push it was, handle_point_name()), one to restock (D-0610.c2.c) and a take
 ## point over each product's cubes (D-0610.c2: aim at the product to take; refresh() places them, unused
 ## ones have no prompt); they forward their `used` here. Pivot, size and slots are art's contract: when the
 ## final model comes, only _build_look() changes.
@@ -40,9 +41,12 @@ const TAKE_RADIUS: float = 0.14
 
 ## The cart's id and its Inventory location (PickingCart). Set by make().
 var cart: PickingCart = PickingCart.new()
-## The point of the platform and the point of the handle.
+## The point of the platform and the point of the handle (grip, D-0610.c2.b; push_point and its node name,
+## handle_point_name(), from before).
 var load_point: PickingCartPoint
 var push_point: PickingCartPoint
+## Puts the first product on the cart back on its shelf (D-0610.c2.c).
+var restock_point: PickingCartPoint
 ## One take point per product on the cart (at most one per slot), in the order of slot_products().
 var take_points: Array[PickingCartPoint] = []
 
@@ -60,6 +64,12 @@ static func make(id: StringName, local: Vector3) -> PickingCartView:
 	view.position = local
 	view._build()
 	return view
+
+
+## The node name of cart `id`'s handle point, the same since D-0610.b on every peer and every version
+## ("Use_<id>_push", though it grips since D-0610.c2.b): the path a client's use of it travels by.
+static func handle_point_name(id: StringName) -> String:
+	return "Use_%s_%s" % [id, PickingCartPoint.ACTION_PUSH]
 
 
 ## The centre of slot `slot` (0 to CART_MAX_UNITS - 1) in the cart's frame: where its unit's cube stands.
@@ -114,7 +124,8 @@ func shown_units() -> Array[MeshInstance3D]:
 
 ## Stands the cart at `local` (the shed's frame). With `slide` the look rolls there from where it was.
 func place_at(local: Vector3, slide: bool = false) -> void:
-	var from: Vector3 = position
+	# From where the look is drawn now, so short steps in a row (a held handle) slide on without a jump back.
+	var from: Vector3 = position + _look.position
 	position = local
 	if _slide != null and _slide.is_valid():
 		_slide.kill()
@@ -152,13 +163,18 @@ func _build() -> void:
 	body.add_child(shape)
 	add_child(body)
 	load_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_LOAD, Vector3(0.1, 0.7, 0.0), 0.45)
-	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_PUSH,
+	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_GRIP,
 		Vector3(HANDLE_X - 0.14, 0.9, 0.0), 0.3)
+	# The handle grips now, but its node keeps the push point's name (handle_point_name()): a client's use reaches
+	# the host by node path (Interactable request_interact), so a renamed node would be a protocol change.
+	push_point.name = handle_point_name(cart.id)
+	restock_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_RESTOCK,
+		Vector3(-LENGTH * 0.5 + 0.2, 0.7, 0.0), 0.3)
 	for slot: int in CompanyTuning.CART_MAX_UNITS:
 		var take := PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_TAKE, slot_centre(slot), TAKE_RADIUS)
 		take.name = "Take_%s_%d" % [cart.id, slot]
 		take_points.append(take)
-	var points: Array[PickingCartPoint] = [load_point, push_point]
+	var points: Array[PickingCartPoint] = [load_point, push_point, restock_point]
 	points.append_array(take_points)
 	for point: PickingCartPoint in points:
 		point.used.connect(func(id: StringName, how: StringName, peer_id: int, origin: Vector3,
