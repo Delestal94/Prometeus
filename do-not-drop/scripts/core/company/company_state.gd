@@ -100,6 +100,7 @@ func to_dict() -> Dictionary:
 		"ledger": ledger.duplicate(true),
 		"supplier_calendar": supplier_calendar.duplicate(true),
 		"pallets": pallets.duplicate(true),
+		"cold_clocks": cold_clocks.duplicate(true),
 	}
 
 
