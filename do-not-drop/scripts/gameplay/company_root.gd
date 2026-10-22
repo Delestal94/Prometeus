@@ -66,7 +66,8 @@ extends Node3D
 ## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the playon's gate (its far edge) and decides
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
-## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
+## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips; its "GateBrake"
+## (CompanyGateBrake, D-0316.4) brakes the copy it drives at the same gate while the host holds it there.
 ##
 ## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
 ## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
@@ -155,6 +156,8 @@ var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
 var trips_view: CompanyTripsView
+## Client: brakes the copy it drives at the gate while the host holds it (D-0316.4). Null on the host.
+var gate_brake: CompanyGateBrake
 var fleet: CompanyFleet
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
@@ -808,12 +811,12 @@ func _add_trips() -> void:
 	trips_view.attach(net)
 	if not net.is_host():
 		day_cycle.trips_out = trips_view.trips_out
+		gate_brake = CompanyGateBrake.add_to(self, trips_view, shed, net)
 		return
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M, -shed.global_basis.z)
-	trips.set_yard(CompanyFleet.yard_back_m(net.company), CompanyFleet.yard_half_width_m(net.company))
+	trips.use_gate(CompanyFleet.trip_gate(shed, net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
