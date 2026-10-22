@@ -66,6 +66,10 @@ extends Node3D
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
 ## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
+##
+## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
+## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
+## instead of falling through the missing floor (D-0318.1).
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -154,6 +158,8 @@ var trips_view: CompanyTripsView
 var cells: CompanyCells
 ## Who gets each company vehicle's and loose box's updates (D-0316), on every peer.
 var interest: CompanyInterest
+## World/Packages: where every peer puts the package a sealed box becomes (D-0715.b).
+var packages: Node3D
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -208,6 +214,7 @@ func _ready() -> void:
 	_add_shed()
 	_add_supplier_truck()
 	_add_cells()
+	_add_packages()
 	_add_interest()
 	_add_trips()
 	_add_crew()
@@ -679,6 +686,29 @@ func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
+
+
+## The packages the sealed boxes become (D-0715.b), on every peer under World/Packages: the same path
+## everywhere, so each one's synchronizer pairs up with the host's. CompanyNet's tables build them
+## there (CompanyPackages); the host's are watched by the cells (_on_package_added()).
+func _add_packages() -> void:
+	if net == null:
+		return
+	packages = Node3D.new()
+	packages.name = "Packages"
+	_world.add_child(packages)
+	net.table.packages.parent = packages
+	net.table.packages.added.connect(_on_package_added)
+
+
+## Host (D-0318.1): a package freezes while its cell isn't loaded (no floor under it) and thaws when it
+## is back (WorldCellStreamer.track_body); it is let go as it leaves the tree. A client's copy follows
+## the host's and is never tracked. Called while box_sealed is applied: no CompanyNet request here.
+func _on_package_added(package: DeliveryPackage) -> void:
+	if cells == null or not is_instance_valid(cells) or net == null or not net.is_host():
+		return
+	cells.track_body(package)
+	package.tree_exiting.connect(cells.untrack_body.bind(package), CONNECT_ONE_SHOT)
 
 
 ## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
