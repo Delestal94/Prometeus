@@ -17,7 +17,11 @@ extends SceneTree
 ##   chicane, bridge, gravel, mud, works, rail crossing);
 ## - EdgeCellContent hands each event to exactly one cell (the one its point lies
 ##   in), leaves the cell as it was with spawn_events off, and with it on adds the
-##   deer, flock and dog nodes at their points, which run a few physics frames.
+##   deer, flock and dog nodes at their points, which run a few physics frames;
+## - the animals take a place in RoutePlacement (D-0315.b): the cell's event claims are
+##   the spots where its deer, flock and dog wait (the node's own lateral), reserve_events()
+##   marks them so overlaps() turns a prop down there and not far away, and the cargo
+##   animal and the mud (no node) claim nothing.
 
 const SEED: int = 20261022
 const SEEDS: int = 40
@@ -47,6 +51,7 @@ func _run() -> void:
 	_test_reused_plans()
 	_test_cells()
 	await _test_spawned_nodes()
+	_test_claims()
 	quit(_failures)
 
 
@@ -240,6 +245,43 @@ func _test_spawned_nodes() -> void:
 		await physics_frame
 	_expect(is_instance_valid(holder) and holder.get_child_count() > 0,
 			"The cells hold their nodes after a few physics frames")
+	holder.free()
+
+
+func _test_claims() -> void:
+	var content := EdgeCellContent.new(_graph, 256.0, SEED, true)
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var claimed: int = 0
+	var matches := true
+	for cell: Vector2i in content.event_cells():
+		var node: Node3D = content.build_cell(cell)
+		holder.add_child(node)
+		var claims: Array[Vector3] = content.event_claims(cell)
+		var animals: Array[Dictionary] = []
+		for event: Dictionary in content.events_in(cell):
+			if event.kind in [EdgeEvents.DEER, EdgeEvents.FLOCK, EdgeEvents.DOG]:
+				animals.append(event)
+		_check(claims.size() == animals.size(), "Cell %s claims one spot per animal (%d)" % [cell, animals.size()])
+		var placement := RoutePlacement.new(holder, null)
+		_check(content.reserve_events(placement, cell) == claims.size(), "Cell %s reserves what it claims" % cell)
+		for i in mini(claims.size(), animals.size()):
+			claimed += 1
+			var event: Dictionary = animals[i]
+			var lateral: float = WildlifeCrossing.WAIT_LATERAL if event.kind == EdgeEvents.DEER else (
+					ChasingDog.HOME_LATERAL if event.kind == EdgeEvents.DOG else 11.0)
+			var named: String = "%s_%s_%d" % [event.kind, event.edge, roundi(float(event.along))]
+			var animal: Node3D = node.get_node(NodePath(named)) as Node3D
+			var wait: Vector3 = animal.transform * Vector3(float(event.side) * lateral, 0.0, 0.0)
+			matches = matches and Vector2(claims[i].x, claims[i].y).distance_to(Vector2(wait.x, wait.z)) < 0.01
+			_check(placement.overlaps(Vector3(claims[i].x, 0.0, claims[i].y), 0.5),
+					"A prop on the spot where the %s of %s waits is turned down" % [event.kind, event.edge])
+			_check(not placement.overlaps(Vector3(claims[i].x + 60.0, 0.0, claims[i].y), 0.5),
+					"A prop 60 m from the %s of %s is not" % [event.kind, event.edge])
+	_expect(claimed > 0 and matches, "The claims sit where the animals' nodes wait (%d)" % claimed)
+	var none := RoutePlacement.new(holder, null)
+	_expect(content.reserve_events(none, Vector2i(400, 400)) == 0 and not none.overlaps(Vector3.ZERO, 1.0),
+			"A cell with no events reserves nothing")
 	holder.free()
 
 

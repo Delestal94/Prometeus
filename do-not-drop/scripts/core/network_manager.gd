@@ -144,14 +144,16 @@ const MAX_PLAYERS: int = 8
 ## host tells the driver of a company vehicle it holds at the gate why (one with cargo that may not
 ## leave with VEHICLES_FAR_MAX out: before, it crossed and counted as out); an older client gets an
 ## RPC it doesn't have (company mode, D-0316.2).
-## 53: CompanyNet's _apply_event takes a new host kind, order_closed {order, state}: an order
+## 53: the "orders" snapshot part carries `stars` (1-5, the customer's rating) on a
+## delivered order; an older client refuses that book (company mode, D-0816.b).
+## 54: CompanyNet's _apply_event takes a new host kind, order_closed {order, state}: an order
 ## that ends without a delivery (the customer gave up, the vehicle came back with it, or the
 ## day ended) fails or is cancelled on every peer's book, and the reputation it costs is the
 ## host's alone (company mode, D-0851).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 53
+const PROTOCOL_VERSION: int = 54
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

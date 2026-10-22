@@ -4,7 +4,7 @@
 > en la tabla de [06-mercaderia-y-stock.md](../06-mercaderia-y-stock.md). Números de [supuestos.md](supuestos.md).
 
 ### D-0616 · Productos fríos fuera de la heladera se echan a perder — A · Sonnet 5.5 · high · Aviso: no · F2
-**[~] Parcial (2026-10-22, PR pendiente)** — la lógica (D-0616.a): `ColdChain` (`scripts/gameplay/business/cold_chain.gd`), `Inventory.discard`, `CompanyTuning.COLD_SPOIL_MINUTES` y `test_cold_chain`; conectada al mundo (D-0616.b, parcial): `ColdChainTick`, el evento `units_spoiled` (protocolo 51) y el guardado de los relojes. Falta D-0616.c (los movimientos de las mesas de empaque, el aviso en la etiqueta del hueco y lo demás de abajo).
+**[~] Parcial (2026-10-22, PR pendiente)** — la lógica (D-0616.a): `ColdChain` (`scripts/gameplay/business/cold_chain.gd`), `Inventory.discard`, `CompanyTuning.COLD_SPOIL_MINUTES` y `test_cold_chain`; conectada al mundo (D-0616.b, parcial): `ColdChainTick`, el evento `units_spoiled` (protocolo 51) y el guardado de los relojes. Falta D-0616.c (los movimientos de las mesas de empaque, el aviso en la etiqueta del hueco y lo demás de abajo; el aviso de que algo se echó a perder, D-0616.c.a, está hecho).
 **Depende de:** D-0211 (`Inventory`), D-0608 (`Shelf`), D-0204 (`temperature`), D-0904 (`PlaceableDefinition.cold`)
 **Qué:** el campo `temperature` deja de ignorarse. Se cuenta, por producto frío y por lugar donde está guardado, cuántos minutos de juego pasó fuera de una heladera (un estante cuyo id está en `cold_shelves`).
 - **D-0616.a (hecha) — la lógica.** `ColdChain` (`RefCounted`, sin nodos ni autoloads): `advance(inventory, products, cold_shelves, minutes)` envejece lo frío que no está en una heladera; pasados `COLD_SPOIL_MINUTES` (120 = 2 h) las unidades de ese lugar se pierden (`Inventory.discard`) y devuelve qué se pudrió y qué pedidos perdieron reserva. En la heladera el reloj **se frena pero no se reinicia**. `receive` y `move` hacen lo mismo que los de `Inventory` y además llevan el reloj: al juntarse unidades con otras, el reloj es el promedio ponderado por unidades. Lo que va en una caja en viaje es de `ColdPack`, no de acá.
@@ -34,8 +34,12 @@
     (`box_take_out`) empieza de cero. Hay que sumar el reloj a esos eventos o a la caja.
   - El aviso en la etiqueta del hueco ("se echa a perder en 40 min") con `ColdChain.minutes_left`: hoy los relojes son
     solo del host; para mostrarlo en los clientes hay que replicar los minutos restantes (no hace falta para el stock).
-  - Avisar a los jugadores que algo se echó a perder (cartel/sonido, `event_applied` con `units_spoiled`) y a los pedidos
-    que perdieron reserva (D-0811, "quedan esperando stock"): el evento no lleva los pedidos, cada peer los recorta.
+  - **D-0616.c.a (hecha) — aviso de que algo se echó a perder.** `SpoilNotice` (`scripts/gameplay/business/spoil_notice.gd`,
+    `RefCounted`): `CompanyRoot._on_event_applied` lo llama con cada `units_spoiled` que aplica un peer (el host también) y
+    sale como `EventBus.depot_notice` ("Se echó a perder: 4 Bidón de leche", clave `WORLD_SPOILED`), un aviso por producto y
+    lugar; el toast del HUD ya trae su sonido corto. Sin RPC ni cambio de protocolo. Test `test_company_cold_notice`.
+  - Falta avisar a los pedidos que perdieron reserva (D-0811, "quedan esperando stock"): el evento no lleva los pedidos,
+    cada peer los recorta.
   - Una caja ya armada con frío dentro no envejece acá (es de `ColdPack`); falta decidir si el paquete en un pallet de
     salida o en un vehículo parado también.
   - Los relojes por lugar siguen sin viajar con un pallet entero que cambia de lugar (`jack_*` no cambia su `location`,
@@ -43,7 +47,7 @@
 Decisión: el reloj es por lugar, no por unidad (`Inventory` no sigue unidades): es lo más simple que no deja engañar al sistema sacando y devolviendo leche de la heladera. Decisión: la pérdida es de todo el lugar a la vez, no unidad por unidad.
 **Test** `test_cold_chain`: la leche en un estante común se pudre a las 2 h y sale del stock; en la heladera nunca; lo ambiente nunca; el reloj se frena y no se reinicia; mover lleva el reloj y juntar promedia; la pérdida recorta las reservas más nuevas y lo informa; ida y vuelta por JSON; `discard` rechaza de más.
 **Test** `test_company_cold_chain_world` (D-0616.b): el reloj del día hace que la leche de un estante común se eche a perder a las 2 h y baje el stock en el host y en un cliente (y en uno que entra tarde); en la heladera no; las unidades de una mano no envejecen; nada avanza en pausa ni de noche; los pedidos reservados más nuevos quedan esperando stock; el reloj viaja con un `units_moved`; los relojes salen y vuelven por el guardado; en el `CompanyRoot` real la leche de los primeros pallets se pierde a las 2 h y el guardado lleva el reloj.
-**Hecho cuando:** producto frío fuera de heladera 2 h de juego → vencido en todos los peers (D-0616.a + D-0616.b); el aviso y las mesas son D-0616.c.
+**Hecho cuando:** producto frío fuera de heladera 2 h de juego → vencido en todos los peers (D-0616.a + D-0616.b); el aviso de pérdida es D-0616.c.a (hecho); las mesas y la etiqueta del hueco son D-0616.c.
 
 ### D-0617 · Heladera como estantería especial — A · Sonnet 5.5 · medium · Aviso: no · F2
 **[x] Hecho (2026-10-22, PR pendiente)** — `Shelf.cold` (la heladera del `.tres` hace un estante frío), `Shelf.set_label` con la temperatura del producto (la heladera solo rotula frío; los demás estantes, solo lo que no es frío), `CompanyShed.cold_shelves()` (el `cold_shelves` de `ColdChain.advance`) y el galpón por defecto con la heladera `cold_1` en lugar del estante `shelf_3` (leche y torta). `DefaultShed.problems()` marca un producto frío en un estante común. `test_cold_shelf`.

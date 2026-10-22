@@ -23,8 +23,9 @@ extends SceneTree
 ##   with extra data or of an order already late; plan() leaves out an order already in the book;
 ## - the book travels as the snapshot's "orders" part: a client takes the host's; a part that doesn't fit
 ##   (not a Dictionary, now_min missing or a float, an extra key, orders not an Array, over MAX_ORDERS,
-##   an id twice, a bad book field, an unknown key or state) is refused and changes nothing; an empty
-##   book and a delivered order with every book field fit;
+##   an id twice, a bad book field, an unknown key or state, stars on an order not delivered or out of
+##   1-5 or a float, D-0816.b) is refused and changes nothing; an empty book and a delivered order with
+##   every book field, its stars too, fit;
 ## - with a host, a client and a late joiner as ENet peers in one process: the host's polls reach the
 ##   client in order, with equal books after each; the client can't write the book: publish() and poll()
 ##   do nothing there, an order_added request is dropped in silence and a forged _apply_event is dropped
@@ -281,6 +282,7 @@ func _check_snapshot_part(host: CompanyNet) -> void:
 		[_with(good, "orders", [_with(one, "paid", -5)]), "a negative paid"],
 		[_with(good, "orders", [_with(one, "rating", 5)]), "an unknown key"],
 		[_with(good, "orders", [_with(one, "state", &"teleported")]), "an unknown state"],
+		[_with(good, "orders", [_with(one, "stars", 5)]), "stars on an order not delivered"],
 	]
 	var before: Dictionary = client.orders.book.to_dict()
 	for case: Array in bad_parts:
@@ -288,11 +290,16 @@ func _check_snapshot_part(host: CompanyNet) -> void:
 			"A snapshot part with %s is refused and changes nothing" % case[1])
 	var delivered: Dictionary = one.duplicate(true)
 	delivered.merge({"state": Order.STATE_DELIVERED, "box_id": &"box_3", "trip_id": &"trip_1",
-		"quality": 80, "paid": 30, "intact": true}, true)
+		"quality": 80, "paid": 30, "intact": true, "stars": 4}, true)
+	for stars: Variant in [0, CompanyTuning.STARS_MAX + 1, 4.0, "4"]:
+		_expect(not client.orders.put_snapshot({"orders": [_with(delivered, "stars", stars)], "now_min": 900})
+			and client.orders.book.to_dict() == before,
+			"A delivered order with stars %s is refused and changes nothing" % var_to_str(stars))
 	_expect(client.orders.put_snapshot({"orders": [delivered], "now_min": 900})
 		and client.orders.book.state_of(one["id"]) == Order.STATE_DELIVERED
-		and client.orders.book.box_of(one["id"]) == &"box_3",
-		"A delivered order with every book field fits")
+		and client.orders.book.box_of(one["id"]) == &"box_3"
+		and client.orders.book.get_order(one["id"]).get("stars") == 4,
+		"A delivered order with every book field, its stars too, fits")
 	_expect(client.orders.put_snapshot({"orders": [], "now_min": 0}) and client.orders.book.size() == 0,
 		"An empty book fits (a day with no order yet)")
 	client.free()

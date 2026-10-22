@@ -506,6 +506,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		var bus: Node = _event_bus()
 		if bus != null:
 			bus.emit_signal(&"order_added", StringName((data["order"] as Dictionary)["id"]))
+	elif kind == CompanyColdNet.SPOILED:
+		SpoilNotice.announce(_event_bus(), data)
 
 
 ## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
