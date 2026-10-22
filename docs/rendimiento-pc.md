@@ -226,8 +226,9 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 
 ## Ancho de banda del modo Empresa (D-2002)
 
-**Fecha:** 2026-10-22 (D-2002.4: lo que D-2002.2 dejaba afuera y las palancas de las salidas). **Commit:** base
-`origin/main` `7ac2db32` (rama `exp/D-2002.4-bandwidth-exits`). Antes: D-2002.2 el mismo día sobre `a7405f5`
+**Fecha:** 2026-10-22 (D-2002.5: la caja en la mano no manda su pose). **Commit:** base `origin/main` `d7e12b63`
+(rama `exp/D-2002.5-carried-box-pose`). Antes: D-2002.4 el mismo día sobre `7ac2db32`
+(`exp/D-2002.4-bandwidth-exits`), D-2002.2 el mismo día sobre `a7405f5`
 (`exp/D-2002.2-exit-bandwidth`), D-2002.3 el 2026-10-19 sobre `425041a` (`exp/D-2002-shed-pose-rate`) y
 D-2002.1 sobre `3d4a242` (`exp/D-2002-bandwidth-budget`). Lo mide `tests/test_company_bandwidth_budget.gd` (corre en
 la batería, filtro `company`; imprime líneas `COMPANY_BW`), con los casos en `tests/company_bandwidth_cases.gd`:
@@ -253,12 +254,16 @@ el host en el galpón o a bordo de cada vehículo, y cada cliente. Cada caso da 
 hasta D-2002.4, cada 30 ms desde entonces)
   y los eventos `trip_started` / `trip_closed` son los reales que publica `CompanyTripsView`. El jugador a bordo
   (`net_in_vehicle`) manda al ritmo que le da `apply_pose_rate()` (30/s; sentado, 15/s desde D-2002.4). La carga es el sincronizador de
-  `package.tscn` (`BoxToPackage.PACKAGE_SCENE`).
+  `package.tscn` (`BoxToPackage.PACKAGE_SCENE`). Cada jugador del galpón lleva una caja en la mano (en todos los
+  casos desde D-2002.5; antes solo con vehículos afuera), al ritmo que manda una caja real en la mano de alguien a
+  pie: muteada, cada 5 s; lejos, a los de a bordo les llega en los pulsos de keepalive.
 - **Medido (ENet):** 4 u 8 peers ENet en localhost, en un proceso, cada uno con un jugador real (`player.tscn`) por
   peer, sumado a la cuadrilla como lo hace el mundo de la empresa (`CompanyRoot.join_crew()`), y un `CompanyNet`;
   el host publica `units_moved` reales al ritmo de abajo. En las salidas, además, en cada peer la escena del
   vehículo (`vehicle.tscn`, sin `NetRestThrottle`: siempre a su ritmo en movimiento) y sus 7 cajas
-  (`package.tscn`: las cuidadas a 30/s, el resto a su ritmo de reposo), con la visibilidad que decidiría
+  (`package.tscn`: las cuidadas a 30/s, el resto a su ritmo de reposo), en todos los casos una caja por jugador del
+  galpón, tomada en el host por ese jugador (la mutea `package.gd` solo; el test cuenta las poses que les llegan a
+  las copias de los clientes: a lo sumo una cada 5 s), con la visibilidad que decidiría
   `CompanyInterest` (a bordo ven todos los vehículos; el galpón, solo si están cerca), y los que viajan mandan como
   pasajeros (`net_in_vehicle`). Se lee como lo lee el overlay de red en LAN (N-216, `NetStats`), cliente por
   cliente, y se le suman los 28 B de IP y UDP de cada datagrama. Todo está quieto y durante la cuenta tiene el
@@ -330,14 +335,18 @@ estos ritmos se cambian por un día medido.
 una salida pasa 40 KB/s o 2 vehículos lejos pasan 64**; con 8 esos dos no entran todavía en el modelo: se imprimen
 (`over_budget` con los culpables) y no fallan (`FULL_CREW_FITS`; el test avisa cuando entren).
 
-**Desde D-2002.4 el test también falla si con 8 jugadores 2 vehículos lejos pasan 64** (`FULL_CREW_FITS["far"]`);
-la salida con 8 se imprime y no falla.
+**Desde D-2002.4 el test también falla si con 8 jugadores 2 vehículos lejos pasan 64** (`FULL_CREW_FITS["far"]`),
+**y desde D-2002.5 si la salida con 8 pasa 40** (`FULL_CREW_FITS["trip"]`): el test exige los seis casos.
 
 | Caso | Presupuesto por cliente | 4 jugadores (modelo / ENet) | 8 jugadores (modelo / ENet) | Estado |
 |---|---|---|---|---|
-| Galpón, poses a 15/s (D-2002.3, igual en D-2002.4) | ≤ 24 KB/s | 9,1 / 5,9-6,0 | 20,2 / 12,8-13,6 | Entran los dos (el test falla si alguno se pasa) |
-| **Una salida afuera (D-2002.4, todo contado y 4 palancas)** | ≤ 40 KB/s | **38,7 / 30,2-30,8** | **67,3 / 52,2-54,0** | 4 entra (el test falla si se pasa); 8 no entra: las 6 cajas en la mano de los que cargan |
-| **2 vehículos lejos (D-2002.4, todo contado y 4 palancas)** | ≤ 64 KB/s | **45,9 / 36,6-36,9** | **57,0 / 40,1-42,4** | Entran los dos (el test falla si alguno se pasa) |
+| **Galpón, cada uno con una caja en la mano (D-2002.5)** | ≤ 24 KB/s | **9,2 / 6,0** | **20,3 / 11,8-13,1** | Entran los dos (el test falla si alguno se pasa) |
+| **Una salida afuera (D-2002.5, la caja en la mano sin pose)** | ≤ 40 KB/s | **27,8 / 19,8-20,5** | **39,0 / 25,0-26,7** | Entran los dos (el test falla si alguno se pasa) |
+| **2 vehículos lejos (D-2002.5)** | ≤ 64 KB/s | **41,6 / 32,2-32,9** | **52,7 / 36,5-37,4** | Entran los dos (el test falla si alguno se pasa) |
+| Galpón, cada uno con una caja en la mano a 30/s (antes de D-2002.5, solo modelo, calculado) | ≤ 24 KB/s | ~29,1 / — | ~57,7 / — | No entraba ni con 4 (nadie lo contaba) |
+| Galpón, poses a 15/s (D-2002.3, igual en D-2002.4; sin cajas en la mano) | ≤ 24 KB/s | 9,1 / 5,9-6,0 | 20,2 / 12,8-13,6 | Superado por D-2002.5 |
+| Una salida afuera (D-2002.4, todo contado y 4 palancas) | ≤ 40 KB/s | 38,7 / 30,2-30,8 | 67,3 / 52,2-54,0 | 8 no entraba: las 6 cajas en la mano de los que cargan |
+| 2 vehículos lejos (D-2002.4, todo contado y 4 palancas) | ≤ 64 KB/s | 45,9 / 36,6-36,9 | 57,0 / 40,1-42,4 | Superado por D-2002.5 |
 | Una salida, todo contado, sin palancas (D-2002.4, antes) | ≤ 40 KB/s | 54,3 / — | 82,9 / — | 4 no entraba |
 | 2 lejos, todo contado, sin palancas (D-2002.4, antes) | ≤ 64 KB/s | 69,9 / — | 90,9 / — | 4 no entraba |
 | Galpón, poses a 30/s (D-2002.1, antes) | ≤ 24 KB/s | 16,1 / 10,8-10,9 | 37,2 / 22,5-25,2 | 4 entraba; 8 se pasaba |
@@ -376,8 +385,8 @@ pero el presupuesto se decide con el techo, como en el galpón.
 
 Lo que pesa cada pieza (modelo, por cliente que la ve): la camioneta en movimiento manda 133 B cada 16,7 ms
 (12,6 KB/s sola en su paquete, 4,7 de datagramas; la segunda suma 7,8 en el mismo paquete); una caja manda 150 B
-(dos `Transform3D`: `net_transform` y `hold_offset`), 6,8 KB/s cuidada a 30/s y 0,3 en reposo (en el paquete de
-las demás); un jugador a bordo reenviado por el host, 5,0 KB/s (a pie en el galpón, 2,5). Un vehículo vacío afuera
+(dos `Transform3D`: `net_transform` y `hold_offset`; 98 B desde D-2002.5, sin `hold_offset`), 6,8 KB/s cuidada a
+30/s y 0,3 en reposo (en el paquete de las demás); un jugador a bordo reenviado por el host, 5,0 KB/s (a pie en el galpón, 2,5). Un vehículo vacío afuera
 (no cuenta para el tope de `CompanyTrips`) cuesta lo mismo que uno cargado menos sus cajas.
 
 Qué se cuenta hoy en el galpón: los sincronizadores del jugador y la camioneta estacionada.
@@ -450,7 +459,8 @@ Con 4 jugadores (50,1, entra): 20,4 / 11,2 / 5,0 (el otro conductor) / 3,8 / 2,5
   keepalive. Toca los dos módulos (`net_pose_smoother`, `world_cells`).
 - **Que la caja no mande `hold_offset` mientras nadie la tiene en la mano** (hoy va en cada pose, `IDENTITY` si
   nadie la tiene; va con la pose a propósito, así que no basta pasarlo a `ON_CHANGE`): 150 → 98 B por caja; una
-  salida −2,1 KB/s. Es `package.tscn` (de Slatex y del Reparto).
+  salida −2,1 KB/s. Es `package.tscn` (de Slatex y del Reparto). **Hecho en D-2002.5** (`hold_offset` ya no viaja
+  nunca: cada peer lo calcula).
 
 Con 4 jugadores las dos salidas entran sin nada de esto. Con el techo de diseño a bordo (conductor y 3 pasajeros, 3
 con 4 jugadores) una salida da 39,7: entra sin margen.
@@ -489,6 +499,35 @@ Culpables después de las palancas (modelo, peor cliente):
 
 Por qué ENet sube tanto respecto de D-2002.2 (salida con 4, 23,6 → 30,8): ahora se miden las 2 cajas en la mano y
 los deltas de `care_state`, que antes no estaban; la camioneta y los sentados bajaron.
+
+**D-2002.5 (2026-10-22): la caja en la mano no manda su pose**
+([decisión](decisiones/2026-10-22-caja-en-la-mano-sin-pose.md)). En todos los modos (es el mismo `package.tscn`):
+
+1. Mientras un jugador a pie la tiene en la mano (`is_held` y `carrier_peer_id > 0`), el host mutea el
+   `NetRestThrottle` de la caja (`set_muted()`, nuevo en `net_pose_smoother`): manda una pose cada 5 s
+   (`muted_interval`, para que el reloj de 16 bits de SceneMultiplayer no se dé vuelta en una caja que se lleva
+   minutos). Al soltarla vuelve a cada tick desde el tick siguiente.
+2. Cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del que la lleva (cabeza, rayo contra lo que
+   estorba, subida desde `pick_up`), en el cuerpo como lo dibuja. `hold_offset` sale de la replicación: una caja que
+   se mueve manda 98 B en vez de 150 (por eso bajan también la caja cuidada y las quietas).
+3. Al soltarla, las poses viejas (de antes de tomarla y del goteo) no se usan: la caja queda donde se dibujó hasta la
+   primera pose nueva del host y se acerca en 0,25 s (`test_remote_carry_alignment`).
+
+Culpables después (modelo, peor cliente):
+
+- Salida con 8 (39,0 de 40, entra justo; el peor va a bordo, el host en el galpón): 5 del galpón reenviados 12,5 / la
+  camioneta 7,0 / la caja cuidada 5,3 / su `care_state` 4,9 / el otro de a bordo 2,5 / la pose del host 2,4 / los
+  eventos de negocio 2,3 / las 6 quietas 1,3 / los eventos de salida 0,5 / las 6 cajas en la mano 0,1.
+- Salida con 4 (27,8): la camioneta 7,0 / la caja cuidada 5,3 / `care_state` 4,9 / el otro de a bordo 2,5 / el del
+  galpón 2,5 / el resto 5,6.
+- 2 lejos con 8 (52,7): las 2 camionetas 11,4 / los 2 `care_state` 9,9 / las 2 cajas cuidadas 8,2 / 3 de a bordo 7,5
+  / 3 del galpón 7,5 / el resto 8,3 (los pulsos de las 4 cajas en la mano del galpón, 0,1). Con 4, 41,6.
+- Galpón con 8 (20,3): igual que en D-2002.3 más las 8 cajas en la mano (0,2). A 30/s y 150 B, como mandaban antes,
+  habrían sido ~37,6 KB/s más (~57,7 en total; con 4, ~29,1: tampoco entraba).
+
+En el Reparto (`test_net_bandwidth_budget`, 8 jugadores, 14 cajas): host → cada cliente, caso estable 80,7 → 67,9
+KB/s (la caja de 148 a 96 B; el modelo sigue contando una caja por jugador moviéndose, un techo: la que se lleva a pie
+ya no manda), todo moviéndose 107,2 → 85,9, subida del host 4,6 → 3,9 Mbit/s.
 
 **Cómo está hecho D-2002.3:**
 
