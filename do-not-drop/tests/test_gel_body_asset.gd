@@ -2,7 +2,7 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
 ## three triangle budgets, eleven zero-default working morphs, twenty-six named bones,
-## nine animation durations, finite vertex/UV data, normalized four-slot skinning,
+## sixteen animation durations, finite vertex/UV data, normalized four-slot skinning,
 ## zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
 
@@ -19,6 +19,8 @@ const JIGGLE_BONES: Array[String] = [
 const DURATIONS: Dictionary = {
 	"Idle": 6.0, "Walk": 1.0 / 3.0, "Stroll": 0.6, "Run": 1.0 / 3.0, "Jump": 1.6,
 	"PickUpPackage": 1.6, "PickUpHigh": 1.6, "Sit": 4.0, "TurnInPlace": 0.8,
+	"CarryWalk": 1.0 / 3.0, "ThrowPackage": 1.0, "DropPackage": 0.9, "Drive": 2.0,
+	"EnterTruck": 1.2, "ExitTruck": 1.2, "RingDoorbell": 1.1,
 }
 var _failures: int = 0
 

@@ -50,8 +50,10 @@ TURN_PERIOD = .8
 DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Stroll': GAITS['Stroll']['period'], 'Run': GAITS['Run']['period'], 'Jump': 1.6,
              'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0,
-             'TurnInPlace': TURN_PERIOD}
-LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace')
+             'TurnInPlace': TURN_PERIOD, 'CarryWalk': GAITS['Walk']['period'],
+             'ThrowPackage': 1.0, 'DropPackage': .9, 'Drive': 2.0,
+             'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1}
+LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace', 'CarryWalk', 'Drive')
 
 # Foot geometry, relative to the ankle (IK target) at rest.
 BALL = Vector((0, -.245, -.227))   # ball of the foot on the ground
@@ -597,6 +599,140 @@ def sit(t):
         P['pole'+side] = (s*1.7, -.5, .9)   # elbows out and forward: the arm wraps the tummy
     return P
 
+
+# --- gameplay clips ------------------------------------------------------------
+
+def _carry_arms(P, bob=0., reach=1.):
+    """Keep both wrists on the box while the lower body supplies motion.
+
+    CarryPose replaces these authored targets with the real package in game;
+    the clip remains useful in previews and gives that runtime IK a stable,
+    already bent starting pose.
+    """
+    rest = IDLE0
+    for side, s in (('L', 1), ('R', -1)):
+        start, rot0 = HANDS0[side]
+        P['hand'+side] = lerp(start, (s*PICKUP_WIDTH, -.95, 1.97+bob), reach)
+        P['hrot'+side] = lerp(rot0, (-55., 0., -s*75.), reach)
+        P['pole'+side] = (s*1.55, -.65, 1.25)
+        P['ik'+side] = reach
+        P['arm'+side] = tuple(rest['arm'+side][:5]) + (2.*reach,)
+    return P
+
+
+def carry_walk(t):
+    """Quick carrying gait: planted feet from Walk, quiet chest, fixed box."""
+    P = gait('Walk', t)
+    p = (t/GAITS['Walk']['period']) % 1.
+    step = math.cos(2*TAU*p)
+    # A carried box damps twist and makes the body lean under its weight.
+    P.update(
+        s_pitch=P['s_pitch']+5., c_pitch=P['c_pitch']+2.,
+        p_yaw=P['p_yaw']*.3, s_yaw=P['s_yaw']*.2, c_yaw=P['c_yaw']*.15,
+        h_yaw=P['h_yaw']*.35, by=P['by']-.012, bz=P['bz']-.018,
+    )
+    return _carry_arms(P, -.012*step)
+
+
+def throw_package(t):
+    """Two-handed shove: anticipation, release in front, then recover."""
+    rest = IDLE0
+    prepare = keys(t, [(0., 0.), (.2, 1.), (.32, 1.), (.48, 0.)])
+    release = keys(t, [(0., 0.), (.22, 0.), (.45, 1.), (.58, 1.), (.82, 0.), (1., 0.)])
+    recover = smooth(.58, 1., t)
+    P = dict(rest)
+    P.update(
+        py=-.10*prepare+.08*release, pz=rest['pz']-.08*prepare+.035*release,
+        s_pitch=rest['s_pitch']-8.*prepare+13.*release,
+        c_pitch=rest['c_pitch']-5.*prepare+8.*release,
+        h_pitch=rest['h_pitch']+5.*prepare-7.*release,
+        by=rest['by']-.025*prepare, bz=rest['bz']-.025*prepare+.018*release,
+        footL=(0., .08*prepare, 0., 8.*prepare),
+        footR=(0., -.08*prepare, 0., 0.),
+    )
+    _carry_arms(P, 0., 1.-recover)
+    for side, s in (('L', 1), ('R', -1)):
+        if recover < 1.:
+            target = (s*(PICKUP_WIDTH+.04*release), -(.95+.42*release),
+                      1.97+.08*release)
+            P['hand'+side] = lerp(P['hand'+side], target, release)
+    return blend(P, rest, smooth(.82, 1., t))
+
+
+def drop_package(t):
+    """Lower the box clear of the tummy, release it, and open the hands."""
+    rest = IDLE0
+    lower = keys(t, [(0., 0.), (.18, 0.), (.55, 1.), (.66, 1.), (.9, 0.)])
+    release = smooth(.58, .9, t)
+    P = dict(rest)
+    P.update(
+        py=.08*lower, pz=rest['pz']-.10*lower,
+        s_pitch=rest['s_pitch']+11.*lower, c_pitch=rest['c_pitch']+4.*lower,
+        h_pitch=rest['h_pitch']+8.*lower,
+        by=rest['by']-.012*lower, bz=rest['bz']-.018*lower,
+    )
+    _carry_arms(P, -.26*lower, 1.-release)
+    return blend(P, rest, release)
+
+
+def drive(t):
+    """Seated driving base; runtime IK attaches hands to wheel and feet to pedals."""
+    P = sit(t*2.)
+    w = TAU*t/2.
+    steer = math.sin(w)
+    press = (1.-math.cos(w))/2.
+    left_foot, right_foot = P['footL'], P['footR']
+    P.update(
+        s_pitch=-7.+1.5*press, c_pitch=-2., h_pitch=-2.+1.2*press,
+        h_yaw=3.*steer, p_roll=1.2*steer, c_roll=-1.5*steer,
+        # Keep the deformation-safe seated leg shape, then press the right
+        # pedal with a small ankle translation. S-311.80 supplies the truck's
+        # exact pedal target, just as its existing runtime IK does for hands.
+        footL=(left_foot[0]+.03, left_foot[1]-.04, left_foot[2], left_foot[3]),
+        footR=(right_foot[0]-.03, right_foot[1]-.06*press,
+               right_foot[2]+.025*press, right_foot[3]-5.*press),
+        groundL=0., groundR=0., toeL=0., toeR=0.,
+    )
+    return P
+
+
+def enter_truck(t):
+    """Step up, turn into the cab and settle into the driving pose."""
+    rest = IDLE0
+    end = drive(0.)
+    u = smooth(0., 1.2, t)
+    P = blend(rest, end, u)
+    step = math.sin(math.pi*u)
+    P.update(
+        px=P['px']-.16*step, py=P['py']-.12*step, pz=P['pz']+.18*step,
+        p_yaw=P.get('p_yaw', 0.)-20.*step, s_roll=P.get('s_roll', 0.)+6.*step,
+        h_yaw=P['h_yaw']+10.*step,
+    )
+    return P
+
+
+def exit_truck(t):
+    """Reverse the cab climb and finish exactly in the standing idle pose."""
+    return enter_truck(1.2-clamp01(t/1.2)*1.2)
+
+
+def ring_doorbell(t):
+    """Reach around the tummy with the right hand, press, return to Idle."""
+    rest = IDLE0
+    reach = keys(t, [(0., 0.), (.18, 0.), (.46, 1.), (.67, 1.), (1.02, 0.), (1.1, 0.)])
+    press = keys(t, [(0., 0.), (.48, 0.), (.56, 1.), (.64, 0.), (1.1, 0.)])
+    P = dict(rest)
+    P.update(
+        px=rest['px']-.035*reach, s_pitch=rest['s_pitch']+5.*reach,
+        s_roll=rest['s_roll']+3.*reach, c_yaw=rest['c_yaw']-8.*reach,
+        h_pitch=rest['h_pitch']-3.*reach, h_yaw=rest['h_yaw']-10.*reach,
+    )
+    # FK keeps the thickest body safe: the elbow travels outside the belly
+    # instead of an IK wrist taking the shortest path through it.
+    button_arm = (35., 68.+5.*press, 48.-8.*press, -24., 48., 5.)
+    P['armR'] = lerp(rest['armR'], button_arm, reach)
+    return P
+
 # --- build ----------------------------------------------------------------------
 
 def build(rig):
@@ -616,7 +752,10 @@ def build(rig):
     clips = {'Idle': idle, 'Walk': lambda t: gait('Walk', t), 'Stroll': lambda t: gait('Stroll', t),
              'Run': lambda t: gait('Run', t),
              'Jump': jump, 'PickUpPackage': pickup, 'PickUpHigh': pickup_high, 'Sit': sit,
-             'TurnInPlace': turn_in_place}
+             'TurnInPlace': turn_in_place, 'CarryWalk': carry_walk,
+             'ThrowPackage': throw_package, 'DropPackage': drop_package, 'Drive': drive,
+             'EnterTruck': enter_truck, 'ExitTruck': exit_truck,
+             'RingDoorbell': ring_doorbell}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action
