@@ -9,7 +9,9 @@ extends SceneTree
 ##   (or none) is answered as before.
 ## - A Player (solo, authority) standing in the second fake vehicle reports it as its vehicle and publishes
 ##   net_in_vehicle with the position in its space; walking back to the first moves it over.
-## - A DeliveryPackage in the second one does the same.
+## - A DeliveryPackage in the second one does the same and, riding still in it while the second one
+##   drives on (the box carried along), its NetRestThrottle rests: its pose in that vehicle's space
+##   doesn't change (D-2002.4: in the first one's space it would move every tick and send at 30/s).
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
 const RIDE = preload("res://scripts/gameplay/player/player_ride.gd")
@@ -87,7 +89,24 @@ func _check_package(first: Bay, second: Bay) -> void:
 	_expect(box.call(&"_find_vehicle") == second, "a box in the second bay is aboard the second")
 	box.global_position = Vector3(0.5, 0.5, 0)
 	_expect(box.call(&"_find_vehicle") == first, "a box in the first bay is aboard the first")
+	await _check_box_rests(box as RigidBody3D, second)
 	box.queue_free()
+
+
+## The box riding in `bay` while it drives on, carried along each tick as the vehicle carries it.
+func _check_box_rests(box: RigidBody3D, bay: Bay) -> void:
+	box.freeze = true
+	box.global_position = bay.global_position + Vector3(0.5, 0.5, 0)
+	var throttle := box.get_node(^"NetRestThrottle") as NetRestThrottle
+	var ride: Vector3 = box.global_position - bay.global_position
+	for _tick: int in range(90):
+		bay.global_position += Vector3(0, 0, 0.2)
+		box.global_position = bay.global_position + ride
+		await physics_frame
+	_expect(box.get(&"net_in_vehicle") == true and box.call(&"_find_vehicle") == bay,
+		"a box riding in the second bay publishes its pose in that bay's space")
+	_expect(throttle.is_resting(), "riding still in the second bay while it drives, the box's sends rest")
+	bay.global_position = Vector3(20, 0, 0)
 
 
 func _expect(condition: bool, message: String) -> void:
