@@ -1467,3 +1467,12 @@ UI_COMPANY_NOTE_3,Cuidado con el perro (es amistoso).,Careful with the dog (he's
 UI_COMPANY_NOTE_4,Ojalá llegue antes de la cena.,Hope it gets here before dinner.
 UI_COMPANY_NOTE_GIFT_1,¡No lo abras! Es sorpresa.,Don't open it! It's a surprise.
 UI_COMPANY_NOTE_GIFT_2,Para mi abuela. Con cariño.,For my grandma. With love.
+UI_COMPANY_DISTRICT_PARQUE_INDUSTRIAL,Parque industrial,Industrial park
+UI_COMPANY_DISTRICT_CENTRO,Centro,Downtown
+UI_COMPANY_DISTRICT_SUBURBIO,Suburbio,Suburbs
+UI_COMPANY_DISTRICT_CAMPO,Campo,Countryside
+UI_COMPANY_DISTRICT_PUERTO,Puerto,Harbor
+UI_COMPANY_DISTRICT_ISLAS,Islas,Islands
+UI_COMPANY_DISTRICT_MONTANA,Montaña,Mountain
+UI_COMPANY_DISTRICT_NIEVE,Nieve,Snow
+UI_COMPANY_DISTRICT_VOLCAN,Volcán,Volcano
