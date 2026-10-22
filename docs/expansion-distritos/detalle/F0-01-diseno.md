@@ -316,6 +316,21 @@ Decisión: `docs/decisiones/2026-10-22-portapapeles.md`.
 Decisión: `docs/decisiones/2026-10-22-guardado.md`.
 **Hecho cuando:** `diseno/guardado.md` existe y D-0251 a D-0253 se pueden construir sin preguntar.
 
+### D-0135 · Clima y temperatura por zona — B · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR pendiente)** — sección "Clima y temperatura por zona" en `diseno/distritos.md`: clima por zona y por día desde la semilla de la empresa (un frente para el llano, el evento gana, días 1-3 sin lluvia), la lluvia baja el agarre ×0,75 por `GripZones`, temperatura de la zona de destino por salida en `ColdPack`. Lo construye D-0324 (versión mínima); el cruce entre zonas, D-1610.
+**Depende de:** D-0114, D-0205, D-0721
+**Qué:** tabla de clima por zona con su efecto en la carga y el vehículo, contrastada con `WorldMood`,
+`GripZones`, `ColdPack` y el mapa continuo.
+- [x] D-0135.1 Reglas: un clima por zona y por día desde `company_seed`, frente del llano con los cuatro perfiles,
+  el evento gana y días 1-3 sin lluvia, el clima no rompe cajas solo, la jugabilidad lee la zona del vehículo,
+  sin clima en el galpón, Entrega y Endless sin cambios, Ampliación de F1.
+- [x] D-0135.2 Tabla de perfiles (existentes y nuevos) con efecto en vehículo, carga y visibilidad, y tablas de las
+  zonas de altura.
+- [x] D-0135.3 Temperatura de la zona por salida sobre los productos fríos y calientes (máximo con la ola de
+  calor), medida de la lluvia y qué tarea construye cada cosa. Revisado por `critico-diseno`.
+Decisión: `docs/decisiones/2026-10-22-clima-por-zona.md`.
+**Hecho cuando:** la sección existe y D-0324 la puede construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.

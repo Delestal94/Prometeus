@@ -36,7 +36,7 @@
 | ~~D-0321~~ | ~~Atajos entre distritos (túnel, ferry, puente) que se desbloquean~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-tramos | high | atajo baja el largo de ruta medido |
 | ~~D-0322~~ | ~~Puntos de interés por distrito (mirador, kiosco, estación de servicio) con efecto chico~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | 3 por distrito colocados por semilla |
 | ~~D-0323~~ | ~~Estación de servicio: cargar combustible (si D-0505 activa combustible)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-camion | medium | test: tanque baja y se carga |
-| D-0324 | Clima por distrito con `WorldMood` (perfiles nuevos) | constructor-mundo | high | perfil por distrito; captura de cada uno |
+| D-0324 | Clima por distrito con `WorldMood` (perfiles nuevos), según [distritos.md](diseno/distritos.md#clima-y-temperatura-por-zona-d-0135) | constructor-mundo | high | perfil por distrito; captura de cada uno |
 | D-0325 | Hora del día real en el distrito (salir de noche se ve de noche) | constructor-mundo | medium | test: hora del reloj → mood |
 | ~~D-0326~~ | ~~Carteles de dirección por distrito con nombres de calles generados~~ **Fusionada en D-0312 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | carteles legibles en captura |
 | ~~D-0327~~ | ~~GPS con varias paradas y ruta sugerida dibujada en el tablero~~ **Fusionada en D-0310 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-camion | high | captura con 3 paradas |
