@@ -11,8 +11,9 @@ extends Node
 ## day waits for a vehicle still out (S3).
 ##
 ## No company vehicle exists yet (D-0207 and later put it in the world), so nothing joins the group
-## and the gate stays idle; the OrderBook is this node's own until D-0801 puts the company's in the
-## state. Boxes are only ids here; where they ride is the vehicle's business.
+## and the gate stays idle; the OrderBook is this node's own until D-0813.1 points it at the book every
+## peer shares (CompanyNet.orders.book, D-0813). Boxes are only ids here; where they ride is the
+## vehicle's business.
 ##
 ## At most `far_max` vehicles are out at once (D-0316, CompanyTuning.VEHICLES_FAR_MAX): a vehicle
 ## out is one whose trip is out, or one that crossed outward while refused. departure_verdict() is

@@ -40,10 +40,10 @@ extends Node
 ## `pos` (a drop, or what a peer that left held), kept on every peer (floor_bundles) and taken
 ## back with units_take (a bundle is its own station).
 ##
-## Events nobody asks for (the contract's "without a client request": the day's clock and phases,
-## later orders) are the host's own rules: they go out through publish(), the same path.
-## Today: clock_anchor, the pace of the day's clock (D-0219, GameClock, given as `clock`), and
-## day_phase, the day's phase and the frozen shed (D-0203, DayCycle, given as `day_cycle`).
+## Events nobody asks for (the contract's "without a client request") are the host's own rules: they
+## go out through publish(), the same path. Today: clock_anchor, the pace of the day's clock (D-0219,
+## GameClock, given as `clock`), day_phase, the day's phase and the frozen shed (D-0203, DayCycle,
+## `day_cycle`), and order_added / order_expired, the day's orders (D-0813, CompanyOrdersNet, `orders`).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -89,12 +89,13 @@ const EVENT_KINDS: Array[StringName] = [
 	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED,
 	CompanyLayoutNet.SOLD, CompanyTableNet.STARTED, CompanyTableNet.PLACED,
 	CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED, CompanyTableNet.LABELED,
-	CompanyTableNet.STAMPED, CompanyTableNet.SEALED,
+	CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED,
 ]
-## Event kinds the host may send with publish(), without a request: its own rules (the day's
-## clock and phases). An event a request leads to (units_moved) only comes from
-## _handle_request()'s checks.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE]
+## Event kinds the host may send with publish(), without a request: its own rules (the day's clock
+## and phases, its orders). An event a request leads to (units_moved) only comes from _handle_request().
+const HOST_EVENT_KINDS: Array[StringName] = [
+	CLOCK_ANCHOR, DAY_PHASE, CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED,
+]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -155,6 +156,8 @@ var build: CompanyLayoutNet = CompanyLayoutNet.new()
 ## The shared packing tables' requests (host) and events (every peer), and their state (D-0715). Its
 ## tables travel in every snapshot (CompanyTableNet.SNAPSHOT_KEY, added in _init()).
 var table: CompanyTableNet = CompanyTableNet.new()
+## The day's orders (D-0813): the book every peer shares, the host's plan and their events; in every snapshot.
+var orders: CompanyOrdersNet = CompanyOrdersNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -208,6 +211,8 @@ var _rx_chunks: Dictionary = {}
 func _init() -> void:
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
+	add_snapshot_part(CompanyOrdersNet.SNAPSHOT_KEY, func() -> Variant: return orders.to_dict(),
+		func(value: Variant) -> bool: return orders.put_snapshot(value))
 
 
 func _ready() -> void:
@@ -271,7 +276,7 @@ func request_for(peer: int, kind: StringName, data: Dictionary = {}) -> bool:
 
 
 ## Host: an event no request led to, decided by the host's own rules (the clock's pace, D-0219;
-## the day's phases, D-0203; later the day's orders). It takes the same path as one a request led
+## the day's phases, D-0203; the day's orders, D-0813). It takes the same path as one a request led
 ## to: applied here first, numbered, sent to every ready peer, then event_applied. False, with
 ## nothing sent, on a client, for a kind not in HOST_EVENT_KINDS, while another event is applied or when the
 ## state here doesn't take it.
@@ -669,7 +674,7 @@ func _store_units(peer: int, data: Dictionary) -> StringName:
 	if accepts != &"" and accepts != product:
 		return REASON_WRONG_PRODUCT
 	var capacity: int = _as_int(station.get("capacity"))
-	if capacity > 0 and _units_at(to) + qty > capacity:
+	if capacity > 0 and CompanyAsk.units_at(inventory, to) + qty > capacity:
 		return REASON_NO_ROOM
 	var moved: Dictionary = {"product": product, "qty": qty, "from": hands, "to": to}
 	return &"" if _publish(&"units_moved", moved) else REASON_BAD_DATA
@@ -808,6 +813,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyTableNet.SEALED:
 			applied = table.apply(company, inventory, kind, data)
+		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED:
+			applied = orders.apply(kind, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
@@ -949,13 +956,6 @@ func _origin_of(peer: int, reach: bool = true) -> Variant:
 				return player.call(&"reach_origin")
 			return (player as Node3D).global_position
 	return null
-
-
-func _units_at(location: StringName) -> int:
-	var total: int = 0
-	for qty: int in inventory.contents_at(location).values():
-		total += qty
-	return total
 
 
 func _on_peer_disconnected(peer: int) -> void:

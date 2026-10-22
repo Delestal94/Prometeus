@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## Static only, no state but the product catalog read once. CompanyNet hands each units request
 ## here (units_take, units_store: at_station(); units_drop: drop()) and refuses with bad_data
-## whatever comes back empty. Split out of company_net.gd in D-2006.
+## whatever comes back empty. Split out of company_net.gd in D-2006 (units_at() in D-0813).
 
 ## Where the product catalog lives: an id in a request must name one of its files.
 const PRODUCTS_DIR: String = "res://data/products/"
@@ -55,6 +55,14 @@ static func at_station(data: Dictionary) -> Dictionary:
 		return {}
 	ask["station"] = StringName(station)
 	return ask
+
+
+## Units of every product at `location` in `stock` (the capacity check of units_store).
+static func units_at(stock: Inventory, location: StringName) -> int:
+	var total: int = 0
+	for qty: int in stock.contents_at(location).values():
+		total += qty
+	return total
 
 
 ## The product, quantity and position of a units_drop: units() plus a finite Vector3 `pos`,
