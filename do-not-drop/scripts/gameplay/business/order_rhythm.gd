@@ -4,7 +4,8 @@ extends RefCounted
 ##
 ## How many orders a day comes from the crew size, and each arrival minute is
 ## drawn from the hourly curve of CompanyTuning.ORDER_HOUR_WEIGHTS with a seeded
-## generator: the same seed and crew size give the same minutes on every peer.
+## generator: the same seed and crew size give the same minutes on every peer. A crew of one gets
+## the same draws squeezed into the hours before SOLO_ORDER_LAST_ARRIVAL_MIN (D-0151).
 ## Pure functions: no node, no autoload, no UI.
 
 
@@ -24,7 +25,7 @@ static func weight_at(minute: int) -> float:
 
 ## Sorted arrival minutes (since midnight) of the day's orders. `count` is how many to draw: -1 (the
 ## default) means the usual orders_for_day(players); a bankrupt company asks for fewer (Bankruptcy,
-## D-0510).
+## D-0510). With one player every minute is moved, in proportion, before last_arrival_min(1).
 static func arrival_minutes(day_seed: int, players: int, count: int = -1) -> Array[int]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = day_seed
@@ -41,8 +42,19 @@ static func arrival_minutes(day_seed: int, players: int, count: int = -1) -> Arr
 			hour += 1
 		var start := CompanyTuning.DAY_START_MIN + hour * 60
 		out.append(mini(start + rng.randi_range(0, 59), CompanyTuning.ORDER_LAST_ARRIVAL_MIN - 1))
+	if maxi(players, 1) == 1:
+		for i in out.size():
+			out[i] = _squeezed(out[i])
 	out.sort()
 	return out
+
+
+## The minute before which every order of the day comes in: SOLO_ORDER_LAST_ARRIVAL_MIN for a crew of
+## one (D-0151, the shed freezes while the only player drives), ORDER_LAST_ARRIVAL_MIN otherwise.
+static func last_arrival_min(players: int) -> int:
+	if maxi(players, 1) == 1:
+		return CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN
+	return CompanyTuning.ORDER_LAST_ARRIVAL_MIN
 
 
 ## Orders per game hour (08:00 first), to print the curve of a day.
@@ -62,3 +74,10 @@ static func _hour_index(minute: int) -> int:
 	if minute < CompanyTuning.DAY_START_MIN or hour >= CompanyTuning.ORDER_HOUR_WEIGHTS.size():
 		return -1
 	return hour
+
+
+## A minute of the usual order hours moved, in proportion, into the solo ones.
+static func _squeezed(minute: int) -> int:
+	var start := CompanyTuning.DAY_START_MIN
+	var share := float(minute - start) / float(CompanyTuning.ORDER_LAST_ARRIVAL_MIN - start)
+	return start + floori(share * (CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN - start))

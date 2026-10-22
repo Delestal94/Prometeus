@@ -64,8 +64,10 @@ func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_S
 
 ## Fills the cells with the graph's streets (EdgeCellContent, D-0304.1) and pins
 ## the main streets. Returns the content, for tests and for callers that want it.
-func use_graph(graph: RoadGraph) -> EdgeCellContent:
-	var content := EdgeCellContent.new(graph, grid.cell_size)
+## `world_seed` deals the Campo's animals and events (EdgeEvents, D-0315); their
+## nodes are built only with `spawn_events`.
+func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false) -> EdgeCellContent:
+	var content := EdgeCellContent.new(graph, grid.cell_size, world_seed, spawn_events)
 	content_for = content.build_cell
 	pin_streets(graph)
 	return content

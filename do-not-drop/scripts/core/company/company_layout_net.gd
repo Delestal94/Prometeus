@@ -64,8 +64,8 @@ const REASON_BAD_DATA: StringName = &"bad_data"
 ## Cells a request or an event may name, from the corner either way: far past the biggest stage
 ## (32 x 20) and small enough that a Vector2i never wraps one back onto the floor.
 const MAX_CELL: int = 256
-## Largest balance, either sign, a layout event may carry.
-const MAX_MONEY: int = 1_000_000_000_000
+## Largest balance, either sign, a layout event may carry (every wallet event's, D-0517).
+const MAX_MONEY: int = CompanyWalletNet.MAX_MONEY
 
 ## The employees' walking grid (D-0908), rebaked on this peer after every layout event that sticks;
 ## null (until the world gives one, D-1011): nothing to rebake. Its owner calls rebake() after a
@@ -337,20 +337,14 @@ func _apply_sold(state: Object, data: Dictionary) -> bool:
 
 ## The host's balance before the event's movement: a copy that holds another missed something; it
 ## takes the host's (so the movement ends on the host's balance) and remembers it (take_drift()).
+## The same step as every wallet event's (CompanyWalletNet.set_balance()).
 func _set_balance(state: Object, before: int) -> void:
-	var here: int = int(state.get(&"money"))
-	if here == before:
-		return
-	push_warning("CompanyLayoutNet: this wallet held %d, the host's %d; set to the host's" % [here, before])
-	state.set(&"money", before)
-	_drifted = true
+	_drifted = CompanyWalletNet.set_balance(state, before, "CompanyLayoutNet") or _drifted
 
 
 ## The wallet entry the event just wrote takes the host's minute; clock_minutes stays as it is.
 static func _entry_minute(state: Object, minute: int) -> void:
-	var ledger: Array = state.get(&"ledger")
-	if not ledger.is_empty():
-		ledger[ledger.size() - 1]["minute"] = minute
+	CompanyWalletNet.entry_minute(state, minute)
 
 
 ## `layout` with every piece's name stored (stamp_uids()) in a copy: what the names will be once a

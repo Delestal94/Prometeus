@@ -8,13 +8,15 @@ extends RefCounted
 ## - the forks with the jack empty: jack_pick of the first pallet of the truck's bed when the truck is parked
 ##   and the bed is in reach of the jack, else of the nearest pallet on the floor in reach (plan_pick());
 ## - the forks with a pallet on them: jack_put, the pallet lands where the jack stands;
-## - the handle: jack_push, one step (CompanyTuning.JACK_PUSH_STEP_M) away from the player.
+## - the handle: jack_push, one step (CompanyTuning.JACK_PUSH_STEP_M) away from the player;
+## - the forklift's seat (D-0606.b): fork_act board, the rest of its requests come from the driver's own peer.
 ##
 ## Host only; nothing here changes state by itself. The answer is what happened: RESULT_* or a reason.
 
 const RESULT_PICKED: StringName = &"picked"
 const RESULT_PUT: StringName = &"put"
 const RESULT_PUSHED: StringName = &"pushed"
+const RESULT_BOARDED: StringName = &"boarded"
 ## The request reached the host's checks and they said no (out of reach, no room, blocked...).
 const REASON_REFUSED: StringName = &"refused"
 const REASON_NO_JACK: StringName = &"no_jack"
@@ -34,6 +36,10 @@ static func use(net: CompanyNet, yard: PalletYardView, action: StringName, peer:
 			return _work(net, station, peer)
 		PalletJackPoint.ACTION_PUSH:
 			return _push(net, yard, station, peer, from)
+		PalletJackPoint.ACTION_BOARD:
+			var before: int = net.seq
+			net.request_for(peer, CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_BOARD})
+			return RESULT_BOARDED if net.seq != before else REASON_REFUSED
 	return REASON_NO_JACK
 
 

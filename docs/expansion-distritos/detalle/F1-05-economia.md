@@ -170,7 +170,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
 ### D-0518 · Solo el host (o un voto) gasta en la tienda — B · Sonnet 5.5 · high · Aviso: sí (`network_manager.gd`) · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 47; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
+**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 49; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
 **Depende de:** D-0511, D-2003, D-2004 (modelo: D-0910 y D-0603.b.2)
 **Qué:** la tienda de D-0511 por red, con el contrato de `diseno/red-autoridad.md` (fila 25 y §13).
 - El host comprueba con `CompanyShop.check()` y publica un evento; cada peer lo aplica con el mismo `CompanyShop.buy()`: máquina → `equipment`, vehículo → `fleet`, ampliación → `warehouse_stage`, libro con motivo `shop`.
@@ -192,3 +192,11 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** al entregar, porque da el feedback inmediato que el coop necesita ("tengo 230 más") y permite comprar a media jornada; cobrar al cierre agregaría un estado "por cobrar" para replicar y guardar sin cambiar el balance (`diseno/economia.md` ya cuenta la paga el día en que se entrega). Archivo: `docs/decisiones/2026-10-22-cobro-al-entregar.md`.
 **Test** `test_order_settlement` (`_test_cashed_at_the_door`): el movimiento `order_paid` lleva el día y el minuto de la entrega y `DaySummary` de ese día lo cuenta.
 **Hecho cuando:** test y decisión (cumplido).
+
+### D-0517 · Plata replicada — A · Sonnet 5.5 · high · Aviso: sí (`network_manager.gd`, protocolo 46) · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — auditoría de `auditor-red` de todos los caminos que mueven la billetera: construir/vender piezas y la mesa de empaque ya replicaban saldo absoluto; el resto (cobro al entregar, propina, alquiler, proveedor, tienda, ampliación, deshacer) aún no se llama en el juego. Evento host `wallet_moved {amount, reason, money, minute}` (`CompanyWalletNet`, `CompanyNet.publish_wallet`); `PROTOCOL_VERSION` 46; `test_company_money_net` (host + 2 clientes). Fila 25 de `diseno/red-autoridad.md`.
+**Depende de:** D-0501
+**Qué:** que todos los clientes vean el mismo saldo. Todo cobro o pago nuevo en el mundo compartido se publica con `publish_wallet`, nunca con `earn` / `spend` / `charge` directo en el host.
+**Test** `test_company_money_net`: saldo y último `balance` del libro iguales en los 3 peers tras cada movimiento (ingreso, gasto, rojo, deriva), una sola entrada en el host, evento malformado ignorado, entrada tardía, cliente que no puede publicar.
+**Hecho cuando:** test y auditoría (cumplido).
+**Pendiente (subtareas):** conectar a `publish_wallet` cada camino al enchufarlo (`order_settlement`, `order_tips`, `fixed_costs`, `supplier_purchase`, `company_shop` / D-0518, `warehouse_stages`, deshacer de `build_placement` con pedido `layout_undo` solo del host).

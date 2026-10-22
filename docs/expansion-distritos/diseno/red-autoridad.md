@@ -137,6 +137,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 | 22 | Mover una pieza (D-0903) | host | `layout_move` `{uid, x: int, z: int, rid}` | que lo pida el host; la pieza existe; `preview` ignorando la pieza | `layout_moved` `{uid, x, z, turns}` | la pieza cambia de celda; conserva `uid` (y con él su stock y su estación) |
 | 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
 | 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
+| 25 | Movimiento de plata del host sin pedido propio (cobro al entregar, propina, alquiler, proveedor, tienda; D-0517) | solo el host (`CompanyNet.publish_wallet`) | — (no hay pedido: lo decide el host) | quien cobra comprueba `can_afford` antes; `amount` ≠ 0, `reason` id corto, `money` y `minute` en rango | `wallet_moved` `{amount, reason, money, minute}` (plata absoluta como D-0910) | cada peer parte de `money − amount` y hace un solo `earn` / `charge`; libro con el `minute` del host; deriva → `take_drift()` y snapshot |
 
 ### Comprar en la tienda (D-0518, fuera del corte)
 

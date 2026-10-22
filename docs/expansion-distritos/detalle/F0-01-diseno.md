@@ -243,15 +243,66 @@ Decisión: `docs/decisiones/2026-10-22-licencias.md`.
 Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 **Hecho cuando:** `diseno/roles-tripulacion.md` dice qué automatiza el modo solo y cómo lo mide el bot de D-2024.
 
+### D-0127 · Dificultad y modificadores — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #654)** — `diseno/dificultad.md`: una sola dificultad; dos modificadores de la empresa (armado asistido con absorción mínima 0,75, días tranquilos), elegidos por el host fuera de la partida, en `CompanyState.options` sin RPC; lo construye D-1919.
+**Depende de:** D-0112, D-0123, D-0126
+**Qué:** `diseno/dificultad.md` (máx. 120 líneas), dentro del recorte de D-0112 (una sola dificultad con armado
+asistido, `critica-alcance.md` §4.5):
+- [x] D-0127.1 Por qué una sola dificultad: qué ya ajusta el esfuerzo (tripulación, día de campaña, empresa en
+  rojo) y por qué no hay tamaños de empresa.
+- [x] D-0127.2 Los modificadores, con qué hacen y qué no tocan: armado asistido (`assisted_packing`) y días
+  tranquilos (`calm_days`); los descartados con su motivo.
+- [x] D-0127.3 Armado asistido: orden de la cinta (relleno sin dejar la caja sin cerrar), caja `assisted` con
+  absorción mínima 0,75 para que lo hecho a mano valga más, aviso de relleno insuficiente.
+- [x] D-0127.4 Quién los elige y cuándo (host, solo fuera de la partida: empresa nueva y lista de guardados),
+  cómo se guardan (`CompanyState.options`, sin subir la versión del save), red (sin RPC), dónde se ven, y que no
+  bloquean hitos ni logros.
+- [x] D-0127.5 Qué construye D-1919, con sus tests. Revisado por `critico-diseno`.
+Decisión: `docs/decisiones/2026-10-22-dificultad.md`.
+**Hecho cuando:** `diseno/dificultad.md` existe y D-1919 lo puede construir sin preguntar.
+
+### D-0129 · Glosario de la expansión — B · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #660)** — `diseno/glosario.md`: 33 conceptos del modo Empresa en ES/EN con uso y descartados; 14 con chequeo en `test_ui_translations` (`_check_company_glossary`).
+**Depende de:** —
+**Qué:** una palabra por concepto en los textos nuevos (pedido, remito, palet, estación, turno, hito…),
+armado con lo que ya dicen `strings_ui.csv` / `strings_world.csv`:
+- [x] D-0129.1 `diseno/glosario.md`: concepto, ES, EN, uso y descartados; amplía `docs/glosario.md` (que
+  enlaza acá) sin repetirlo.
+- [x] D-0129.2 "Lo usa `loc_text`": las claves que viajan con `LocText` salen de las mismas tablas, así que el
+  chequeo va sobre la tabla de UI: si el español dice "palet" el inglés dice "pallet" (14 pares) y los
+  descartados (tarima, albarán, warehouse, licence…) no aparecen.
+- [x] D-0129.3 El agente `localizador` lo lee junto con `docs/glosario.md`.
+**Test** `test_ui_translations` (`_check_company_glossary`).
+**Hecho cuando:** `diseno/glosario.md` existe y el test lo cumple sobre las tablas actuales.
+
+### D-0130 · Tabla de la primera semana — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/onboarding.md`: día 1 = el bucle en 6 objetivos (con pedido de 1 unidad a las 08:00), 12 filas más con disparador y día mínimo, progreso por jugador en `seen_tips` sin RPC ni campo de save; `teaches_key` de los hitos 1-5 queda como repaso. Lo construye D-1901.
+**Depende de:** D-0111, D-0118, D-0720, D-0812
+**Qué:** `diseno/onboarding.md` (máx. 120 líneas), con la crítica de `critico-diseno`:
+- [x] D-0130.1 Reglas: el día 1 es el tutorial, una cosa nueva por día, se enseña por disparador y no por
+  calendario, una sola línea guía, voz de la Jefa en el feed.
+- [x] D-0130.2 La tabla de los 7 días (qué aprende, disparador, objetivo o nota, hecho cuando, tareas), que
+  funciona igual en F1 sin hitos.
+- [x] D-0130.3 El día 1 paso por paso y qué ve cada jugador con 2 o más (la línea mira primero lo que tiene en
+  la mano).
+- [x] D-0130.4 Estado y red para D-1901: función pura `CompanyOnboarding.current`, `mark_tip_seen` por jugador,
+  claves `UI_ONBOARD_*` / `WORLD_ONBOARD_*`, cómo lo mide `bot_company_day`.
+Decisión: `docs/decisiones/2026-10-22-primera-semana.md`.
+**Hecho cuando:** `diseno/onboarding.md` existe y D-1901 lo puede construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
-- [ ] D-0151.1 Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
+- [x] D-0151.1 (2026-10-22) Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
   despausar reanuda el reloj solo si lo pausó el menú (no en SUMMARY); un peer que entra despausa antes del
-  snapshot. Online con alguien más, la pausa de hoy.
-- [ ] D-0151.2 `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
+  snapshot. Online con alguien más, la pausa de hoy. Quedó en `CompanySoloPause`
+  (`scripts/gameplay/company_solo_pause.gd`, hijo de `CompanyRoot`, test `test_company_solo_pause`): Esc y
+  `EventBus.pause_requested` la activan, `NetworkManager.roster_changed` (antes del snapshot) la desactiva.
+- [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
-- [ ] D-0151.3 Pedido sugerido (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
+- [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el
+  2026-10-22; falta D-0151.3b: el carrito precargado y el envío del host al pasar a CLOSING con su línea en el
+  resumen) (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
   producto, recortado desde el de menos unidades hasta `plata − RENT_PER_DAY − SOLO_ORDER_CASH_RESERVE`; el carrito
   se abre precargado; al pasar a CLOSING, si no hay pedido para mañana, el host lo manda y lo anota el resumen.
 **Test** `test_company_solo_assists`: la pausa sin peers frena `minute_now()` y no la despausa el menú en SUMMARY;
