@@ -58,7 +58,8 @@ extends Node3D
 ## The crew split between the shed and the street (D-0316): the "Interest" child (CompanyInterest,
 ## every peer) sends each company vehicle and loose box only to the players near it (the host still
 ## simulates all of them), and the cells load around every player and vehicle on the host but only
-## around its own player on a client (CompanyInterest.cell_anchors()). Every peer's player is a node
+## around its own player on a client (CompanyInterest.cell_anchors()); a seated player counts at its
+## seat, Player.reach_origin() (CompanyInterest.anchor_point()). Every peer's player is a node
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
@@ -730,7 +731,8 @@ func _add_cells() -> void:
 
 ## The packages the sealed boxes become (D-0715.b), on every peer under World/Packages: the same path
 ## everywhere, so each one's synchronizer pairs up with the host's. CompanyNet's tables build them
-## there (CompanyPackages); the host's are watched by the cells (_on_package_added()).
+## there (CompanyPackages); the host's are watched by the cells, and every peer's by the interest
+## (_on_package_added()).
 func _add_packages() -> void:
 	if net == null:
 		return
@@ -741,10 +743,14 @@ func _add_packages() -> void:
 	net.table.packages.added.connect(_on_package_added)
 
 
-## Host (D-0318.1): a package freezes while its cell isn't loaded (no floor under it) and thaws when it
-## is back (WorldCellStreamer.track_body); it is let go as it leaves the tree. A client's copy follows
-## the host's and is never tracked. Called while box_sealed is applied: no CompanyNet request here.
+## Every peer (D-0316.3): a package is a loose box of the interest (add_loose_box()), and on the host
+## consume() lets it go before broadcasting the removal (consuming), so a far peer drops it too. Host
+## (D-0318.1): it freezes while its cell isn't loaded (no floor under it) and thaws when it is back
+## (WorldCellStreamer.track_body), let go as it leaves the tree; the cells never track a client's
+## copy. Called while box_sealed is applied: no CompanyNet request here.
 func _on_package_added(package: DeliveryPackage) -> void:
+	if interest != null and is_instance_valid(interest):
+		interest.add_loose_box(package, package.consuming)
 	if cells == null or not is_instance_valid(cells) or net == null or not net.is_host():
 		return
 	cells.track_body(package)

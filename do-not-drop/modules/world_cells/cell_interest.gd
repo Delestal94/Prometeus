@@ -25,7 +25,9 @@ extends Node
 ## tracked body silently skips the far peers, and a one-shot event or a removal (a box
 ## consumed, a vehicle sold) sent that way leaves a stale copy there for good. Such a
 ## fact travels as an ON_CHANGE property of the synchronizer (it arrives when the peer
-## sees the body again), as an RPC on a node that isn't tracked, or after untrack().
+## sees the body again), as an RPC on a node that isn't tracked, or after untrack() or
+## release(): release(body) untracks the body and takes it out of `groups`, so no later
+## look tracks it again (what a removal calls right before its broadcast).
 ##
 ## Not for spawned bodies: a body a MultiplayerSpawner put in the world is despawned
 ## on a peer that stops seeing it, and spawned again later. track() refuses one whose
@@ -49,12 +51,20 @@ extends Node
 ## it `copy_stale_sec` after it was tracked (a late joiner's copy where the scene put
 ## it). It shows again within `grid.load_radius` once an update arrived after the last
 ## look, so it shows where it really is: nobody sees it jump. Processing is never
-## switched off: whatever moves the copy (a smoother) keeps running.
+## switched off: whatever moves the copy (a smoother) keeps running. A collision layer or
+## mask written into a hidden copy (by an update, through a replicated property's setter,
+## or by the game) is kept for the showing and zeroed again, at that update or at the next
+## look: the copy stays out of physics. copy_shown tells the game a copy is back, so it can
+## derive again the layers it owns (one written as 0 while hidden can't be told from the
+## zeroing).
 ##
 ## Bodies come in through track(), or by themselves while they are in one of
 ## `groups` (each MultiplayerSynchronizer child whose root is the body). Only nodes
 ## of this node's own multiplayer count (one session; a test runs several in one
 ## tree). step() is what _process runs; a test calls it with its own clock.
+
+## Client: a copy this node hid shows again, its collision layers given back.
+signal copy_shown(body: Node3D)
 
 ## Only the cell size and the two radii are read.
 var grid := WorldCellGrid.new()
@@ -158,6 +168,25 @@ func untrack(sync: MultiplayerSynchronizer) -> void:
 				sync.set_visibility_for(peer, false)
 		sync.public_visibility = entry.was_public
 	_show_copy(entry)
+
+
+## Lets `body` go: every synchronizer tracked for it is untracked (untrack()) and it leaves
+## every one of `groups`, so no later look tracks it again (unless the game puts it back). A
+## broadcast RPC called on it right after reaches every peer the game's own visibility
+## filters let through.
+func release(body: Node3D) -> void:
+	if body == null:
+		return
+	for sync: Variant in _entries.keys():
+		if not is_instance_valid(sync):
+			_entries.erase(sync)
+			continue
+		var entry: _Entry = _entries[sync]
+		if is_instance_valid(entry.body) and entry.body == body:
+			untrack(sync)
+	for group: StringName in groups:
+		if body.is_in_group(group):
+			body.remove_from_group(group)
 
 
 func is_tracked(sync: MultiplayerSynchronizer) -> bool:
@@ -317,6 +346,7 @@ func _follow_copy(entry: _Entry, local_anchor: Variant, now: float) -> void:
 
 func _hide_copy(entry: _Entry) -> void:
 	if entry.hidden_here:
+		_keep_hidden_solids(entry)
 		return
 	entry.hidden_here = true
 	entry.body.visible = false
@@ -335,6 +365,7 @@ func _show_copy(entry: _Entry) -> void:
 	if not entry.hidden_here:
 		return
 	entry.hidden_here = false
+	_keep_hidden_solids(entry)
 	if is_instance_valid(entry.body):
 		entry.body.visible = true
 	for solid: Variant in entry.collisions:
@@ -343,13 +374,35 @@ func _show_copy(entry: _Entry) -> void:
 			(solid as CollisionObject3D).collision_layer = int(saved[0])
 			(solid as CollisionObject3D).collision_mask = int(saved[1])
 	entry.collisions.clear()
+	if is_instance_valid(entry.body):
+		copy_shown.emit(entry.body)
 
 
 func _on_synchronized(sync: MultiplayerSynchronizer) -> void:
 	var entry: _Entry = _entries.get(sync)
-	if entry != null:
-		entry.fresh = true
-		entry.synced_at = _clock
+	if entry == null:
+		return
+	entry.fresh = true
+	entry.synced_at = _clock
+	if entry.hidden_here:
+		_keep_hidden_solids(entry)
+
+
+## A hidden copy got an update, is looked at again or is about to show: a layer or mask written
+## into it since it was hidden (by an update or by the game; non-zero, as a 0 can't be told from
+## the zeroing) is what the showing gives back, and the copy stays out of physics meanwhile.
+func _keep_hidden_solids(entry: _Entry) -> void:
+	for solid: Variant in entry.collisions:
+		if not is_instance_valid(solid):
+			continue
+		var typed := solid as CollisionObject3D
+		var saved: Array = entry.collisions[solid]
+		if typed.collision_layer != 0:
+			saved[0] = typed.collision_layer
+			typed.collision_layer = 0
+		if typed.collision_mask != 0:
+			saved[1] = typed.collision_mask
+			typed.collision_mask = 0
 
 
 ## Whether a MultiplayerSpawner next to it has the body's parent as its spawn path.

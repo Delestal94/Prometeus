@@ -9,13 +9,18 @@ extends SceneTree
 ## (CompanyInterest.LOOSE_BOX_GROUP), both the host's and sent by a MultiplayerSynchronizer, and a
 ## CompanyInterest and CompanyCells fed by CompanyInterest.cell_anchors() as CompanyRoot does (the
 ## company vehicle doesn't exist yet: D-0302.2). The host and one client ride the vehicle from the
-## yard to 1.1 km north and back; the other client stays in the shed.
+## yard to 1.1 km north and back; the other client stays in the shed. The rider sits as a Player does
+## (D-0316.3): its body stays in the yard where it sat down and its reach_origin(), the seat, rides
+## along with each peer's copy of the vehicle; the host's player is moved along with the vehicle.
 ## - While the vehicle is far, the shed client receives no update of the vehicle nor of the box (the
 ##   counters of their synchronizers stand still) and its stale copies end up hidden; the rider keeps
 ##   receiving both. The host stopped sending them to the shed only past the unload radius (3 cells
 ##   from the shed player) and sent them again from the load radius (2 cells) on the way back.
 ## - The shed client's cells never load around the trip (only its own player anchors them); the
-##   host's and the rider's load the vehicle's cell.
+##   host's and the rider's load the vehicle's cell (the rider's at its seat, not its body).
+## - The host anchors the seated rider at its seat in the far vehicle (CompanyInterest.anchor_point()),
+##   not in the yard where its body still stands: so it keeps sending the rider the vehicle and the
+##   box, and the rider never hides them (with the body as the anchor both would be lost).
 ## - Nobody teleports: on every peer, every crew member and every shown copy of the vehicle and the
 ##   box moves at most TELEPORT_M from one tick to the next, and the shed player never moves.
 ## - Back in the yard every peer sees the vehicle, the box and the three players in the same place,
@@ -63,6 +68,25 @@ var _flips: Dictionary = {}
 var _rider_ever_hidden: bool = false
 var _rider_copy_ever_hidden: bool = false
 var _shed_far_cell_loaded: bool = false
+## At the last tick, the host's anchor for the seated rider was its seat and its body was in the yard.
+var _rider_anchor_ok: bool = false
+
+
+## A crew member seated in the vehicle, as a seated Player: its body stays where it sat down while
+## reach_origin(), its seat, rides along with this peer's copy of the vehicle.
+class SeatedCrew:
+	extends Node3D
+	var vehicle: Node3D
+	var seat: Vector3
+
+	func _init(on: Node3D = null, at: Vector3 = Vector3.ZERO) -> void:
+		vehicle = on
+		seat = at
+
+	func reach_origin() -> Vector3:
+		if vehicle == null or not vehicle.is_inside_tree():
+			return global_position
+		return vehicle.global_transform * seat
 
 
 func _initialize() -> void:
@@ -120,11 +144,13 @@ func _add_world(index: int) -> void:
 	_received.append(counts)
 	_last_seen.append({})
 	var places: Array[Vector3] = [YARD + SEATS[0], YARD + SEATS[1], SHED_SPOT]
+	var van: Node3D = _body("Van", YARD, 1, 1.0 / 60.0)
 	for crew: int in range(3):
-		var member: Node3D = _body("Crew_%d" % _ids[crew], places[crew], _ids[crew], 1.0 / 30.0)
+		# The rider (crew 1) is seated: its body stays where it sat down, its seat rides in the van.
+		var seated: Node3D = SeatedCrew.new(van, SEATS[1]) if crew == 1 else null
+		var member: Node3D = _body("Crew_%d" % _ids[crew], places[crew], _ids[crew], 1.0 / 30.0, seated)
 		member.add_to_group(CompanyRoot.CREW_GROUP)
 		world.add_child(member)
-	var van: Node3D = _body("Van", YARD, 1, 1.0 / 60.0)
 	van.add_to_group(CompanyTrips.VEHICLE_GROUP)
 	world.add_child(van)
 	var box: Node3D = _body("Box", YARD + BAY, 1, 1.0 / 30.0)
@@ -145,9 +171,10 @@ func _add_world(index: int) -> void:
 	side.add_child(cells)
 
 
-## A stand-in body owned by `authority` that sends its position every `interval` seconds.
-func _body(body_name: String, pos: Vector3, authority: int, interval: float) -> Node3D:
-	var body := Node3D.new()
+## A stand-in body (`made`, or a plain Node3D) owned by `authority` that sends its position every
+## `interval` seconds.
+func _body(body_name: String, pos: Vector3, authority: int, interval: float, made: Node3D = null) -> Node3D:
+	var body: Node3D = made if made != null else Node3D.new()
 	body.name = body_name
 	body.position = pos
 	var sync := MultiplayerSynchronizer.new()
@@ -184,6 +211,8 @@ func _trip() -> void:
 	_expect(_cells(0).is_loaded(far_cell), "The host's cells load around the far vehicle (%s)" % far_cell)
 	_expect(_cells(1).is_loaded(far_cell), "The rider's cells load around the far vehicle (%s)" % far_cell)
 	_expect(not _cells(2).is_loaded(far_cell), "The shed client's cells don't load the trip's cell (%s)" % far_cell)
+	_expect(_rider_anchor_ok, "Far away, the host anchors the seated rider at its seat in the vehicle"
+		+ " (reach_origin()), not in the yard where its body still stands")
 	await _drive_to(YARD.z)
 	var same: bool = await _ticks_until(_all_see_the_same, SETTLE_SECONDS)
 	_expect(same, "Back in the yard every peer sees the vehicle, the box and the crew in the same place")
@@ -210,7 +239,11 @@ func _tick() -> void:
 	var host_van: Node3D = _node(0, "Van")
 	_node(0, "Box").position = host_van.position + BAY
 	_node(0, "Crew_%d" % _ids[0]).position = host_van.position + SEATS[0]
-	_node(1, "Crew_%d" % _ids[1]).position = _node(1, "Van").position + SEATS[1]
+	# The seated rider's body stays in the yard; where it is now is its seat (SeatedCrew).
+	var rider_anchor: Variant = _interest(0).anchor_of.call(_ids[1])
+	_rider_anchor_ok = rider_anchor is Vector3 \
+		and (rider_anchor as Vector3).distance_to(host_van.global_transform * SEATS[1]) < 0.01 \
+		and _node(0, "Crew_%d" % _ids[1]).position.distance_to(YARD + SEATS[1]) < 0.01
 	for index: int in range(_sides.size()):
 		_cells(index).anchors = CompanyInterest.cell_anchors(
 			_sides[index], CompanyRoot.CREW_GROUP, CompanyTrips.VEHICLE_GROUP, index == 0)
