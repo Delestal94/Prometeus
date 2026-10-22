@@ -396,7 +396,7 @@ quede vacía en silencio).
 **Hecho cuando:** el test pasa con `CompanyState` y `CompanyRoot` nombrados.
 
 ### D-0244 · Guía para agregar contenido de la expansión — B · Opus 5.5 · low · Aviso: no · F0 (Pulido)
-**[x] Hecho (2026-10-22, PR #PRNUM)** — `docs/agregar-contenido-expansion.md`, una sola guía (producto, caja, proveedor, vehículo de la flota, requisito de pedido, colocable, zona y mapa, ítem de tienda; roles y máquinas remiten a sus tareas), y `agregar-vehiculo.md` remite a ella.
+**[x] Hecho (2026-10-22, PR #608)** — `docs/agregar-contenido-expansion.md`, una sola guía (producto, caja, proveedor, vehículo de la flota, requisito de pedido, colocable, zona y mapa, ítem de tienda; roles y máquinas remiten a sus tareas), y `agregar-vehiculo.md` remite a ella.
 **Depende de:** D-0202, D-0207
 **Qué:** absorbe D-0850, D-0950, D-1050, D-1150 y D-1250. La crítica de alcance (`diseno/critica-alcance.md`)
 decidió una sola guía en vez de seis, así que no hay `agregar-producto.md` ni `agregar-distrito.md`: cada
