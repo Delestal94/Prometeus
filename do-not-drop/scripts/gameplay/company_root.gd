@@ -195,6 +195,9 @@ var _saw_host_day: bool = false
 var _host_gone: bool = false
 ## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
 var _presence_shown: Array = []
+## Host: the day whose truck pallets are on the bed (_load_truck_pallets()), and the (day, minute) last looked at.
+var _pallets_day: int = 0
+var _pallets_checked: Vector2i = Vector2i.ZERO
 
 
 func _ready() -> void:
@@ -616,6 +619,7 @@ func _add_shed() -> void:
 		net.stations = shed.station_for
 		shed.piece_used.connect(_on_piece_used)
 		shed.cart_used.connect(_on_cart_used)
+		shed.jack_used.connect(_on_jack_used)
 
 
 ## Host: a crew member used a piece of the shed. A shelf puts the units of one of its slots in their
@@ -645,6 +649,33 @@ func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: 
 	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from)
 
 
+## Host: a crew member worked the pallet jack (D-0605.b): pick a pallet up or put it down, or push the jack.
+## PalletJackUse asks the host's own CompanyNet on their behalf, which checks reach, the truck and the floor.
+func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
+	if net == null or not net.is_host():
+		return
+	PalletJackUse.use(net, shed.yard, action, peer_id, from)
+
+
+## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
+## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
+## (CompanyPallets.loaded_event: not the ones the shed started with, not the ones already loaded). Once per day,
+## even when nothing loads; never after the truck left.
+func _load_truck_pallets() -> void:
+	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
+		return
+	var day: int = _hosted_state.day
+	var minute: int = floori(clock.minute_now())
+	if _pallets_day == day or _pallets_checked == Vector2i(day, minute):
+		return
+	_pallets_checked = Vector2i(day, minute)
+	if not CompanyPallets.load_due(supplier_schedule, day, minute):
+		return
+	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
+	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):
+		_pallets_day = day
+
+
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
 ## GameClock and CompanyState as every other peer, so there is nothing to send.
 func _add_supplier_truck() -> void:
@@ -656,6 +687,15 @@ func _add_supplier_truck() -> void:
 	supplier_truck.minute_now = func() -> float:
 		return clock.minute_now() if clock != null and is_instance_valid(clock) else float(CompanyTuning.DAY_START_MIN)
 	_world.add_child(supplier_truck)
+	shed.truck = supplier_truck
+	if net != null:
+		# The pallets on the bed are the book's (CompanyPallets), the same on every peer (D-0605.b).
+		supplier_truck.pallets = net.pallets.book
+		net.event_applied.connect(func(_seq: int, kind: StringName, _data: Dictionary) -> void:
+			if CompanyPallets.EVENT_KINDS.has(kind):
+				supplier_truck.refresh_bed())
+		net.company_state_restored.connect(func(_snapshot_seq: int) -> void: supplier_truck.refresh_bed())
+		supplier_truck.refresh_bed()
 
 
 ## Until the order screen (D-0603) puts real orders in the calendar, the first order of the default
@@ -720,6 +760,7 @@ func _add_interest() -> void:
 
 
 func _process(_delta: float) -> void:
+	_load_truck_pallets()
 	if cells == null:
 		return
 	var as_host: bool = net == null or net.is_host()
