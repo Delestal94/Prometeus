@@ -169,6 +169,8 @@ func _test_root() -> void:
 		_expect(false, "The company world has a net")
 		return
 	state.set(&"day", DAY)
+	# The calendar holds only real orders (D-0603.b.2): one for the day, as the order screen would put it.
+	level.supplier_schedule.place(DAY - 1, [{"product": HEN, "qty": 30}, {"product": LAMP, "qty": 10}])
 	level.clock.start(float(SupplierSchedule.arrival_minute()) - 8.0)
 	await process_frame
 	var departures: Array[Dictionary] = []

@@ -200,7 +200,6 @@ var _presence_shown: Array = []
 ## Host: the day whose truck pallets are on the bed (_load_truck_pallets()), and the (day, minute) last looked at.
 var _pallets_day: int = 0
 var _pallets_checked: Vector2i = Vector2i.ZERO
-## Host: the (day, minute) the truck's departure was last looked at (_send_truck_off()).
 var _departure_checked: Vector2i = Vector2i.ZERO
 
 
@@ -669,28 +668,8 @@ func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
 	PalletJackUse.use(net, shed.yard, action, peer_id, from)
 
 
-## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
-## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
-## (CompanyPallets.loaded_event: not the ones the shed started with, not the ones already loaded). Once per day,
-## even when nothing loads; never after the truck left.
-func _load_truck_pallets() -> void:
-	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
-		return
-	var day: int = _hosted_state.day
-	var minute: int = floori(clock.minute_now())
-	if _pallets_day == day or _pallets_checked == Vector2i(day, minute):
-		return
-	_pallets_checked = Vector2i(day, minute)
-	if not CompanyPallets.load_due(supplier_schedule, day, minute):
-		return
-	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
-	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):
-		_pallets_day = day
-
-
-## Host, once a game minute: the truck of the day has driven off (SupplierDeparture): what stayed on its bed goes
-## with it and the delivery note keeps what did not come (D-0618.b, D-0614.b). One jack_departed per day; the
-## day stays in the calendar (the truck keeps showing as left); departed_day stops a second one.
+## Host, once a game minute: the day's truck drove off (SupplierDeparture): what stayed on its bed goes with it and
+## the delivery note keeps the shortfall (D-0618.b, D-0614.b). One jack_departed per day; the day stays in the calendar.
 func _send_truck_off() -> void:
 	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
 		return

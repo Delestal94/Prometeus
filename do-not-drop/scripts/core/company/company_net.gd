@@ -91,8 +91,7 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyPallets.DEPARTED, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
 	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED,
 ]
-## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, the truck's pallets,
-## its orders); units_moved never.
+## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders); never units_moved.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.DEPARTED,
 	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
 	CompanyOrdersNet.EXPIRED]

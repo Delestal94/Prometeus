@@ -144,7 +144,7 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Hecho cuando:** el test pasa con un calendario de 3 días.
 
 ### D-0618 · El camión del proveedor se va a una hora y se lleva lo que quede — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — la lógica (`SupplierDeparture`, `test_supplier_departure`) y el cableado en el mundo (D-0618.b): evento `jack_departed` de `CompanyPallets`, publicado por el host desde `CompanyRoot._send_truck_off`; `test_company_truck_departure`. `PROTOCOL_VERSION` 44.
+**[x] Hecho (2026-10-22, PR pendiente)** — la lógica (`SupplierDeparture`, `test_supplier_departure`) y el cableado en el mundo (D-0618.b): evento `jack_departed` de `CompanyPallets`, publicado por el host desde `CompanyRoot._send_truck_off`; `test_company_truck_departure`. `PROTOCOL_VERSION` 45.
 **Depende de:** D-0602 (`SupplierSchedule.truck_state`), D-0604 (`Pallet`), D-0614 (`DeliveryNote`)
 **Qué:**
 - **D-0618.a (hecha) — la lógica.** `SupplierDeparture` (`RefCounted`, sin nodos): `has_left(schedule, día, minuto)`, `left_on_bed(palets, ids bajados)`, `taken_units` y `resolve(...)`, que a la hora de salida (`SupplierSchedule.departure_minute()`) devuelve `{left, taken, note_lines}` y limpia el día del calendario. Antes de esa hora no toca nada.
