@@ -340,6 +340,15 @@ Decisión: `docs/decisiones/2026-10-22-clima-por-zona.md`.
 Decisión: `docs/decisiones/2026-10-22-horario-clientes.md`.
 **Hecho cuando:** `diseno/clientes.md` existe y D-0851 se puede construir sin preguntar.
 
+### D-0137 · Cosméticos de la empresa — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/cosmeticos-empresa.md`: cuatro ranuras (pintura, franja, logo, uniforme) que salen de los hitos cumplidos, las elige el host en el cierre desde un bloque de la tienda, una pintura para toda la flota (solo carrocería), logo de lista cerrada, uniforme solo en empleados y copa fija del volcán. Lo construyen D-0437 y D-1234.
+**Depende de:** D-0118 (`diseno/hitos.md`), D-0112 (P8 de la crítica de alcance)
+**Qué:** qué cosméticos hay, de quién son, quién y dónde los elige, cómo se ven en cada vehículo y cómo viajan por la red, contrastado con `UnlockManager`, `CompanyShopPanel`, `vehicle.gd`, `reference_truck.gd` y `red-autoridad.md`.
+- [x] D-0137.1 Reglas 1 a 9, los 10 cosméticos de los hitos más los 4 de base (18 elegibles), dónde va cada cosa en cada vehículo, datos, guardado y red.
+- [x] D-0137.2 Detalle de D-0437 (`detalle/F2-04-progresion.md`) y D-1234 (`detalle/F2-12-flota.md`) con su test. Revisado por `critico-diseno` (tienda sin pestañas ni fase OPENING, uniforme fuera del jugador, color de carrocería local, logo fuera de las puertas, ayudante de red propio, repintar con el snapshot).
+Decisión: `docs/decisiones/2026-10-22-cosmeticos-empresa.md`.
+**Hecho cuando:** `diseno/cosmeticos-empresa.md` existe y D-0437 y D-1234 se pueden construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
