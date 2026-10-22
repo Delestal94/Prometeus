@@ -55,6 +55,9 @@ var shed: CompanyShed
 var net: CompanyNet
 ## The player kept still while building (its input is off until the mode ends).
 var player: Node3D
+## Returns true while another screen owns the input (the supplier order screen, D-0603.b.2): the mode does not
+## start then. Unset, nothing blocks it.
+var busy: Callable = Callable()
 var camera: Camera3D
 var hint: Label
 
@@ -119,9 +122,12 @@ func is_building() -> bool:
 	return mode.active
 
 
-## Starts the mode on the shed's current floor. False when it was refused (BuildMode.last_refusal).
+## Starts the mode on the shed's current floor. False when it was refused (BuildMode.last_refusal) or
+## `busy` says another screen owns the input.
 func enter() -> bool:
 	if shed == null or net == null or net.company == null:
+		return false
+	if busy.is_valid() and bool(busy.call()):
 		return false
 	if not mode.enter(shed.grid, true):
 		return false
