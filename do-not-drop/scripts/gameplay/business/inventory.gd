@@ -71,6 +71,11 @@ func count(product: StringName, location: StringName = &"") -> int:
 	return total
 
 
+## location -> qty (> 0) of one product.
+func locations_of(product: StringName) -> Dictionary:
+	return (_stock.get(product, {}) as Dictionary).duplicate()
+
+
 ## Every unit of every product.
 func total_units() -> int:
 	var total: int = 0

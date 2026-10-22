@@ -85,11 +85,14 @@ const MAX_PLAYERS: int = 8
 ## 37: CompanyNet's _request takes seven new kinds (box_start, box_place,
 ## box_take_out, box_fill, box_label, box_stamp, box_tape), _apply_event seven
 ## (box_started ... box_sealed) and its snapshot a "packing" part: the shared
-## packing tables (company mode, D-0715).
+## packing tables (company mode, D-0715);
+## 38: the company world (company_root.tscn) is in LEVEL_SCENES, so a joiner may
+## be sent to it, and its World/PlayerSpawner spawns the crew (company mode
+## online, D-0214).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 37
+const PROTOCOL_VERSION: int = 38
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -162,7 +165,13 @@ var _fresh_slots: Dictionary = {}
 var _borrowed_reservations: Dictionary = {}
 
 const DEFAULT_LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
-const LEVEL_SCENES: Array[String] = ["res://scenes/gameplay/level_base.tscn", "res://scenes/gameplay/level_endless.tscn"]
+## The scenes a room plays in (NetSession.level_scenes): the handshake sends a joiner to the
+## host's and refuses any other. The company world (D-0214) is a room of its own (--host-company).
+const LEVEL_SCENES: Array[String] = [
+	"res://scenes/gameplay/level_base.tscn",
+	"res://scenes/gameplay/level_endless.tscn",
+	"res://scenes/gameplay/company_root.tscn",
+]
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 ## Loaded in _ready, not preloaded: it builds on UiTheme, which an autoload
 ## this early shouldn't compile along with itself.

@@ -196,6 +196,7 @@ Agregar antes que cambiar: ninguna firma existente cambia.
 **Hecho cuando:** el test pasa y el aviso está en `docs/avisos/`.
 
 ### D-0214 · Escena del mundo de la empresa — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` `LEVEL_SCENES`, `main_menu.gd`) · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — la raíz es `company_root.tscn` (`CompanyRoot`, PR #324); la continuación la pone en línea: en `LEVEL_SCENES` (`PROTOCOL_VERSION` 38), llama a `level_ready()`, el host spawnea un jugador por peer por `World/PlayerSpawner` (`join_crew()`, `crew_spawn()`) y lo saca cuando se va; `--autostart-company [--slot=<n>]` (alias `--mode=company`) y `--host-company` (sin botón: uno más en la página Jugar empuja "Volver" fuera de una pantalla de 720 px; queda para quien reacomode esa página); `test_company_world_boot`, `test_company_online` y `tools/run-net-pair.sh --company`. Aviso `docs/avisos/2026-10-21-d0214-empresa-en-linea.md`.
 **Depende de:** D-0202, D-0301
 **Qué:** `scenes/company/company_world.tscn` con raíz `CompanyWorld` (`scripts/gameplay/districts/company_world.gd`).
 - **Hijos:** `WorldCells` (D-0303), `DayCycle`, `OrderBook`, `Inventory`, el galpón (D-0620), el
@@ -281,3 +282,59 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 (D-0144).
 **Hecho cuando:** las carpetas existen, `python tools/check_modules.py` pasa y `file_domain` clasifica un
 archivo de cada carpeta como Nacho.
+
+### D-0232 · Tick de negocio a 4 Hz — B · Opus 5.5 · medium · Aviso: sí (`modules/`, `docs/modulos.md`) · F0 (Ampliación)
+**[x] Hecho (2026-10-21, PR #578)** — módulo `modules/fixed_tick/` (`FixedTick`) + adaptador `scripts/core/company/business_tick.gd` (`BusinessTick`, solo en el host); `DayCycle.poll` es su primer paso y el `_process` propio del ciclo queda apagado en el mundo Empresa.
+**Depende de:** D-0203, D-0214
+**Qué:** las reglas del host que solo necesitan mirar el mundo unas veces por segundo (fases del día,
+y después pedidos, proveedor, empleados, máquinas) corren en un tick fijo, aparte de la física y del
+frame dibujado.
+- **Módulo `fixed_tick`** (`FixedTick`, puro, sin nodos): pasos con nombre que corren en el orden en que
+  se agregaron; `advance(delta)` acumula y corre un tick por período entero; tras un tirón corre a lo
+  sumo `max_catch_up` (4) ticks y tira el resto (`dropped_ticks`); un paso cuyo objeto se liberó se cae;
+  `last_run_usec` mide lo que costó el último tick, para el perfilador.
+- **Adaptador `BusinessTick`** (nodo, hijo de `CompanyRoot`, solo en el host): ritmo
+  `CompanyTuning.BUSINESS_TICK_HZ = 4.0`, sin recuperación (`max_catch_up` 1): sus pasos miran el mundo,
+  no integran tiempo, y el `DayCycle` no debe cruzar dos fases en un frame. Los pasos son reglas del host que publican por `CompanyNet`;
+  un cliente cambia solo por los eventos del host.
+- `DayCycle` conserva su `_process` (cada `POLL_SECONDS` = 0,25 s) para cuando nadie lo maneja (tests,
+  sin mundo); `CompanyRoot` lo apaga en todos los peers y en el host lo suma como paso `day_cycle`.
+**Test** `modules/fixed_tick/tests/test_fixed_tick.gd`: a 4 Hz, 10 s a 60, 144 y 20 fps corren 40 ticks
+(±1); orden de los pasos, nombres repetidos y Callables inválidos rechazados, paso de objeto liberado
+descartado; un frame de 3 s corre el tope y descarta el resto; deltas negativos, NaN e infinitos no corren
+nada; 10 000 frames cuestan menos de 100 µs por frame en promedio. `test_company_world_boot`: el host
+tiene `BusinessTick` con el paso `day_cycle` y el `_process` del `DayCycle` apagado.
+**Hecho cuando:** los dos tests pasan y `check_modules` / `portability-check` están verdes.
+
+### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**Depende de:** D-0206
+**Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
+es de la UI del menú (Jugar → Empresa) y no entra acá.
+- `list_slots(dir)`: una entrada por slot de `user://saves/company/` con `slot`, `name` (el `company_name`,
+  o el slot si está vacío), `day`, `money`, `saved_at`, `interrupted` y `version`, del último jugado al
+  primero. Lee sin mover archivos: cuenta un slot que solo tiene `.bak` (escritura cortada) y deja afuera
+  `.tmp`, `.bad` y JSON que no son saves. Un save de un build más nuevo aparece con su `version` para que la
+  UI lo muestre deshabilitado.
+- `delete(slot, dir)`: borra el `.json` del slot y sus `.bak`, `.tmp` y `.bad`.
+- `new_slot_id(dir)`: `company` si está libre, si no `company_2`, `company_3`…
+**Test** `test_company_slots`: crea 3 slots con nombre, día y plata distintos, los lista en orden de
+`saved_at`, borra uno (con su `.bak`) y después los otros; `.bak` solo cuenta, `.tmp`/`.bad`/no-save no;
+`new_slot_id` y carpeta inexistente.
+**Hecho cuando:** el test pasa.
+
+### D-0236 · Guardado automático al cerrar el día y al salir — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanyRoot.save_closed_day()`: el host guarda el slot en cuanto se aplica el SUMMARY, como la apertura del día siguiente (día + 1 a las 08:00, sin `interrupted`, stock con las manos en el piso); al salir durante el resumen guarda eso mismo en vez del día interrumpido; a mitad de día sigue el guardado interrumpido de D-2005; `test_company_autosave`.
+**Depende de:** D-0203, D-0206, D-2005
+**Qué:** en `scripts/gameplay/company_root.gd`, solo el host (también solo):
+- al aplicarse el `day_phase` SUMMARY (`CompanyNet.event_applied`), guardar el slot como **la apertura del
+  día siguiente**: una copia de la empresa con `day + 1` y `clock_minutes = DAY_START_MIN`, sin
+  `interrupted`; la empresa en juego conserva su día hasta `next_day()`. Cargarlo abre ese día, igual que
+  `next_day()`;
+- al cerrarse el mundo (`_exit_tree`, también al cerrar el juego) durante el SUMMARY, ese mismo guardado; en
+  cualquier otra fase, el día interrumpido de D-2005.
+**Test** `test_company_autosave`: un día completo (OPENING → SUMMARY) guarda el día 2 desde la apertura con
+la plata y el stock; matar el proceso a mitad del día 2 (sin el guardado de `_exit_tree`) y cargar da el
+último cierre; salir en el resumen no lo pisa con el día 1 interrumpido; salir a mitad de día sigue guardando
+interrumpido.
+**Hecho cuando:** el test pasa.

@@ -29,31 +29,114 @@ function Write-Log($msg) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $msg" | Out-File -FilePath $log -Append -Encoding utf8
 }
 
-# The cloud can't read these logs, so a failed run opens (or comments on) one GitHub issue and a good
-# run closes it. The repo is public: only error lines go to the issue, never the whole log.
+# The cloud can't read these logs, so a failed run opens (or comments on) one GitHub issue per routine
+# ("Rutina de PC caída: build" / ": arte") and a good run of the SAME routine closes it (a success of
+# the art session once closed the build's issue, #483). The repo is public: only error lines and the
+# last 10 log lines go to the issue, never the whole log.
 $repo = 'Delestal94/Prometeus'
+
+# Windows PowerShell 5.1 pipes text to native commands in ASCII ("fall?"). Bodies go through a UTF-8
+# (no BOM) file instead; this also fixes what gh prints, which is parsed below.
+$utf8 = New-Object System.Text.UTF8Encoding $false
+$OutputEncoding = $utf8
+try { [Console]::OutputEncoding = $utf8 } catch { }
+
+function New-BodyFile([string]$text) {
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ("rutina-issue-{0}.md" -f [guid]::NewGuid().ToString('N'))
+    [IO.File]::WriteAllText($tmp, $text, $utf8)
+    $tmp
+}
+
+# Open `rutina-caida` issue whose title matches the regex (ASCII-only patterns, so a console that
+# garbles accents cannot make the match fail and open a duplicate each run). $null if none.
+function Find-OpenIssue([string]$titlePattern) {
+    $json = (gh issue list --repo $repo --label rutina-caida --state open --limit 50 --json 'number,title' 2>$null) -join "`n"
+    if (-not $json.Trim()) { return $null }
+    $hit = @($json | ConvertFrom-Json) | Where-Object { $_.title -match $titlePattern } | Select-Object -First 1
+    if ($hit) { $hit.number } else { $null }
+}
+
+function Add-IssueComment($number, [string]$text) {
+    $tmp = New-BodyFile $text
+    try { gh issue comment $number --repo $repo --body-file $tmp | Out-Null } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+}
+
+function Limit-Line([string]$s) { if ($s.Length -gt 300) { $s.Substring(0, 300) + '…' } else { $s } }
+
 function Report-Health([bool]$ok, [string]$detail) {
     try {
-        $open = (gh issue list --repo $repo --label rutina-caida --state open --json number --jq '.[0].number') 2>$null
+        $now = Get-Date -Format 'yyyy-MM-dd HH:mm'
+        $mine = Find-OpenIssue ('^Rutina de PC .*: {0}$' -f $Rutina)
         if ($ok) {
-            if ($open) {
-                gh issue close $open --repo $repo --comment "Volvió a andar: la rutina ``$Rutina`` terminó bien el $(Get-Date -Format 'yyyy-MM-dd HH:mm')." | Out-Null
+            if ($mine) {
+                Add-IssueComment $mine "Volvió a andar: la rutina ``$Rutina`` terminó bien el $now."
+                gh issue close $mine --repo $repo | Out-Null
+            }
+            # Old scheme (one issue for both routines, no suffix): a success of either closes it; the next
+            # failure opens the issue of its own routine.
+            $legacy = Find-OpenIssue '^Rutina de PC [^:]+$'
+            if ($legacy) {
+                Add-IssueComment $legacy ("Cierro este issue del esquema anterior (uno solo para build y arte): desde N-973 hay un issue por rutina, " +
+                    "'Rutina de PC caída: build' y ': arte', y solo lo cierra un éxito de su propia rutina. Terminó bien ``$Rutina`` el $now; " +
+                    "si la otra sigue caída, su issue se abre en su próxima falla.")
+                gh issue close $legacy --repo $repo | Out-Null
             }
             return
         }
-        $errors = Get-Content $log -Encoding utf8 -ErrorAction SilentlyContinue |
+        $lines = @(Get-Content $log -Encoding utf8 -ErrorAction SilentlyContinue)
+        $errors = @($lines |
             Where-Object { $_ -match 'API Error|error:|Error:|exited with|failed|fatal' -and $_ -notmatch 'Permission allow rule' } |
-            Select-Object -Last 8 | ForEach-Object { if ($_.Length -gt 300) { $_.Substring(0, 300) + '…' } else { $_ } }
+            Select-Object -Last 8 | ForEach-Object { Limit-Line $_ })
+        $tail = @($lines | Where-Object { $_.Trim() } | Select-Object -Last 10 | ForEach-Object { Limit-Line $_ })
+        # Plan quota (README rule 13) is not a real breakdown: say so, but still report it (the run did not
+        # happen). Only the lines that go to the issue are searched, so a stray "429" elsewhere is ignored.
+        $quotaPattern = 'usage limit|rate.?limit|quota|limit reached|hit your .{0,20}limit|\b429\b'
+        $quota = @(($errors + $tail) | Where-Object { $_ -match $quotaPattern }).Count -gt 0
         $fence = '```'
-        $body = "La rutina ``$Rutina`` de la PC falló el $(Get-Date -Format 'yyyy-MM-dd HH:mm'): $detail`n`n" +
-            "Líneas de error (log completo en la PC: ``$log``):`n$fence`n$($errors -join "`n")`n$fence"
-        if ($open) {
-            $body | gh issue comment $open --repo $repo --body-file - | Out-Null
+        $head = if ($quota) {
+            "Cupo del plan agotado (regla 13), no es una caída real: la rutina ``$Rutina`` de la PC no pudo correr el $now. Se resuelve cuando el cupo se renueva; no hace falta arreglar nada. Detalle: $detail"
         } else {
-            $body | gh issue create --repo $repo --title 'Rutina de PC caída' --label rutina-caida --body-file - | Out-Null
+            "La rutina ``$Rutina`` de la PC falló el ${now}: $detail"
+        }
+        $body = "$head`n`nLíneas de error (log completo en la PC: ``$log``):`n$fence`n$($errors -join "`n")`n$fence`n`n" +
+            "Últimas 10 líneas del log:`n$fence`n$($tail -join "`n")`n$fence"
+        if ($mine) {
+            Add-IssueComment $mine $body
+        } else {
+            $tmp = New-BodyFile $body
+            try { gh issue create --repo $repo --title "Rutina de PC caída: $Rutina" --label rutina-caida --body-file $tmp | Out-Null } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
         }
     } catch {
         Write-Log "could not report health to GitHub: $_"
+    }
+}
+
+# A skipped run exits 0 and used to leave no trace (or one line in a log nobody reads). Now: one line in
+# saltos.log (date, routine, reason) and, if this routine has an open issue, a comment on it. A skip
+# never opens an issue; the same skip is commented at most once every 12 hours (PAUSA can last days).
+function Add-Skip([string]$reason) {
+    Write-Log $reason
+    try {
+        $skipLog = Join-Path $state 'saltos.log'
+        $recent = $false
+        if (Test-Path $skipLog) {
+            $last = Get-Content $skipLog -Encoding utf8 -ErrorAction SilentlyContinue |
+                Where-Object { $_.EndsWith("`t$Rutina`t$reason") } | Select-Object -Last 1
+            if ($last) {
+                $when = [datetime]::MinValue
+                if ([datetime]::TryParseExact(($last -split "`t")[0], 'yyyy-MM-dd HH:mm:ss', $null, 'None', [ref]$when)) {
+                    $recent = ((Get-Date) - $when).TotalHours -lt 12
+                }
+            }
+        }
+        "{0}`t{1}`t{2}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Rutina, $reason |
+            Out-File -FilePath $skipLog -Append -Encoding utf8
+        if (-not $recent) {
+            $mine = Find-OpenIssue ('^Rutina de PC .*: {0}$' -f $Rutina)
+            if ($mine) { Add-IssueComment $mine "Corrida saltada el $(Get-Date -Format 'yyyy-MM-dd HH:mm') (no es una falla): $reason." }
+        }
+    } catch {
+        Write-Log "could not record the skip: $_"
     }
 }
 
@@ -70,7 +153,7 @@ while (-not $lock -and -not $Fresh) {
     try {
         $lock = [System.IO.File]::Open($lockPath, 'OpenOrCreate', 'ReadWrite', 'None')
     } catch {
-        if ((Get-Date) -ge $deadline) { Write-Log 'another PC routine is running: skipped'; exit 0 }
+        if ((Get-Date) -ge $deadline) { Add-Skip 'another PC routine is running: skipped'; exit 0 }
         Start-Sleep -Seconds 60
     }
 }
@@ -91,14 +174,14 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
         # Hand brake: same file the cloud routines honour.
         git cat-file -e origin/main:.claude/rutinas/PAUSA 2>$null
-        if ($LASTEXITCODE -eq 0) { Write-Log 'PAUSA on origin/main: skipped'; exit 0 }
+        if ($LASTEXITCODE -eq 0) { Add-Skip 'PAUSA on origin/main: skipped'; exit 0 }
         # Budget level (README rule 1 bis): the art session skips at "minimo" and only runs every
         # 6 hours at "ahorro"; the build always runs. Checked here so Claude is not even started.
         $budget = (git show origin/main:.claude/rutinas/PRESUPUESTO 2>$null | Select-Object -First 1)
         if ($budget) { $budget = ($budget.Trim() -split '\s+')[0].ToLower() }
-        if ($Rutina -eq 'arte' -and $budget -eq 'minimo') { Write-Log 'PRESUPUESTO minimo: art session skipped'; exit 0 }
+        if ($Rutina -eq 'arte' -and $budget -eq 'minimo') { Add-Skip 'PRESUPUESTO minimo: art session skipped'; exit 0 }
         if ($Rutina -eq 'arte' -and $budget -eq 'ahorro' -and ((Get-Date).Hour % 6) -ne 0) {
-            Write-Log 'PRESUPUESTO ahorro: art session only at 00, 06, 12 and 18 h'; exit 0
+            Add-Skip 'PRESUPUESTO ahorro: art session only at 00, 06, 12 and 18 h'; exit 0
         }
 
         # Start from a clean origin/main; ignored files (.godot import cache, builds/) survive.

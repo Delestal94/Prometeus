@@ -21,7 +21,7 @@
 | D-0211 | ✅ `Inventory`: stock por producto y ubicación (estante, palet, caja abierta) con autoridad en el host | constructor-negocio | high | test `test_inventory` mueve unidades sin duplicar ni perder |
 | D-0212 | ✅ `PackedBox`: modelo de datos de un paquete armado (caja, contenido, relleno, cinta, etiqueta, sellos, pedido) | constructor-negocio | high | test serializa y compara contra el pedido |
 | D-0213 | ✅ Puente `PackedBox` → `DeliveryPackage` + trampa actual (la entrega sigue igual) | constructor-trampas | xhigh | una caja armada en el galpón aparece en la camioneta con la trampa calculada (test) |
-| D-0214 | ✅ Escena raíz del modo Empresa (`company_root.tscn`) que carga galpón y distritos con `scene_loader` | constructor-mundo | high | arranca con `--autostart --mode=company` sin errores |
+| D-0214 | ✅ Escena raíz del modo Empresa (`company_root.tscn`) que carga galpón y distritos con `scene_loader` | constructor-mundo | high | arranca con `--autostart-company` sin errores (`test_company_world_boot`); en sala con `test_company_online` |
 | D-0215 | ✅ Señales nuevas en `EventBus` para negocio (pedido_entrante, caja_armada, entrega_cobrada, empleado_contratado…) | constructor-progresion | medium | lista documentada; `test_event_bus_signals` las cubre |
 | D-0216 | ✅ Registro de distritos (`DistrictRegistry`) leído de `.tres`, sin listas a mano | constructor-mundo | medium | agregar un `.tres` suma el distrito sin tocar código (test) |
 | D-0217 | ✅ Registro de vehículos (`FleetRegistry`) leído de `.tres` | constructor-camion | medium | idem con vehículos |
@@ -44,11 +44,11 @@
 | ~~D-0229~~ | ~~Módulo portable `milestones` (condiciones y recompensas declarativas)~~ **Fusionada en D-0401 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | idem |
 | ~~D-0230~~ | ~~Adaptadores chicos en `scripts/` que conectan cada módulo nuevo con el juego~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | ningún módulo nombra autoloads (check verde) |
 | ~~D-0231~~ | ~~Simulación del día sin escena (headless) para tests y balance: corre 1 día en < 2 s~~ **Fusionada en D-0540 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | `tools/sim_day.gd` imprime ingresos, entregas y fallas |
-| D-0232 | Sistema de "tick de negocio" a frecuencia fija (4 Hz) separado de la física | constructor-negocio | medium | test verifica cadencia; el perfilador no lo ve en el frame |
+| D-0232 | ✅ Sistema de "tick de negocio" a frecuencia fija (4 Hz) separado de la física | constructor-negocio | medium | test verifica cadencia; el perfilador no lo ve en el frame |
 | ~~D-0233~~ | ~~Pool de objetos para productos y cajas (evitar crear y borrar nodos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | perfilador-rendimiento | high | `bench_depot` sin picos de allocs al armar 100 cajas |
 | ~~D-0234~~ | ~~Migración del save de perfil actual (`unlock_profile`) al save de empresa~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | perfil viejo carga y conserva cosméticos y récords |
-| D-0235 | Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
-| D-0236 | Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
+| D-0235 | ✅ Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
+| D-0236 | ✅ Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
 | ~~D-0237~~ | ~~Rutas de guardado compatibles con Steam Auto-Cloud (ver N-914)~~ **Fusionada en D-2010 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | rutas bajo `user://saves/company/`; documentado |
 | D-0238 | Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
 | D-0239 | Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |

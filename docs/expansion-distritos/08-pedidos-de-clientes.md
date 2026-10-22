@@ -11,14 +11,14 @@
 | D-0802 | ✅ Estructura del pedido: cliente, dirección, productos, requisitos, ventana, paga | constructor-progresion | medium | test de serialización |
 | ✅ D-0803 | Ritmo de llegada de pedidos durante el día (curva) | constructor-progresion | medium | sim muestra la curva |
 | ✅ D-0804 | Tablero de pedidos en el galpón (lista con estado) | constructor-ui | high | captura legible |
-| D-0805 | Impresora de pedidos que escupe la hoja física (guiño Overcooked) | constructor-negocio | medium | hoja aparece y se puede llevar a la mesa |
+| ✅ D-0805 | Impresora de pedidos que escupe la hoja física (guiño Overcooked) | constructor-negocio | medium | hoja aparece y se puede llevar a la mesa |
 | D-0806 | ✅ Requisitos: frágil, frío, regalo, urgente, pesado, "no doblar" | constructor-progresion | medium | 6 requisitos en `.tres` con test |
-| D-0807 | Vencimiento del pedido y penalidad por tardanza | constructor-progresion | medium | test |
-| D-0808 | Asignar pedido a una caja (la hoja va con la caja) | constructor-negocio | medium | test |
+| ✅ D-0807 | Vencimiento del pedido y penalidad por tardanza | constructor-progresion | medium | test |
+| ✅ D-0808 | Asignar pedido a una caja (la hoja va con la caja) | constructor-negocio | medium | test |
 | D-0809 | Asignar caja a salida/vehículo | constructor-negocio | medium | test |
 | ~~D-0810~~ | ~~Cancelación del cliente (evento raro)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
-| D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
+| ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
 | D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
 | D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
 | D-0815 | Pedido completado → cobro y reputación | constructor-progresion | medium | test |

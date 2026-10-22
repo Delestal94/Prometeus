@@ -23,6 +23,7 @@ func _run() -> void:
 	_test_add()
 	_test_cycle()
 	_test_expire_and_payout()
+	_test_abandon()
 	_test_open_orders_by_zone()
 	_test_invalid_transitions()
 	_test_round_trip()
@@ -99,6 +100,30 @@ func _test_expire_and_payout() -> void:
 	book.mark_packed(&"o1", &"b")
 	book.mark_out(&"o1", &"t")
 	_expect(book.mark_delivered(&"o1", 80, true) == roundi(pay * 0.75), "late delivery pays 75 %")
+	book.free()
+
+
+func _test_abandon() -> void:
+	var book := _book()
+	book.add(_order(&"o1", &"campo", 0))
+	book.add(_order(&"o2", &"campo", 0))
+	book.add(_order(&"o3", &"campo", 0))
+	var due: int = book.get_order(&"o1")["due_min"]
+	book.mark_packed(&"o2", &"b2")
+	book.mark_out(&"o2", &"t2")
+	book.expire(due + 1)
+	var limit: int = due + CompanyTuning.ORDER_ABANDON_MIN
+	_expect(book.abandon(limit).is_empty(), "nobody is dropped at the limit minute")
+	var gone: Array[StringName] = book.abandon(limit + 1)
+	_expect(gone == [&"o1", &"o3"], "late orders off the road are dropped past the limit")
+	_expect(book.state_of(&"o1") == Order.STATE_FAILED, "a dropped order is failed")
+	_expect(book.state_of(&"o2") == Order.STATE_LATE, "an order out on the road is not dropped")
+	_expect(book.abandon(limit + 5).is_empty(), "a dropped order is not reported twice")
+	var again := _book()
+	again.from_dict(book.to_dict())
+	_expect(again.abandon(limit + 5).is_empty(), "late_from survives a save: o2 stays late")
+	_expect(again.state_of(&"o2") == Order.STATE_LATE, "restored book keeps o2 late")
+	again.free()
 	book.free()
 
 

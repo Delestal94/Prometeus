@@ -4,12 +4,12 @@ extends RefCounted
 ## for and the street and number the courier reads off it.
 ##
 ## Pure data, no node, no autoload. The address is derived from the order's house_id
-## ("<zone>_house_<n>", see OrderGenerator). Street names are translation keys (the screen calls
-## tr()); until D-0312 gives every street its own name there is one street per zone and the
-## number is the house number, so the same house always shows the same address on the label and
-## on the house sign. The look of the paper is package_shipping_label.gd (presentation).
+## naming a house of the map (HouseAddresses, D-0312: its street and number, the same ones the
+## house sign shows) or the generator's older "<zone>_house_<n>". Street names are translation
+## keys (the screen calls tr()). The look of the paper is package_shipping_label.gd (presentation).
 
-## zone id -> translation key of its street. Placeholder until D-0312 (one street per zone).
+## Houses the map does not know (the generator's "<zone>_house_<n>"): zone id -> translation key
+## of its one street, and the number is the house number.
 const STREET_KEYS: Dictionary = {
 	&"centro": &"WORLD_STREET_CENTRO",
 	&"campo": &"WORLD_STREET_CAMPO",
@@ -20,7 +20,17 @@ const FALLBACK_STREET_KEY: StringName = &"WORLD_STREET_MAIN"
 ## {order, customer, street_key, number} for an order dictionary; empty if it names no house.
 static func address(order: Dictionary) -> Dictionary:
 	var order_id: String = str(order.get("id", ""))
-	var number: int = house_number(StringName(str(order.get("house_id", ""))))
+	var house_id := StringName(str(order.get("house_id", "")))
+	var addresses: HouseAddresses = HouseAddresses.load_default()
+	if order_id != "" and addresses != null and addresses.has_house(house_id):
+		var known: Dictionary = addresses.of_house(house_id)
+		return {
+			"order": StringName(order_id),
+			"customer": str(order.get("customer", "")),
+			"street_key": known["street_key"],
+			"number": known["number"],
+		}
+	var number: int = house_number(house_id)
 	if order_id == "" or number < 1:
 		return {}
 	var zone: StringName = StringName(str(order.get("zone", "")))

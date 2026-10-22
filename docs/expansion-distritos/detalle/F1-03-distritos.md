@@ -69,6 +69,7 @@ Centro sin salirse de la calzada (`OFF_ROAD` = 0).
 **Hecho cuando:** el test pasa y `revisor-visual` mandó capturas de 3 aristas (asfalto, ripio, barro).
 
 ### D-0305 · Varias paradas por salida — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `Trip` suma paradas por casa (`stops`, `pending_stops()`, `next_stop()`, `deliver_stop()`) y `close()` con `Inventory`: lo no entregado vuelve `FAILED` y los productos de una caja sana pasan de `box:<id>` a `dock` (`Trip.RETURN_LOCATION`); si la caja está rota se pierden. `test_company_trip_stops`. Falta que el GPS/tablero use `next_stop()` (D-0308, D-0307).
 **Depende de:** D-0302, D-0311
 **Qué:** un `Trip` tiene una lista de paradas (casa + pedidos). Entregar en una casa saca esos pedidos.
 La salida no termina hasta volver al galpón. Las cajas que no se entregaron vuelven con estado `FAILED`
@@ -146,6 +147,10 @@ pisan entre sí y cada una se puede instanciar con `DeliveryHouse` sin errores.
 **Hecho cuando:** el test pasa.
 
 ### D-0312 · Direcciones legibles — B · Opus 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — `HouseAddresses` (`scripts/gameplay/districts/house_addresses.gd`): calle = etiqueta `street` de la arista de la casa (nombre `WORLD_STREET_<CALLE>`, 9 calles es/en en `strings_world.csv`), número = cuenta por calle y por lado (derecha par, izquierda impar) según el orden de aristas y la distancia; `OrderLabel.address` lo usa para las casas del mapa (las de `<zona>_house_<n>` quedan como antes) y `HouseMap.instance` lo pone en el cartel y el timbre (`DeliveryHouse.address_number` / `sign_number()`); `test_company_addresses`. Ver `revisar/D-0312.md`.
+**Subtareas abiertas:**
+- **D-0312.1** Cuando `OrderGenerator` nombre casas del `HouseMap` (D-0801+), `house_id` pasa a ser su id y desaparece el camino viejo `<zona>_house_<n>` de `OrderLabel`.
+- **D-0312.2** Cartel de calle en las esquinas del mapa (arte: `arte-pendiente`), con la captura de `revisor-visual`.
 **Depende de:** D-0311
 **Qué:** cada arista con nombre de calle (lista traducible por zona, D-0345). Cada casa con número par o
 impar según el lado. La etiqueta de la caja (D-0707) y el cartel de la casa muestran "Calle N".
@@ -184,6 +189,11 @@ igual a la ruta actual.
   diferencias de calidad.
 
 ### D-0316 · Jugadores repartidos entre galpón y calle — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — `WorldCellInterest` (módulo `world_cells`, `cell_interest.gd`): el host manda el sincronizador de cada vehículo (`company_vehicle`) y caja suelta (`company_loose_box`) solo a los peers con su jugador a ≤ 2 celdas (lo suelta pasado 3; el conductor y un peer sin jugador lo reciben siempre; pulso cada 20 s), y un cliente esconde su copia lejana (y la saca de la física) hasta que una actualización la trae cerca; `CompanyInterest` (hijo `Interest` de `CompanyRoot`); en un cliente las celdas cargan solo alrededor de su jugador; tope `CompanyTuning.VEHICLES_FAR_MAX = 2` en `CompanyTrips.departure_verdict()` (el portón no arranca una tercera salida, `departure_refused`, pero ese vehículo cuenta como afuera en `trips_out()` hasta volver) y el tablero de despacho apaga "Cargar" con el motivo `WORLD_DISPATCH_FAR_LIMIT`. Sin cambio de protocolo. `test_company_split_crew` (3 peers ENet), `test_world_cells_interest`, `test_company_trips`, `test_company_dispatch_panel`, `test_company_root`. Ver `revisar/D-0316.md` y `docs/decisiones/2026-10-21-visibilidad-por-distancia.md`.
+**Subtareas abiertas:**
+- **D-0316.1** (`constructor-red`, high) Nodos de los jugadores remotos en el mundo de Empresa (spawn en el host, entrada tarde, salida; los "spawns de jugadores" de D-0214): hasta entonces el host no tiene ancla para un cliente y `CompanyInterest` le manda todo, como antes. Con ellos, cablear `DayCycle.crew_in_shed` (D-0203).
+- **D-0316.2** (`constructor-red`, high; con D-0302.2) El vehículo real de la empresa en `company_vehicle` con su `MultiplayerSynchronizer` hijo directo: comprobar que la copia que se esconde/muestra (`hide_far_copies`, sin colisiones mientras está escondida) se ve bien con el `NetPoseSmoother` y la predicción del conductor; frenar en el portón a un tercer vehículo rechazado (`departure_refused`) y mandarle el motivo a su conductor (hoy solo cuenta como afuera). Ningún hecho único ni baja del vehículo por RPC sobre el vehículo mismo (no llega a quien no lo ve: propiedad ON_CHANGE, evento de `CompanyNet` o `untrack()` antes). El contexto real del tablero (D-0310.b) le pasa `trips`. **Sube `PROTOCOL_VERSION`** (un cliente viejo no esconde las copias que el host deja de mandar). Medir en D-2002.2 el costo del pulso (0,1 s cada 20 s por cuerpo y peer oculto).
+- **D-0316.3** (con D-0318.1) Las cajas sueltas del galpón y la calle entran al grupo `CompanyInterest.LOOSE_BOX_GROUP`. Antes, sacar de la caja todo RPC de hecho único o baja que se llame sobre ella (`package_handling.gd` `_remote_consume`: con la caja oculta para un peer lejano, ese peer se quedaría con una caja fantasma): propiedad ON_CHANGE, evento de `CompanyNet` o `untrack()` antes del broadcast. **Sube `PROTOCOL_VERSION`** en ese PR.
 **Depende de:** D-0303, D-2003
 **Qué:** cada jugador es un ancla de `world_cells`. Un jugador en el galpón no recibe sincronización de
 cuerpos de celdas lejanas: visibilidad por distancia con `MultiplayerSynchronizer.public_visibility` /
@@ -219,6 +229,7 @@ salida muestra la hora de salida y de vuelta, y el GPS estima la llegada en hora
 **Hecho cuando:** el test pasa.
 
 ### D-0320 · Resultado de la salida al cierre del día — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `TripResult` (`scripts/gameplay/districts/trip_result.gd`): `build()` arma el resumen de un `Trip` cerrado (línea por pedido con resultado, estado de la caja intacta/en riesgo/rota/sin entregar, paga, penalidad y reputación, más totales y mérito por jugador), `apply()` da el mérito al que llevó cada caja intacta (`CompanyTuning.TRIP_MERIT_INTACT`, sin repetirse) y `add_to_day()` suma las salidas al resumen del día; `test_company_trip_result`. Falta que el cierre del día lo llame (D-0508.3).
 **Depende de:** D-0305, D-0501
 **Qué:** al cerrar un `Trip` se arma su resumen: pedidos entregados, estado de cada caja (intacta, en
 riesgo, rota; como `RunManager` hoy), paga, penalidades y mérito por jugador (`CrewProgression`). Se suma

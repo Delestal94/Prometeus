@@ -5,6 +5,8 @@ extends Node
 ## Child of the company world, not an autoload; it names no autoload either (lesson N-919). The
 ## owner (CompanyRoot) hands it the CompanyNet, the GameClock and the CompanyState by reference
 ## (attach()) and two Callables for what only the world knows (crew_in_shed, trips_out).
+## In the company world the host's BusinessTick (D-0232) calls poll() and the root turns this
+## node's own _process (every POLL_SECONDS) off; that one only runs with no CompanyRoot (tests).
 ##
 ## Phases are host facts (docs/expansion-distritos/diseno/red-autoridad.md, "Fases del día"). Only
 ## the host decides a transition, in poll() and open_day() / next_day(); each one goes out once as
@@ -87,6 +89,10 @@ var ticks: Callable = Callable()
 ## The closing summary of the day (DaySummary.build()), {} outside SUMMARY. A closing screen that
 ## opens after the event (a late joiner) reads it here.
 var summary: Dictionary = {}
+## What a new day's opening tells this peer, as Callable() -> String ("" for nothing): the world
+## sets it (CompanyRoot, Bankruptcy.opening_text, D-0510.2) and it goes out as EventBus.depot_notice
+## right after company_day_started.
+var opening_notice: Callable = Callable()
 
 var _phase: Phase = Phase.IDLE
 var _day: int = 0
@@ -205,6 +211,9 @@ func apply_phase(data: Dictionary) -> bool:
 		match phase:
 			Phase.OPENING:
 				_pending_facts.append([&"company_day_started", [day]])
+				var notice: String = str(opening_notice.call()) if opening_notice.is_valid() else ""
+				if not notice.is_empty():
+					_pending_facts.append([&"depot_notice", [notice]])
 			Phase.CLOSING:
 				_pending_facts.append([&"company_day_closing", [day]])
 			Phase.SUMMARY:

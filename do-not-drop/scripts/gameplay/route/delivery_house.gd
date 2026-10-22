@@ -135,6 +135,9 @@ var delivered: bool = false
 ## files a photo against this number, so it has to match the index route.gd
 ## reports through house_resolved.
 var house_index: int = 0
+## The number on the house sign and the doorbell when it has a street address (HouseMap,
+## D-0312); 0 keeps the route's stop number, house_index + 1.
+var address_number: int = 0
 ## What actually happened here, once it did -- kept so the photo the player
 ## takes afterwards can be filed against this specific delivery (the photo
 ## is what refutes a complaint at the results screen).
@@ -333,8 +336,13 @@ func _build_house() -> void:
 	waiting_marker.house_index = house_index
 	waiting_marker.house_bounds = _visual_bounds()
 	add_child(waiting_marker)
-	waiting_marker.set_number(house_index + 1)
+	waiting_marker.set_number(sign_number())
 	waiting_marker.set_order(assigned_label)
+
+
+## What the house sign and the doorbell show: the street number, or the stop number.
+func sign_number() -> int:
+	return address_number if address_number > 0 else house_index + 1
 
 
 ## The doorbell panel (tareas de Nacho N-302) on the wall beside the door, at
@@ -361,7 +369,7 @@ func _build_doorbell_visual() -> void:
 	# On the number window, whose face stands 3.6 cm off the wall.
 	doorbell_number = Label3D.new()
 	doorbell_number.name = "DoorbellNumber"
-	doorbell_number.text = str(house_index + 1)
+	doorbell_number.text = str(sign_number())
 	doorbell_number.font = DOORBELL_FONT
 	doorbell_number.font_size = 64
 	doorbell_number.pixel_size = 0.0008

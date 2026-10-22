@@ -14,6 +14,14 @@ const GelJiggleController = preload("res://scripts/gameplay/player/gel/gel_jiggl
 const GelSquashController = preload("res://scripts/gameplay/player/gel/gel_squash_stretch.gd")
 const GelWaveController = preload("res://scripts/gameplay/player/gel/gel_impact_waves.gd")
 const GelDragController = preload("res://scripts/gameplay/player/gel/gel_inertial_drag.gd")
+const HairAttachment = preload("res://scripts/gameplay/player/gel/gel_hair_attachment.gd")
+const HairLibrary = preload("res://scripts/gameplay/player/gel/gel_hair_library.gd")
+const CostumeCatalog = preload("res://scripts/gameplay/player/gel/gel_costume_catalog.gd")
+const CostumeLibrary = preload("res://scripts/gameplay/player/gel/gel_costume_library.gd")
+const CostumeFitter = preload("res://scripts/gameplay/player/gel/gel_costume_fitter.gd")
+const CostumeSprings = preload("res://scripts/gameplay/player/gel/gel_costume_springs.gd")
+const AccessoryCatalog = preload("res://scripts/gameplay/player/gel/gel_accessory_catalog.gd")
+const AccessoryLibrary = preload("res://scripts/gameplay/player/gel/gel_accessory_library.gd")
 
 enum Framing { FACE, BODY }
 
@@ -49,6 +57,11 @@ var _gel_jiggle: Node
 var _gel_squash: Node
 var _gel_waves: Node
 var _gel_drag: Node
+var _hair_attachment: BoneAttachment3D
+var _face_hair_attachments: Array[BoneAttachment3D] = []
+var _costume: Node3D
+var _costume_fitter
+var _accessory: Node3D
 
 
 func _ready() -> void:
@@ -86,6 +99,11 @@ func show_proportions(proportions: GelBodyProportions) -> void:
 	mannequin.visible = false
 	gel_mannequin.visible = true
 	_gel_shaper.apply(proportions)
+	if _hair_attachment != null:
+		_hair_attachment.call(&"apply_proportions", proportions)
+	_fit_face_hair(proportions)
+	if _costume_fitter != null:
+		_costume_fitter.apply(proportions)
 	if _gel_jiggle != null:
 		_gel_jiggle.apply_proportions(proportions)
 
@@ -93,6 +111,91 @@ func show_proportions(proportions: GelBodyProportions) -> void:
 func show_character() -> void:
 	mannequin.visible = false
 	gel_mannequin.visible = true
+
+
+## Rebuilds only the lightweight cosmetic roots; the gel body, camera and
+## simulation controllers stay alive so changing a card is immediate.
+func show_cosmetics(
+	hair_id: StringName,
+	eyebrows_id: StringName,
+	moustache_id: StringName,
+	costume_id: StringName,
+	accessory_id: StringName,
+	proportions: GelBodyProportions
+) -> void:
+	_clear_cosmetics()
+	var skeleton: Skeleton3D = PlayerAppearance.find_skeleton(gel_mannequin)
+	if skeleton == null:
+		return
+	_hair_attachment = HairAttachment.new()
+	_hair_attachment.call(&"setup", skeleton, hair_id, 1)
+	_add_face_hair(skeleton, HairLibrary.build_eyebrows(eyebrows_id), eyebrows_id)
+	_add_face_hair(skeleton, HairLibrary.build_moustache(moustache_id), moustache_id)
+	_costume = CostumeLibrary.build_costume(costume_id)
+	gel_mannequin.add_child(_costume)
+	_costume_fitter = CostumeFitter.new()
+	_costume_fitter.setup(_costume, gel_mannequin)
+	var springs := CostumeSprings.new()
+	_costume.add_child(springs)
+	if not springs.setup(_costume):
+		springs.free()
+	if accessory_id != &"none":
+		_accessory = AccessoryLibrary.build_accessory(accessory_id)
+		gel_mannequin.add_child(_accessory)
+	var hat_rule: int = _strongest_hat_rule(
+		CostumeCatalog.costume(costume_id).get(&"hat_rule", &"none"),
+		AccessoryCatalog.accessory(accessory_id).get(&"hat_rule", &"none") if accessory_id != &"none" else &"none"
+	)
+	_hair_attachment.call(&"set_hat_rule", hat_rule)
+	show_proportions(proportions)
+
+
+func _add_face_hair(skeleton: Skeleton3D, visual: Node3D, style_id: StringName) -> void:
+	if style_id == &"none":
+		visual.free()
+		return
+	var attachment := BoneAttachment3D.new()
+	attachment.name = visual.name
+	attachment.bone_name = &"head"
+	skeleton.add_child(attachment)
+	attachment.add_child(visual)
+	_face_hair_attachments.append(attachment)
+
+
+func _fit_face_hair(proportions: GelBodyProportions) -> void:
+	var scale := Vector3(
+		1.0 + proportions.head_shape * HairAttachment.HEAD_SHAPE_X,
+		1.0 + proportions.head_shape * HairAttachment.HEAD_SHAPE_Y,
+		1.0
+	) * proportions.head_size
+	for attachment: BoneAttachment3D in _face_hair_attachments:
+		if attachment.get_child_count() > 0:
+			(attachment.get_child(0) as Node3D).scale = scale
+
+
+func _strongest_hat_rule(first: StringName, second: StringName) -> int:
+	if first == &"hide" or second == &"hide":
+		return HairAttachment.HatRule.HIDE
+	if first == &"compress" or second == &"compress":
+		return HairAttachment.HatRule.COMPRESS
+	return HairAttachment.HatRule.NONE
+
+
+func _clear_cosmetics() -> void:
+	if is_instance_valid(_hair_attachment):
+		_hair_attachment.free()
+	_hair_attachment = null
+	for attachment: BoneAttachment3D in _face_hair_attachments:
+		if is_instance_valid(attachment):
+			attachment.free()
+	_face_hair_attachments.clear()
+	if is_instance_valid(_costume):
+		_costume.free()
+	_costume = null
+	_costume_fitter = null
+	if is_instance_valid(_accessory):
+		_accessory.free()
+	_accessory = null
 
 
 func proportion_application_count() -> int:
