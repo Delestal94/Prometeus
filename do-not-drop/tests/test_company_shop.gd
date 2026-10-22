@@ -28,7 +28,9 @@ func _run() -> void:
 		ids.append(item.id)
 		_expect(item.is_valid(), "%s is valid" % item.id)
 		_expect(tr(item.display_key) != item.display_key, "%s has a name" % item.id)
-	_expect(ids == [&"expansion_1", &"label_reader", &"upgrade_1"], "file name order: %s" % [ids])
+	var expected: Array[StringName] = [
+		&"expansion_1", &"expansion_2", &"expansion_3", &"label_reader", &"upgrade_1"]
+	_expect(ids == expected, "file name order: %s" % [ids])
 	_expect(CompanyShop.find(&"upgrade_1").price == 450, "upgrade 1 costs 450 (economia.md §4)")
 	_expect(CompanyShop.find(&"nope") == null, "unknown id finds nothing")
 

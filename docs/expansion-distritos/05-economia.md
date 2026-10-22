@@ -21,7 +21,7 @@
 | ✅ D-0511 | Tienda de la empresa (máquinas, vehículos, ampliaciones, licencias) con catálogo de `.tres` | constructor-progresion | high | comprar ítem en test descuenta y otorga |
 | ✅ D-0512 | Precios de vehículos (bici < carrito < camioneta 4x4 < lancha < avioneta) | constructor-progresion | low | tabla en `.tres` |
 | D-0513 | ✅ Precios de máquinas de automatización | constructor-progresion | low | tabla en `.tres` |
-| D-0514 | Precios de ampliaciones del galpón | constructor-progresion | low | tabla en `.tres` |
+| ✅ D-0514 | Precios de ampliaciones del galpón | constructor-progresion | low | tabla en `.tres` |
 | D-0515 | Sueldos de empleados por rol y nivel | constructor-progresion | low | tabla en `.tres` |
 | D-0516 | Cobro al cierre del día o al entregar (según D-0105) | constructor-progresion | medium | test |
 | D-0517 | Plata replicada: todos los clientes ven el mismo saldo | auditor-red | high | test de red |

@@ -18,6 +18,8 @@ const NAME_KEYS: Dictionary = {
 	&"conveyor": "WORLD_SHOP_CONVEYOR",
 	&"packer": "WORLD_SHOP_PACKER",
 	&"expansion_1": "WORLD_SHOP_EXPANSION_1",
+	&"expansion_2": "WORLD_SHOP_EXPANSION_2",
+	&"expansion_3": "WORLD_SHOP_EXPANSION_3",
 	&"vehicle_van": "WORLD_SHOP_VEHICLE_VAN",
 	&"vehicle_bike": "WORLD_SHOP_VEHICLE_BIKE",
 	&"vehicle_cart": "WORLD_SHOP_VEHICLE_CART",
