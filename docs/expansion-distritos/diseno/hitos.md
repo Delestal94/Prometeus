@@ -93,26 +93,77 @@ Las máquinas se reparten así: el hito 9 ofrece 3 (`tape_sealer`, `labeler`, `c
 - Las ramas son **dos y paralelas**: agua (Puerto → Islas) y aire (Montaña → Nieve → Volcán). Montaña no pide
   Islas: la avioneta cruza sola (`gate_montana_altura`). Nieve pide haber entregado en Montaña y Volcán en
   Nieve, para que nadie llegue al final sin haber pasado por las zonas difíciles.
-- **Suburbio, Campo y Puerto** guardan el hito en el bloqueo (`deliveries_25`, `reputation_60`, `deliveries_50`).
-  **Islas, Montaña, Nieve y Volcán no lo guardan**: sus bloqueos piden la lancha, la avioneta o el equipo, y eso
-  solo se ofrece en la tienda después del hito. El hito queda hecho aunque el bloqueo no lo nombre.
+- **Suburbio y Campo** guardan el hito en el bloqueo (`deliveries_25`, `reputation_60`).
+  **Puerto, Islas, Montaña, Nieve y Volcán no lo guardan**: sus bloqueos piden la licencia, la lancha, la avioneta
+  o el equipo, y eso solo se ofrece en la tienda después del hito (Puerto, desde D-0124). El hito queda hecho aunque el bloqueo no lo nombre.
 - "Abre" es el día en que el bloqueo se puede cruzar. En Montaña, Nieve y Volcán lo marca la plata: la avioneta
   sola son 12 000 y un solitario junta ~350 por día para llaves del mapa.
 
 ## Las licencias
 
-Aparecen donde hacen falta; **su diseño detallado (cómo se obtienen, cuánto cuestan, si se rinde algo) es
-D-0124**. Esta lista solo fija cuándo se ofrecen y quién las pide:
+Diseño de D-0124. Una licencia es un **papel de la empresa**: se ofrece con un hito, se compra una vez en la
+tienda y desde ahí abre un bloqueo del mapa o la compra de un vehículo. No hay examen, ni vencimiento, ni
+renovación (D-0537 está recortada, [critica-alcance.md](critica-alcance.md) R3).
 
-| Licencia | Se ofrece con | La pide |
-|---|---|---|
-| `license_nautical` | 12 | `gate_puerto` (junto al hito) y comprar `boat` |
-| `license_4x4` | 16 | comprar `offroad` |
-| `license_flight` | 20 | comprar `plane` (D-1418) |
-| `license_high_mountain` | 26 | el puesto de `gate_nieve_equipo`, junto al equipo (propuesta) |
-| `license_volcanic` | 28 | el puesto de `gate_volcan_equipo`, junto al equipo (propuesta) |
+### Las cinco
 
-`permit_suburbio` no es una de las cinco: es el "segundo distrito" de 1 200 de [economia.md](economia.md) §4.
+| Licencia | Se ofrece con (día 1 / 2 / 4 jug.) | Precio | Qué abre | Qué no abre |
+|---|---|---|---|---|
+| `license_nautical` | 12 `deliveries_50` (10 / 7 / 5) | **650** | cruzar `gate_puerto` y comprar `boat` | la lancha misma (5 000) ni `gate_islas_agua` |
+| `license_4x4` | 16 `campo_25` (17 / 14 / 10) | **600** | comprar `offroad` | ningún bloqueo: la 4x4 no abre zonas, entrega adentro |
+| `license_flight` | 20 `deliveries_100` (18 / 14 / 10) | **1 000** | comprar `plane` | el aeródromo (`aerodrome`, 1 500) se compra aparte y lo pide `gate_montana_altura`, no la compra de la avioneta |
+| `license_high_mountain` | 26 `montana_8` | **1 000** | cruzar `gate_nieve_equipo`, junto a `chains` y `winter_coat` | — |
+| `license_volcanic` | 28 `volcano_permit` | **1 000** | cruzar `gate_volcan_equipo`, junto a `thermal_suit` y `thermal_boxes` | — |
+
+Total de la campaña: **4 250**, menos que la lancha sola.
+
+### Cómo se obtienen
+
+1. **El hito la ofrece.** La recompensa `shop_item` del hito pone el ítem `license_*` en la tienda (D-0511).
+   Antes del hito el ítem no aparece: no hay "comprarla sin el hito" (es el test de D-0407).
+2. **Se compra en la tienda del cierre**, como cualquier ítem: cobra el precio con motivo `shop` y queda en el
+   resumen del día. Quién puede gastar lo decide D-0518, igual que para el resto de la tienda.
+3. **Es de la empresa, no de un jugador.** Maneja el que quiera, entre a la sala cuando entre, y los empleados
+   que manejan (grupo 10) también. Un coop de 1-8 no puede tener a uno solo "habilitado" para la lancha: si se
+   desconecta, el resto queda varado.
+4. **No se pierde nunca.** Ni con la quiebra (D-0510 solo baja los pedidos), ni al vender el vehículo, ni al
+   cambiar de base. Se guarda en el save de la empresa.
+5. **Lo que la pide lo dice.** En el bloqueo, el aviso de siempre (`WORLD_GATE_NEEDS_EQUIPMENT` con el nombre
+   de la licencia); en la tienda, el vehículo sin licencia aparece gris con "Necesita: licencia …" en lugar de
+   desaparecer, así se sabe qué falta. El aviso muestra el nombre traducido (`WORLD_SHOP_LICENSE_*`), nunca la
+   clave `license_*`.
+6. **Primer vuelo guiado** (D-1418): el primer despegue después de comprar `plane` es un tutorial de radio de
+   la Jefa ([narrativa-empresa.md](narrativa-empresa.md)), no un examen. No se puede reprobar y se puede saltear.
+
+### Cómo se guarda y se pide (para D-0407)
+
+- **Una licencia es una clave más de `CompanyState.equipment`**, con el prefijo `license_`. No hace falta campo
+  nuevo en el save, en el snapshot ni en `CompanyNet`: `equipment` ya viaja y se guarda.
+- **`ShopItem` suma el tipo `license`** (en `KINDS`), que entrega su `grant_key` a `equipment` como `machine`,
+  pero la tienda lo muestra en su propio grupo ("Licencias") con el texto `WORLD_SHOP_LICENSE_*`.
+- **`ShopItem.requires` también vale para `vehicle`**: `vehicle_boat` pide `license_nautical`, `vehicle_offroad`
+  `license_4x4` y `vehicle_plane` `license_flight`. Hoy `CompanyShop.check()` solo mira `requires` en `machine`:
+  D-0407 lo aplica también a `vehicle` y `license`. Un solo `requires` alcanza: ningún vehículo pide dos cosas
+  para comprarse (el aeródromo lo pide el bloqueo).
+- **`CompanyShop.owns()` reconoce `license`** (hoy solo `machine` y `expansion`), así no se compra dos veces.
+- **Los bloqueos la piden con `GateRequirement.equipment`**, que ya existe: `gate_puerto` cambia su `milestone`
+  `deliveries_50` por `equipment` `license_nautical` (si pidiera los dos, `missing_key` mira el equipo primero y
+  antes del hito diría "falta la licencia" cuando todavía no se vende), `gate_nieve_equipo` suma
+  `license_high_mountain`, `gate_volcan_equipo` `license_volcanic` y `gate_montana_altura` `aerodrome`.
+- El aviso del bloqueo pasa como argumento el nombre traducido del ítem (hoy `missing_key` pasa `str(item)`): lo
+  traduce quien lo muestra, con el `display_key` del `ShopItem` cuyo `grant_key` es esa clave.
+- Las cinco van en `data/shop/license_*.tres` con `enabled = false` hasta F2, como los vehículos de hoy.
+
+### Por qué estos números
+
+- **Náutica 650**: 4 jugadores ganan el hito el día 5 y cierran ese día con 790 ([economia.md](economia.md) §5),
+  después de pagar Suburbio. Con 650 les quedan 140, arriba del piso de 100 de caja de economia.md §3, aun sin
+  contar el premio de 600 del hito; con 1 000 no llegan. Así los tres "Abre" (10 / 7 / 5) quedan como estaban.
+- **4x4 600**: no abre ninguna zona, solo suma un vehículo de 2 500. Un cuarto del vehículo es lo que se paga
+  por algo que no da nada por sí solo.
+- **Vuelo, alta montaña y volcánica 1 000**: son los que se usaron para estimar los días de Montaña, Nieve y
+  Volcán; ahí manda la avioneta (12 000) y el equipo, y la licencia no mueve el día de apertura más que ~3 días
+  de un jugador solo.
 
 ## Plata que entra por los hitos
 
@@ -261,8 +312,9 @@ Siguiendo [economia-y-contramedidas.md](../../economia-y-contramedidas.md):
   prefiere Campo desde el día 1, se saca el hito 6 y se reparte su recompensa.
 - **Equivalencias de reputación** (para D-0405): 55 ≈ 10 entregas cobradas, 60 ≈ 15, 70 ≈ 50, 80 ≈ 130,
   90 ≈ 300. La curva real de D-0405 manda y estos días se mueven con ella.
-- **Precios provisorios** que usé para estimar los días: licencia 1 000 cada una, aeródromo 1 500, equipo de Nieve
-  1 200, equipo de Volcán 2 500. Los fijan D-0124 y D-0511.
+- **Precios provisorios** que usé para estimar los días: aeródromo 1 500, equipo de Nieve 1 200, equipo de Volcán
+  2 500 (los fija D-0511). Las licencias los fijó D-0124 (sección "Las licencias": 650 / 600 / 1 000 / 1 000 /
+  1 000).
 - **Ids provisorios** de proveedores (`supplier_*`, D-0621), cosméticos (D-0137), equipo (`work_gloves`, `grip_boots`)
   y máquinas (nombres del grupo 11, no los de economia.md §4).
 - **Racha sin roturas de 4 jugadores.** Entregan más por día, así que les cuesta un poco más la racha de 10 días

@@ -23,7 +23,16 @@ extends SceneTree
 ##   shown during the grace (copy_stale_sec) and hides after it;
 ## - a client that leaves is forgotten; a body that leaves the group is untracked: public again,
 ##   its copy shown again; an interest that leaves the tree hands everything back the same way;
-## - a body whose parent is a MultiplayerSpawner's spawn path is refused (not tracked).
+## - a body whose parent is a MultiplayerSpawner's spawn path is refused (not tracked);
+## - with new interests on a late body (its synchronizer also sends its solid's layer and mask on
+##   change): sent to the far client as a viewer while that client hides its copy as far, an update
+##   that writes the layer and mask leaves the copy out of physics (both still 0), and showing it
+##   gives back the written ones (not the ones it had when hidden); a layer the game itself writes
+##   into the hidden copy's area is zeroed again at the next look and given back at the showing;
+##   copy_shown fires then, not before;
+## - release(): a broadcast RPC on the late body, hidden from the far client, skips that client; right
+##   after release() the same RPC reaches it; the body is untracked, its synchronizer public again,
+##   out of the interest's groups but still in the game's others, and a later look doesn't track it.
 ## Expected in the log: one warning for that refused body.
 
 const PORT: int = 24672
@@ -31,6 +40,9 @@ const GROUP: StringName = &"interest_test_bodies"
 const CELL: float = 256.0
 const CONNECT_SECONDS: float = 10.0
 const BODIES: Array[String] = ["Body", "Ghost"]
+## The late body's group (the new interests follow only it) and a group of the game's, not theirs.
+const LATE_GROUP: StringName = &"interest_test_late"
+const OTHER_GROUP: StringName = &"interest_test_other"
 
 var _failures: int = 0
 ## Peer id -> anchor, read by every side's anchor_of.
@@ -42,6 +54,16 @@ var _peers: Array[ENetMultiplayerPeer] = []
 var _ids: Array[int] = []
 ## The hand-driven clock of the interests.
 var _now: float = 0.0
+
+
+## The late body: a broadcast RPC (mark) leaves its tag here on the peers it reaches.
+class LateBody:
+	extends Node3D
+	var marks: Array = []
+
+	@rpc("authority", "call_remote", "reliable")
+	func mark(tag: String) -> void:
+		marks.append(tag)
 
 
 func _initialize() -> void:
@@ -97,28 +119,38 @@ func _add_world(index: int) -> void:
 	for body_name: String in BODIES:
 		_add_body(side, body_name)
 	_sync(index).synchronized.connect(func() -> void: _received[index] += 1)
+	_add_interest(index, [GROUP])
+
+
+## Side `index`'s interest, following `groups` and stepped by hand.
+func _add_interest(index: int, groups: Array[StringName]) -> WorldCellInterest:
 	var interest := WorldCellInterest.new()
 	interest.name = "Interest"
-	interest.groups = [GROUP]
+	interest.groups = groups
 	interest.keepalive_sec = 1000.0
 	interest.anchor_of = func(peer: int) -> Variant: return _anchors.get(peer)
-	side.add_child(interest)
+	_sides[index].add_child(interest)
 	interest.set_process(false)
+	return interest
 
 
-## A body in the group at (5, 0, 5) sending its position every network frame, with a solid 1 m box
-## ("Solid") and an area ("Zone").
-func _add_body(parent: Node, body_name: String) -> MultiplayerSynchronizer:
-	var body := Node3D.new()
+## A body (`made`, or a plain Node3D) in `group` at (5, 0, 5) sending its position every network
+## frame, and each of `on_change` when it changes, with a solid 1 m box ("Solid") and an area ("Zone").
+func _add_body(parent: Node, body_name: String, made: Node3D = null, group: StringName = GROUP,
+		on_change: Array[NodePath] = []) -> MultiplayerSynchronizer:
+	var body: Node3D = made if made != null else Node3D.new()
 	body.name = body_name
 	body.position = Vector3(5.0, 0.0, 5.0)
-	body.add_to_group(GROUP)
+	body.add_to_group(group)
 	var sync := MultiplayerSynchronizer.new()
 	sync.name = "Sync"
 	sync.replication_interval = 0.0
 	var config := SceneReplicationConfig.new()
 	config.add_property(^".:position")
 	config.property_set_replication_mode(^".:position", SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
+	for path: NodePath in on_change:
+		config.add_property(path)
+		config.property_set_replication_mode(path, SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
 	sync.replication_config = config
 	body.add_child(sync)
 	var solid := StaticBody3D.new()
@@ -198,6 +230,7 @@ func _test_session() -> void:
 	await _test_leaving(host_sync, near_id, far_id)
 	_test_exit_tree()
 	_test_spawned_refused()
+	await _test_late_body(far_id)
 
 
 func _test_keepalive(host_sync: MultiplayerSynchronizer, far_id: int) -> void:
@@ -324,6 +357,92 @@ func _test_spawned_refused() -> void:
 	spawn_root.free()
 
 
+## New interests on the host and the far client follow LATE_GROUP only; its body is also in a group of
+## the game's (OTHER_GROUP) and sends its solid's layer and mask on change.
+func _test_late_body(far_id: int) -> void:
+	for index: int in [0, 2]:
+		_add_interest(index, [LATE_GROUP])
+	# The client's node first: the host's synchronizer has to find it there.
+	for index: int in [2, 0]:
+		_add_body(_sides[index], "Late", LateBody.new(), LATE_GROUP,
+			[^"Solid:collision_layer", ^"Solid:collision_mask"])
+		_body(index, "Late").add_to_group(OTHER_GROUP)
+	await _test_update_while_hidden(far_id)
+	await _test_release(far_id)
+
+
+## The host keeps sending the late body to the far client (a viewer) while that client hides its copy
+## as far: what an update writes into the hidden copy's layers waits for the showing.
+func _test_update_while_hidden(far_id: int) -> void:
+	var host_solid := _sides[0].get_node(^"Late/Solid") as StaticBody3D
+	var copy_solid := _sides[2].get_node(^"Late/Solid") as StaticBody3D
+	var copy_sync := _sync(2, "Late")
+	var deltas: Array[int] = [0]
+	copy_sync.delta_synchronized.connect(func() -> void: deltas[0] += 1)
+	var shown: Array = []
+	_interest(2).copy_shown.connect(func(body: Node3D) -> void: shown.append(body))
+	_interest(0).viewers_of = func(_body_node: Node3D) -> Array: return [far_id]
+	_anchors[far_id] = Vector3(6.0 * CELL, 0.0, 0.0)
+	_step_all()
+	await _flow(0.3)
+	_step_all()
+	_expect(_sync(0, "Late").get_visibility_for(far_id) and _interest(2).is_hidden_here(copy_sync)
+		and copy_solid.collision_layer == 0, "a far viewer gets the late body, and hides its copy as far")
+	var before: int = deltas[0]
+	host_solid.collision_layer = 8
+	host_solid.collision_mask = 2
+	await _flow(0.3)
+	_expect(deltas[0] > before, "the new layer and mask reach the hidden copy (%d -> %d)" % [before, deltas[0]])
+	_expect(copy_solid.collision_layer == 0 and copy_solid.collision_mask == 0,
+		"an update that writes the hidden copy's layer and mask leaves it out of physics (got %d, %d)"
+		% [copy_solid.collision_layer, copy_solid.collision_mask])
+	_expect(shown.is_empty(), "copy_shown doesn't fire while the copy stays hidden")
+	# The game itself writes a layer into the hidden copy's area: zeroed again at the next look.
+	var copy_zone := _sides[2].get_node(^"Late/Zone") as Area3D
+	copy_zone.collision_layer = 32
+	_step_all()
+	_expect(_interest(2).is_hidden_here(copy_sync) and copy_zone.collision_layer == 0,
+		"a layer the game writes into a hidden copy is zeroed again at the next look (got %d)"
+		% copy_zone.collision_layer)
+	_anchors[far_id] = Vector3(6.0, 0.0, 6.0)
+	await _flow(0.3)
+	_step_all()
+	_expect(_body(2, "Late").visible and copy_solid.collision_layer == 8 and copy_solid.collision_mask == 2,
+		"shown again, the copy gets the layer and mask the update wrote, not the old ones (got %d, %d)"
+		% [copy_solid.collision_layer, copy_solid.collision_mask])
+	_expect(copy_zone.collision_layer == 32 and copy_zone.collision_mask == 1,
+		"...and its area the layer the game wrote, with the mask it had (got %d, %d)"
+		% [copy_zone.collision_layer, copy_zone.collision_mask])
+	_expect(shown == [_body(2, "Late")], "copy_shown tells the game the copy is back (got %s)" % [shown])
+	_interest(0).viewers_of = Callable()
+
+
+## A broadcast RPC on the late body skips the far client while it is hidden from it; right after
+## release() it reaches it, and the body stays untracked.
+func _test_release(far_id: int) -> void:
+	var host_body := _body(0, "Late") as LateBody
+	var copy := _body(2, "Late") as LateBody
+	var host_sync := _sync(0, "Late")
+	_anchors[far_id] = Vector3(6.0 * CELL, 0.0, 0.0)
+	_step_all()
+	_expect(_interest(0).is_tracked(host_sync) and not host_sync.get_visibility_for(far_id),
+		"6 cells away the far client doesn't get the late body")
+	host_body.rpc(&"mark", "hidden")
+	await _flow(0.3)
+	_expect(copy.marks.is_empty(), "a broadcast RPC on it skips the peer it is hidden from (got %s)" % [copy.marks])
+	_interest(0).release(host_body)
+	_expect(not _interest(0).is_tracked(host_sync) and host_sync.public_visibility,
+		"release() untracks the body: its synchronizer is public again")
+	_expect(not host_body.is_in_group(LATE_GROUP) and host_body.is_in_group(OTHER_GROUP),
+		"...and takes it out of the interest's groups, not out of the game's others")
+	host_body.rpc(&"mark", "released")
+	await _flow(0.3)
+	_expect(copy.marks == ["released"],
+		"right after release() a broadcast RPC on it reaches the far client (got %s)" % [copy.marks])
+	_step_all()
+	_expect(_interest(0).tracked_count() == 0, "a later look doesn't track it again")
+
+
 func _set_grouped(grouped: bool) -> void:
 	for index: int in [0, 2]:
 		for body_name: String in BODIES:
@@ -354,13 +473,16 @@ func _step_all() -> void:
 			interest.step(_now)
 
 
-## Real frames for the network, with the host's body nudged every frame so it always has news.
+## Real frames for the network, with the host's bodies nudged every frame so they always have news.
 func _flow(seconds: float) -> void:
 	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
 	var wobble: float = 0.0
 	while Time.get_ticks_msec() < deadline:
 		wobble = 0.001 - wobble
-		_body(0).position.y = wobble
+		for body_name: String in ["Body", "Late"]:
+			var body := _sides[0].get_node_or_null(body_name) as Node3D
+			if body != null:
+				body.position.y = wobble
 		await process_frame
 
 

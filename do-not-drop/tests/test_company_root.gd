@@ -13,7 +13,9 @@ extends SceneTree
 ## - the local player stands inside the shed, on the floor;
 ## - D-0715.b / D-0318.1: its CompanyNet's tables build packages under World/Packages, and the host's
 ##   package is tracked by the cells: it runs in the shed, freezes out where no cell is loaded and is
-##   let go (thawed) as it leaves the tree;
+##   let go (thawed) as it leaves the tree; D-0316.3: the package is a loose box of the root's interest
+##   (CompanyInterest.LOOSE_BOX_GROUP), and solo is the host, so its consuming signal (what consume()
+##   emits before broadcasting the removal) releases it: untracked and out of the group;
 ## - D-0316: it has an Interest child (CompanyInterest) reading CompanyRoot.CREW_GROUP, which tracks a
 ##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player and
 ##   on that vehicle;
@@ -208,6 +210,13 @@ func _check_package_cells(level: CompanyRoot, cells: CompanyCells) -> void:
 	_expect(package != null and package.get_parent() == holder, "A package goes under World/Packages")
 	if package == null:
 		return
+	_expect(package.is_in_group(CompanyInterest.LOOSE_BOX_GROUP),
+		"The package is a loose box of the interest: in CompanyInterest.LOOSE_BOX_GROUP (D-0316.3)")
+	var sync := package.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	level.interest.track(sync, package)
+	package.consuming.emit()
+	_expect(not level.interest.is_tracked(sync) and not package.is_in_group(CompanyInterest.LOOSE_BOX_GROUP),
+		"Solo is the host: the package's consuming (before consume() broadcasts) lets the interest release it")
 	cells.step(Time.get_ticks_msec() / 1000.0)
 	_expect(not cells.is_body_frozen(package), "In the shed's loaded cell the host's package runs")
 	package.global_position = Vector3(5000.0, 1.0, 5000.0)

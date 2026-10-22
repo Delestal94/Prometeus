@@ -170,6 +170,8 @@ static func place_at(p: DeliveryPackage, mount: Node3D, mount_point: Node) -> vo
 ##
 ## With `hand_over_at` (the resident at the door) it doesn't just vanish: see play_consume().
 static func consume(p: DeliveryPackage, hand_over_at: Variant) -> void:
+	# Before the broadcast: whatever hides the box from a far peer lets it go, or that peer keeps it.
+	p.consuming.emit()
 	release_carrier(p)
 	release_mount(p)
 	# It's a scene node, not a spawned one: freeing it here never reached the

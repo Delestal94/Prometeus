@@ -19,14 +19,14 @@
 | ~~D-0810~~ | ~~Cancelación del cliente (evento raro)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | ✅ D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
 | ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
-| D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
+| ✅ D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
 | ✅ D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
 | ✅ D-0815 | Pedido completado → cobro y reputación | constructor-progresion | medium | test |
 | ✅ D-0816 | Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
 | ✅ D-0817 | Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
 | ~~D-0818~~ | ~~Firma del cliente en el celular/remito~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-jugador | low | gesto |
 | ~~D-0819~~ | ~~Cliente ausente: dejar en buzón, vecino o volver~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test de las 3 opciones |
-| D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |
+| ✅ D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |
 
 ## Ampliación
 

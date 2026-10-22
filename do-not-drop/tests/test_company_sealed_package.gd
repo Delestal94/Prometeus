@@ -30,7 +30,21 @@ extends SceneTree
 ## - a third peer joining late gets no Package_box_1 and the host's synchronizer never reaches it
 ##   (its world coming up doesn't open it); a box it seals itself afterwards (Package_box_3) is on
 ##   the three peers, equal, and reaches the client and it; once the client leaves none of the
-##   host's packages reaches it any more.
+##   host's packages reaches it any more;
+## - D-0316.3: every peer's packages are loose boxes of its CompanyInterest, wired as CompanyRoot does
+##   (add_loose_box() with the package's consuming signal). Package_box_1 is in
+##   CompanyInterest.LOOSE_BOX_GROUP on the host and the client, and the host's interest tracks it.
+##   With the client's player 5 cells away the host stops sending the box to the client and the client
+##   hides its copy; the removal consume() broadcasts on the box (_remote_consume) then skips the client,
+##   which keeps its copy (the ghost box this task is about). The host's consume() lets the box go first
+##   (consuming -> release(): untracked, public again, out of the group), and its own broadcast reaches
+##   the client, whose copy goes: so consuming came before the broadcast. consume() broadcasts only for
+##   an online host, and the NetworkManager autoload is offline in this process: while it runs, an
+##   OnlineHost (a NetSession that says so) stands in at /root/NetworkManager (_as_online_host());
+## - D-0316.3: the client's hidden copy of Package_box_2, which nobody holds, gets the host's consume()
+##   with a hand-over and plays it out of physics; shown during the hand-over (the client's player
+##   goes, so its next look shows everything), it stays at layer 0 / mask 0 (CompanyInterest doesn't
+##   give a consumed box its loose layers back), and both copies go when the hand-over ends.
 ## D-0318.1 (the host's package frozen in a cell that isn't loaded) is test_company_root's.
 
 const PORT: int = 24675
@@ -53,12 +67,26 @@ class Peer:
 	var state: Node
 	var net: CompanyNet
 	var packages: Node3D
+	## Its CompanyInterest (D-0316.3), its packages put in as loose boxes (_add_net()).
+	var interest: CompanyInterest
 	var refusals: Array = []
 	var restored: Array[int] = []
 	## {node name: facts of the package when it went in} (_facts()).
 	var made: Dictionary = {}
 	## {node name: synchronized signals its synchronizer fired here}.
 	var synced: Dictionary = {}
+
+
+## A session that says it is an online host: PackageHandling.consume() broadcasts _remote_consume only for
+## one, and the NetworkManager autoload is offline here (_as_online_host()).
+class OnlineHost:
+	extends NetSession
+
+	func is_online() -> bool:
+		return true
+
+	func is_host() -> bool:
+		return true
 
 
 func _initialize() -> void:
@@ -318,6 +346,7 @@ func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 		% int(_client.synced.get(&"Package_box_1", 0)))
 	await _check_held_seal(client_id)
 	await _check_late_join(late, mine, client_id)
+	await _check_far_consume(mine, client_id)
 	_drop_world(_client)
 	client.close()
 	_expect(await _wait_for(func() -> bool:
@@ -326,8 +355,9 @@ func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 	for package: Node in _host.packages.get_children():
 		if gates.sends_to(package, client_id):
 			reached.append(package.name)
-	_expect(_host.packages.get_child_count() == 3 and reached.is_empty(),
-		"Once the client left none of the host's packages reaches it (still: %s)" % [reached])
+	_expect(_host.packages.get_child_count() == 1 and reached.is_empty(),
+		"Once the client left none of the host's packages (box_1 and box_2 consumed) reaches it (still: %s)"
+		% [reached])
 
 
 ## The auditor's case (B1): a client waiting for a snapshot holds the box_sealed that reaches it; the
@@ -393,6 +423,85 @@ func _check_late_join(late: ENetMultiplayerPeer, first: DeliveryPackage, client_
 		return gates.sends_to(third, late_id) and gates.sends_to(third, client_id)),
 		"Package_box_3 reaches the client and the late peer once both acked")
 	_expect_same(&"Package_box_3", [_host, _client, _late])
+
+
+## D-0316.3: the client's player goes 5 cells away, so the host stops sending it Package_box_1 and it
+## hides its copy; a removal broadcast on the box skips it until the host's consume() lets the box go.
+func _check_far_consume(first: DeliveryPackage, client_id: int) -> void:
+	var host_sync := first.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var copy := _client.packages.get_node_or_null(^"Package_box_1") as DeliveryPackage
+	_expect(first.is_in_group(CompanyInterest.LOOSE_BOX_GROUP) and copy != null
+		and copy.is_in_group(CompanyInterest.LOOSE_BOX_GROUP) and _host.interest.is_tracked(host_sync),
+		"Package_box_1 is a loose box on the host and the client, and the host's interest tracks it")
+	if copy == null:
+		return
+	# The client's player, as the host and the client place it: 5 cells away (past the unload radius).
+	for peer: Peer in [_host, _client]:
+		var member := Node3D.new()
+		member.name = "Crew_%d" % client_id
+		member.position = Vector3(5.0 * CompanyTuning.CELL_SIZE, 0.0, 0.0)
+		member.add_to_group(CompanyRoot.CREW_GROUP)
+		member.set_multiplayer_authority(client_id)
+		peer.side.add_child(member)
+	var copy_sync := copy.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	_expect(await _wait_for(func() -> bool:
+		return not host_sync.get_visibility_for(client_id) and _client.interest.is_hidden_here(copy_sync)),
+		"With the client's player 5 cells away the host stops sending it Package_box_1 and it hides its copy")
+	# What consume() broadcasts online, while the box is still hidden from the client.
+	first._remote_consume.rpc(null)
+	var reached: bool = await _wait_for(func() -> bool: return not is_instance_valid(copy), 0.5)
+	_expect(not reached and copy.is_inside_tree() and not copy.is_queued_for_deletion(),
+		"A removal broadcast on the box hidden from the client skips it: it would keep a ghost box")
+	_as_online_host(first.consume)
+	_expect(not _host.interest.is_tracked(host_sync) and host_sync.public_visibility
+		and not first.is_in_group(CompanyInterest.LOOSE_BOX_GROUP),
+		"The host's consume() lets the box go first (consuming: untracked, public again, out of the group)")
+	_expect(await _wait_for(func() -> bool: return not is_instance_valid(copy)),
+		"...and its own broadcast reaches the far client, whose copy goes: consuming came before it")
+	await _check_hidden_consumed(client_id)
+
+
+## D-0316.3: the client's hidden copy of Package_box_2 gets the host's consume() with a hand-over; shown
+## during it, it stays out of physics.
+func _check_hidden_consumed(client_id: int) -> void:
+	var second := _host.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
+	var copy := _client.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
+	_expect(second != null and copy != null, "Package_box_2 is on the host and the client")
+	if second == null or copy == null:
+		return
+	var copy_sync := copy.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	_expect(await _wait_for(func() -> bool: return _client.interest.is_hidden_here(copy_sync)) and not copy.is_held,
+		"The client hides its copy of Package_box_2 (its player is far), which nobody holds")
+	_as_online_host(second.consume.bind(Vector3(0.0, 0.0, 3.0)))
+	var handed: bool = await _wait_for(func() -> bool: return copy._consumed)
+	_expect(handed and _client.interest.is_hidden_here(copy_sync)
+		and copy.collision_layer == 0 and copy.collision_mask == 0,
+		"The host's consume() with a hand-over reaches the hidden copy, which plays it out of physics")
+	# The client's player goes (a peer without one gets everything): its next look shows the copy.
+	_client.side.get_node(NodePath("Crew_%d" % client_id)).free()
+	_client.interest.step(Time.get_ticks_msec() / 1000.0 + 1.0)
+	_expect(copy.visible and not _client.interest.is_hidden_here(copy_sync)
+		and copy.collision_layer == 0 and copy.collision_mask == 0,
+		"Shown during the hand-over, the consumed copy stays at layer 0 / mask 0 (got %d, %d)"
+		% [copy.collision_layer, copy.collision_mask])
+	_expect(await _wait_for(func() -> bool: return not is_instance_valid(copy) and not is_instance_valid(second)),
+		"...and both copies go when the hand-over ends")
+
+
+## Runs `action` while /root/NetworkManager is an OnlineHost (the autoload set aside under another name):
+## PackageHandling.consume() looks the session up there and broadcasts only for an online host.
+func _as_online_host(action: Callable) -> void:
+	var real: Node = root.get_node_or_null(^"NetworkManager")
+	if real != null:
+		real.name = "NetworkManagerAside"
+	var stand_in := OnlineHost.new()
+	stand_in.name = "NetworkManager"
+	root.add_child(stand_in)
+	action.call()
+	root.remove_child(stand_in)
+	stand_in.free()
+	if real != null:
+		real.name = "NetworkManager"
 
 
 ## `peer` opens an S box on `table`, takes a hen and puts it in; every step reaches `followers`.
@@ -476,7 +585,13 @@ func _add_net(peer: Peer) -> void:
 	peer.net.company = peer.state
 	peer.side.add_child(peer.net)
 	peer.net.table.packages.parent = peer.packages
+	peer.interest = CompanyInterest.new()
+	peer.interest.name = "Interest"
+	peer.interest.crew_group = CompanyRoot.CREW_GROUP
+	peer.side.add_child(peer.interest)
 	peer.net.table.packages.added.connect(func(package: DeliveryPackage) -> void:
+		# As CompanyRoot._on_package_added() (D-0316.3).
+		peer.interest.add_loose_box(package, package.consuming)
 		peer.made[StringName(package.name)] = _facts(package)
 		var sync := package.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 		sync.synchronized.connect(func() -> void:
