@@ -359,7 +359,7 @@ compuertas de `campo`, y sin flags arranca en el día 1 con `STARTING_MONEY`.
 **Hecho cuando:** el test pasa; documentados en el README; `render_company_shed.gd` los toma de su línea de comandos.
 
 ### D-0239 · Registro local del día de la empresa — B · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — `RunTelemetry` guarda un JSON por día (`<fecha_hora>_day<N>.json`, `"kind": "company_day"`) con los eventos de negocio; `run_telemetry_format.describe_day()` lo lee; `tools/telemetry-summary.py` suma una tabla "Dias de empresa"; `test_company_day_telemetry`.
+**[x] Hecho (2026-10-22, PR #598)** — `RunTelemetry` guarda un JSON por día (`<fecha_hora>_day<N>.json`, `"kind": "company_day"`) con los eventos de negocio; `run_telemetry_format.describe_day()` lo lee; `tools/telemetry-summary.py` suma una tabla "Dias de empresa"; `test_company_day_telemetry`.
 **Depende de:** D-0203, D-0215
 **Qué:** en `scripts/core/run_telemetry.gd` (el autoload del registro de partidas, S-805), con la misma opción
 "Guardar registro de partidas" y la misma carpeta `user://telemetry/`, solo escuchando `EventBus` (sin RPC ni
