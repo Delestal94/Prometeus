@@ -32,6 +32,10 @@ static func build(dashboard: Control, make_rich: Callable, font_size: int) -> Di
 static func _plate_text(parent: Node, make_rich: Callable, font_size: int, color: Color) -> RichTextLabel:
 	var label: RichTextLabel = make_rich.call(parent, font_size)
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# A RichTextLabel clips its children by default; the prompt's action icon
+	# (hud.gd) sits just left of the plate.
+	label.clip_contents = false
 	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	label.add_theme_color_override("default_color", color)
 	label.add_theme_color_override("font_outline_color", UiTheme.INK)

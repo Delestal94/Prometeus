@@ -376,8 +376,10 @@ func _build_top_bar() -> void:
 	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, HUD_MIN_FONT_SIZE)
 	set_economy_visible(false)
 	card_label = make_rich(metrics, HUD_MIN_FONT_SIZE)
-	card_label.custom_minimum_size.x = 236
-	# One line (N-983.5): HudNotices.fit_card_line() cuts the name to fit.
+	# 320 (was 236): "CARTA: Descuento • G usar" on one line (N-983.5); the card only
+	# takes that width while it shows a card. HudNotices.fit_card_line() cuts the
+	# name to fit it, so the card never grows past it.
+	card_label.custom_minimum_size.x = 320
 	card_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	card_label.add_theme_color_override("default_color", INK)
 

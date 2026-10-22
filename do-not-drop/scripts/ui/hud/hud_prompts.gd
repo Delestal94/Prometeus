@@ -44,6 +44,7 @@ func _ready() -> void:
 	EventBus.cargo_animal_ended.connect(_on_animal_ended_subtitle)
 	EventBus.run_started.connect(_on_run_started_subtitle)
 	GameSettings.subtitle_scale_changed.connect(_on_subtitle_scale_changed)
+	GameSettings.colorblind_palette_changed.connect(_on_palette_changed)
 
 
 func refresh_shortcuts(delta: float = 0.0) -> void:
@@ -240,6 +241,12 @@ func refresh_plates() -> void:
 	hud.interaction_label.visible = has_prompt
 	hud.subtitle_label.visible = has_sounds
 	hud.prompt_stack.visible = has_prompt or has_sounds
+
+
+## The "EN RIESGO !" chip takes the state colour of the palette.
+func _on_palette_changed(_enabled: bool) -> void:
+	if hud != null and hud.subtitle_label != null:
+		render_interaction_prompt()
 
 
 func _on_subtitle_scale_changed(_scale: float) -> void:

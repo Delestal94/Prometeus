@@ -20,6 +20,8 @@ extends SceneTree
 ##   the prompt's paper; the prompt draws its key as a keycap, not "[ E ]";
 ## - N-983.2: the at-risk trap's standing line carries the cargo card's "EN RIESGO !"
 ##   chip, so it is told apart by more than colour;
+##   the chip follows the colour-blind palette live; the prompt's action icon is drawn
+##   (not clipped by the label) and both plates keep their text centred;
 ## - N-983.3: the subtitle size option (normal / large / very large, up to 1.5x)
 ##   scales only the subtitle plate, clamps, and shows up in the options panel;
 ## - N-983.4: a faint text backdrop (under 0.5) thickens the text outline by 1 px;
@@ -253,6 +255,21 @@ func _check_plates(hud: CanvasLayer, settings: Node, bus: Node, horn_text: Strin
 	_expect(not sub_label.get_theme_color(&"default_color").is_equal_approx(
 			prompt_label.get_theme_color(&"default_color")),
 		"The subtitles are not the prompt's colour")
+	# The action icon sits just left of the prompt plate, on screen and not clipped.
+	var icon_rect: Rect2 = hud.interaction_icon.get_global_rect()
+	_expect(hud.interaction_icon.visible and not prompt_label.clip_contents
+			and icon_rect.size.x > 0.0 and icon_rect.end.x <= prompt_label.get_global_rect().position.x + 0.01
+			and hud.hud_layer.get_global_rect().encloses(icon_rect),
+		"The prompt's action icon is drawn left of the plate, inside the screen (got %s)" % icon_rect)
+	_expect(prompt_label.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER
+			and sub_label.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER,
+		"Both plates keep their text centred")
+	# The at-risk chip follows the colour-blind palette live.
+	var original_palette: bool = settings.colorblind_palette
+	settings.colorblind_palette = true
+	_expect(String(sub_label.text).contains(UiTheme.OKABE_ORANGE.to_html(false)),
+		"The EN RIESGO chip takes the colour-blind palette as soon as it is switched")
+	settings.colorblind_palette = original_palette
 	bus.interaction_prompt_changed.emit("")
 	await process_frame
 	_expect(not prompt_label.visible and sub_label.visible,
@@ -299,13 +316,15 @@ func _check_card_line(hud: CanvasLayer) -> void:
 	var original_card: int = int(progression.cards.get(me, -1))
 	hud.dashboard.show()
 	var use_key: String = root.get_node("GameSettings").key_label(&"use_card")
+	var card_width: float = hud.card_label.custom_minimum_size.x
 	for card_id: int in progression.CARD_NAMES.keys():
 		progression.cards[me] = card_id
 		hud.notices.refresh_card()
 		await process_frame
-		_expect(hud.card_label.get_line_count() == 1,
-			"The card line fits on one line for card %d (got %d lines: '%s')" % [
-				card_id, hud.card_label.get_line_count(), hud.card_label.get_parsed_text()])
+		var line_width: float = hud.card_label.get_content_width()
+		_expect(hud.card_label.get_line_count() == 1 and line_width <= card_width + 8.0,
+			"The card line fits its %d-wide card on one line for card %d (got %d lines, %d wide: '%s')" % [
+				card_width, card_id, hud.card_label.get_line_count(), line_width, hud.card_label.get_parsed_text()])
 		_expect(hud.card_label.get_parsed_text().contains(" %s " % use_key),
 			"The card's use key stays on the line for card %d" % card_id)
 	# A very long name is cut with an ellipsis, the key is kept.
