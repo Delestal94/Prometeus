@@ -121,6 +121,13 @@ const SUPPLY_CAPACITY: Dictionary = {
 ## A supply counts as low at or under this share of its capacity.
 const SUPPLY_LOW_RATIO: float = 0.25
 
+## Cooler with ice (D-0721, ColdPack): a cold product lasts COLD_BASE_MINUTES in a box without ice
+## and COLD_PER_ICE_MINUTES more per ice pack (up to ICE_PACKS_MAX); an ice pack costs ICE_PACK_COST.
+const COLD_BASE_MINUTES: float = 15.0
+const COLD_PER_ICE_MINUTES: float = 25.0
+const ICE_PACKS_MAX: int = 2
+const ICE_PACK_COST: int = 2
+
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
 const WAREHOUSE_GRID_M: float = 1.0
