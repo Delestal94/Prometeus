@@ -1,10 +1,10 @@
-# Protocolo 54: el pedido al proveedor nombra al proveedor (D-0621.b.a)
+# Protocolo 56: el pedido al proveedor nombra al proveedor (D-0621.b.a)
 
 **Fecha:** 2026-10-22 · **De:** Nacho (red) · **Para:** Slatex
 
 ## Qué cambió
 
-- **`PROTOCOL_VERSION` 54** (`scripts/core/network_manager.gd`, zona compartida): solo la constante y su línea
+- **`PROTOCOL_VERSION` 56** (`scripts/core/network_manager.gd`, zona compartida): solo la constante y su línea
   del historial. `main` tenía el 53; de los PRs abiertos, #706 (D-0851) también usa el 53 y #697 (D-0715.c) el 52,
   así que los dos tienen que subir al mezclarse (`docs/convenciones-godot.md` §6: el segundo que entre toma el
   siguiente libre y corrige su línea). Ninguna firma ni RPC de `NetworkManager` / `NetSession` cambió y
@@ -12,7 +12,7 @@
   **Cambió el protocolo** sin RPC nuevo: la petición `supplier_order` de `CompanyNet` lleva `supplier` (el id del
   proveedor), el evento `supplier_ordered` lo lleva siempre (`{order_day, lines, peer, supplier}`) y la parte
   `supplier` del snapshot suma `suppliers` (los camiones de los otros proveedores). Un cliente con 53 y un host con
-  54 no se conectan (error de versión en el menú); con el mismo número viejo el cliente rechazaría el evento y el
+  56 no se conectan (error de versión en el menú); con el mismo número viejo el cliente rechazaría el evento y el
   snapshot con otros proveedores.
 - **Compatibilidad:** una petición sin `supplier` sigue andando y es de `distribuidora_central` (el proveedor por
   defecto, `SupplierIds.DEFAULT`); un guardado viejo (`supplier_calendar` con solo `deliveries`) carga como el
