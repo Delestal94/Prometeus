@@ -136,6 +136,9 @@ const COLD_BASE_MINUTES: float = 15.0
 const COLD_PER_ICE_MINUTES: float = 25.0
 const ICE_PACKS_MAX: int = 2
 const ICE_PACK_COST: int = 2
+## Cold stock outside a fridge (D-0616, ColdChain): a cold product rots after this many game minutes
+## out of cold storage (2 h), counted per product and place; in a fridge the clock stops.
+const COLD_SPOIL_MINUTES: float = 120.0
 
 ## Gift wrap (D-0723, GiftWrap): a gift order delivered in a wrapped box pays GIFT_WRAP_BONUS of its
 ## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
