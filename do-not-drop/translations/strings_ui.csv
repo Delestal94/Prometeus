@@ -1402,6 +1402,10 @@ UI_SUPPLIER_ORDERED,"Pedido hecho: %d palets, llegan el día %d","Order placed: 
 UI_SUPPLIER_HOST_ONLY,Solo el anfitrión hace el pedido,Only the host places the order
 UI_SUPPLIER_ORDER,Pedir,Order
 UI_SUPPLIER_CLOSE,Cerrar,Close
+UI_SUPPLIER_SENT,"Pedido enviado, esperando al anfitrión…","Order sent, waiting for the host…"
+UI_SUPPLIER_DAY_CLOSED,"El día ya cerró: pedí cuando abra el próximo","The day is closed: order once the next one opens"
+UI_SUPPLIER_TOO_MUCH,El camión de ese día ya viene lleno de ese producto,That day's truck is already full of that product
+UI_SUPPLIER_NAME_DISTRIBUIDORA_CENTRAL,Distribuidora Central,Distribuidora Central
 UI_ORDER_NOTICE_ONE,Pedido nuevo: %s — %s %d,New order: %s — %s %d
 UI_ORDER_NOTICE_ONE_NO_ADDRESS,Pedido nuevo: %s,New order: %s
 UI_ORDER_NOTICE_MANY,%d pedidos nuevos,%d new orders

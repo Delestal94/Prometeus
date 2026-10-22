@@ -74,7 +74,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
 	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START,
 	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
-	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyCarts.PUSH,
+	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyCarts.PUSH, CompanySupplierNet.ORDER,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
 ## RpcGuard's critical reserve once the sender's budget is gone.
@@ -89,7 +89,7 @@ const EVENT_KINDS: Array[StringName] = [
 	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
 	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
-	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
+	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanySupplierNet.ORDERED,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips out); units_moved never.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyTripsView.STARTED,
@@ -120,8 +120,6 @@ const FLOOR_PREFIX: String = FloorBundles.PREFIX
 ## units_drop: a `pos` farther than this (meters) from where the host sees the player lands at
 ## its feet instead. Never a refusal: letting go always empties the hand (row 7).
 const DROP_REACH: float = 2.0
-## Where the product catalog lives: an id in a request must name one of its files.
-const PRODUCTS_DIR: String = CompanyAsk.PRODUCTS_DIR
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 const REASON_NO_STATION: StringName = &"no_station"
@@ -158,6 +156,8 @@ var build: CompanyLayoutNet = CompanyLayoutNet.new()
 var table: CompanyTableNet = CompanyTableNet.new()
 ## Where the picking carts stand after a push (D-0610.b); a snapshot part.
 var carts: CompanyCarts = CompanyCarts.new()
+## The supplier orders (D-0603.b.2) on the calendar `supplier.schedule` (the truck's); a snapshot part.
+var supplier: CompanySupplierNet = CompanySupplierNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -212,6 +212,7 @@ func _init() -> void:
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
 	add_snapshot_part(CompanyCarts.SNAPSHOT_KEY, carts.to_dict, carts.put_snapshot)
+	add_snapshot_part(CompanySupplierNet.SNAPSHOT_KEY, supplier.to_dict, supplier.put_snapshot)
 
 
 func _ready() -> void:
@@ -313,11 +314,6 @@ func drop(product: StringName, qty: int, pos: Vector3) -> int:
 ## `origin` (the player's reach origin) up to Interactable.REMOTE_REACH plus `slack`.
 static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> bool:
 	return origin.distance_to(spot) <= Interactable.REMOTE_REACH + slack
-
-
-## A product id off the network names a product of the catalog, never a path (CompanyAsk.product_exists()).
-static func product_exists(product: StringName) -> bool:
-	return CompanyAsk.product_exists(product)
 
 
 ## Host: where `peer` stood at its last units request, null if it never made one or it left
@@ -586,6 +582,7 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 	if CompanyTableNet.REQUEST_KINDS.has(kind):
 		return _pack(peer, kind, data)
 	if CompanyCarts.REQUEST_KINDS.has(kind): return _push_cart(peer, data)
+	if CompanySupplierNet.REQUEST_KINDS.has(kind): return _grant(supplier.check(company, data, peer, day_cycle))
 	match kind:
 		&"units_take":
 			return _take_units(peer, data)
@@ -823,6 +820,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
 			applied = carts.apply(data)
+		CompanySupplierNet.ORDERED:
+			applied = supplier.apply(data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false

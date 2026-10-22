@@ -35,6 +35,9 @@ var company_name: String = ""
 ## Wallet history (D-0501), oldest first, at most CompanyTuning.LEDGER_MAX entries:
 ## {day, minute, amount (signed), reason, balance (after the movement)}.
 var ledger: Array[Dictionary] = []
+## The supplier calendar (D-0603.b.2), in the SupplierSchedule.to_dict() form: what was ordered and the
+## day its truck comes. The live one is CompanyNet's; the host writes it here after every order.
+var supplier_calendar: Dictionary = {"deliveries": {}}
 
 var _active: bool = false
 
@@ -79,6 +82,7 @@ func to_dict() -> Dictionary:
 		"warehouse_stage": warehouse_stage,
 		"inventory": inventory.duplicate(true),
 		"ledger": ledger.duplicate(true),
+		"supplier_calendar": supplier_calendar.duplicate(true),
 	}
 
 
@@ -120,6 +124,9 @@ func from_dict(data: Dictionary) -> bool:
 	ledger = _entries(data.get("ledger", []))
 	if ledger.size() > CompanyTuning.LEDGER_MAX:
 		ledger = ledger.slice(ledger.size() - CompanyTuning.LEDGER_MAX)
+	var calendar: Variant = data.get("supplier_calendar", {})
+	if calendar is Dictionary:
+		supplier_calendar = SupplierSchedule.from_dict(calendar).to_dict()
 	_active = true
 	return true
 
@@ -248,6 +255,7 @@ func _set_defaults() -> void:
 	warehouse_stage = 0
 	inventory = Inventory.new().to_dict()
 	ledger = []
+	supplier_calendar = SupplierSchedule.new().to_dict()
 	company_name = ""
 
 

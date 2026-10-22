@@ -29,6 +29,8 @@ extends Node3D
 signal piece_used(uid: StringName, role: StringName, peer_id: int)
 ## A player worked a picking cart (PickingCartPoint): which cart, how (load or push), who, where they stood.
 signal cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3)
+## The supplier board was used and its screen opens on this peer (SupplierBoardPoint, D-0603.b.2).
+signal supplier_board_opened
 
 const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
@@ -59,6 +61,12 @@ const MODEL_TABLE: String = "sm_env_depot_packing_table"
 const MODEL_SHELF: String = "sm_env_shed_shelf"
 const SHELF_MODEL_SIZE: Vector3 = Vector3(2.0, 2.0, 1.0)
 const MODEL_PALLET: String = "sm_env_depot_pallet_wrapped"
+## The supplier board (D-0603.b.2, grey-box until the clipboard, D-0131 / D-0413): a panel on the inside of
+## the dock's wall, SUPPLIER_BOARD_CELLS from the dock gate toward the west wall (at least one cell in).
+const SUPPLIER_BOARD_CELLS: float = 3.0
+const SUPPLIER_BOARD_SIZE: Vector3 = Vector3(1.0, 0.7, 0.06)
+const SUPPLIER_BOARD_HEIGHT: float = 1.45
+const SUPPLIER_BOARD_COLOR: Color = Color(0.46, 0.47, 0.5)
 ## Zone names the floor shows (translations/strings_world.csv).
 const ZONE_KEYS: Dictionary = {
 	&"dock": "WORLD_SHED_ZONE_DOCK",
@@ -91,6 +99,8 @@ var grid: Vector2i = Vector2i.ZERO
 var pieces: Array[Dictionary] = []
 ## The point to use each piece drawn, by uid (ShedPiecePoint, D-0914), and who used which.
 var use_points: Dictionary = {}
+## The supplier board's point, hung again on every drawing.
+var supplier_point: SupplierBoardPoint
 ## Where the pallets stood at the last redraw: pallet id -> its node.
 var pallet_nodes: Dictionary = {}
 ## The picking carts drawn, by id (PickingCartView). Each stands at its default spot (DefaultShed.cart_spots)
@@ -180,6 +190,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
 	_build_lights(state.layout)
+	_build_supplier_board()
 	var furniture := Node3D.new()
 	furniture.name = "Furniture"
 	add_child(furniture)
@@ -556,6 +567,45 @@ func cart_can_stand(local: Vector3, cart: StringName = &"") -> bool:
 		if Rect2(piece["rect"]).grow(clearance / CompanyTuning.WAREHOUSE_GRID_M).has_point(cell):
 			return false
 	return true
+
+
+# --- The supplier board ---
+
+
+## Where the supplier board hangs (shed frame, floor height): on the inside of the dock's wall,
+## SUPPLIER_BOARD_CELLS west of the dock gate, at least one cell from the west wall.
+static func supplier_board_spot(stage_index: int) -> Vector3:
+	var size: Vector2i = WarehouseStages.grid_size_for(stage_index)
+	var dock: Rect2i = WarehouseStages.dock_rect(stage_index)
+	var metres: float = CompanyTuning.WAREHOUSE_GRID_M
+	var x: float = maxf(float(dock.position.x) - SUPPLIER_BOARD_CELLS, 1.0)
+	return Vector3((x - size.x * 0.5) * metres, 0.0, size.y * 0.5 * metres)
+
+
+## The grey board, its sign and the point in front of it that opens the order screen on the user's peer.
+func _build_supplier_board() -> void:
+	var at: Vector3 = supplier_board_spot(stage)
+	var board := MeshInstance3D.new()
+	board.name = "SupplierBoard"
+	var mesh := BoxMesh.new()
+	mesh.size = SUPPLIER_BOARD_SIZE
+	mesh.material = DepotKit.flat(SUPPLIER_BOARD_COLOR)
+	board.mesh = mesh
+	board.position = at + Vector3(0.0, SUPPLIER_BOARD_HEIGHT, -SUPPLIER_BOARD_SIZE.z * 0.5)
+	add_child(board)
+	var sign := Label3D.new()
+	sign.name = "Sign"
+	sign.text = tr(SupplierBoardPoint.PROMPT_KEY)
+	sign.font_size = 28
+	sign.pixel_size = 0.004
+	sign.outline_size = 8
+	sign.position = Vector3(0.0, SUPPLIER_BOARD_SIZE.y * 0.5 + 0.12, 0.0)
+	sign.rotation.y = PI
+	board.add_child(sign)
+	supplier_point = SupplierBoardPoint.make()
+	supplier_point.position = at + Vector3(0.0, 1.0, -0.6)
+	supplier_point.opened.connect(func() -> void: supplier_board_opened.emit())
+	add_child(supplier_point)
 
 
 func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:

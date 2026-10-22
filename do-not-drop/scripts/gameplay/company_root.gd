@@ -98,8 +98,6 @@ const MAX_SPAWN_SLOTS: int = 16
 const CREW_GROUP: StringName = &"company_crew"
 ## Every player node is named this and its peer id (player.gd takes its authority from it).
 const PLAYER_PREFIX: String = "Player_"
-## How many days from the first one the stand-in supplier calendar covers (_seed_stand_in_calendar).
-const STAND_IN_DAYS: int = 120
 ## Zone names over the map: size of a pixel of their 256 px letters, and height over the ground.
 const ZONE_LABEL_PIXEL_SIZE: float = 0.06
 const ZONE_LABEL_HEIGHT: float = 30.0
@@ -129,9 +127,11 @@ var shed: CompanyShed
 var builder: ShedBuilder
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
 var supplier_truck: SupplierTruckView
-## The supplier calendar the truck follows. Stand-in until the order screen (D-0603) feeds it: see
-## _seed_stand_in_calendar().
+## The supplier calendar the truck follows, on every peer: CompanyNet's (net.supplier.schedule), fed by the
+## orders of the supplier board (D-0603.b.2, _add_supplier_orders()).
 var supplier_schedule: SupplierSchedule = SupplierSchedule.new()
+## The supplier order screen, opened from the shed's board on the peer that used it (D-0603.b.2).
+var supplier_board: SupplierBoard
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
@@ -638,7 +638,7 @@ func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
 ## GameClock and CompanyState as every other peer, so there is nothing to send.
 func _add_supplier_truck() -> void:
-	_seed_stand_in_calendar()
+	_add_supplier_orders()
 	supplier_truck = SupplierTruckView.new()
 	supplier_truck.schedule = supplier_schedule
 	supplier_truck.origin = shed.position
@@ -648,18 +648,54 @@ func _add_supplier_truck() -> void:
 	_world.add_child(supplier_truck)
 
 
-## Until the order screen (D-0603) puts real orders in the calendar, the first order of the default
-## shed arrives with the truck every day for STAND_IN_DAYS days, the same on every peer, so the
-## truck can be seen driving in. It brings nothing: the stock stays what the shed started with.
-func _seed_stand_in_calendar() -> void:
+## The supplier orders (D-0603.b.2), on every peer: the calendar the truck reads is CompanyNet's (an order
+## is a supplier_order request the host checks and a supplier_ordered event every peer applies; a late
+## joiner gets it in the snapshot) and the shed's board opens the order screen on the peer that used it.
+## Host (solo too): the calendar comes from the company's save (days before today dropped) and is written
+## back to it after every order, so a closed or interrupted day keeps what was ordered. A company on its
+## first day with nothing for it gets the first truck, DefaultShed.first_order: the delivery whose pallets
+## DefaultShed.first_pallets() put in reception (same ids); the other days bring only what was ordered.
+func _add_supplier_orders() -> void:
+	if net == null:
+		return
+	net.supplier.schedule = supplier_schedule
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	var defs: Dictionary = {}
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		defs[id] = catalog.product(id)
+	var sellers: Array[StringName] = catalog.ids(CompanyCatalog.SUPPLIERS)
+	net.supplier.products = defs
+	net.supplier.supplier = catalog.supplier(sellers[0]) if not sellers.is_empty() else null
+	if net.is_host() and _hosted_state != null:
+		supplier_schedule.copy_from(SupplierSchedule.from_dict(_hosted_state.supplier_calendar))
+		supplier_schedule.forget_before(_hosted_state.day)
+		_seed_first_truck(_hosted_state.day)
+		_hosted_state.supplier_calendar = supplier_schedule.to_dict()
+		net.event_applied.connect(_on_supplier_ordered)
+	supplier_board = SupplierBoard.new()
+	supplier_board.name = "SupplierBoard"
+	add_child(supplier_board)
+	supplier_board.setup(net, net.supplier.supplier, defs)
+	supplier_board.player_of = func() -> Node: return player
+	supplier_board.busy = func() -> bool: return builder != null and builder.is_building()
+	shed.supplier_board_opened.connect(func() -> void: supplier_board.open())
+
+
+## Host, on the company's first day: the first truck (DefaultShed.first_order) when nothing comes that day.
+func _seed_first_truck(day: int) -> void:
 	var data: DefaultShed = DefaultShed.load_default()
-	if data == null:
+	if data == null or day != CompanyTuning.STARTING_DAY or supplier_schedule.has_delivery(day):
 		return
 	var lines: Array = []
 	for line: Dictionary in data.first_order:
 		lines.append({"product": line.get("product", &""), "qty": line.get("qty", 0)})
-	for day: int in range(CompanyTuning.STARTING_DAY, CompanyTuning.STARTING_DAY + STAND_IN_DAYS):
-		supplier_schedule.place(day - 1, lines)
+	supplier_schedule.place(day - 1, lines)
+
+
+## Host: an order went into the calendar; the company keeps it for the save (CompanyState.supplier_calendar).
+func _on_supplier_ordered(_seq: int, kind: StringName, _data: Dictionary) -> void:
+	if kind == CompanySupplierNet.ORDERED and _hosted_state != null and is_instance_valid(_hosted_state):
+		_hosted_state.supplier_calendar = supplier_schedule.to_dict()
 
 
 ## The shed from the company as this peer holds it: on the host what it started with; on a client
