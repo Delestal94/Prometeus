@@ -275,6 +275,21 @@ armado con lo que ya dicen `strings_ui.csv` / `strings_world.csv`:
 **Test** `test_ui_translations` (`_check_company_glossary`).
 **Hecho cuando:** `diseno/glosario.md` existe y el test lo cumple sobre las tablas actuales.
 
+### D-0130 · Tabla de la primera semana — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/onboarding.md`: día 1 = el bucle en 6 objetivos (con pedido de 1 unidad a las 08:00), 12 filas más con disparador y día mínimo, progreso por jugador en `seen_tips` sin RPC ni campo de save; `teaches_key` de los hitos 1-5 queda como repaso. Lo construye D-1901.
+**Depende de:** D-0111, D-0118, D-0720, D-0812
+**Qué:** `diseno/onboarding.md` (máx. 120 líneas), con la crítica de `critico-diseno`:
+- [x] D-0130.1 Reglas: el día 1 es el tutorial, una cosa nueva por día, se enseña por disparador y no por
+  calendario, una sola línea guía, voz de la Jefa en el feed.
+- [x] D-0130.2 La tabla de los 7 días (qué aprende, disparador, objetivo o nota, hecho cuando, tareas), que
+  funciona igual en F1 sin hitos.
+- [x] D-0130.3 El día 1 paso por paso y qué ve cada jugador con 2 o más (la línea mira primero lo que tiene en
+  la mano).
+- [x] D-0130.4 Estado y red para D-1901: función pura `CompanyOnboarding.current`, `mark_tip_seen` por jugador,
+  claves `UI_ONBOARD_*` / `WORLD_ONBOARD_*`, cómo lo mide `bot_company_day`.
+Decisión: `docs/decisiones/2026-10-22-primera-semana.md`.
+**Hecho cuando:** `diseno/onboarding.md` existe y D-1901 lo puede construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
