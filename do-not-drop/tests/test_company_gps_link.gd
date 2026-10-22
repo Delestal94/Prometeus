@@ -8,7 +8,9 @@ extends SceneTree
 ## - link_vehicles() gives a fleet vehicle's DashboardGps a provider once (a second call hooks nothing);
 ## - the provider answers with the vehicle's trip: the next house's address and the estimate in game minutes,
 ##   moves on to the next house once the first order is delivered, and points at the shed when none is left;
-## - the screen shows that estimate (WORLD_GPS_ETA).
+## - the screen shows that estimate (WORLD_GPS_ETA);
+## - the screen draws the planned path (expansion D-0308.1c, DashboardRouteMap): the vehicle's heading up, only the
+##   stretch the screen covers, and a ribbon mesh is built from it on the vehicle's own screen.
 
 var _failures: int = 0
 
@@ -30,6 +32,7 @@ func _run() -> void:
 		"trip": &"trip_1", "vehicle": &"van", "orders": [&"o0", &"o1"], "boxes": [&"b0"], "minute": 480,
 	}
 	_test_next_stop(entry, book, centro)
+	_test_route_map()
 	await _test_link(entry, book, centro)
 	if _failures == 0:
 		print("PASS: the company GPS link follows each vehicle's trip through the replicated orders")
@@ -41,6 +44,37 @@ func _test_next_stop(entry: Dictionary, book: OrderBook, centro: Array[HouseSpot
 	_expect(CompanyGpsLink.next_stop({}, book) == &"", "No trip, no stop")
 	_expect(CompanyGpsLink.next_stop(entry, null) == &"", "No book, no stop")
 	_expect(CompanyGpsLink.next_stop(entry, OrderBook.new()) == &"", "Unknown orders are skipped")
+
+
+func _test_route_map() -> void:
+	var here := Vector2(10.0, 20.0)
+	var right := Vector2(1.0, 0.0)
+	var forward := Vector2(0.0, 1.0)
+	var ahead := PackedVector2Array([Vector2(10.0, 20.0), Vector2(10.0, 70.0)])
+	var segments: PackedVector2Array = DashboardRouteMap.screen_segments(ahead, here, right, forward)
+	_expect(segments.size() == 2, "A path straight ahead is one piece")
+	_expect(is_equal_approx(segments[0].x, DashboardRouteMap.ORIGIN.x), "It starts under the vehicle")
+	_expect(segments[1].y > segments[0].y, "Ahead is up on the screen")
+	var behind := PackedVector2Array([Vector2(10.0, -50.0), Vector2(10.0, -90.0)])
+	var seen_behind: PackedVector2Array = DashboardRouteMap.screen_segments(behind, here, right, forward)
+	_expect(seen_behind.is_empty(), "A path behind leaves nothing")
+	var right_of: PackedVector2Array = DashboardRouteMap.screen_segments(
+			PackedVector2Array([Vector2(10.0, 20.0), Vector2(60.0, 20.0)]), here, right, forward)
+	_expect(right_of[1].x > right_of[0].x, "A path to the vehicle's right is to the right of the screen")
+	var long_way := PackedVector2Array([Vector2(10.0, 20.0), Vector2(10.0, 1000.0)])
+	var cut: PackedVector2Array = DashboardRouteMap.screen_segments(long_way, here, right, forward)
+	var covered: float = (cut[1].y - DashboardRouteMap.ORIGIN.y) / DashboardRouteMap.METRES_TO_SCREEN
+	_expect(is_equal_approx(covered, DashboardRouteMap.RANGE_AHEAD_M), "Only the stretch the screen covers is kept")
+	var far := PackedVector2Array([Vector2(500.0, 20.0), Vector2(500.0, 90.0)])
+	_expect(DashboardRouteMap.screen_segments(far, here, right, forward).is_empty(), "A far path leaves nothing")
+	var none: PackedVector2Array = DashboardRouteMap.screen_segments(PackedVector2Array(), here, right, forward)
+	_expect(none.is_empty(), "No path, no line")
+	var map := DashboardRouteMap.new()
+	map.show_route(ahead, here, right, forward)
+	_expect(map.visible and map.mesh != null and map.mesh.get_surface_count() == 1, "A path builds a ribbon")
+	map.show_route(PackedVector2Array(), here, right, forward)
+	_expect(not map.visible, "An empty path hides the line")
+	map.free()
 
 
 func _test_link(entry: Dictionary, book: OrderBook, centro: Array[HouseSpot]) -> void:
@@ -78,6 +112,7 @@ func _test_link(entry: Dictionary, book: OrderBook, centro: Array[HouseSpot]) ->
 	screen.refresh()
 	var eta: String = tr("WORLD_GPS_ETA") % ceili(float(first.game_minutes))
 	_expect(screen.detail_label.text.contains(eta), "The screen shows the estimate")
+	_expect(screen.route_map.visible and screen.route_map.mesh != null, "The screen draws the planned path")
 	book.mark_packed(&"o0", &"b0")
 	book.mark_out(&"o0", &"trip_1")
 	book.mark_delivered(&"o0", 100, true, 480)
