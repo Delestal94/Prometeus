@@ -5,6 +5,8 @@ extends Node
 ## Child of the company world, not an autoload; it names no autoload either (lesson N-919). The
 ## owner (CompanyRoot) hands it the CompanyNet, the GameClock and the CompanyState by reference
 ## (attach()) and two Callables for what only the world knows (crew_in_shed, trips_out).
+## In the company world the host's BusinessTick (D-0232) calls poll() and the root turns this
+## node's own _process (every POLL_SECONDS) off; that one only runs with no CompanyRoot (tests).
 ##
 ## Phases are host facts (docs/expansion-distritos/diseno/red-autoridad.md, "Fases del día"). Only
 ## the host decides a transition, in poll() and open_day() / next_day(); each one goes out once as

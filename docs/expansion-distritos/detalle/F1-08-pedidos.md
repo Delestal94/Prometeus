@@ -120,3 +120,21 @@ camino, no repite, sobrevive a guardar/cargar; veredicto de `abandoned`.
 **Qué:** funciones estáticas sobre el `OrderBook`; el vínculo vive en el pedido (`box_id`, estado `PACKED`), no en una tabla aparte, así host, clientes y save coinciden. `assign(book, order_id, box_id, box)` exige pedido abierto o atrasado, caja con cinta y con la etiqueta de ese pedido (D-0707), y que la caja no esté ya atada a otro pedido; devuelve `OK` o el motivo (`unknown_order`, `order_not_waiting`, `box_not_taped`, `label_mismatch`, `box_taken`). El contenido no se revisa acá: una caja equivocada se ata igual y paga 0 en la puerta (D-0712). `order_of_box` busca el pedido de una caja y `release` (`OrderBook.unpack`) lo devuelve a abierto, o a atrasado si ya venció, cuando la caja se abre o se desarma (D-0719).
 **Test** `test_order_box_link`: ata abierto y atrasado, cada rechazo sin cambiar nada, caja ocupada, búsqueda por caja, liberar y volver a atar.
 **Hecho cuando:** test (la lógica, en este PR; el llamado desde la mesa, en D-0808.b).
+
+### D-0812 · Tamaño de pedidos de los primeros días — B · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR pendiente)** — `OrderGenerator.items_cap_for_day(day)` + `ORDER_EARLY_DAYS` y `ORDER_ITEMS_EARLY_MAX` en `CompanyTuning`; `generate_day` toma ese tope cuando `max_items` es 0 (el valor por defecto); `test_order_generator` ampliado.
+**Depende de:** D-0801
+**Qué:** los días 1 a 3 los pedidos piden 1 o 2 productos distintos; del día 4 en adelante, hasta 3 (`ORDER_ITEMS_MAX`). Pasar `max_items` explícito sigue mandando.
+Decisión: tres días de rampa (coincide con la primera semana de aprendizaje del galpón) y tope 2, no 1, para que armar una caja con dos productos se vea desde el día 1. Cantidad por producto sin cambios (15 % de pedir 2 unidades).
+**Test** `test_order_generator`: topes por día, días 1-3 nunca superan 2 productos y llegan a 2, un `max_items` explícito pisa el tope del día.
+**Hecho cuando:** el test pasa. La sim de balance con 1-8 jugadores es D-0844.
+
+### D-0811 · Pedidos imposibles hoy quedan en espera — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR #580)** — `OrderWaiting` (`scripts/gameplay/business/order_waiting.gd`); `test_order_waiting`. Falta mostrar "en espera" en el tablero y la hoja (D-0811.b, con D-0612).
+**Depende de:** D-0210, D-0211, D-0613
+**Qué:** un pedido que el galpón no puede cubrir **no falla ni se esconde**: sigue `open` en el `OrderBook` (vence y se abandona con su reloj de siempre) y se marca "en espera" con lo que le falta. No hay estado nuevo: es una clasificación derivada del stock, así no cambia el guardado ni la red.
+- `OrderWaiting.classify(inventory, orders)` → `{ready: [ids], waiting: {id: {producto: faltan}}}`. Reparte el stock libre (todo menos lo sellado en cajas, como `StockAlert`) entre los pendientes por `due_min` y después por id: dos pedidos por la última gallina no quedan ambos "listos".
+- `can_cover` / `missing_for`: un pedido solo, sin repartir.
+- `unblocked_by(inventory, orders, incoming)`: los que esperan y el camión en camino desbloquea.
+**Test:** listo vs. en espera con lo que falta; el más urgente se queda con la última unidad; lo sellado, lo armado y lo cerrado no cuentan; líneas repetidas suman; `unblocked_by` no toca el inventario real.
+**Hecho cuando:** el test pasa.

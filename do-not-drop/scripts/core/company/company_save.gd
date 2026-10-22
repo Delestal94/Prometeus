@@ -23,6 +23,10 @@ extends RefCounted
 ## day, money and stock with the clock back at the opening (DAY_START_MIN): the
 ## day is played again from the start. A file without the key (every v1 save
 ## before D-2005) is not interrupted, so the format stays version 1.
+##
+## Several companies live side by side, one per slot (D-0235): list_slots() describes
+## them for the picker (name, day, money, date) without moving any file, delete()
+## removes one with its leftovers and new_slot_id() hands out a free slot name.
 
 enum LoadResult { LOADED, MISSING, CORRUPT, TOO_NEW }
 
@@ -138,6 +142,94 @@ static func exists(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> bool:
 ## (load_into() is what quarantines a bad one).
 static func was_interrupted(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> bool:
 	return _interrupted(_peek(path_for(slot, dir)))
+
+
+## One entry per company saved in `dir`, the last played first (`saved_at` descending,
+## ties by `slot` ascending): {"slot", "name", "day", "money", "saved_at", "interrupted",
+## "version"}. "slot" is what load_into() takes; "name" falls back to the slot when the
+## company has none. A slot whose only file is the <slot>.json.bak a cut write left counts
+## (load_into() recovers it). Loose .tmp / .bad files and JSON that is not a save of ours
+## are left out; a save from a newer build is listed with its "version" so the UI can show
+## it disabled. Only reads: nothing is moved or quarantined. No folder is an empty list.
+static func list_slots(dir: String = SAVE_DIR) -> Array[Dictionary]:
+	var slots: Array[Dictionary] = []
+	var folder: DirAccess = DirAccess.open(dir)
+	if folder == null:
+		return slots
+	var seen: Dictionary = {}
+	for file_name: String in folder.get_files():
+		var slot: String = ""
+		if file_name.ends_with(".json"):
+			slot = file_name.trim_suffix(".json")
+		elif file_name.ends_with(".json.bak"):
+			slot = file_name.trim_suffix(".json.bak")
+		# A name path_for() would change could not be loaded back by its slot.
+		if slot.is_empty() or seen.has(slot) or path_for(slot, dir) != dir.path_join(slot + ".json"):
+			continue
+		seen[slot] = true
+		var raw: Dictionary = _peek(path_for(slot, dir))
+		var version: int = _version_of(raw)
+		var company: Variant = raw.get("company")
+		if version <= 0 or not company is Dictionary:
+			continue
+		var title: String = ""
+		var company_name: Variant = (company as Dictionary).get("company_name")
+		if typeof(company_name) == TYPE_STRING:
+			title = (company_name as String).strip_edges()
+		slots.append({
+			"slot": slot,
+			"name": title if not title.is_empty() else slot,
+			"day": _int_of((company as Dictionary).get("day")),
+			"money": _int_of((company as Dictionary).get("money")),
+			"saved_at": _int_of(raw.get("saved_at")),
+			"interrupted": _interrupted(raw),
+			"version": version,
+		})
+	slots.sort_custom(_slot_before)
+	return slots
+
+
+## Removes the slot's file and what a cut write or a quarantine left next to it (.bak,
+## .tmp, .bad). True when none of them is left, also when there was nothing to remove.
+static func delete(slot: String, dir: String = SAVE_DIR) -> bool:
+	var path: String = path_for(slot, dir)
+	var clear: bool = true
+	for suffix: String in ["", ".bak", ".tmp", ".bad"]:
+		var leftover: String = path + suffix
+		if FileAccess.file_exists(leftover):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(leftover))
+		if FileAccess.file_exists(leftover):
+			clear = false
+	return clear
+
+
+## A slot name nobody uses in `dir`: DEFAULT_SLOT when free, else "company_2", "company_3"...
+## Taken means a .json or the .bak a cut write left (both are a company to list_slots()).
+static func new_slot_id(dir: String = SAVE_DIR) -> String:
+	var candidate: String = DEFAULT_SLOT
+	var n: int = 2
+	while _slot_taken(candidate, dir):
+		candidate = "%s_%d" % [DEFAULT_SLOT, n]
+		n += 1
+	return candidate
+
+
+static func _slot_taken(slot: String, dir: String) -> bool:
+	var path: String = path_for(slot, dir)
+	return FileAccess.file_exists(path) or FileAccess.file_exists(path + ".bak")
+
+
+static func _slot_before(a: Dictionary, b: Dictionary) -> bool:
+	if a["saved_at"] != b["saved_at"]:
+		return int(a["saved_at"]) > int(b["saved_at"])
+	return String(a["slot"]) < String(b["slot"])
+
+
+## 0 for anything that is not a number (a hand-edited file).
+static func _int_of(value: Variant) -> int:
+	if typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT:
+		return int(value)
+	return 0
 
 
 ## The JSON object in `path` or, when it is missing, in its .bak; {} when neither is

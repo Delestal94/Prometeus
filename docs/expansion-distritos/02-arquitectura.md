@@ -44,13 +44,13 @@
 | ~~D-0229~~ | ~~Módulo portable `milestones` (condiciones y recompensas declarativas)~~ **Fusionada en D-0401 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | idem |
 | ~~D-0230~~ | ~~Adaptadores chicos en `scripts/` que conectan cada módulo nuevo con el juego~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | ningún módulo nombra autoloads (check verde) |
 | ~~D-0231~~ | ~~Simulación del día sin escena (headless) para tests y balance: corre 1 día en < 2 s~~ **Fusionada en D-0540 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | `tools/sim_day.gd` imprime ingresos, entregas y fallas |
-| D-0232 | Sistema de "tick de negocio" a frecuencia fija (4 Hz) separado de la física | constructor-negocio | medium | test verifica cadencia; el perfilador no lo ve en el frame |
+| D-0232 | ✅ Sistema de "tick de negocio" a frecuencia fija (4 Hz) separado de la física | constructor-negocio | medium | test verifica cadencia; el perfilador no lo ve en el frame |
 | ~~D-0233~~ | ~~Pool de objetos para productos y cajas (evitar crear y borrar nodos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | perfilador-rendimiento | high | `bench_depot` sin picos de allocs al armar 100 cajas |
 | ~~D-0234~~ | ~~Migración del save de perfil actual (`unlock_profile`) al save de empresa~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | perfil viejo carga y conserva cosméticos y récords |
-| D-0235 | Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
-| D-0236 | Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
+| D-0235 | ✅ Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
+| D-0236 | ✅ Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
 | ~~D-0237~~ | ~~Rutas de guardado compatibles con Steam Auto-Cloud (ver N-914)~~ **Fusionada en D-2010 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | rutas bajo `user://saves/company/`; documentado |
-| D-0238 | Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
+| D-0238 | ✅ Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
 | D-0239 | Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |
 | ~~D-0240~~ | ~~Separación simulación/presentación en todo lo nuevo (convención §)~~ **Fusionada en D-2041 (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-gdscript | medium | revisión sin hallazgos de mezcla en `business/` |
 

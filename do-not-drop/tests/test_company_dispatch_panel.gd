@@ -13,16 +13,22 @@ extends SceneTree
 ## - a client (can_act false) sees Load disabled with the reason and loads nothing; no vehicle
 ##   at the yard disables it too; an empty zone says so and focuses Close;
 ## - every focus neighbour points at a live node, and ui_cancel closes the board;
-## - both languages have every key the board uses.
+## - with CompanyTuning.VEHICLES_FAR_MAX (2) vehicles out (CompanyTrips.departure_verdict(), D-0316)
+##   a box can still be picked but Load is off, the status says why and nothing loads; once one is
+##   back, Load works again;
+## - both languages have every key the board uses (strings_ui.csv, and strings_world.csv for the
+##   reasons that come from the world, like WORLD_DISPATCH_FAR_LIMIT).
 
 const ZONE_DIR: String = "res://data/zones/"
+const HEN: String = "res://data/products/hen.tres"
 const GATE_DIR: String = "res://data/gates/"
 const KEYS: Array[String] = [
 	"UI_DISPATCH_TITLE", "UI_DISPATCH_HINT", "UI_DISPATCH_VEHICLE", "UI_DISPATCH_NO_VEHICLE",
 	"UI_DISPATCH_CAPACITY", "UI_DISPATCH_EMPTY", "UI_DISPATCH_ROW", "UI_DISPATCH_PICK",
 	"UI_DISPATCH_LOAD", "UI_DISPATCH_LOAD_N", "UI_DISPATCH_CLOSE", "UI_DISPATCH_LOADED",
-	"UI_DISPATCH_HOST_ONLY",
+	"UI_DISPATCH_HOST_ONLY", "WORLD_DISPATCH_FAR_LIMIT",
 ]
+const CSVS: Array[String] = ["res://translations/strings_ui.csv", "res://translations/strings_world.csv"]
 
 var _failures: int = 0
 var _zones: Dictionary = {}
@@ -41,6 +47,7 @@ func _run() -> void:
 	await _test_pick_and_load()
 	await _test_limits_and_rules()
 	await _test_client_and_empty()
+	await _test_far_cap()
 	if _failures == 0:
 		print("PASS: dispatch board loads the 2 picked boxes on the vehicle and the third waits")
 	quit(_failures)
@@ -74,7 +81,7 @@ func _van(slots: int, kg: float) -> VehicleDefinition:
 func _ctx(zones_of: Dictionary, vehicle: VehicleDefinition, can_act: bool = true) -> Dictionary:
 	var book := OrderBook.new()
 	var zone := DispatchZone.new(AABB(Vector3(0, 0, 4), Vector3(4, 2, 3)))
-	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
+	var products: Dictionary = {&"hen": load(HEN)}
 	var kg: Dictionary = {}
 	for id: StringName in zones_of:
 		var box := StringName("box_" + str(id))
@@ -115,11 +122,12 @@ func _focus_name() -> String:
 
 func _test_keys() -> void:
 	var rows: Dictionary = {}
-	var file := FileAccess.open("res://translations/strings_ui.csv", FileAccess.READ)
-	while not file.eof_reached():
-		var cols: PackedStringArray = file.get_csv_line()
-		if cols.size() >= 3:
-			rows[cols[0]] = cols
+	for csv: String in CSVS:
+		var file := FileAccess.open(csv, FileAccess.READ)
+		while not file.eof_reached():
+			var cols: PackedStringArray = file.get_csv_line()
+			if cols.size() >= 3:
+				rows[cols[0]] = cols
 	for key: String in KEYS:
 		var both: bool = rows.has(key) and rows[key][1] != "" and rows[key][2] != ""
 		_expect(both, "translation row with both languages: " + key)
@@ -219,6 +227,35 @@ func _test_client_and_empty() -> void:
 	_expect(_focus_name() == "Close", "empty board focuses Close (got %s)" % _focus_name())
 	_check_focus_links(empty)
 	empty.queue_free()
+	await process_frame
+
+
+func _test_far_cap() -> void:
+	var ctx: Dictionary = _ctx({&"o1": &"centro"}, _van(2, 100.0))
+	var trips: CompanyTrips = ctx["trips"]
+	trips.setup(Vector3(0, 0, -4), 2.0)
+	var products: Dictionary = {&"hen": load(HEN)}
+	for id: StringName in [&"x1", &"x2"]:
+		var box := StringName("box_" + str(id))
+		trips.book.add(Order.make(id, "Ana", &"centro", &"house_1", [{"product": &"hen", "qty": 1}], 0, products))
+		trips.book.mark_packed(id, box)
+		var out_van := StringName("out_" + str(id))
+		trips.stage_cargo(out_van, [id], [box])
+		trips.track(out_van, Vector3(0, 0, -2))
+		trips.track(out_van, Vector3(0, 0, -6))
+	_expect(trips.trips_out() == 2, "two vehicles are out (got %d)" % trips.trips_out())
+	var panel: DispatchBoardPanel = await _panel(ctx)
+	_expect(panel.toggle(&"box_o1")["ok"], "with two out, a box can still be picked")
+	_expect(panel.load_button().disabled, "with two out, Load is off")
+	var reason: String = DispatchBoardPanel.reason_text(CompanyTrips.FAR_LIMIT, [CompanyTuning.VEHICLES_FAR_MAX])
+	_expect(reason != CompanyTrips.FAR_LIMIT and reason.contains("2"), "the reason is translated (got %s)" % reason)
+	_expect(panel.status_text() == reason, "the status says why (got %s)" % panel.status_text())
+	_expect(panel.confirm() == 0 and (ctx["zone"] as DispatchZone).boxes().size() == 1, "nothing loads")
+	trips.track(&"out_x1", Vector3(0, 0, -2))
+	panel.refresh(ctx)
+	_expect(not panel.load_button().disabled, "one back: Load is on again")
+	_expect(panel.confirm() == 1, "and the box loads")
+	panel.queue_free()
 	await process_frame
 
 
