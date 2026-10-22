@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SupplierDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/supplier_definition.gd" id="1_supplier"]
+
+[resource]
+script = ExtResource("1_supplier")
+id = &"feria_de_antiguedades"
+products = Array[StringName]([&"antique_lamp", &"glass_tower", &"porcelain_vase"])
+price_factor = 0.95
+arrival_min = 600
+wait_minutes = 240

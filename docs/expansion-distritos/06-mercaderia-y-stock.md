@@ -33,7 +33,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0621 | Varios proveedores con productos, precios y puntualidad distintos | constructor-negocio | medium | 5 proveedores `.tres` |
+| D-0621 | ◐ (D-0621.a hecha; falta D-0621.b: elegir en el tablero) Varios proveedores con productos, precios y puntualidad distintos | constructor-negocio | medium | 5 proveedores `.tres` |
 | D-0622 | Proveedores por distrito (pescado de Islas, artesanías de Montaña) | constructor-negocio | medium | test de filtro |
 | ~~D-0623~~ | ~~Contenedores marítimos en Puerto como entrada grande~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | contenedor se descarga en Puerto |
 | ~~D-0624~~ | ~~Productos a granel que hay que fraccionar (arroz, tornillos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | estación de fraccionar funciona |
