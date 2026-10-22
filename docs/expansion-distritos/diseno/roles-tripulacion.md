@@ -120,3 +120,66 @@ y se corrige subiendo los pedidos por jugador o agregando una tarea en la estaci
 | Tiempo sin caja ni volante por jugador | `bot_company_day` con 1, 2 y 4 bots | máx. 120 s |
 | Pedidos completados por jugador y día | `sim_economy` (D-0540) | 1 jugador no pierde más de la mitad por vencimiento |
 | Salidas por día | contador del bot | dentro de los rangos de las tablas |
+
+## 6. Modo solo (D-0126)
+
+Qué automatiza el juego para que **una persona sola** lleve la empresa sin aburrirse ni quebrar. Lo verifica
+el bot de D-2024 (`bot_company_solo`, 20 días) y lo construye D-0151. Decisión:
+[2026-10-22-modo-solo.md](../../decisiones/2026-10-22-modo-solo.md).
+
+### 6.1 Regla
+
+- **No es un modo aparte ni un interruptor.** El juego cuenta la tripulación al abrir el día
+  (`crew_size`: jugadores conectados, host incluido; los empleados no cuentan) y, si es **1**, prende las
+  ayudas de solitario de §6.2 hasta el cierre. Igual que el tope de pedidos (§4): si entra alguien a mitad
+  del día, las ayudas siguen hasta el cierre y el día siguiente se recalculan.
+- **Se automatiza lo que en coop hace "el que se queda"** (§3: reponer, pedir, ordenar), nunca el núcleo:
+  armar, manejar y cuidar la caja siguen siendo del jugador.
+- Cada ayuda es una regla chica del host con su constante en `CompanyTuning`, no un sistema nuevo. Ninguna
+  agrega RPC: cambian datos que ya se replican (stock de la mesa, pedido al proveedor, reloj).
+
+### 6.2 Ayudas
+
+| # | Ayuda | Qué hace con 1 jugador | Con 2 o más | Por qué | Estado |
+|---|---|---|---|---|---|
+| 1 | **Galpón congelado** (S4) | Mientras maneja, el reloj del galpón (proveedor en la dársena, vencimientos de armado) está quieto | Solo si salen todos | Sin esto el camión del proveedor se va mientras reparte | ya (`DayCycle._poll_shed`, D-0316) |
+| 2 | **Pausa de verdad** | La pausa del menú para el reloj del día (`GameClock.pause()`): pedidos, galpón y ruta quietos | No hay pausa: el mundo sigue (como hoy en coop) | Una persona sola tiene que poder atender la puerta sin perder un pedido; mira el número **en vivo** (solo sin otro peer conectado), no el del día | D-0151 |
+| 3 | **Pedido al proveedor sugerido** | El carrito del proveedor se abre precargado con lo que falta (§6.3). Si a las `SOLO_AUTO_ORDER_MIN` (19:00) no mandó nada para mañana, se manda el sugerido solo y lo avisa el celular | Precargado igual (sirve a todos), nunca se manda solo | Olvidarse el pedido de la tarde, cuando el solitario está en la ruta, deja el día siguiente sin stock: es la espiral de quiebra más corta | D-0151 |
+| 4 | **Mesa llena al abrir** | Al abrir el día, cada mesa arranca con `SUPPLY_CAPACITY` completo (gratis, como reponer: decisión del 2026-10-19). A media jornada repone él | Reponer es la tarea del que se queda | En solo no hay "el que se queda" a la mañana; una reposición por día alcanza para 8 pedidos | D-0151 |
+| 5 | **Asistente de estante en la ruta** | Las cajas que nadie cuida se estabilizan solas y las trampas complejas se pausan estacionado (`package_rescue.gd`, `solo_assist`) | No: cada pasajero cuida una caja | Es lo que el juego base ya hace con 1 jugador; la caja en la mano sigue siendo suya | ya (juego base) |
+| 6 | **Un evento por día** | Máximo 1 evento del día, sin los que piden 3 o más | Escala con la tripulación | Carga mental | ya ([eventos-del-dia.md](eventos-del-dia.md)) |
+| 7 | **Pedidos a su medida** | 8 por día (`6 + 2 × 1`), ventana de 4 h, de 1 a 2 productos los primeros 3 días | Escala | Ya balanceado en [economia.md](economia.md) (+380/día) | ya |
+| 8 | **El cierre espera** | Si a las 20:00 está en la ruta, el cierre espera a que vuelva (S3) | Igual | No se corta una salida | ya (D-0203) |
+
+### 6.3 Pedido sugerido (ayuda 3)
+
+Por producto del catálogo del proveedor: `max(0, unidades en pedidos abiertos − stock + demanda media diaria
+de los últimos SOLO_ORDER_LOOKBACK_DAYS (3) días)`, redondeado hacia arriba a múltiplos de 4 (una mano), sin
+pasar el total de plata menos `SOLO_ORDER_CASH_RESERVE` (100, la misma reserva de la curva de economía).
+El día 1 no hay historia: se usa la demanda esperada de `CompanyDayOrders` para mañana. Se ve como un pedido
+normal en el tablero y el portapapeles; el jugador lo cambia o lo borra. El pedido automático de las 19:00 se
+cobra como cualquier otro (al recibir cada palet, D-0503): si nadie lo descarga, no cuesta nada.
+
+### 6.4 Lo que no se automatiza
+
+- **Armar, manejar, cuidar en la mano, descargar el palet, elegir qué cajas salen.** Son el juego.
+- **No hay compañero IA** ni repartidor NPC en F1: el camino para crecer solo son los empleados de F2
+  (§4), sin descuento de sueldo para el solitario (el novato ya se paga con 1 pedido más por día,
+  [economia.md](economia.md)).
+- **No se alarga la ventana de entrega**: el solitario sale con pocas cajas y prioriza por vencimiento
+  (§2.1). Si el bot entrega menos del 70 %, es un hallazgo de balance para `pulidor-jugabilidad`, no una ayuda nueva.
+
+### 6.5 Con empleados (F2)
+
+Un empleado repositor asignado a una mesa apaga la ayuda 4 en esa mesa (él la repone); uno en la dársena no
+cambia la 3 (pedir sigue siendo del jugador). La ayuda 1 ya pasa a "el galpón sigue si hay empleados" (S4).
+El resto no cambia.
+
+### 6.6 Cómo se mide
+
+| Qué | Cómo | Umbral |
+|---|---|---|
+| Día 1 con ganancia | `bot_company_day` con 1 bot (D-2016) | ganancia > 0 |
+| 20 días seguidos | `bot_company_solo` (D-2024) con la política de §2.1 | sin quiebra, ninguna etapa trabada, ≥ 70 % de pedidos entregados |
+| Pedido sugerido | el bot de D-2024 no pide nunca a mano: vive solo del sugerido y del automático | ningún día con un pedido abierto sin stock por falta de pedido |
+| Regla de 2 min | `bot_company_day` con 1 bot | máx. 120 s sin caja ni volante (el tiempo en pausa no cuenta) |
