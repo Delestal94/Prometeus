@@ -76,9 +76,9 @@ const REQUEST_KINDS: Array[StringName] = [
 	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
 	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyPackages.ACK,
 ]
-## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
-## RpcGuard's critical reserve once the sender's budget is gone.
-const CRITICAL_KINDS: Array[StringName] = [UNITS_DROP]
+## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
+## They spend RpcGuard's critical reserve once the sender's budget is gone.
+const CRITICAL_KINDS: Array[StringName] = [UNITS_DROP, CompanyPackages.ACK]
 ## The host's day clock changed pace: {minute, speed, paused} (D-0219, GameClock.apply_anchor()).
 const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## The day moved on, or the shed froze or thawed: {day, phase, frozen, lag, frozen_at[, summary]}
