@@ -169,6 +169,19 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Test** `test_employee_wages`: sueldo y rendimiento de cada nivel, orden de menor a mayor, nombre en los dos idiomas, un nivel mejor cuesta y rinde más, el novato cuesta menos que el margen de un pedido (102) y un nivel desconocido no tiene sueldo.
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
+### D-0518 · Solo el host (o un voto) gasta en la tienda — B · Sonnet 5.5 · high · Aviso: sí (`network_manager.gd`) · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 50; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
+**Depende de:** D-0511, D-2003, D-2004 (modelo: D-0910 y D-0603.b.2)
+**Qué:** la tienda de D-0511 por red, con el contrato de `diseno/red-autoridad.md` (fila 25 y §13).
+- El host comprueba con `CompanyShop.check()` y publica un evento; cada peer lo aplica con el mismo `CompanyShop.buy()`: máquina → `equipment`, vehículo → `fleet`, ampliación → `warehouse_stage`, libro con motivo `shop`.
+- La plata viaja absoluta, como el layout (D-0910): `money` es el saldo del host después y `minute` su `clock_minutes`, solo para la entrada del libro. Un peer con la plata desfasada la corrige, avisa y pide un snapshot (`take_drift()`).
+- Motivos: `host_only`; `bad_data` (ítem que no es texto, desconocido o apagado, o sin empresa); y las claves `WORLD_SHOP_*` de `CompanyShop` tal cual, que la pantalla traduce.
+- Join tardío: sin parte nueva del snapshot; plata, libro, `equipment`, `fleet` y `warehouse_stage` ya van en `company`.
+- **D-0518.b (abierta, `constructor-red` + `constructor-ui`)** Voto de la tripulación para que un cliente compre (era D-0428): el cliente pide, el host abre una votación (`modules/coop_vote`) y compra si pasa. Entra donde `CompanyShopNet.check()` recibe `by_host`, igual que D-0910.1 para construir.
+**Decisión:** "el host o un voto" se resuelve como **solo el host** en esta tarea, igual que construir (D-0910): un cliente pide y oye `host_only` sin que cambie la plata, el inventario ni el `seq`; un `peer` en los datos no cuenta (el remitente lo pone `RpcGuard`). El día no frena la compra: la tienda es la pantalla del cierre (D-0511.2) y la regla `day_closed` del proveedor es por su calendario, no aplica. Un ítem desconocido es `bad_data` (regla 5 del contrato) y no `WORLD_SHOP_UNKNOWN_ITEM`. Para no pasar las 1000 líneas de `company_net.gd`, los chequeos de un trozo del snapshot y su unión salieron a `CompanySnapshot.chunk_ok()` / `join()`.
+**Test** `test_company_shop_net`: el ayudante solo (`host_only`, datos malos, claves de `CompanyShop`, eventos rotos, deriva), solo con el catálogo real, y host + cliente por ENet: el cliente no compra (`host_only`, también con `peer: 1`, sin escribir nada antes), el host compra máquina, ampliación y vehículo y los dos quedan iguales, sus rechazos no cambian nada, la deriva termina en snapshot y un tercero que entra tarde ve todo.
+**Hecho cuando:** test de red: un cliente no puede comprar solo (cumplido).
+
 ### D-0516 · Cobro al entregar — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-22, PR pendiente)** — el cobro es **al entregar**, no al cierre del día: ya era así desde D-0815 (`OrderSettlement.settle()` suma la paga a la billetera con motivo `order_paid` en el momento de la puerta). Se fija con test y decisión; no hubo cambio de código.
 **Depende de:** D-0501, D-0815

@@ -2,7 +2,9 @@ class_name CompanyShop
 extends RefCounted
 ## The company's shop (expansion D-0511): what can be bought, whether the company may buy
 ## it now and the purchase itself. Pure functions over `data/shop/*.tres` and a company
-## node (CompanyState): no nodes, no UI, no network. Who may spend (host or vote) is D-0518.
+## node (CompanyState): no nodes, no UI, no network. Who may spend is D-0518: only the host, through
+## CompanyNet's shop_buy (CompanyShopNet; the crew's vote is D-0518.b). A shop screen asks there and
+## never calls buy() itself.
 ##
 ## `check` and `buy` answer with {ok, key, args} like DispatchRules: key is empty when ok,
 ## otherwise a WORLD_SHOP_* reason the UI translates.
