@@ -66,3 +66,20 @@ static func drop(data: Dictionary) -> Dictionary:
 		return {}
 	ask["pos"] = pos
 	return ask
+
+
+## Text as a StringName, &"" for anything else (a value that came over the network).
+static func as_id(value: Variant) -> StringName:
+	return StringName(value) if is_id(value) else &""
+
+
+static func as_int(value: Variant) -> int:
+	return int(value) if typeof(value) == TYPE_INT else 0
+
+
+## Units of all products at `location`.
+static func units_at(stock: Inventory, location: StringName) -> int:
+	var total: int = 0
+	for qty: int in stock.contents_at(location).values():
+		total += qty
+	return total

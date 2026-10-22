@@ -3,7 +3,7 @@ extends Node3D
 ## The shed of the Modo Empresa as the players walk in it (expansion D-0911 and D-0620): floor and
 ## walls of the company's stage with the gates open where the dock and the exit are, every piece of
 ## CompanyState.layout (shelves, packing tables, the dispatch zone), the painted floor zones, the
-## shelf labels with their units and the pallets that wait in reception.
+## shelf labels with their units, the pallets that wait in reception and the picking carts (D-0610.b).
 ##
 ## It only DRAWS state: the layout and the stage from CompanyState, the units from the Inventory
 ## (CompanyNet's copy, equal on every peer). The host fills a new company's layout and stock from
@@ -27,6 +27,8 @@ extends Node3D
 ## the shed (the walls' line, and so the gates, included): CompanyRoot asks it who is in, for DayCycle.
 
 signal piece_used(uid: StringName, role: StringName, peer_id: int)
+## A player worked a picking cart (PickingCartPoint): which cart, how (load or push), who, where they stood.
+signal cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3)
 
 const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
@@ -91,6 +93,9 @@ var pieces: Array[Dictionary] = []
 var use_points: Dictionary = {}
 ## Where the pallets stood at the last redraw: pallet id -> its node.
 var pallet_nodes: Dictionary = {}
+## The picking carts drawn, by id (PickingCartView). Each stands at its default spot (DefaultShed.cart_spots)
+## or, once pushed, where the CompanyNet it follows says (CompanyCarts).
+var cart_views: Dictionary = {}
 
 var _default: DefaultShed
 var _slot_views: Array[Dictionary] = []
@@ -114,13 +119,15 @@ func follow(company_net: CompanyNet) -> void:
 		company_net.company_state_restored.connect(_on_state_restored)
 
 
-func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if _net == null or not is_instance_valid(_net) or _net.company == null:
 		return
 	if CompanyLayoutNet.EVENT_KINDS.has(kind):
 		rebuild(_net.company, _net.inventory)
 	elif kind == &"units_moved" and _pallet_root != null:
 		refresh_stock(_net.inventory)
+	elif kind == CompanyCarts.MOVED:
+		_on_cart_moved(data)
 
 
 func _on_state_restored(_snapshot_seq: int) -> void:
@@ -168,6 +175,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	use_points.clear()
 	_slot_views.clear()
 	pallet_nodes.clear()
+	cart_views.clear()
 	stage = int(state.warehouse_stage)
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
@@ -196,6 +204,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	_pallet_root = Node3D.new()
 	_pallet_root.name = "Pallets"
 	add_child(_pallet_root)
+	_build_carts()
 	refresh_stock(stock)
 
 
@@ -228,6 +237,8 @@ func refresh_stock(stock: Inventory) -> void:
 		label.modulate = Color(1, 1, 1) if qty > 0 else Color(1.0, 0.62, 0.55)
 		(view["crate"] as Node3D).visible = qty > 0
 	_draw_pallets(stock)
+	for cart_view: PickingCartView in cart_views.values():
+		cart_view.refresh(stock)
 
 
 ## The pallets waiting in the Inventory (pallet:<id> locations) as {id, product, qty}, by id.
@@ -456,8 +467,12 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 
 ## The shelf slot a units request names (ShelfPicking.station_id) as CompanyNet's `stations` resolver
 ## wants it: where its units lie, the spot to reach (the piece's use point), what it accepts and holds
-## (D-0609). {} for anything else, or a slot with no label.
+## (D-0609). A picking cart is a station too, named by its location, cart:<id> (D-0610.b). {} for anything
+## else, or a slot with no label.
 func station_for(id: StringName) -> Dictionary:
+	var cart_id: StringName = PickingCart.parse_location(id)
+	if cart_id != &"":
+		return _cart_station(cart_id)
 	var named: Dictionary = ShelfPicking.parse_station(id)
 	if named.is_empty():
 		return {}
@@ -471,6 +486,68 @@ func station_for(id: StringName) -> Dictionary:
 		"location": shelf.location(slot), "spot": point.global_position,
 		"accepts": shelf.label_of(slot), "capacity": CompanyTuning.SHELF_SLOT_CAPACITY,
 	}
+
+
+# --- Picking carts ---
+
+
+## One cart per DefaultShed.cart_spots entry ("cart_1", "cart_2"...), where the host's pushes left it.
+func _build_carts() -> void:
+	var spots: Array[Vector2] = []
+	if _default != null and _default.stage == stage:
+		spots = _default.cart_spots
+	for index: int in spots.size():
+		var id := StringName("cart_%d" % (index + 1))
+		var local: Vector3 = cell_to_local(spots[index])
+		if _net != null and is_instance_valid(_net):
+			var pushed: Variant = _net.carts.position_of(id)
+			if pushed is Vector3:
+				local = pushed
+		var view: PickingCartView = PickingCartView.make(id, local)
+		view.used.connect(func(cart_id: StringName, action: StringName, peer_id: int, from: Vector3) -> void:
+			cart_used.emit(cart_id, action, peer_id, from))
+		add_child(view)
+		cart_views[id] = view
+
+
+## A cart_moved reached this peer: the cart rolls to where the host left it.
+func _on_cart_moved(data: Dictionary) -> void:
+	var view: Variant = cart_views.get(StringName(str(data.get("cart", ""))))
+	var pos: Variant = data.get("pos")
+	if view is PickingCartView and is_instance_valid(view) and pos is Vector3:
+		(view as PickingCartView).place_at(pos, true)
+
+
+## A cart as CompanyNet's `stations` resolver wants it (D-0610.b): its units' location, a spot over the
+## platform to measure reach to, the units it holds at most and, for a push, where it stands now (shed
+## frame) and whether the floor at a point is free (cart_can_stand). {} for a cart that is not drawn.
+func _cart_station(cart_id: StringName) -> Dictionary:
+	var view: Variant = cart_views.get(cart_id)
+	if not (view is PickingCartView) or not is_instance_valid(view) or not (view as PickingCartView).is_inside_tree():
+		return {}
+	var cart_view := view as PickingCartView
+	return {
+		"location": cart_view.cart.location(), "spot": cart_view.global_position + Vector3.UP * 0.5,
+		"capacity": CompanyTuning.CART_MAX_UNITS, "at": cart_view.position,
+		"stand_ok": cart_can_stand,
+	}
+
+
+## Whether a cart may be left at `local` (shed frame): inside the floor with CompanyTuning.CART_CLEARANCE_M
+## to the walls, and that far from every piece of furniture (the dispatch zone is only painted).
+func cart_can_stand(local: Vector3) -> bool:
+	var clearance: float = CompanyTuning.CART_CLEARANCE_M
+	var half: Vector2 = WarehouseStages.floor_size_m(stage) * 0.5
+	if absf(local.x) > half.x - clearance or absf(local.z) > half.y - clearance:
+		return false
+	var cell: Vector2 = local_to_cell(local)
+	for piece: Dictionary in pieces:
+		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))
+		if def != null and def.role == &"dispatch":
+			continue
+		if Rect2(piece["rect"]).grow(clearance / CompanyTuning.WAREHOUSE_GRID_M).has_point(cell):
+			return false
+	return true
 
 
 func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:

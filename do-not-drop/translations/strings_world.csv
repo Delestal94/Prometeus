@@ -396,6 +396,8 @@ WORLD_SHED_ZONE_DISPATCH,DESPACHO,DISPATCH
 WORLD_SHED_USE_SHELF,Usar estante,Use shelf
 WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
+WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
+WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
 WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf
 WORLD_PLACEABLE_FRIDGE,Heladera,Fridge

@@ -597,6 +597,7 @@ func _add_shed() -> void:
 		shed.follow(net)
 		net.stations = shed.station_for
 		shed.piece_used.connect(_on_piece_used)
+		shed.cart_used.connect(_on_cart_used)
 
 
 ## Host: a crew member used a piece of the shed. A shelf puts the units of one of its slots in their
@@ -616,6 +617,14 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		{"station": plan["station"], "product": plan["product"], "qty": plan["qty"]})
 	if net.inventory.count(plan["product"], hands) > before:
 		_pick_after[key] = plan["slot"]
+
+
+## Host: a crew member worked a picking cart (D-0610.b): load or unload it, or push it. PickingCartUse asks
+## the host's own CompanyNet on their behalf, which checks reach, hands and room.
+func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3) -> void:
+	if net == null or not net.is_host():
+		return
+	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from)
 
 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
