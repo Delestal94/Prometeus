@@ -1,4 +1,4 @@
-# 2026-10-22 · La caja encintada es un `DeliveryPackage` en cada peer (D-0715.b): `PROTOCOL_VERSION` 41
+# 2026-10-22 · La caja encintada es un `DeliveryPackage` en cada peer (D-0715.b): `PROTOCOL_VERSION` 42
 
 Para Slatex. Desde D-0715.b, encintar una caja en el modo Empresa (`box_sealed`) crea en **cada peer** el
 mismo `DeliveryPackage` (`package.tscn`, tu escena), en `World/Packages/Package_<id de caja>`. No se
@@ -6,15 +6,15 @@ tocó nada de tu dominio: ni `package.gd`, ni `package.tscn`, ni sus ayudantes.
 
 ## Zona compartida: `do-not-drop/scripts/core/network_manager.gd`
 
-- `PROTOCOL_VERSION` 40 → **41** (línea "41" en el historial). Ninguna firma, RPC ni señal
+- `PROTOCOL_VERSION` 41 → **42** (línea "42" en el historial). Ninguna firma, RPC ni señal
   de `NetworkManager` / `NetSession` cambia; `modules/net_session/` no se tocó.
 - **El protocolo cambia:** el evento `box_sealed` viaja igual, pero ahora cada peer crea un nodo con
   `MultiplayerSynchronizer` que el host sincroniza. Un cliente viejo (38) con un host nuevo no tendría el
   nodo (errores "Node not found" del sincronizador); un cliente nuevo con un host viejo tendría una caja
   quieta que nadie mueve. Con el número nuevo, el handshake los separa con el error de versión.
-- **Por qué 41:** el 39 (PR #602, D-0610.b) y el 40 (PR #606, D-0302.2.a) ya están en `main`; este PR
+- **Por qué 42:** el 39 (PR #602), el 40 (PR #606) y el 41 (PR #610, D-0813) ya están en `main`; este PR
   se mezcló sobre ellos y toma el siguiente.
-- El 41 también cubre un `kind` nuevo de `CompanyNet._request`, `package_ack` (ver abajo): un host viejo lo
+- El 42 también cubre un `kind` nuevo de `CompanyNet._request`, `package_ack` (ver abajo): un host viejo lo
   descartaría y nunca abriría el sincronizador.
 
 ## Para conocer (tu dominio, sin cambios)

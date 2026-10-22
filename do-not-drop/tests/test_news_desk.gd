@@ -7,6 +7,8 @@ extends SceneTree
 ## - determinism: the same facts and the same seed make the same paper, another
 ##   seed another one; the front page is the heaviest fact; the stories under it
 ##   come from different sections, one per topic, never more than three;
+## - the facts of N-606.4b (rollover, dog_chase with a "honked" variant, train_stop) are
+##   in the catalogue, the rollover heavier than a failed run;
 ## - a clean run is the "scandal" story; Endless never is; a filler is always
 ##   there and is not the one the last paper ran; the variant of the last paper
 ##   isn't repeated;
@@ -57,6 +59,13 @@ func _check_catalog() -> void:
 	var stories: Dictionary = catalog.get("stories", {})
 	_expect(stories.size() >= 20, "The catalogue has the facts' stories (%d)" % stories.size())
 	_expect((catalog.get("neighbors", []) as Array).size() >= 8, "There are invented neighbors to name")
+	# N-606.4b: the van on its side leads over a plain failed run; the dog has a variant for its honk.
+	for kind: String in ["rollover", "dog_chase", "train_stop"]:
+		_expect(stories.has(kind), "%s has its story" % kind)
+	_expect(float(stories["rollover"]["weight"]) > float(stories["run_failed"]["weight"]),
+			"A rollover outranks a failed run for the front page")
+	_expect((stories["dog_chase"]["variants"] as Array).any(func(variant: Dictionary) -> bool:
+			return "honked" in variant.get("tags", [])), "The dog has a variant for the horn that sent it home")
 	var slot_pattern := RegEx.create_from_string("\\{([a-z_]+)\\}")
 	var fillers: int = 0
 	for kind: String in stories:

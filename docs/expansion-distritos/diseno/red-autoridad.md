@@ -109,8 +109,8 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 
 | Qué | Quién | Cómo viaja |
 |---|---|---|
-| Entra un pedido nuevo (D-0803) | host, con el ritmo del día | evento `order_added` `{order: Order.to_dict()}` |
-| Vence un pedido (D-0804) | host | evento `order_expired` `{order, penalty}`: se libera la reserva; una caja a medio armar queda en la mesa sin pedido (se puede desarmar o etiquetar para otro); una caja ya sellada sigue siendo una caja sin pedido (se entrega sin cobro o se desarma, D-0719) |
+| Entra un pedido nuevo (D-0803, D-0813) | host, con el ritmo del día (`CompanyOrdersNet.poll`: el plan de `OrderGenerator` con la semilla del día) | evento `order_added` `{order}`: el pedido entero como lo escribe `Order.normalize()` (un pedido ya es un diccionario; no hay `Order.to_dict()`), estado `open`; cada peer lo suma a su `OrderBook` (§10) |
+| Vence un pedido (D-0807, D-0813) | host (`CompanyOrdersNet.poll`, `OrderBook.overdue()`) | evento `order_expired` `{order, minute}`: el pedido pasa a LATE en cada peer (`OrderBook.expire_one()`, con `late_from`) y se sigue pudiendo entregar con −25 % (D-0807). **Decisión (D-0813):** sin `penalty` (vencer no cobra nada en el momento) y sin reserva que liberar (todavía nada reserva antes de `order_claim`, fila 8); `minute` deja el `now_min` del libro igual en todos. Lo que decía esta fila para un pedido que se pierde (se libera la reserva; la caja a medio armar queda en la mesa sin pedido; una caja sellada sigue siendo una caja sin pedido, D-0719) pasa al abandono (`abandon()`, FAILED y reputación), que es otro evento: D-0807.b |
 | Fases del día (D-0203) | host (`DayCycle`) | evento `day_phase` `{day, phase, frozen, lag, frozen_at[, summary]}` (`phase` es OPENING, OPERATING, CLOSING o SUMMARY; `summary` solo en SUMMARY, `DaySummary.build()`); el mismo evento lleva el congelado del galpón (S4: `frozen`, `lag`, `frozen_at` en minutos). El cliente es pasivo: valida y aplica, y emite `company_day_*` en el EventBus local |
 | Reloj (D-0219) | host | evento `clock_anchor` `{minute, speed, paused}` solo al cambiar (apertura, pausa, salida que cierra tarde); cada peer toma como origen **su propio** tick al recibirlo (o al aplicar el snapshot), menos medio RTT de `NetStats`, y calcula la hora local desde ahí (el tick del host no vale en otra máquina). **Decisión:** ancla y no envío cada 2 s (lo que decía D-0219): no gasta ancho de banda quieto y no hay que interpolar; D-0219 lo construye así |
 | Cierre: cobro, alquiler, penalidades (D-0320, D-0509) | host | evento `day_closed` `{day, summary}`; después el host guarda (solo el host guarda) |
@@ -225,7 +225,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - **Partes que faltan**: `add_snapshot_part(key, take, put)` suma una parte con su clave; cada peer suma
   las mismas antes de que su mundo esté listo. `take` (host) devuelve datos planos; `put` (cliente) los
   pone en su lugar sin señales de hechos, los valida (regla 5) y devuelve `false` si no sirven (el
-  cliente espera otro snapshot). Las suman: `OrderBook` (D-0803 / D-0807, cuando el mundo lo tenga),
+  cliente espera otro snapshot). Las suman: ~~`OrderBook`~~ (hecho en D-0813: parte `orders`, §10),
   fase del día (D-0203), palets con estado y zona (D-0605 / D-0607), mesas de
   armado (D-0701 en adelante), vehículos afuera (~~D-0302.2.a~~: hecho, parte `trips` de `CompanyTripsView`:
   la lista de los que están afuera, cada uno con la forma de `trip_started`), cajas vivas con lo de `box_sealed` y `update_visibility` después del
@@ -391,7 +391,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - **Motivos de `_rejected`:** los de `CompanyNet` (`bad_data`, `no_station`, `out_of_reach`, `not_enough`,
   `hands_busy`, `hands_full`, `no_room`) más `no_money`, `has_box`, `no_box`, `sealed`, `no_supply`,
   `cell_taken`, `empty_cell`, `reserved_for_other`, `no_order`, `already_stamped`, `empty_box` y `no_trap`
-  (D-0715.b, §10). Una celda que llega como `Vector3i` no pasa `dict_ok` y se descarta sin aviso (regla 5).
+  (D-0715.b, §11). Una celda que llega como `Vector3i` no pasa `dict_ok` y se descarta sin aviso (regla 5).
 - **Líneas:** el empaquetado del snapshot y los chequeos de lo que trae salieron a `CompanySnapshot`
   (`scripts/core/company/company_snapshot.gd`; `CompanyNet.pack_snapshot`, `unpack_snapshot` y `stock_ok`
   siguen con la misma firma). `company_net.gd` queda en 990 de las 1000 líneas de gdlint: la próxima acción
@@ -399,18 +399,72 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Test: `test_company_shared_table` (y `test_company_layout_net` lee las ramas `CompanyTableNet.*`).
 - **Pendiente:**
   - ~~**D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10), validando
-    antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §10); de D-0715.b quedan las cajas vivas
+    antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §11); de D-0715.b quedan las cajas vivas
     en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
-    cuando el libro de pedidos esté en `CompanyNet` y `CompanyTableNet._serial` guardado con el día (D-0206);
+    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) y `CompanyTableNet._serial` guardado con el día (D-0206);
   - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
     `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
   - guardar las mesas con el día (D-0206): hoy un día cargado trae unidades en `box:<id>` sin mesa.
 
-## 10. Lo construido (D-0715.b): el paquete de la caja encintada
+## 10. Lo construido (D-0813): los pedidos del día
 
-- **Cada peer crea el mismo `DeliveryPackage`** al aplicar `box_sealed` (fila 15, protocolo 41; el evento no
+- **Un libro en cada peer:** `CompanyNet.orders` (`CompanyOrdersNet`, `scripts/core/company/company_orders_net.gd`)
+  tiene el `OrderBook` que comparten todos (`orders.book`), igual en todos y escrito solo por eventos del host. Ningún
+  `kind` de petición lo toca: un cliente no tiene cómo escribirlo (regla 1); `publish()` y `poll()` no hacen nada en
+  un cliente.
+- **Eventos** `order_added` y `order_expired` (fila "Fuera de las 20", protocolo 41), por `publish()`
+  (`HOST_EVENT_KINDS`) y el `_apply_event` de siempre: ningún RPC nuevo. Cada peer, el host también, los aplica en
+  `CompanyOrdersNet.apply()` (una rama de `_apply_state()`, sin `_:`) y solo comprueba datos (regla 6).
+- **El host decide:** `plan_day(seed, day, players, zones, products, requirements, company)` arma el plan del día con
+  `OrderGenerator.generate_day` (minutos de `OrderRhythm`, la semilla del día, menos pedidos en rojo, D-0510) y
+  `poll(net, minuto)` publica un `order_added` por cada pedido planeado cuyo `created_min` ya llegó, del más viejo al
+  más nuevo, y después un `order_expired` por cada pedido del libro que pasó su `due_min` (`OrderBook.overdue()`, en
+  el orden del libro). Un pedido sale del plan recién cuando su evento salió: uno que nunca entraría (`order_ok()`
+  lo rechaza o su id ya está en el libro) se descarta con un aviso; con el libro lleno, mientras se aplica un evento
+  (`CompanyNet.is_applying()`), sin inventario o con `publish()` rechazado, `poll()` corta y el próximo reintenta. El
+  plan (lo que falta llegar) no viaja ni va en el snapshot. **Decisión:** viaja el pedido
+  entero (380 a 550 bytes, medido) y no la semilla: así ningún cliente necesita los mismos catálogos, zonas abiertas,
+  tripulación y plata que el host para llegar al mismo pedido, y uno que entra tarde lo recibe igual en el snapshot.
+- **Validación (regla 5)**, `CompanyOrdersNet.order_ok()`: exactamente las claves de `Order.normalize()` (más las que
+  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact`, solo en el snapshot), id y
+  cliente de texto de hasta 64, una zona de `data/zones/` y una casa del mapa (`HouseAddresses`) o `<zona>_house_<n>`
+  de esa zona con `n` de 1 a 12, de 1 a 3 productos del catálogo distintos con `qty` entera 1..24, requisitos de
+  `data/order_requirements/` sin repetir, `created_min < due_min` enteros, paga entera 0..10⁹ y estado conocido (`open`
+  en un evento). Un `order_added` de un id que el libro ya tiene, o con el libro lleno (`MAX_ORDERS` = 4096), no se
+  aplica; un `order_expired` de un pedido desconocido, cerrado, ya atrasado o que a ese `minute` todavía no venció,
+  tampoco. En el host `publish()` devuelve `false` sin gastar `seq` (y `push_error`); en un cliente el evento no se
+  aplica y el peer pide snapshot (§3).
+- **Join tardío y huecos:** parte `orders` del snapshot (`{orders, now_min}`, `OrderBook.to_dict()`), que `CompanyNet`
+  suma sola en `_init()`. El cliente la valida entera antes de tocar su libro (`book_ok()`: a lo sumo `MAX_ORDERS`,
+  cada pedido `order_ok()` con los campos del libro, sin ids repetidos, `now_min` entero) y la pone con
+  `OrderBook.from_dict()`, que no emite señales.
+- **Líneas:** `company_net.gd` queda en 996 de las 1000 de gdlint (el cuerpo de `_lookup_station` salió a
+  `CompanyAsk.station_of()`): la próxima acción tiene que sacar algo antes de sumar (p. ej. el armado de trozos
+  `_take_chunk`).
+- Test: `test_company_orders_net` (solo, la parte del snapshot, y host + cliente + uno que entra tarde por ENet);
+  `test_order_book` suma `overdue()` y `expire_one()`; `test_company_layout_net` ya lee las ramas nuevas de
+  `_apply_state()`.
+- **Pendiente:**
+  - **D-0813.1**: el mundo de la empresa juega los pedidos: `CompanyRoot` planea el día en el `OPENING` del host
+    (semilla del día, tripulación, zonas abiertas, catálogos), suma `orders.poll` al `BusinessTick` con
+    `DayCycle.shed_minute()`, emite `EventBus.order_added` en cada peer desde `event_applied` (nunca al aplicar un
+    snapshot) y no desde las señales del libro (salen dentro de `_apply_state()`), y el bot del día toma sus pedidos
+    de ahí. `CompanyTrips` y `OrderBoxLink` siguen con su libro hasta el punto siguiente;
+  - lo que `CompanyTrips` hace directo sobre su libro (`mark_out` al salir, `close` al volver) y el armado
+    (`order_packed`) pasan a eventos con las filas 15, 17, 19 y 20 (D-0715.b, D-0716, D-0302, D-0815): un cambio
+    del libro compartido que no sea evento queda solo en el host hasta el próximo snapshot (hoy no pasa: ningún
+    vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro;
+  - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
+    plata (D-0910), junto con el reloj de D-0807.b;
+  - podar del libro los pedidos cerrados de días viejos y guardarlo con el día (D-0206), y bajar `MAX_ORDERS`: hoy
+    crece hasta 16 por día y un libro lleno (4096) pesa 2,4 MB de los 4 MB del snapshot (137 KB comprimido) y tarda
+    230 ms en validarse en el cliente (medido; `revisar/D-0813.md`).
+
+## 11. Lo construido (D-0715.b): el paquete de la caja encintada
+
+- **Cada peer crea el mismo `DeliveryPackage`** al aplicar `box_sealed` (fila 15, protocolo 42; el evento no
   cambia): `CompanyPackages` (`scripts/core/company/company_packages.gd`, `CompanyTableNet.packages`) lo arma
   con `BoxToPackage.build` desde la caja encintada que tiene ese peer y le pone lo que dice el host: nombre
   `node_name`, `package_id`, trampa, absorción, la pose `pos`/`basis` (espacio del mundo) y calidad e
@@ -442,7 +496,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Test: `test_company_sealed_package` (solo, campos malos, `no_trap`, id salteado, host + cliente ENet, el
   cliente que espera un snapshot mientras se encinta, y un tercero que entra tarde) y `test_company_root`
   (celdas).
-- **Protocolo:** 41 (sobre el 39 de D-0610.b y el 40 de D-0302.2.a).
+- **Protocolo:** 42 (sobre el 41 de D-0813).
 - **Pendiente:**
   - las cajas vivas en el snapshot (hasta entonces el que entra tarde, o un cliente cuyo snapshot cubrió el
     `box_sealed`, no ve las cajas ya encintadas; con el acuse no recibe errores, solo no las tiene);
