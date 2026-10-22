@@ -22,7 +22,8 @@ extends SceneTree
 ##   with that order (OUT, and out in the TripsView); back across it closes the trip.
 ## - A rack of the van (a PackageMountPoint) taken by a box (its current_mount_path) is let go when the interest
 ##   hides that box's copy (copy_hidden: a stale copy kept it taken, D-0316.2) and taken back when it shows, unless
-##   something else took it meanwhile.
+##   something else took it meanwhile; then the box's update taking it off that rack (current_mount_path empty)
+##   leaves the rack to what holds it (package.gd, D-0316.4), while one off a rack it still holds frees it.
 ## - ENet pair in one process (the host on the NetworkManager autoload, the client on a second copy, each in
 ##   the real company_root.tscn, as test_company_online): the client builds the same
 ##   World/Vehicles/van_classic from the host's snapshot, a frozen copy it doesn't own. Until the client acks
@@ -43,10 +44,16 @@ extends SceneTree
 ## - D-0316.2, with the cap at 0 and cargo staged on the van: the client at the wheel drives it at the gate; the
 ##   host holds it inside (its centre never past the line, no trip, nothing out), the client's predicted copy
 ##   stays within 1.5 m of it and is never hidden, and only the client is told why (its TripsView's
-##   departure_held, over _held_here, with WORLD_DISPATCH_FAR_LIMIT; the host's view tells nobody). Over a bad
-##   link (its copy's --net-sim 150 ms + 20 ms jitter), driven at the playon's side at over 10 m/s: still held and
-##   predicted with no snap up to the gate; what the hold does to the copy (shift, gap, snaps) is only printed: it
-##   overshoots and snaps back (an open subtask: the client braking at the gate itself).
+##   departure_held, over _held_here, with WORLD_DISPATCH_FAR_LIMIT; the host's view tells nobody). Only the client
+##   has a GateBrake (CompanyGateBrake, D-0316.4), braking its copy since the notice, on the host's very gate (same
+##   side_of() and distance() all round the yard). Over a bad link (its copy's --net-sim 150 ms + 20 ms jitter),
+##   driven at the playon's side at over 10 m/s: still held and predicted with no snap up to the gate; once told,
+##   the client brakes its copy (over 60 ticks), with no snap during the hold and no jump (under 0.5 m a tick), and
+##   the copy stays within 2.5 m of the host's van (before D-0316.4: one snap of ~3.1 m and a 5 m gap). Again with
+##   the notice held back 85 ms on its way to the brake (a real link's half lag): no snap and no jump either; the
+##   gap, the round trip it runs on before it is told, is only printed. In between, the host lets the held van go
+##   for something the client can't see (its cargo forgotten) while the client pushes: the client's brake lets go
+##   once the host's pose is past the compound and the copy follows it out, with no snap, no jump and within 3 m.
 ## - The van driven 1.1 km north in 200 m steps with the client's player in the shed: the client's copy ends up
 ##   hidden and out of physics (layer and mask 0); back at 600 m (2 cells) it shows, solid again, on the frame it
 ##   shows within 0.5 m of the host's van (drawn from the new pose, not slid from the old one).
@@ -367,7 +374,13 @@ func _check_rack_slot(level: CompanyRoot, van: VehicleBody3D) -> void:
 	mount.set(&"occupied_by", other)
 	level.interest.copy_shown.emit(box)
 	_expect(mount.get(&"occupied_by") == other, "...but not from what took it while the copy was hidden")
+	box.current_mount_path = NodePath()
+	_expect(mount.get(&"occupied_by") == other,
+		"...nor emptied under it when the box's update takes the box off that rack (current_mount_path, D-0316.4)")
 	mount.set(&"occupied_by", null)
+	box.current_mount_path = box.get_path_to(mount)
+	box.current_mount_path = NodePath()
+	_expect(mount.get(&"occupied_by") == null, "A box taken off a rack it still holds lets it go")
 	other.free()
 	box.queue_free()
 	await process_frame
@@ -608,6 +621,7 @@ func _check_held_at_gate(host_van: VehicleBody3D, copy: VehicleBody3D, client_id
 		% worst_past)
 	_expect(worst_gap < 1.5 and not ever_hidden,
 		"...the client's predicted copy stays within 1.5 m of it (worst %.2f m) and is never hidden" % worst_gap)
+	_check_brake_gate(trips.gate, _client_root.gate_brake)
 	var text: String = tr(CompanyTrips.FAR_LIMIT)
 	if text.count("%") == 1:
 		text = text % 0
@@ -619,19 +633,51 @@ func _check_held_at_gate(host_van: VehicleBody3D, copy: VehicleBody3D, client_id
 	_expect(await _wait_for(func() -> bool: return seat.occupant == null and not copy.is_predicted()),
 		"The client gets out of the held van")
 	await _check_held_lagged(host_van, copy, seat, driver)
+	await _check_held_lagged(host_van, copy, seat, driver, 85)
 	trips.far_max = CompanyTuning.VEHICLES_FAR_MAX
 	trips.forget(&"van_classic")
 
 
+## D-0316.4: only the client has a GateBrake, braking its copy since the notice, and it stands on the host's gate.
+func _check_brake_gate(host_gate: TripGate, brake: CompanyGateBrake) -> void:
+	_expect(_host_root.gate_brake == null and brake != null and brake.is_braking(&"van_classic"),
+		"...only the client has a GateBrake, and it brakes its copy since the notice")
+	if brake == null or brake.gate() == null:
+		return
+	var origin: Vector3 = CompanyFleet.gate_of(_host_root.shed, _host_root.net.company)
+	var same: bool = true
+	for x: float in [-14.0, -12.0, 0.0, 12.0, 14.0]:
+		for z: float in [-30.0, -2.0, 0.0, 2.0, 30.0]:
+			var at: Vector3 = origin + Vector3(x, 0.0, z)
+			same = same and brake.gate().side_of(at) == host_gate.side_of(at) \
+				and is_equal_approx(brake.gate().distance(at), host_gate.distance(at))
+	_expect(same, "...on the host's gate: the same line and the same yard (CompanyFleet.trip_gate())")
+
+
 ## The same hold over a bad link (--net-sim 150 ms, 20 ms jitter on the client's copy): the van faces the playon's
-## side, ~13 m of run-up, and the client drives it at the edge at ~12 m/s. The host holds it; how far the predicted
-## copy overshoots and snaps back is printed (informative).
-func _check_held_lagged(host_van: VehicleBody3D, copy: VehicleBody3D, seat: SeatPoint, driver: Node) -> void:
+## side, ~13 m of run-up, and the client drives it at the edge at ~12 m/s. The host holds it and, once told, the client
+## brakes its own copy there too (CompanyGateBrake, D-0316.4): no snap, the copy within 2.5 m of the host's van.
+## `notice_late_ms` holds the notice back on its way to the client's brake, as a real link would (here it is an RPC
+## over localhost, while the copy's states come the link's half lag late).
+func _check_held_lagged(host_van: VehicleBody3D, copy: VehicleBody3D, seat: SeatPoint, driver: Node,
+		notice_late_ms: int = 0) -> void:
 	var trips: CompanyTrips = _host_root.trips
+	var brake: CompanyGateBrake = _client_root.gate_brake
+	var view: CompanyTripsView = _client_root.trips_view
 	var start: Transform3D = CompanyFleet.park_transform(_host_root.shed, _host_root.net.company, 0)
 	host_van.call(&"park", Transform3D(Basis(Vector3.UP, -PI * 0.5) * start.basis, start.origin))
 	_expect(await _wait_for(func() -> bool: return copy.global_position.distance_to(host_van.global_position) < 0.1),
 		"Turned to the playon's side, the copy stands where the host's van does")
+	# The last hold's brake runs out first (and with it the host's pause between two notices): this one starts told
+	# nothing, so the brake comes only from its own notice.
+	_expect(await _wait_for(func() -> bool: return not brake.is_braking(&"van_classic")),
+		"The client's brake from the last hold has let go")
+	var late: Array = []
+	var hold_late: Callable = func(id: StringName, cap: int) -> void:
+		late.append([Time.get_ticks_msec() + notice_late_ms, id, cap])
+	if notice_late_ms > 0:
+		view.held_at_gate.disconnect(brake.hold)
+		view.held_at_gate.connect(hold_late)
 	copy.call(&"configure_net_sim", {"lag_ms": 150, "jitter_ms": 20, "loss_pct": 0.0})
 	var prediction: Object = copy.get(&"_prediction")
 	var reconciler: NetPredictionReconciler = prediction.get(&"reconciler")
@@ -641,7 +687,11 @@ func _check_held_lagged(host_van: VehicleBody3D, copy: VehicleBody3D, seat: Seat
 	var top_speed: float = 0.0
 	var worst_shift: float = 0.0
 	var worst_gap: float = 0.0
+	var worst_out: float = 0.0
+	var worst_jump: float = 0.0
+	var was_at: Vector3 = copy.global_position
 	var predicted_ticks: int = 0
+	var braked_ticks: int = 0
 	var held: Array[bool] = [false]
 	var on_held: Callable = func(_id: StringName, _reason: Dictionary, _driver: int) -> void: held[0] = true
 	trips.departure_held.connect(on_held)
@@ -649,12 +699,19 @@ func _check_held_lagged(host_van: VehicleBody3D, copy: VehicleBody3D, seat: Seat
 	var before: Array[float] = [0.0, 0.0]
 	var snaps_free: int = -1
 	for _tick: int in range(420):
+		while not late.is_empty() and Time.get_ticks_msec() >= int(late[0][0]):
+			brake.hold(late[0][1], late[0][2])
+			late.pop_front()
 		copy.call(&"set_controls", 1.0, 0.0, false)
 		await physics_frame
 		var flat := Vector3(host_van.linear_velocity.x, 0.0, host_van.linear_velocity.z)
 		top_speed = maxf(top_speed, flat.length())
 		if held[0] and snaps_free < 0:
 			snaps_free = reconciler.snaps - snaps_before
+		if brake.is_braking(&"van_classic"):
+			braked_ticks += 1
+		var moved: float = copy.global_position.distance_to(was_at)
+		was_at = copy.global_position
 		if not copy.is_predicted():
 			continue
 		predicted_ticks += 1
@@ -663,29 +720,87 @@ func _check_held_lagged(host_van: VehicleBody3D, copy: VehicleBody3D, seat: Seat
 		if held[0]:
 			worst_shift = maxf(worst_shift, shift)
 			worst_gap = maxf(worst_gap, gap)
+			worst_out = maxf(worst_out, _out_of_compound(copy.global_position))
+			worst_jump = maxf(worst_jump, moved)
 		else:
 			before = [maxf(before[0], shift), maxf(before[1], gap)]
 	trips.departure_held.disconnect(on_held)
+	if notice_late_ms > 0:
+		view.held_at_gate.disconnect(hold_late)
+		brake.attach(view)
 	var snaps: int = reconciler.snaps - snaps_before - maxi(snaps_free, 0)
-	print("test_company_fleet: held at the gate over 150 ms + 20 ms jitter: top %.1f m/s; before the hold worst shift"
-		% top_speed + " %.2f m, gap %.2f m, %d snaps; held: worst shift %.2f m, gap %.2f m, %d snaps"
-		% [before[0], before[1], maxi(snaps_free, 0), worst_shift, worst_gap, snaps])
+	print("test_company_fleet: held at the gate over 150 ms + 20 ms jitter, the notice %d ms late: top %.1f m/s;"
+		% [notice_late_ms, top_speed] + " before the hold worst shift %.2f m, gap %.2f m, %d snaps;"
+		% [before[0], before[1], maxi(snaps_free, 0)] + " held: worst shift %.2f m, gap %.2f m, %d snaps,"
+		% [worst_shift, worst_gap, snaps] + " the copy at most %.2f m out of the compound and %.2f m in a tick,"
+		% [worst_out, worst_jump] + " braked %d ticks" % braked_ticks)
 	_expect(top_speed > 10.0 and trips.trips_out() == 0 and trips.trip_of(&"van_classic") == null,
 		"Lagged, the client drives the van at the side at %.1f m/s and the host still holds it" % top_speed)
 	_expect(predicted_ticks > 30 and before[0] < NetPredictionReconciler.SNAP_DISTANCE and snaps_free <= 0,
 		"...and predicts its copy up to the gate with no snap (worst shift %.2f m)" % before[0])
-	# Informative only (printed above), an open subtask of D-0316.2: the client doesn't know about the gate, so its
-	# copy runs on past the line for a round trip and the host's stop is snapped in (measured: ~5 m, one snap of
-	# ~3.2 m at 12 m/s). Asserting it waits for the client to brake at the gate itself.
-	if worst_shift >= NetPredictionReconciler.SNAP_DISTANCE or worst_gap >= 2.5:
-		print("test_company_fleet: (informative) the lagged hold snaps the copy: shift %.2f m, gap %.2f m"
-			% [worst_shift, worst_gap])
+	# Before D-0316.4 the copy ran on past the line for a round trip and the host's stop was snapped in: one snap of
+	# 3.05-3.17 m at 12 m/s, the copy ~5 m from the host's van.
+	_expect(held[0] and braked_ticks > 60,
+		"...its GateBrake brakes the client's copy at the gate once told (%d ticks)" % braked_ticks)
+	_expect(snaps == 0 and worst_jump < 0.5,
+		"...with no snap (%d, worst shift %.2f m) and no jump: at most %.2f m a tick, its own speed's"
+		% [snaps, worst_shift, worst_jump])
+	# The notice late, the copy runs on that much longer before it brakes: the gap is the round trip's, only printed.
+	_expect(notice_late_ms > 0 or worst_gap < 2.5,
+		"...and the copy within 2.5 m of the host's van (worst %.2f m)" % worst_gap)
+	if notice_late_ms == 0:
+		await _check_unseen_release(host_van, copy, reconciler, brake)
 	copy.call(&"configure_net_sim", {"lag_ms": 0, "jitter_ms": 0, "loss_pct": 0.0})
 	var own: Player = _client_root.get_node_or_null(NodePath("World/Player_%d" % driver.get_multiplayer_authority())) \
 		as Player
 	if own != null:
 		own.leave_seat()
 	_expect(await _wait_for(func() -> bool: return seat.occupant == null), "The client gets out of the held van")
+
+
+## The host lets the held van go for something the client can't see (its cargo forgotten) while the client still
+## pushes: the client's brake lets go once the host's pose of it is past the compound (CompanyGateBrake.HOST_OUT_M),
+## and the copy follows the host's out with no snap and no jump. The cargo is staged again after.
+func _check_unseen_release(host_van: VehicleBody3D, copy: VehicleBody3D, reconciler: NetPredictionReconciler,
+		brake: CompanyGateBrake) -> void:
+	var trips: CompanyTrips = _host_root.trips
+	var braking: bool = brake.is_braking(&"van_classic")
+	trips.forget(&"van_classic")
+	var snaps_before: int = reconciler.snaps
+	var worst_gap: float = 0.0
+	var worst_jump: float = 0.0
+	var let_go_at: int = -1
+	var was_at: Vector3 = copy.global_position
+	for tick: int in range(150):
+		copy.call(&"set_controls", 1.0, 0.0, false)
+		await physics_frame
+		worst_jump = maxf(worst_jump, copy.global_position.distance_to(was_at))
+		was_at = copy.global_position
+		worst_gap = maxf(worst_gap, copy.global_position.distance_to(host_van.global_position))
+		if let_go_at < 0 and not brake.is_braking(&"van_classic"):
+			let_go_at = tick
+	var out: float = _out_of_compound(copy.global_position)
+	print("test_company_fleet: the host let the held van go unseen: the brake let go after %d ticks; worst gap %.2f m,"
+		% [let_go_at, worst_gap] + " %.2f m a tick, %d snaps; the copy %.1f m out"
+		% [worst_jump, reconciler.snaps - snaps_before, out])
+	_expect(braking and let_go_at > 0 and let_go_at < 90 and out > 5.0,
+		"The host lets the held van go unseen (its cargo forgotten): the client's brake lets go by the host's pose"
+		+ " (after %d ticks) and the copy follows it out (%.1f m)" % [let_go_at, out])
+	_expect(reconciler.snaps == snaps_before and worst_jump < 0.5 and worst_gap < 3.0,
+		"...with no snap (%d), no jump (%.2f m a tick) and within 3 m of the host's van (worst %.2f m)"
+		% [reconciler.snaps - snaps_before, worst_jump, worst_gap])
+	trips.stage_cargo(&"van_classic", [&"o_held"], [&"box_held"])
+
+
+## How far `at` is out of the compound (the host's gate yard: past the playon's far edge or a side), 0 inside it.
+func _out_of_compound(at: Vector3) -> float:
+	var company: Object = _host_root.net.company
+	var origin: Vector3 = CompanyFleet.gate_of(_host_root.shed, company)
+	var north: Vector3 = -_host_root.shed.global_basis.z
+	var off := Vector3(at.x - origin.x, 0.0, at.z - origin.z)
+	var past_side: float = absf(off.dot(north.cross(Vector3.UP).normalized())) \
+		- CompanyFleet.yard_half_width_m(company)
+	return maxf(maxf(off.dot(north), past_side), 0.0)
 
 
 ## The van far from the client's player and back: its copy hides, out of physics, and shows where the host has it.

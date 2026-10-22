@@ -34,6 +34,9 @@ const ASSIST_REACH: float = 1.5
 ## An impact at least this hard (m/s) briefly interrupts tool work.
 const HARD_HIT_SPEED: float = 6.0
 const CareModel = preload("res://scripts/gameplay/package/package_care.gd")
+## The shelf or bay slot a box sits in (no class name; package_rescue.gd preloads it too): current_mount_path's setter
+## reads whose it is before letting it go.
+const MountPoint = preload("res://scripts/gameplay/interaction/package_mount_point.gd")
 var care = CareModel.new()
 var care_state: Dictionary = {}:
 	set(value):
@@ -67,10 +70,14 @@ var is_loaded: bool = false
 var current_mount: Node = null
 ## Replicate shelf occupancy as well as the box transform: clients use it
 ## to decide whether they may board, tend cargo or place another box.
+## The mount it leaves is freed only while it is still this box's: on a client another box may have taken it
+## meanwhile (this one's copy hidden far away and the slot let go, CompanyInterest, D-0316.2), and its update
+## then emptied a slot that box sits in.
 var current_mount_path: NodePath = NodePath():
 	set(value):
-		if is_instance_valid(current_mount) and &"occupied_by" in current_mount:
-			current_mount.set(&"occupied_by", null)
+		var left: MountPoint = current_mount as MountPoint if is_instance_valid(current_mount) else null
+		if left != null and left.occupied_by == self:
+			left.occupied_by = null
 		current_mount_path = value
 		current_mount = get_node_or_null(value) if not value.is_empty() and is_inside_tree() else null
 		if current_mount != null and &"occupied_by" in current_mount:

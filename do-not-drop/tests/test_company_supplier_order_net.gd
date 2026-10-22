@@ -118,8 +118,9 @@ func _test_helper() -> void:
 	_expect(data == {"lamp": 24}, "The request is one flat key per product (got %s)" % [data])
 	var ask: Dictionary = helper.check(wallet, data.merged({"rid": 1}), 7, false)
 	_expect(ask.get("reason") == &"" and ask.get("kind") == CompanySupplierNet.ORDERED
-		and ask.get("data") == {"order_day": 3, "lines": [{"product": "lamp", "qty": 24}], "peer": 7},
-		"An order of the catalog is one supplier_ordered with the day and who asked (got %s)" % [ask])
+		and ask.get("data") == {"order_day": 3, "lines": [{"product": "lamp", "qty": 24}], "peer": 7,
+			"supplier": String(SupplierSchedule.DEFAULT_SUPPLIER)},
+		"An order of the catalog is one supplier_ordered with the day, who asked and the truck (got %s)" % [ask])
 	_expect(helper.schedule.day_count() == 0, "Checking writes nothing")
 	_expect(helper.apply(ask["data"]) and helper.schedule.ordered_for(4) == {&"lamp": 24}
 		and helper.schedule.pallets_for(4).size() == 1,

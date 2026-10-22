@@ -203,6 +203,9 @@ func _check_supplier(res: Resource) -> void:
 	if supplier == null:
 		_add_res(res, "is not a SupplierDefinition")
 		return
+	# The id goes into the calendar and the pallet ids (D-0621.b): one SupplierIds.ok() refuses has no truck.
+	var id_rule: String = "id must be lowercase letters, digits and '_', at most %d long (got '%s')"
+	_require(SupplierIds.ok(supplier.id), res, id_rule % [SupplierIds.MAX_LENGTH, supplier.id])
 	_require(not supplier.products.is_empty(), res, "sells no product")
 	var seen: Dictionary = {}
 	for product_id: StringName in supplier.products:
