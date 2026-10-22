@@ -24,9 +24,10 @@ extends Node
 ##
 ## Kinds today: units_take, units_store and units_drop (rows 5 to 7; units_drop is critical), snapshot_request, the
 ## shed layout's place, move, rotate, sell and expand (D-0910: CompanyLayoutNet, `build`), the packing tables' box_*
-## (rows 9 to 15b, D-0715: CompanyTableNet, `table`), package_ack (D-0715.b: CompanyPackages, `table.packages`), cart_push
-## (D-0610.b: CompanyCarts, `carts`; units move with units_take / units_store at the station cart:<id>), the pallet
-## jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`), supplier_order (D-0603.b.2:
+## (rows 9 to 15b, D-0715: CompanyTableNet, `table`), package_ack (D-0715.b: CompanyPackages, `table.packages`),
+## cart_push (D-0610.b: CompanyCarts, `carts`; units move with units_take / units_store at the station
+## cart:<id>), the pallet jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`),
+## supplier_order (D-0603.b.2:
 ## CompanySupplierNet, `supplier`), shop_buy (D-0518: CompanyShopNet, `shop`, the host's only) and trip_tow (D-0307.1:
 ## CompanyTowNet, `tow`: a stuck vehicle towed home; its effects go out as wallet_moved and trip_closed).
 ## A task that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a
