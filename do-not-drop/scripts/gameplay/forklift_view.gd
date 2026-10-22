@@ -327,7 +327,9 @@ func _on_rejected(rid: int, reason: StringName) -> void:
 func _prompt() -> String:
 	if _refusal != "" and Time.get_ticks_msec() < _refusal_until_msec:
 		return tr(_refusal)
-	return tr("WORLD_FORKLIFT_DRIVING")
+	return tr("WORLD_FORKLIFT_DRIVING") % [GameSettings.binding_label(&"interact"),
+			GameSettings.binding_label(&"forklift_mast_up"), GameSettings.binding_label(&"forklift_mast_down"),
+			GameSettings.binding_label(&"package_drop")]
 
 
 # --- Drawing ---

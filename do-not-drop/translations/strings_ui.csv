@@ -520,6 +520,9 @@ UI_OPT_BIND_RIGHT_CLICK,Click derecho,Right click
 UI_OPT_BIND_GROUP_FOOT,A pie,On foot
 UI_OPT_BIND_GROUP_DRIVE,Manejando,Driving
 UI_OPT_BIND_GROUP_CREW,Tripulación,Crew
+UI_OPT_BIND_GROUP_FORKLIFT,Autoelevador,Forklift
+UI_OPT_BIND_MAST_UP,Subir el mástil,Raise the mast
+UI_OPT_BIND_MAST_DOWN,Bajar el mástil,Lower the mast
 UI_OPT_BIND_DEFAULT,Original,Default
 UI_OPT_BIND_DEFAULT_HINT,Volver a la tecla y el botón originales,Back to the original key and button
 UI_OPT_BIND_SWAPPED,%s tenía esa tecla: se intercambiaron.,%s had that key: swapped.
