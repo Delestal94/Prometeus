@@ -287,6 +287,10 @@ func _publish_net_state() -> void:
 
 
 func _find_vehicle() -> Node3D:
+	# Among several vehicles (a fleet, D-0302.2.b.4) the box's owner picks the one that carries it.
+	if is_inside_tree() and is_multiplayer_authority() and get_tree().get_node_count_in_group(&"vehicle") > 1:
+		_vehicle = VehiclePick.pick(get_tree(), _vehicle, global_position, RIDE_MARGIN if net_in_vehicle else 0.0)
+		return _vehicle
 	if not is_instance_valid(_vehicle) and is_inside_tree():
 		var found: Node = get_tree().get_first_node_in_group(&"vehicle")
 		_vehicle = found as Node3D if found != null and found.has_method(&"carries") else null

@@ -21,7 +21,8 @@ extends Node3D
 ## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
 ## one: the same player at SPAWN it always was.
 ##
-## The company's vehicles (`fleet`) park outside the shed's exit on every peer (CompanyFleet, D-0302.2.b);
+## The company's vehicles (`fleet`) park in the playon outside the shed's exit on every peer and can be driven
+## (CompanyFleet, D-0302.2.b);
 ## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
@@ -32,9 +33,9 @@ extends Node3D
 ## The host leaving mid-day (D-2005, like N-222): a client keeps what it saw of the
 ## host's day for the menu (CompanyInterruptedDay), gets its own company back, stops
 ## the world and loads the main menu. The host (solo too) loads its slot when it comes
-## up without a company (CompanySave) and saves the day as it stood at the last applied
-## event, marked interrupted, whenever its world closes before the day does: its session
-## ended and it went back to the menu, or the game closed. A day DayCycle (D-0203) closes is saved
+## up without a company (CompanySave), saves a slot with none as that day's opening (D-0251) and,
+## whenever its world closes before the day does (session ended, back to the menu, or the game
+## closed), writes nothing of that day: it marks the opening interrupted. A day DayCycle (D-0203) closes is saved
 ## as soon as its SUMMARY applies, and again if the world closes during the summary, as the next
 ## day's opening (save_closed_day(), D-0236): a game killed mid-day comes back at its last close.
 ##
@@ -63,7 +64,7 @@ extends Node3D
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
-## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the shed's gate and decides
+## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the playon's gate (its far edge) and decides
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
 ## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
@@ -80,7 +81,7 @@ const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
 ## gameplay/: once the company HUD exists, the host-gone screen and the way to the menu move
 ## there, as N-222's live in hud_pause.gd.
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
-## Where a save puts the units players held (D-2005): a loaded day opens with empty hands. The
+## Where a close's save puts the units players held (D-2005, D-0236): a loaded day opens with empty hands. The
 ## shed has no fixed spot for them yet (no station gives a location), so they lie in floor
 ## bundle 0, a floor:<n> location of red-autoridad.md section 2 (row 7). D-2006 / D-0611 will
 ## refine where they go (where each player stood).
@@ -146,9 +147,11 @@ var day_cycle: DayCycle
 ## The closing screen of the day (D-0508.3): every peer shows what the host closed, only the host's
 ## "continue" moves the day on.
 var summary_panel: DaySummaryPanel
+## The company's shop over the closing screen (D-0511.2): its Shop button opens it, the host buys.
+var shop_screen: CompanyShopScreen
 ## Host only (null on a client): the host's rules at a fixed rate (D-0232).
 var business_tick: BusinessTick
-## Host: the shed gate and the trips out (D-0302.1). Null on a client.
+## Host: the playon's gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
@@ -162,7 +165,7 @@ var interest: CompanyInterest
 ## World/Packages: where every peer puts the package a sealed box becomes (D-0715.b).
 var packages: Node3D
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
-## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
+## and whose opening a cut day marks interrupted (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
 var save_slot: String = CompanySave.DEFAULT_SLOT
 var save_dir: String = CompanySave.SAVE_DIR
@@ -217,13 +220,18 @@ func _ready() -> void:
 	zones = load_zones()
 	for zone: ZoneDefinition in zones:
 		_add_zone_slab(zone)
+	CompanyGround.add_backup(_world, zones)
 	_add_shed()
+	ColdChainTick.add_to(self, net, day_cycle, shed, business_tick)
 	_add_supplier_truck()
 	_add_cells()
 	_add_packages()
 	_add_interest()
 	_add_trips()
 	fleet = CompanyFleet.add_to(_world, net, session, shed)
+	if trips != null:
+		fleet.vehicle_recovered.connect(trips.forget)
+	CompanyGpsLink.add_to(_world, fleet, trips_view, net)
 	_add_crew()
 	_add_builder()
 	_add_stock_board()
@@ -241,7 +249,8 @@ static func load_zones() -> Array[ZoneDefinition]:
 ## Same name on every peer, so its RPCs reach the same node. The host (solo
 ## counts), with no company on, loads its slot (a new company only when there is
 ## none to load) and hands CompanyNet its stock (CompanyState.stock(): a copy the
-## events keep up to date). A client
+## events keep up to date), the saved day's return bundle laid on the shed's floor
+## (ReturnBundle.place(), D-0252: the snapshot takes it to the clients). A client
 ## writes nothing (rule 1 of red-autoridad.md): an empty stock, and every event
 ## held until the host's snapshot puts the real one, and the host's company, in
 ## place (D-2004); what the client's CompanyState held before comes back when it
@@ -261,8 +270,8 @@ func _add_net(state: COMPANY_STATE) -> void:
 	if state == null:
 		return
 	if not state.is_active():
-		# The slot first: a new company here would erase it on the first exit
-		# (save_interrupted_day()). CORRUPT already starts a new company (the bad file is kept as
+		# The slot first: a new company here would erase it with its opening save below. CORRUPT
+		# already starts a new company (the bad file is kept as
 		# .bad); MISSING and TOO_NEW leave it off. A newer build's file is never overwritten
 		# (CompanySave.save()), so a new company played over one is not saved.
 		CompanySave.load_into(state, save_slot, save_dir)
@@ -276,8 +285,14 @@ func _add_net(state: COMPANY_STATE) -> void:
 		var report: Dictionary = DefaultShed.load_default().apply_to(state)
 		for refusal: Dictionary in report["refused"]:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
+	# The slot always holds an opening (D-0251): one without a save gets this day's, before the dev
+	# flags (they never reach the disk). A newer build's file counts as a save: never written over.
+	if not CompanySave.exists(save_slot, save_dir):
+		if not CompanySave.save(state, save_slot, save_dir):
+			push_warning("CompanyRoot: opening of day %d not saved to %s" % [state.day, save_dir])
 	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
+	ReturnBundle.place(net.floor_bundles, net.inventory, SAVED_HANDS_LOCATION, state.layout, state.warehouse_stage)
 	net.pallets.load_save(state.pallets)
 	_hosted_state = state
 
@@ -332,6 +347,7 @@ func _add_summary_panel() -> void:
 	summary_panel.name = "DaySummaryPanel"
 	layer.add_child(summary_panel)
 	summary_panel.continued.connect(_on_summary_continued)
+	shop_screen = CompanyShopScreen.attach(self, net, summary_panel)
 	var bus: Node = _event_bus()
 	if bus != null:
 		bus.connect(&"company_day_summary", _on_day_summary)
@@ -381,24 +397,18 @@ func _start_company(state: COMPANY_STATE) -> void:
 		session.session_failed.connect(_on_session_failed)
 
 
-## Host (solo too): the day as it stands, at the last applied event, saved as interrupted
-## (CompanySave): the live stock goes into the company first as a save keeps it (stock_for_save():
-## nobody holds anything when it loads). Loading it plays the same day again from the opening.
-## False on a client, without a company on, over a newer build's save or when the file could not
-## be written.
+## Host (solo too): the day cut short (D-0251). Nothing of it is written: the slot's opening is only
+## marked interrupted (CompanySave.mark_interrupted()), so loading it plays the day again. False on
+## a client, without a company on or a save in the slot, over a newer build's save or on a write error.
 func save_interrupted_day() -> bool:
 	if _hosted_state == null or not is_instance_valid(_hosted_state):
 		return false
 	if not _hosted_state.is_active():
 		return false
-	if net != null and is_instance_valid(net) and net.inventory != null:
-		_hosted_state.store_stock(stock_for_save(net.inventory))
-		_hosted_state.pallets = net.pallets.to_save()
-	var saved: bool = CompanySave.save(_hosted_state, save_slot, save_dir, true)
-	if not saved:
-		push_warning("CompanyRoot: the interrupted day %d could not be saved to %s"
-			% [_hosted_state.day, CompanySave.path_for(save_slot, save_dir)])
-	return saved
+	var marked: bool = CompanySave.mark_interrupted(save_slot, save_dir)
+	if not marked:
+		push_warning("CompanyRoot: interrupted day %d not marked in %s" % [_hosted_state.day, save_dir])
+	return marked
 
 
 ## Host (solo too), with the day closed (DayCycle in SUMMARY): the company saved as the next day's
@@ -416,6 +426,7 @@ func save_closed_day() -> bool:
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
 		_hosted_state.pallets = net.pallets.to_save()
+		ColdChainTick.write_clocks(self, _hosted_state)
 	var next_opening := COMPANY_STATE.new()
 	next_opening.from_dict(_hosted_state.to_dict())
 	next_opening.day = _hosted_state.day + 1
@@ -428,20 +439,11 @@ func save_closed_day() -> bool:
 	return saved
 
 
-## A copy of `stock` as a save keeps it (D-2005): what every hands:<peer> held lies in
-## SAVED_HANDS_LOCATION, with the total of each product and the reservations unchanged. `stock`
-## itself (CompanyNet's live one) is not touched.
+## A copy of `stock` as a save keeps it (D-2005, D-0252: ReturnBundle.for_save()): what lay in hands, on the
+## floor, in open boxes and in packages lies in SAVED_HANDS_LOCATION, the total of each product kept and
+## nothing reserved. `stock` itself (CompanyNet's live one) is not touched.
 static func stock_for_save(stock: Inventory) -> Inventory:
-	var copy := Inventory.new()
-	copy.from_dict(stock.to_dict())
-	var by_product: Dictionary = copy.to_dict().get("stock", {})
-	for product: Variant in by_product:
-		var locations: Dictionary = by_product[product]
-		for location: Variant in locations:
-			if String(location).begins_with(CompanyNet.HANDS_PREFIX):
-				copy.move(StringName(product), int(locations[location]), StringName(location),
-					SAVED_HANDS_LOCATION)
-	return copy
+	return ReturnBundle.for_save(stock, SAVED_HANDS_LOCATION)
 
 
 ## What this client saw of the host's day (CompanyInterruptedDay.summary()): the mirror's day,
@@ -457,7 +459,8 @@ func host_day_seen() -> Dictionary:
 	return CompanyInterruptedDay.summary(_mirrored_state, stock, minute)
 
 
-## The host's world closing mid-day saves the day as interrupted (D-2005); a client leaves the
+## The host's world closing mid-day marks the day interrupted (D-2005); in the summary it saves the
+## next day's opening. Either way its company is then loaded from the slot (D-0251). A client leaves the
 ## host's company behind: its CompanyState goes back to what it had before the snapshot
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
@@ -467,8 +470,8 @@ func _exit_tree() -> void:
 	if bus != null and bus.is_connected(&"company_day_started", _on_day_started):
 		bus.disconnect(&"company_day_started", _on_day_started)
 	if _hosted_state != null:
-		if not save_closed_day():
-			save_interrupted_day()
+		if save_closed_day() or save_interrupted_day():
+			CompanySave.load_into(_hosted_state, save_slot, save_dir)
 		_hosted_state = null
 	_restore_own_company()
 	_publish_presence()
@@ -788,7 +791,8 @@ func _process(_delta: float) -> void:
 
 ## Every peer: the view of the trips out (CompanyTripsView, attached to CompanyNet in the frame the
 ## world comes up, like the day's clock, so its snapshot part goes in the first snapshot). Host: the
-## gate across the shed's exit (north wall, centered) and the trips that cross it, which the view
+## gate across the playon's far edge (CompanyFleet.gate_of(): the yard outside the shed's north exit, where the
+## vehicles park, so nothing is out until one is driven across it) and the trips that cross it, which the view
 ## publishes; the day waits for a trip still out (DayCycle.trips_out: CompanyTrips, the authority, on
 ## the host; the view on a client, where the cycle never polls).
 func _add_trips() -> void:
@@ -801,11 +805,11 @@ func _add_trips() -> void:
 	if not net.is_host():
 		day_cycle.trips_out = trips_view.trips_out
 		return
-	var width: float = float(CompanyTuning.WAREHOUSE_EXIT_CELLS.x) * CompanyTuning.WAREHOUSE_GRID_M
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(CompanyFleet.exit_of(shed, net.company), width)
+	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M, -shed.global_basis.z)
+	trips.set_yard(CompanyFleet.yard_back_m(net.company), CompanyFleet.yard_half_width_m(net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out

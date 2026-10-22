@@ -34,3 +34,19 @@ Decisión: la tabla vive en el script y no en un campo nuevo de los `.tres`: son
 Decisión: la orientación es de la caja entera y no de cada producto, porque en F1 los productos no rotan en la grilla (`PackedBox`). Decisión: la lista va por id en el script, como `ProductCompatibility`, para no tocar los `.tres` del catálogo.
 **Test** `test_product_orientation`: qué ids piden estar de pie y existen en el catálogo; caja de pie segura; caja acostada con leche la lista una vez y cobra el castigo; el vidrio acostado no falla; caja nula; ida y vuelta por JSON y snapshot viejo.
 **Hecho cuando:** la regla tiene su test (pasa).
+
+### D-0729 · Pedidos multi-caja (un pedido en 2-3 cajas) — B · Sonnet 5.5 · high · Aviso: no · F2
+**[x] Hecho (2026-10-22, PR pendiente)** — `OrderParts` (`scripts/gameplay/business/order_parts.gd`) + `CompanyTuning.ORDER_BOXES_MAX` y `MULTI_BOX_FILL`; `test_order_parts`. Que el generador pida pedidos grandes, el vínculo de varias cajas en `OrderBoxLink`, la hoja con "caja 1/2" y cobrar al entregar todas quedan para D-0729.b (ver `revisar/D-0729.md`).
+**Depende de:** D-0703 (`PackedBox`), D-0712 (`BoxContentCheck`), D-0808 (`OrderBoxLink`)
+**Qué:** `class_name OrderParts`, estático. Un pedido que ocupa más de `MULTI_BOX_FILL` (75 %) de una caja XL se parte con `split(order, products)` en 1 a `ORDER_BOXES_MAX` (3) partes, una por caja: unidades de mayor a menor volumen, cada una en la primera parte con lugar (empates por id de producto). Cada parte es un pedido (`id` `<pedido>#<n>`) que `BoxContentCheck` ya entiende. `match(order, products, boxes)` empareja las cajas entregadas con las partes en cualquier orden y dice `missing` (partes sin caja) y `extra` (cajas sobrantes); `door_accepts` exige las dos listas vacías.
+Decisión: la partición se calcula de los ítems del pedido, no se guarda: todos los peers obtienen lo mismo y no cambia `Order`, `OrderBook` ni el protocolo. Decisión: pasado el tope de cajas, la unidad va a la parte con más lugar (el pedido sigue entrando en 3); el generador no debería pedir tanto y D-0729.b lo limita.
+**Test** `test_order_parts`: 6 unidades son una parte (el pedido mismo); 7 son dos y 14 tres; las partes suman lo pedido y la partición es repetible; el tope no pierde unidades; emparejado en cualquier orden, caja faltante, caja equivocada y caja de más.
+**Hecho cuando:** un pedido grande se parte en cajas y la puerta solo lo acepta con todas (el test pasa).
+
+### D-0731 · Mensaje escrito a mano del cliente — B · Sonnet 5.5 · low · Aviso: no · F2
+**[x] Hecho (2026-10-22, PR pendiente)** — `CustomerNote` (`scripts/gameplay/business/customer_note.gd`) + `PackedBox.note_key` + 6 claves `UI_COMPANY_NOTE*` en `strings_ui.csv`; `test_customer_note`. Dibujar la nota en la cara de la caja con el marcador de `PackageScribble` y mostrarla en la hoja quedan para D-0731.b (ver `revisar/D-0731.md`).
+**Depende de:** D-0703 (`PackedBox`), D-0723 (`GiftWrap.is_gift`)
+**Qué:** `class_name CustomerNote`, estático. Cada pedido lleva una nota corta elegida por su id de una lista fija (4 comunes, 2 de regalo para pedidos `gift`): `key_for(order)`, `attach(box, order)` (la escribe una sola vez en `PackedBox.note_key`) y `text(box)` (traducida). `note_key` viaja en `to_dict`/`from_dict`; una clave desconocida se descarta.
+Decisión: la nota sale del id del pedido (`String.hash`), no de un azar: todos los peers obtienen la misma sin red y no cambia `Order` ni el protocolo. Decisión: son claves de `strings_ui.csv` y no texto libre del cliente, para que se traduzca; la lista crece con D-0822 (60 textos).
+**Test** `test_customer_note`: nota repetible, pedido sin id sin nota, pool de regalo vs. común, las 4 comunes se usan, todas las claves están en el CSV, se escribe una vez, ida y vuelta por JSON, clave falsa y snapshot viejo.
+**Hecho cuando:** la caja lleva la nota de su pedido (el test pasa).

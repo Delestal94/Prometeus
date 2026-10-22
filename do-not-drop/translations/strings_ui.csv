@@ -430,6 +430,10 @@ UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
 UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
 UI_COMPANY_BANKRUPT_WARNING,Cerraste en rojo: hoy llegan menos pedidos (%d %%).,You closed in the red: fewer orders today (%d%%).
+UI_COMPANY_CLOSE_DAY,Cerrar el día,Close the day
+UI_COMPANY_CLOSE_DAY_CONFIRM,"¿Cerrar el día ahora? No entran más pedidos, se espera a que vuelvan las salidas y lo que no se entregó se cobra como a las 20:00.","Close the day now? No more orders come in, the trips out come back and whatever was not delivered is charged as at 20:00."
+UI_COMPANY_CLOSE_DAY_HOST_ONLY,Lo cierra el host,The host closes the day
+UI_COMPANY_EXIT_LOSES_DAY,"Salir ahora pierde lo hecho desde las 08:00. Para guardarlo, cerrá el día.","Leaving now loses everything done since 08:00. To keep it, close the day."
 UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d, balance $%d, %d units in stock."
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
@@ -1443,3 +1447,23 @@ UI_ORDER_STARS_2,Mala,Bad
 UI_ORDER_STARS_3,Regular,Fair
 UI_ORDER_STARS_4,Buena,Good
 UI_ORDER_STARS_5,Excelente,Excellent
+UI_FINANCE_SHOP,Tienda,Shop
+UI_SHOP_TITLE,Tienda de la empresa,Company shop
+UI_SHOP_MONEY,Caja de la empresa: %s,Company cash: %s
+UI_SHOP_ROW,"%s · $%d","%s · $%d"
+UI_SHOP_BUY,Comprar,Buy
+UI_SHOP_CLOSE,Volver al cierre,Back to summary
+UI_SHOP_EMPTY,Todavía no hay nada a la venta,Nothing for sale yet
+UI_SHOP_KIND_VEHICLE,Vehículo,Vehicle
+UI_SHOP_KIND_MACHINE,Máquina,Machine
+UI_SHOP_KIND_EXPANSION,Ampliación,Expansion
+UI_SHOP_BOUGHT,Comprado: %s,Bought: %s
+UI_SHOP_HOST_ONLY,Solo el anfitrión compra por la empresa,Only the host buys for the company
+UI_SHOP_BAD_DATA,Eso no se puede comprar,That cannot be bought
+UI_SHOP_NO_LINK,Sin conexión con el anfitrión,No connection to the host
+UI_COMPANY_NOTE_1,Dejalo en la puerta. ¡Gracias!,Leave it at the door. Thanks!
+UI_COMPANY_NOTE_2,Si no estoy toque timbre dos veces.,"If I'm out, ring twice."
+UI_COMPANY_NOTE_3,Cuidado con el perro (es amistoso).,Careful with the dog (he's friendly).
+UI_COMPANY_NOTE_4,Ojalá llegue antes de la cena.,Hope it gets here before dinner.
+UI_COMPANY_NOTE_GIFT_1,¡No lo abras! Es sorpresa.,Don't open it! It's a surprise.
+UI_COMPANY_NOTE_GIFT_2,Para mi abuela. Con cariño.,For my grandma. With love.

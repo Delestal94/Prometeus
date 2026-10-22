@@ -7,28 +7,28 @@ extends SceneTree
 ##   <stage>:<reason>", ok -> "" (the bot prints BOT_STAGE <stage> ok instead);
 ## - final_line is BOT_OK only when every stage is ok, else BOT_FAIL stages_missing=<n> (a bot that
 ##   always said OK would hide the missing stages);
-## - summary_lines keys and the BOT_COMPANY prefix;
+## - summary_lines keys (return_bundle_units too, D-0252) and the BOT_COMPANY prefix;
 ## - integration: the bot's own open_world/wait_opening open the company world (company_root.tscn)
 ##   and the day reaches OPENING within the bounded wait; closing leaves no error behind;
 ## - the stages, run in order on that one world (run_stage): receive_pallet, shelve_stock,
-##   take_orders, pack_boxes, dispatch, deliver, return and close_day return ok, and what each leaves is checked
+##   take_orders, pack_boxes, dispatch, drive, deliver, return and close_day return ok, and what each leaves is checked
 ##   in the world (the pallets open and the stock on the labelled shelf slots, the day's whole plan
 ##   brought by the world into the shared book, CompanyNet.orders.book, and copied OPEN into
 ##   CompanyTrips' own book, D-0813.1; one order PACKED by a sealed box with no assembly error and
-##   its packaging in the ledger, the cargo loaded with the trip not started, D-2016.2: the van out
-##   through the gate with its order OUT, then DELIVERED at a house of the fixed map with the pay in
-##   the wallet and the ledger as order_paid, back in with the trip closed and nothing failed or
-##   out, the day in SUMMARY with the costs of the packing in its summary and saved); drive stays
-##   not_implemented naming the task it waits for (D-0302.2/D-1501); a stage
-##   run out of order fails with a reason, and so do a stage name that does not exist and a
-##   world that is not the company's.
+##   its packaging in the ledger, the cargo loaded with the trip not started, D-2016.2: the fleet's
+##   van, the real node, driven by the player out of the yard under its own physics, so the gate
+##   started its trip with the order OUT, the van outside and moved, the player at the wheel, then
+##   DELIVERED at a house of the fixed map with the pay in the wallet and the ledger as order_paid,
+##   reversed back into the yard with the trip closed, nothing failed or out and the player off the
+##   wheel, the day in SUMMARY with the costs of the packing in its summary and saved); no stage is
+##   pending any more (PENDING stays for the next one that is); a stage run out of order fails
+##   with a reason, and so do a stage name that does not exist and a world that is not the
+##   company's.
 
 const BOT: String = "res://tests/bot_company_day.gd"
 const DAY_CYCLE := preload("res://scripts/core/company/day_cycle.gd")
 ## The stages that run, and the ones that wait for a task: stage -> the reason they return.
-const PENDING: Dictionary = {
-	"drive": "D-0302.2/D-1501",
-}
+const PENDING: Dictionary = {}
 
 var _failures: int = 0
 
@@ -83,11 +83,12 @@ func _check_pure(bot: GDScript) -> void:
 	_expect(final != "BOT_OK", "A failed stage is not BOT_OK (got %s)" % final)
 
 	var stats: Dictionary = {
-		"players": 2, "money": 500, "deliveries": 0, "breaks": 0, "assembly_errors": 0,
+		"players": 2, "money": 500, "deliveries": 0, "breaks": 0, "assembly_errors": 0, "return_bundle_units": 3,
 		"stage_ms": {"drive": 7},
 	}
 	var lines: PackedStringArray = bot.call(&"summary_lines", stats)
-	_expect(lines.size() == 5 + names.size(), "Summary line count (got %d)" % lines.size())
+	_expect(lines.size() == 6 + names.size(), "Summary line count (got %d)" % lines.size())
+	_expect("BOT_COMPANY return_bundle_units=3" in lines, "Return bundle line (got %s)" % [lines])
 	_expect(lines[0] == "BOT_COMPANY players=2", "First line (got %s)" % lines[0])
 	_expect(lines[1] == "BOT_COMPANY money=500", "Money line (got %s)" % lines[1])
 	_expect("BOT_COMPANY stage_ms_drive=7" in lines, "Stage ms line (got %s)" % [lines])
@@ -119,7 +120,8 @@ func _check_out_of_order(bot: GDScript, level: Node3D) -> void:
 	var money: int = _money(level)
 	var cases: Dictionary = {
 		"shelve_stock": "nothing_in_hands", "pack_boxes": "no_packable_order",
-		"dispatch": "nothing_packed", "deliver": "nothing_loaded", "return": "no_trip_out",
+		"dispatch": "nothing_packed", "drive": "nothing_loaded", "deliver": "nothing_loaded",
+		"return": "no_trip_out",
 		"no_such_stage": "unknown_stage",
 	}
 	for stage: String in cases:
@@ -161,13 +163,16 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 			"dispatch":
 				_check_dispatched(root_level, ctx)
 				money = _money(level)
+			"drive":
+				_check_driven(root_level, ctx)
 			"deliver":
 				_check_delivered(root_level, ctx, money)
 			"return":
 				_check_returned(root_level, ctx)
 			"close_day":
-				_check_closed(root_level)
+				_check_closed(root_level, ctx)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
+	# drive and return move the real van in real-time physics (about 2 s each).
 	_expect(seconds < 15.0, "The stages run in a bounded time (took %.1f s)" % seconds)
 
 
@@ -235,6 +240,19 @@ func _check_dispatched(level: CompanyRoot, ctx: Dictionary) -> void:
 	_expect(level.trips.trips_out() == 0, "No trip started without a vehicle")
 
 
+func _check_driven(level: CompanyRoot, ctx: Dictionary) -> void:
+	var van := level.fleet.vehicle(String(ctx["vehicle_id"])) as VehicleBody3D
+	var trip: Trip = ctx["trip"]
+	_expect(van != null and trip != null and level.trips.trip_of(ctx["vehicle_id"]) == trip,
+		"The fleet's van crossed the gate itself and its trip started")
+	_expect(level.trips.book.state_of(ctx["order"]["id"]) == Order.STATE_OUT, "The loaded order is OUT")
+	_expect(van != null and level.trips.gate.side_of(van.global_position) == TripGate.OUTSIDE
+		and float(ctx["drive_m"]) > 2.0,
+		"The van stands outside the yard, driven there (%.1f m)" % float(ctx["drive_m"]))
+	_expect(van != null and int(van.get(&"driver_peer_id")) == level.player.get_multiplayer_authority(),
+		"The player is at the wheel")
+
+
 func _check_delivered(level: CompanyRoot, ctx: Dictionary, money: int) -> void:
 	var order_id: StringName = ctx["order"]["id"]
 	var trip: Trip = ctx["trip"]
@@ -258,9 +276,13 @@ func _check_returned(level: CompanyRoot, ctx: Dictionary) -> void:
 		"The trip closed on return with nothing failed")
 	_expect(level.trips.trips_out() == 0, "No vehicle is out: the day may close")
 	_expect(level.trips.closed_trips().size() == 1, "One closed trip")
+	var van := level.fleet.vehicle(String(ctx["vehicle_id"])) as VehicleBody3D
+	_expect(van != null and level.trips.gate.side_of(van.global_position) == TripGate.INSIDE,
+		"The van was driven back into the yard")
+	_expect(van != null and int(van.get(&"driver_peer_id")) == 0, "Nobody is left at the wheel")
 
 
-func _check_closed(level: CompanyRoot) -> void:
+func _check_closed(level: CompanyRoot, ctx: Dictionary) -> void:
 	var cycle: DayCycle = level.day_cycle
 	_expect(cycle.phase() == DAY_CYCLE.Phase.SUMMARY,
 		"The day is in SUMMARY (got %s)" % cycle.phase_name())
@@ -268,6 +290,14 @@ func _check_closed(level: CompanyRoot) -> void:
 	_expect(int(cycle.summary.get("costs", 0)) > 0, "The summary counts the day's costs")
 	var path: String = CompanySave.path_for(level.save_slot, level.save_dir)
 	_expect(FileAccess.file_exists(path), "The closed day was saved to the temp folder")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var saved := Inventory.new()
+	if raw is Dictionary:
+		saved.from_dict(((raw as Dictionary).get("company", {}) as Dictionary).get("inventory", {}))
+	var left: int = CompanyAsk.units_at(saved, CompanyRoot.SAVED_HANDS_LOCATION)
+	_expect(int(ctx.get("return_bundle_units", -1)) == left,
+		"The bot counts the units the save left in the return bundle (D-0252) (got %s, saved %d)"
+		% [ctx.get("return_bundle_units"), left])
 
 
 func _money(level: Node3D) -> int:

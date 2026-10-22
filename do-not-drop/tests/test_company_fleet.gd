@@ -8,14 +8,15 @@ extends SceneTree
 ##   that exists (a bike, junk) are skipped, at most MAX_VEHICLES; node_names() names the second of an id
 ##   "<id>_2" and never repeats a name.
 ## - Solo, company_root.tscn: World/Vehicles is a CompanyFleet holding exactly the fleet's vehicles, named by
-##   id, each its definition's scene with its variant and in CompanyTrips.VEHICLE_GROUP, parked past the gate's
-##   line with its rear doors out of the shed and its nose away from it, sitting on the ground; no trip started
+##   id, each its definition's scene with its variant and in CompanyTrips.VEHICLE_GROUP, drivable outside a run
+##   (test_company_van_drive) and parked in the playon, inside the gate (its far edge, CompanyFleet.gate_of()),
+##   with its rear doors out of the shed and its nose away from it, sitting on the ground; no trip started
 ##   (trips_out() 0); the interest tracks its synchronizer and the host's cells anchor on it. build() with a
 ##   two-van fleet adds only the missing one, van_classic_2, parked beside it.
 ## - A player sits at the wheel (cab door open, the driver seat's interact(), as the host does): the van's
 ##   driver_peer_id is its peer and the player is seated there; getting up gives the wheel back.
-## - With cargo staged on the van, moving it across the gate's line outward starts a trip with that order (OUT,
-##   and out in the TripsView); back across it closes the trip.
+## - With cargo staged on the van, moving it across the gate's line (the playon's far edge) outward starts a trip
+##   with that order (OUT, and out in the TripsView); back across it closes the trip.
 ## - ENet pair in one process (the host on the NetworkManager autoload, the client on a second copy, each in
 ##   the real company_root.tscn, as test_company_online): the client builds the same
 ##   World/Vehicles/van_classic from the host's snapshot, a frozen copy it doesn't own. Until the client acks
@@ -27,6 +28,12 @@ extends SceneTree
 ##   and it stops once the run ends.
 ## - The client's player takes the wheel (the seat's interact() on the host) and the client leaves: the host
 ##   frees the wheel (driver_peer_id 0, controls off) and the seat, and closes its vehicles to it.
+## - The client at the wheel drives the host's van outside a run (D-0302.2.b.2): its copy is built
+##   drivable_outside_run; once the host seats it, with its copy's controls set by hand (the input component reads
+##   the host process's peer id here) the host's van is let go (net_simulating, its NetRestThrottle stops
+##   resting), the client predicts its copy (is_predicted()), the host's van moves and the copy stays within a
+##   metre of it; close_to() takes the client off the wheel and the van brakes, freezes within the parking wait
+##   and its engine goes off.
 ## - No engine error on the way (a synchronizer reaching the client before its van existed logs one).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -163,6 +170,7 @@ func _check_solo(state: Node) -> void:
 		"...with its definition's variant %s (got %s)" % [definition.variant, van.get(&"variant_id")])
 	_expect(van.is_in_group(CompanyTrips.VEHICLE_GROUP) and van.freeze,
 		"...in CompanyTrips.VEHICLE_GROUP, parked (frozen) on the host")
+	_expect(bool(van.get(&"drivable_outside_run")), "...drivable outside a run")
 	_check_parked(level, van)
 	await _check_tracked(level, van)
 	await _check_second_van(level, fleet)
@@ -172,15 +180,21 @@ func _check_solo(state: Node) -> void:
 	await process_frame
 
 
-## Parked past the gate's line, rear doors out of the shed, nose away from it, on the ground, no trip.
+## Parked in the playon (inside the gate's line), rear doors out of the shed, nose away from it, on the ground, no
+## trip.
 func _check_parked(level: CompanyRoot, van: VehicleBody3D) -> void:
 	var trips: CompanyTrips = level.trips
 	var outward: Vector3 = -level.shed.global_basis.z
-	_expect(trips != null and trips.gate.side_of(van.global_position) == TripGate.OUTSIDE
-		and trips.gate.distance(van.global_position) > CompanyShed.WALL_THICKNESS + CompanyFleet.PARK_GAP_M,
-		"The van parks past the gate's line (%.2f m out)" % trips.gate.distance(van.global_position))
+	var wall_out: float = trips.gate.distance(CompanyFleet.exit_of(level.shed, level.net.company)) \
+		+ CompanyFleet.PLAYON_DEPTH_M + CompanyShed.WALL_THICKNESS
+	var nose_tip: Vector3 = van.to_global(Vector3(0.0, 1.0, -2.7))
+	_expect(trips != null and trips.gate.side_of(van.global_position) == TripGate.INSIDE
+		and trips.gate.side_of(nose_tip) == TripGate.INSIDE and absf(wall_out) < SAME_M,
+		"The van parks in the playon, inside the gate's line (%.2f m from it, nose %.2f m)"
+		% [trips.gate.distance(van.global_position), trips.gate.distance(nose_tip)])
 	var rear: Vector3 = van.to_global(Vector3(0.0, 1.0, 4.6))
-	_expect(not level.shed.holds(rear) and trips.gate.distance(rear) > CompanyShed.WALL_THICKNESS,
+	_expect(not level.shed.holds(rear) and trips.gate.distance(rear)
+		< -CompanyFleet.PLAYON_DEPTH_M + CompanyFleet.PARK_GAP_M + 0.5 + CompanyShed.WALL_THICKNESS,
 		"...its rear doors out of the shed and its wall (%s)" % rear)
 	var nose: Vector3 = -van.global_basis.z
 	_expect(nose.dot(outward) > 0.99, "...nose away from the shed (front %s, out %s)" % [nose, outward])
@@ -223,7 +237,7 @@ func _check_second_van(level: CompanyRoot, fleet: CompanyFleet) -> void:
 		var apart: float = Vector2(second.global_position.x - first.global_position.x,
 			second.global_position.z - first.global_position.z).length()
 		_expect(apart > CompanyFleet.PARK_SPACING_M - SAME_M and level.trips.gate.side_of(second.global_position)
-			== TripGate.OUTSIDE, "...parked beside it, %.2f m apart, past the gate's line too" % apart)
+			== TripGate.INSIDE, "...parked beside it, %.2f m apart, inside the gate's line too" % apart)
 		second.free()
 	await physics_frame
 
@@ -261,7 +275,7 @@ func _check_crossing(level: CompanyRoot, van: VehicleBody3D) -> void:
 		products))
 	trips.book.mark_packed(&"o_fleet", &"box_fleet")
 	trips.stage_cargo(&"van_classic", [&"o_fleet"], [&"box_fleet"])
-	var exit: Vector3 = CompanyFleet.exit_of(level.shed, level.net.company)
+	var exit: Vector3 = CompanyFleet.gate_of(level.shed, level.net.company)
 	var outward: Vector3 = -level.shed.global_basis.z
 	await _put(van, exit - outward * 1.0)
 	_expect(trips.trips_out() == 0, "Inside the gate's line with cargo staged, nothing has left yet")
@@ -375,6 +389,7 @@ func _check_copy() -> void:
 	_expect(await _wait_for(follows), "...and follows it when the host moves it (%s vs %s)"
 		% [copy.global_position, host_van.global_position])
 	await _check_run_telemetry(telemetry)
+	await _check_client_drives(host_van, copy, client_id)
 	await _check_driver_leaves(host_van, client_id)
 
 
@@ -410,6 +425,60 @@ func _check_run_telemetry(telemetry: Array[int]) -> void:
 	_expect(during > 0 and telemetry[0] == after_end,
 		"During a run the client gets the van's telemetry (%d), none once it ended (%d more)"
 		% [during, telemetry[0] - after_end])
+
+
+## The client's player takes the wheel and drives its copy (controls set by hand: in this process the input
+## component compares with the host's peer id); close_to() then takes it off the wheel.
+func _check_client_drives(host_van: VehicleBody3D, copy: VehicleBody3D, client_id: int) -> void:
+	_expect(bool(copy.get(&"drivable_outside_run")), "The client's copy is drivable outside a run too")
+	var seat := host_van.get_node_or_null(SEAT_PATH) as SeatPoint
+	var driver: Node = _host_root.get_node_or_null(NodePath("World/Player_%d" % client_id))
+	if seat == null or driver == null:
+		_expect(false, "The host has the van's driver seat and the client's player")
+		return
+	var constants: Dictionary = (host_van.get_script() as GDScript).get_script_constant_map()
+	var park_wait: float = float(constants["PARK_MAX_WAIT_SECONDS"])
+	var throttle := host_van.get_node(^"NetRestThrottle") as NetRestThrottle
+	_expect(host_van.freeze and not host_van.net_simulating, "Parked, the host's van is frozen and not simulating")
+	var start: Vector3 = host_van.global_position
+	host_van.call(&"set_door_open", &"cab_left", true)
+	seat.interact(driver)
+	_expect(int(host_van.get(&"driver_peer_id")) == client_id, "The host seats the client at the wheel")
+	var awake_at: int = -1
+	var predicted_at: int = -1
+	for tick: int in range(150):
+		copy.call(&"set_controls", 1.0, 0.0, false)
+		await physics_frame
+		if awake_at < 0 and not throttle.is_resting():
+			awake_at = tick
+		if predicted_at < 0 and copy.is_predicted():
+			predicted_at = tick
+	_expect(host_van.net_simulating and not host_van.freeze, "The host's van is let go and simulating")
+	_expect(awake_at >= 0 and awake_at < 10,
+		"...its NetRestThrottle stops resting within 10 ticks (tick %d)" % awake_at)
+	_expect(predicted_at >= 0, "...the client predicts its copy (is_predicted, from tick %d)" % predicted_at)
+	var moved: float = host_van.global_position.distance_to(start)
+	var gap: float = copy.global_position.distance_to(host_van.global_position)
+	_expect(moved > 2.0 and gap < 1.0, "...the host's van moved %.1f m and the copy is %.2f m from it" % [moved, gap])
+	_expect(bool(host_van.get(&"presentation_engine_running")), "...with its engine on")
+	_host_root.fleet.close_to(client_id)
+	_expect(int(host_van.get(&"driver_peer_id")) == 0, "close_to() takes the client off the wheel")
+	var froze_at: float = -1.0
+	for tick: int in range(int((park_wait + 4.0) * 60.0)):
+		await physics_frame
+		if host_van.freeze:
+			froze_at = float(tick) / 60.0
+			break
+	_expect(froze_at >= 0.0 and froze_at < park_wait + 1.0 and bool(host_van.get(&"_parked")),
+		"...the van brakes and freezes within the parking wait (after %.1f s)" % froze_at)
+	_expect(not bool(host_van.get(&"presentation_engine_running")), "...and its engine is off")
+	# The client's player climbs out (its own gesture), so the seat is free for the next check.
+	var own: Player = _client_root.get_node_or_null(NodePath("World/Player_%d" % client_id)) as Player
+	if own != null:
+		own.leave_seat()
+	var seat_free: Callable = func() -> bool:
+		return (driver as Player).seat_node_path.is_empty() and seat.occupant == null
+	_expect(await _wait_for(seat_free), "The client's player gets out and the seat is free again")
 
 
 ## The client sits at the wheel of the host's van and leaves: the host takes it off the wheel and the seat.

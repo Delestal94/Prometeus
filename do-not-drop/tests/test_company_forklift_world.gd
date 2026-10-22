@@ -379,6 +379,9 @@ func _test_world() -> void:
 	_expect(PalletJackUse.use(_net, yard, PalletJackPoint.ACTION_BOARD, 1, _driver.global_position)
 		== PalletJackUse.RESULT_BOARDED and state.driver == 1, "Getting on again, where it was left")
 	_expect(_driver.has_meta(ForkliftView.DRIVING_META), "The driver's player is marked as driving")
+	_expect(is_equal_approx(float(_driver.get_meta(ForkliftView.PlayerSprint.PACE_CAP_META, 0.0)),
+		CompanyTuning.FORKLIFT_DRIVE_SPEED_MPS) and CompanyTuning.FORKLIFT_DRIVE_SPEED_MPS < 3.6,
+		"The driver's pace is capped at the forklift's, under walking pace")
 	_publish_driver(0)
 	await _test_next_driver()
 	await _test_leaver()
@@ -410,6 +413,7 @@ func _test_next_driver() -> void:
 	_expect(not before and took and _driver.has_meta(&"interact_override"),
 		"A driver whose player shows up after the event takes the keys once it is found")
 	_publish_driver(0)
+	_expect(not _driver.has_meta(ForkliftView.PlayerSprint.PACE_CAP_META), "Off the forklift the pace cap is gone")
 	_expect(not _driver.has_meta(&"interact_override") and not _driver.has_meta(ForkliftView.DRIVING_META),
 		"... and gives them back on getting off")
 	other.free()

@@ -25,6 +25,8 @@ var ice_packs: int = 0
 var gift_wrapped: bool = false
 ## Laid on its side (D-0727, ProductOrientation): upright-only products inside get damaged.
 var on_side: bool = false
+## Translation key of the customer's handwritten note on the box (D-0731, CustomerNote); "" = none.
+var note_key: StringName = &""
 ## Placed products, in order: {"product": StringName, "origin": Vector3i, "cells": Vector3i}.
 var items: Array[Dictionary] = []
 
@@ -158,6 +160,7 @@ func to_dict() -> Dictionary:
 		"ice_packs": ice_packs,
 		"gift_wrapped": gift_wrapped,
 		"on_side": on_side,
+		"note_key": String(note_key),
 	}
 
 
@@ -184,6 +187,8 @@ static func from_dict(d: Dictionary) -> PackedBox:
 	box.ice_packs = clampi(int(d.get("ice_packs", 0)), 0, CompanyTuning.ICE_PACKS_MAX)
 	box.gift_wrapped = bool(d.get("gift_wrapped", false))
 	box.on_side = bool(d.get("on_side", false))
+	var note: StringName = StringName(str(d.get("note_key", "")))
+	box.note_key = note if note in CustomerNote.KEYS else &""
 	return box
 
 

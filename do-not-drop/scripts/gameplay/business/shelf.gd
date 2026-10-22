@@ -11,14 +11,17 @@ extends RefCounted
 var id: StringName = &""
 ## Product label of each slot; &"" is an unlabeled, empty slot.
 var labels: Array[StringName] = []
+## A fridge (PlaceableDefinition.cold, D-0617): it keeps only cold products and no other shelf does.
+var cold: bool = false
 
 
-## A shelf of `slot_count` slots (use PlaceableDefinition.slots); null if id or count is invalid.
-static func make(shelf_id: StringName, slot_count: int) -> Shelf:
+## A shelf of `slot_count` slots (use PlaceableDefinition.slots and .cold); null if id or count is invalid.
+static func make(shelf_id: StringName, slot_count: int, is_cold: bool = false) -> Shelf:
 	if shelf_id == &"" or slot_count <= 0:
 		return null
 	var shelf := Shelf.new()
 	shelf.id = shelf_id
+	shelf.cold = is_cold
 	shelf.labels.resize(slot_count)
 	shelf.labels.fill(&"")
 	return shelf
@@ -42,10 +45,22 @@ func find_slot(product: StringName) -> int:
 	return labels.find(product) if product != &"" else -1
 
 
+## True when a product of this temperature (ProductDefinition.temperature) may be kept here: a fridge
+## takes only cold ones, any other shelf only the rest.
+func accepts_temperature(temperature: StringName) -> bool:
+	return (temperature == ColdPack.COLD) == cold
+
+
 ## Labels an empty slot (or relabels the same product). Fails if the slot holds units of
-## another product, or if the product already has another slot on this shelf.
-func set_label(inventory: Inventory, slot: int, product: StringName) -> bool:
+## another product, or if the product already has another slot on this shelf. `temperature` is the
+## product's (ProductDefinition.temperature); a fridge refuses ambient products and the other shelves
+## refuse cold ones (D-0617). &"" skips that check.
+func set_label(
+	inventory: Inventory, slot: int, product: StringName, temperature: StringName = &""
+) -> bool:
 	if not _valid(slot) or product == &"":
+		return false
+	if temperature != &"" and not accepts_temperature(temperature):
 		return false
 	if labels[slot] == product:
 		return true
@@ -104,13 +119,13 @@ func total_of(inventory: Inventory, product: StringName) -> int:
 
 
 func to_dict() -> Dictionary:
-	return {"id": id, "labels": labels.duplicate()}
+	return {"id": id, "labels": labels.duplicate(), "cold": cold}
 
 
 ## Rebuilds a shelf from to_dict() (also after a JSON round trip); null if it is invalid.
 static func from_dict(data: Dictionary) -> Shelf:
 	var raw: Array = data.get("labels", [])
-	var shelf: Shelf = make(StringName(str(data.get("id", ""))), raw.size())
+	var shelf: Shelf = make(StringName(str(data.get("id", ""))), raw.size(), bool(data.get("cold", false)))
 	if shelf == null:
 		return null
 	for i: int in raw.size():

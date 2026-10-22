@@ -22,14 +22,20 @@ extends SceneTree
 ##   dispatch        ok  DispatchZone ties the sealed box to its order, DispatchRules clears the
 ##                       van, load_into() stages the cargo in CompanyTrips (the trip starts
 ##                       when the van crosses the gate)
-##   drive           not_implemented  D-0302.2 / D-1501 (no vehicle on the street graph yet)
-##   deliver         ok  the van (its id, no node yet) crosses CompanyTrips' gate outward, so the
-##                       Trip starts and the order goes OUT; at each stop the house is one of the
+##   drive           ok  the fleet's van (CompanyFleet, parked frozen in the playon) gets a driver:
+##                       the player opens the cab door and takes the wheel (SeatPoint.interact), the
+##                       pedal is pressed (drive_accelerate) and the van leaves the yard under its own
+##                       physics; CompanyTrips' gate, which follows the node every tick, starts the
+##                       Trip (the order goes OUT) and the van stops outside with the player at the
+##                       wheel. Not yet: the drive to the houses along the street graph (D-2016.3,
+##                       when the graph is in the company world, D-0314.a)
+##   deliver         ok  with the van's Trip out, at each stop the house is one of the
 ##                       fixed map's (HouseMap, D-0311) in the order's zone, the door settles each
 ##                       order (OrderSettlement: pay into the wallet, reputation) and the Trip
 ##                       records it (record_settled), until no stop is left
-##   return          ok  the van crosses the gate back in: the Trip closes with nothing failed,
-##                       no vehicle is out and TripResult reports the deliveries and the clock
+##   return          ok  the driver reverses (drive_brake) until the van is back in the yard: the
+##                       gate closes the Trip with nothing failed, no vehicle is out and TripResult
+##                       reports the deliveries and the clock; the player gets out (leave_seat)
 ##   close_day       ok  the clock jumps to 20:00 and DayCycle goes OPERATING, CLOSING, SUMMARY;
 ##                       the summary holds the day's packaging costs and the closed day saves
 ##                       and loads back
@@ -47,11 +53,10 @@ extends SceneTree
 ##   BOT_FAIL no_opening                the day never reached OPENING
 ##   BOT_STAGE <stage> ok               a stage that passed
 ## then a summary block, one `BOT_COMPANY key=value` line each (players, money, deliveries,
-## breaks, assembly_errors, stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
-## ok, else `BOT_FAIL stages_missing=<n>` (1 until drive exists).
-## The van's crossings are fed to the gate by hand (CompanyTrips.track) inside deliver and return,
-## with no frame between them and the checks, so a real vehicle node in the gate's group could not
-## move the van's side in between.
+## breaks, assembly_errors, return_bundle_units: what the closed day's save left in the return bundle,
+## D-0252; stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
+## ok, else `BOT_FAIL stages_missing=<n>`.
+## The van's crossings are the real node's: nothing feeds the gate by hand (CompanyTrips.track).
 ## Exit codes: 0 BOT_OK, 1 any BOT_FAIL, 3 hard wall-clock timeout (`BOT_TIMEOUT`).
 ## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders through
 ## CompanyRoot.order_crew, the peers come with D-2017) --hard=<seconds> (the hard timeout, default 120).
@@ -69,9 +74,7 @@ const STAGES: Array[String] = [
 	"return", "close_day",
 ]
 ## The stages with nothing behind them yet: stage -> the F1 tasks that are missing.
-const PENDING: Dictionary = {
-	"drive": "D-0302.2/D-1501",
-}
+const PENDING: Dictionary = {}
 const OPENING_WAIT_SECONDS: float = 10.0
 const DEFAULT_PLAYERS: int = 2
 const DEFAULT_HARD_SECONDS: float = 120.0
@@ -92,8 +95,8 @@ const PHASE_FRAMES: int = 120
 ## How far ahead the day's own timer is moved so OPENING does not make the bot wait its 5 s: the
 ## clock is jumped to 20:00 anyway.
 const SKIP_OPENING_MSEC: int = 10000
-## How far (metres) inside and outside the gate line the bot puts the van to cross it.
-const GATE_STEP_M: float = 3.0
+## Drives the fleet's van out of the yard and back (drive and return).
+const VAN := preload("res://tests/bot_company_van.gd")
 
 var _players: int = DEFAULT_PLAYERS
 var _hard_seconds: float = DEFAULT_HARD_SECONDS
@@ -130,7 +133,7 @@ static func stage_ok_line(stage: String) -> String:
 ## One `BOT_COMPANY key=value` line per key: the fixed counters, then stage_ms_<stage> in order.
 static func summary_lines(stats: Dictionary) -> PackedStringArray:
 	var lines := PackedStringArray()
-	for key: String in ["players", "money", "deliveries", "breaks", "assembly_errors"]:
+	for key: String in ["players", "money", "deliveries", "breaks", "assembly_errors", "return_bundle_units"]:
 		lines.append("%s %s=%s" % [PREFIX, key, str(stats.get(key, 0))])
 	var times: Dictionary = stats.get("stage_ms", {})
 	for stage: String in STAGES:
@@ -243,7 +246,7 @@ func _run() -> void:
 	var stats: Dictionary = {
 		"players": _players, "money": money, "deliveries": int(ctx["deliveries"]),
 		"breaks": int(ctx["breaks"]), "assembly_errors": int(ctx["assembly_errors"]),
-		"stage_ms": times,
+		"return_bundle_units": int(ctx["return_bundle_units"]), "stage_ms": times,
 	}
 	close_world(self, level)
 	for line: String in summary_lines(stats):
@@ -274,7 +277,7 @@ func _on_hard_timeout() -> void:
 ## What the stages hand to each other, and the counters of the summary. `players` sizes the orders.
 static func new_context(players: int) -> Dictionary:
 	return {
-		"players": players, "assembly_errors": 0, "breaks": 0, "deliveries": 0,
+		"players": players, "assembly_errors": 0, "breaks": 0, "deliveries": 0, "return_bundle_units": 0,
 		# Pallets the bot opened: id -> the Pallet dictionary (state open).
 		"opened": {},
 		# What the bot holds after receive_pallet: {product, qty}.
@@ -282,6 +285,8 @@ static func new_context(players: int) -> Dictionary:
 		"orders": [], "order": {}, "box": null, "box_id": &"", "quality": -1.0,
 		# The vehicle dispatch loaded, and the trip it is on (deliver -> return).
 		"vehicle_id": &"", "trip": null,
+		# Metres the van covered from its parking spot to where it stopped outside the yard.
+		"drive_m": 0.0,
 	}
 
 
@@ -306,12 +311,14 @@ static func run_stage(
 			return await _pack_boxes(tree, level as CompanyRoot, ctx)
 		"dispatch":
 			return _dispatch(level as CompanyRoot, ctx)
+		"drive":
+			return await _drive(tree, level as CompanyRoot, ctx)
 		"deliver":
 			return _deliver(level as CompanyRoot, ctx)
 		"return":
-			return _return(level as CompanyRoot, ctx)
+			return await _return(tree, level as CompanyRoot, ctx)
 		"close_day":
-			return await _close_day(tree, level as CompanyRoot)
+			return await _close_day(tree, level as CompanyRoot, ctx)
 	return _fail("unknown_stage")
 
 
@@ -594,29 +601,37 @@ static func _dispatch(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	return _ok()
 
 
-## The loaded van leaves through the gate (the Trip starts, its orders go OUT) and, stop by stop, each
-## house is checked against the fixed map and the door settles its orders: the customer pays into
-## the wallet (OrderSettlement) and the Trip records the delivery. The drive in between is drive's.
+## The loaded van, parked in the playon, is driven out of the yard by the player: the gate sees the
+## node cross and starts the Trip (its orders go OUT). The van stops outside with its driver.
+static func _drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
+	var vehicle: StringName = ctx["vehicle_id"]
+	if vehicle == &"" or ctx["box"] == null:
+		return _fail("nothing_loaded")
+	var driven: Dictionary = await VAN.drive_out(tree, level, vehicle)
+	ctx["drive_m"] = float(driven["metres"])
+	if driven["reason"] != "":
+		return _fail(driven["reason"])
+	var trip: Trip = level.trips.trip_of(vehicle)
+	if trip == null:
+		return _fail("trip_not_started")
+	if level.trips.book.state_of(ctx["order"]["id"]) != Order.STATE_OUT:
+		return _fail("order_not_out")
+	ctx["trip"] = trip
+	return _ok()
+
+
+## Stop by stop, each house of the van's Trip is checked against the fixed map and the door settles
+## its orders: the customer pays into the wallet (OrderSettlement) and the Trip records the delivery.
 static func _deliver(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var vehicle: StringName = ctx["vehicle_id"]
 	var box: PackedBox = ctx["box"]
 	if vehicle == &"" or box == null:
 		return _fail("nothing_loaded")
 	var trips: CompanyTrips = level.trips
-	var points: Array[Vector3] = _gate_points(level)
-	if trips.gate == null or trips.gate.side_of(points[0]) != TripGate.INSIDE \
-			or trips.gate.side_of(points[1]) != TripGate.OUTSIDE:
-		return _fail("no_gate")
-	trips.track(vehicle, points[0])
-	if trips.track(vehicle, points[1]) != &"departed":
-		return _fail("not_departed")
-	var trip: Trip = trips.trip_of(vehicle)
-	if trip == null or trips.trips_out() != 1:
-		return _fail("trip_not_started")
+	var trip: Trip = ctx["trip"]
+	if trip == null or trips.trip_of(vehicle) != trip:
+		return _fail("not_driven_out")
 	var book: OrderBook = trips.book
-	if book.state_of(ctx["order"]["id"]) != Order.STATE_OUT:
-		return _fail("order_not_out")
-	ctx["trip"] = trip
 	var houses: HouseMap = HouseMap.load_default()
 	var products: Dictionary = _products()
 	var wallet: Node = level.net.company as Node
@@ -644,16 +659,17 @@ static func _deliver(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	return _ok() if trip.pending_stops().is_empty() else _fail("stops_left")
 
 
-## The van comes back in through the gate: the Trip closes with nothing failed, no vehicle is out
-## (the day may close) and its summary has the deliveries and both clocks.
-static func _return(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
+## The driver backs the van into the yard: the gate closes the Trip with nothing failed, no vehicle is
+## out (the day may close) and its summary has the deliveries and both clocks. The player gets out.
+static func _return(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var trip: Trip = ctx["trip"]
 	if trip == null:
 		return _fail("no_trip_out")
 	var trips: CompanyTrips = level.trips
 	var vehicle: StringName = ctx["vehicle_id"]
-	if trips.track(vehicle, _gate_points(level)[0]) != &"returned":
-		return _fail("not_returned")
+	var back: String = await VAN.drive_back(tree, level, vehicle)
+	if back != "":
+		return _fail(back)
 	if trip.is_out() or trips.trips_out() != 0 or trips.trip_of(vehicle) != null:
 		return _fail("trip_not_closed")
 	if not trip.failed_ids.is_empty():
@@ -668,14 +684,15 @@ static func _return(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 
 ## The day closes the way its clock does: 20:00 comes, OPERATING goes to CLOSING and, with no trip
 ## out, to SUMMARY. The summary must carry what the day cost and the closed day must save and load.
-static func _close_day(tree: SceneTree, level: CompanyRoot) -> Dictionary:
+static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var cycle: DayCycle = level.day_cycle
 	var state: Node = level.net.company as Node
 	if not level.clock.start(float(CompanyTuning.DAY_END_MIN)):
 		return _fail("clock_not_started")
 	# The opening's 5 s of real time are skipped; the clock jump above is the same kind of skip.
 	cycle.ticks = func() -> int: return Time.get_ticks_msec() + SKIP_OPENING_MSEC
-	var seen: Array[int] = []
+	# The phase it starts from too: after a real drive the day may be OPERATING already.
+	var seen: Array[int] = [int(cycle.phase())]
 	for _frame: int in PHASE_FRAMES:
 		cycle.poll()
 		if seen.is_empty() or seen[seen.size() - 1] != int(cycle.phase()):
@@ -697,13 +714,17 @@ static func _close_day(tree: SceneTree, level: CompanyRoot) -> Dictionary:
 		return _fail("summary_without_packing_costs")
 	if int(summary.get("closing", -1)) != int(state.get("money")):
 		return _fail("summary_money")
-	return _save_and_load(level, state)
+	return _save_and_load(level, state, ctx)
 
 
 ## What the closing screen's continue will do (D-0206's hook): the closed day is saved as a finished
 ## day and read back into a scratch company that must hold the same day, money, ledger and stock.
-static func _save_and_load(level: CompanyRoot, state: Node) -> Dictionary:
-	state.call(&"store_stock", CompanyRoot.stock_for_save(level.net.inventory))
+## The units the save leaves in the return bundle go to ctx (D-0252: with a full crew it may have to
+## be one bundle per product).
+static func _save_and_load(level: CompanyRoot, state: Node, ctx: Dictionary) -> Dictionary:
+	var kept: Inventory = CompanyRoot.stock_for_save(level.net.inventory)
+	ctx["return_bundle_units"] = CompanyAsk.units_at(kept, CompanyRoot.SAVED_HANDS_LOCATION)
+	state.call(&"store_stock", kept)
 	if not CompanySave.save(state, level.save_slot, level.save_dir):
 		return _fail("save_failed")
 	var scratch: Node = CompanyRoot.COMPANY_STATE.new()
@@ -841,17 +862,6 @@ static func _first_table(level: CompanyRoot) -> StringName:
 
 
 ## The floor of the shed's dispatch piece in world coordinates (height 2 m), or an empty AABB.
-## Two points on the shed's axis, GATE_STEP_M inside and outside the exit: where CompanyRoot put
-## CompanyTrips' gate (the middle of the north wall).
-static func _gate_points(level: CompanyRoot) -> Array[Vector3]:
-	var stage: int = int((level.net.company as Node).get(&"warehouse_stage"))
-	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
-	return [
-		level.shed.to_global(Vector3(0.0, 0.0, -half_depth + GATE_STEP_M)),
-		level.shed.to_global(Vector3(0.0, 0.0, -half_depth - GATE_STEP_M)),
-	]
-
-
 static func _dispatch_area(level: CompanyRoot) -> AABB:
 	for piece: Dictionary in level.shed.pieces:
 		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))

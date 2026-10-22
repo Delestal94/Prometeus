@@ -129,11 +129,11 @@ func _check_solo() -> void:
 		"...in one layout_placed event {id, x, z, turns, uid, minute, money} (%s)" % [events])
 
 	_expect(_ask(net, heard, CompanyLayoutNet.PLACE, {"id": &"shelf", "x": 8, "z": 3, "turns": 0}) == &""
-		and CompanyLayoutNet.piece_index(_layout(state), &"shelf_4") >= 0,
-		"A new shelf is shelf_4: the default shed has shelf_1 to shelf_3")
-	_expect(_ask(net, heard, CompanyLayoutNet.ROTATE, {"uid": &"shelf_4", "turns": 1}) == &""
-		and _piece(state, &"shelf_4").get("turns") == 1,
-		"Turning shelf_4 a quarter turn goes through (%s)" % [_piece(state, &"shelf_4")])
+		and CompanyLayoutNet.piece_index(_layout(state), &"shelf_3") >= 0,
+		"A new shelf is shelf_3: the default shed has shelf_1, shelf_2 and the cold_1 fridge")
+	_expect(_ask(net, heard, CompanyLayoutNet.ROTATE, {"uid": &"shelf_3", "turns": 1}) == &""
+		and _piece(state, &"shelf_3").get("turns") == 1,
+		"Turning shelf_3 a quarter turn goes through (%s)" % [_piece(state, &"shelf_3")])
 	_expect(_ask(net, heard, CompanyLayoutNet.MOVE, {"uid": &"fridge_1", "x": 3, "z": 3}) == &""
 		and _piece(state, &"fridge_1").get("x") == 3 and _piece(state, &"fridge_1").get("z") == 3,
 		"Moving fridge_1 to (3, 3) goes through (%s)" % [_piece(state, &"fridge_1")])
@@ -176,10 +176,10 @@ func _check_solo() -> void:
 	_expect(_company(state) == before and net.seq == seq,
 		"...and none of them changed the company or spent a seq (seq %d)" % net.seq)
 
-	_expect(_ask(net, heard, CompanyLayoutNet.SELL, {"uid": &"shelf_4"}) == &""
-		and CompanyLayoutNet.piece_index(_layout(state), &"shelf_4") < 0
+	_expect(_ask(net, heard, CompanyLayoutNet.SELL, {"uid": &"shelf_3"}) == &""
+		and CompanyLayoutNet.piece_index(_layout(state), &"shelf_3") < 0
 		and int(state.get(&"money")) == CompanyTuning.STARTING_MONEY - 280 + 40,
-		"Selling the empty shelf_4 takes it out and pays its refund (money %d)" % int(state.get(&"money")))
+		"Selling the empty shelf_3 takes it out and pays its refund (money %d)" % int(state.get(&"money")))
 	_expect(_ask(net, heard, CompanyLayoutNet.PLACE, {"id": &"fridge", "x": 6, "z": 4}) == &""
 		and int(state.get(&"money")) == 60,
 		"A second fridge leaves 60 (money %d)" % int(state.get(&"money")))
@@ -307,7 +307,7 @@ func _check_mirror() -> void:
 	var stock: Inventory = host.call(&"stock")
 	var steps: Array = [
 		[CompanyLayoutNet.PLACE, {"id": &"shelf", "x": 8, "z": 3, "turns": 0}, "a purchase"],
-		[CompanyLayoutNet.SELL, {"uid": &"shelf_4"}, "a sale"],
+		[CompanyLayoutNet.SELL, {"uid": &"shelf_3"}, "a sale"],
 	]
 	var drifts: Array[bool] = []
 	for step: Array in steps:
@@ -423,13 +423,13 @@ func _play(late: ENetMultiplayerPeer) -> void:
 	var thawed: Array = [
 		[CompanyLayoutNet.PLACE, {"id": &"fridge", "x": 5, "z": 3, "turns": 0}],
 		[CompanyLayoutNet.PLACE, {"id": &"shelf", "x": 8, "z": 3, "turns": 0}],
-		[CompanyLayoutNet.ROTATE, {"uid": &"shelf_4", "turns": 1}],
+		[CompanyLayoutNet.ROTATE, {"uid": &"shelf_3", "turns": 1}],
 		[CompanyLayoutNet.MOVE, {"uid": &"fridge_1", "x": 3, "z": 3}],
 	]
 	await _build_all(thawed, [_client], "in a thawed shed")
 	_expect(_client.shed.piece_at(Vector2i(3, 3)) == &"fridge_1" and _client.shed.piece_at(Vector2i(5, 3)) == &""
-		and _client.shed.piece_at(Vector2i(8, 4)) == &"shelf_4",
-		"The client's shed redrew each change: fridge_1 at (3, 3), shelf_4 turned over (8, 3)-(8, 4)")
+		and _client.shed.piece_at(Vector2i(8, 4)) == &"shelf_3",
+		"The client's shed redrew each change: fridge_1 at (3, 3), shelf_3 turned over (8, 3)-(8, 4)")
 
 	_crew_inside = false
 	_host.day.poll()
@@ -439,7 +439,7 @@ func _play(late: ENetMultiplayerPeer) -> void:
 	_client.state.set(&"clock_minutes", SENTINEL_MINUTE)
 	var frozen: Array = [
 		[CompanyLayoutNet.MOVE, {"uid": &"shelf_2", "x": 2, "z": 2}],
-		[CompanyLayoutNet.SELL, {"uid": &"shelf_4"}],
+		[CompanyLayoutNet.SELL, {"uid": &"shelf_3"}],
 		[CompanyLayoutNet.PLACE, {"id": &"fridge", "x": 6, "z": 4, "turns": 0}],
 	]
 	await _build_all(frozen, [_client], "in a frozen shed")

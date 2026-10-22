@@ -43,9 +43,9 @@
 | ✅ D-0726 | Productos que no se pueden juntar (químicos con comida) | constructor-negocio | medium | regla con test |
 | ✅ D-0727 | Productos con orientación (líquidos de pie) | constructor-negocio | medium | test |
 | ~~D-0728~~ | ~~Caja a medida (más cara, encaje perfecto)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
-| D-0729 | Pedidos multi-caja (un pedido en 2-3 cajas) | constructor-negocio | high | test |
+| ✅ D-0729 | Pedidos multi-caja (un pedido en 2-3 cajas) | constructor-negocio | high | test |
 | ~~D-0730~~ | ~~Paquetes sin caja (bici, colchón) con film y esquineros~~ **Fusionada en D-0626 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
-| D-0731 | Mensaje escrito a mano del cliente (`package_scribble.gd`) | constructor-negocio | low | dibujo/firma en la caja |
+| ✅ D-0731 | Mensaje escrito a mano del cliente (`package_scribble.gd`) | constructor-negocio | low | dibujo/firma en la caja |
 | D-0732 | Etiquetas de colores por distrito | constructor-negocio | low | test |
 | ~~D-0733~~ | ~~Armado con temporizador para pedidos urgentes~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-0734 | Control de calidad por otro jugador (abrir y revisar antes de cerrar) | constructor-negocio | medium | test |

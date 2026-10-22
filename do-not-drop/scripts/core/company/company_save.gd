@@ -17,12 +17,12 @@ extends RefCounted
 ## When to save (day SUMMARY, back to the menu) is wired by DayCycle (D-0203)
 ## and the company scene (D-0214).
 ##
-## A day the host's world closed before the day did (D-2005: the session ended,
-## or the host went back to the menu) is saved as it stood at the last applied
-## event with "interrupted": true next to "version". Loading it gives the same
-## day, money and stock with the clock back at the opening (DAY_START_MIN): the
-## day is played again from the start. A file without the key (every v1 save
-## before D-2005) is not interrupted, so the format stays version 1.
+## The file always holds a day's opening (D-0251, docs/expansion-distritos/diseno/guardado.md
+## rule 1): the close saves the next day's, and a new company its day 1. A day the host's world
+## closed before the day did (D-2005: the session ended, or the host went back to the menu) writes
+## nothing of that day: mark_interrupted() only sets "interrupted": true next to "version", so
+## loading it plays that day again from the opening, as it was before the day began. A file without
+## the key (every v1 save before D-2005) is not interrupted, so the format stays version 1.
 ##
 ## Several companies live side by side, one per slot (D-0235): list_slots() describes
 ## them for the picker (name, day, money, date) without moving any file, delete()
@@ -47,7 +47,8 @@ static func path_for(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> Str
 
 
 ## Writes the state's to_dict() to the slot; `interrupted` marks a day cut short
-## (D-2005), which load_into() starts again from the opening. False when the
+## (D-2005), which load_into() starts again from the opening (the game marks the
+## opening already saved instead, mark_interrupted()). False when the
 ## folder or the file could not be written (the previous save, if any, stays as
 ## it was), and when the slot holds a save from a newer build: load_into() left
 ## it alone (TOO_NEW), so the company here is not that one and must not erase it.
@@ -109,10 +110,31 @@ static func load_into(
 		state.call("new_company")
 		return LoadResult.CORRUPT
 	if _interrupted(raw):
-		# Same day, from its opening: what happened after it is kept (the save is the state at
-		# the last applied event), only the clock goes back.
+		# Same day, from its opening. A file marked by mark_interrupted() already is that opening
+		# (D-0251); one written whole with `interrupted` (D-2005, before D-0251) only gets its clock
+		# back, and keeps what was played of the day.
 		state.set("clock_minutes", CompanyTuning.DAY_START_MIN)
 	return LoadResult.LOADED
+
+
+## Marks the save in the slot as a day cut short (D-0251): only "interrupted" changes, the company
+## in the file (that day's opening) stays as it was, so nothing of the day cut reaches the disk.
+## Reads the .bak a cut write left when the file is missing. False, touching nothing, when the slot
+## holds no save of ours or one from a newer build, and when the file could not be written.
+static func mark_interrupted(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> bool:
+	var path: String = path_for(slot, dir)
+	var raw: Dictionary = _peek(path)
+	var saved_version: int = _version_of(raw)
+	if saved_version <= 0 or not raw.get("company") is Dictionary:
+		return false
+	if saved_version > VERSION:
+		push_warning(
+			"CompanySave: %s is version %d, this build writes %d; not marked"
+			% [path, saved_version, VERSION]
+		)
+		return false
+	raw["interrupted"] = true
+	return SafeJson.write(path, raw)
 
 
 ## Climbs `company` from `from_version` up to `to_version`. Empty when a step is
