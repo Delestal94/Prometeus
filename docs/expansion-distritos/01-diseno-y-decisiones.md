@@ -43,7 +43,7 @@
 | ~~D-0128~~ | ~~Encaje del Endless actual en la expansión (¿endless por distrito? ¿desafío diario?)~~ **Fusionada en D-0102 (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | decisión documentada |
 | D-0129 | ✅ Glosario de términos del juego (pedido, remito, palet, estación, turno, hito) en español e inglés | documentador | low | `diseno/glosario.md`; lo usa `loc_text` |
 | D-0130 | ✅ Tabla de "primera vez": qué aprende el jugador cada día de los primeros 7 | critico-diseno | medium | `diseno/onboarding.md`; D-1901 la implementa |
-| D-0131 | Diseñar el portapapeles de gestión (inspirado en Schedule I) como objeto en la mano, no menú | critico-diseno | medium | `diseno/portapapeles.md` con wireframes en texto |
+| D-0131 | ✅ Diseñar el portapapeles de gestión (inspirado en Schedule I) como objeto en la mano, no menú | critico-diseno | medium | `diseno/portapapeles.md` con wireframes en texto |
 | ~~D-0132~~ | ~~Diseño de sabotaje amistoso coop (esconder cajas, cambiar etiquetas) — sí o no~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión documentada |
 | ~~D-0133~~ | ~~Diseño del mercado de proveedores (precios que varían por día, calidad del proveedor)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sección en `diseno/economia.md` |
 | D-0134 | Definir qué se guarda y qué no entre sesiones (empresa, stock, empleados, día en curso) | constructor-progresion | medium | `diseno/guardado.md`; D-0206 lo implementa |

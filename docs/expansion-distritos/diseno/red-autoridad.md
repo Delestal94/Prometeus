@@ -96,7 +96,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 
 | # | Acción (tarea) | Inicia | Petición: `kind` y `data` | El host valida | Evento: `kind` y `data` | Cambia en cada peer |
 |---|---|---|---|---|---|---|
-| 1 | Pedir mercadería para mañana (D-0602, D-0503) | jugador, en el tablero del proveedor | `supplier_order` `{station, product, qty, rid}` | alcance; fase `OPERATING`; producto del catálogo; `qty` en rango; plata ≥ costo | `supplier_ordered` `{product, qty, cost}` | `CompanyState`: pedido al proveedor de mañana y `money −= cost`; señal `money_changed` |
+| 1 | Pedir mercadería para mañana (D-0602, D-0503) | jugador, en el tablero del proveedor o el portapapeles | `supplier_order` `{station, product, qty, rid}` | sin alcance (se pide desde cualquier lado, [portapapeles](portapapeles.md) §3); fase `OPERATING`; producto del catálogo; `qty` en rango; plata ≥ costo | `supplier_ordered` `{product, qty, cost}` | `CompanyState`: pedido al proveedor de mañana y `money −= cost`; señal `money_changed` |
 | 2 | Llega el camión del proveedor (D-0601) | host (08:30 de juego) | — | hay pedido de ayer | `supply_arrived` `{pallets: [{id, product, qty}]}` | `Inventory.receive` en `pallet:<id>` (una vez por palet); palets `sealed` |
 | 3 | Bajar el palet a recepción (D-0605, zorra / autoelevador) | jugador, moviendo el cuerpo físico | — (es física: zorra o autoelevador, host como hoy) | el palet entró al área de recepción (señal del área en el host) | `pallet_placed` `{pallet, zone}` | el palet queda en `zone`; sus unidades no se mueven |
 | 4 | Abrir el palet (D-0607) | jugador, en el palet | `pallet_open` `{station, rid}` | alcance; palet recibido, `sealed`, con unidades | `pallet_opened` `{pallet}` | `Pallet.open`: `sealed` → `open` |
