@@ -412,6 +412,12 @@ WORLD_PACKTUT_DONE,¡Listo! Tu primera caja salió,Done! Your first box is on it
 WORLD_SHOP_UPGRADE_1,Mejora 1: segunda mesa y estantes,Upgrade 1: second table and shelves
 WORLD_SHOP_LABEL_READER,Lectora de etiquetas,Label reader
 WORLD_SHOP_EXPANSION_1,Ampliación del galpón 1,Shed expansion 1
+WORLD_SHOP_VEHICLE_VAN,Camioneta extra,Extra van
+WORLD_SHOP_VEHICLE_BIKE,Bici,Bike
+WORLD_SHOP_VEHICLE_CART,Carrito,Cart
+WORLD_SHOP_VEHICLE_OFFROAD,Camioneta 4x4,4x4 truck
+WORLD_SHOP_VEHICLE_BOAT,Lancha,Boat
+WORLD_SHOP_VEHICLE_PLANE,Avioneta,Light plane
 WORLD_SHOP_NO_COMPANY,No hay empresa,No company
 WORLD_SHOP_UNKNOWN_ITEM,Ese ítem no existe,That item does not exist
 WORLD_SHOP_ALREADY_OWNED,Ya lo tenés,Already owned
