@@ -340,7 +340,7 @@ interrumpido.
 **Hecho cuando:** el test pasa.
 
 ### D-0238 · Flags de desarrollo del modo Empresa — B · Opus 5.5 · low · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyDevFlags` (`scripts/core/company/company_dev_flags.gd`): `--company-day=N`, `--district=<zona>` y `--money=N`, aplicados por el host de `CompanyRoot` al levantar el mundo; README y `render_company_shed.gd`; `test_company_dev_flags`.
+**[x] Hecho (2026-10-22, PR #594)** — `CompanyDevFlags` (`scripts/core/company/company_dev_flags.gd`): `--company-day=N`, `--district=<zona>` y `--money=N`, aplicados por el host de `CompanyRoot` al levantar el mundo; README y `render_company_shed.gd`; `test_company_dev_flags`.
 **Depende de:** D-0202, D-0205, D-0214
 **Qué:** en `scripts/core/company/company_dev_flags.gd` (puro, sin autoloads) y un llamado en
 `CompanyRoot._add_net()` (solo el host, también solo), después de cargar el slot o arrancar una empresa nueva
