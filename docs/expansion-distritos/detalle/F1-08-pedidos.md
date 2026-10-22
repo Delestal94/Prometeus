@@ -138,3 +138,10 @@ Decisión: tres días de rampa (coincide con la primera semana de aprendizaje de
 - `unblocked_by(inventory, orders, incoming)`: los que esperan y el camión en camino desbloquea.
 **Test:** listo vs. en espera con lo que falta; el más urgente se queda con la última unidad; lo sellado, lo armado y lo cerrado no cuentan; líneas repetidas suman; `unblocked_by` no toca el inventario real.
 **Hecho cuando:** el test pasa.
+
+### D-0814 · Notificación de pedido nuevo en el celular — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — `OrderNotice` (`scripts/gameplay/business/order_notice.gd`) + `OrderNoticeFeed` (`order_notice_feed.gd`); `test_order_notice`. Falta enchufar el feed al `OrderBook` de `CompanyRoot` y a `HudNotices.toast` (D-0814.b, junto con la replicación de D-0813).
+**Depende de:** D-0210, D-0802
+**Qué:** el aviso que le llega al jugador cuando entra un pedido. `OrderNotice.message(orders)` (estático, sin nodos) devuelve `{text, priority}`: un pedido dice cliente y dirección (`OrderLabel`), varios juntos se funden en "N pedidos nuevos" (el día abre con varios a la vez). Prioridad 30 si alguno es `urgent`, 20 si no. `OrderNoticeFeed.watch(book)` escucha `order_added` y junta lo que llegue en el mismo frame en **un** aviso (`notice(text, priority)`); la HUD lo muestra como toast. Funciona igual en el anfitrión y en el espejo del cliente.
+**Test** `test_order_notice`: texto de uno, de varios y sin dirección, prioridad urgente, entrada sin id, inglés, ráfaga en un frame = un aviso, `watch(null)` calla, claves en los dos idiomas.
+**Hecho cuando:** el test pasa. El toast en pantalla se ve con `revisor-visual` cuando esté enchufado (D-0814.b).
