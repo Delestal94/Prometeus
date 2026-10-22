@@ -7,4 +7,4 @@ Para: Slatex. De: Nacho (rutina desarrollador, carril 1).
   oculta cuando es 0. Las llamadas viejas siguen andando igual.
 - `scripts/core/company/company_net.gd`: `CompanySupplierNet.ORDERED` entra en `HOST_EVENT_KINDS` (el host lo
   publica sin pedido). La forma del evento no cambia, sin `PROTOCOL_VERSION` nuevo.
-- `NetworkManager.PROTOCOL_VERSION` sube a 54 (`supplier_ordered` con `peer` 0 viene del host sin pedido). Si otro PR en vuelo ya usó el 54 al mezclar, se sube al siguiente libre.
+- `NetworkManager.PROTOCOL_VERSION` sube a 55 (`supplier_ordered` con `peer` 0 viene del host sin pedido). Si otro PR en vuelo ya usó el 55 al mezclar, se sube al siguiente libre.

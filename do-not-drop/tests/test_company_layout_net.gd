@@ -347,7 +347,9 @@ func _check_event_branches() -> void:
 		class_paths[String(entry["class"])] = String(entry["path"])
 	var covered: Array[StringName] = []
 	var catch_all: bool = false
-	for line: String in text.substr(start, end - start).split("\n"):
+	# A pattern may go on over lines with a trailing backslash: join them first.
+	var body: String = text.substr(start, end - start).replace("\\\n", "")
+	for line: String in body.split("\n"):
 		if not (line.begins_with("\t\t") and not line.begins_with("\t\t\t") and line.strip_edges().ends_with(":")):
 			continue
 		var pattern: String = line.strip_edges().trim_suffix(":")
