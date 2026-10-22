@@ -80,7 +80,6 @@ func _test_restock() -> void:
 		"The restock point's prompt is its own (%s)" % view.restock_point.get_prompt())
 
 	var hands: StringName = CompanyNet.hands_location(1)
-	var units_before: int = _net.inventory.total_units()
 	var slot_where: Dictionary = _slot_of(HEN)
 	_expect(not slot_where.is_empty(), "The default shed has a shelf slot for hens")
 	if slot_where.is_empty():
@@ -98,7 +97,6 @@ func _test_restock() -> void:
 	# Load 3 hens and put them back: the shelf slot gains them, hands and cart end up empty.
 	var on_shelf: int = shelf.count(_net.inventory, slot)
 	_give(HEN, 3)
-	units_before += 3
 	_use_action(PickingCartPoint.ACTION_LOAD)
 	_expect(view.cart.count(_net.inventory) == 3, "3 hens on the cart")
 	var shelf_room: int = shelf.free_space(_net.inventory, slot)
@@ -117,11 +115,9 @@ func _test_restock() -> void:
 	# Only what fits goes: leave room for 2 of 4 hens (fill the slot first).
 	var topped: int = shelf.free_space(_net.inventory, slot) - 2
 	_net.inventory.receive(HEN, topped, shelf.location(slot))
-	units_before += topped
 	_mirror.inventory.from_dict(_net.inventory.to_dict())
 	_give(HEN, 4)
 	_use_action(PickingCartPoint.ACTION_LOAD)
-	units_before += 4
 	_mirror_note()
 	_expect(_use() == PickingCartUse.RESULT_RESTOCKED and view.cart.count(_net.inventory) == 2
 		and shelf.free_space(_net.inventory, slot) == 0, "A slot with room for 2 takes 2, 2 stay on the cart")
@@ -141,10 +137,11 @@ func _test_restock() -> void:
 	_mirror_note()
 	_player_at = view.global_position + Vector3(-1.2, 1.5, 0.0) + Vector3(0.0, 0.0, 60.0)
 	var cart_before: int = view.cart.count(_net.inventory)
+	var total_before: int = _net.inventory.total_units()
 	_expect(_use() == PickingCartUse.REASON_REFUSED, "Out of reach is refused")
 	_expect(view.cart.count(_net.inventory) == cart_before and _net.inventory.contents_at(hands).is_empty(),
 		"Refused: the cart keeps its units, the hands stay empty")
-	_expect(_net.inventory.total_units() == units_before, "No unit was created or lost (%d)"
+	_expect(_net.inventory.total_units() == total_before, "No unit was created or lost (%d)"
 		% _net.inventory.total_units())
 
 	for node: Node in [_mirror_shed, _mirror, _shed, _net]:
