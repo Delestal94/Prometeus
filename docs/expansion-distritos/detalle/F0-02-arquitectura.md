@@ -443,3 +443,30 @@ con el día, la corriente y la empresa; el host y un espejo cargado de su `to_di
 otra semilla da otros; ningún script de `scripts/gameplay/business/` ni `scripts/core/company/` sortea con el generador
 global (`randi()`, `randf()`, `randomize()`, `shuffle()`, `pick_random()`…).
 **Hecho cuando:** el test pasa y la auditoría de red no encuentra desincronías.
+
+### D-0251 · Un día cortado vuelve a su apertura — A · Opus 5.5 · medium · Aviso: no · F0 (Núcleo)
+**[x] Hecho (2026-10-22, PR pendiente)** — el slot siempre guarda una apertura: el host la escribe al subir el mundo si el slot no tiene save (día 1 de una empresa nueva, antes de los flags), un corte solo la marca `interrupted` (`CompanySave.mark_interrupted()`) y, al salir, la empresa en memoria se recarga del slot; `test_company_autosave` ampliado.
+**Depende de:** D-0134 (diseño, [guardado.md](../diseno/guardado.md) reglas 1 y 2), D-0236 (guardado al cierre), D-2005 (el host se va)
+**Qué:** hoy un día cortado (salir al menú, el host se va, se cierra el juego) se guarda "a medias": la plata, el
+stock y el libro de caja del último evento, con el reloj de vuelta a las 08:00. Eso cobra dos veces al repetir el día,
+deja unidades varadas en cajas y paquetes que no existen y hace que el resumen sume de más (R-03). Con esta tarea:
+- `CompanySave.mark_interrupted(slot, dir)` reescribe el archivo con `interrupted: true` y la empresa tal como estaba
+  (la apertura). No toca un archivo de una versión más nueva ni un slot sin save.
+- `CompanyRoot._add_net`: si el slot no tiene save (empresa nueva, slot corrupto ya en `.bad`, o una empresa que llegó
+  activa), guarda la apertura en el momento, después del galpón por defecto y **antes** de `CompanyDevFlags`.
+- `CompanyRoot.save_interrupted_day()` ya no escribe la empresa: solo marca. Al salir del mundo, el host además
+  recarga su `CompanyState` desde el slot, así un mundo que vuelve a subir en la misma sesión abre esa apertura,
+  igual que una sesión nueva.
+- `load_into` sigue llevando el reloj a las 08:00 en un save `interrupted`: un save viejo escrito entero (antes de
+  D-0251) se sigue cargando como antes.
+- Decisión: no sube `CompanySave.VERSION`. Las claves no cambian de significado para el lector; solo cambia cuándo se
+  escribe (regla 5 de guardado.md).
+- Decisión: al salir del mundo el host recarga la empresa del slot también después de un cierre (salir en el
+  resumen). Si no, volver a entrar en la misma sesión jugaría otra vez el día cerrado y lo cobraría dos veces.
+**Test** `test_company_autosave`: el mundo que sube sin save escribe la apertura del día 1; con un cobro y
+un cargo, unidades en la mano y en una caja, salir a mitad de día deja el slot igual a la apertura, marcado
+`interrupted`; cargarlo da la plata, el libro de caja y el stock de la apertura a las 08:00, y la empresa en juego
+vuelve a esa apertura. Ajustados `test_company_host_leaves` y `test_company_pallets_save` (lo del día cortado ya no
+queda en el save; los palets se guardan con el cierre).
+**Hecho cuando:** `test_company_autosave` ampliado: cobrar, salir a mitad de día y cargar da la plata, el stock y el
+libro de caja de la apertura.
