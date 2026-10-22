@@ -55,7 +55,10 @@ func count() -> int:
 	return _at.size()
 
 
-## {cart, dir} of a cart_push request, `dir` a finite Vector3 whose x and z are not both zero; {} otherwise.
+## {cart, dir, step} of a cart_push request, `dir` a finite Vector3 whose x and z are not both zero; {} otherwise.
+## `step` (metres) is the optional "step" of the data, a short one while somebody holds the handle
+## (D-0610.c2.b, PickingCartGrip): clamped to CART_GRIP_MIN_STEP_M .. CART_PUSH_STEP_M, and the whole
+## CART_PUSH_STEP_M when absent or not a finite number, as every push was before it existed.
 static func push_ask(data: Dictionary) -> Dictionary:
 	var cart: Variant = data.get("cart")
 	var dir: Variant = data.get("dir")
@@ -64,7 +67,11 @@ static func push_ask(data: Dictionary) -> Dictionary:
 	var flat := Vector3((dir as Vector3).x, 0.0, (dir as Vector3).z)
 	if flat.length() < 0.001:
 		return {}
-	return {"cart": StringName(cart), "dir": flat}
+	var step: float = CompanyTuning.CART_PUSH_STEP_M
+	var wanted: Variant = data.get("step")
+	if (wanted is float or wanted is int) and is_finite(float(wanted)):
+		step = clampf(float(wanted), CompanyTuning.CART_GRIP_MIN_STEP_M, CompanyTuning.CART_PUSH_STEP_M)
+	return {"cart": StringName(cart), "dir": flat, "step": step}
 
 
 ## Host: the cart_moved a cart_push asks for at `station` (what CompanyNet's `stations` knows of the cart
@@ -77,7 +84,7 @@ func check(ask: Dictionary, station: Dictionary) -> Dictionary:
 	if not (at is Vector3 and stand is Callable and (stand as Callable).is_valid()):
 		return {"reason": REASON_NO_STATION}
 	var from: Vector3 = at
-	var step: Vector3 = (ask["dir"] as Vector3).normalized() * CompanyTuning.CART_PUSH_STEP_M
+	var step: Vector3 = (ask["dir"] as Vector3).normalized() * float(ask.get("step", CompanyTuning.CART_PUSH_STEP_M))
 	var to := Vector3(from.x + step.x, 0.0, from.z + step.z)
 	if not bool((stand as Callable).call(to)):
 		return {"reason": REASON_BLOCKED}

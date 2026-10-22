@@ -130,6 +130,7 @@ var player: Node3D
 var shed: CompanyShed
 ## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
 var builder: ShedBuilder
+var cart_grip: PickingCartGrip  # who holds a picking cart's handle (D-0610.c2.b)
 ## The stock list over the clipboard's key (D-0612.b): every peer, read only.
 var stock_board: StockBoard
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
@@ -629,6 +630,7 @@ func _add_shed() -> void:
 		net.stations = shed.station_for
 		shed.piece_used.connect(_on_piece_used)
 		shed.cart_used.connect(_on_cart_used)
+		cart_grip = PickingCartGrip.attach(self, net, shed)
 		shed.jack_used.connect(_on_jack_used)
 
 
@@ -655,6 +657,8 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 ## CompanyNet on their behalf, which checks reach, hands and room.
 func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, what: StringName) -> void:
 	if net == null or not net.is_host():
+		return
+	if cart_grip != null and cart_grip.handled(cart_id, action, peer_id):
 		return
 	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from, what)
 

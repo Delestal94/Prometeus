@@ -40,7 +40,7 @@ const TAKE_RADIUS: float = 0.14
 
 ## The cart's id and its Inventory location (PickingCart). Set by make().
 var cart: PickingCart = PickingCart.new()
-## The point of the platform and the point of the handle.
+## The point of the platform and the point of the handle (grip, D-0610.c2.b; named push_point from before).
 var load_point: PickingCartPoint
 var push_point: PickingCartPoint
 ## Puts the first product on the cart back on its shelf (D-0610.c2.c).
@@ -116,7 +116,8 @@ func shown_units() -> Array[MeshInstance3D]:
 
 ## Stands the cart at `local` (the shed's frame). With `slide` the look rolls there from where it was.
 func place_at(local: Vector3, slide: bool = false) -> void:
-	var from: Vector3 = position
+	# From where the look is drawn now, so short steps in a row (a held handle) slide on without a jump back.
+	var from: Vector3 = position + _look.position
 	position = local
 	if _slide != null and _slide.is_valid():
 		_slide.kill()
@@ -154,7 +155,7 @@ func _build() -> void:
 	body.add_child(shape)
 	add_child(body)
 	load_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_LOAD, Vector3(0.1, 0.7, 0.0), 0.45)
-	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_PUSH,
+	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_GRIP,
 		Vector3(HANDLE_X - 0.14, 0.9, 0.0), 0.3)
 	restock_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_RESTOCK,
 		Vector3(-LENGTH * 0.5 + 0.2, 0.7, 0.0), 0.3)

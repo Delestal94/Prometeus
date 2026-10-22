@@ -200,6 +200,15 @@ const CART_MAX_UNITS: int = 6
 const CART_PUSH_STEP_M: float = 1.2
 ## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
 const CART_CLEARANCE_M: float = 0.7
+## Holding the cart's handle (D-0610.c2.b, PickingCartGrip): the cart keeps this far from whoever holds it
+## (centre of the cart to their feet, m, on the floor), pushed ahead in short steps every CART_GRIP_INTERVAL_S;
+## the shortest step worth a request; who walks CART_GRIP_RELEASE_M away lets go; after a `blocked` the grip
+## waits CART_GRIP_BLOCKED_PAUSE_S before it tries again.
+const CART_GRIP_DISTANCE_M: float = 1.0
+const CART_GRIP_RELEASE_M: float = 2.6
+const CART_GRIP_MIN_STEP_M: float = 0.05
+const CART_GRIP_INTERVAL_S: float = 0.1
+const CART_GRIP_BLOCKED_PAUSE_S: float = 0.6
 ## How close two picking carts may stand, centre to centre on the floor (m, D-0610.c): past the diagonal of the
 ## 1.0 x 0.6 m platform, so two carts never overlap whichever way they face.
 const CART_SPACING_M: float = 1.2

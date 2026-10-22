@@ -398,6 +398,8 @@ WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
 WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
 WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
+WORLD_SHED_GRIP_CART,Agarrar o soltar el carrito,Grab or let go of the cart
+WORLD_SHED_PUSH_BLOCKED,No pasa: no hay lugar ahí,It will not go: no room there
 WORLD_SHED_TAKE_FROM_CART,Tomar %s del carrito,Take %s from the cart
 WORLD_SHED_RESTOCK_FROM_CART,Devolver al estante lo del carrito,Put the cart's stock back on its shelf
 WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
