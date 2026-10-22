@@ -175,7 +175,7 @@ func _run() -> void:
 
 
 ## The company world with its save folder pointed at a temp dir, before it enters the tree (the
-## host loads its slot from there on entry and saves the interrupted day there on leaving).
+## host loads its slot from there on entry and marks the day interrupted there on leaving).
 func _open_world() -> Node3D:
 	var level := (load(SCENE) as PackedScene).instantiate() as CompanyRoot
 	level.save_dir = SAVE_DIR

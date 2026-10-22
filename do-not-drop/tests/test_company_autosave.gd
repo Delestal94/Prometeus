@@ -11,8 +11,11 @@ extends SceneTree
 ##   from the opening without what day 2 earned;
 ## - leaving during the summary keeps that close (day 2, not interrupted) instead of saving day 1
 ##   interrupted, which would play the closed day again;
-## - leaving mid-day still saves the day interrupted (D-2005), and save_closed_day() outside SUMMARY
-##   saves nothing;
+## - a company the root comes up with and no save in the slot gets its opening saved at once (D-0251);
+## - leaving mid-day writes nothing of the day (D-0251): with money earned and charged, units moved and
+##   held, the slot is that opening (day 1, STARTING_MONEY, an empty ledger, the stock as it opened)
+##   marked interrupted (D-2005); loading it gives the same, and so does the company in play once its
+##   world is gone; save_closed_day() outside SUMMARY saves nothing.
 ## - D-0253: the host closes day 1 early from OPERATING (DayClose.close()): with no trip out the next
 ##   poll is SUMMARY, the clock still before 20:00, and the slot is day 2's opening, not interrupted,
 ##   with the day's money; leaving afterwards keeps that close.
@@ -64,7 +67,9 @@ func _check_close_and_kill() -> void:
 	_expect(host.day_cycle.phase() == DayCycle.Phase.OPENING and host.day_cycle.current_day() == 1,
 		"The host opens day 1 (got %s, day %d)" % [host.day_cycle.phase_name(), host.day_cycle.current_day()])
 	_expect(not host.save_closed_day(), "save_closed_day() during OPENING saves nothing")
-	_expect(not CompanySave.exists(SLOT, DIR), "...and no file is written")
+	_expect(CompanySave.exists(SLOT, DIR) and int((_raw().get("company", {}) as Dictionary).get("day", 0)) == 1
+		and not CompanySave.was_interrupted(SLOT, DIR),
+		"...the slot holds day 1's opening, saved when the world came up (D-0251)")
 	state.call(&"earn", 250, &"order_paid")
 	host.net.inventory.move(&"hen", 2, &"dock", &"hands:1")
 	_close_day(host)
@@ -121,16 +126,41 @@ func _check_leave_in_summary() -> void:
 func _check_leave_mid_day() -> void:
 	var state: Node = _new_state()
 	state.call(&"new_company", "Mid SRL")
+	var stock: Inventory = state.call(&"stock")
+	stock.receive(&"hen", 5, &"dock")
+	state.call(&"store_stock", stock)
 	var host: LiveDayRoot = await _enter(state)
+	var opening: Dictionary = _raw().get("company", {})
 	host.day_cycle.ticks = func() -> int: return Time.get_ticks_msec() + LATER_MSEC
 	host.day_cycle.poll()
 	_expect(host.day_cycle.phase() == DayCycle.Phase.OPERATING,
 		"Day 1 is OPERATING (got %s)" % host.day_cycle.phase_name())
+	state.call(&"earn", 180, &"order_paid")
+	state.call(&"charge", 60, &"rent")
+	host.net.inventory.move(&"hen", 2, &"dock", &"hands:1")
+	host.net.inventory.move(&"hen", 1, &"dock", &"box:b1")
 	_expect(not host.save_closed_day(), "save_closed_day() mid-day saves nothing")
 	await _leave(host)
-	var company: Dictionary = _raw().get("company", {})
+	var raw: Dictionary = _raw()
+	var company: Dictionary = raw.get("company", {})
 	_expect(CompanySave.was_interrupted(SLOT, DIR) and int(company.get("day", 0)) == 1,
-		"Leaving mid-day still saves day 1 interrupted (D-2005) (got day %s)" % company.get("day"))
+		"Leaving mid-day marks day 1 interrupted (D-2005) (got day %s)" % company.get("day"))
+	_expect(company == opening,
+		"...and writes nothing of it: the company in the slot is the opening, untouched (D-0251)")
+	var loaded: Node = _new_state()
+	CompanySave.load_into(loaded, SLOT, DIR)
+	var loaded_stock: Inventory = loaded.call(&"stock")
+	_expect(int(loaded.get(&"money")) == CompanyTuning.STARTING_MONEY
+		and (loaded.get(&"ledger") as Array).size() == (opening.get("ledger", []) as Array).size()
+		and int(loaded.get(&"clock_minutes")) == CompanyTuning.DAY_START_MIN,
+		"Loading it gives the opening's money and ledger at 08:00, not the day's (got %s, ledger %s)"
+		% [loaded.get(&"money"), loaded.get(&"ledger")])
+	_expect(loaded_stock.count(&"hen", &"dock") == 5 and loaded_stock.total_units() == 5,
+		"...and the opening's stock: the 5 hens on the dock (got %s)" % [loaded_stock.to_dict()])
+	_expect(int(state.get(&"money")) == CompanyTuning.STARTING_MONEY and int(state.get(&"day")) == 1
+		and (state.get(&"ledger") as Array).size() == (opening.get("ledger", []) as Array).size(),
+		"The company in play went back to that opening when its world went (money %s)" % state.get(&"money"))
+	loaded.free()
 	state.free()
 	_clean()
 

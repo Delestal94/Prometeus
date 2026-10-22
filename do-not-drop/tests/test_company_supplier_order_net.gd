@@ -301,8 +301,9 @@ func _test_root() -> void:
 	level.free()
 	var saved: Node = STATE_SCRIPT.new()
 	CompanySave.load_into(saved, CompanySave.DEFAULT_SLOT, DIR)
-	_expect(SupplierSchedule.from_dict(saved.supplier_calendar).ordered_for(2) == {product: 24},
-		"Leaving the root saves the calendar (got %s)" % [saved.supplier_calendar])
+	_expect(SupplierSchedule.from_dict(saved.supplier_calendar).ordered_for(2).is_empty(),
+		"Leaving the root mid-day keeps the day's opening: the order of the cut day is not saved (got %s)"
+		% [saved.supplier_calendar])
 	saved.free()
 	state.call(&"reset")
 	_clean()
