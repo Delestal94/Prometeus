@@ -128,6 +128,16 @@ func _test_world() -> void:
 	_expect(view.load_point.get_prompt() != "" and view.push_point.get_prompt() != ""
 		and view.load_point.get_prompt() != view.push_point.get_prompt(), "Both points have their own prompt")
 	_expect(_shed.station_for(&"cart:no_such_cart").is_empty(), "An unknown cart is no station")
+	var spots: Array[Vector2] = DefaultShed.load_default().cart_spots
+	for index: int in spots.size():
+		var id := StringName("cart_%d" % (index + 1))
+		_expect(_shed.cart_can_stand(_shed.cell_to_local(spots[index]), id),
+			"The default spot of %s is free floor for it (D-0610.c)" % id)
+		for other: int in range(index + 1, spots.size()):
+			var metres: float = (spots[other] - spots[index]).length() * CompanyTuning.WAREHOUSE_GRID_M
+			_expect(metres >= CompanyTuning.CART_SPACING_M,
+				"Default carts %d and %d stand %.1f m apart or more (%.2f)" % [index + 1, other + 1,
+				CompanyTuning.CART_SPACING_M, metres])
 	var station: Dictionary = _shed.station_for(view.cart.location())
 	_expect(station.get("location") == &"cart:cart_1" and station.get("capacity") == CompanyTuning.CART_MAX_UNITS
 		and station.get("spot") is Vector3 and station.get("at") is Vector3 and station.get("stand_ok") is Callable,
