@@ -374,6 +374,18 @@ lanzamiento la aplique cuando haya con qué mostrarla.
 Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
 **Hecho cuando:** la nota existe y la rutina de lanzamiento puede pasar la página a la versión B sin preguntar qué prometer.
 
+### D-0140 · La contra al diseño completo — A · Opus 5.5 · high · Aviso: no · F0
+**Depende de:** D-0101 a D-0139 (todo el diseño escrito), D-0112 (los recortes de alcance ya aplicados no se repiten)
+**Qué:** pasada de `abogado-del-diablo` a `diseno/*.md`, las decisiones de la expansión y lo que ya está construido.
+Informe `diseno/revision-diseno.md`:
+- [ ] D-0140.1 Contradicciones entre documentos de diseño y diseño que el código ya dejó atrás, con archivo:línea.
+- [ ] D-0140.2 Lista SIMPLIFICAR / REHACER / MANTENER por sistema, respetando la fila 5 de las decisiones delegadas
+  (lo que nombró el usuario se simplifica, nunca se saca).
+- [ ] D-0140.3 Riesgos para cerrar y medir el corte vertical F1.
+- [ ] D-0140.4 Tareas ajustadas: los cambios de texto o criterio se aplican en el mismo PR (detalle o tabla de
+  grupo); un recorte de feature va en un PR propio que se pueda revertir (regla 3 del README de rutinas).
+**Hecho cuando:** el informe existe y las tareas que nombra como ajustes de texto o criterio ya llevan el cambio.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
