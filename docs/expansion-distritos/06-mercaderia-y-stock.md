@@ -17,7 +17,7 @@
 | D-0607 | ✅ Abrir palet: las cajas del producto pasan a ser tomables | constructor-negocio | medium | test |
 | D-0608 | ✅ Estanterías con huecos etiquetados por producto | constructor-mundo | high | dejar producto en hueco lo suma al `Inventory` (test) |
 | D-0609 | ✅ Tomar productos de la estantería (picking) a mano | constructor-jugador | high | test: tomar 3 unidades baja el stock en 3 |
-| D-0610 | ◐ (falta D-0610.b, el carrito en el mundo) Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
+| D-0610 | ◐ (falta D-0610.c2: empuje continuo, devolver al estante, elegir producto) Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
 | D-0611 | ✅ Stock visible: etiqueta del hueco muestra cantidad | constructor-mundo | medium | captura con números |
 | D-0612 | ◐ (falta D-0612.b, abrirla en el mundo y la captura) Vista de stock en el portapapeles (lista por producto) | constructor-ui | medium | captura |
 | ✅ D-0613 | Aviso de stock bajo para productos con pedidos pendientes | constructor-negocio | medium | test |
