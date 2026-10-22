@@ -46,7 +46,7 @@ func _test_next_stop(entry: Dictionary, book: OrderBook, centro: Array[HouseSpot
 func _test_link(entry: Dictionary, book: OrderBook, centro: Array[HouseSpot]) -> void:
 	var fleet := Node3D.new()
 	root.add_child(fleet)
-	var van := Node3D.new()
+	var van := VehicleBody3D.new()
 	van.name = "van"
 	fleet.add_child(van)
 	var screen := DashboardGps.new()
