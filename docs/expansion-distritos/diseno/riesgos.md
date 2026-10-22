@@ -41,8 +41,9 @@ P3: vigilar.
   suben la latencia y las pérdidas para todos, y el galpón lleno con 8 es justo el caso que se promete.
 - **Evidencia:**
   - `docs/rendimiento-pc.md` §"Ancho de banda del modo Empresa (D-2002)": con poses a 15/s, el galpón usa
-    8,7 KB/s con 4 jugadores y 19,8 con 8. "Una salida afuera" (≤ 40) y "2 vehículos lejos" (≤ 64) siguen
-    pendientes de D-2002.2.
+    8,7 KB/s con 4 jugadores y 19,8 con 8. Con D-2002.2 (2026-10-22): "una salida afuera" usa 35,6 de 40 con 4
+    y 46,6 con 8; "2 vehículos lejos", 50,1 de 64 con 4 y 66,2 con 8 (modelo; medido con ENet, 8 entra).
+    Con 8 lo que más pesa es la camioneta en movimiento a ~60/s (D-2002.4).
   - Hoy el galpón no tiene sincronizadores propios: los bultos del piso son estáticos (`red-autoridad.md`
     §1, regla 10). La caja armada es un `DeliveryPackage` con sincronizador a 30/s
     (`scenes/gameplay/package/package.tscn:98-99`), que `NetRestThrottle` frena en reposo.
@@ -56,9 +57,9 @@ P3: vigilar.
      del lado que recibe), no con un sincronizador cada uno. Lo mide `test_company_bandwidth_budget` con 20.
   2. Cintas como grafo: viajan la entrada y la salida de cada ítem, y el avance lo calcula cada peer con el
      reloj del día (D-1115). Nunca viaja la posición de cada ítem.
-  3. D-2002.2 mide una salida y 2 vehículos lejos apenas el mundo de la empresa tenga vehículo.
+  3. D-2002.2 midió una salida y 2 vehículos lejos: entran con 4; con 8, D-2002.4 (camioneta a 30/s).
   4. Si D-1047 o D-1148 pasan el presupuesto, se reabre D-2022 en vez de bajar más el ritmo de las poses.
-- **Tareas:** D-2002 (D-2002.2), D-1012, D-1115, D-1047, D-1148.
+- **Tareas:** D-2002 (D-2002.4), D-1012, D-1115, D-1047, D-1148.
 
 ## R-02 · Join tardío con partes que faltan — P1 · F1
 
@@ -235,7 +236,8 @@ P3: vigilar.
 - **Evidencia:** punto 6 de la decisión del mapa continuo (el host simula todo; máximo 2 vehículos lejos).
   `company_tuning.gd:42-47` (celdas de 256 m, radio 2, impostores a 5). `company_cells.gd:5-8` y `:13-17`:
   31 celdas fijas, contadas con la misma cuenta de `pin_fixed_cells()`. `docs/rendimiento-pc.md`
-  §"Carga y memoria". D-2002.2 sigue pendiente.
+  §"Carga y memoria". D-2002.2 (2026-10-22): con 2 vehículos lejos y 8 jugadores el modelo da 66,2 de
+  64 KB/s; un tercer vehículo sumaría unos 24 KB/s al que va a bordo (estimado).
 - **Mitigación:** medir antes de abrir la segunda zona. D-2002 (con D-0317 adentro) decide si el tope de 2
   vehículos lejos se sostiene. D-2023 corre un bot de 8 jugadores en CI nocturno. Memoria con el galpón
   grande (D-0947), preset bajo (D-2038) y fugas en 10 días (D-2013). Las celdas fijas se cargan en versión

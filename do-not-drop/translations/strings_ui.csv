@@ -1461,3 +1461,9 @@ UI_SHOP_BOUGHT,Comprado: %s,Bought: %s
 UI_SHOP_HOST_ONLY,Solo el anfitrión compra por la empresa,Only the host buys for the company
 UI_SHOP_BAD_DATA,Eso no se puede comprar,That cannot be bought
 UI_SHOP_NO_LINK,Sin conexión con el anfitrión,No connection to the host
+UI_COMPANY_NOTE_1,Dejalo en la puerta. ¡Gracias!,Leave it at the door. Thanks!
+UI_COMPANY_NOTE_2,Si no estoy toque timbre dos veces.,"If I'm out, ring twice."
+UI_COMPANY_NOTE_3,Cuidado con el perro (es amistoso).,Careful with the dog (he's friendly).
+UI_COMPANY_NOTE_4,Ojalá llegue antes de la cena.,Hope it gets here before dinner.
+UI_COMPANY_NOTE_GIFT_1,¡No lo abras! Es sorpresa.,Don't open it! It's a surprise.
+UI_COMPANY_NOTE_GIFT_2,Para mi abuela. Con cariño.,For my grandma. With love.

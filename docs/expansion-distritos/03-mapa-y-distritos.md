@@ -15,7 +15,7 @@
 | ✅ D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
 | D-0306 | ✅ Orden de paradas: el jugador elige o lo sugiere el GPS | constructor-camion | high | GPS muestra la próxima parada; test cambia el orden |
 | D-0307 | ◐ (falta D-0307.1: la grúa en el mundo; ver detalle) Regreso al galpón: viaje de vuelta corto o salto con pantalla de resumen (según D-0104) | constructor-mundo | high | regreso sin cargar la escena entera dos veces (medido) |
-| D-0308 | ◐ (falta D-0308.1, ver detalle: es el GPS por el grafo) Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
+| D-0308 | ◐ (falta D-0308.1c, ver detalle: dibujar la ruta en la pantalla) Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
 | D-0309 | ✅ Requisito de vehículo por distrito (la lancha solo sale al agua, etc.) | constructor-progresion | medium | test: combinación inválida rechazada |
 | D-0310 | ◐ (falta D-0310.b) Mapa del mundo 2D (tablero en el galpón) con distritos, estado y pedidos (incluye D-0327, fusión de D-0112) | constructor-ui | high | captura de `revisor-visual` legible a 1080p y Steam Deck |
 | D-0311 | ✅ Casas de entrega por distrito con `DeliveryHouse` y variantes (puerta, buzón, muelle, porche) (incluye D-0247, fusión de D-0112) | constructor-mundo | high | 4 variantes funcionan con el flujo de puerta actual |
@@ -36,7 +36,7 @@
 | ~~D-0321~~ | ~~Atajos entre distritos (túnel, ferry, puente) que se desbloquean~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-tramos | high | atajo baja el largo de ruta medido |
 | ~~D-0322~~ | ~~Puntos de interés por distrito (mirador, kiosco, estación de servicio) con efecto chico~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | 3 por distrito colocados por semilla |
 | ~~D-0323~~ | ~~Estación de servicio: cargar combustible (si D-0505 activa combustible)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-camion | medium | test: tanque baja y se carga |
-| D-0324 | Clima por distrito con `WorldMood` (perfiles nuevos) | constructor-mundo | high | perfil por distrito; captura de cada uno |
+| D-0324 | Clima por distrito con `WorldMood` (perfiles nuevos), según [distritos.md](diseno/distritos.md#clima-y-temperatura-por-zona-d-0135) | constructor-mundo | high | perfil por distrito; captura de cada uno |
 | D-0325 | Hora del día real en el distrito (salir de noche se ve de noche) | constructor-mundo | medium | test: hora del reloj → mood |
 | ~~D-0326~~ | ~~Carteles de dirección por distrito con nombres de calles generados~~ **Fusionada en D-0312 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | carteles legibles en captura |
 | ~~D-0327~~ | ~~GPS con varias paradas y ruta sugerida dibujada en el tablero~~ **Fusionada en D-0310 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-camion | high | captura con 3 paradas |

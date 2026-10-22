@@ -87,6 +87,8 @@ func refresh() -> void:
 		target_house = int(guidance.get("house", -1))
 		distance_label.text = _metres(float(guidance.distance)) if not guidance.is_empty() else "—"
 		detail_label.text = String(guidance.get("label", ""))
+		if guidance.has("game_minutes"):
+			detail_label.text += " · " + tr("WORLD_GPS_ETA") % ceili(float(guidance.game_minutes))
 		arrow.visible = not guidance.is_empty()
 		if not guidance.is_empty():
 			_point_arrow(truck, guidance.waypoint)
