@@ -25,8 +25,9 @@ extends Node
 ## what the dispatch board asks before loading a vehicle. A vehicle with cargo staged that tries to
 ## cross the gate outward with that many already out is held at the gate (D-0316.2, `hold_at_gate`):
 ## every tick it would cross, it is put back where it last stood inside, its horizontal motion stopped,
-## so it never leaves, nor counts as out; departure_held says so, with the reason and its driver, at
-## most once every `held_notice_msec` per vehicle (CompanyTripsView tells that driver). Its cargo
+## so it never leaves, nor counts as out (its heading is its own: it can steer along the line); departure_held
+## says so, with the reason and its driver, at most once every `held_notice_msec` per vehicle and driver
+## (CompanyTripsView tells that driver). Its cargo
 ## stays staged. Only one fed through track(), with no node to hold (or with hold_at_gate off), still
 ## crosses: it starts no trip (departure_refused) but counts as out until it crosses back in
 ## (trips_out(), so the day waits for it too; refused_returned when it does).
@@ -40,7 +41,8 @@ signal departure_refused(vehicle_id: StringName, reason: Dictionary)
 signal refused_returned(vehicle_id: StringName)
 ## A vehicle with cargo tried to cross outward with `far_max` out and was held inside the gate (D-0316.2):
 ## `reason` is departure_verdict()'s, `driver` its driver_peer_id (0: nobody at the wheel). At most once
-## every held_notice_msec per vehicle, however many ticks it pushes against the gate.
+## every held_notice_msec per vehicle and driver, however many ticks it pushes against the gate (a new driver
+## is told at once).
 signal departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
 
 ## The group of the vehicles the gate watches.
@@ -70,9 +72,9 @@ var _active: Dictionary = {}
 var _refused_out: Dictionary = {}
 var _closed: Array[Trip] = []
 var _next_id: int = 1
-## vehicle id -> its global_transform the last tick it stood inside the gate (where a hold puts it back).
+## vehicle id -> its global_position the last tick it stood inside the gate (where a hold puts it back).
 var _inside_pose: Dictionary = {}
-## vehicle id -> Time.get_ticks_msec() of its last departure_held.
+## vehicle id -> [driver, Time.get_ticks_msec()] of its last departure_held: a new driver is told at once.
 var _held_told: Dictionary = {}
 
 
@@ -187,7 +189,7 @@ func _watch(body: Node3D) -> void:
 		return
 	gate.track(id, at)
 	if gate.side_of(at) == TripGate.INSIDE:
-		_inside_pose[id] = body.global_transform
+		_inside_pose[id] = at
 	else:
 		_inside_pose.erase(id)
 
@@ -198,12 +200,12 @@ func _would_refuse(vehicle_id: StringName) -> bool:
 
 
 ## Puts `body` back where it last stood inside the gate (at its own height: its suspension holds that), its
-## horizontal motion stopped, and says so (departure_held) unless it did for this vehicle in the last
-## held_notice_msec. The gate never sees it outside.
+## horizontal motion stopped, and says so (departure_held) unless it told this driver about this vehicle in
+## the last held_notice_msec. Its heading is left as it is, turning too: the gate is a wall it can steer along,
+## not a lock. The gate never sees it outside.
 func _hold(body: Node3D, vehicle_id: StringName) -> void:
-	var inside: Transform3D = _inside_pose[vehicle_id]
-	var height: float = body.global_position.y
-	body.global_transform = Transform3D(inside.basis, Vector3(inside.origin.x, height, inside.origin.z))
+	var inside: Vector3 = _inside_pose[vehicle_id]
+	body.global_transform = Transform3D(body.global_basis, Vector3(inside.x, body.global_position.y, inside.z))
 	var rigid := body as RigidBody3D
 	if rigid != null and not rigid.freeze:
 		# On the body's live state: RigidBody3D.linear_velocity is the copy from before a VehicleBody3D's
@@ -213,12 +215,14 @@ func _hold(body: Node3D, vehicle_id: StringName) -> void:
 		if state != null:
 			state.linear_velocity = Vector3(0.0, state.linear_velocity.y, 0.0)
 	body.reset_physics_interpolation()
+	var wheel: Variant = body.get(&"driver_peer_id")
+	var driver: int = int(wheel) if wheel is int else 0
 	var now: int = Time.get_ticks_msec()
-	if _held_told.has(vehicle_id) and now - int(_held_told[vehicle_id]) < held_notice_msec:
+	var told: Array = _held_told.get(vehicle_id, [])
+	if not told.is_empty() and int(told[0]) == driver and now - int(told[1]) < held_notice_msec:
 		return
-	_held_told[vehicle_id] = now
-	var driver: Variant = body.get(&"driver_peer_id")
-	departure_held.emit(vehicle_id, departure_verdict(vehicle_id), int(driver) if driver is int else 0)
+	_held_told[vehicle_id] = [driver, now]
+	departure_held.emit(vehicle_id, departure_verdict(vehicle_id), driver)
 
 
 func _on_departed(vehicle_id: StringName) -> void:

@@ -15,7 +15,8 @@ extends SceneTree
 ##   until it crosses back in; it keeps its cargo, which leaves with it once a trip came back;
 ## - a vehicle node with cargo that would leave refused is held at the gate (D-0316.2): put back where it last
 ##   stood inside, stopped, never out (trips_out() unchanged, its orders PACKED, no departure_refused), and
-##   departure_held tells its id, the reason and its driver_peer_id once per held_notice_msec (again with 0); a
+##   departure_held tells its id, the reason and its driver_peer_id once per held_notice_msec and driver (a new
+##   driver at once; every hold with 0); it keeps its own heading (a wall, not a lock); a
 ##   CompanyTripsView following it tells that driver (solo: itself) with WORLD_DISPATCH_FAR_LIMIT and the cap
 ##   (its departure_held); one with no cargo still leaves; with hold_at_gate off it crosses refused as before;
 ## - forget() (D-0302.2.b): a vehicle that leaves the world no longer counts as out: its trip closes as if
@@ -304,9 +305,17 @@ func _test_gate_hold() -> void:
 	await _drive_to(second, -6.0)
 	_expect(is_equal_approx(second.global_position.z, -3.5) and held.size() == 1,
 		"pushed again within held_notice_msec it is held again, and nobody is told twice (%d)" % held.size())
+	second.driver_peer_id = 9
+	await _drive_to(second, -6.0)
+	_expect(held.size() == 2 and held[1][0] == &"van_held" and held[1][2] == 9,
+		"...but a new driver within held_notice_msec is told at once (got %s)" % [held])
+	second.rotation.y = 0.6
+	await _drive_to(second, -6.0)
+	_expect(is_equal_approx(second.rotation.y, 0.6) and is_equal_approx(second.global_position.z, -3.5),
+		"held, it keeps its own heading (a wall to steer along, not a lock): yaw %.2f" % second.rotation.y)
 	trips.held_notice_msec = 0
 	await _drive_to(second, -5.0)
-	_expect(held.size() == 2 and told.size() == 2, "...with no pause, every hold is told (%d)" % held.size())
+	_expect(held.size() == 3 and told.size() == 3, "...with no pause, every hold is told (%d)" % held.size())
 	# The trip back in: there is room, and the held vehicle leaves with its cargo.
 	await _drive_to(first, -1.0)
 	await _drive_to(second, -6.0)
