@@ -128,3 +128,13 @@ camino, no repite, sobrevive a guardar/cargar; veredicto de `abandoned`.
 Decisión: tres días de rampa (coincide con la primera semana de aprendizaje del galpón) y tope 2, no 1, para que armar una caja con dos productos se vea desde el día 1. Cantidad por producto sin cambios (15 % de pedir 2 unidades).
 **Test** `test_order_generator`: topes por día, días 1-3 nunca superan 2 productos y llegan a 2, un `max_items` explícito pisa el tope del día.
 **Hecho cuando:** el test pasa. La sim de balance con 1-8 jugadores es D-0844.
+
+### D-0811 · Pedidos imposibles hoy quedan en espera — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, PR #580)** — `OrderWaiting` (`scripts/gameplay/business/order_waiting.gd`); `test_order_waiting`. Falta mostrar "en espera" en el tablero y la hoja (D-0811.b, con D-0612).
+**Depende de:** D-0210, D-0211, D-0613
+**Qué:** un pedido que el galpón no puede cubrir **no falla ni se esconde**: sigue `open` en el `OrderBook` (vence y se abandona con su reloj de siempre) y se marca "en espera" con lo que le falta. No hay estado nuevo: es una clasificación derivada del stock, así no cambia el guardado ni la red.
+- `OrderWaiting.classify(inventory, orders)` → `{ready: [ids], waiting: {id: {producto: faltan}}}`. Reparte el stock libre (todo menos lo sellado en cajas, como `StockAlert`) entre los pendientes por `due_min` y después por id: dos pedidos por la última gallina no quedan ambos "listos".
+- `can_cover` / `missing_for`: un pedido solo, sin repartir.
+- `unblocked_by(inventory, orders, incoming)`: los que esperan y el camión en camino desbloquea.
+**Test:** listo vs. en espera con lo que falta; el más urgente se queda con la última unidad; lo sellado, lo armado y lo cerrado no cuentan; líneas repetidas suman; `unblocked_by` no toca el inventario real.
+**Hecho cuando:** el test pasa.

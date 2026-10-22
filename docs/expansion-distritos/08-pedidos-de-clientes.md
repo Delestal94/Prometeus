@@ -17,7 +17,7 @@
 | ✅ D-0808 | Asignar pedido a una caja (la hoja va con la caja) | constructor-negocio | medium | test |
 | D-0809 | Asignar caja a salida/vehículo | constructor-negocio | medium | test |
 | ~~D-0810~~ | ~~Cancelación del cliente (evento raro)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
-| D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
+| ✅ D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
 | ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
 | D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
 | D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
