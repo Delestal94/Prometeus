@@ -374,6 +374,19 @@ lanzamiento la aplique cuando haya con qué mostrarla.
 Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
 **Hecho cuando:** la nota existe y la rutina de lanzamiento puede pasar la página a la versión B sin preguntar qué prometer.
 
+### D-0140 · La contra al diseño completo — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #737)** — `diseno/revision-diseno.md`: F1 no está cerrado (la puerta no cobra, las trampas no leen la intensidad, el bot simula etapas); compuerta F1 → F2 atada a D-2016, Campo fuera del corte, D-2016.4, D-0710.b, D-0509.b, D-0254 y D-0551; los recortes quedan para PRs propios.
+**Depende de:** D-0101 a D-0139 (todo el diseño escrito), D-0112 (los recortes de alcance ya aplicados no se repiten)
+**Qué:** pasada de `abogado-del-diablo` a `diseno/*.md`, las decisiones de la expansión y lo que ya está construido.
+Informe `diseno/revision-diseno.md`:
+- [x] D-0140.1 Contradicciones entre documentos de diseño y diseño que el código ya dejó atrás, con archivo:línea.
+- [x] D-0140.2 Lista SIMPLIFICAR / REHACER / MANTENER por sistema, respetando la fila 5 de las decisiones delegadas
+  (lo que nombró el usuario se simplifica, nunca se saca).
+- [x] D-0140.3 Riesgos para cerrar y medir el corte vertical F1.
+- [x] D-0140.4 Tareas ajustadas: los cambios de texto o criterio se aplican en el mismo PR (detalle o tabla de
+  grupo); un recorte de feature va en un PR propio que se pueda revertir (regla 3 del README de rutinas).
+**Hecho cuando:** el informe existe y las tareas que nombra como ajustes de texto o criterio ya llevan el cambio.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **[x] Hecho (2026-10-22, PR #723)** — pausa sin peers, pedidos antes de las 15:00 solo, pedido automático al cierre y carrito precargado; falta ver al bot de D-2016 cerrar el día 2 ([revisar](../revisar/D-0151.3c.md)).
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)

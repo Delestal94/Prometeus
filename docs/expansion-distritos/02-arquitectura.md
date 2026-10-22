@@ -31,6 +31,7 @@
 | D-0251 | ✅ Un día cortado vuelve a su apertura: crear la empresa guarda el día 1 y un corte solo marca `interrupted`, no escribe nada a medias ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_company_autosave` ampliado: cobrar, salir a mitad de día y cargar da la plata, el stock y el libro de caja de la apertura |
 | D-0252 | ✅ Stock sin lugares en curso al guardar: manos, piso, cajas y paquetes al bulto de devolución con posición ([guardado.md](diseno/guardado.md) §3) | constructor-progresion | medium | test: después de cargar, toda unidad está en un lugar con estación y el bulto se puede tomar |
 | D-0253 | ✅ Cerrar el día antes: el host lo pide desde la pausa y se guarda como un cierre; las salidas avisan que cortar pierde el día ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_day_cycle` ampliado; botón y aviso en el menú de pausa |
+| D-0254 | Partir `company_root.gd` (1000 líneas) y `company_net.gd` (999) antes de enganchar puerta, cobro y alquiler ([riesgos.md](diseno/riesgos.md) R-16, [revisión D-0140](diseno/revision-diseno.md)) | constructor-red | medium | los dos bajan de 850 líneas, `PROTOCOL_VERSION` no cambia y `tools/run-tests.sh company` sigue en verde |
 
 ## Ampliación
 

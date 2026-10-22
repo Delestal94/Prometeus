@@ -91,10 +91,15 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 **Hecho cuando:** el test pasa con 6 cajas de calidad conocida.
 
 ### D-0710 · Calidad → trampa y su intensidad — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
+**[~] Parcial (revisión D-0140, 2026-10-22: falta D-0710.b, que las trampas lean la intensidad)** — antes marcada hecha (2026-10-12): `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
 **Depende de:** D-0709 (`AssemblyQuality`), D-0213 (`BoxToPackage`), D-0109
 **Qué:** la trampa que viaja sigue siendo la del producto más difícil; el armado solo mueve la intensidad (`diseno/armado-y-trampas.md` §5). Números en `CompanyTuning` (`TRAP_INTENSITY_MID` 0,1, `TRAP_INTENSITY_HIGH` 0,25, `TRAP_LOOSE_BOX_INTENSITY` 0,3).
-**Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo.
+- [ ] **D-0710.b** (revisión D-0140; `constructor-trampas`, high, aviso a Slatex: comportamientos de trampa) Los
+  comportamientos leen `META_TRAP_PLAN`: el nivel low/mid/high elige la variante de dificultad que el `.tres` de la
+  trampa ya tiene (sin parámetros nuevos por trampa) y `META_LOOSE_BOX` suma Equilibrio con el mismo mecanismo de
+  trampa extra. Hoy los dos metadatos se escriben y nadie los lee: el armado solo cambia `impact_absorption`.
+**Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo; y (D-0710.b) `sim_trap_balance` muestra
+más roturas en `high` que en `low` en ≥ 5 de las 7 trampas.
 
 
 ### D-0711 · Caja armada sigue siendo `DeliveryPackage` — A · Sonnet 5.5 · xhigh · Aviso: no · F1

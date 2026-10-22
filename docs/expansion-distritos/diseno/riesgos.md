@@ -31,7 +31,8 @@ P3: vigilar.
 | R-13 | `--script` que pierde autoloads al nombrar clases nuevas (N-919) | P2 | D-0243 | F0-F5 |
 | R-14 | Determinismo: pedidos por semilla y tripulación, tránsito por reloj | P2 | D-0246, D-0807, D-1504 | F1-F2 |
 | R-15 | Regresiones en Entrega y Endless por archivos compartidos | P2 | D-0315, D-2039 | todas |
-| R-16 | `CompanyNet` en 992 de las 1000 líneas del lint | P2 | D-2041 | F1-F2 |
+| R-16 | `CompanyNet` (999) y `CompanyRoot` (1000) en el tope de líneas del lint | P1 | D-0254 | F1 |
+| R-17 | El bot del corte mide etapas simuladas como OK | P0 | D-2016.4 | F1 |
 
 ## R-01 · Ancho de banda del galpón — P1 · F1-F2
 
@@ -338,7 +339,7 @@ P3: vigilar.
   antes y después de cada fase.
 - **Tareas:** D-0315, D-2039.
 
-## R-16 · `CompanyNet` contra el tope de líneas — P2 · F1-F2
+## R-16 · `CompanyNet` y `CompanyRoot` contra el tope de líneas — P1 · F1
 
 - **Qué puede salir mal:** `CompanyNet` maneja peticiones, eventos, snapshot, stock y piso, y cada acción
   nueva le suma un `kind`. Está en 992 líneas con un tope de 1000 en el lint, así que la próxima acción no
@@ -349,11 +350,23 @@ P3: vigilar.
   que sirven de modelo: `CompanyTableNet`, `CompanyLayoutNet` y `CompanySnapshot`.
 - **Mitigación:** antes de F2 se separan el armado de trozos del snapshot y el despacho de peticiones por
   dominio (como `CompanyTableNet`), con los tests `company` en verde y sin cambiar el protocolo.
-- **Tareas:** D-2041 (no alcanza sola) y "Sin tarea todavía", punto 1.
+- **Tareas:** D-0254 (revisión D-0140: hoy `company_net.gd` tiene 999 líneas y `company_root.gd` 1000, y enchufar la
+  puerta y el alquiler pasa por los dos) y D-2041.
+
+## R-17 · El bot del corte mide etapas simuladas como OK — P0 · F1
+
+- **Qué puede salir mal:** `bot_company_day` termina en `BOT_OK` aunque la puerta, el alquiler y la red los simula él:
+  llama `OrderSettlement.settle` por su cuenta, arma una caja y corre solo en el host. Si con eso se declara cerrado
+  el corte, F2 arranca sobre un día que en el juego real no cobra.
+- **Evidencia:** fuera de `tests/` no hay llamadas a `OrderSettlement.settle` ni a `FixedCosts.settle`;
+  encabezado de `tests/bot_company_day.gd` ("None of that is replicated to clients yet").
+- **Mitigación:** D-2016.4 (`BOT_STUB` bloquea `BOT_OK`) y la compuerta F1 → F2 atada a D-2016 en
+  `.claude/rutinas/desarrollador.md` §2.
+- **Tareas:** D-2016.4, D-0340, D-0509.b, D-2017.
 
 ## Sin tarea todavía
 
-1. **Partir `CompanyNet` (R-16).** Propuesta para el grupo 02: `constructor-red`, esfuerzo medium. Hecho
+1. ~~**Partir `CompanyNet` (R-16).**~~ Ya tiene tarea: D-0254. Propuesta original para el grupo 02: `constructor-red`, esfuerzo medium. Hecho
    cuando `company_net.gd` baja de 800 líneas, `PROTOCOL_VERSION` no cambia y `tools/run-tests.sh company`
    sigue en verde.
 2. **Compuerta de conteos en CI (R-08, R-09).** `bench_company` imprime `nodes`, `objects`, `draw_calls` y
