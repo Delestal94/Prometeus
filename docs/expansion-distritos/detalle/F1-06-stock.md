@@ -144,14 +144,15 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Hecho cuando:** el test pasa con un calendario de 3 días.
 
 ### D-0618 · El camión del proveedor se va a una hora y se lleva lo que quede — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[~] Parcial (2026-10-22, PR pendiente)** — la lógica (`SupplierDeparture`, `scripts/gameplay/business/supplier_departure.gd`) y `test_supplier_departure`. Falta D-0618.b (el camión que se va en el mundo y el cableado en `CompanyRoot`).
+**[x] Hecho (2026-10-22, PR pendiente)** — la lógica (`SupplierDeparture`, `test_supplier_departure`) y el cableado en el mundo (D-0618.b): evento `jack_departed` de `CompanyPallets`, publicado por el host desde `CompanyRoot._send_truck_off`; `test_company_truck_departure`. `PROTOCOL_VERSION` 45.
 **Depende de:** D-0602 (`SupplierSchedule.truck_state`), D-0604 (`Pallet`), D-0614 (`DeliveryNote`)
 **Qué:**
 - **D-0618.a (hecha) — la lógica.** `SupplierDeparture` (`RefCounted`, sin nodos): `has_left(schedule, día, minuto)`, `left_on_bed(palets, ids bajados)`, `taken_units` y `resolve(...)`, que a la hora de salida (`SupplierSchedule.departure_minute()`) devuelve `{left, taken, note_lines}` y limpia el día del calendario. Antes de esa hora no toca nada.
-- **D-0618.b (pendiente) — el cableado.** `CompanyRoot` llama a `resolve` cuando el reloj pasa la hora de salida, quita los palets que quedaron en la caja de `SupplierTruckView`, guarda `note_lines` en el `DeliveryNote` (D-0614.b) y replica.
+- **D-0618.b (hecha) — el cableado.** `CompanyRoot` llama a `resolve` cuando el reloj pasa la hora de salida, quita los palets que quedaron en la caja de `SupplierTruckView`, guarda `note_lines` en el `DeliveryNote` (D-0614.b) y replica.
 **Decisión:** el camión se lleva lo que queda y **no hay cargo extra por demora**: la billetera solo paga lo que llegó (D-0503) y el remito registra el faltante.
 **Test** `test_supplier_departure`: espera hasta la hora de salida, se lleva 6 gallinas, vacío no se lleva nada, día sin camión, basura en la lista.
-**Hecho cuando:** test: camión que se va con lo no descargado (hecho en la lógica); en el juego, D-0618.b.
+**Hecho cuando:** test: camión que se va con lo no descargado (hecho en la lógica y en el mundo, `test_company_truck_departure`).
+**D-0618.b, cómo quedó:** una vez por minuto de juego, si el día tiene entrega, el host llama a `CompanyPallets.departed_event` (usa `SupplierDeparture.resolve` sobre una copia del calendario) y publica `jack_departed {day, lines}`. Cada peer que lo aplica saca de la caja los palets que seguían ahí, guarda las líneas en el remito (`CompanyPallets.note`, un `DeliveryNote`) y `CompanyRoot` quita el día de su calendario. Los palets bajados (piso, zorra, rack, o los del galpón inicial) cuentan como recibidos. El remito viaja en el snapshot (`pallets.note`, `departed_day`).
 
 ### D-0620 · Layout inicial del depósito actual adaptado: dársena, recepción, racks, armado, despacho — A · Opus 5.5 · xhigh · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — es D-0911 visto desde el stock: `data/shed/default_shed.tres` (`DefaultShed`) y `CompanyShed`; `test_company_default_layout`. Detalle completo en [F1-09-galpon.md](F1-09-galpon.md).
@@ -197,11 +198,11 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Hecho cuando:** test: un pedido que pide más de lo que hay marca el producto con lo que falta (test pasa).
 
 ### D-0614 · Recepción: control de remito (lo que llegó vs. lo pedido) — B · Sonnet 5.5 · medium · Aviso: no · F1
-**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del remito (`DeliveryNote`, `scripts/gameplay/business/delivery_note.gd`) y `test_delivery_note`. Falta D-0614.b (llamarlo al irse el camión y mostrarlo).
+**[~] Parcial (2026-10-22, PR pendiente)** — la lógica del remito (`DeliveryNote`, `test_delivery_note`) y su registro al irse el camión (D-0614.b, con D-0618.b: `CompanyPallets.note`, replicado en el snapshot; `test_company_truck_departure`). Falta mostrarlo (D-0614.c: lista de faltantes en el resumen del día o el tablero, UI) y guardarlo en el save (D-0605.c, junto con el libro de palets).
 **Depende de:** D-0602 (`SupplierSchedule.ordered_for`), D-0604 (`Pallet`), D-0605 (`PalletJack.left_on_bed`)
 **Qué:**
 - **D-0614.a (hecha) — la lógica.** `DeliveryNote` (`RefCounted`, sin nodos): `received_units(pallets, received_ids)` suma las unidades de los palets que sí se bajaron; `compare(pedido, recibido)` devuelve una línea por producto (`ordered`, `received`, `missing`, `extra`) en orden de id; `check(día, pedido, recibido)` guarda en el remito solo las líneas que no cierran (un día exacto no deja registro; volver a controlar el mismo día lo reemplaza). `days_with_shortfall()`, `discrepancies(día)`, `missing_totals()`, `is_exact` y `total_missing`. `to_dict`/`from_dict` toleran datos rotos y recalculan `missing`/`extra`.
-- **D-0614.b (pendiente) — el cableado.** Cuando el camión se va (`SupplierSchedule.truck_state` pasa a `left`, D-0618), `CompanyRoot` llama a `check(día, ordered_for(día), received_units(pallets_for(día), ids bajados))`, guarda el `DeliveryNote` en el save de empresa y lo replica con el resto del stock (D-0619). Lo que se muestra (lista de faltantes en el resumen del día o el tablero) es UI; el cobro solo de lo recibido ya lo hace D-0503 por palet.
+- **D-0614.b (hecha) — el cableado.** Cuando el camión se va (`SupplierSchedule.truck_state` pasa a `left`, D-0618), `CompanyRoot` llama a `check(día, ordered_for(día), received_units(pallets_for(día), ids bajados))`, guarda el `DeliveryNote` en el save de empresa y lo replica con el resto del stock (D-0619). Lo que se muestra (lista de faltantes en el resumen del día o el tablero) es UI; el cobro solo de lo recibido ya lo hace D-0503 por palet.
 **Test** `test_delivery_note`: solo cuentan los palets bajados; faltante de 6 gallinas registrado en su día; entrega exacta sin registro y volver a controlar reemplaza; sobrante como `extra` y no como faltante; totales por producto y días inválidos; ida y vuelta de JSON y save roto.
 **Hecho cuando:** test: un faltante se registra (hecho en la lógica); en el juego, al irse el camión (D-0614.b).
 
