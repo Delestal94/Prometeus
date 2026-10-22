@@ -77,9 +77,8 @@ extends Node3D
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
-## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here in
-## gameplay/: once the company HUD exists, the host-gone screen and the way to the menu move
-## there, as N-222's live in hud_pause.gd.
+## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here: once the
+## company HUD exists, the host-gone screen and the way to the menu move there, as N-222's in hud_pause.gd.
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 ## Where a close's save puts the units players held (D-2005, D-0236): a loaded day opens with empty hands. The
 ## shed has no fixed spot for them yet (no station gives a location), so they lie in floor
@@ -237,6 +236,7 @@ func _ready() -> void:
 	_add_crew()
 	_add_builder()
 	_add_stock_board()
+	CompanyDispatch.add_to(self)
 	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()

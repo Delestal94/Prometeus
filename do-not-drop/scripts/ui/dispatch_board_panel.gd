@@ -74,11 +74,13 @@ func close() -> void:
 	closed.emit()
 
 
-## Redraws the board from `ctx`. The picks that are still waiting in the zone are kept.
+## Redraws the board from `ctx`. The picks that are still waiting in the zone are kept, and so is the
+## focus when its row is still there (the world refreshes the board while it is open).
 func refresh(ctx: Dictionary) -> void:
 	_ctx = ctx
 	if _rows_box == null:
 		return
+	var focused: StringName = _focused_box()
 	var waiting: Array[StringName] = _waiting()
 	var kept: Array[StringName] = []
 	for box_id: StringName in _selected:
@@ -100,6 +102,8 @@ func refresh(ctx: Dictionary) -> void:
 		row.pressed.connect(toggle.bind(box_id))
 		_rows[box_id] = row
 	_update_view()
+	if focused != &"" and _rows.has(focused):
+		(_rows[focused] as Button).grab_focus.call_deferred()
 
 
 ## Picks `box_id`, or drops it when it was picked. Returns {"ok", "key", "args"}: when not ok
@@ -292,6 +296,17 @@ func _link_focus() -> void:
 		_close_button.focus_neighbor_left = _close_button.get_path_to(_load_button)
 		if last_row != null:
 			_close_button.focus_neighbor_top = _close_button.get_path_to(last_row)
+
+
+## The box whose row has the focus, or &"" (none, or the focus is on Load / Close / outside the board).
+func _focused_box() -> StringName:
+	var owner: Control = get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	if owner == null:
+		return &""
+	for box_id: StringName in _rows:
+		if _rows[box_id] == owner:
+			return box_id
+	return &""
 
 
 func _focus_first() -> void:

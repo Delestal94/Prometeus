@@ -3,8 +3,9 @@ extends SceneTree
 ##
 ## Using the pieces of the company's shed (expansion D-0914 "interacción con objetos colocados igual
 ## que con los fijos"; ShedPiecePoint, CompanyShed):
-## - every shelf, packing table and dispatch zone of the layout has one use point, by its uid, on the
-##   interaction layer with a shape, with the prompt of its role; a plain block has none;
+## - every shelf and packing table of the layout has one use point, by its uid, on the interaction
+##   layer with a shape, with the prompt of its role; a plain block has none; a dispatch zone has a
+##   DispatchStation instead (D-0310.b, test_company_dispatch_station), not a use point;
 ## - a piece the crew places gets the same point as one of the default layout, and the point is the
 ##   same in kind (class, layer, shape, prompt) for placed and default alike;
 ## - the point stands on walkable floor in front of its piece, for the four turns: inside the floor,
@@ -56,6 +57,9 @@ func _check_default(shed: CompanyShed, state: DefaultShed.ScratchState) -> void:
 		"One use point per workable piece of the default layout (%d)" % shed.use_points.size())
 	for index: int in state.layout.size():
 		var uid: StringName = DefaultShed.piece_uid(state.layout, index)
+		if shed.dispatch_stations.has(uid):
+			_expect(not shed.use_points.has(uid), "%s has a station, not a use point" % uid)
+			continue
 		var point := shed.use_points.get(uid) as ShedPiecePoint
 		_expect(point != null, "%s has a use point" % uid)
 		if point != null:
@@ -69,8 +73,6 @@ func _check_point(shed: CompanyShed, point: ShedPiecePoint, layout: Array, label
 		"%s: on the interaction layer with its shape" % label)
 	_expect(not point.get_prompt().is_empty() and point.get_prompt() != String(ShedPiecePoint.PROMPT_KEYS[point.role]),
 		"%s: it has a translated prompt" % label)
-	if point.role == &"dispatch":
-		return
 	var cell := Vector2i(shed.local_to_cell(shed.to_local(point.global_position)).floor())
 	_expect(Rect2i(Vector2i.ZERO, shed.grid).has_point(cell), "%s: its point is inside the floor (%s)" % [label, cell])
 	for piece: Dictionary in shed.pieces:

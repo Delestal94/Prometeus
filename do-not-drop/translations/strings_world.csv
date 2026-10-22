@@ -459,3 +459,15 @@ WORLD_TOW_NO_TRIP,No hay salida abierta para este vehículo,No open trip for thi
 WORLD_TOW_NOT_STUCK,El vehículo todavía anda: volvé manejando,The vehicle still runs: drive back
 WORLD_TOW_NO_MONEY,No alcanza para la grúa: hacen falta $%d,Not enough money for the tow: it costs $%d
 WORLD_SPOILED,Se echó a perder: %d %s,Spoiled: %d %s
+WORLD_ZONE_PARQUE_INDUSTRIAL,Parque Industrial,Industrial Park
+WORLD_ZONE_CENTRO,Barrio Centro,Downtown
+WORLD_ZONE_SUBURBIO,Suburbio,Suburbs
+WORLD_ZONE_CAMPO,Campo,Countryside
+WORLD_ZONE_PUERTO,Puerto,Harbor
+WORLD_ZONE_ISLAS,Islas,Islands
+WORLD_ZONE_MONTANA,Montaña,Mountains
+WORLD_ZONE_NIEVE,Nieve,Snowfields
+WORLD_ZONE_VOLCAN,Volcán,Volcano
+WORLD_VEHICLE_VAN_CLASSIC,Camioneta clásica,Classic van
+WORLD_VEHICLE_VAN_AGILE,Camioneta ágil,Agile van
+WORLD_VEHICLE_VAN_VINTAGE,Camioneta vintage,Vintage van
