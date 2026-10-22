@@ -327,9 +327,12 @@ func _on_rejected(rid: int, reason: StringName) -> void:
 func _prompt() -> String:
 	if _refusal != "" and Time.get_ticks_msec() < _refusal_until_msec:
 		return tr(_refusal)
-	return tr("WORLD_FORKLIFT_DRIVING") % [GameSettings.binding_label(&"interact"),
-			GameSettings.binding_label(&"forklift_mast_up"), GameSettings.binding_label(&"forklift_mast_down"),
-			GameSettings.binding_label(&"package_drop")]
+	# Looked up at run time: tests preload this script before the autoloads exist as identifiers.
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	var labels: Array = []
+	for action: StringName in [&"interact", &"forklift_mast_up", &"forklift_mast_down", &"package_drop"]:
+		labels.append(settings.binding_label(action) if settings != null else "?")
+	return tr("WORLD_FORKLIFT_DRIVING") % labels
 
 
 # --- Drawing ---
