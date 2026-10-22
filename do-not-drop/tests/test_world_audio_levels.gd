@@ -51,6 +51,8 @@ const SOUNDS: Array = [
 	["resident groan", &"creature_groan", &"RESIDENT_GROAN_DB", "signal"],
 	["forklift beeper", &"reverse_beep", &"FORKLIFT_BEEP_DB", "repeat"],
 	["forklift engine", &"forklift_motor_loop", &"FORKLIFT_ENGINE_DB", "machine"],
+	["shed forklift engine", &"forklift_motor_loop", &"SHED_FORKLIFT_ENGINE_DB", "machine"],
+	["shed forklift hydraulics", &"forklift_hydraulic_loop", &"SHED_FORKLIFT_HYDRAULIC_DB", "machine"],
 	["roller door", &"roller_door", &"ROLLER_DOOR_DB", "signal"],
 	["river", &"river_flow_loop", &"RIVER_DB", "noise"],
 	["train horn", &"train_horn", &"TRAIN_HORN_DB", "signal"],
