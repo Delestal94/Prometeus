@@ -690,7 +690,7 @@ func _load_truck_pallets() -> void:
 
 ## Host, once a game minute: the truck of the day has driven off (SupplierDeparture): what stayed on its bed goes
 ## with it and the delivery note keeps what did not come (D-0618.b, D-0614.b). One jack_departed per day; the
-## day leaves the calendar on every peer when it is applied (_add_supplier_truck).
+## day stays in the calendar (the truck keeps showing as left); departed_day stops a second one.
 func _send_truck_off() -> void:
 	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
 		return
@@ -720,9 +720,7 @@ func _add_supplier_truck() -> void:
 	if net != null:
 		# The pallets on the bed are the book's (CompanyPallets), the same on every peer (D-0605.b).
 		supplier_truck.pallets = net.pallets.book
-		net.event_applied.connect(func(_seq: int, kind: StringName, data: Dictionary) -> void:
-			if kind == CompanyPallets.DEPARTED:
-				supplier_schedule.clear_day(int(data.get("day", 0)))
+		net.event_applied.connect(func(_seq: int, kind: StringName, _data: Dictionary) -> void:
 			if CompanyPallets.EVENT_KINDS.has(kind):
 				supplier_truck.refresh_bed())
 		net.company_state_restored.connect(func(_snapshot_seq: int) -> void: supplier_truck.refresh_bed())

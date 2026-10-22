@@ -118,6 +118,12 @@ func _test_net() -> void:
 		"... and a snapshot without the new keys still fits (an older host)")
 	_expect(not late.put_snapshot({"book": host.pallets.book.to_dict(), "jack_at": null, "loaded_day": DAY,
 		"departed_day": "x", "note": {}}), "... a day that is not a number does not")
+	var again: Dictionary = host.pallets.note.to_dict()
+	_expect(not host.pallets.apply(null, CompanyPallets.DEPARTED, departure) and host.pallets.note.to_dict() == again
+		and host.pallets.departed_event(schedule, DAY, SupplierSchedule.departure_minute(), planned).is_empty(),
+		"A second departure of the same day is refused and changes nothing")
+	_expect(not late.put_snapshot({"book": host.pallets.book.to_dict(), "jack_at": null, "loaded_day": DAY,
+		"departed_day": -1, "note": {}}), "... nor a negative day")
 	# An even delivery keeps no record.
 	var even := CompanyPallets.new()
 	var even_line: Dictionary = {"product": "hen", "ordered": 6, "received": 6}
@@ -185,8 +191,10 @@ func _test_root() -> void:
 		and level.supplier_truck.bed_ids().is_empty(),
 		"It drives off once and takes its pallets (%d events)" % departures.size())
 	_expect(net.pallets.departed_day == DAY and net.pallets.note.days_with_shortfall() == [DAY]
-		and not level.supplier_schedule.has_delivery(DAY),
-		"The note says what was missing and the day left the calendar")
+		and level.supplier_schedule.has_delivery(DAY),
+		"The note says what was missing; the calendar keeps the day (the truck shows as left)")
+	_expect(net.pallets.departed_event(level.supplier_schedule, DAY, SupplierSchedule.departure_minute() + 1,
+		level.supplier_schedule.pallets_for(DAY)).is_empty(), "The same day does not depart twice")
 	level.queue_free()
 	await process_frame
 	state.call(&"reset")

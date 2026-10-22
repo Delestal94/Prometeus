@@ -138,11 +138,11 @@ func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dic
 
 ## Host: the jack_departed event for `day` once its truck has left at `minute` (SupplierDeparture), or {}: no delivery
 ## that day, or the truck is still there. The pallets of `planned` that are not on the bed (on the floor, on the jack,
-## in a rack, or the shed's first ones, which never were) count as unloaded. `schedule` is not touched: the day
-## leaves it when jack_departed is applied (CompanyRoot), so a refused publish asks again the next minute.
+## in a rack, or the shed's first ones, which never were) count as unloaded. `schedule` is not touched (the truck
+## keeps showing as left); `departed_day` stops a second departure of the same day, and a refused publish asks again.
 ## `lines` is the whole comparison of the order against what was unloaded, exact or not.
 func departed_event(schedule: SupplierSchedule, day: int, minute: int, planned: Array[Dictionary]) -> Dictionary:
-	if not schedule.has_delivery(day):
+	if day <= departed_day or not schedule.has_delivery(day):
 		return {}
 	var on_bed: Array[StringName] = book.ids_at(PalletJack.AT_BED)
 	var unloaded: Array = []
@@ -272,7 +272,8 @@ func _apply_loaded(data: Dictionary) -> bool:
 func _apply_departed(data: Dictionary) -> bool:
 	var day: Variant = data.get("day")
 	var raw: Variant = data.get("lines")
-	if typeof(day) != TYPE_INT or int(day) < 1 or not raw is Array or (raw as Array).size() > MAX_NOTE_LINES:
+	var many: bool = raw is Array and (raw as Array).size() > MAX_NOTE_LINES
+	if typeof(day) != TYPE_INT or int(day) <= departed_day or not raw is Array or many:
 		return false
 	var ordered: Dictionary = {}
 	var received: Dictionary = {}
@@ -335,7 +336,7 @@ func put_snapshot(value: Variant) -> bool:
 		return false
 	var left_on: Variant = plain.get("departed_day", 0)
 	var kept: Variant = plain.get("note", {})
-	if typeof(left_on) != TYPE_INT or not kept is Dictionary:
+	if typeof(left_on) != TYPE_INT or int(left_on) < 0 or not kept is Dictionary:
 		return false
 	book.from_dict(parsed)
 	jack_at = at
