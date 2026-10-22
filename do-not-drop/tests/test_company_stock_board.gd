@@ -10,7 +10,8 @@ extends SceneTree
 ##   only with real_calendar on (CompanyRoot turns it on: since D-0603.b.2 the calendar holds only real orders);
 ## - open() shows the panel, frees the mouse and turns the local player's input off; close() gives both
 ##   back; an open list is blocked while the build mode is on;
-## - a change the net applies redraws the open list from this peer's inventory;
+## - a change the net applies redraws the open list from this peer's inventory; a picking cart that rolls
+##   (cart_moved, many a second while somebody holds its handle, D-0610.c2.b) does not;
 ## - CompanyRoot carries the board on every peer.
 
 var _failures: int = 0
@@ -183,7 +184,13 @@ func _test_refresh() -> void:
 	var shown: String = before.text if before != null else "no row"
 	_expect(before != null and "Faltan 3" in before.text, "the hen row says 3 are missing (got %s)" % shown)
 	net.inventory.receive(&"hen", 3, &"shelf:a")
-	net.event_applied.emit(1, &"units_moved", {})
+	# A picking cart rolling (D-0610.c2.b: a held cart sends one every CART_GRIP_INTERVAL_S) moves no unit: no redraw.
+	net.event_applied.emit(1, CompanyCarts.MOVED, {"cart": &"cart_1", "pos": Vector3.ZERO})
+	await process_frame
+	var still: Button = board.panel.find_child("Row_hen", true, false) as Button
+	var stale: String = still.text if still != null else "no row"
+	_expect(still != null and "Faltan 3" in stale, "a cart_moved does not redraw the list (got %s)" % stale)
+	net.event_applied.emit(2, &"units_moved", {})
 	await process_frame
 	var after: Button = board.panel.find_child("Row_hen", true, false) as Button
 	var now: String = after.text if after != null else "no row"

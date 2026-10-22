@@ -39,10 +39,10 @@
 | D-0124 | ✅ Diseño de las licencias (náutica, vuelo, 4x4, alta montaña, zona volcánica) y cómo se obtienen | constructor-progresion | medium | sección en `diseno/hitos.md` |
 | ~~D-0125~~ | ~~Diseño de la competencia NPC (empresa rival que roba clientes si bajás la reputación)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | `diseno/rival.md` o recorte justificado |
 | D-0126 | ✅ Definir el modo solo: qué automatiza el juego para que una persona sola pueda llevar el negocio | critico-diseno | high | sección en `diseno/roles-tripulacion.md`; bot de D-2024 lo verifica |
-| D-0127 | Definir dificultad/tamaños de partida (empresa chica, mediana, grande) y modificadores | critico-diseno | medium | `diseno/dificultad.md` |
+| D-0127 | ✅ Definir dificultad/tamaños de partida (empresa chica, mediana, grande) y modificadores | critico-diseno | medium | `diseno/dificultad.md` |
 | ~~D-0128~~ | ~~Encaje del Endless actual en la expansión (¿endless por distrito? ¿desafío diario?)~~ **Fusionada en D-0102 (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | decisión documentada |
-| D-0129 | Glosario de términos del juego (pedido, remito, palet, estación, turno, hito) en español e inglés | documentador | low | `diseno/glosario.md`; lo usa `loc_text` |
-| D-0130 | Tabla de "primera vez": qué aprende el jugador cada día de los primeros 7 | critico-diseno | medium | `diseno/onboarding.md`; D-1901 la implementa |
+| D-0129 | ✅ Glosario de términos del juego (pedido, remito, palet, estación, turno, hito) en español e inglés | documentador | low | `diseno/glosario.md`; lo usa `loc_text` |
+| D-0130 | ✅ Tabla de "primera vez": qué aprende el jugador cada día de los primeros 7 | critico-diseno | medium | `diseno/onboarding.md`; D-1901 la implementa |
 | D-0131 | Diseñar el portapapeles de gestión (inspirado en Schedule I) como objeto en la mano, no menú | critico-diseno | medium | `diseno/portapapeles.md` con wireframes en texto |
 | ~~D-0132~~ | ~~Diseño de sabotaje amistoso coop (esconder cajas, cambiar etiquetas) — sí o no~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión documentada |
 | ~~D-0133~~ | ~~Diseño del mercado de proveedores (precios que varían por día, calidad del proveedor)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sección en `diseno/economia.md` |

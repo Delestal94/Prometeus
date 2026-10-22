@@ -19,6 +19,10 @@ var grid: Dictionary = {}
 var taped: bool = false
 var label_order_id: StringName = &""
 var stamps: Array[StringName] = []
+## Ice packs inside (D-0721, ColdPack): how long cold products last on the road.
+var ice_packs: int = 0
+## Wrapped in gift paper (D-0723, GiftWrap): a gift order delivered wrapped pays a little more.
+var gift_wrapped: bool = false
 ## Placed products, in order: {"product": StringName, "origin": Vector3i, "cells": Vector3i}.
 var items: Array[Dictionary] = []
 
@@ -149,6 +153,8 @@ func to_dict() -> Dictionary:
 		"taped": taped,
 		"label_order_id": String(label_order_id),
 		"stamps": stamp_list,
+		"ice_packs": ice_packs,
+		"gift_wrapped": gift_wrapped,
 	}
 
 
@@ -172,6 +178,8 @@ static func from_dict(d: Dictionary) -> PackedBox:
 	box.label_order_id = StringName(str(d.get("label_order_id", "")))
 	for stamp: Variant in d.get("stamps", []):
 		box.stamps.append(StringName(str(stamp)))
+	box.ice_packs = clampi(int(d.get("ice_packs", 0)), 0, CompanyTuning.ICE_PACKS_MAX)
+	box.gift_wrapped = bool(d.get("gift_wrapped", false))
 	return box
 
 

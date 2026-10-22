@@ -233,7 +233,7 @@ Campos, sin código:
   `zone` (solo `deliveries_district`), `min_deliveries` (solo `no_breakage_days`)
 - `requires`: ids de otros hitos
 - `rewards`: lista de recompensas. Cada una: `kind` (uno de los ocho), `ids`, `amount`, `reason_key` (solo `money`)
-- `teaches_key`: texto del consejo del bucle (con contenido solo del 1 al 5; D-0130 los afina)
+- `teaches_key`: texto del consejo del bucle (con contenido solo del 1 al 5; es repaso, no primera enseñanza: [onboarding.md](onboarding.md) §5)
 - `expected_day`: tres números (1, 2 y 4 jugadores), solo para D-0441 y el test; no se usan en juego
 - `ends_campaign`: verdadero solo en `national_logistics` (dispara D-0438)
 - `rank`: rango de la empresa que empieza con el hito (D-0423); vacío si no cambia

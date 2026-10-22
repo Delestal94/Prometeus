@@ -9,6 +9,9 @@ extends SceneTree
 ## - a quiet day shows "nothing" in both lists; the truncated warning shows only when asked;
 ## - Continue (and ui_cancel) hides the panel and emits `continued`; opening grabs focus on the
 ##   button so a gamepad can close it;
+## - D-0614.c: the supplier's delivery note of the day (DeliveryNote lines) shows one row per product
+##   that came short ("llegaron 4 de 10 (faltan 6)") or extra, none for an even one, and the section
+##   hides with no lines; broken lines are skipped and more than MAX_ROWS fold into "y N productos más";
 ## - both languages have every finance_* key the panel and the known ledger reasons use.
 
 const PANEL: String = "res://scripts/ui/day_summary_panel.gd"
@@ -18,7 +21,8 @@ const KEYS: Array[String] = [
 	"UI_FINANCE_REASON_ORDER_PAID", "UI_FINANCE_REASON_TIP", "UI_FINANCE_REASON_PLACEABLE_SELL",
 	"UI_FINANCE_REASON_SUPPLIER", "UI_FINANCE_REASON_BOXES", "UI_FINANCE_REASON_PACKAGING",
 	"UI_FINANCE_REASON_RENT", "UI_FINANCE_REASON_PLACEABLE_BUY", "UI_FINANCE_REASON_WAREHOUSE_EXPAND",
-	"UI_FINANCE_REASON_PENALTY", "UI_FINANCE_REASON_OTHER",
+	"UI_FINANCE_REASON_PENALTY", "UI_FINANCE_REASON_OTHER", "UI_FINANCE_NOTE", "UI_FINANCE_NOTE_SHORT",
+	"UI_FINANCE_NOTE_EXTRA", "UI_FINANCE_NOTE_MORE",
 ]
 
 var _failures: int = 0
@@ -39,6 +43,7 @@ func _run() -> void:
 	_test_keys()
 	await _test_numbers(state)
 	_test_rows()
+	await _test_note()
 	await _test_quiet_and_close()
 	state.reset()
 	if _failures == 0:
@@ -122,6 +127,38 @@ func _test_rows() -> void:
 	_expect(panel_class.rows({"a": 1, "b": 2}).size() == 2, "a short list is not folded")
 	_expect(panel_class.rows({}).is_empty(), "no reasons, no rows")
 	_expect(panel_class.money(-5) == "-$5" and panel_class.money(0) == "$0", "money formats negatives")
+
+
+func _test_note() -> void:
+	var lines: Array = DeliveryNote.compare(
+		{&"zz_short": 10, &"zz_extra": 10, &"zz_even": 5}, {&"zz_short": 4, &"zz_extra": 12, &"zz_even": 5}
+	)
+	var panel: Control = _make_panel()
+	panel.open({"day": 3}, lines)
+	await process_frame
+	var box: Control = _find(panel, "Note") as Control
+	_expect(box != null and box.visible, "a day with a short delivery shows the note")
+	var short: Label = _find(panel, "Note_zz_short") as Label
+	_expect(short != null and short.text == "zz_short: llegaron 4 de 10 (faltan 6)",
+		"the short row reads what came and what is missing: %s" % (short.text if short else "<missing>"))
+	var extra: Label = _find(panel, "Note_zz_extra") as Label
+	_expect(extra != null and extra.text == "zz_extra: llegaron 12 de 10 (sobran 2)",
+		"the extra row reads the surplus: %s" % (extra.text if extra else "<missing>"))
+	_expect(_find(panel, "Note_zz_even") == null, "an even product has no row")
+	panel.refresh({"day": 4}, [])
+	await process_frame
+	_expect(not box.visible and _find(panel, "Note_zz_short") == null, "a day without lines hides the note")
+	panel.queue_free()
+	var panel_class: GDScript = load(PANEL)
+	var broken: Array = [7, {}, {"product": "", "missing": 3}, {"product": "zz_even", "missing": 0, "extra": 0}]
+	_expect(panel_class.note_rows(broken).is_empty(), "broken and even lines give no rows")
+	var many: Array = []
+	for i: int in 12:
+		many.append({"product": "p%02d" % i, "ordered": 5, "received": 1, "missing": 4, "extra": 0})
+	var rows: Array = panel_class.note_rows(many)
+	_expect(rows.size() == panel_class.MAX_ROWS, "12 short products fold into %d rows" % panel_class.MAX_ROWS)
+	_expect(rows[rows.size() - 1] == ["other", "y 5 productos más"],
+		"the last row counts the rest: %s" % [rows[rows.size() - 1]])
 
 
 func _test_quiet_and_close() -> void:

@@ -398,9 +398,21 @@ WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
 WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
 WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
+WORLD_SHED_GRIP_CART,Agarrar o soltar el carrito,Grab or let go of the cart
+WORLD_SHED_PUSH_BLOCKED,No pasa: no hay lugar ahí,It will not go: no room there
 WORLD_SHED_TAKE_FROM_CART,Tomar %s del carrito,Take %s from the cart
+WORLD_SHED_RESTOCK_FROM_CART,Devolver al estante lo del carrito,Put the cart's stock back on its shelf
 WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
 WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
+WORLD_SHED_BOARD_FORKLIFT,Subir al autoelevador,Get on the forklift
+WORLD_FORKLIFT_DRIVING,"%s: tomar o dejar el palet · %s / %s: mástil · %s: bajar","%s: take or leave the pallet · %s / %s: mast · %s: get off"
+WORLD_FORKLIFT_REFUSED,No se puede hacer eso acá,Can't do that here
+WORLD_FORKLIFT_NO_PALLET,No hay un palet a esa altura,There is no pallet at this height
+WORLD_FORKLIFT_NO_ROOM,No hay lugar para apoyar el palet acá,No room to set the pallet down here
+WORLD_FORKLIFT_NO_RACK,Ningún hueco de estante a esta altura,No rack slot at this height
+WORLD_FORKLIFT_HANDS_FULL,La zorra ya lleva el palet,The pallet jack already carries the pallet
+WORLD_FORKLIFT_TRUCK_AWAY,El camión no está en el portón,The truck is not at the gate
+WORLD_FORKLIFT_NO_PARK,No hay lugar para bajarte acá: alejate de estantes y muros,No room to get off here: move away from shelves and walls
 WORLD_SHED_USE_SUPPLIER,Pedir al proveedor,Order from the supplier
 WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf
@@ -440,3 +452,7 @@ WORLD_DOOR_CHEER_2,¡Qué rápido! Muy bien,That was quick! Well done
 WORLD_DOOR_CHEER_3,Todo en orden. ¡Gracias!,All in order. Thank you!
 WORLD_DOOR_SHRUG_1,Bueno... llegó,Well... it arrived
 WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better
+WORLD_TOW_DONE,La grúa te llevó al playón (-$%d),The tow truck took you to the yard (-$%d)
+WORLD_TOW_NO_TRIP,No hay salida abierta para este vehículo,No open trip for this vehicle
+WORLD_TOW_NOT_STUCK,El vehículo todavía anda: volvé manejando,The vehicle still runs: drive back
+WORLD_TOW_NO_MONEY,No alcanza para la grúa: hacen falta $%d,Not enough money for the tow: it costs $%d
