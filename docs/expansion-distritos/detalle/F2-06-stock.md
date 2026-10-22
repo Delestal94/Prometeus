@@ -13,3 +13,10 @@
 Decisión: el reloj es por lugar, no por unidad (`Inventory` no sigue unidades): es lo más simple que no deja engañar al sistema sacando y devolviendo leche de la heladera. Decisión: la pérdida es de todo el lugar a la vez, no unidad por unidad.
 **Test** `test_cold_chain`: la leche en un estante común se pudre a las 2 h y sale del stock; en la heladera nunca; lo ambiente nunca; el reloj se frena y no se reinicia; mover lleva el reloj y juntar promedia; la pérdida recorta las reservas más nuevas y lo informa; ida y vuelta por JSON; `discard` rechaza de más.
 **Hecho cuando:** producto frío fuera de heladera 2 h → vencido (el test pasa; falta conectarlo al mundo, D-0616.b).
+
+### D-0617 · Heladera como estantería especial — A · Sonnet 5.5 · medium · Aviso: no · F2
+**[x] Hecho (2026-10-22, PR pendiente)** — `Shelf.cold` (la heladera del `.tres` hace un estante frío), `Shelf.set_label` con la temperatura del producto (la heladera solo rotula frío; los demás estantes, solo lo que no es frío), `CompanyShed.cold_shelves()` (el `cold_shelves` de `ColdChain.advance`) y el galpón por defecto con la heladera `cold_1` en lugar del estante `shelf_3` (leche y torta). `DefaultShed.problems()` marca un producto frío en un estante común. `test_cold_shelf`.
+**Depende de:** D-0608 (`Shelf`), D-0904 (`PlaceableDefinition.cold`), D-0616.a
+**Qué:** que el estante de frío exista de verdad y solo él guarde frío, antes de conectar el reloj al mundo (D-0616.b).
+Decisión: el uid de la heladera por defecto es `cold_1` y no `fridge_1`, para no chocar con el nombre que recibe la primera heladera que se compra. Decisión: el control es al rotular (un hueco), no al depositar: lo que no se puede rotular no tiene dónde entrar. Decisión: la heladera por defecto es gratis y sale de la lista de "no propio al inicio" solo en el layout, no en `fridge.tres` (comprar otra sigue costando 200).
+**Test** `test_cold_shelf`. **Hecho cuando:** el test pasa; `test_company_default_layout` y `test_company_layout_net` siguen verdes.

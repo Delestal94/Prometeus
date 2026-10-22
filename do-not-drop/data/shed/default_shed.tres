@@ -18,9 +18,9 @@ pieces = Array[Dictionary]([{
 "x": 0,
 "z": 2
 }, {
-"id": "shelf",
-"turns": 1,
-"uid": "shelf_3",
+"id": "fridge",
+"turns": 0,
+"uid": "cold_1",
 "x": 0,
 "z": 4
 }, {
@@ -85,12 +85,12 @@ shelf_stock = Array[Dictionary]([{
 }, {
 "product": "wedding_cake",
 "qty": 0,
-"shelf": "shelf_3",
+"shelf": "cold_1",
 "slot": 0
 }, {
 "product": "milk_canister",
 "qty": 0,
-"shelf": "shelf_3",
+"shelf": "cold_1",
 "slot": 1
 }])
 first_order = Array[Dictionary]([{
