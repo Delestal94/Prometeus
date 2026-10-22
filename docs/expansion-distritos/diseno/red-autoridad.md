@@ -673,7 +673,7 @@ voto es D-0518.b).
 
 ## 14. Lo construido (D-0851): el cierre del día para los pedidos
 
-- **Evento** `order_closed {order, state}` (`CompanyOrdersNet.CLOSED`, `HOST_EVENT_KINDS`, protocolo 53): exactamente esas dos
+- **Evento** `order_closed {order, state}` (`CompanyOrdersNet.CLOSED`, `HOST_EVENT_KINDS`, protocolo 56): exactamente esas dos
   claves, el id de un pedido del libro y `state` `failed` o `cancelled`. Cada peer, el host también, lo aplica en
   `CompanyOrdersNet.apply()` con `OrderBook.mark_failed()` / `cancel()`: una transición que el libro no permite (cancelar un
   atrasado, cerrar uno ya cerrado) no se aplica, así que el host no lo publica y un cliente pide snapshot. Sin `minute`: no
