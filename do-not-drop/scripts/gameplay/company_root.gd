@@ -67,18 +67,9 @@ extends Node3D
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
 ## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
 ##
-<<<<<<< HEAD
-## Orders (D-0813.1): the host plans each new day's orders at its OPENING (CompanyDayOrders.plan(): the
-## company's day seed, the crew, the zones open) and its business tick brings them in at the shed's minute
-## while the day is open (CompanyDayOrders.poll()), into the book every peer shares (CompanyNet.orders.book,
-## which the stock board reads). Every peer tells EventBus.order_added from CompanyNet.event_applied, once
-## per order and never for a snapshot's, nor from the book's own signals (they fire inside the apply).
-## CompanyTrips keeps its own book until packing, dispatch and delivery are events: nothing here feeds it.
-=======
 ## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
 ## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
 ## instead of falling through the missing floor (D-0318.1).
->>>>>>> origin/main
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -177,8 +168,7 @@ var save_dir: String = CompanySave.SAVE_DIR
 ## The arguments CompanyDevFlags reads on the host when the world comes up (--company-day=, --district=,
 ## --money=, D-0238): the command line's, unless a test hands its own before adding the root.
 var dev_args: PackedStringArray = OS.get_cmdline_user_args()
-## Host: the crew the day's orders are planned for (OrderRhythm); 0, the session's (_crew_ids()). A run
-## with no peers that plays a bigger crew's day (the day bot's --players) sets it before adding the root.
+## Host: the crew the day's orders are planned for; 0, the session's (the day bot's --players sets it).
 var order_crew: int = 0
 ## The session and the CompanyState this world plays with. Unset, the NetworkManager and the
 ## CompanyState autoloads, found by path when the world comes up (N-919). Two peers in one process
@@ -207,14 +197,11 @@ var _saw_host_day: bool = false
 var _host_gone: bool = false
 ## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
 var _presence_shown: Array = []
-<<<<<<< HEAD
 ## Host: the day whose orders are planned (_plan_orders()), so a freeze toggle in OPENING plans nothing.
 var _orders_day: int = 0
-=======
 ## Host: the day whose truck pallets are on the bed (_load_truck_pallets()), and the (day, minute) last looked at.
 var _pallets_day: int = 0
 var _pallets_checked: Vector2i = Vector2i.ZERO
->>>>>>> origin/main
 
 
 func _ready() -> void:
@@ -516,8 +503,7 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 ## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
 ## units and layout events itself (CompanyShed.follow(), D-0910).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
-## the summary takes no other day_phase until next_day(). One that opens a day plans its orders on the
-## host (_plan_orders()). An order that came in goes out as EventBus.order_added on every peer (D-0813.1).
+## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
@@ -842,30 +828,13 @@ func _add_builder() -> void:
 	builder.setup(shed, net, player)
 
 
-## The stock list (D-0612.b): I / d-pad right opens it on any peer. It marks what today's pending orders
-## are missing from the book every peer shares (CompanyNet.orders.book, D-0813.1; read only), so a
-## client marks the same as the host; only today's (only_today) until D-0815.b and D-0302 close orders
-## there, or the past days' would pile up. The calendar is the stand-in until D-0603 feeds it, so
-## nothing counts as on the way yet.
+## The stock list (D-0612.b): I / d-pad right opens it on any peer (StockBoard.for_company(), D-0813.1).
 func _add_stock_board() -> void:
 	if net == null:
 		return
-	stock_board = StockBoard.new()
-	stock_board.name = "StockBoard"
+	stock_board = StockBoard.for_company(net, supplier_schedule, func() -> Node: return player,
+		func() -> bool: return builder != null and builder.is_building())
 	add_child(stock_board)
-	stock_board.setup(net)
-	stock_board.schedule = supplier_schedule
-	stock_board.real_calendar = false
-	stock_board.book_of = func() -> OrderBook:
-		return net.orders.book if net != null and is_instance_valid(net) else null
-	stock_board.only_today = true
-	stock_board.player_of = func() -> Node:
-		return player
-	stock_board.busy = func() -> bool:
-		return builder != null and builder.is_building()
-	var catalog: CompanyCatalog = CompanyCatalog.load_all()
-	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
-		stock_board.products[id] = catalog.product(id)
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,

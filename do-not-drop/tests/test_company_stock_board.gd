@@ -197,6 +197,8 @@ func _test_refresh() -> void:
 
 func _test_root_has_board() -> void:
 	var source: String = FileAccess.get_file_as_string("res://scripts/gameplay/company_root.gd")
-	_expect("stock_board = StockBoard.new()" in source and "_add_stock_board()" in source,
+	_expect("stock_board = StockBoard.for_company(" in source and "_add_stock_board()" in source,
 		"CompanyRoot builds the board on every peer")
-	_expect("stock_board.only_today = true" in source, "CompanyRoot's board counts today's orders only (D-0813.1)")
+	var board_source: String = FileAccess.get_file_as_string("res://scripts/gameplay/stock_board.gd")
+	_expect("board.only_today = true" in board_source,
+		"the company world's board counts today's orders only (D-0813.1)")

@@ -90,6 +90,28 @@ func _ready() -> void:
 	panel.closed.connect(_on_closed)
 
 
+## The company world's board: it marks what today's orders of the book every peer shares miss
+## (CompanyNet.orders.book, D-0813.1; read only, so a client marks the same as the host; only today's
+## until D-0815.b and D-0302 close orders there, or the past days' would pile up). The calendar is the
+## stand-in until D-0603 feeds it, so nothing counts as on the way yet. Not in the tree yet.
+static func for_company(company_net: CompanyNet, calendar: SupplierSchedule, player_fn: Callable,
+		busy_fn: Callable) -> StockBoard:
+	var board := StockBoard.new()
+	board.name = "StockBoard"
+	board.setup(company_net)
+	board.schedule = calendar
+	board.real_calendar = false
+	board.book_of = func() -> OrderBook:
+		return company_net.orders.book if is_instance_valid(company_net) else null
+	board.only_today = true
+	board.player_of = player_fn
+	board.busy = busy_fn
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		board.products[id] = catalog.product(id)
+	return board
+
+
 func setup(company_net: CompanyNet) -> void:
 	net = company_net
 	if net != null and not net.event_applied.is_connected(_on_event_applied):
