@@ -43,23 +43,40 @@ func ids_at(at: StringName) -> Array[StringName]:
 	return found
 
 
-## Picks a pallet up from the bed or the floor. `holder` and `from_pos` (meters) are where the person
-## and the jack stand: it has to be within PALLET_JACK_REACH_M of a floor pallet (the bed is reached
-## from the dock, the caller checks that). False, changing nothing, if the jack is full, the pallet is
-## unknown or already on the jack, or it is out of reach.
-func pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
+## Whether pick_up(id, holder) would work, changing nothing (the host checks a request with it).
+func can_pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
 	if carrying != &"" or not places.has(id):
 		return false
 	var place: Dictionary = places[id]
 	if place["at"] == AT_JACK:
 		return false
 	if place["at"] == AT_FLOOR or place["at"] == AT_RACK:
-		if holder.distance_to(place["pos"]) > CompanyTuning.PALLET_JACK_REACH_M:
-			return false
-		place.erase("pos")
-		place.erase("slot")
+		return holder.distance_to(place["pos"]) <= CompanyTuning.PALLET_JACK_REACH_M
+	return true
+
+
+## Picks a pallet up from the bed or the floor. `holder` and `from_pos` (meters) are where the person
+## and the jack stand: it has to be within PALLET_JACK_REACH_M of a floor pallet (the bed is reached
+## from the dock, the caller checks that). False, changing nothing, if the jack is full, the pallet is
+## unknown or already on the jack, or it is out of reach.
+func pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
+	if not can_pick_up(id, holder):
+		return false
+	var place: Dictionary = places[id]
+	place.erase("pos")
+	place.erase("slot")
 	place["at"] = AT_JACK
 	carrying = id
+	return true
+
+
+## Whether put_down(pos, floor_rect, ...) would find the spot free, changing nothing.
+func can_put_down(pos: Vector2, floor_rect: Rect2) -> bool:
+	if carrying == &"" or not floor_rect.encloses(_footprint(pos)):
+		return false
+	for id: StringName in ids_at(AT_FLOOR):
+		if _footprint(places[id]["pos"]).intersects(_footprint(pos)):
+			return false
 	return true
 
 
@@ -67,11 +84,8 @@ func pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
 ## another floor pallet. A pallet that came from the bed is received into `inventory` here, once.
 ## False, changing nothing, when the jack is empty or the spot is not free.
 func put_down(pos: Vector2, floor_rect: Rect2, inventory: Inventory) -> bool:
-	if carrying == &"" or not floor_rect.encloses(_footprint(pos)):
+	if not can_put_down(pos, floor_rect):
 		return false
-	for id: StringName in ids_at(AT_FLOOR):
-		if _footprint(places[id]["pos"]).intersects(_footprint(pos)):
-			return false
 	var place: Dictionary = places[carrying]
 	var pallet: Dictionary = place["pallet"]
 	if inventory.contents_at(Pallet.location(carrying)).is_empty():

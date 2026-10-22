@@ -29,22 +29,20 @@ extends Node
 ## (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
 ## path, only to know which peers have their world up and when one comes up.
 ##
-## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section
-## 2; units_drop is critical), snapshot_request, the shed layout's place, move, rotate and sell
-## (D-0910: checked and applied by CompanyLayoutNet, `build`) and the shared packing tables' box_*
-## (rows 9 to 15, D-0715: CompanyTableNet, `table`) and the picking carts' cart_push / cart_moved (D-0610.b:
-## CompanyCarts, `carts`; their units move with units_take / units_store at the station cart:<id>). A task
-## that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a
-## player stuck, rule 8), checks it in _handle_request() and applies its event in _apply_state().
+## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section 2; units_drop is
+## critical), snapshot_request, the shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`),
+## the shared packing tables' box_* (rows 9 to 15, D-0715: CompanyTableNet, `table`), the picking carts' cart_push
+## (D-0610.b: CompanyCarts, `carts`; their units move with units_take / units_store at the station cart:<id>) and the
+## pallet jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`; the station `jack`). A task
+## that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player
+## stuck, rule 8), checks it in _handle_request() and applies its event in _apply_state().
 ##
-## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its
-## `pos` (a drop, or what a peer that left held), kept on every peer (floor_bundles) and taken
-## back with units_take (a bundle is its own station).
+## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its `pos` (a drop, or
+## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
 ##
-## Events nobody asks for (the contract's "without a client request": the day's clock and phases,
-## later orders) are the host's own rules: they go out through publish(), the same path.
-## Today: clock_anchor, the pace of the day's clock (D-0219, GameClock, given as `clock`), and
-## day_phase, the day's phase and the frozen shed (D-0203, DayCycle, given as `day_cycle`).
+## Events nobody asks for (the contract's "without a client request") are the host's own rules: they go out
+## through publish(), the same path. Today: clock_anchor (D-0219, GameClock, `clock`), day_phase (D-0203, DayCycle,
+## `day_cycle`) and jack_loaded, the pallets of the day's truck (D-0605.b, CompanyRoot).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -72,10 +70,10 @@ const UNITS_DROP: StringName = &"units_drop"
 ## Request kinds the host takes (the contract's section 2 whitelist); anything else is
 ## dropped. Later tasks append theirs.
 const REQUEST_KINDS: Array[StringName] = [
-	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
-	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START,
-	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
-	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyCarts.PUSH,
+	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE, CompanyLayoutNet.MOVE,
+	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
+	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
+	CompanyTableNet.TAPE, CompanyCarts.PUSH, CompanyPallets.PICK, CompanyPallets.PUT, CompanyPallets.PUSH,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
 ## RpcGuard's critical reserve once the sender's budget is gone.
@@ -87,15 +85,13 @@ const CLOCK_ANCHOR: StringName = &"clock_anchor"
 const DAY_PHASE: StringName = &"day_phase"
 ## Event kinds every peer applies.
 const EVENT_KINDS: Array[StringName] = [
-	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED,
-	CompanyLayoutNet.SOLD, CompanyTableNet.STARTED, CompanyTableNet.PLACED,
-	CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED, CompanyTableNet.LABELED,
-	CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
+	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
+	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
+	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
+	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED,
 ]
-## Event kinds the host may send with publish(), without a request: its own rules (the day's
-## clock and phases). An event a request leads to (units_moved) only comes from
-## _handle_request()'s checks.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE]
+## Kinds the host may publish() with no request, its own rules (clock, phases, the truck's pallets); units_moved never.
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -122,8 +118,6 @@ const FLOOR_PREFIX: String = FloorBundles.PREFIX
 ## units_drop: a `pos` farther than this (meters) from where the host sees the player lands at
 ## its feet instead. Never a refusal: letting go always empties the hand (row 7).
 const DROP_REACH: float = 2.0
-## Where the product catalog lives: an id in a request must name one of its files.
-const PRODUCTS_DIR: String = CompanyAsk.PRODUCTS_DIR
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 const REASON_NO_STATION: StringName = &"no_station"
@@ -158,6 +152,8 @@ var build: CompanyLayoutNet = CompanyLayoutNet.new()
 var table: CompanyTableNet = CompanyTableNet.new()
 ## Where the picking carts stand after a push (D-0610.b); a snapshot part.
 var carts: CompanyCarts = CompanyCarts.new()
+## The supplier pallets and the pallet jack (D-0605.b); a snapshot part.
+var pallets: CompanyPallets = CompanyPallets.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
 ## small ones to cut a snapshot in many).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
@@ -212,6 +208,7 @@ func _init() -> void:
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
 	add_snapshot_part(CompanyCarts.SNAPSHOT_KEY, carts.to_dict, carts.put_snapshot)
+	add_snapshot_part(CompanyPallets.SNAPSHOT_KEY, pallets.to_dict, pallets.put_snapshot)
 
 
 func _ready() -> void:
@@ -313,11 +310,6 @@ func drop(product: StringName, qty: int, pos: Vector3) -> int:
 ## `origin` (the player's reach origin) up to Interactable.REMOTE_REACH plus `slack`.
 static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> bool:
 	return origin.distance_to(spot) <= Interactable.REMOTE_REACH + slack
-
-
-## A product id off the network names a product of the catalog, never a path (CompanyAsk.product_exists()).
-static func product_exists(product: StringName) -> bool:
-	return CompanyAsk.product_exists(product)
 
 
 ## Host: where `peer` stood at its last units request, null if it never made one or it left
@@ -585,7 +577,13 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 		return _build(peer, kind, data)
 	if CompanyTableNet.REQUEST_KINDS.has(kind):
 		return _pack(peer, kind, data)
-	if CompanyCarts.REQUEST_KINDS.has(kind): return _push_cart(peer, data)
+	if CompanyCarts.REQUEST_KINDS.has(kind):
+		var push: Dictionary = CompanyCarts.push_ask(data)
+		var cart: Dictionary = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
+		return _on_object(peer, cart, func(station: Dictionary) -> Dictionary: return carts.check(push, station))
+	if CompanyPallets.REQUEST_KINDS.has(kind):
+		return _on_object(peer, {"station": CompanyPallets.STATION},
+			func(station: Dictionary) -> Dictionary: return pallets.check(kind, data, station))
 	match kind:
 		&"units_take":
 			return _take_units(peer, data)
@@ -619,13 +617,13 @@ func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	return _grant(table.check(company, inventory, kind, data, station, hands_location(peer)))
 
 
-## Host: a cart_push (D-0610.b) at a cart in the sender's reach (as for units), checked by CompanyCarts.
-func _push_cart(peer: int, data: Dictionary) -> StringName:
-	var push: Dictionary = CompanyCarts.push_ask(data)
-	var ask: Dictionary = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
+## Host: a request on a world object (a picking cart, D-0610.b; the pallet jack, D-0605.b): `ask` names its station
+## and it must be within the sender's reach (as for units); `check` is the object's own rule, Callable(station) ->
+## the refusal or the one event to publish.
+func _on_object(peer: int, ask: Dictionary, check: Callable) -> StringName:
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
-	return problem if problem != &"" else _grant(carts.check(push, station))
+	return problem if problem != &"" else _grant(check.call(station))
 
 
 ## Host: the refusal of a checked request ({reason}), or its one event ({reason: &"", kind, data})
@@ -815,14 +813,14 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = build.apply(company, kind, data)
 			if applied and kind == CompanyLayoutNet.SOLD:
 				table.forget(CompanyAsk.as_id(data.get("uid")))
-		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT:
+		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED:
 			applied = table.apply(company, inventory, kind, data)
-		CompanyTableNet.FILLED, CompanyTableNet.LABELED, CompanyTableNet.STAMPED:
-			applied = table.apply(company, inventory, kind, data)
-		CompanyTableNet.SEALED:
+		CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
 			applied = carts.apply(data)
+		CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED:
+			applied = pallets.apply(inventory, kind, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
