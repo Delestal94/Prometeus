@@ -64,8 +64,11 @@
     todavía no les mandó ese `seq` (filtro de visibilidad), manda el evento por el mismo canal reliable y recién
     después llama a `update_visibility(peer)`. Si el sincronizador llega antes que el nodo, el cliente no
     resuelve el camino y esa caja no se mueve más ahí (el mismo bug que documenta `package.gd:184`). Con el snapshot, `update_visibility` va después del
-    último trozo. Los bultos de unidades en el piso son nodos **estáticos** sin sincronizador: el evento
-    trae su posición y no se mueven.
+    último trozo. Así entran los vehículos de la flota (`CompanyFleet`, `World/Vehicles/<id>`, D-0302.2.b): cada
+    peer los arma desde el snapshot (la flota de `CompanyState`) y el host abre cada sincronizador a un peer al final
+    del cuadro en que le mandó el snapshot (mismo canal confiable: el vehículo existe antes de su primer paquete). Uno
+    que se compre o se venda en el día va a necesitar evento y acuse, como la caja. Los bultos de unidades en el piso
+    son nodos **estáticos** sin sincronizador: el evento trae su posición y no se mueven.
 11. **Lo físico lejos no viaja (D-0316).** El sincronizador de un vehículo (`company_vehicle`) o una caja suelta
     (`company_loose_box`) lo maneja `CompanyInterest`: el host lo manda solo a los peers con su jugador a ≤ 2 celdas
     (lo deja pasado 3) y al conductor, y un cliente esconde su copia lejana (y la saca de la física). Sus

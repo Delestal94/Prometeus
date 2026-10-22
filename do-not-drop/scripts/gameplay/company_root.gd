@@ -21,8 +21,8 @@ extends Node3D
 ## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
 ## one: the same player at SPAWN it always was.
 ##
-## No vehicle, no route and no run: Delivery and Endless ignore all of this
-## (level_base.gd / level_endless.gd are untouched).
+## The company's vehicles park outside the shed's exit on every peer (CompanyFleet, World/Vehicles, D-0302.2.b);
+## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
 ## starts from the company's stock and, until stations exist, refuses every units
@@ -153,6 +153,8 @@ var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
 var trips_view: CompanyTripsView
+## The company's vehicles, World/Vehicles on every peer (D-0302.2.b): the host's fleet, a client's from its snapshot.
+var fleet: CompanyFleet
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
 var cells: CompanyCells
@@ -222,6 +224,7 @@ func _ready() -> void:
 	_add_packages()
 	_add_interest()
 	_add_trips()
+	fleet = CompanyFleet.add_to(_world, net, session, shed)
 	_add_crew()
 	_add_builder()
 	_add_stock_board()
@@ -803,13 +806,11 @@ func _add_trips() -> void:
 	if not net.is_host():
 		day_cycle.trips_out = trips_view.trips_out
 		return
-	var stage: int = net.company.warehouse_stage if net.company != null else 0
-	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
 	var width: float = float(CompanyTuning.WAREHOUSE_EXIT_CELLS.x) * CompanyTuning.WAREHOUSE_GRID_M
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(shed.to_global(Vector3(0.0, 0.0, -half_depth)), width)
+	trips.setup(CompanyFleet.exit_of(shed, net.company), width)
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
