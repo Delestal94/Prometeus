@@ -38,7 +38,7 @@ extends SceneTree
 ## warning for each event the client refuses ("does not fit this peer's state") and CompanyOrdersNet's
 ## for the planned order it drops ("never fits") and for the full book ("is full").
 
-const PORT: int = 24681
+const PORT: int = 24713
 const SEED: int = 20261022
 const PLAYERS: int = 2
 const PRODUCTS_DIR: String = "res://data/products/"

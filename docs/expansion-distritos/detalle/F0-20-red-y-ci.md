@@ -37,7 +37,7 @@ Si se pasa: lista de culpables, en orden.
 - [x] **D-2002.2** Una salida afuera (≤ 40 KB/s) y 2 vehículos lejos (≤ 64 KB/s), con 4 y 8 jugadores: 4 entran en lo que se cuenta (el test lo exige; salvedades en D-2002.4); 8 se pasan en el modelo, culpables en `docs/rendimiento-pc.md`. Revisar: [`revisar/D-2002.2.md`](../revisar/D-2002.2.md).
 - [x] **D-2002.4** (2026-10-22, PR pendiente) Contado lo que faltaba (`care_state` real de 912 B a su ritmo, una caja en la mano por cada uno que carga en el galpón, pulsos de keepalive desfasados por cliente, la camioneta estacionada esperada con `is_resting()`, test con 2 camionetas en `test_company_multi_vehicle`) y 4 palancas solo en Empresa: camioneta cada 0,03 s, sentados a 15/s, keepalive que no despierta, `care_state` cada 0,2 s ([decisión](../../decisiones/2026-10-22-palancas-ancho-de-banda-salidas.md)); `FULL_CREW_FITS["far"]` = true; la salida con 8 sigue afuera. Sin cambio de protocolo. Revisar: [`revisar/D-2002.4.md`](../revisar/D-2002.4.md).
 - [x] **D-2002.3** Galpón con 8 jugadores dentro de 24 KB/s: juntar las poses reenviadas en paquetes propios del host (~21,6 KB/s; cambia quién manda las poses: un espejo de cada jugador en el host o un RPC por lote, y suma un tick de latencia) o bajar el envío del jugador en el galpón a 15/s (~19,7 KB/s).
-- [x] **D-2002.5** (2026-10-22, PR pendiente) La caja en la mano de un jugador a pie no manda su pose (el host mutea su `NetRestThrottle`: una cada 5 s) y cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del jugador; `hold_offset` sale de la replicación (98 B por caja en vez de 150); al soltarla queda donde se dibujó hasta la primera pose nueva. Salida con 8: 67,3 → 39,0 (ENet 54,0 → 25,0-26,7); con `net_vehicle` mezclado, 39,7 (ENet 24,6-26,6); el galpón cuenta una caja en la mano por jugador (muteada: 0,1-0,2 KB/s; a 30/s habrían sido ~58 con 8); `FULL_CREW_FITS["trip"]` = true. Todos los modos; protocolo 58 ([decisión](../../decisiones/2026-10-22-caja-en-la-mano-sin-pose.md)). Pendiente: rehacer el galpón con `bot_company_day`. Revisar: [`revisar/D-2002.5.md`](../revisar/D-2002.5.md).
+- [x] **D-2002.5** (2026-10-22, PR pendiente) La caja en la mano de un jugador a pie no manda su pose (el host mutea su `NetRestThrottle`: una cada 5 s) y cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del jugador; `hold_offset` sale de la replicación (98 B por caja en vez de 150); al soltarla queda donde se dibujó hasta la primera pose nueva. Salida con 8: 67,3 → 39,0 (ENet 54,0 → 25,0-26,7); con `net_vehicle` mezclado, 39,7 (ENet 24,6-26,6); el galpón cuenta una caja en la mano por jugador (muteada: 0,1-0,2 KB/s; a 30/s habrían sido ~58 con 8); `FULL_CREW_FITS["trip"]` = true. Todos los modos; protocolo 59 ([decisión](../../decisiones/2026-10-22-caja-en-la-mano-sin-pose.md)). Pendiente: rehacer el galpón con `bot_company_day`. Revisar: [`revisar/D-2002.5.md`](../revisar/D-2002.5.md).
 **Hecho cuando:** los números están medidos y anotados con commit y fecha.
 
 ### D-2003 · Eventos de negocio por RPC confiable con número de secuencia — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F0
@@ -118,6 +118,7 @@ no está hecha, anotar la ruta en su tarea.
 **Hecho cuando:** la ruta figura en la configuración de Auto-Cloud documentada.
 
 ### D-2011 · `bench_company` en CI — A · Opus 5.5 · high · Aviso: sí (`.github/workflows/`) · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — D-2011.1: la etapa `drive` sube al jugador a la van de la flota (`bot_company_van.gd`), mantiene el acelerador `--seconds` y dobla hacia la Avenida Este (`steer_toward`/`drive_target`) con cámara de persecución (`chase_pose`); el resumen suma `drive_frames`, `drive_frame_ms_p50/p95`, `drive_draw_calls`, `drive_objects`, `drive_metres`. CPU 30 s: 554 m, pasa la entrada de Centro (x = 256). Revisar: [`revisar/D-2011.1.md`](../revisar/D-2011.1.md).
 **[~] Parcial (2026-10-12, PR pendiente)** — `tests/bench_company.gd` abre `company_root.tscn` (save en `user://bench_company`, se borra), recorre el galpón con una cámara por un camino fijo (vuelta a x ±18, z ±10 desde `SPAWN` y barrido por la puerta hacia las losas de zonas) e imprime `BENCH_COMPANY key=value` (objects, nodes, draw_calls, physics_bodies, frame_ms p50/p95, memory_static_kb) y `BENCH_COMPANY_OK`; paso informativo "Measure company world performance" en `tests.yml` (`|| true`); `test_company_bench`. Falta D-2011.1.
 **Depende de:** D-0214
 **Qué:** `tests/bench_company.gd`, como `bench_drive`.
@@ -128,7 +129,7 @@ no está hecha, anotar la ruta en su tarea.
 - **CI:** paso nuevo en `tests.yml` junto a "Measure rendered performance". Solo informa, no falla
   (los FPS de CI no valen).
 - [x] **D-2011.0** Recorrido del galpón, resumen y paso de CI.
-- [ ] **D-2011.1** Etapa de manejo 30 s hacia Barrio Centro (`_stage_drive()` hoy imprime `drive: not_available`): cuando el mundo de la empresa tenga vehículo y calle (D-0304, D-1501).
+- [x] **D-2011.1** Etapa de manejo 30 s hacia Barrio Centro (`_stage_drive()` hoy imprime `drive: not_available`): cuando el mundo de la empresa tenga vehículo y calle (D-0304, D-1501).
 **Hecho cuando:** CI imprime los números en un PR y la PC los puede repetir.
 
 ### D-2012 · Presupuesto de rendimiento — A · Opus 5.5 · medium · Aviso: no · F0
@@ -183,13 +184,20 @@ simulados (peers ENet locales o actores locales).
   para cada etapa que todavía no existe, sin colgarse.
 - [x] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya). Hechas: 9 de 9.
 - [ ] **D-2016.3** `drive` lleva la van con piloto automático por el grafo de calles hasta las casas de sus paradas (y `return` la trae por el mismo camino), cuando el grafo esté en el mundo de la empresa (D-0314.a, `use_graph`); `deliver` deja la caja en la puerta cuando la entrega en la casa exista (D-0311).
-**Hecho cuando:** con todo F1 cerrado imprime `BOT_OK` con 2 jugadores, y es el criterio de cierre de D-0111.
+- [ ] **D-2016.4** (revisión D-0140, [revisión D-0140](../diseno/revision-diseno.md) §5) Sin etapas simuladas: `deliver` pasa por la puerta del
+  mundo (`DeliveryHouse`, D-0340) y el bot no llama `OrderSettlement` por su cuenta; arma **6 cajas**; el alquiler lo
+  cobra el juego al cierre (D-0509.b); registra por jugador el mayor tramo sin caja ni volante (≤ 120 s); corre
+  también con `--players=1`. Cada etapa que siga simulada imprime `BOT_STUB <etapa>` y bloquea `BOT_OK`.
+**Hecho cuando:** con todo F1 cerrado imprime `BOT_OK` sin ningún `BOT_STUB` con 1 y con 2 jugadores, y es el criterio de
+cierre de D-0111 (la compuerta F1 → F2 de `.claude/rutinas/desarrollador.md` §2).
 
 ### D-2017 · QA de red par y trío en modo Empresa — B · Opus 5.5 · high · Aviso: no · F0
 **Depende de:** D-2016, D-2003
 **Qué:** variante de `bot_company_day` con 2 y 3 peers que comparan `CompanyState.to_dict()` al cierre
 del día. El guion de `probador-qa` suma "Empresa en red".
-**Hecho cuando:** los 3 peers terminan con el mismo diccionario y no hay `ERROR` en ninguno de los logs.
+**Hecho cuando:** los 3 peers terminan con el mismo diccionario y no hay `ERROR` en ninguno de los logs; el armado, el
+despacho y la puerta corren con el armador o el repartidor en un cliente, no en el host (revisión D-0140). Antes,
+`bot_company_day` dice en su encabezado qué acciones siguen fuera de `CompanyNet._request`.
 
 ### D-2018 · Módulos nuevos en `portability-check.sh` — A · Opus 5.5 · low · Aviso: no · F0
 **[x] Hecho (2026-10-12, a1374c1, PR pendiente)** — ya estaba: `portability-check.sh` descubre solo cada `modules/<x>/` con `module.cfg` y `check_modules.py` (CI, lint) rechaza un módulo sin `module.cfg` o sin `tests/test_*.gd`; el run de main de a1374c1 da `OK day_clock`, `OK world_cells`, 25/25. `inventory`, `order_queue` y `build_grid` entran solos cuando D-0221, D-0222 y D-0225 los creen.

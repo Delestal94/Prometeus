@@ -48,7 +48,7 @@
 | ~~D-0933~~ | ~~Alarma de incendio/evento (caja explosiva en el galpón)~~ **Fusionada en D-1138 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | medium | evento |
 | ~~D-0934~~ | ~~Mapa de calor de tránsito de empleados (para optimizar)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | overlay |
 | D-0935 | Herramienta de medir tiempos por estación (cuello de botella) (incluye D-1133, fusión de D-0112) | constructor-ui | medium | overlay |
-| D-0936 | Exterior del galpón que cambia con la etapa (cartel, playón) | constructor-mundo | medium | 4 variantes |
+| D-0936 | ✅ Exterior del galpón que cambia con la etapa (cartel, playón) | constructor-mundo | medium | 4 variantes |
 | ~~D-0937~~ | ~~Galpones secundarios en otros distritos (D-0330)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | test |
 | ~~D-0938~~ | ~~Ajuste fino sin grilla (modo libre) para decoración~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-0939 | Colisiones de objetos colocados livianas (cajas simples) | perfilador-rendimiento | medium | física medida |

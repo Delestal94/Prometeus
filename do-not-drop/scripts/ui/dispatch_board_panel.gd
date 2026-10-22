@@ -18,6 +18,10 @@ class_name DispatchBoardPanel
 ##   box_kg: Dictionary box id -> kg, zones / gates: id -> ZoneDefinition / GateRequirement,
 ##   owned: CompanyState.gate_owned(), opened_gates: Array, can_act: bool (false on a client:
 ##   the Load button shows disabled, with the reason, not hidden).
+## Optional bay: Array of {"id", "def": VehicleDefinition} (D-0931.b), the vehicles standing in the bay
+## (at most DispatchBay.MAX_VEHICLES, the first is "vehicle"). With two or more a "Load all" button shows:
+## DispatchBay.load_bay() hands every waiting box to the first vehicle that accepts it and `loaded` is
+## emitted once per vehicle that got boxes.
 ##
 ## Gamepad first: rows are buttons in one focus column (ui_accept picks / drops a box), then
 ## Load and Close; blocked rows stay focusable so their reason can be read. Every state has a
@@ -47,6 +51,7 @@ var _rows_box: VBoxContainer
 var _scroll: ScrollContainer
 var _status_label: Label
 var _load_button: Button
+var _load_all_button: Button
 var _close_button: Button
 
 
@@ -145,6 +150,50 @@ func confirm() -> int:
 	return count
 
 
+## Loads the whole zone onto the bay's vehicles (DispatchBay.load_bay): each box goes to the first vehicle that
+## accepts it, oldest first, and the picks are ignored. Vehicles that may not leave now (the cap of vehicles
+## out) are left out. Returns how many boxes went (0 when the board may not act or no box fits).
+func confirm_bay() -> int:
+	if not can_confirm_bay():
+		return 0
+	var zone: DispatchZone = _ctx.get("zone")
+	var result: Dictionary = DispatchBay.load_bay(
+		zone, _ctx.get("trips"), _ctx.get("book"), _bay_ready(), _ctx.get("box_kg", {}),
+		_ctx.get("zones", {}), _ctx.get("gates", {}), _ctx.get("owned", {}), _ctx.get("opened_gates", [])
+	)
+	var count: int = 0
+	var loads: Dictionary = result["loads"]
+	var sent: Array = []
+	for vehicle_id: StringName in loads:
+		var chosen: Array[StringName] = []
+		chosen.assign(loads[vehicle_id])
+		if chosen.is_empty():
+			continue
+		count += chosen.size()
+		sent.append([vehicle_id, chosen])
+	if count <= 0:
+		return 0
+	_selected.clear()
+	_status_key = "UI_DISPATCH_LOADED"
+	_status_args = [count]
+	for entry: Array in sent:
+		loaded.emit(entry[0], entry[1])
+	refresh(_ctx)
+	_focus_first()
+	return count
+
+
+## True when "Load all" would do something: the board may act, two or more vehicles stand in the bay, one of
+## them may leave and a box waits.
+func can_confirm_bay() -> bool:
+	return (_acts() and _ctx.get("zone") != null and not _waiting().is_empty() and _bay().size() >= 2
+		and not _bay_ready().is_empty())
+
+
+func load_all_button() -> Button:
+	return _load_all_button
+
+
 ## True when Load would do something: the board may act, a vehicle is there and may leave
 ## (_departure()), and a box is picked.
 func can_confirm() -> bool:
@@ -223,6 +272,10 @@ func _build() -> void:
 	_load_button.name = "Load"
 	_load_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_load_button.pressed.connect(confirm)
+	_load_all_button = UiTheme.button(buttons, tr("UI_DISPATCH_LOAD_ALL"), true)
+	_load_all_button.name = "LoadAll"
+	_load_all_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_load_all_button.pressed.connect(confirm_bay)
 	_close_button = UiTheme.button(buttons, tr("UI_DISPATCH_CLOSE"))
 	_close_button.name = "Close"
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -256,6 +309,9 @@ func _update_view() -> void:
 	_load_button.text = tr("UI_DISPATCH_LOAD")
 	if not _selected.is_empty():
 		_load_button.text = tr("UI_DISPATCH_LOAD_N") % _selected.size()
+	_load_all_button.visible = _bay().size() >= 2
+	_load_all_button.disabled = not can_confirm_bay()
+	_load_all_button.text = tr("UI_DISPATCH_LOAD_ALL") % _bay().size() if _bay().size() >= 2 else ""
 	_status_label.text = _status_line()
 	_link_focus()
 
@@ -284,6 +340,8 @@ func _link_focus() -> void:
 	var last_row: Control = chain.back() if not chain.is_empty() else null
 	if not _load_button.disabled:
 		chain.append(_load_button)
+	if _load_all_button.visible and not _load_all_button.disabled:
+		chain.append(_load_all_button)
 	chain.append(_close_button)
 	for i: int in chain.size():
 		var node: Control = chain[i]
@@ -350,6 +408,21 @@ func _departure() -> Dictionary:
 	if trips == null:
 		return {"ok": true, "key": "", "args": []}
 	return trips.departure_verdict(_vehicle_id())
+
+
+func _bay() -> Array:
+	var bay: Variant = _ctx.get("bay", [])
+	return bay if bay is Array else []
+
+
+## The bay's vehicles that may leave now (CompanyTrips.departure_verdict()).
+func _bay_ready() -> Array:
+	var trips: CompanyTrips = _ctx.get("trips")
+	var ready: Array = []
+	for entry: Dictionary in _bay():
+		if trips == null or trips.departure_verdict(StringName(entry["id"]))["ok"]:
+			ready.append(entry)
+	return ready.slice(0, DispatchBay.MAX_VEHICLES)
 
 
 func _waiting() -> Array[StringName]:

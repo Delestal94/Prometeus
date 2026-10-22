@@ -15,6 +15,8 @@ extends SceneTree
 ## - with the fixed map (HouseMap, D-2016.2) every order names a house of its own zone on the map, the
 ##   same ones on every run, and the rest of each order (id, zone, products, minute) is the same as
 ##   without the map; a zone with no house on it keeps "<zone>_house_<n>".
+## - customer names (D-0840, customer_names.gd) are "First Last" from a pool of 1500+, all different, and a
+##   day of orders uses many of them.
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -37,6 +39,7 @@ func _run() -> void:
 	_test_empty_inputs()
 	_test_templates()
 	_test_map_houses()
+	_test_customer_names()
 	quit(_failures)
 
 
@@ -214,6 +217,25 @@ func _test_map_houses() -> void:
 	for order in OrderGenerator.generate_day(3, 4, 3, _open(), _products, _reqs, 0, null, {}, empty):
 		_expect(String(order["house_id"]).begins_with(String(order["zone"]) + "_house_"),
 			"a zone with no map house keeps <zone>_house_<n> (got %s)" % order["house_id"])
+
+
+func _test_customer_names() -> void:
+	_expect(CustomerNames.count() >= 1500, "the name pool has at least 1500 names (got %d)" % CustomerNames.count())
+	var seen: Dictionary = {}
+	for i in CustomerNames.count():
+		seen[CustomerNames.name_at(i)] = true
+	_expect(seen.size() == CustomerNames.count(),
+		"every index makes a different name (%d of %d)" % [seen.size(), CustomerNames.count()])
+	_expect(CustomerNames.name_at(-1) == CustomerNames.name_at(CustomerNames.count() - 1),
+		"a negative index wraps")
+	var names: Dictionary = {}
+	for day_seed in [11, 12, 13]:
+		for order in _day(day_seed, 6):
+			var customer: String = order["customer"]
+			_expect(customer.split(" ").size() == 2 and seen.has(customer),
+				"%s is a pool name (got %s)" % [order["id"], customer])
+			names[customer] = true
+	_expect(names.size() >= 20, "three days of orders use many names (got %d)" % names.size())
 
 
 func _expect(condition: bool, label: String) -> void:

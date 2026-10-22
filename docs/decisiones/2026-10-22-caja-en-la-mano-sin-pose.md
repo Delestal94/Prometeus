@@ -50,5 +50,5 @@ sincronizador mientras está en la mano (corta también los deltas, como `is_hel
 visibilidad de `CompanyInterest` y del join tardío); mutearla con el intervalo directo en `package.gd` (el
 `NetRestThrottle` lo pisaba al descansar o despertar: por eso es una función del módulo).
 
-**Protocolo:** cambia, 57 -> 58 (era 55; renumerado al mezclar `main`). Sale una propiedad del sincronizador de la caja (`hold_offset`) y cambia la firma
+**Protocolo:** cambia, 58 -> 59 (era 55; renumerado al mezclar `main`, donde 55-58 ya estaban tomados). Sale una propiedad del sincronizador de la caja (`hold_offset`) y cambia la firma
 de `submit_carry_transform` (dos argumentos en vez de tres). Un host y un cliente de builds distintas no se conectan.

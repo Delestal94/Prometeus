@@ -1326,6 +1326,7 @@ UI_FINANCE_REASON_RENT,Alquiler del galpón,Shed rent
 UI_FINANCE_REASON_PLACEABLE_BUY,Piezas del galpón compradas,Shed pieces bought
 UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
+UI_FINANCE_REASON_TOW,Grúa,Tow truck
 UI_FINANCE_REASON_OTHER,Otros,Other
 UI_OPT_BIND_KEY_TIP,Tecla,Key
 UI_OPT_BIND_PAD_TIP,Botón o stick del mando,Gamepad button or stick
@@ -1408,6 +1409,7 @@ UI_DISPATCH_ROW,%s · %s · %.1f kg,%s · %s · %.1f kg
 UI_DISPATCH_PICK,Elegí al menos una caja,Pick at least one box
 UI_DISPATCH_LOAD,Cargar,Load
 UI_DISPATCH_LOAD_N,Cargar %d,Load %d
+UI_DISPATCH_LOAD_ALL,Cargar todo (%d vehículos),Load all (%d vehicles)
 UI_DISPATCH_CLOSE,Cerrar,Close
 UI_DISPATCH_LOADED,Cargadas %d cajas,%d boxes loaded
 UI_DISPATCH_HOST_ONLY,Solo el anfitrión carga el vehículo,Only the host loads the vehicle
@@ -1423,6 +1425,7 @@ UI_STOCK_TOTALS,%d unidades en %d productos,%d units in %d products
 UI_STOCK_CLOSE,Cerrar,Close
 UI_SUPPLIER_TITLE,Pedido al proveedor,Supplier order
 UI_SUPPLIER_FROM,Proveedor: %s,Supplier: %s
+UI_SUPPLIER_ALREADY,Ya pedido para mañana: %d unidades,Already ordered for tomorrow: %d units
 UI_SUPPLIER_HINT,Sumá unidades de cada producto y después Pedir,Add units of each product and then Order
 UI_SUPPLIER_ROW,%s · $%d c/u,%s · $%d each
 UI_SUPPLIER_TOTAL,Total: $%d,Total: $%d

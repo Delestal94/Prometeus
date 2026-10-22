@@ -1,9 +1,9 @@
-# D-2002.5: la caja en la mano de alguien a pie no manda su pose (protocolo 58)
+# D-2002.5: la caja en la mano de alguien a pie no manda su pose (protocolo 59)
 
 Tocado en archivos del dominio de Slatex (`package/`, `player/`), en zona compartida (`network_manager.gd`,
-`modules/net_pose_smoother/`) y en tests. **Cambia el protocolo:** `PROTOCOL_VERSION` 57 -> 58 (se tomó primero 55 y se
-renumeró al mezclar `main`, que ya tenía 55-57: D-0151.3b, D-0621.b y D-0302.2.b.4.b, `docs/convenciones-godot.md`
-§6.3). Un cliente con 57 y un host con 58 no se conectan (error de versión en el menú); con el mismo número se desincronizarían en silencio (la configuración
+`modules/net_pose_smoother/`) y en tests. **Cambia el protocolo:** `PROTOCOL_VERSION` 58 -> 59 (se tomó primero 55 y se
+renumeró al mezclar `main`, que ya tenía 55-58: D-0151.3b, D-0621.b, D-0302.2.b.4.b y D-0307.1, `docs/convenciones-godot.md`
+§6.3). Un cliente con 58 y un host con 59 no se conectan (error de versión en el menú); con el mismo número se desincronizarían en silencio (la configuración
 de replicación de la caja y la firma de un RPC son distintas). Decisión:
 [`decisiones/2026-10-22-caja-en-la-mano-sin-pose.md`](../decisiones/2026-10-22-caja-en-la-mano-sin-pose.md).
 
@@ -45,7 +45,7 @@ Vale para todos los modos (Reparto, Infinito y Empresa): es el mismo `package.ts
   mostrarlo a un peer (también un pulso de keepalive con `QUIET_META`) lo pone a cada tick por 2 frames y vuelve a
   muteado, para que ese peer reciba una pose enseguida; al desmutear vuelve a cada tick en el mismo tick y queda una
   ventana de `settle_seconds`.
-- `scripts/core/network_manager.gd` (compartido): solo `PROTOCOL_VERSION` y su línea `## 58`.
+- `scripts/core/network_manager.gd` (compartido): solo `PROTOCOL_VERSION` y su línea `## 59`.
 
 Para Slatex: nada que hacer si no tocás el carry. Si cambiás dónde se sostiene la caja, cambialo en
 `PlayerCarry.hands_pose()`: lo dibujan igual el dueño y los demás. Un componente nuevo que mueva la caja en la mano

@@ -161,14 +161,16 @@ const MAX_PLAYERS: int = 8
 ## space is, VehiclePick.index_of(), -1 none) after their other properties, and the box's
 ## submit_carry_transform and request_drop take a trailing `vehicle` index: with several
 ## vehicles every copy goes on the one its owner rides (D-0302.2.b.4.b).
-## 58: a package no longer replicates hold_offset (net_vehicle moves up to its slot) and
-## submit_carry_transform drops its `in_hands`: every peer draws a box held on foot in its
-## carrier's hands from that player's own pose, and the host sends its pose only every 5 s
-## meanwhile (D-2002.5).
+## 58: CompanyNet's _request takes a new kind, trip_tow {vehicle, rid}: any peer asks the host to tow a
+## stuck or broken company vehicle home; it goes out as the wallet_moved (reason tow) and trip_closed events
+## that already exist, and a refusal comes back with a WORLD_TOW_* key (company mode, D-0307.1).
+## 59: a package no longer replicates hold_offset and submit_carry_transform drops its
+## `in_hands`: every peer draws a box held on foot in its carrier's hands from that player's
+## own pose, and the host sends its pose only every 5 s meanwhile (D-2002.5).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 58
+const PROTOCOL_VERSION: int = 59
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
