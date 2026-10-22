@@ -11,6 +11,9 @@ extends SceneTree
 ##   material carries tx_detail_concrete_512.png in world triplanar, one repetition per
 ##   CompanyShed.FLOOR_SLAB_M (a whole number of grid cells, so the slab joints land on cell lines);
 ## - the local player stands inside the shed, on the floor;
+## - D-0316: it has an Interest child (CompanyInterest) reading CompanyRoot.CREW_GROUP, which tracks a
+##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player and
+##   on that vehicle;
 ## - D-2002.3: it sends its pose CompanyTuning.SHED_POSE_RATE_HZ times a second on foot (the interval
 ##   rounded down, not up), back to the game's 30 while riding a vehicle (a stand-in in the "vehicle"
 ##   group that carries everyone) and to the shed's rate off it; a player outside the company's world
@@ -24,6 +27,8 @@ extends SceneTree
 ## - on a client (a session that isn't the host) it waits for the snapshot without touching
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
+## - D-0508.3: the day's SUMMARY opens the closing screen (DaySummaryPanel) and its "continue" opens the
+##   next day on the host;
 ## - the main menu knows the scene, the --mode=company flag and has the button;
 ## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
 ##   as interrupted there, and the real slot (user://saves/company/) is never touched;
@@ -76,6 +81,7 @@ func _run() -> void:
 		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
 			"The only anchor is the local player")
 		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
+	await _check_interest(level)
 	_expect(root.get_node_or_null(^"SceneLoader") == null, "No loader is left once inside the company")
 	var net: CompanyNet = level.get_node_or_null(^"CompanyNet") as CompanyNet
 	_expect(net != null and net == level.get(&"net"), "The root has its CompanyNet child (D-2003)")
@@ -136,6 +142,8 @@ func _run() -> void:
 		_expect(height > -1.0, "The player stands on the floor, not falling (y=%.2f)" % height)
 		await _check_pose_rate(player as Player, level.get_node(^"World") as Node3D)
 
+	_check_summary_screen(level, state)
+
 	var menu_source: String = FileAccess.get_file_as_string("res://scripts/ui/main_menu.gd")
 	_expect(menu_source.contains(SCENE) and menu_source.contains("--mode=company"),
 		"The main menu opens this scene with --mode=company")
@@ -154,6 +162,26 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: company root builds the shed and nine zones, company on, player inside, menu flag")
 	quit(_failures)
+
+
+## D-0508.3: the day's SUMMARY opens the closing screen with the host's numbers, its "continue" opens
+## the next day and the screen goes away with it.
+func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
+	var panel: DaySummaryPanel = level.summary_panel
+	var cycle: DayCycle = level.day_cycle
+	_expect(panel != null and not panel.visible,
+		"The root has its closing screen, hidden while the day runs (D-0508.3)")
+	if panel == null or cycle == null:
+		return
+	var day: int = cycle.current_day()
+	state.call(&"earn", 120, &"order_paid")
+	for next: DayCycle.Phase in [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]:
+		cycle.call(&"_transition", next)
+	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and panel.visible,
+		"SUMMARY opens the closing screen (phase %s)" % cycle.phase_name())
+	panel.close()
+	_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == day + 1 and not panel.visible,
+		"Its continue opens the next day (day %d, %s)" % [cycle.current_day(), cycle.phase_name()])
 
 
 ## D-0510.2: the root's DayCycle.opening_notice is the bankruptcy warning in the red, "" in the black.
@@ -312,6 +340,36 @@ func _clean() -> void:
 	for file: String in dir.get_files():
 		dir.remove(file)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR))
+
+
+## D-0316: the Interest child, and the host's cells anchored on every company vehicle too.
+func _check_interest(level: Node) -> void:
+	var interest: CompanyInterest = level.get_node_or_null(^"Interest") as CompanyInterest
+	_expect(interest != null and interest == level.get(&"interest"), "The root has its Interest child (D-0316)")
+	if interest == null:
+		return
+	_expect(interest.crew_group == CompanyRoot.CREW_GROUP, "The interest reads the crew group")
+	var van := Node3D.new()
+	van.name = "van_test"
+	van.position = Vector3(300.0, 0.0, -40.0)
+	var sync := MultiplayerSynchronizer.new()
+	var config := SceneReplicationConfig.new()
+	config.add_property(^".:position")
+	sync.replication_config = config
+	van.add_child(sync)
+	van.add_to_group(CompanyTrips.VEHICLE_GROUP)
+	level.add_child(van)
+	# The root's _process runs after process_frame is emitted: two frames for it to have run once.
+	await process_frame
+	await process_frame
+	interest.step(Time.get_ticks_msec() / 1000.0 + 1.0)
+	_expect(interest.is_tracked(sync), "A company vehicle's synchronizer is tracked by the interest")
+	var cells: CompanyCells = level.get(&"cells")
+	_expect(cells.anchors.size() == 2 and cells.anchors.has(van.global_position),
+		"Solo is the host: the cells anchor on the player and the vehicle (got %s)" % [cells.anchors])
+	van.free()
+	interest.step(Time.get_ticks_msec() / 1000.0 + 2.0)
+	_expect(interest.tracked_count() == 0, "A freed vehicle is forgotten (got %d)" % interest.tracked_count())
 
 
 func _expect(condition: bool, message: String) -> void:

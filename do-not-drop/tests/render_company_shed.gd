@@ -6,6 +6,8 @@ extends SceneTree
 ## The Modo Empresa root (company_root.tscn: the default CompanyShed, the game's sun and sky) seen
 ## from a player's eye (1.7 m) from the dock and from the exit, a low view of the floor joints and
 ## a high diagonal one, to judge the concrete floor and plaster walls (D-0911).
+## It takes the Modo Empresa dev flags from its own command line (D-0238, CompanyDevFlags), e.g.
+##   ... --script res://tests/render_company_shed.gd -- --company-day=5 --money=9000 --district=suburbio
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 
