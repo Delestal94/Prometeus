@@ -40,8 +40,9 @@ extends Node3D
 ##
 ## The day (D-0203): the root gives every peer a GameClock and a DayCycle child, both attached to
 ## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
-## the phases and the clock then run by themselves (DayCycle). The shed's area is not wired as
-## DayCycle.crew_in_shed yet, so the shed never freezes here.
+## the phases and the clock then run by themselves (DayCycle, polled by the host's BusinessTick,
+## D-0232). The shed's area is not wired as DayCycle.crew_in_shed yet, so the shed never freezes
+## here.
 ##
 ## Steam (D-2009): what the company shows, CompanyLobbyMeta's lobby data (host) and rich presence,
 ## goes to NetworkManager's steam_presence (NetSteamPresence) when the world comes up, on every
@@ -127,6 +128,8 @@ var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
 var clock: GameClock
 var day_cycle: DayCycle
+## Host only (null on a client): the host's rules at a fixed rate (D-0232).
+var business_tick: BusinessTick
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
@@ -252,6 +255,20 @@ func _add_day(state: COMPANY_STATE) -> void:
 	add_child(day_cycle)
 	day_cycle.attach(net, clock, state)
 	day_cycle.opening_notice = _opening_notice
+	_add_business_tick()
+
+
+## Host (solo too): the business tick (D-0232) runs the host's rules at CompanyTuning.BUSINESS_TICK_HZ,
+## DayCycle.poll first; the cycle's own poll in _process goes off on every peer (a client's poll does
+## nothing anyway).
+func _add_business_tick() -> void:
+	day_cycle.set_process(false)
+	if not net.is_host():
+		return
+	business_tick = BusinessTick.new()
+	business_tick.name = "BusinessTick"
+	add_child(business_tick)
+	business_tick.add_step(&"day_cycle", day_cycle.poll)
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
