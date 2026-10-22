@@ -262,7 +262,7 @@ Decisión: `docs/decisiones/2026-10-22-dificultad.md`.
 **Hecho cuando:** `diseno/dificultad.md` existe y D-1919 lo puede construir sin preguntar.
 
 ### D-0129 · Glosario de la expansión — B · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/glosario.md`: 33 conceptos del modo Empresa en ES/EN con uso y descartados; 14 con chequeo en `test_ui_translations` (`_check_company_glossary`).
+**[x] Hecho (2026-10-22, PR #660)** — `diseno/glosario.md`: 33 conceptos del modo Empresa en ES/EN con uso y descartados; 14 con chequeo en `test_ui_translations` (`_check_company_glossary`).
 **Depende de:** —
 **Qué:** una palabra por concepto en los textos nuevos (pedido, remito, palet, estación, turno, hito…),
 armado con lo que ya dicen `strings_ui.csv` / `strings_world.csv`:
