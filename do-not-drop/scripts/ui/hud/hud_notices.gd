@@ -8,6 +8,9 @@ var hud: Hud
 const PING_DISPLAY_SECONDS: float = 2.5
 const EVENT_DISPLAY_SECONDS: float = 6.0
 const EVENT_STINGER_DELAY: float = 0.3
+## The top-right card's line ("CARTA: Descuento • G usar") stays on one line up to
+## this many HUD units (N-983.5); a longer card name is cut with "…".
+const CARD_LINE_MAX_WIDTH: float = 440.0
 const PingCatalogData = preload("res://scripts/ui/ping_catalog.gd")
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## One label per fixed HUD zone. Each source keeps its queued entry here;
@@ -176,7 +179,24 @@ func refresh_card() -> void:
 	var action: String = GameSettings.prompt(
 			tr("HUD_CARD_USE_KEY") % GameSettings.key_label(&"use_card"),
 			tr("HUD_CARD_USE_PAD") % GameSettings.pad_label(&"use_card"))
-	hud.card_label.text = UiTheme.keycaps(tr("HUD_CARD") % [CrewProgression.card_name(card_id), action])
+	hud.card_label.text = UiTheme.keycaps(fit_card_line(CrewProgression.card_name(card_id), action))
+
+
+## "CARTA: Descuento   ·   G  usar" on one line (N-983.5): when it is wider than
+## CARD_LINE_MAX_WIDTH the card's name gives way with an ellipsis, never the key.
+func fit_card_line(card_name: String, action: String) -> String:
+	var label: RichTextLabel = hud.card_label
+	var font: Font = label.get_theme_font(&"normal_font")
+	var font_size: int = label.get_theme_font_size(&"normal_font_size")
+	var kept: String = card_name
+	while not kept.is_empty():
+		var line: String = tr("HUD_CARD") % [kept, action]
+		# Keycaps pad the key with a space either side, and "·" turns into "•".
+		var drawn: String = " %s " % line.replace("·", "•")
+		if font.get_string_size(drawn, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= CARD_LINE_MAX_WIDTH:
+			return line
+		kept = kept.left(kept.length() - 2).strip_edges() + "…" if kept.length() > 2 else ""
+	return tr("HUD_CARD") % ["", action]
 
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
