@@ -8,8 +8,14 @@ extends SceneTree
 ##   publishes nothing before the first arrival, then one order_added per order that came in, in the
 ##   plan's order, and one order_expired per order past its due_min (LATE, late_from open), each order
 ##   once, in small events;
+## - poll() takes an order off the plan only once its event went out: a poll from inside an apply
+##   (OrderBook.order_added), without an inventory or with the book full (MAX_ORDERS) sends nothing and
+##   keeps the plan for the next poll, which sends it; a planned order order_ok() refuses is dropped and
+##   the next one goes out;
 ## - the host refuses to publish (false, no seq spent, the book unchanged) an order_added with a
-##   malformed order (a key missing or extra, an id that isn't text, empty or too long, a product outside
+##   malformed order (a key missing or extra, an id that isn't text, empty or too long, a zone outside the
+##   catalog, a house of another zone, past HOUSES_PER_ZONE, with a leading zero or not on the map, a
+##   product outside
 ##   the catalog or a path, qty 0 or a float, an item with another key, a repeated product, four products
 ##   or none, items that aren't an Array, an unknown or repeated requirement, due at its creation, a float
 ##   minute, negative pay, a state other than open, a book field) or with extra data, or one already in
@@ -27,8 +33,9 @@ extends SceneTree
 ##   back; a peer that joins late holds what reaches it before its snapshot, gets the host's book from it
 ##   and follows the next events; the three end with the same book, seq and kinds, every order late.
 ## Expected in the log: CompanyNet's error for each event the host refuses to publish ("could not apply
-## its own"), Godot's for the forged _apply_event ("RPC '_apply_event' is not allowed") and CompanyNet's
-## warning for each event the client refuses ("does not fit this peer's state").
+## its own"), Godot's for the forged _apply_event ("RPC '_apply_event' is not allowed"), CompanyNet's
+## warning for each event the client refuses ("does not fit this peer's state") and CompanyOrdersNet's
+## for the planned order it drops ("never fits").
 
 const PORT: int = 24681
 const SEED: int = 20261022
@@ -68,6 +75,7 @@ func _run() -> void:
 	_load_catalogs()
 	var solo: CompanyNet = _check_solo()
 	_check_snapshot_part(solo)
+	_check_poll_guards(solo)
 	solo.free()
 	await _check_network()
 	RpcGuard.reset()
@@ -166,8 +174,21 @@ func _check_host_refusals(net: CompanyNet, plan: Array[Dictionary]) -> void:
 	var four: Array = []
 	for product: StringName in _products.keys().slice(0, 4):
 		four.append({"product": product, "qty": 1})
+	var zone: String = String(fresh["zone"])
+	var other_zone: StringName = &"centro" if zone != "centro" else &"campo"
+	var map_houses: Array = HouseAddresses.load_default().house_ids()
+	_expect(not map_houses.is_empty()
+		and CompanyOrdersNet.order_ok(_with(fresh, "house_id", map_houses[0]), false)
+		and CompanyOrdersNet.order_ok(_with(fresh, "house_id", zone + "_house_12"), false),
+		"An order may name a house of the map or one of its zone's 12 (%s)" % [map_houses.slice(0, 1)])
 	var bad_orders: Array = [
 		[_without(fresh, "pay"), "no pay"],
+		[_with(fresh, "zone", &"atlantis"), "a zone outside the catalog"],
+		[_with(fresh, "house_id", String(other_zone) + "_house_1"), "a house of another zone"],
+		[_with(fresh, "house_id", zone + "_house_13"), "a house past HOUSES_PER_ZONE"],
+		[_with(fresh, "house_id", zone + "_house_01"), "a house number with a leading zero"],
+		[_with(fresh, "house_id", zone + "_house_0"), "house 0"],
+		[_with(fresh, "house_id", &"nowhere_7"), "a house that isn't on the map"],
 		[_with(fresh, "tip", 3), "an extra key"],
 		[_with(fresh, "id", 7), "an id that isn't text"],
 		[_with(fresh, "id", ""), "an empty id"],
@@ -275,6 +296,45 @@ func _check_snapshot_part(host: CompanyNet) -> void:
 	_expect(client.orders.put_snapshot({"orders": [], "now_min": 0}) and client.orders.book.size() == 0,
 		"An empty book fits (a day with no order yet)")
 	client.free()
+
+
+## poll() takes an order off the plan only once its event went out, or when it can never go.
+func _check_poll_guards(net: CompanyNet) -> void:
+	var book: OrderBook = net.orders.book
+	net.orders.put_snapshot({"orders": [], "now_min": 0})
+	var seq: int = net.seq
+	var good: Dictionary = _fresh_order(&"d2_o02", 500)
+	net.orders.plan([good])
+	var inside: Array[int] = []
+	var from_apply: Callable = func(_id: StringName) -> void: inside.append(net.orders.poll(net, LAST_MINUTE))
+	book.order_added.connect(from_apply)
+	_expect(net.publish(CompanyOrdersNet.ADDED, {"order": _fresh_order(&"d2_o01", 400)}),
+		"An order of day 2 comes in")
+	book.order_added.disconnect(from_apply)
+	_expect(inside == [0] and net.orders.planned().size() == 1 and net.seq == seq + 1,
+		"A poll from inside an apply (OrderBook.order_added) sends nothing and keeps the plan (%s)" % [inside])
+	var stock: Inventory = net.inventory
+	net.inventory = null
+	_expect(net.orders.poll(net, 600) == 0 and net.orders.planned().size() == 1 and net.seq == seq + 1,
+		"Without an inventory poll() sends nothing and keeps the plan")
+	net.inventory = stock
+	var kept: Dictionary = book.to_dict()
+	var full: Array = []
+	for i: int in range(CompanyOrdersNet.MAX_ORDERS):
+		full.append(_with(good, "id", StringName("f_%d" % i)))
+	_expect(net.orders.put_snapshot({"orders": full, "now_min": 0}) and book.size() == CompanyOrdersNet.MAX_ORDERS,
+		"A book of MAX_ORDERS orders fits")
+	_expect(net.orders.poll(net, 500) == 0 and net.orders.planned().size() == 1 and net.seq == seq + 1,
+		"With the book full poll() sends nothing and keeps the order for the next poll")
+	net.orders.put_snapshot(kept)
+	_expect(net.orders.poll(net, 500) == 1 and net.orders.planned().is_empty()
+		and book.state_of(&"d2_o02") == Order.STATE_OPEN,
+		"...and the next poll with room sends it (planned %s)" % [_plan_ids(net.orders.planned())])
+	var broken: Dictionary = _with(_fresh_order(&"d2_o03", 550), "items", [{"product": &"unicorn", "qty": 1}])
+	net.orders.plan([_fresh_order(&"d2_o04", 550), broken])
+	_expect(net.orders.poll(net, 560) == 1 and net.orders.planned().is_empty()
+		and book.has(&"d2_o04") and not book.has(&"d2_o03"),
+		"A planned order order_ok() refuses is dropped and the next one goes out")
 
 
 # --- Network ---
@@ -496,7 +556,9 @@ func _expect_books(followers: Array, when: String) -> void:
 
 func _fresh_order(id: StringName, created: int) -> Dictionary:
 	var items: Array = [{"product": &"hen", "qty": 1}]
-	return Order.normalize(Order.make(id, "Ana", _zones[0].id, &"centro_house_1", items, created, _products))
+	var zone: StringName = _zones[0].id
+	var house := StringName("%s_house_1" % zone)
+	return Order.normalize(Order.make(id, "Ana", zone, house, items, created, _products))
 
 
 static func _arrival_sorted(plan: Array[Dictionary]) -> bool:

@@ -10,7 +10,9 @@ extends SceneTree
 ## - overdue() names, without changing anything, the orders expire() would make
 ##   late, and expire_one() makes late only the one it is given (refusing one not
 ##   due yet, closed, already late or unknown): one per overdue id leaves the book
-##   as expire() does (the host's order_expired events, D-0813);
+##   as expire() does (the host's order_expired events, D-0813), and like expire()
+##   it sets the book's minute, so a day-2 order unpacked before its due goes back
+##   OPEN even though day 1 expired one later in the day;
 ## - open_orders() filters by zone and drops closed orders;
 ## - invalid moves (DELIVERED -> OPEN, packing a closed order) are refused;
 ## - to_dict()/from_dict() keep states, box and trip ids.
@@ -136,6 +138,19 @@ func _test_expire_one() -> void:
 	_expect(twin.to_dict() == book.to_dict(), "one expire_one per overdue id leaves the book as expire() does")
 	twin.free()
 	book.free()
+	# The next day starts from midnight again: an order of day 2 (due 12:00) unpacked at 10:00 is not
+	# late because day 1 expired something at 15:00.
+	var days := _book()
+	days.add(_order(&"d1", &"campo", 0))
+	_expect(days.expire_one(&"d1", 900), "day 1: an order expires at 15:00")
+	days.add(_order(&"d2_early", &"campo", 300))
+	days.add(_order(&"d2", &"campo", 480))
+	days.mark_packed(&"d2", &"box2")
+	_expect(days.expire_one(&"d2_early", 600), "day 2: another expires at 10:00")
+	_expect(days.unpack(&"d2") and days.state_of(&"d2") == Order.STATE_OPEN,
+		"day 2: unpacking an order due at %d goes back OPEN, not LATE (got %s)"
+		% [days.get_order(&"d2")["due_min"], days.state_of(&"d2")])
+	days.free()
 
 
 func _test_abandon() -> void:

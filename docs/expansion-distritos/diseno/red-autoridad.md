@@ -415,19 +415,23 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   tiene el `OrderBook` que comparten todos (`orders.book`), igual en todos y escrito solo por eventos del host. Ningún
   `kind` de petición lo toca: un cliente no tiene cómo escribirlo (regla 1); `publish()` y `poll()` no hacen nada en
   un cliente.
-- **Eventos** `order_added` y `order_expired` (fila "Fuera de las 20", protocolo 39), por `publish()`
+- **Eventos** `order_added` y `order_expired` (fila "Fuera de las 20", protocolo 41), por `publish()`
   (`HOST_EVENT_KINDS`) y el `_apply_event` de siempre: ningún RPC nuevo. Cada peer, el host también, los aplica en
   `CompanyOrdersNet.apply()` (una rama de `_apply_state()`, sin `_:`) y solo comprueba datos (regla 6).
 - **El host decide:** `plan_day(seed, day, players, zones, products, requirements, company)` arma el plan del día con
   `OrderGenerator.generate_day` (minutos de `OrderRhythm`, la semilla del día, menos pedidos en rojo, D-0510) y
   `poll(net, minuto)` publica un `order_added` por cada pedido planeado cuyo `created_min` ya llegó, del más viejo al
   más nuevo, y después un `order_expired` por cada pedido del libro que pasó su `due_min` (`OrderBook.overdue()`, en
-  el orden del libro). El plan (lo que falta llegar) no viaja ni va en el snapshot. **Decisión:** viaja el pedido
+  el orden del libro). Un pedido sale del plan recién cuando su evento salió: uno que nunca entraría (`order_ok()`
+  lo rechaza o su id ya está en el libro) se descarta con un aviso; con el libro lleno, mientras se aplica un evento
+  (`CompanyNet.is_applying()`), sin inventario o con `publish()` rechazado, `poll()` corta y el próximo reintenta. El
+  plan (lo que falta llegar) no viaja ni va en el snapshot. **Decisión:** viaja el pedido
   entero (380 a 550 bytes, medido) y no la semilla: así ningún cliente necesita los mismos catálogos, zonas abiertas,
   tripulación y plata que el host para llegar al mismo pedido, y uno que entra tarde lo recibe igual en el snapshot.
 - **Validación (regla 5)**, `CompanyOrdersNet.order_ok()`: exactamente las claves de `Order.normalize()` (más las que
-  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact`, solo en el snapshot), ids y
-  nombres de texto de hasta 64, de 1 a 3 productos del catálogo distintos con `qty` entera 1..24, requisitos de
+  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact`, solo en el snapshot), id y
+  cliente de texto de hasta 64, una zona de `data/zones/` y una casa del mapa (`HouseAddresses`) o `<zona>_house_<n>`
+  de esa zona con `n` de 1 a 12, de 1 a 3 productos del catálogo distintos con `qty` entera 1..24, requisitos de
   `data/order_requirements/` sin repetir, `created_min < due_min` enteros, paga entera 0..10⁹ y estado conocido (`open`
   en un evento). Un `order_added` de un id que el libro ya tiene, o con el libro lleno (`MAX_ORDERS` = 4096), no se
   aplica; un `order_expired` de un pedido desconocido, cerrado, ya atrasado o que a ese `minute` todavía no venció,
@@ -437,8 +441,9 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   suma sola en `_init()`. El cliente la valida entera antes de tocar su libro (`book_ok()`: a lo sumo `MAX_ORDERS`,
   cada pedido `order_ok()` con los campos del libro, sin ids repetidos, `now_min` entero) y la pone con
   `OrderBook.from_dict()`, que no emite señales.
-- **Líneas:** `company_net.gd` queda en 1000 de las 1000 de gdlint (`_units_at` salió a `CompanyAsk.units_at()`): la
-  próxima acción tiene que sacar algo antes de sumar (p. ej. el armado de trozos `_take_chunk`).
+- **Líneas:** `company_net.gd` queda en 996 de las 1000 de gdlint (el cuerpo de `_lookup_station` salió a
+  `CompanyAsk.station_of()`): la próxima acción tiene que sacar algo antes de sumar (p. ej. el armado de trozos
+  `_take_chunk`).
 - Test: `test_company_orders_net` (solo, la parte del snapshot, y host + cliente + uno que entra tarde por ENet);
   `test_order_book` suma `overdue()` y `expire_one()`; `test_company_layout_net` ya lee las ramas nuevas de
   `_apply_state()`.
@@ -446,12 +451,14 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   - **D-0813.1**: el mundo de la empresa juega los pedidos: `CompanyRoot` planea el día en el `OPENING` del host
     (semilla del día, tripulación, zonas abiertas, catálogos), suma `orders.poll` al `BusinessTick` con
     `DayCycle.shed_minute()`, emite `EventBus.order_added` en cada peer desde `event_applied` (nunca al aplicar un
-    snapshot), y `CompanyTrips` (con el bot del día) pasa a usar `net.orders.book` en vez de su libro propio;
+    snapshot) y no desde las señales del libro (salen dentro de `_apply_state()`), y el bot del día toma sus pedidos
+    de ahí. `CompanyTrips` y `OrderBoxLink` siguen con su libro hasta el punto siguiente;
   - lo que `CompanyTrips` hace directo sobre su libro (`mark_out` al salir, `close` al volver) y el armado
     (`order_packed`) pasan a eventos con las filas 15, 17, 19 y 20 (D-0715.b, D-0716, D-0302, D-0815): un cambio
     del libro compartido que no sea evento queda solo en el host hasta el próximo snapshot (hoy no pasa: ningún
     vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro;
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
-  - podar del libro los pedidos cerrados de días viejos y guardarlo con el día (D-0206): hoy crece hasta 16 por día y
-    `MAX_ORDERS` alcanza para 256 días en una sesión.
+  - podar del libro los pedidos cerrados de días viejos y guardarlo con el día (D-0206), y bajar `MAX_ORDERS`: hoy
+    crece hasta 16 por día y un libro lleno (4096) pesa 2,4 MB de los 4 MB del snapshot (137 KB comprimido) y tarda
+    230 ms en validarse en el cliente (medido; `revisar/D-0813.md`).

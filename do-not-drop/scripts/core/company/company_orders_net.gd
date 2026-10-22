@@ -38,8 +38,12 @@ const MAX_TEXT: int = RpcGuard.MAX_TEXT_LENGTH
 const MAX_MINUTE: int = 365 * CompanyTuning.MINUTES_PER_DAY
 ## Highest pay an order may carry.
 const MAX_PAY: int = 1_000_000_000
-## Where the requirement catalog lives: a requirement of an order names one of its files.
+## Where the requirement and zone catalogs live: a requirement or the zone of an order names one of
+## their files (the id is the file's name).
 const REQUIREMENTS_DIR: String = "res://data/order_requirements/"
+const ZONES_DIR: String = "res://data/zones/"
+## The generator's houses: "<zone>_house_<n>", n from 1 to OrderGenerator.HOUSES_PER_ZONE.
+const HOUSE_INFIX: String = "_house_"
 ## Keys of an order as Order.normalize() writes it, and those OrderBook adds as it moves on (they only
 ## travel in a snapshot).
 const ORDER_KEYS: Array[String] = [
@@ -53,9 +57,8 @@ var book: OrderBook = OrderBook.new()
 
 ## Host: the day's orders still to come in, oldest first (plan()).
 var _planned: Array[Dictionary] = []
-## Requirement ids of the catalog, read once ({StringName: true}).
-static var _known_requirements: Dictionary = {}
-static var _requirements_read: bool = false
+## Ids of each catalog folder, read once ({dir: {StringName: true}}).
+static var _catalog_ids: Dictionary = {}
 
 
 ## The book is a Node outside the tree: it goes with this object.
@@ -101,19 +104,31 @@ func planned() -> Array[Dictionary]:
 ## Host, as the shed's minute goes by: through `net` (whose `orders` is this), an order_added for every
 ## planned order whose created_min is `now_min` or earlier, oldest first, then an order_expired for every
 ## order of the book past its due_min at `now_min` and not late yet (OrderBook.overdue(), in book order).
-## Returns how many events went out: none on a client (publish() refuses there) or for a minute out of
-## 0..MAX_MINUTE. A planned order the book doesn't take is dropped (CompanyNet logs it), so a broken one is
-## not tried again on every tick.
+## Returns how many events went out. Nothing at all on a client, while `net` applies an event, without
+## its inventory or for a minute out of 0..MAX_MINUTE. A planned order leaves the plan only once its event
+## went out, or when it can never go (order_ok() refuses it or its id is in the book: dropped with a
+## warning); with the book full (MAX_ORDERS) or an event refused for any other reason it stops there and
+## the next poll tries again.
 func poll(net: CompanyNet, now_min: int) -> int:
 	if net == null or net.orders != self or not net.is_host() or not _minute_ok(now_min):
 		return 0
+	if net.is_applying() or net.inventory == null:
+		return 0
 	var sent: int = 0
 	while not _planned.is_empty() and int(_planned[0]["created_min"]) <= now_min:
-		if net.publish(ADDED, {"order": _planned.pop_front()}):
-			sent += 1
+		var next: Dictionary = _planned[0]
+		if not order_ok(next, false) or book.has(StringName(next["id"])):
+			push_warning("CompanyOrdersNet: planned order %s never fits; dropped" % next.get("id"))
+			_planned.pop_front()
+			continue
+		if book.size() >= MAX_ORDERS or not net.publish(ADDED, {"order": next}):
+			return sent
+		_planned.pop_front()
+		sent += 1
 	for id: StringName in book.overdue(now_min):
-		if net.publish(EXPIRED, {"order": id, "minute": now_min}):
-			sent += 1
+		if not net.publish(EXPIRED, {"order": id, "minute": now_min}):
+			return sent
+		sent += 1
 	return sent
 
 
@@ -171,21 +186,22 @@ static func book_ok(value: Variant) -> bool:
 
 
 ## One order from the network (rule 5): exactly the keys Order.normalize() writes (with `book_keys`, also
-## any of BOOK_KEYS, as a snapshot carries them), each of its type and in range: ids, names and the state
-## short text (a known state; only open without `book_keys`, as an event brings it), 1 to Order.MAX_ITEMS
-## products of the catalog, each once, 1 to PALLET_MAX_UNITS of each, requirements of the catalog, each
-## once, created_min before due_min (both 0..MAX_MINUTE), pay 0..MAX_PAY, and nothing Order.validate()
-## would refuse.
+## any of BOOK_KEYS, as a snapshot carries them), each of its type and in range: id, customer and state
+## short text (a known state; only open without `book_keys`, as an event brings it), a zone of the catalog
+## and a house of it (_house_ok()), 1 to Order.MAX_ITEMS products of the catalog, each once, 1 to
+## PALLET_MAX_UNITS of each, requirements of the catalog, each once, created_min before due_min (both
+## 0..MAX_MINUTE), pay 0..MAX_PAY, and nothing Order.validate() would refuse.
 static func order_ok(value: Variant, book_keys: bool) -> bool:
 	if not value is Dictionary or not _keys_ok(value, book_keys):
 		return false
 	var order: Dictionary = value
 	var state: Variant = order["state"]
+	var zone: Variant = order["zone"]
 	var texts: bool = (
-		_text_ok(order["id"]) and _text_ok(order["customer"]) and _text_ok(order["zone"])
-		and _text_ok(order["house_id"]) and _text_ok(state)
+		_text_ok(order["id"]) and _text_ok(order["customer"]) and _text_ok(state)
+		and _text_ok(zone) and _ids_in(ZONES_DIR).has(StringName(zone))
 	)
-	if not texts or not Order.STATES.has(StringName(state)):
+	if not texts or not Order.STATES.has(StringName(state)) or not _house_ok(order["house_id"], zone):
 		return false
 	if not book_keys and StringName(state) != Order.STATE_OPEN:
 		return false
@@ -241,7 +257,7 @@ static func _requirements_ok(value: Variant) -> bool:
 	for requirement: Variant in value:
 		if not _text_ok(requirement) or seen.has(StringName(requirement)):
 			return false
-		if not _requirement_ids().has(StringName(requirement)):
+		if not _ids_in(REQUIREMENTS_DIR).has(StringName(requirement)):
 			return false
 		seen[StringName(requirement)] = true
 	return true
@@ -265,14 +281,31 @@ static func _book_fields_ok(order: Dictionary) -> bool:
 	return typeof(order.get("intact", true)) == TYPE_BOOL
 
 
-## Requirement ids of the catalog: exactly the names of its files (read once).
-static func _requirement_ids() -> Dictionary:
-	if not _requirements_read:
-		_requirements_read = true
-		for file: String in ResourceLoader.list_directory(REQUIREMENTS_DIR):
+## A house the order of `zone` may name: one of the map's delivery houses (HouseAddresses, D-0312) or
+## the generator's "<zone>_house_<n>" of that same zone, n from 1 to OrderGenerator.HOUSES_PER_ZONE
+## written plainly (no sign, no leading zero).
+static func _house_ok(house_id: Variant, zone: Variant) -> bool:
+	if not _text_ok(house_id):
+		return false
+	var text: String = String(house_id)
+	var prefix: String = String(zone) + HOUSE_INFIX
+	if text.begins_with(prefix):
+		var number: String = text.trim_prefix(prefix)
+		var n: int = int(number) if number.is_valid_int() else 0
+		return str(n) == number and n >= 1 and n <= OrderGenerator.HOUSES_PER_ZONE
+	var addresses: HouseAddresses = HouseAddresses.load_default()
+	return addresses != null and addresses.has_house(StringName(text))
+
+
+## Ids of the catalog in `dir`: exactly the names of its files (read once per folder).
+static func _ids_in(dir: String) -> Dictionary:
+	if not _catalog_ids.has(dir):
+		var ids: Dictionary = {}
+		for file: String in ResourceLoader.list_directory(dir):
 			if file.ends_with(".tres") or file.ends_with(".res"):
-				_known_requirements[StringName(file.get_basename())] = true
-	return _known_requirements
+				ids[StringName(file.get_basename())] = true
+		_catalog_ids[dir] = ids
+	return _catalog_ids[dir]
 
 
 ## Text up to MAX_TEXT, empty only if `empty_ok`.

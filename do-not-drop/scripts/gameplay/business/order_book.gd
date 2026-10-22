@@ -140,12 +140,14 @@ func overdue(now_min: int) -> Array[StringName]:
 
 
 ## Marks LATE the one order `id` if overdue(now_min) names it: what each peer
-## does with the host's order_expired event (D-0813). False, changing nothing,
-## for an unknown, closed, already late or not yet due order.
+## does with the host's order_expired event (D-0813). Like expire(), the book's
+## minute becomes now_min (minutes count from midnight, so a new day's are
+## lower). False, changing nothing, for an unknown, closed, already late or not
+## yet due order.
 func expire_one(id: StringName, now_min: int) -> bool:
 	if not overdue(now_min).has(id) or not _go_late(id):
 		return false
-	_now_min = maxi(_now_min, now_min)
+	_now_min = now_min
 	return true
 
 
