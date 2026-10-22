@@ -134,6 +134,16 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Test** `test_supplier_schedule`: calendario de 3 días, fusión de pedidos y palets, estados del camión, pedidos inválidos, ida y vuelta JSON.
 **Hecho cuando:** el test pasa con un calendario de 3 días.
 
+### D-0618 · El camión del proveedor se va a una hora y se lleva lo que quede — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-22, PR pendiente)** — la lógica (`SupplierDeparture`, `scripts/gameplay/business/supplier_departure.gd`) y `test_supplier_departure`. Falta D-0618.b (el camión que se va en el mundo y el cableado en `CompanyRoot`).
+**Depende de:** D-0602 (`SupplierSchedule.truck_state`), D-0604 (`Pallet`), D-0614 (`DeliveryNote`)
+**Qué:**
+- **D-0618.a (hecha) — la lógica.** `SupplierDeparture` (`RefCounted`, sin nodos): `has_left(schedule, día, minuto)`, `left_on_bed(palets, ids bajados)`, `taken_units` y `resolve(...)`, que a la hora de salida (`SupplierSchedule.departure_minute()`) devuelve `{left, taken, note_lines}` y limpia el día del calendario. Antes de esa hora no toca nada.
+- **D-0618.b (pendiente) — el cableado.** `CompanyRoot` llama a `resolve` cuando el reloj pasa la hora de salida, quita los palets que quedaron en la caja de `SupplierTruckView`, guarda `note_lines` en el `DeliveryNote` (D-0614.b) y replica.
+**Decisión:** el camión se lleva lo que queda y **no hay cargo extra por demora**: la billetera solo paga lo que llegó (D-0503) y el remito registra el faltante.
+**Test** `test_supplier_departure`: espera hasta la hora de salida, se lleva 6 gallinas, vacío no se lleva nada, día sin camión, basura en la lista.
+**Hecho cuando:** test: camión que se va con lo no descargado (hecho en la lógica); en el juego, D-0618.b.
+
 ### D-0620 · Layout inicial del depósito actual adaptado: dársena, recepción, racks, armado, despacho — A · Opus 5.5 · xhigh · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — es D-0911 visto desde el stock: `data/shed/default_shed.tres` (`DefaultShed`) y `CompanyShed`; `test_company_default_layout`. Detalle completo en [F1-09-galpon.md](F1-09-galpon.md).
 **Depende de:** D-0608 (estantes con huecos), D-0604 (palet), D-0602 (calendario), D-0904, D-0214
