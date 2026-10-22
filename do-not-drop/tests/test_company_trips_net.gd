@@ -19,10 +19,18 @@ extends SceneTree
 ##   and the failed list arrives (the view's trip_closed); with VEHICLES_FAR_MAX (2) out, a third
 ##   vehicle that crosses is refused and counts as out on the client (trips_out() 3, trip ""),
 ##   until it is back (one trip_closed with trip "", no trip_closed signal); a peer that joins with
-##   vehicles out gets them from the snapshot, with `changed` once and no trip_closed.
+##   vehicles out gets them from the snapshot, with `changed` once and no trip_closed; a
+##   trip_started published while it still waits for that snapshot is held and dropped (the snapshot
+##   has it) and one published right after the snapshot is applied once after it: no vehicle twice.
+## - The host never sends what its own view would refuse (auditor-red on D-0302.2.a): DispatchZone
+##   hands a vehicle at most CompanyTrips.MAX_CARGO boxes (the rest keep waiting); stage_cargo()
+##   with 65 orders and boxes keeps 64 (one warning) and that vehicle is out on the host's view as
+##   on CompanyTrips; a vehicle id too long stages nothing. The view, handed a trip with ids that
+##   don't fit, sends the ones that do (one warning); with MAX_OUT vehicles out, or for the close of
+##   a trip never sent, it sends nothing (a warning each). No error is logged anywhere in the test.
 ## - A view that leaves the tree unhooks itself and its snapshot part.
-## Expected in the log: no warning or error of the game's (the engine's leak notes at exit aside, as
-## in test_company_trips).
+## Expected in the log: the six warnings above (cargo cut, id too long, ids left out, the close never
+## sent, over MAX_OUT and its return), and the engine's leak notes at exit, as in test_company_trips.
 
 const PORT: int = 24673
 const MINUTE: int = 600
@@ -42,6 +50,33 @@ var _late_view: CompanyTripsView
 ## Per view: how many `changed`, and every trip_closed [trip, vehicle, failed].
 var _changes: Dictionary = {}
 var _closed: Dictionary = {}
+var _catcher := LogCatcher.new()
+
+
+## Errors and warnings logged while the test runs.
+class LogCatcher extends Logger:
+	var _mutex := Mutex.new()
+	var _errors: Array[String] = []
+	var _warnings: Array[String] = []
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _backtraces: Array[ScriptBacktrace]) -> void:
+		_mutex.lock()
+		var text: String = "%s (%s:%d in %s)" % [rationale if not rationale.is_empty() else code, file, line, function]
+		if error_type == Logger.ERROR_TYPE_WARNING:
+			_warnings.append(text)
+		else:
+			_errors.append(text)
+		_mutex.unlock()
+
+	## [errors, warnings] since the last call.
+	func take() -> Array:
+		_mutex.lock()
+		var out: Array = [_errors.duplicate(), _warnings.duplicate()]
+		_errors.clear()
+		_warnings.clear()
+		_mutex.unlock()
+		return out
 
 
 func _initialize() -> void:
@@ -50,9 +85,15 @@ func _initialize() -> void:
 
 func _run() -> void:
 	RpcGuard.reset()
+	OS.add_logger(_catcher)
 	await _check_solo()
 	_check_bad_data()
+	await _check_big_cargo()
+	_check_never_refused()
 	await _check_peers()
+	var logged: Array = _catcher.take()
+	OS.remove_logger(_catcher)
+	_expect(logged[0].is_empty(), "No error is logged (got %s)" % [logged[0]])
 	if _failures == 0:
 		print("PASS: the host's trips out reach every peer by event and a late joiner by snapshot")
 	quit(_failures)
@@ -204,6 +245,90 @@ func _check_bad_data() -> void:
 	view.free()
 
 
+## The host keeps and sends only what its view takes: a zone with 65 boxes hands 64, stage_cargo()
+## with 65 keeps 64, and the vehicle is out on the view as on CompanyTrips, with no error.
+func _check_big_cargo() -> void:
+	_catcher.take()
+	var zone := DispatchZone.new()
+	var many_boxes: Array = []
+	var many_orders: Array = []
+	for index: int in range(CompanyTrips.MAX_CARGO + 1):
+		many_boxes.append(StringName("box_b%d" % index))
+		many_orders.append(StringName("b%d" % index))
+	zone.from_dict({"boxes": many_boxes, "orders": many_orders})
+	var side := Node.new()
+	side.name = "CargoSide"
+	root.add_child(side)
+	var parts: Dictionary = _new_side(side, true)
+	var view: CompanyTripsView = parts["view"]
+	var trips: CompanyTrips = parts["trips"]
+	await process_frame
+	_expect(zone.load_into(trips, &"van_zone") == CompanyTrips.MAX_CARGO and zone.boxes().size() == 1,
+		"The dispatch zone hands at most MAX_CARGO (%d) boxes; the rest keeps waiting (left %d)"
+		% [CompanyTrips.MAX_CARGO, zone.boxes().size()])
+	_expect(_catcher.take()[1].is_empty(), "...with no warning: nothing was cut")
+	var orders: Array[StringName] = []
+	var boxes: Array[StringName] = []
+	orders.assign(many_orders)
+	boxes.assign(many_boxes)
+	_packed(trips, orders)
+	trips.stage_cargo(&"van_big", orders, boxes)
+	var cut: Array = _catcher.take()
+	_expect(cut[1].size() == 1, "stage_cargo() with 65 orders and boxes warns once (got %s)" % [cut[1]])
+	_leave(trips, &"van_big", [])
+	var trip: Trip = trips.trip_of(&"van_big")
+	_expect(trip != null and trip.order_ids.size() == CompanyTrips.MAX_CARGO
+		and trip.box_ids.size() == CompanyTrips.MAX_CARGO,
+		"...and the trip leaves with 64 of each (got %s)" % [trip.order_ids.size() if trip != null else -1])
+	_expect(view.is_out(&"van_big") and view.is_out(&"van_big") == trips.is_out(&"van_big")
+		and view.trip_of(&"van_big").get("orders", []).size() == CompanyTrips.MAX_CARGO,
+		"The big trip is out on the host's view as on CompanyTrips")
+	_come_back(trips, &"van_big")
+	_expect(not view.is_out(&"van_big") and not trips.is_out(&"van_big"), "...and back on both")
+	trips.stage_cargo(StringName("v".repeat(CompanyTrips.MAX_ID_LENGTH + 1)), [&"b64"], [&"box_b64"])
+	var long_id: Array = _catcher.take()
+	_expect(long_id[1].size() == 1 and trips.trips_out() == 0,
+		"A vehicle id too long stages nothing, with one warning (got %s)" % [long_id[1]])
+	_expect(cut[0].is_empty() and long_id[0].is_empty(), "No error on the way")
+	side.free()
+
+
+## The view, handed what CompanyTrips never stages, still sends only what it takes.
+func _check_never_refused() -> void:
+	_catcher.take()
+	var view := CompanyTripsView.new()
+	var trip := Trip.new()
+	trip.id = &"trip_odd"
+	trip.vehicle_id = &"van_odd"
+	trip.depart_min = MINUTE
+	trip.order_ids.assign([&"o_ok", StringName("o".repeat(CompanyTripsView.MAX_ID_LENGTH + 1))])
+	for index: int in range(CompanyTripsView.MAX_ITEMS + 6):
+		trip.box_ids.append(StringName("box_%d" % index))
+	view._on_trip_started(trip)
+	var odd: Array = _catcher.take()
+	_expect(view.is_out(&"van_odd") and view.trip_of(&"van_odd")["orders"] == [&"o_ok"]
+		and view.trip_of(&"van_odd")["boxes"].size() == CompanyTripsView.MAX_ITEMS and odd[1].size() == 1,
+		"A trip with ids that don't fit goes out with those that do, one warning (got %s)" % [odd[1]])
+	var never_sent := Trip.new()
+	never_sent.id = &"trip_ghost"
+	never_sent.vehicle_id = &"van_ghost"
+	var none: Array[StringName] = []
+	view._on_trip_closed(never_sent, none)
+	var ghost: Array = _catcher.take()
+	_expect(ghost[1].size() == 1 and view.trips_out() == 1, "The close of a trip never sent sends nothing")
+	for index: int in range(CompanyTripsView.MAX_OUT - 1):
+		view._on_departure_refused(StringName("van_r%d" % index), {})
+	_expect(view.trips_out() == CompanyTripsView.MAX_OUT and _catcher.take()[1].is_empty(),
+		"Up to MAX_OUT (%d) vehicles out, every one is sent" % CompanyTripsView.MAX_OUT)
+	view._on_departure_refused(&"van_over", {})
+	view._on_refused_returned(&"van_over")
+	var over: Array = _catcher.take()
+	_expect(over[1].size() == 2 and view.trips_out() == CompanyTripsView.MAX_OUT and not view.is_out(&"van_over"),
+		"One more is not sent, nor is its return: a warning each (got %s)" % [over[1]])
+	_expect(odd[0].is_empty() and ghost[0].is_empty() and over[0].is_empty(), "...and no error")
+	view.free()
+
+
 func _check_peers() -> void:
 	var host_side := Node.new()
 	host_side.name = "HostSide"
@@ -220,7 +345,7 @@ func _check_peers() -> void:
 	_host_net = host["net"]
 	_host_view = host["view"]
 	_host_trips = host["trips"]
-	_packed(_host_trips, [&"o1", &"o2", &"o3", &"o4", &"o5"])
+	_packed(_host_trips, [&"o1", &"o2", &"o3", &"o4", &"o5", &"o6", &"o7"])
 	var client_peer := ENetMultiplayerPeer.new()
 	_expect(client_peer.create_client("127.0.0.1", PORT) == OK, "The client starts joining")
 	client_side.multiplayer.multiplayer_peer = client_peer
@@ -314,14 +439,27 @@ func _join_late(late_peer: ENetMultiplayerPeer) -> Node:
 	_expect(connected, "The late peer connects")
 	if not connected:
 		return null
+	# Room for two more trips: van_4 leaves while the joiner waits, van_5 right after its snapshot.
+	_host_trips.far_max = 5
+	_leave(_host_trips, &"van_4", [&"o6"])
+	var held: bool = await _wait_for(func() -> bool: return _late_net._held.has(_host_net.seq))
+	_expect(held and _late_view.trips_out() == 0, "A trip_started reaching the joiner before its snapshot is held")
 	_expect(_host_net.send_snapshot(late_side.multiplayer.get_unique_id()), "The host sends it the snapshot")
-	var joined: bool = await _wait_for(func() -> bool: return not _late_net.awaiting_snapshot())
-	_expect(joined and _late_view.vehicles_out() == [&"van_1", &"van_2", &"van_3"]
+	_leave(_host_trips, &"van_5", [&"o7"])
+	var joined: bool = await _wait_for(func() -> bool:
+		return not _late_net.awaiting_snapshot() and _late_net.seq == _host_net.seq)
+	var all_out: Array[StringName] = [&"van_1", &"van_2", &"van_3", &"van_4", &"van_5"]
+	_expect(joined and _late_view.vehicles_out() == all_out and _late_view.trips_out() == 5
 		and _late_view.trip_of(&"van_1") == _client_view.trip_of(&"van_1")
+		and _late_view.trip_of(&"van_4") == _client_view.trip_of(&"van_4")
 		and _late_view.trip_of(&"van_3").get("trip") == &"",
-		"The late joiner gets the trips out from the snapshot (got %s)" % [_late_view.vehicles_out()])
-	_expect(_changes[_late_view] == 1 and _closed[_late_view].is_empty(),
-		"...with `changed` once and no trip_closed (changes %d)" % _changes[_late_view])
+		"The late joiner gets the trips out from the snapshot and the one after it, each once (got %s)"
+		% [_late_view.vehicles_out()])
+	_expect(_changes[_late_view] == 2 and _closed[_late_view].is_empty(),
+		"...with `changed` once for the snapshot and once for van_5, no trip_closed (changes %d)"
+		% _changes[_late_view])
+	await _wait_seq(_client_net)
+	_expect(_client_view.vehicles_out() == all_out, "The first client sees the same five out")
 	return late_side
 
 
@@ -330,19 +468,20 @@ func _check_back_reaches_everyone() -> void:
 	_come_back(_host_trips, &"van_3")
 	await _wait_seq(_client_net)
 	await _wait_seq(_late_net)
-	_expect(_client_view.trips_out() == 2 and not _client_view.is_out(&"van_3")
-		and _late_view.trips_out() == 2 and not _late_view.is_out(&"van_3"),
+	_expect(_client_view.trips_out() == 4 and not _client_view.is_out(&"van_3")
+		and _late_view.trips_out() == 4 and not _late_view.is_out(&"van_3"),
 		"The refused vehicle back is in again on every peer (client %d, late %d)"
 		% [_client_view.trips_out(), _late_view.trips_out()])
 	_expect(_closed[_client_view].size() == closed_before and _closed[_late_view].is_empty(),
 		"...with no trip_closed signal: it had no trip")
-	_come_back(_host_trips, &"van_1")
-	_come_back(_host_trips, &"van_2")
+	for vehicle: StringName in [&"van_1", &"van_2", &"van_4", &"van_5"]:
+		_come_back(_host_trips, vehicle)
 	await _wait_seq(_client_net)
 	await _wait_seq(_late_net)
 	_expect(_client_view.trips_out() == 0 and _late_view.trips_out() == 0 and _host_view.trips_out() == 0
 		and _host_trips.trips_out() == 0, "Everyone back: every view is empty")
-	_expect(_closed[_late_view].size() == 2, "The late joiner heard both trips close (got %s)" % [_closed[_late_view]])
+	_expect(_closed[_late_view].size() == 4,
+		"The late joiner heard the four trips close (got %s)" % [_closed[_late_view]])
 
 
 ## `net` has applied every event the host sent.

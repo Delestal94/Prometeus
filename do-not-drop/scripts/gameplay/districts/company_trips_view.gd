@@ -18,7 +18,11 @@ extends Node
 ## a trip has at least one order), `minute` the host's game minute as an int (0..GameClock's
 ## MAX_MINUTE). Every peer applies them in apply_trip() with the same code (rule 6: no game rule is
 ## checked again, only that the data fits, rule 5, and that the vehicle is in or out as the event
-## says); a peer whose view doesn't take one waits for a snapshot (CompanyNet._receive()).
+## says); a peer whose view doesn't take one waits for a snapshot (CompanyNet._receive()). The host
+## never sends one its own view would refuse: CompanyTrips keeps only cargo that fits
+## (stage_cargo()), the payload takes only the ids that fit and _publish() runs the same check first
+## (_checked()); what still doesn't fit (over MAX_OUT vehicles out, or the close of a trip never
+## sent) is left out with a warning, so no peer, the host included, ever logs an event refused.
 ##
 ## Only what is out lives here: a vehicle back is forgotten. Nothing here moves an order: the
 ## OrderBook stays the host's (CompanyTrips.book until D-0801) and orders are only ids. Reads, on any
@@ -46,9 +50,9 @@ const SNAPSHOT_KEY: String = "trips"
 ## Most vehicles a snapshot may carry out at once (rule 5): VEHICLES_FAR_MAX trips plus every
 ## refused vehicle, far over any fleet.
 const MAX_OUT: int = 32
-## Most orders, boxes or failed orders an event or an entry may carry.
-const MAX_ITEMS: int = 64
-const MAX_ID_LENGTH: int = RpcGuard.MAX_TEXT_LENGTH
+## Most orders, boxes or failed orders an event or an entry may carry: what CompanyTrips keeps.
+const MAX_ITEMS: int = CompanyTrips.MAX_CARGO
+const MAX_ID_LENGTH: int = CompanyTrips.MAX_ID_LENGTH
 const STARTED_KEYS: Array[String] = ["trip", "vehicle", "orders", "boxes", "minute"]
 const REFUSED_KEYS: Array[String] = ["vehicle", "minute"]
 const CLOSED_KEYS: Array[String] = ["trip", "vehicle", "failed", "minute"]
@@ -143,51 +147,63 @@ func trip_of(vehicle_id: StringName) -> Dictionary:
 ## with that trip). False, changing nothing, when it doesn't fit. The signals wait for
 ## event_applied (_on_event_applied()).
 func apply_trip(kind: StringName, data: Dictionary) -> bool:
-	var vehicle: StringName = &""
-	match kind:
-		STARTED, REFUSED:
-			var entry: Dictionary = (
-				_entry_from(data, false) if kind == STARTED else _refused_from(data)
-			)
-			if entry.is_empty() or _out.has(entry["vehicle"]) or _out.size() >= MAX_OUT:
-				return false
-			vehicle = entry["vehicle"]
-			_out[vehicle] = entry
-		CLOSED:
-			if not _keys_ok(data, CLOSED_KEYS) or not _id_ok(data["vehicle"]):
-				return false
-			vehicle = StringName(data["vehicle"])
-			var trip: Variant = data["trip"]
-			var entry: Dictionary = _out.get(vehicle, {})
-			if not _text_ok(trip) or entry.is_empty() or entry["trip"] != StringName(trip):
-				return false
-			var failed: Variant = data["failed"]
-			var most_failed: int = MAX_ITEMS if entry["trip"] != &"" else 0
-			if not _ids_ok(failed, 0, most_failed) or not _minute_ok(data["minute"]):
-				return false
-			_out.erase(vehicle)
-			if entry["trip"] != &"":
-				_pending_closed.append([entry["trip"], vehicle, _ids(failed)])
-		_:
-			return false
+	var fit: Dictionary = _checked(kind, data)
+	if fit.is_empty():
+		return false
+	var vehicle: StringName = fit["vehicle"]
+	if fit.has("entry"):
+		_out[vehicle] = fit["entry"]
+	else:
+		var entry: Dictionary = _out[vehicle]
+		_out.erase(vehicle)
+		if entry["trip"] != &"":
+			_pending_closed.append([entry["trip"], vehicle, fit["failed"]])
 	_dirty = true
 	if not _has_net():
 		_flush()
 	return true
 
 
-## Host: `trip` started (CompanyTrips.trip_started).
+## What apply_trip() would do with `data`, changing nothing: {vehicle, entry} for a vehicle that
+## leaves (started or refused), {vehicle, failed} for one that is back, {} when it doesn't fit.
+func _checked(kind: StringName, data: Dictionary) -> Dictionary:
+	match kind:
+		STARTED, REFUSED:
+			var entry: Dictionary = _entry_from(data, false) if kind == STARTED else _refused_from(data)
+			if entry.is_empty() or _out.has(entry["vehicle"]) or _out.size() >= MAX_OUT:
+				return {}
+			return {"vehicle": entry["vehicle"], "entry": entry}
+		CLOSED:
+			if not _keys_ok(data, CLOSED_KEYS) or not _id_ok(data["vehicle"]) or not _text_ok(data["trip"]):
+				return {}
+			var vehicle := StringName(data["vehicle"])
+			var entry: Dictionary = _out.get(vehicle, {})
+			if entry.is_empty() or entry["trip"] != StringName(data["trip"]):
+				return {}
+			var most_failed: int = MAX_ITEMS if entry["trip"] != &"" else 0
+			if not _ids_ok(data["failed"], 0, most_failed) or not _minute_ok(data["minute"]):
+				return {}
+			return {"vehicle": vehicle, "failed": _ids(data["failed"])}
+	return {}
+
+
+## Host: `trip` started (CompanyTrips.trip_started), with the ids that fit (CompanyTrips.fitting()).
 func _on_trip_started(trip: Trip) -> void:
+	var orders: Array[StringName] = CompanyTrips.fitting(trip.order_ids)
+	var boxes: Array[StringName] = CompanyTrips.fitting(trip.box_ids)
+	_warn_left_out(trip.vehicle_id, trip.order_ids.size() + trip.box_ids.size() - orders.size() - boxes.size())
 	_publish(STARTED, {
-		"trip": trip.id, "vehicle": trip.vehicle_id, "orders": trip.order_ids.duplicate(),
-		"boxes": trip.box_ids.duplicate(), "minute": _wire_minute(trip.depart_min),
+		"trip": trip.id, "vehicle": trip.vehicle_id, "orders": orders, "boxes": boxes,
+		"minute": _wire_minute(trip.depart_min),
 	})
 
 
-## Host: `trip` came back with `failed` (CompanyTrips.trip_closed).
+## Host: `trip` came back with `failed` (CompanyTrips.trip_closed), the ids that fit.
 func _on_trip_closed(trip: Trip, failed: Array[StringName]) -> void:
+	var kept: Array[StringName] = CompanyTrips.fitting(failed)
+	_warn_left_out(trip.vehicle_id, failed.size() - kept.size())
 	_publish(CLOSED, {
-		"trip": trip.id, "vehicle": trip.vehicle_id, "failed": failed.duplicate(),
+		"trip": trip.id, "vehicle": trip.vehicle_id, "failed": kept,
 		"minute": _wire_minute(trip.return_min),
 	})
 
@@ -207,12 +223,24 @@ func _on_refused_returned(vehicle_id: StringName) -> void:
 
 
 ## Host: the event goes through CompanyNet, which applies it here too (apply_trip()), or without one
-## applies here at once. CompanyNet logs an event it could not publish; the host's view then lags
-## CompanyTrips (which still decides the day) until the next fact that fits.
+## applies here at once. One this view would refuse (_checked()) is not sent: a warning, and the
+## views lag CompanyTrips (which still decides the day) for that vehicle, never an error anywhere.
 func _publish(kind: StringName, data: Dictionary) -> bool:
 	if not is_host():
 		return false
+	if _checked(kind, data).is_empty():
+		push_warning("CompanyTripsView: %s of '%s' doesn't fit the trips out (%d out, at most %d); not sent"
+			% [kind, data.get("vehicle", ""), _out.size(), MAX_OUT])
+		return false
 	return net.publish(kind, data) if _has_net() else apply_trip(kind, data)
+
+
+## Host: one warning when `left_out` ids of `vehicle`'s trip don't go in its event (over MAX_ITEMS or
+## not fitting). CompanyTrips.stage_cargo() keeps only ids that fit, so a trip from it never does.
+static func _warn_left_out(vehicle: StringName, left_out: int) -> void:
+	if left_out > 0:
+		push_warning("CompanyTripsView: %d ids of %s's trip left out of its event (at most %d, of %d characters)"
+			% [left_out, vehicle, MAX_ITEMS, MAX_ID_LENGTH])
 
 
 ## Every peer: the trips the last events changed are told now that CompanyNet is not applying.

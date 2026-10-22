@@ -37,6 +37,11 @@ signal refused_returned(vehicle_id: StringName)
 const VEHICLE_GROUP: StringName = &"company_vehicle"
 ## Translation key (strings_world.csv) of the refusal: "%d vehicles are already out".
 const FAR_LIMIT: String = "WORLD_DISPATCH_FAR_LIMIT"
+## Most orders, and most boxes, one vehicle's cargo keeps (stage_cargo()), far over any vehicle's
+## load: what one trip event may carry (CompanyTripsView.MAX_ITEMS). DispatchZone hands no more.
+const MAX_CARGO: int = 64
+## Longest vehicle, order or box id kept (RpcGuard's text limit): what a trip event may carry.
+const MAX_ID_LENGTH: int = RpcGuard.MAX_TEXT_LENGTH
 
 var book: OrderBook = OrderBook.new()
 var gate: TripGate
@@ -62,8 +67,35 @@ func setup(exit_origin: Vector3, width: float) -> void:
 
 
 ## What the dispatch zone loaded on `vehicle_id`: it leaves with this when it crosses the gate.
+## Only what a trip event can carry is kept (one warning when something is left out): the first
+## MAX_CARGO orders and boxes whose ids fit (id_fits()); a vehicle whose own id doesn't fit gets
+## nothing staged, so it never starts a trip the other peers could not be told about.
 func stage_cargo(vehicle_id: StringName, orders: Array[StringName], boxes: Array[StringName]) -> void:
-	_staged[vehicle_id] = {"orders": orders.duplicate(), "boxes": boxes.duplicate()}
+	if not id_fits(vehicle_id):
+		push_warning("CompanyTrips: vehicle id '%s' is empty or over %d characters; nothing staged"
+			% [vehicle_id, MAX_ID_LENGTH])
+		return
+	var kept_orders: Array[StringName] = fitting(orders)
+	var kept_boxes: Array[StringName] = fitting(boxes)
+	if kept_orders.size() < orders.size() or kept_boxes.size() < boxes.size():
+		push_warning("CompanyTrips: %s keeps %d of %d orders and %d of %d boxes (at most %d ids of %d characters)"
+			% [vehicle_id, kept_orders.size(), orders.size(), kept_boxes.size(), boxes.size(), MAX_CARGO,
+				MAX_ID_LENGTH])
+	_staged[vehicle_id] = {"orders": kept_orders, "boxes": kept_boxes}
+
+
+## An id a trip event may carry: not empty, at most MAX_ID_LENGTH characters.
+static func id_fits(id: StringName) -> bool:
+	return id != &"" and String(id).length() <= MAX_ID_LENGTH
+
+
+## The first MAX_CARGO ids of `ids` that fit (id_fits()), in order.
+static func fitting(ids: Array[StringName]) -> Array[StringName]:
+	var kept: Array[StringName] = []
+	for id: StringName in ids:
+		if kept.size() < MAX_CARGO and id_fits(id):
+			kept.append(id)
+	return kept
 
 
 ## Where a vehicle is now. Returns what the gate saw (&"departed", &"returned" or &"").
