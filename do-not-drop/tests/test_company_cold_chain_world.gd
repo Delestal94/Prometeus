@@ -453,7 +453,12 @@ func _test_root() -> void:
 	net.inventory.receive(_milk, 1, pallet)
 	level.clock.start(float(CompanyTuning.DAY_START_MIN) + 60.0 + CompanyTuning.COLD_SPOIL_MINUTES + 30.0)
 	tick.poll()
+	# The interrupted day writes nothing; the closed day does (save_closed_day()), through write_clocks().
+	var to_save: Node = STATE_SCRIPT.new()
+	ColdChainTick.write_clocks(level, to_save)
 	level.free()
+	CompanySave.save(to_save, CompanySave.DEFAULT_SLOT, DIR)
+	to_save.free()
 	var saved: Node = STATE_SCRIPT.new()
 	CompanySave.load_into(saved, CompanySave.DEFAULT_SLOT, DIR)
 	var clocks := ColdChain.new()
