@@ -102,6 +102,10 @@ const FORKLIFT_BEEP_DB: float = -17.5
 ## -40, same reasoning as the truck's own ENGINE_DB is engine_loop()'s raw level.
 const FORKLIFT_ENGINE_DB: float = -24.0
 const ROLLER_DOOR_DB: float = -1.0
+## The shed forklift (forklift_cues.gd, D-0606.c3): the same engine loop as the depot's, and the hydraulic
+## pump (self-normalised to -16 like it) 1 dB louder as it only runs while the forks move.
+const SHED_FORKLIFT_ENGINE_DB: float = -24.0
+const SHED_FORKLIFT_HYDRAULIC_DB: float = -23.0
 
 # The river under the narrow bridge (narrow_bridge_segment.gd). Positioned
 # 3D, so this is its level at the player's unit_size, same as the crossing
