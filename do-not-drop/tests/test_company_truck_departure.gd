@@ -153,7 +153,6 @@ func _test_root() -> void:
 	_clean()
 	var state: Node = root.get_node(^"/root/CompanyState")
 	state.call(&"reset")
-	state.set(&"day", DAY)
 	var level := (load(SCENE) as PackedScene).instantiate() as CompanyRoot
 	level.save_dir = DIR
 	root.add_child(level)
@@ -163,6 +162,9 @@ func _test_root() -> void:
 	if net == null:
 		_expect(false, "The company world has a net")
 		return
+	state.set(&"day", DAY)
+	level.clock.start(float(SupplierSchedule.arrival_minute()) - 8.0)
+	await process_frame
 	var departures: Array[Dictionary] = []
 	net.event_applied.connect(func(_seq: int, kind: StringName, data: Dictionary) -> void:
 		if kind == CompanyPallets.DEPARTED:
