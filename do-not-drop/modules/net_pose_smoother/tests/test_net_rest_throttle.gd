@@ -6,8 +6,9 @@ extends SceneTree
 ## drops to rest_interval; any move past max_distance or max_angle -- also a
 ## slow creep that adds up -- or a change in another watched property brings
 ## the full rate back in the same tick; a peer the synchronizer is made
-## visible to wakes it, the per-frame refresh (peer 0) doesn't; a watched
-## property the body doesn't have leaves the rate alone.
+## visible to wakes it, the per-frame refresh (peer 0) doesn't, nor hiding it
+## from a peer, nor a change made with QUIET_META set (a keepalive pulse); a
+## watched property the body doesn't have leaves the rate alone.
 
 const TICK: float = 1.0 / 60.0
 const ACTIVE: float = 1.0 / 60.0
@@ -73,6 +74,15 @@ func _initialize() -> void:
 	sync.visibility_changed.emit(5)
 	_expect(not throttle.is_resting() and is_equal_approx(sync.replication_interval, ACTIVE),
 		"A peer it was just made visible to wakes it, to get the pose at full rate")
+	_settle(throttle)
+	sync.public_visibility = false
+	sync.visibility_changed.emit(6)
+	_expect(throttle.is_resting(), "Hiding it from a peer (flag off, not public) doesn't wake it")
+	sync.set_meta(NetRestThrottle.QUIET_META, true)
+	sync.visibility_changed.emit(5)
+	sync.remove_meta(NetRestThrottle.QUIET_META)
+	_expect(throttle.is_resting(), "A change made with QUIET_META set (a keepalive pulse) doesn't wake it")
+	sync.public_visibility = true
 
 	var typo := NetRestThrottle.new()
 	typo.watched = [&"net_transfrom"]

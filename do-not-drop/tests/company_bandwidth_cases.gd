@@ -21,10 +21,12 @@ const FAR_BUDGET: float = 64.0 * KB
 ## The crew D-2002 sets the budgets for (4 ENet peers): every case must fit with it.
 const MEASURED_CREW: int = 4
 ## Whether the full crew (NetworkManager.MAX_PLAYERS) is held to each case's budget: the shed's
-## since its pose rate (D-2002.3); a trip's and two far vehicles' don't fit yet (D-2002.2:
-## over_budget and the culprits are printed, docs/rendimiento-pc.md says what would make them fit).
-## The test says so when one fits: hold it then.
-const FULL_CREW_FITS: Dictionary = {"shed": true, "trip": false, "far": false}
+## since its pose rate (D-2002.3); two far vehicles' since D-2002.4 (the fleet's vehicle at ~30/s,
+## seated riders at 15/s, care_state at 5/s, keepalive pulses that don't wake the boxes); a trip's
+## doesn't fit yet: the boxes the 6 left in the shed carry while loading (over_budget and the
+## culprits are printed, docs/rendimiento-pc.md says what would make it fit). The test says so when
+## one fits: hold it then.
+const FULL_CREW_FITS: Dictionary = {"shed": true, "trip": false, "far": true}
 ## Players aboard each vehicle out (roles-tripulacion.md §2.3-2.4, "Ruta 1-2"): a driver and a
 ## passenger who tends a box.
 const TRIP_RIDERS: int = 2

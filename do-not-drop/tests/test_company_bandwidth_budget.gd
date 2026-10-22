@@ -17,36 +17,43 @@ extends SceneTree
 ## 1-2"; a lone driver tends his own) and a full load (its definition's cargo_slots). A case's
 ## number is its worst client: the host in the shed or aboard any vehicle, every client
 ## (CASES.worst()). Every case must fit its budget with 4 players (MEASURED_CREW); the full crew
-## where FULL_CREW_FITS says it does (the shed), else its over_budget line and culprits are printed,
+## where FULL_CREW_FITS says it does (the shed, far), else its over_budget line and culprits are printed,
 ## not failed. The crowded trips (CROWDED_RIDERS aboard, the design's ceiling, one player left in
 ## the shed) are printed only.
 ## - Model (tests/bandwidth_model.gd, the framing test_net_bandwidth_budget counts with): the real
 ##   company world (company_root.tscn, solo) is opened and every MultiplayerSynchronizer in it
 ##   counted at the interval the world leaves it on: the shed's own once (the host's), a parked
-##   vehicle at its NetRestThrottle's rest, and the player's once per crew member (the host's own,
-##   the other clients' relayed by the host): on foot at the shed's pose rate
-##   (CompanyRoot.join_crew(), CompanyTuning.SHED_POSE_RATE_HZ: player_pose_rate), aboard
-##   (Player.net_in_vehicle) at the rate the world gives a rider (player_ride.gd apply_pose_rate():
-##   rider_pose_rate). The fleet's vehicle (CompanyFleet, World/Vehicles) is driven across the
-##   shed's gate and back by code with a full load staged: its synchronizer at the rate it sends
-##   while it moves, and the real trip_started and trip_closed the host's CompanyTripsView
-##   publishes. The load is package.tscn's synchronizer (BoxToPackage.PACKAGE_SCENE): the tended
-##   boxes moving, the rest riding still at the rest interval. Floats as 64-bit and ints as 32-bit
+##   vehicle at its NetRestThrottle's rest (waited for: is_resting()), and the player's once per
+##   crew member (the host's own, the other clients' relayed by the host): on foot at the shed's
+##   pose rate (CompanyRoot.join_crew(), CompanyTuning.SHED_POSE_RATE_HZ: player_pose_rate), seated
+##   aboard (Player.net_in_vehicle, a seat: the driver and the passenger with the box on the lap) at
+##   the rate the world gives a seated rider (player_ride.gd apply_pose_rate(), SEATED_POSE_RATE_HZ:
+##   rider_pose_rate; standing in a bay, the game's). The fleet's vehicle (CompanyFleet,
+##   World/Vehicles) is driven across the shed's gate and back by code with a full load staged: its
+##   synchronizer at the rate it sends while it moves (CompanyTuning.FLEET_POSE_INTERVAL_SEC, not
+##   its scene's), and the real trip_started and trip_closed the host's CompanyTripsView publishes.
+##   The load is package.tscn's synchronizer (BoxToPackage.PACKAGE_SCENE): the tended boxes moving,
+##   each publishing its care_state (the largest real one publish_care() leaves, of any trap) at the
+##   company's rate (BoxToPackage.tune()), an ON_CHANGE delta; the rest riding still at the rest
+##   interval. While vehicles are out, each player in the shed carries a box loading the next one,
+##   moving (D-2002.4, the caveats of auditor-red on D-2002.2). Floats as 64-bit and ints as 32-bit
 ##   (a pose in motion, a clock past 33 s) and a datagram at Steam's ceiling around every packet. On
 ##   top, the business events (CompanyNet's _apply_event, reliable, sized the same way) of a busy
 ##   line: every player does a business action a second (aboard, a delivery) plus the host's own
 ##   rules, each the size of the largest real units_moved the root publishes (a drop and a take
 ##   through CompanyNet), in a datagram of its own; and a trip event a second per vehicle out (the
 ##   larger real one: a ceiling, a trip sends two). Far, CompanyInterest's keepalive: a client in
-##   the shed gets every hidden body for its pulse, and every pulse (on and off) wakes a box riding
-##   still (NetRestThrottle on visibility_changed) for the riders who see it. Nothing in the world
+##   the shed gets every hidden body for its pulse, each client in the shed on its own clock, and a
+##   pulse wakes a box riding still for the riders as many times as a real box's NetRestThrottle
+##   wakes for WorldCellInterest.pulse_visibility() (none since D-2002.4). Nothing in the world
 ##   sends a property of more than 64 bytes every tick.
 ## - Measured, every case: that many ENet peers on localhost in this process (a SceneMultiplayer
 ##   each), a real player per peer on every side (player.tscn, joined to the crew as the company
 ##   world does it, standing still; a rider's owner sends as one, net_in_vehicle) and a CompanyNet;
-##   out of the shed, the vehicles out (their definition's scene) and their loads (package.tscn) on
-##   every side, the host's reaching the clients that see them as CompanyInterest decides. The host
-##   publishes real units_moved at the busy rate; read as the network overlay reads LAN (NetStats,
+##   out of the shed, the vehicles out (their definition's scene at the fleet's interval), their
+##   loads (package.tscn; the tended ones publish the measured care_state) and the boxes carried in
+##   the shed on every side, the host's reaching the clients that see them as CompanyInterest
+##   decides. The host publishes real units_moved at the busy rate; read as the network overlay reads LAN (NetStats,
 ##   N-216). Every client stays under its own model's ceiling and, where held, the worst under the
 ##   budget; the worst got over half of its model's data (it did flow; skipped under two frames of
 ##   the fastest pose), and every client applies every event. Trip events and the keepalive are only
@@ -468,11 +475,11 @@ func _care_and_pulse() -> Dictionary:
 	return found
 
 
-## What WorldCellInterest does to `sync` for a keepalive pulse to PULSE_PEER, on or off.
+## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to PULSE_PEER, on or off.
 func _pulse(sync: MultiplayerSynchronizer, show: bool) -> void:
 	# Solo, SceneMultiplayer has no such peer to update and says so: only the throttle's answer counts here.
 	Engine.print_error_messages = false
-	sync.set_visibility_for(PULSE_PEER, show)
+	WorldCellInterest.pulse_visibility(sync, PULSE_PEER, show)
 	Engine.print_error_messages = true
 
 

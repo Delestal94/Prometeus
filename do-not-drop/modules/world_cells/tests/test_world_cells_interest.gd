@@ -16,7 +16,8 @@ extends SceneTree
 ## - a peer viewers_of lists, and one without an anchor, get it however far;
 ## - keepalive: a hidden peer is shown the body for a pulse every keepalive_sec, as long as two of
 ##   its replication intervals when that is longer than keepalive_pulse_sec, and an update reaches
-##   it; the far copy stays hidden; after the pulse, nothing more arrives;
+##   it; the far copy stays hidden; after the pulse, nothing more arrives; the pulse shows and hides
+##   it with QUIET_META set (a NetRestThrottle on it doesn't wake), and leaves none;
 ## - a far copy shows again (solid again, its area's layers back) only after an update put it back
 ##   within the load radius: walking up to the stale copy while the body is far keeps it hidden; a
 ##   copy no update ever reached (a late joiner's, where the scene put it, next to its player) stays
@@ -241,6 +242,11 @@ func _test_keepalive(host_sync: MultiplayerSynchronizer, far_id: int) -> void:
 	# Two replication intervals (0.4 s) are longer than keepalive_pulse_sec: the pulse lasts those.
 	host_sync.replication_interval = 0.2
 	var hidden_since: float = _now
+	var quiet: Array = []
+	var listen: Callable = func(peer: int) -> void:
+		if peer == far_id:
+			quiet.append(bool(host_sync.get_meta(WorldCellInterest.QUIET_META, false)))
+	host_sync.visibility_changed.connect(listen)
 	_now = hidden_since + 1.0
 	_interest(0).step(_now)
 	_expect(not host_sync.get_visibility_for(far_id), "no pulse before keepalive_sec")
@@ -258,6 +264,9 @@ func _test_keepalive(host_sync: MultiplayerSynchronizer, far_id: int) -> void:
 	_now += 0.35
 	_interest(0).step(_now)
 	_expect(not host_sync.get_visibility_for(far_id), "the pulse ends after two replication intervals")
+	host_sync.visibility_changed.disconnect(listen)
+	_expect(quiet == [true, true] and not host_sync.has_meta(WorldCellInterest.QUIET_META),
+		"the pulse shows and hides the body with QUIET_META set, and leaves none (%s)" % str(quiet))
 	host_sync.replication_interval = 0.0
 	await _flow(0.3)
 	var after_pulse: int = _received[2]

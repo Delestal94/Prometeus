@@ -40,7 +40,11 @@ extends Node
 ## for over half of that (9 min at 60 fps) could be ignored for minutes once it is
 ## back. So every `keepalive_sec` a hidden body is shown to that peer for
 ## `keepalive_pulse_sec` (at least two of its replication intervals): a handful of
-## updates every 20 s, nothing like a stream.
+## updates every 20 s, nothing like a stream. A pulse shows and hides the body
+## with the synchronizer's meta QUIET_META set (pulse_visibility()): a sender that
+## would speed up for a peer it is shown to (net_pose_smoother's NetRestThrottle
+## reads the same meta) leaves its rate alone; the pulse already lasts two of its
+## intervals.
 ##
 ## On a client (`hide_far_copies`), the copy of a tracked body the host owns is hidden
 ## and taken out of physics (visible = false, and the collision layer and mask of
@@ -65,6 +69,9 @@ extends Node
 
 ## Client: a copy this node hid shows again, its collision layers given back.
 signal copy_shown(body: Node3D)
+
+## The meta a keepalive pulse sets on a synchronizer while it changes its visibility (pulse_visibility()).
+const QUIET_META: StringName = &"net_rest_quiet"
 
 ## Only the cell size and the two radii are read.
 var grid := WorldCellGrid.new()
@@ -284,9 +291,17 @@ func _decide(sync: MultiplayerSynchronizer, entry: _Entry, peers: Array, anchors
 		elif now - float(entry.hidden_at[peer]) >= keepalive_sec:
 			entry.hidden_at[peer] = now
 			entry.pulse_until[peer] = now + maxf(keepalive_pulse_sec, 2.0 * sync.replication_interval)
+			pulse_visibility(sync, peer, true)
 		var want: bool = near or entry.pulse_until.has(peer)
 		if sync.get_visibility_for(peer) != want:
 			sync.set_visibility_for(peer, want)
+
+
+## A keepalive pulse's start (`show`) or end for `peer`: its visibility flag, set with QUIET_META on.
+static func pulse_visibility(sync: MultiplayerSynchronizer, peer: int, show: bool) -> void:
+	sync.set_meta(QUIET_META, true)
+	sync.set_visibility_for(peer, show)
+	sync.remove_meta(QUIET_META)
 
 
 func _is_near(entry: _Entry, peer: int, anchor: Variant, viewers: Array) -> bool:
@@ -317,7 +332,7 @@ func _end_pulses(now: float) -> void:
 				continue
 			entry.pulse_until.erase(peer)
 			if connected.has(peer) and not bool(entry.near.get(peer, false)):
-				typed.set_visibility_for(peer, false)
+				pulse_visibility(typed, peer, false)
 
 
 ## The client's side, the same hysteresis as the host's: hides past the unload radius, or past the
