@@ -432,8 +432,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   cliente de texto de hasta 64, una zona de `data/zones/` y una casa del mapa (`HouseAddresses`) o `<zona>_house_<n>`
   de esa zona con `n` de 1 a 12, de 1 a 3 productos del catálogo distintos con `qty` entera 1..24, requisitos de
   `data/order_requirements/` sin repetir, `created_min < due_min` enteros, paga entera 0..10⁹ y estado conocido (`open`
-  en un evento). Un `order_added` de un id que el libro ya tiene, o con el libro lleno (`MAX_ORDERS` = 4096), no se
-  aplica; un `order_expired` de un pedido desconocido, cerrado, ya atrasado o que a ese `minute` todavía no venció,
+  en un evento). Un `order_added` de un id que el libro ya tiene, o con el libro lleno (`MAX_ORDERS` = 256 desde D-0813.1), no
+  se aplica; un `order_expired` de un pedido desconocido, cerrado, ya atrasado o que a ese `minute` todavía no venció,
   tampoco. En el host `publish()` devuelve `false` sin gastar `seq` (y `push_error`); en un cliente el evento no se
   aplica y el peer pide snapshot (§3).
 - **Join tardío y huecos:** parte `orders` del snapshot (`{orders, now_min}`, `OrderBook.to_dict()`), que `CompanyNet`
@@ -446,21 +446,31 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Test: `test_company_orders_net` (solo, la parte del snapshot, y host + cliente + uno que entra tarde por ENet);
   `test_order_book` suma `overdue()` y `expire_one()`; `test_company_layout_net` ya lee las ramas nuevas de
   `_apply_state()`.
+- **El mundo (D-0813.1):** el host planea cada día nuevo en el `OPENING` (`CompanyDayOrders.plan()` →
+  `CompanyDayOrders.plan()`: `day_seed(CompanySeed.ORDERS)`, tripulación de la sesión, zonas sin portón o con todos los
+  suyos abiertos, catálogos; una vez por día, así un `OPENING` repetido por congelar el galpón no replanea) y el
+  `BusinessTick` suma el paso `orders` después de `day_cycle` (`CompanyDayOrders.poll()`: `poll(net,
+  floor(shed_minute()))` solo en `OPENING` y `OPERATING`). Cada peer emite `EventBus.order_added` desde
+  `event_applied` (nunca por un snapshot ni desde las señales del libro). **Poda:** el `day_phase` que abre un día nuevo
+  (`DayCycle.apply_phase()`, `is_new`) llama `CompanyOrdersNet.prune_closed()` adentro del evento, en cada peer: el
+  libro suelta los entregados, fallados y cancelados (todos de días anteriores) y se queda con los abiertos, armados,
+  en camino y atrasados. Determinista porque fase, día y libro son los mismos en todos en cada `seq` (eventos y
+  snapshot), sin `kind` nuevo ni cambio de protocolo. `MAX_ORDERS` baja a 256. `CompanyTrips` y `OrderBoxLink` siguen
+  con su libro (el bot del día le copia los pedidos al de `CompanyTrips`); el tablero de stock lee el compartido, solo
+  los pedidos del día (`only_today`, por el id `d<día>_`). Con el libro lleno `poll()` no trae pedidos pero sigue
+  mandando los vencimientos. Test: `test_company_orders_world`.
 - **Pendiente:**
-  - **D-0813.1**: el mundo de la empresa juega los pedidos: `CompanyRoot` planea el día en el `OPENING` del host
-    (semilla del día, tripulación, zonas abiertas, catálogos), suma `orders.poll` al `BusinessTick` con
-    `DayCycle.shed_minute()`, emite `EventBus.order_added` en cada peer desde `event_applied` (nunca al aplicar un
-    snapshot) y no desde las señales del libro (salen dentro de `_apply_state()`), y el bot del día toma sus pedidos
-    de ahí. `CompanyTrips` y `OrderBoxLink` siguen con su libro hasta el punto siguiente;
   - lo que `CompanyTrips` hace directo sobre su libro (`mark_out` al salir, `close` al volver) y el armado
     (`order_packed`) pasan a eventos con las filas 15, 17, 19 y 20 (D-0715.b, D-0716, D-0302, D-0815): un cambio
     del libro compartido que no sea evento queda solo en el host hasta el próximo snapshot (hoy no pasa: ningún
-    vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro;
+    vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro. **El PR que traiga
+    esos eventos sube `PROTOCOL_VERSION`**: con pedidos que se cierran, la poda del `OPENING` cambia lo que hace un
+    `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
-  - podar del libro los pedidos cerrados de días viejos y guardarlo con el día (D-0206), y bajar `MAX_ORDERS`: hoy
-    crece hasta 16 por día y un libro lleno (4096) pesa 2,4 MB de los 4 MB del snapshot (137 KB comprimido) y tarda
-    230 ms en validarse en el cliente (medido; `revisar/D-0813.md`).
+  - guardar el libro con el día (D-0206). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
+    poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
+    sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
 
 ## 11. Lo construido (D-0715.b): el paquete de la caja encintada
 

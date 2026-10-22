@@ -12,8 +12,11 @@ extends SceneTree
 ##                       handful with units_take through CompanyNet
 ##   shelve_stock    ok  carries the pallets to the slots labelled for each product with
 ##                       units_store (a slot labelled for another product refuses wrong_product)
-##   take_orders     ok  OrderGenerator makes the day's orders from a seed and they enter the
-##                       world's OrderBook (CompanyTrips.book), all OPEN, each with its fields
+##   take_orders     ok  the world brings the day's orders in (D-0813.1): planned at the OPENING
+##                       from the company's seed, published by the business tick into the shared
+##                       book (CompanyNet.orders.book) as the clock reaches the last arrival; the
+##                       bot copies them, OPEN, into CompanyTrips' own book, the one packing and
+##                       dispatch use until those are events, each with its fields
 ##   pack_boxes      ok  at a packing table: units from the shelves by units_take, box size by
 ##                       BoxDispenser, products in, padding, label, seals, tape; order is PACKED
 ##   dispatch        ok  DispatchZone ties the sealed box to its order, DispatchRules clears the
@@ -42,8 +45,8 @@ extends SceneTree
 ## breaks, assembly_errors, stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
 ## ok, else `BOT_FAIL stages_missing=<n>` (3 until drive, deliver and return exist).
 ## Exit codes: 0 BOT_OK, 1 any BOT_FAIL, 3 hard wall-clock timeout (`BOT_TIMEOUT`).
-## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders, the peers come
-## with D-2017) --hard=<seconds> (the hard timeout, default 120).
+## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders through
+## CompanyRoot.order_crew, the peers come with D-2017) --hard=<seconds> (the hard timeout, default 120).
 ## The company saves into a temp folder (user://bot_company_day), never the game's slot.
 ## The pure parts (stage_names, stage_line, summary_lines, final_line), the world helpers
 ## (open_world, wait_opening, close_world) and the stages (new_context, run_stage) are static:
@@ -66,12 +69,14 @@ const DEFAULT_PLAYERS: int = 2
 const DEFAULT_HARD_SECONDS: float = 120.0
 
 const PRODUCTS_DIR: String = "res://data/products/"
-const REQUIREMENTS_DIR: String = "res://data/order_requirements/"
 const ZONE_DIR: String = "res://data/zones/"
 const GATE_DIR: String = "res://data/gates/"
 const VAN_PATH: String = "res://data/vehicles/van_classic.tres"
-## The seed of the bot's day of orders: the same orders on every run.
+## The bot's company seed (CompanyState.company_seed, D-0246): the same day of orders on every run.
 const ORDERS_SEED: int = 2016
+## How long (real msec) the business tick may take to bring the day's orders in before take_orders
+## fails: it runs every 250 ms.
+const ORDER_WAIT_MSEC: int = 3000
 ## The bot stands this far from a station's spot (meters) when it uses it, well inside the reach.
 const STAND_OFFSET: Vector3 = Vector3(0.0, 0.5, 1.0)
 ## Frames a phase change may take (DayCycle moves one step per poll()) before the stage fails.
@@ -136,11 +141,17 @@ static func final_line(results: Dictionary) -> String:
 # --- The world (static: the test drives them on its own tree) ---
 
 
-## The company world with its save folder pointed at a temp dir, before it enters the tree.
-static func open_world(tree: SceneTree) -> Node3D:
+## The company world with its save folder pointed at a temp dir, before it enters the tree, on a new
+## company of seed ORDERS_SEED (the same orders every run) whose orders are planned for `players` (0:
+## the session's crew, one).
+static func open_world(tree: SceneTree, players: int = 0) -> Node3D:
 	clean_save_dir()
+	var state: Node = tree.root.get_node_or_null(^"/root/CompanyState")
+	if state != null:
+		state.call(&"new_company", "", ORDERS_SEED)
 	var level := (load(SCENE) as PackedScene).instantiate() as CompanyRoot
 	level.save_dir = SAVE_DIR
+	level.order_crew = players
 	tree.root.add_child(level)
 	tree.current_scene = level
 	await tree.process_frame
@@ -196,7 +207,7 @@ func _run() -> void:
 	_hard_seconds = float(_arg("hard", str(DEFAULT_HARD_SECONDS)))
 	create_timer(_hard_seconds, true, false, true).timeout.connect(_on_hard_timeout)
 
-	var level: Node3D = await open_world(self)
+	var level: Node3D = await open_world(self, _players)
 	if not await wait_opening(self, level, OPENING_WAIT_SECONDS):
 		close_world(self, level)
 		_end("BOT_FAIL no_opening", 1)
@@ -278,7 +289,7 @@ static func run_stage(
 		"shelve_stock":
 			return await _shelve_stock(tree, level as CompanyRoot, ctx)
 		"take_orders":
-			return _take_orders(level as CompanyRoot, ctx)
+			return await _take_orders(tree, level as CompanyRoot, ctx)
 		"pack_boxes":
 			return await _pack_boxes(tree, level as CompanyRoot, ctx)
 		"dispatch":
@@ -368,21 +379,32 @@ static func _shelve_stock(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) 
 	return _ok() if shelved > 0 else _fail("nothing_shelved")
 
 
-## The day's orders from the seed, in the world's order book.
-static func _take_orders(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
+## The day's orders as the world brings them in (D-0813.1): the host's world planned them at the OPENING
+## from the company's seed, and its business tick publishes each one into the book every peer shares
+## (CompanyNet.orders.book) once the shed's minute reaches it. The bot moves the clock so the shed's minute
+## is the last arrival and waits for the tick (the ones already past due are LATE there by then). Then it
+## copies them into CompanyTrips' own book, OPEN as OrderBook.add() leaves them: the book packing and
+## dispatch work on, which doesn't become the shared one until marking packed, out and delivered are events.
+static func _take_orders(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	if level.trips == null:
 		return _fail("no_trips")
-	var book: OrderBook = level.trips.book
-	var zones: Array[ZoneDefinition] = []
-	for zone: ZoneDefinition in CompanyRoot.load_zones():
-		if zone.is_open_at_start():
-			zones.append(zone)
-	var day: int = level.day_cycle.current_day()
-	var orders: Array[Dictionary] = OrderGenerator.generate_day(
-		ORDERS_SEED, day, int(ctx["players"]), zones, _products(), _requirements(),
-		CompanyTuning.ORDER_ITEMS_MAX, level.net.company)
-	if orders.is_empty():
+	var shared: OrderBook = level.net.orders.book
+	if shared.size() + level.net.orders.planned().size() == 0:
 		return _fail("no_orders")
+	if level.day_cycle.is_frozen():
+		return _fail("shed_frozen")
+	var lag: float = level.clock.minute_now() - level.day_cycle.shed_minute()
+	if not level.clock.start(float(CompanyTuning.ORDER_LAST_ARRIVAL_MIN) + lag):
+		return _fail("clock_not_started")
+	var start: int = Time.get_ticks_msec()
+	while not level.net.orders.planned().is_empty() and Time.get_ticks_msec() - start < ORDER_WAIT_MSEC:
+		await tree.process_frame
+	if not level.net.orders.planned().is_empty():
+		return _fail("orders_not_in")
+	var orders: Array[Dictionary] = shared.open_orders()
+	if orders.is_empty() or orders.size() != shared.size():
+		return _fail("shared_book_size")
+	var book: OrderBook = level.trips.book
 	for order: Dictionary in orders:
 		if not Order.validate(order).is_empty():
 			return _fail("bad_order")
@@ -644,16 +666,6 @@ static func _products() -> Dictionary:
 			var def := load(PRODUCTS_DIR + file) as ProductDefinition
 			if def != null:
 				found[def.id] = def
-	return found
-
-
-static func _requirements() -> Dictionary:
-	var found: Dictionary = {}
-	for file: String in DirAccess.get_files_at(REQUIREMENTS_DIR):
-		if file.ends_with(".tres"):
-			var req := load(REQUIREMENTS_DIR + file) as OrderRequirement
-			if req != null:
-				found[req.id] = req
 	return found
 
 

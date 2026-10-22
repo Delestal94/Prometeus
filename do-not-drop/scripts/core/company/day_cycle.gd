@@ -28,8 +28,9 @@ extends Node
 ##
 ## The day, in order:
 ##   OPENING    open_day() / next_day(): the clock restarts at 08:00 and the day is company.day (set
-##              on every peer as the event is applied). Lasts OPENING_REAL_SECONDS real seconds (the
-##              supplier shows up); the clock already runs.
+##              on every peer as the event is applied), and the order book every peer shares drops its
+##              closed orders (CompanyOrdersNet.prune_closed(), D-0813.1). Lasts OPENING_REAL_SECONDS
+##              real seconds (the supplier shows up); the clock already runs.
 ##   OPERATING  until the world clock reads DAY_END_MIN (20:00).
 ##   CLOSING    from 20:00 on. S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0.
 ##              It lasts at least one poll, so what listens to company_day_closing (rent, D-0320)
@@ -210,6 +211,9 @@ func apply_phase(data: Dictionary) -> bool:
 	if is_new:
 		match phase:
 			Phase.OPENING:
+				# Inside the event, so every peer's order book drops the same orders (D-0813.1).
+				if _has_net():
+					net.orders.prune_closed()
 				_pending_facts.append([&"company_day_started", [day]])
 				var notice: String = str(opening_notice.call()) if opening_notice.is_valid() else ""
 				if not notice.is_empty():

@@ -167,6 +167,8 @@ var save_dir: String = CompanySave.SAVE_DIR
 ## The arguments CompanyDevFlags reads on the host when the world comes up (--company-day=, --district=,
 ## --money=, D-0238): the command line's, unless a test hands its own before adding the root.
 var dev_args: PackedStringArray = OS.get_cmdline_user_args()
+## Host: the crew the day's orders are planned for; 0, the session's (the day bot's --players sets it).
+var order_crew: int = 0
 ## The session and the CompanyState this world plays with. Unset, the NetworkManager and the
 ## CompanyState autoloads, found by path when the world comes up (N-919). Two peers in one process
 ## (a test) hand each root its own before adding it, as they do save_dir.
@@ -294,8 +296,8 @@ func _add_day(state: COMPANY_STATE) -> void:
 
 
 ## Host (solo too): the business tick (D-0232) runs the host's rules at CompanyTuning.BUSINESS_TICK_HZ,
-## DayCycle.poll first; the cycle's own poll in _process goes off on every peer (a client's poll does
-## nothing anyway).
+## DayCycle.poll first, then the day's orders (D-0813.1); the cycle's own poll in _process goes off on
+## every peer (a client's poll does nothing anyway).
 func _add_business_tick() -> void:
 	day_cycle.set_process(false)
 	if not net.is_host():
@@ -304,6 +306,7 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
+	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -483,12 +486,19 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 ## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
 ## units and layout events itself (CompanyShed.follow(), D-0910).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
-## the summary takes no other day_phase until next_day().
+## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
 			save_closed_day()
+		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
+			CompanyDayOrders.plan(net, _hosted_state, day_cycle.current_day(),
+				order_crew if order_crew > 0 else _crew_ids().size())
 		_publish_presence()
+	elif kind == CompanyOrdersNet.ADDED:
+		var bus: Node = _event_bus()
+		if bus != null:
+			bus.emit_signal(&"order_added", StringName((data["order"] as Dictionary)["id"]))
 
 
 ## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
@@ -815,27 +825,13 @@ func _add_builder() -> void:
 	builder.busy = func() -> bool: return supplier_board != null and supplier_board.is_open()
 
 
-## The stock list (D-0612.b): I / d-pad right opens it on any peer. The order book is the host's
-## (trips.book until D-0813.1), so only the host marks what the pending orders are missing; the
-## supplier calendar holds only real orders (D-0603.b.2), so what is ordered counts as on the way.
+## The stock list (D-0612.b): I / d-pad right opens it on any peer (StockBoard.for_company(), D-0813.1).
 func _add_stock_board() -> void:
 	if net == null:
 		return
-	stock_board = StockBoard.new()
-	stock_board.name = "StockBoard"
+	stock_board = StockBoard.for_company(net, supplier_schedule, func() -> Node: return player,
+		func() -> bool: return builder != null and builder.is_building())
 	add_child(stock_board)
-	stock_board.setup(net)
-	stock_board.schedule = supplier_schedule
-	stock_board.real_calendar = true
-	stock_board.book_of = func() -> OrderBook:
-		return trips.book if trips != null else null
-	stock_board.player_of = func() -> Node:
-		return player
-	stock_board.busy = func() -> bool:
-		return builder != null and builder.is_building()
-	var catalog: CompanyCatalog = CompanyCatalog.load_all()
-	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
-		stock_board.products[id] = catalog.product(id)
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,

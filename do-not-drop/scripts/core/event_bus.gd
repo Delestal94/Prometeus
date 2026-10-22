@@ -182,7 +182,8 @@ signal company_day_closing(day: int)
 ## The day's closing summary is ready for the closing screen (DayCycle, D-0203):
 ## earnings, costs, deliveries and failures as plain values.
 signal company_day_summary(day: int, summary: Dictionary)
-## A customer order came in (OrderBook, D-0210/D-0801).
+## A customer order came in (D-0801): CompanyRoot emits it on every peer, once per order, from
+## CompanyNet's order_added event (D-0813.1); a snapshot's orders don't emit it.
 signal order_added(order_id: StringName)
 ## A box was packed and sealed for that order (OrderBook.mark_packed).
 signal order_packed(order_id: StringName)
