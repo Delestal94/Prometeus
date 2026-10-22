@@ -5,13 +5,15 @@ extends RefCounted
 ## (SeatPoint.interact, as the host does), the driving actions are held down (Input, read by
 ## VehicleInputComponent) and CompanyTrips, which follows the node every physics tick, sees it cross.
 ## Out: the pedal until the van's Trip starts; back: the brake, which stops it and then reverses,
-## until the Trip closes. Each waits at most DRIVE_TICKS and lets the van stop afterwards.
+## until the Trip closes. Each waits at most DRIVE_TICKS and then stops the van with the handbrake.
+## The physics runs in real time (60 ticks a second): the two drives take a few seconds each.
 
 ## The driver's seat of the van scene (as test_company_van_drive.gd) and the door it is boarded by.
 const SEAT_PATH: NodePath = ^"CabinInterior/DriverEyePoint/InteractionArea"
 const DRIVER_DOOR: StringName = &"cab_left"
 const ACCELERATE: StringName = &"drive_accelerate"
 const BRAKE: StringName = &"drive_brake"
+const HANDBRAKE: StringName = &"drive_handbrake"
 ## Physics ticks the van may take to cross the gate (out or back in) before the stage fails.
 const DRIVE_TICKS: int = 900
 ## Physics ticks the van may take to stop once the pedal is let go.
@@ -86,9 +88,11 @@ static func hold_until(tree: SceneTree, action: StringName, done: Callable) -> b
 	return reached
 
 
-## Nobody on the pedal: the van brakes (vehicle.gd's idle brake) until it stands, at most STOP_TICKS.
+## Off the pedal, the handbrake held until the van stands (at most STOP_TICKS), then let go.
 static func stop(tree: SceneTree, van: VehicleBody3D) -> void:
+	Input.action_press(HANDBRAKE)
 	for _tick: int in STOP_TICKS:
 		await tree.physics_frame
 		if van.freeze or van.linear_velocity.length() < STOPPED_MPS:
-			return
+			break
+	Input.action_release(HANDBRAKE)

@@ -690,7 +690,8 @@ static func _close_day(tree: SceneTree, level: CompanyRoot) -> Dictionary:
 		return _fail("clock_not_started")
 	# The opening's 5 s of real time are skipped; the clock jump above is the same kind of skip.
 	cycle.ticks = func() -> int: return Time.get_ticks_msec() + SKIP_OPENING_MSEC
-	var seen: Array[int] = []
+	# The phase it starts from too: after a real drive the day may be OPERATING already.
+	var seen: Array[int] = [int(cycle.phase())]
 	for _frame: int in PHASE_FRAMES:
 		cycle.poll()
 		if seen.is_empty() or seen[seen.size() - 1] != int(cycle.phase()):

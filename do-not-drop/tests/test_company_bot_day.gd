@@ -171,6 +171,7 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 			"close_day":
 				_check_closed(root_level)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
+	# drive and return move the real van in real-time physics (about 2 s each).
 	_expect(seconds < 15.0, "The stages run in a bounded time (took %.1f s)" % seconds)
 
 
