@@ -128,6 +128,9 @@ var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
 var clock: GameClock
 var day_cycle: DayCycle
+## The closing screen of the day (D-0508.3): every peer shows what the host closed, only the host's
+## "continue" moves the day on.
+var summary_panel: DaySummaryPanel
 ## Host only (null on a client): the host's rules at a fixed rate (D-0232).
 var business_tick: BusinessTick
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
@@ -192,6 +195,7 @@ func _ready() -> void:
 	_add_trips()
 	_add_crew()
 	_add_builder()
+	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()
 	_report_level_ready.call_deferred()
@@ -277,6 +281,45 @@ func _open_company_day() -> void:
 	if not is_inside_tree() or _host_gone or not net.is_host() or _hosted_state == null:
 		return
 	day_cycle.open_day(_hosted_state.day)
+
+
+## The closing screen (D-0508.2) on its own layer, opened by the day's SUMMARY phase on every peer.
+## EventBus by path: this script compiles before the autoloads in the --script tests (N-919).
+func _add_summary_panel() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "DaySummaryLayer"
+	add_child(layer)
+	summary_panel = DaySummaryPanel.new()
+	summary_panel.name = "DaySummaryPanel"
+	layer.add_child(summary_panel)
+	summary_panel.continued.connect(_on_summary_continued)
+	var bus: Node = _event_bus()
+	if bus != null:
+		bus.connect(&"company_day_summary", _on_day_summary)
+		bus.connect(&"company_day_started", _on_day_started)
+
+
+## The EventBus autoload by path (the single lookup of this script; N-919).
+func _event_bus() -> Node:
+	return get_node_or_null(^"/root/EventBus")
+
+
+func _on_day_summary(_day: int, summary: Dictionary) -> void:
+	if summary_panel != null and not _host_gone:
+		summary_panel.open(summary)
+
+
+## The next day opened (the host pressed continue): every copy of the closing screen goes away.
+func _on_day_started(_day: int) -> void:
+	if summary_panel != null and summary_panel.visible:
+		summary_panel.hide()
+
+
+## "Continue" on the closing screen: the host opens the next day; a client only closes its copy and
+## waits for the host's OPENING event.
+func _on_summary_continued() -> void:
+	if day_cycle != null and net != null and net.is_host():
+		day_cycle.next_day()
 
 
 ## The business side of the world, before the world itself: CompanyNet (_add_net()) and, on a
@@ -377,6 +420,11 @@ func host_day_seen() -> Dictionary:
 ## host's company behind: its CompanyState goes back to what it had before the snapshot
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
+	var bus: Node = _event_bus()
+	if bus != null and bus.is_connected(&"company_day_summary", _on_day_summary):
+		bus.disconnect(&"company_day_summary", _on_day_summary)
+	if bus != null and bus.is_connected(&"company_day_started", _on_day_started):
+		bus.disconnect(&"company_day_started", _on_day_started)
 	if _hosted_state != null:
 		if not save_closed_day():
 			save_interrupted_day()
