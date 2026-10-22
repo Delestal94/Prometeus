@@ -215,9 +215,10 @@ Se anota en una decisión nueva del día.
 **Hecho cuando:** la decisión está documentada y el número está en `world_tuning.gd`.
 
 ### D-0318 · Física lejos del jugador — B · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — con D-0318.1: las cajas del modo Empresa (los paquetes de `box_sealed`, D-0715.b) quedan registradas en `CompanyCells` en el host.
 **[~] Parcial (2026-10-19, PR pendiente)** — `WorldCellStreamer.track_body/untrack_body/is_body_frozen` (módulo `world_cells`): un `RigidBody3D` registrado se congela (`FREEZE_MODE_STATIC`, velocidades guardadas) mientras su celda no está instanciada y se descongela al volver; lo que el juego ya tenía congelado se respeta. `modules/world_cells/tests/test_world_cells_freeze.gd`.
 **Subtareas abiertas:**
-- **D-0318.1** Registrar las cajas sueltas del modo Empresa (`CompanyCells.track_body`) cuando existan las cajas del galpón/calle (D-0703, D-0214): hoy ningún nodo las suelta en el mapa.
+- [x] **D-0318.1** (2026-10-22, PR pendiente, con D-0715.b) Las cajas del modo Empresa son los `DeliveryPackage` que deja `box_sealed` (D-0715.b, `World/Packages`): en el host, `CompanyRoot._on_package_added()` las registra con `cells.track_body()` y las suelta con `untrack_body()` al salir del árbol; la copia de un cliente sigue a la del host y no se registra. El galpón está en celdas fijas, así que adentro nunca se congelan. `test_company_root` (corre en el galpón, se congela lejos, se descongela al salir del árbol). Falta que entren a `company_loose_box` (D-0316.3).
 **Depende de:** D-0303
 **Qué:** las cajas sueltas en celdas sin ancla se congelan (`freeze = true`) con su estado guardado, y se
 descongelan al volver a cargar la celda, para que no se pierdan cuerpos que caen por un piso no cargado.

@@ -397,13 +397,40 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   tiene que sacar algo más (p. ej. el armado de trozos `_take_chunk`).
 - Test: `test_company_shared_table` (y `test_company_layout_net` lee las ramas `CompanyTableNet.*`).
 - **Pendiente:**
-  - **D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10: sincronizador
-    invisible hasta mandar el `seq`, nombre `node_name`), validando antes `pos`, `basis`, `quality`, `trap` y
-    `node_name` (hoy nadie los lee); las cajas vivas en el snapshot con `update_visibility` después del
-    último trozo; `OrderBook` → armado (`order_packed`) cuando el libro de pedidos esté en `CompanyNet`; y
-    `CompanyTableNet._serial` guardado con el día (D-0206);
+  - ~~**D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10), validando
+    antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §10); de D-0715.b quedan las cajas vivas
+    en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
+    cuando el libro de pedidos esté en `CompanyNet` y `CompanyTableNet._serial` guardado con el día (D-0206);
   - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
     `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
   - guardar las mesas con el día (D-0206): hoy un día cargado trae unidades en `box:<id>` sin mesa.
+
+## 10. Lo construido (D-0715.b): el paquete de la caja encintada
+
+- **Cada peer crea el mismo `DeliveryPackage`** al aplicar `box_sealed` (fila 15, protocolo 41; el evento no
+  cambia): `CompanyPackages` (`scripts/core/company/company_packages.gd`, `CompanyTableNet.packages`) lo arma
+  con `BoxToPackage.build` desde la caja encintada que tiene ese peer y le pone lo que dice el host: nombre
+  `node_name`, `package_id`, trampa, absorción, la pose `pos`/`basis` (espacio del mundo) y calidad e
+  intensidad en la meta `BoxToPackage.META_TRAP_PLAN`. Va bajo `parent`, el mismo camino en todos los peers
+  (`CompanyRoot`: `World/Packages`); sin `parent` no se crea nada y el evento se aplica igual.
+- **Validación (reglas 5 y 6), antes del primer cambio:** `node_name` = `Package_<package_id>`, nombre de
+  nodo válido y libre bajo `parent`; `pos` `Vector3` finito y `basis` `Basis` que juntos pasan
+  `RpcGuard.finite_transform`; `trap` el nombre exacto de un archivo de `data/traps/`; `quality` en
+  0..`QUALITY_MAX`; `trap_intensity` y `absorption` en 0..1. El paquete se construye (fuera del árbol)
+  antes de mover plata o unidades; si algo no encaja, no cambia nada y el peer espera un snapshot.
+- **Regla 10 en el host:** el sincronizador entra con un filtro (`add_visibility_filter`, se suma al de
+  `package.gd`) que no deja pasar a nadie hasta que el evento salió (se abre diferido: `CompanyNet` lo manda
+  apenas termina de aplicarlo) y después solo a los peers a los que fue ese evento (conectados y con su
+  mundo listo, como los destinos de `CompanyNet`). Un peer que se va o cuyo mundo vuelve a levantar sale de
+  esa lista. Así el que entra tarde no recibe un sincronizador sin nodo (sin el filtro:
+  `Node not found: ".../Packages/Package_box_1/MultiplayerSynchronizer"`).
+- **Física lejos (D-0318.1):** el host registra cada paquete en `CompanyRoot.cells` (`track_body`) y lo
+  suelta al salir del árbol.
+- Test: `test_company_sealed_package` (solo, campos malos, host + cliente ENet y un tercero que entra tarde)
+  y `test_company_root` (celdas).
+- **Pendiente:** las cajas vivas en el snapshot (con `update_visibility` después del último trozo: hasta
+  entonces el que entra tarde no ve las cajas ya encintadas, y un cliente cuya copia no aceptó el
+  `box_sealed` recibe el sincronizador sin el nodo); `order_packed`; `_serial` con el día (D-0206); que
+  entren a `company_loose_box` (D-0316.3, regla 11).

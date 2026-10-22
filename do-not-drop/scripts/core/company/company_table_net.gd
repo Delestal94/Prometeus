@@ -37,9 +37,11 @@ extends RefCounted
 ##   box_stamped   {table, stamp, money, minute}
 ##   box_sealed    {table, order, package_id, node_name, trap, trap_intensity, contents, absorption,
 ##                  quality, pos, basis, money, minute}
-## box_sealed takes the box off the table on every peer; creating its DeliveryPackage on every peer
-## is D-0715.b. Refusals: bad_data, no_station, out_of_reach (CompanyNet's), not_enough, hands_busy,
-## hands_full, no_room, no_money and the REASON_* below.
+## box_sealed takes the box off the table on every peer and puts the DeliveryPackage it became in
+## the world, named node_name, at pos and basis (`packages`, CompanyPackages, D-0715.b); a peer
+## checks those fields too before it changes anything. Refusals: bad_data, no_station,
+## out_of_reach (CompanyNet's), not_enough, hands_busy, hands_full, no_room, no_money and the
+## REASON_* below.
 
 const START: StringName = &"box_start"
 const PLACE: StringName = &"box_place"
@@ -110,6 +112,9 @@ const MAX_ID_LENGTH: int = RpcGuard.MAX_TEXT_LENGTH
 ## D-0807). Unset, no table has an order: box_label is refused with no_order and box_place takes
 ## only units no order holds.
 var order_of: Callable = Callable()
+## The DeliveryPackage each box_sealed makes on this peer (D-0715.b). The world sets its `parent`
+## (CompanyRoot: World/Packages); unset, no package is built and the event applies all the same.
+var packages: CompanyPackages = CompanyPackages.new()
 
 ## {table: PackingStation} of every table touched; {table: box id} of each one holding a box.
 var _tables: Dictionary = {}
@@ -540,7 +545,9 @@ func _apply_stamped(state: Object, desk: PackingStation, data: Dictionary) -> bo
 
 
 ## The box is taped and leaves the table; its units go from box:<id> to package:<id> and the
-## order on its label holds that much less (row 15). The package itself is D-0715.b's.
+## order on its label holds that much less, and the package it became goes into the world on this
+## peer (row 15, D-0715.b: `packages`). Its fields (name, pose, trap, quality...) are checked with
+## the rest, and the package built from the taped box, before anything changes.
 func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dictionary) -> bool:
 	var desk: PackingStation = _tables[table]
 	var box_id: StringName = _box_ids[table]
@@ -550,17 +557,25 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 		return false
 	if not (_text_ok(order) and StringName(order) == desk.box.label_order_id and _wallet_ok(data)):
 		return false
+	if not CompanyPackages.fields_ok(data, box_id) or not packages.can_add(data["node_name"]):
+		return false
 	var box_at: StringName = box_location(box_id)
 	var held: Dictionary = desk.box.contents()
-	if held.is_empty() or not contents is Dictionary or contents != held:
-		return false
-	if not desk.supplies.has(StationSupplies.TAPE):
+	if held.is_empty() or not contents is Dictionary or contents != held \
+			or not desk.supplies.has(StationSupplies.TAPE):
 		return false
 	for product: StringName in held:
 		if stock.count(product, box_at) < int(held[product]):
 			return false
+	var shut: PackedBox = PackedBox.from_dict(desk.box.to_dict())
+	shut.taped = true
+	var package: DeliveryPackage = packages.make(shut, data)
+	if packages.active() and package == null:
+		return false
 	_set_balance(state, int(data["money"]) + CompanyTuning.TAPE_COST)
 	if not desk.seal(state):
+		if package != null:
+			package.free()
 		return false
 	_entry_minute(state, CompanyTuning.TAPE_COST, data["minute"])
 	for product: StringName in held:
@@ -569,6 +584,7 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 			stock.unreserve(product, int(held[product]), StringName(order))
 	desk.take_box()
 	_box_ids.erase(table)
+	packages.put(package)
 	return true
 
 

@@ -11,6 +11,9 @@ extends SceneTree
 ##   material carries tx_detail_concrete_512.png in world triplanar, one repetition per
 ##   CompanyShed.FLOOR_SLAB_M (a whole number of grid cells, so the slab joints land on cell lines);
 ## - the local player stands inside the shed, on the floor;
+## - D-0715.b / D-0318.1: its CompanyNet's tables build packages under World/Packages, and the host's
+##   package is tracked by the cells: it runs in the shed, freezes out where no cell is loaded and is
+##   let go (thawed) as it leaves the tree;
 ## - D-0316: it has an Interest child (CompanyInterest) reading CompanyRoot.CREW_GROUP, which tracks a
 ##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player and
 ##   on that vehicle;
@@ -97,6 +100,7 @@ func _run() -> void:
 		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
 			"The only anchor is the local player")
 		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
+		_check_package_cells(level as CompanyRoot, cells)
 	await _check_interest(level)
 	_expect(root.get_node_or_null(^"SceneLoader") == null, "No loader is left once inside the company")
 	var net: CompanyNet = level.get_node_or_null(^"CompanyNet") as CompanyNet
@@ -179,6 +183,41 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: company root builds the shed and nine zones, company on, player inside, menu flag")
 	quit(_failures)
+
+
+## D-0715.b / D-0318.1: the root's tables build their packages under World/Packages, and the host's
+## package is tracked by the cells: it runs in the shed (a pinned cell), freezes out where no cell is
+## loaded, and is let go (thawed) as it leaves the tree.
+func _check_package_cells(level: CompanyRoot, cells: CompanyCells) -> void:
+	var holder: Node3D = level.get_node_or_null(^"World/Packages") as Node3D
+	var packages: CompanyPackages = level.net.table.packages if level.net != null else null
+	_expect(holder != null and holder == level.packages and packages != null
+		and packages.parent == holder, "The root's tables build their packages under World/Packages")
+	if holder == null or packages == null:
+		return
+	var box := PackedBox.new(&"S")
+	box.place(load("res://data/products/hen.tres"), Vector3i.ZERO)
+	box.taped = true
+	var sealed: Dictionary = {
+		"package_id": &"box_99", "node_name": &"Package_box_99", "trap": &"noisy",
+		"trap_intensity": 0.5, "absorption": 1.0, "quality": 50.0, "pos": Vector3(0.0, 1.0, 0.0),
+		"basis": Basis.IDENTITY,
+	}
+	var package: DeliveryPackage = packages.make(box, sealed)
+	packages.put(package)
+	_expect(package != null and package.get_parent() == holder, "A package goes under World/Packages")
+	if package == null:
+		return
+	cells.step(Time.get_ticks_msec() / 1000.0)
+	_expect(not cells.is_body_frozen(package), "In the shed's loaded cell the host's package runs")
+	package.global_position = Vector3(5000.0, 1.0, 5000.0)
+	cells.step(Time.get_ticks_msec() / 1000.0)
+	_expect(cells.is_body_frozen(package) and package.freeze,
+		"Out where no cell is loaded it freezes (D-0318.1: the root tracks the host's packages)")
+	holder.remove_child(package)
+	_expect(not cells.is_body_frozen(package) and not package.freeze,
+		"Leaving the tree it is let go and thawed")
+	package.free()
 
 
 ## D-0508.3: the day's SUMMARY opens the closing screen with the host's numbers, its "continue" opens
