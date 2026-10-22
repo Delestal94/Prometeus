@@ -32,6 +32,9 @@ var warehouse_stage: int = 0
 ## Stock, in the Inventory.to_dict() form (use stock() / store_stock()).
 var inventory: Dictionary = {}
 var company_name: String = ""
+## The company's world seed (D-0246): every random draw of the business starts from day_seed().
+## Saved with the company and sent in the host's snapshot; 1 to CompanySeed.MAX_SEED.
+var company_seed: int = 0
 ## Wallet history (D-0501), oldest first, at most CompanyTuning.LEDGER_MAX entries:
 ## {day, minute, amount (signed), reason, balance (after the movement)}.
 var ledger: Array[Dictionary] = []
@@ -51,10 +54,14 @@ func is_active() -> bool:
 	return _active
 
 
-## Starts a fresh company with the starting money, day, clock and reputation.
-func new_company(new_name: String = "") -> void:
+## Starts a fresh company with the starting money, day, clock and reputation. `seed_value` fixes
+## its world seed (a test, a shared challenge); 0 or an invalid one draws a new one.
+func new_company(new_name: String = "", seed_value: int = 0) -> void:
 	_set_defaults()
 	company_name = new_name
+	company_seed = CompanySeed.normalize(seed_value)
+	if company_seed == 0:
+		company_seed = CompanySeed.fresh()
 	_active = true
 
 
@@ -68,6 +75,7 @@ func reset() -> void:
 func to_dict() -> Dictionary:
 	return {
 		"company_name": company_name,
+		"company_seed": company_seed,
 		"money": money,
 		"day": day,
 		"clock_minutes": clock_minutes,
@@ -95,6 +103,9 @@ func from_dict(data: Dictionary) -> bool:
 		return false
 	_set_defaults()
 	company_name = str(data.get("company_name", ""))
+	company_seed = CompanySeed.normalize(data.get("company_seed"))
+	if company_seed == 0:
+		company_seed = CompanySeed.from_name(company_name)
 	money = int(_num(data.get("money"), CompanyTuning.STARTING_MONEY))
 	day = maxi(int(_num(data.get("day"), CompanyTuning.STARTING_DAY)), 1)
 	clock_minutes = clampi(
@@ -129,6 +140,11 @@ func from_dict(data: Dictionary) -> bool:
 		supplier_calendar = SupplierSchedule.from_dict(calendar).to_dict()
 	_active = true
 	return true
+
+
+## The seed of `stream` (CompanySeed.ORDERS, SUPPLIERS) for `for_day`, or today when it is -1.
+func day_seed(stream: StringName, for_day: int = -1) -> int:
+	return CompanySeed.for_day(company_seed, day if for_day < 0 else for_day, stream)
 
 
 ## Adds money to the wallet and records it. A zero or negative amount does nothing
@@ -257,6 +273,7 @@ func _set_defaults() -> void:
 	ledger = []
 	supplier_calendar = SupplierSchedule.new().to_dict()
 	company_name = ""
+	company_seed = 0
 
 
 func _clamp_reputation(value: float) -> float:

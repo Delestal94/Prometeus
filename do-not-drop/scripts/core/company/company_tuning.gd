@@ -280,6 +280,9 @@ const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
 ## and how close the jack's holder must stand to pick one up.
 const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
 const PALLET_JACK_REACH_M: float = 1.6
+## One push of the pallet jack in the world (D-0605.b): how far it rolls, in metres, away from whoever pushes
+## it. More than a pallet's long side (1.2 m), so a pallet put down is never under the next one.
+const JACK_PUSH_STEP_M: float = 1.3
 ## The forklift (D-0606, PalletForklift): how high the forks go (m), how fast they rise (m/s, the
 ## depot's staff forklift speed) and how close to a level they must be to take or leave a pallet.
 const FORKLIFT_MAX_LIFT_M: float = 2.4

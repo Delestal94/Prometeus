@@ -105,14 +105,18 @@ const MAX_PLAYERS: int = 8
 ## MultiplayerSynchronizer to it; a peer checks the event's node_name, pos, basis,
 ## trap, trap_intensity, absorption and quality first, and box_tape may be refused
 ## with no_trap (company mode, D-0715.b);
-## 43: CompanyNet's _request takes a new kind, supplier_order, _apply_event a new
+## 43: CompanyNet's _request takes three new kinds, jack_pick, jack_put and jack_push,
+## _apply_event four, jack_picked, jack_placed, jack_moved and jack_loaded, and its
+## snapshot a "pallets" part: the supplier pallets and the pallet jack (company
+## mode, D-0605.b).
+## 44: CompanyNet's _request takes a new kind, supplier_order, _apply_event a new
 ## one, supplier_ordered, and its snapshot a "supplier" part: the supplier
 ## calendar; the shed's SupplierBoardPoint has a new RPC, _open_here (company
 ## mode, D-0603.b.2).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 43
+const PROTOCOL_VERSION: int = 44
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

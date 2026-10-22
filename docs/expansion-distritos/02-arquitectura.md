@@ -63,7 +63,7 @@
 | D-0243 | ✅ Test de que ningún `--script` pierde autoloads al nombrar clases nuevas (lección de N-919) | escritor-tests | medium | `test_hud_script_loads` extendido a `CompanyState` |
 | D-0244 | ✅ Documentar cómo agregar un producto, un distrito y un vehículo (3 guías cortas) (incluye D-0850, D-0950, D-1050, D-1150, D-1250, fusión de D-0112) | documentador | low | `docs/agregar-contenido-expansion.md` (una sola guía, [crítica](diseno/critica-alcance.md)) y `agregar-vehiculo.md` actualizada |
 | D-0245 | ✅ Validador de `.tres` de la expansión (ids únicos, rutas existentes, rangos) en CI | escritor-tests | medium | `test_expansion_resources` falla con un id repetido |
-| D-0246 | Semilla de mundo compartida extendida a pedidos y proveedores (todos ven lo mismo) | auditor-red | high | auditoría sin desincronías |
+| D-0246 | ✅ Semilla de mundo compartida extendida a pedidos y proveedores (todos ven lo mismo) | auditor-red | high | auditoría sin desincronías |
 | ~~D-0247~~ | ~~Ver si `DeliveryHouse` puede ser genérica para muelle, pista y casa de montaña~~ **Fusionada en D-0311 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | decisión anotada y, si sí, una sola clase con variantes |
 | ~~D-0248~~ | ~~Medir costo de memoria del modo Empresa con galpón grande~~ **Fusionada en D-0947 (D-0112, [crítica](diseno/critica-alcance.md))** | perfilador-rendimiento | medium | número en `docs/rendimiento-pc.md` |
 | ~~D-0249~~ | ~~Revisión de arquitectura por `auditor-integral` al cerrar F0~~ **Fusionada en D-2039 (D-0112, [crítica](diseno/critica-alcance.md))** | auditor-integral | high | hallazgos P0-P1 resueltos |
