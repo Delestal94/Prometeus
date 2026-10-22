@@ -27,7 +27,10 @@ const CUSTOMER_NAMES: Array[String] = [
 ## The day's orders sorted by arrival. zones are the ZoneDefinitions open today
 ## (those that take no deliveries, shipping_fee 0, are skipped); products maps
 ## product id -> ProductDefinition; requirements maps id -> OrderRequirement.
-## max_items caps the distinct products of an order (D-0812 lowers it early on).
+## max_items caps the distinct products of an order; 0 (the default) takes items_cap_for_day(day). company, when
+## given (a node with money), sets how many orders the day opens with: a company in the red gets
+## BANKRUPT_ORDER_SHARE of the usual count (Bankruptcy.orders_for_day, D-0510); null keeps the usual
+## count. The host's seed and money are all it takes: every peer gets the same orders.
 static func generate_day(
 	day_seed: int,
 	day: int,
@@ -35,16 +38,20 @@ static func generate_day(
 	zones: Array[ZoneDefinition],
 	products: Dictionary,
 	requirements: Dictionary,
-	max_items: int = CompanyTuning.ORDER_ITEMS_MAX,
+	max_items: int = 0,
+	company: Object = null,
 ) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var open_zones: Array[ZoneDefinition] = _delivery_zones(zones)
 	var ids: Array[StringName] = _sorted_ids(products)
 	if open_zones.is_empty() or ids.is_empty():
 		return out
+	if max_items <= 0:
+		max_items = items_cap_for_day(day)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = day_seed
-	var minutes: Array[int] = OrderRhythm.arrival_minutes(day_seed, players)
+	var count: int = Bankruptcy.orders_for_day(OrderRhythm.orders_for_day(players), company)
+	var minutes: Array[int] = OrderRhythm.arrival_minutes(day_seed, players, count)
 	for index in minutes.size():
 		var zone: ZoneDefinition = open_zones[rng.randi_range(0, open_zones.size() - 1)]
 		var items: Array[Dictionary] = _pick_items(rng, zone.id, ids, products, max_items)
@@ -62,6 +69,14 @@ static func generate_day(
 		)
 		out.append(_apply_requirements(order, reqs, requirements))
 	return out
+
+
+## Most distinct products an order may ask for on this day (D-0812): 2 in the first
+## CompanyTuning.ORDER_EARLY_DAYS days, ORDER_ITEMS_MAX afterwards.
+static func items_cap_for_day(day: int) -> int:
+	if day <= CompanyTuning.ORDER_EARLY_DAYS:
+		return CompanyTuning.ORDER_ITEMS_EARLY_MAX
+	return CompanyTuning.ORDER_ITEMS_MAX
 
 
 static func _delivery_zones(zones: Array[ZoneDefinition]) -> Array[ZoneDefinition]:

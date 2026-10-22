@@ -379,8 +379,12 @@ CompanyState   (autoload, persistente)   plata, día, reloj, reputación, bloque
 - El mundo es **un solo mapa continuo** (≤ 6 × 6 km, sin origen flotante, sin pantallas de carga después de
   la inicial): `docs/decisiones/2026-10-04-mapa-continuo.md`. `RouteStreamer` se conserva para Endless.
 - Entrada: botón "Empresa" del menú o `--autostart-company [--slot=<n>]`
-  (`docs/decisiones/2026-10-04-flag-modo-empresa.md`); la escena raíz es `CompanyWorld` y se suma al final de
-  `NetworkManager.LEVEL_SCENES`.
+  (`docs/decisiones/2026-10-04-flag-modo-empresa.md`); en sala, `--host-company` (el botón espera lugar en
+  la página Jugar). La escena raíz es `company_root.tscn` (`CompanyRoot`; `CompanyWorld` cuando exista), al
+  final de `NetworkManager.LEVEL_SCENES`: el host spawnea un jugador por peer por `World/PlayerSpawner`
+  cuando su mundo avisa `level_ready()`.
+- Flags de desarrollo (D-0238, `CompanyDevFlags`): `--company-day=<n>`, `--district=<zona>` y `--money=<n>`,
+  aplicados por el host al levantar el mundo, antes del snapshot; `CompanyRoot.dev_args` para los tests.
 
 ### 10.2 Autoridad (quién manda en cada estado)
 

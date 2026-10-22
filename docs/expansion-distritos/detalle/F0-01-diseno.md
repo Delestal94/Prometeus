@@ -161,6 +161,7 @@ Confirma o corrige los números de [supuestos.md](supuestos.md).
 (D-0202). `sim_economy` (D-0540) la reproduce en F2.
 
 ### D-0118 · Lista de 30 hitos — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR #563)** — `diseno/hitos.md`: 30 hitos con condición, recompensa y día esperado para 1/2/4 jugadores; cada distrito con su hito y tipo nuevo `shop_item`.
 **Depende de:** D-0114, D-0117
 **Qué:** `diseno/hitos.md`: id, condición (de los tipos de D-0402), recompensa (tipos de D-0403) y día
 esperado según D-0117. Los primeros 5 enseñan el bucle (D-0412).
@@ -180,6 +181,7 @@ Regla: modo Entrega y Endless no cambian de comportamiento (S1).
 **Hecho cuando:** 15+ sistemas con su fila, y cada fila con archivo y línea de entrada.
 
 ### D-0120 · Riesgos técnicos — B · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `diseno/riesgos.md`: 16 riesgos (1 P0, 9 P1, 6 P2) con evidencia, mitigación y tarea `D-` (todos los P0-P1 con tarea abierta); 4 propuestas "sin tarea todavía".
 **Depende de:** D-0119
 **Qué:** `diseno/riesgos.md` con severidad P0-P3:
 - red (galpón con 300+ objetos);

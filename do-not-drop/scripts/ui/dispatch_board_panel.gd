@@ -7,7 +7,9 @@ class_name DispatchBoardPanel
 ## picked to that vehicle through the existing path: DispatchZone.load_boxes() ->
 ## CompanyTrips.stage_cargo() (D-0716 / D-0717). A box the vehicle cannot take (DispatchRules,
 ## D-0309) cannot be picked: its row says why. Picking more than the vehicle holds (slots,
-## kg: the same checks as DispatchLoading.plan()) is refused with the reason too.
+## kg: the same checks as DispatchLoading.plan()) is refused with the reason too. While
+## CompanyTrips.departure_verdict() says the vehicle can't leave (CompanyTuning.VEHICLES_FAR_MAX
+## vehicles are already out, D-0316) Load is off and the status line says why.
 ##
 ## Data comes in through open() / refresh() as one dictionary, no autoload is read, so the panel
 ## runs headless in a test:
@@ -139,9 +141,11 @@ func confirm() -> int:
 	return count
 
 
-## True when Load would do something: the board may act, a vehicle is there and a box is picked.
+## True when Load would do something: the board may act, a vehicle is there and may leave
+## (_departure()), and a box is picked.
 func can_confirm() -> bool:
-	return _acts() and _ctx.get("vehicle") != null and _ctx.get("zone") != null and not _selected.is_empty()
+	return (_acts() and _ctx.get("vehicle") != null and _ctx.get("zone") != null and not _selected.is_empty()
+		and _departure()["ok"])
 
 
 func selected() -> Array[StringName]:
@@ -259,6 +263,9 @@ func _status_line() -> String:
 		return tr("UI_DISPATCH_HOST_ONLY")
 	if _ctx.get("vehicle") == null:
 		return ""
+	var departure: Dictionary = _departure()
+	if not departure["ok"]:
+		return reason_text(String(departure["key"]), departure["args"])
 	if _rows.size() > 0 and _selected.is_empty():
 		return tr("UI_DISPATCH_PICK")
 	return ""
@@ -319,6 +326,15 @@ func _rules_verdict(box_id: StringName) -> Dictionary:
 		order, vehicle, _ctx.get("zones", {}), _ctx.get("gates", {}), _ctx.get("owned", {}),
 		_ctx.get("opened_gates", [])
 	)
+
+
+## Whether the vehicle may leave now: CompanyTrips.departure_verdict() (the cap of vehicles out,
+## D-0316); ok when the board has no trips.
+func _departure() -> Dictionary:
+	var trips: CompanyTrips = _ctx.get("trips")
+	if trips == null:
+		return {"ok": true, "key": "", "args": []}
+	return trips.departure_verdict(_vehicle_id())
 
 
 func _waiting() -> Array[StringName]:

@@ -15,10 +15,10 @@
 | D-0505 | ✅ Sin combustible ni energía; el costo operativo es el mantenimiento (D-0527) | — | — | decidido |
 | D-0506 | ✅ Penalidades: rotura, producto equivocado, tarde, caja mal etiquetada | constructor-progresion | high | test por tipo |
 | D-0507 | ✅ Propinas por entrega perfecta y rápida | constructor-progresion | low | test |
-| D-0508 | ◐ (falta mostrarlo al cerrar el día, D-0508.3) Resumen financiero del cierre del día (ingresos, costos, ganancia) | constructor-ui | high | captura y test de los números |
+| D-0508 | ✅ Resumen financiero del cierre del día (ingresos, costos, ganancia) | constructor-ui | high | captura y test de los números |
 | D-0509 | ✅ Gastos fijos diarios (alquiler del galpón, luz) | constructor-progresion | medium | test |
-| D-0510 | ◐ (falta el aviso y el enganche, D-0510.2) Quiebra: qué pasa con saldo negativo N días (préstamo forzado, reinicio, aviso) | constructor-progresion | medium | test del caso |
-| D-0511 | Tienda de la empresa (máquinas, vehículos, ampliaciones, licencias) con catálogo de `.tres` | constructor-progresion | high | comprar ítem en test descuenta y otorga |
+| D-0510 | ✅ Quiebra: qué pasa con saldo negativo N días (préstamo forzado, reinicio, aviso) | constructor-progresion | medium | test del caso |
+| ✅ D-0511 | Tienda de la empresa (máquinas, vehículos, ampliaciones, licencias) con catálogo de `.tres` | constructor-progresion | high | comprar ítem en test descuenta y otorga |
 | D-0512 | Precios de vehículos (bici < carrito < camioneta 4x4 < lancha < avioneta) | constructor-progresion | low | tabla en `.tres` |
 | D-0513 | Precios de máquinas de automatización | constructor-progresion | low | tabla en `.tres` |
 | D-0514 | Precios de ampliaciones del galpón | constructor-progresion | low | tabla en `.tres` |

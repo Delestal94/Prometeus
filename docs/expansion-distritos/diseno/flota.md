@@ -132,7 +132,8 @@ para 72 km/h.
 - **La primera camioneta es gratis**; las extra y las variantes se compran como unidades
   (1 500 / 1 800 / 2 000), entre el carrito y la 4x4 (D-0512).
 - **La ágil y la vieja se abren en Empresa con hitos que ya usan los bloqueos** (`deliveries_25` de
-  `gate_suburbio`, `deliveries_50` de `gate_puerto`). D-0118 puede cambiar el id.
+  `gate_suburbio`, `deliveries_50` de `gate_puerto`). D-0118 puede cambiar el id
+  ([hitos.md](hitos.md) los mantiene y suma `bike` con `reputation_55`).
 - **La trampa amplificada es una regla de datos** (×1,5 sobre la intensidad del armado), no solo física:
   así se puede leer y testear.
 - **Carrito y 4x4 tienen base fija** (galpón o su zona).
