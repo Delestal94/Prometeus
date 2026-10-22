@@ -9,6 +9,8 @@ extends RefCounted
 ##   many as fit); with empty hands it unloads (units_take, the first product on the cart, up to the hand
 ##   limit). PickingCart plans what to ask for and says why it cannot (empty, full, hands_busy...).
 ## - the handle: cart_push away from the player, one step (CompanyCarts).
+## - a take point (D-0610.c2): units_take of that product, up to the hand limit, also onto hands that
+##   already hold some of it; other products in the hands are hands_busy.
 ##
 ## Host only; nothing here changes state by itself. The answer is what happened: RESULT_* or the reason.
 
@@ -20,9 +22,10 @@ const REASON_REFUSED: StringName = &"refused"
 const REASON_NO_CART: StringName = &"no_cart"
 
 
-## `from` is where the user stands (world), `peer` who they are. Returns RESULT_* or a reason.
+## `from` is where the user stands (world), `peer` who they are, `product` what a take point hands out.
+## Returns RESULT_* or a reason.
 static func use(net: CompanyNet, view: PickingCartView, action: StringName, peer: int,
-		from: Vector3) -> StringName:
+		from: Vector3, product: StringName = &"") -> StringName:
 	if net == null or not net.is_host() or view == null or not is_instance_valid(view) \
 			or not view.is_inside_tree():
 		return REASON_NO_CART
@@ -31,6 +34,8 @@ static func use(net: CompanyNet, view: PickingCartView, action: StringName, peer
 			return _load_or_unload(net, view.cart, peer)
 		PickingCartPoint.ACTION_PUSH:
 			return _push(net, view, peer, from)
+		PickingCartPoint.ACTION_TAKE:
+			return _take(net, view.cart, peer, product)
 	return REASON_NO_CART
 
 
@@ -47,6 +52,17 @@ static func _load_or_unload(net: CompanyNet, cart: PickingCart, peer: int) -> St
 	if net.seq == before:
 		return REASON_REFUSED
 	return RESULT_LOADED if loading else RESULT_UNLOADED
+
+
+static func _take(net: CompanyNet, cart: PickingCart, peer: int, product: StringName) -> StringName:
+	if product == &"":
+		return PickingCart.REASON_EMPTY
+	var plan: Dictionary = cart.plan_unload(net.inventory, CompanyNet.hands_location(peer), product)
+	if plan.has("reason"):
+		return plan["reason"]
+	var before: int = net.seq
+	net.request_for(peer, &"units_take", {"station": cart.location(), "product": plan["product"], "qty": plan["qty"]})
+	return RESULT_UNLOADED if net.seq != before else REASON_REFUSED
 
 
 ## Away from the player: from where they stand to the cart, flattened, in the shed's frame.

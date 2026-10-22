@@ -13,11 +13,12 @@ extends Node3D
 ## and nothing falls, whatever order they came in. Moving the cart is a jump of its node to the spot the
 ## host decided (place_at()); only the look slides, so the reach spot and the colliders are already there.
 ##
-## Interaction: a PickingCartPoint for the platform (load or unload) and one for the handle (push); they
-## forward their `used` here. Pivot, size and slots are art's contract: when the final model comes, only
-## _build_look() changes.
+## Interaction: a PickingCartPoint for the platform (load or unload), one for the handle (push) and a take
+## point over each product's cubes (D-0610.c2: aim at the product to take; refresh() places them, unused
+## ones have no prompt); they forward their `used` here. Pivot, size and slots are art's contract: when the
+## final model comes, only _build_look() changes.
 
-signal used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3)
+signal used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, product: StringName)
 
 const LENGTH: float = 1.0
 const WIDTH: float = 0.6
@@ -34,12 +35,16 @@ const SLOT_X: Array[float] = [-0.24, 0.03, 0.30]
 const SLOT_Z: Array[float] = [-0.14, 0.14]
 const FRAME_COLOR: Color = Color(0.58, 0.59, 0.61)
 const SLIDE_SECONDS: float = 0.25
+## Reach sphere of a take point: about one cube, so two products side by side keep apart.
+const TAKE_RADIUS: float = 0.14
 
 ## The cart's id and its Inventory location (PickingCart). Set by make().
 var cart: PickingCart = PickingCart.new()
 ## The point of the platform and the point of the handle.
 var load_point: PickingCartPoint
 var push_point: PickingCartPoint
+## One take point per product on the cart (at most one per slot), in the order of slot_products().
+var take_points: Array[PickingCartPoint] = []
 
 var _look: Node3D
 var _units: Array[MeshInstance3D] = []
@@ -82,6 +87,15 @@ func refresh(stock: Inventory) -> void:
 		_units[slot].visible = shown
 		if shown:
 			(_units[slot].mesh as BoxMesh).material = DepotKit.flat(product_color(_slot_products[slot]))
+	_place_take_points()
+
+
+## The take point of `product`, null while it is not on the cart.
+func take_point_of(product: StringName) -> PickingCartPoint:
+	for point: PickingCartPoint in take_points:
+		if point.product == product and product != &"":
+			return point
+	return null
 
 
 ## The product on each shown slot, in slot order (as many entries as units drawn).
@@ -140,10 +154,40 @@ func _build() -> void:
 	load_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_LOAD, Vector3(0.1, 0.7, 0.0), 0.45)
 	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_PUSH,
 		Vector3(HANDLE_X - 0.14, 0.9, 0.0), 0.3)
-	for point: PickingCartPoint in [load_point, push_point]:
-		point.used.connect(func(id: StringName, how: StringName, peer_id: int, origin: Vector3) -> void:
-			used.emit(id, how, peer_id, origin))
+	for slot: int in CompanyTuning.CART_MAX_UNITS:
+		var take := PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_TAKE, slot_centre(slot), TAKE_RADIUS)
+		take.name = "Take_%s_%d" % [cart.id, slot]
+		take_points.append(take)
+	var points: Array[PickingCartPoint] = [load_point, push_point]
+	points.append_array(take_points)
+	for point: PickingCartPoint in points:
+		point.used.connect(func(id: StringName, how: StringName, peer_id: int, origin: Vector3,
+				what: StringName) -> void:
+			used.emit(id, how, peer_id, origin, what))
 		add_child(point)
+
+
+## One take point per product group, at the middle of its cubes; the rest go back to no product.
+func _place_take_points() -> void:
+	var groups: Array[StringName] = []
+	var centres: Dictionary = {}
+	var counts: Dictionary = {}
+	for slot: int in _slot_products.size():
+		var product: StringName = _slot_products[slot]
+		if not centres.has(product):
+			groups.append(product)
+			centres[product] = Vector3.ZERO
+			counts[product] = 0
+		centres[product] += slot_centre(slot)
+		counts[product] += 1
+	for index: int in take_points.size():
+		var point: PickingCartPoint = take_points[index]
+		if index < groups.size():
+			point.product = groups[index]
+			point.position = centres[groups[index]] / float(counts[groups[index]])
+		else:
+			point.product = &""
+			point.position = slot_centre(index)
 
 
 ## The grey box: deck, rails, wheels and the push handle.
