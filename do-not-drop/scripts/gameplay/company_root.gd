@@ -62,6 +62,11 @@ extends Node3D
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
+## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the shed's gate and decides
+## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
+## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
+## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
+##
 ## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
 ## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
 ## instead of falling through the missing floor (D-0318.1).
@@ -143,6 +148,9 @@ var summary_panel: DaySummaryPanel
 var business_tick: BusinessTick
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
+## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
+## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
+var trips_view: CompanyTripsView
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
 var cells: CompanyCells
@@ -604,6 +612,7 @@ func _add_shed() -> void:
 		shed.follow(net)
 		net.stations = shed.station_for
 		shed.piece_used.connect(_on_piece_used)
+		shed.cart_used.connect(_on_cart_used)
 
 
 ## Host: a crew member used a piece of the shed. A shelf puts the units of one of its slots in their
@@ -623,6 +632,14 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		{"station": plan["station"], "product": plan["product"], "qty": plan["qty"]})
 	if net.inventory.count(plan["product"], hands) > before:
 		_pick_after[key] = plan["slot"]
+
+
+## Host: a crew member worked a picking cart (D-0610.b): load or unload it, or push it. PickingCartUse asks
+## the host's own CompanyNet on their behalf, which checks reach, hands and room.
+func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3) -> void:
+	if net == null or not net.is_host():
+		return
+	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from)
 
 
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
@@ -706,10 +723,20 @@ func _process(_delta: float) -> void:
 	cells.anchors = CompanyInterest.cell_anchors(self, CREW_GROUP, CompanyTrips.VEHICLE_GROUP, as_host)
 
 
-## Host: the gate across the shed's exit (north wall, centered) and the trips that cross it; the
-## day waits for a trip still out (DayCycle.trips_out). A client sees the vehicle, nothing more.
+## Every peer: the view of the trips out (CompanyTripsView, attached to CompanyNet in the frame the
+## world comes up, like the day's clock, so its snapshot part goes in the first snapshot). Host: the
+## gate across the shed's exit (north wall, centered) and the trips that cross it, which the view
+## publishes; the day waits for a trip still out (DayCycle.trips_out: CompanyTrips, the authority, on
+## the host; the view on a client, where the cycle never polls).
 func _add_trips() -> void:
-	if net == null or not net.is_host():
+	if net == null:
+		return
+	trips_view = CompanyTripsView.new()
+	trips_view.name = "TripsView"
+	add_child(trips_view)
+	trips_view.attach(net)
+	if not net.is_host():
+		day_cycle.trips_out = trips_view.trips_out
 		return
 	var stage: int = net.company.warehouse_stage if net.company != null else 0
 	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
@@ -719,6 +746,7 @@ func _add_trips() -> void:
 	add_child(trips)
 	trips.setup(shed.to_global(Vector3(0.0, 0.0, -half_depth)), width)
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
 
 

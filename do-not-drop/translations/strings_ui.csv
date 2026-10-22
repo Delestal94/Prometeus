@@ -1402,3 +1402,6 @@ UI_SUPPLIER_ORDERED,"Pedido hecho: %d palets, llegan el día %d","Order placed: 
 UI_SUPPLIER_HOST_ONLY,Solo el anfitrión hace el pedido,Only the host places the order
 UI_SUPPLIER_ORDER,Pedir,Order
 UI_SUPPLIER_CLOSE,Cerrar,Close
+UI_ORDER_NOTICE_ONE,Pedido nuevo: %s — %s %d,New order: %s — %s %d
+UI_ORDER_NOTICE_ONE_NO_ADDRESS,Pedido nuevo: %s,New order: %s
+UI_ORDER_NOTICE_MANY,%d pedidos nuevos,%d new orders

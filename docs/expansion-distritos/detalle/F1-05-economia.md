@@ -135,3 +135,12 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** el catálogo vive en `data/shop/` y no en `CompanyCatalog` (sus tipos de ítem no son del registro de la empresa y no hay que tocar `KINDS`); los vehículos y las licencias de distrito se agregan como `.tres` en D-0512 y con las barreras (D-0306).
 **Test** `test_company_shop`: catálogo en orden, compra cobra y entrega, motivo `shop` en el libro, rechazos sin cambiar nada.
 **Hecho cuando:** comprar un ítem en test descuenta la plata y lo otorga (cumplido).
+
+### D-0512 · Precios de vehículos — A · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — seis `ShopItem` de `kind = vehicle` en `data/shop/vehicle_<fleet_key>.tres`: camioneta extra 1 500, bici 250, carrito 900, 4x4 (`offroad`) 2 500, lancha 5 000, avioneta 12 000 (`diseno/economia.md` §4 y `diseno/flota.md`). Nombres en `strings_world.csv` (`WORLD_SHOP_VEHICLE_*`) y `CompanyShop.NAME_KEYS`; `test_company_vehicle_prices`.
+**Depende de:** D-0511, D-0115
+**Qué:** la tabla de precios de la flota como `.tres` del catálogo de la tienda. Cada precio es el de `flota.md`; la escalera bici < carrito < 4x4 < lancha < avioneta sube entre 2× y 3,6× por escalón (la regla de escala del §4).
+**Decisión:** todos van con `enabled = false`: `CompanyShop.items()` no los lista hasta que existe el vehículo (bici D-1207, carrito D-1221, 4x4 D-1231, lancha D-1302, avioneta D-1401); esa tarea solo cambia la línea a `true` y suma la pantalla/venta. Comprarlos por código ya funciona (suma `{vehicle: fleet_key}` a la flota). La camioneta extra (1 500) queda apagada hasta que D-1201 compre por unidad. Las camionetas ágil y vieja (1 800 y 2 000) tienen hito, no entran acá: llevan su `.tres` cuando se desbloqueen (D-0401+).
+**Test** `test_company_vehicle_prices`: precio y `grant_key` de cada uno, escalera, fuera del catálogo mientras estén apagados, y la compra de la bici cobra 250 con motivo `shop`.
+**Hecho cuando:** tabla en `.tres` (cumplido).
+
