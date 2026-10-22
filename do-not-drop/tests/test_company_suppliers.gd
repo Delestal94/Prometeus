@@ -56,7 +56,8 @@ func _run() -> void:
 				sellers += 1
 		_expect(sellers >= 1, "product '%s' has a seller" % product_id)
 	_expect(catalog.supplier(&"mercado_del_campo").sells(&"hen"), "the farm market sells hens")
-	_expect(not catalog.supplier(&"mercado_del_campo").sells(&"fireworks_crate"), "the farm market does not sell fireworks")
+	_expect(not catalog.supplier(&"mercado_del_campo").sells(&"fireworks_crate"),
+		"the farm market does not sell fireworks")
 
 	var bakery: SupplierDefinition = catalog.supplier(&"panaderia_mayorista")
 	var express: SupplierDefinition = catalog.supplier(&"importadora_express")
