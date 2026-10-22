@@ -26,6 +26,7 @@ const CLASSES: Dictionary = {
 	"music": ["rms", -24.0],
 	"machine": ["rms", -40.0],
 	"repeat": ["loudest", -30.0],
+	"foley": ["loudest", -24.0],
 }
 ## [what, SynthAudio function, its level in world_mix.gd, class, (optional) the
 ## script that owns the function when it is not SynthAudio's]
@@ -56,6 +57,12 @@ const SOUNDS: Array = [
 	["train chugging", &"train_chug_loop", &"TRAIN_CHUG_DB", "engine"],
 	["callout voice", &"callout_voice", &"CALLOUT_VOICE_DB", "signal"],
 	["running footstep", &"footstep", &"FOOTSTEP_DB", "detail", SynthAudioSteps],
+	["newspaper rooster", &"rooster_crow", &"NEWSPAPER_ROOSTER_DB", "signal"],
+	["newspaper birds", &"morning_chirps", &"NEWSPAPER_CHIRPS_DB", "nature"],
+	["newspaper extra hit", &"extra_stinger", &"NEWSPAPER_EXTRA_DB", "signal"],
+	["newspaper paper", &"paper_rustle", &"NEWSPAPER_PAPER_DB", "foley"],
+	["newspaper page turn", &"page_turn", &"NEWSPAPER_PAGE_DB", "foley"],
+	["newspaper mate spit", &"mate_spit", &"NEWSPAPER_SPIT_DB", "signal"],
 ]
 
 ## Composed tracks (.ogg, tools/audio/compose_music.py): Godot can't hand a

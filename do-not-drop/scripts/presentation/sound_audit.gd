@@ -34,6 +34,8 @@ const SOUND_NAMES: Dictionary = {
 	&"care_step": "Toque correcto", &"care_error": "Tecla equivocada", &"care_success": "Arreglo listo",
 	&"care_whoosh": "Giro de la flecha", &"care_tick": "Avance de la herramienta",
 	&"footstep": "Pisada",
+	&"rooster_crow": "Gallo", &"morning_chirps": "Pajaritos de la mañana", &"extra_stinger": "¡Extra! del diario",
+	&"paper_rustle": "Papel de diario", &"page_turn": "Página que se da vuelta", &"mate_spit": "Escupida del mate",
 	# Not a synthesized sound: a crewmate's voice chat (VoicePlayback, N-212.2).
 	&"AudioStreamGenerator": "Voz",
 }
@@ -46,7 +48,8 @@ const SOURCE_NAMES: Dictionary = {
 	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",
 	"chasing_dog": "Perro", "flock_crossing": "Ovejas", "rail_crossing_segment": "Paso a nivel",
 	"narrow_bridge_segment": "Puente", "care_prompt_view": "Panel de cuidado",
-	"player_sprint": "Jugador (correr)", "voice_playback": "Voz de compañero",
+	"newspaper_director": "Diario del día siguiente", "player_sprint": "Jugador (correr)",
+	"voice_playback": "Voz de compañero",
 }
 
 ## Keys muted this session.

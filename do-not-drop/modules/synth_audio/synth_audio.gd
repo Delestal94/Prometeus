@@ -12,6 +12,7 @@ extends RefCounted
 ##   SynthAudioHandling  camera shutter, tape, cardboard, tension bed
 ##   SynthAudioWorld     wind, rain, birds, crickets, road, crossing bell, roller door, reverse beep
 ##   SynthAudioAnimals   dog bark, sheep bleat
+##   SynthAudioNewspaper rooster, morning birds, "extra!" hit, paper rustle, page turn, mate spit
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
 
@@ -308,3 +309,36 @@ static func care_whoosh() -> AudioStreamWAV:
 
 static func care_tick() -> AudioStreamWAV:
 	return _cached(&"care_tick", SynthAudioCare.make_care_tick)
+
+
+## The next-day newspaper scene's sounds (N-606.4a, newspaper_director.gd), built by SynthAudioNewspaper.
+
+
+## The morning rooster that opens the scene.
+static func rooster_crow() -> AudioStreamWAV:
+	return _cached(&"rooster_crow", SynthAudioNewspaper.make_rooster_crow)
+
+
+## The little birds that answer the rooster.
+static func morning_chirps() -> AudioStreamWAV:
+	return _cached(&"morning_chirps", SynthAudioNewspaper.make_morning_chirps)
+
+
+## "Extra, extra!" and the brass hit on the front-page headline.
+static func extra_stinger() -> AudioStreamWAV:
+	return _cached(&"extra_stinger", SynthAudioNewspaper.make_extra_stinger)
+
+
+## The paper being unfolded (and lowered).
+static func paper_rustle() -> AudioStreamWAV:
+	return _cached(&"paper_rustle", SynthAudioNewspaper.make_paper_rustle)
+
+
+## A page turned.
+static func page_turn() -> AudioStreamWAV:
+	return _cached(&"page_turn", SynthAudioNewspaper.make_page_turn)
+
+
+## The Boss's spit-take.
+static func mate_spit() -> AudioStreamWAV:
+	return _cached(&"mate_spit", SynthAudioNewspaper.make_mate_spit)
