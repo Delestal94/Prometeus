@@ -15,13 +15,83 @@ extends SceneTree
 ##   the day goes to CLOSING, by close_early() and by the 20:00 transition alike, and the wallet is not charged
 ##   then; it is the supplier_ordered every peer applies, with AUTO_PEER, so auto_units() tells it; an order for
 ##   tomorrow already sent, or a suggestion that is empty (stock covers it), adds nothing; a repeated CLOSING
-##   event, or send() again, does not double it; a client's hook does nothing;
+##   event, or send() again, does not double it; two days in a row order only the second day's own orders (the
+##   book keeps the whole session's, the hook notes the ids that came in since the last OPENING); a client's
+##   hook (a fake peer connected as client 2, no socket) does nothing;
 ## - the day summary's line "automatic supplier order: N units" (DaySummaryPanel) shows with N > 0, hides at 0.
 
 const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 
 var _failures: int = 0
 var _now: int = 0
+
+
+## A peer that is connected as client 2: not the server, so CompanyNet.is_host() is false. No socket.
+class FakeClientPeer:
+	extends MultiplayerPeerExtension
+
+	func _poll() -> void:
+		pass
+
+	func _get_connection_status() -> MultiplayerPeer.ConnectionStatus:
+		return MultiplayerPeer.CONNECTION_CONNECTED
+
+	func _get_unique_id() -> int:
+		return 2
+
+	func _is_server() -> bool:
+		return false
+
+	func _get_available_packet_count() -> int:
+		return 0
+
+	func _get_max_packet_size() -> int:
+		return 1024
+
+	func _get_packet_peer() -> int:
+		return 1
+
+	func _get_packet_channel() -> int:
+		return 0
+
+	func _get_packet_mode() -> MultiplayerPeer.TransferMode:
+		return MultiplayerPeer.TRANSFER_MODE_RELIABLE
+
+	func _get_packet_script() -> PackedByteArray:
+		return PackedByteArray()
+
+	func _put_packet_script(_buffer: PackedByteArray) -> Error:
+		return OK
+
+	func _set_target_peer(_peer: int) -> void:
+		pass
+
+	func _set_transfer_channel(_channel: int) -> void:
+		pass
+
+	func _get_transfer_channel() -> int:
+		return 0
+
+	func _set_transfer_mode(_mode: MultiplayerPeer.TransferMode) -> void:
+		pass
+
+	func _get_transfer_mode() -> MultiplayerPeer.TransferMode:
+		return MultiplayerPeer.TRANSFER_MODE_RELIABLE
+
+	func _set_refuse_new_connections(_enable: bool) -> void:
+		pass
+
+	func _is_refusing_new_connections() -> bool:
+		return false
+
+	func _is_server_relay_supported() -> bool:
+		return false
+
+	func _disconnect_peer(_peer: int, _force: bool) -> void:
+		pass
+
+	func _close() -> void:
+		pass
 
 
 func _initialize() -> void:
@@ -37,6 +107,7 @@ func _run() -> void:
 	_test_auto_order_at_20()
 	_test_auto_order_not_needed()
 	_test_auto_order_already_sent()
+	_test_auto_order_two_days()
 	_test_auto_order_client()
 	_test_summary_line()
 	quit(_failures)
@@ -112,11 +183,15 @@ func _test_suggested() -> void:
 func _test_auto_order_rule() -> void:
 	var products: Dictionary = _catalog()
 	var orders: Array = [
-		{"items": [{"product": &"lamp", "qty": 6}, {"product": &"vase", "qty": 4}], "state": Order.STATE_OPEN},
-		{"items": [{"product": &"mug", "qty": 50}], "state": Order.STATE_CANCELLED},
+		{
+			"id": &"a", "state": Order.STATE_OPEN,
+			"items": [{"product": &"lamp", "qty": 6}, {"product": &"vase", "qty": 4}],
+		},
+		{"id": &"b", "items": [{"product": &"mug", "qty": 50}], "state": Order.STATE_CANCELLED},
+		{"id": &"old", "items": [{"product": &"lamp", "qty": 70}], "state": Order.STATE_DELIVERED},
 	]
-	var kept: Array = SupplierAutoOrder.todays_orders(orders)
-	_expect(kept.size() == 1, "a cancelled order asked for nothing")
+	var kept: Array = SupplierAutoOrder.todays_orders(orders, {&"a": true, &"b": true})
+	_expect(kept.size() == 1, "a cancelled order asked for nothing and an order of another day is not today's")
 	var schedule := SupplierSchedule.new()
 	var got := SupplierAutoOrder.lines(1000, schedule, kept, {&"lamp": 1}, products, null, 3)
 	_expect(got == [{"product": &"lamp", "qty": 5}, {"product": &"vase", "qty": 4}], "rule lines: %s" % [got])
@@ -160,21 +235,41 @@ func _closing_side(label: String, money: int = 1000) -> Dictionary:
 	cycle.ticks = func() -> int: return _now
 	side.add_child(cycle)
 	_expect(clock.attach(net, state) and cycle.attach(net, clock, state), "%s: clock and cycle attach" % label)
-	net.supplier.products = _catalog()
+	net.supplier.products = _closing_catalog()
 	net.supplier.supplier = null
 	var products: Dictionary = net.supplier.products
-	net.orders.book.add(Order.make(&"o1", "Ana", &"centro", &"h1", [{"product": &"lamp", "qty": 6}], 500, products))
-	net.orders.book.add(Order.make(&"o2", "Beto", &"centro", &"h2", [{"product": &"vase", "qty": 4}], 520, products))
-	net.orders.book.add(Order.make(&"o3", "Cai", &"centro", &"h3", [{"product": &"mug", "qty": 50}], 540, products))
-	net.orders.book.cancel(&"o3")
-	net.inventory.receive(&"lamp", 1, &"shelf_a")
+	net.inventory.receive(&"antique_lamp", 1, &"shelf_a")
 	var hook: SupplierAutoOrderHook = SupplierAutoOrderHook.attach(side, net)
 	_expect(hook != null, "%s: the hook attaches" % label)
 	_expect(cycle.open_day(1), "%s: day 1 opens" % label)
 	_now += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0) + 1000
 	cycle.poll()
 	_expect(cycle.phase() == DayCycle.Phase.OPERATING, "%s: day 1 is OPERATING" % label)
+	_add_orders(net, "d1", {&"antique_lamp": 6, &"porcelain_vase": 4}, 20)
 	return {"state": state, "net": net, "clock": clock, "cycle": cycle, "hook": hook, "side": side}
+
+
+## The day's orders come in as order_added events (the hook sees them arrive), one per product, plus one
+## cancelled order of `cancelled_mugs` mugs.
+func _add_orders(net: CompanyNet, prefix: String, wanted: Dictionary, cancelled_mugs: int) -> void:
+	var minute: int = 500
+	for id: StringName in wanted:
+		var order := Order.make(StringName("%s_%s" % [prefix, id]), "Ana", &"centro", &"centro_house_1",
+			[{"product": id, "qty": wanted[id]}], minute, net.supplier.products)
+		_expect(net.publish(CompanyOrdersNet.ADDED, {"order": order}), "%s: order of %s comes in" % [prefix, id])
+		minute += 20
+	var mugs := Order.make(StringName("%s_mug" % prefix), "Cai", &"centro", &"centro_house_3",
+		[{"product": &"hen", "qty": cancelled_mugs}], minute, net.supplier.products)
+	_expect(net.publish(CompanyOrdersNet.ADDED, {"order": mugs}), "%s: the mugs order comes in" % prefix)
+	net.orders.book.cancel(StringName("%s_mug" % prefix))
+
+
+func _closing_catalog() -> Dictionary:
+	return {
+		&"antique_lamp": _product(&"antique_lamp", 10),
+		&"porcelain_vase": _product(&"porcelain_vase", 5),
+		&"hen": _product(&"hen", 2),
+	}
 
 
 func _test_auto_order_close_early() -> void:
@@ -185,7 +280,7 @@ func _test_auto_order_close_early() -> void:
 	var seq: int = net.seq
 	_expect(net.supplier.schedule.day_count() == 0, "close_early: nothing ordered before the close")
 	_expect(cycle.close_early() and cycle.phase() == DayCycle.Phase.CLOSING, "close_early: the day is CLOSING")
-	var want: Dictionary = {&"lamp": 5, &"vase": 4}
+	var want: Dictionary = {&"antique_lamp": 5, &"porcelain_vase": 4}
 	_expect(net.supplier.schedule.ordered_for(2) == want and net.supplier.schedule.day_count() == 1,
 		"close_early: one order for tomorrow with the suggested units (got %s)" % [net.supplier.schedule.to_dict()])
 	_expect(net.seq == seq + 2, "close_early: the phase event and the order event (seq +%d)" % (net.seq - seq))
@@ -209,18 +304,19 @@ func _test_auto_order_at_20() -> void:
 	_expect((parts["clock"] as GameClock).start(float(CompanyTuning.DAY_END_MIN)), "20:00: the clock reads 20:00")
 	cycle.poll()
 	_expect(cycle.phase() == DayCycle.Phase.CLOSING, "20:00: the day is CLOSING")
-	_expect(net.supplier.schedule.ordered_for(2) == {&"lamp": 5, &"vase": 4},
+	_expect(net.supplier.schedule.ordered_for(2) == {&"antique_lamp": 5, &"porcelain_vase": 4},
 		"20:00: the same order as close_early (got %s)" % [net.supplier.schedule.to_dict()])
 	cycle.poll()
-	_expect(net.supplier.schedule.ordered_for(2) == {&"lamp": 5, &"vase": 4}, "20:00: polling again does not double it")
+	_expect(net.supplier.schedule.ordered_for(2) == {&"antique_lamp": 5, &"porcelain_vase": 4},
+		"20:00: polling again does not double it")
 	_free(parts)
 
 
 func _test_auto_order_not_needed() -> void:
 	var parts: Dictionary = _closing_side("CoveredSide")
 	var net: CompanyNet = parts["net"]
-	net.inventory.receive(&"lamp", 10, &"shelf_a")
-	net.inventory.receive(&"vase", 10, &"shelf_a")
+	net.inventory.receive(&"antique_lamp", 10, &"shelf_a")
+	net.inventory.receive(&"porcelain_vase", 10, &"shelf_a")
 	(parts["cycle"] as DayCycle).close_early()
 	_expect(net.supplier.schedule.day_count() == 0 and net.supplier.auto_units(1) == 0,
 		"stock covers the day: no order (got %s)" % [net.supplier.schedule.to_dict()])
@@ -235,11 +331,11 @@ func _test_auto_order_not_needed() -> void:
 func _test_auto_order_already_sent() -> void:
 	var parts: Dictionary = _closing_side("SentSide")
 	var net: CompanyNet = parts["net"]
-	_expect(net.supplier.apply({"order_day": 1, "lines": [{"product": "mug", "qty": 24}], "peer": 1}),
+	_expect(net.supplier.apply({"order_day": 1, "lines": [{"product": "hen", "qty": 24}], "peer": 1}),
 		"someone sent tomorrow's order")
 	var seq: int = net.seq
 	(parts["cycle"] as DayCycle).close_early()
-	_expect(net.supplier.schedule.ordered_for(2) == {&"mug": 24} and net.supplier.auto_units(1) == 0
+	_expect(net.supplier.schedule.ordered_for(2) == {&"hen": 24} and net.supplier.auto_units(1) == 0
 		and net.seq == seq + 1,
 		"an order already sent: the close adds nothing (got %s)" % [net.supplier.schedule.to_dict()])
 	_free(parts)
@@ -248,21 +344,42 @@ func _test_auto_order_already_sent() -> void:
 func _test_auto_order_client() -> void:
 	var parts: Dictionary = _closing_side("ClientSide")
 	var net: CompanyNet = parts["net"]
-	var peer := ENetMultiplayerPeer.new()
-	if peer.create_client("127.0.0.1", 24999) != OK:
-		push_error("FAIL: could not make a client peer")
-		_failures += 1
-		_free(parts)
-		return
+	var peer := FakeClientPeer.new()
 	root.multiplayer.multiplayer_peer = peer
-	_expect(not net.is_host(), "the net is a client's while the connection is not up")
+	_expect(not net.is_host(), "the net is a client's: connected, but not the server")
 	var seq: int = net.seq
 	net.event_applied.emit(seq, CompanyNet.DAY_PHASE, {"day": 1, "phase": "CLOSING", "frozen": false})
 	var hook: SupplierAutoOrderHook = parts["hook"]
 	_expect(net.supplier.schedule.day_count() == 0 and net.seq == seq and hook.send() == 0,
 		"a client's hook orders nothing")
 	root.multiplayer.multiplayer_peer = null
-	peer.close()
+	_free(parts)
+
+
+## Two days in a row: the book keeps day 1's orders, but day 2's order only counts day 2's.
+func _test_auto_order_two_days() -> void:
+	var parts: Dictionary = _closing_side("TwoDaysSide")
+	var net: CompanyNet = parts["net"]
+	var cycle: DayCycle = parts["cycle"]
+	cycle.close_early()
+	_expect(net.supplier.schedule.ordered_for(2) == {&"antique_lamp": 5, &"porcelain_vase": 4},
+		"two days: day 1 orders for day 2")
+	_now += 1000
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and cycle.next_day(), "two days: day 2 opens")
+	_now += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0) + 1000
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING and cycle.current_day() == 2, "two days: day 2 is OPERATING")
+	_expect(net.orders.book.size() == 2, "two days: the book still holds day 1's open orders (closed ones are pruned)")
+	net.inventory.receive(&"antique_lamp", 3, &"shelf_a")
+	_add_orders(net, "d2", {&"antique_lamp": 6}, 15)
+	cycle.close_early()
+	# Day 2 asked 6 lamps with 1 + 3 = 4 in stock: 2, not day 1's 6 lamps and 4 vases again.
+	_expect(net.supplier.schedule.ordered_for(3) == {&"antique_lamp": 2},
+		"two days: day 2 orders only its own (got %s)" % [net.supplier.schedule.to_dict()])
+	_expect(net.supplier.auto_units(2) == 2
+		and net.supplier.schedule.ordered_for(2) == {&"antique_lamp": 5, &"porcelain_vase": 4},
+		"two days: units told per day, day 2's truck untouched")
 	_free(parts)
 
 

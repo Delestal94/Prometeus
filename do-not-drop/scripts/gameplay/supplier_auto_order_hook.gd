@@ -13,6 +13,9 @@ extends Node
 var net: CompanyNet = null
 ## The last day this hook ran for.
 var _done_day: int = 0
+## Ids of the orders that came in today (order_added since the last OPENING). The book keeps the whole session's
+## orders (nothing closes them yet, and Order has no day), so "today's orders" are the ones seen arriving today.
+var _today: Dictionary = {}
 
 
 ## Hooks a new hook, child of `parent`, to `company_net`'s events. Null without a CompanyNet.
@@ -33,7 +36,17 @@ func _exit_tree() -> void:
 
 
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
-	if kind != CompanyNet.DAY_PHASE or data.get("phase") != DayCycle.PHASE_NAMES[DayCycle.Phase.CLOSING]:
+	if kind == CompanyOrdersNet.ADDED:
+		var order: Variant = data.get("order")
+		if order is Dictionary:
+			_today[StringName((order as Dictionary).get("id", &""))] = true
+		return
+	if kind != CompanyNet.DAY_PHASE:
+		return
+	if data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
+		_today.clear()
+		return
+	if data.get("phase") != DayCycle.PHASE_NAMES[DayCycle.Phase.CLOSING]:
 		return
 	var day: int = int(data.get("day", 0))
 	if day < 1 or day == _done_day or net == null or not is_instance_valid(net) or not net.is_host():
@@ -49,7 +62,7 @@ func send() -> int:
 		return 0
 	var book_orders: Array = net.orders.book.to_dict().get("orders", [])
 	var order_lines: Array[Dictionary] = SupplierAutoOrder.lines(
-		int(company.get(&"money")), net.supplier.schedule, SupplierAutoOrder.todays_orders(book_orders),
+		int(company.get(&"money")), net.supplier.schedule, SupplierAutoOrder.todays_orders(book_orders, _today),
 		SupplierAutoOrder.stock_units(net.inventory, net.supplier.products), net.supplier.products,
 		net.supplier.supplier, int(company.get(&"day")))
 	if order_lines.is_empty():

@@ -30,12 +30,15 @@ static func lines(money: int, schedule: SupplierSchedule, orders: Array, stock: 
 	return cart.to_array()
 
 
-## The day's orders as the book keeps them (OrderBook.to_dict()["orders"]), open or closed, less the ones the
-## customer cancelled: those asked for nothing.
-static func todays_orders(book_orders: Array) -> Array:
+## The day's orders out of the book's (OrderBook.to_dict()["orders"]): the ones whose id is a key of `today_ids`
+## (the hook notes them as they come in: the book keeps the whole session and an Order has no day), open or
+## closed, less the ones the customer cancelled: those asked for nothing.
+static func todays_orders(book_orders: Array, today_ids: Dictionary) -> Array:
 	var out: Array = []
 	for order: Variant in book_orders:
-		if order is Dictionary and StringName((order as Dictionary).get("state", &"")) != Order.STATE_CANCELLED:
+		if not order is Dictionary or not today_ids.has(StringName((order as Dictionary).get("id", &""))):
+			continue
+		if StringName((order as Dictionary).get("state", &"")) != Order.STATE_CANCELLED:
 			out.append(order)
 	return out
 
