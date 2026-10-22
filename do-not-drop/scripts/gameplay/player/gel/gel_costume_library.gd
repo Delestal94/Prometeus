@@ -136,7 +136,7 @@ static func _bee(root: Node3D, primary: Material, secondary: Material) -> void:
 		var chain: StringName = &"bee_antenna_l" if side < 0.0 else &"bee_antenna_r"
 		for index: int in 3:
 			_spring_piece(_capsule(root, "Antenna", Vector3(side * (0.10 + index * 0.05),
-				1.88 + index * 0.13, -0.01), Vector3(0.035, 0.20, 0.035), secondary,
+				1.88 + index * 0.13, -0.36), Vector3(0.035, 0.20, 0.035), secondary,
 				Vector3(0.0, 0.0, side * (-0.16 - index * 0.10)), &"head"), chain, index)
 
 

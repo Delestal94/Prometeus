@@ -365,6 +365,7 @@ WORLD_GATE_NEEDS_EQUIPMENT,NO PASA SIN EQUIPO: %s,NO ENTRY WITHOUT GEAR: %s
 WORLD_DISPATCH_NEEDS_VEHICLE,No entra: necesita %s,Can't load: needs %s
 WORLD_DISPATCH_NEEDS_MILESTONE,No entra: falta el hito %s,Can't load: milestone %s missing
 WORLD_DISPATCH_NEEDS_EQUIPMENT,No entra: falta el equipo %s,Can't load: gear %s missing
+WORLD_DISPATCH_FAR_LIMIT,No sale: ya hay %d vehículos en la calle,Can't leave: %d vehicles are already out
 WORLD_LOAD_NO_SLOTS,No entra: el vehículo lleva %s cajas,Can't load: vehicle holds %s boxes
 WORLD_LOAD_NO_WEIGHT,No entra: pasa los %s kg del vehículo,Can't load: over the vehicle's %s kg
 WORLD_STREET_CENTRO,Calle Central,Central Street
@@ -405,3 +406,12 @@ WORLD_PACKTUT_LABEL,Pegá la etiqueta de envío,Stick the shipping label
 WORLD_PACKTUT_DISPATCH,Cerrá la caja con cinta y dejala en la zona de despacho,Tape the box shut and leave it in the dispatch zone
 WORLD_PACKTUT_TAPE,Cerrá la caja con cinta,Tape the box shut
 WORLD_PACKTUT_DONE,¡Listo! Tu primera caja salió,Done! Your first box is on its way
+WORLD_SHOP_UPGRADE_1,Mejora 1: segunda mesa y estantes,Upgrade 1: second table and shelves
+WORLD_SHOP_LABEL_READER,Lectora de etiquetas,Label reader
+WORLD_SHOP_EXPANSION_1,Ampliación del galpón 1,Shed expansion 1
+WORLD_SHOP_NO_COMPANY,No hay empresa,No company
+WORLD_SHOP_UNKNOWN_ITEM,Ese ítem no existe,That item does not exist
+WORLD_SHOP_ALREADY_OWNED,Ya lo tenés,Already owned
+WORLD_SHOP_NEEDS_ITEM,Primero hace falta %s,Needs %s first
+WORLD_SHOP_WRONG_STAGE,Falta la ampliación anterior (etapa %s),The previous expansion is missing (stage %s)
+WORLD_SHOP_CANNOT_AFFORD,Faltan monedas: cuesta %s y hay %s,Not enough money: costs %s and you have %s

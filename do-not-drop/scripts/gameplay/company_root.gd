@@ -34,14 +34,15 @@ extends Node3D
 ## the world and loads the main menu. The host (solo too) loads its slot when it comes
 ## up without a company (CompanySave) and saves the day as it stood at the last applied
 ## event, marked interrupted, whenever its world closes before the day does: its session
-## ended and it went back to the menu, or the game closed. Every day is still saved as in progress,
-## also one DayCycle (D-0203) already closed (its SUMMARY phase): saving the closed day is D-0206's
-## hook (docs/expansion-distritos/revisar/D-0203.md).
+## ended and it went back to the menu, or the game closed. A day DayCycle (D-0203) closes is saved
+## as soon as its SUMMARY applies, and again if the world closes during the summary, as the next
+## day's opening (save_closed_day(), D-0236): a game killed mid-day comes back at its last close.
 ##
 ## The day (D-0203): the root gives every peer a GameClock and a DayCycle child, both attached to
 ## CompanyNet before the snapshot goes out. The host opens the company's day once the world is up;
-## the phases and the clock then run by themselves (DayCycle). The shed's area is not wired as
-## DayCycle.crew_in_shed yet, so the shed never freezes here.
+## the phases and the clock then run by themselves (DayCycle, polled by the host's BusinessTick,
+## D-0232). The shed's area is not wired as DayCycle.crew_in_shed yet, so the shed never freezes
+## here.
 ##
 ## Steam (D-2009): what the company shows, CompanyLobbyMeta's lobby data (host) and rich presence,
 ## goes to NetworkManager's steam_presence (NetSteamPresence) when the world comes up, on every
@@ -51,6 +52,11 @@ extends Node3D
 ## Bandwidth (D-2002.3): every player here joins the crew through join_crew(), which has it send
 ## its pose at CompanyTuning.SHED_POSE_RATE_HZ on foot instead of the game's 30, so a full crew
 ## fits the shed's 24 KB/s a client (test_company_bandwidth_budget).
+##
+## The crew split between the shed and the street (D-0316): the "Interest" child (CompanyInterest,
+## every peer) sends each company vehicle and loose box only to the players near it (the host still
+## simulates all of them), and the cells load around every player and vehicle on the host but only
+## around its own player on a client (CompanyInterest.cell_anchors()).
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -122,11 +128,15 @@ var net: CompanyNet
 ## The day's clock and phases (D-0219, D-0203), children of this root on every peer.
 var clock: GameClock
 var day_cycle: DayCycle
+## Host only (null on a client): the host's rules at a fixed rate (D-0232).
+var business_tick: BusinessTick
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
 var cells: CompanyCells
+## Who gets each company vehicle's and loose box's updates (D-0316), on every peer.
+var interest: CompanyInterest
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -178,6 +188,7 @@ func _ready() -> void:
 	_add_shed()
 	_add_supplier_truck()
 	_add_cells()
+	_add_interest()
 	_add_trips()
 	_add_crew()
 	_add_builder()
@@ -243,6 +254,21 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.name = "DayCycle"
 	add_child(day_cycle)
 	day_cycle.attach(net, clock, state)
+	day_cycle.opening_notice = _opening_notice
+	_add_business_tick()
+
+
+## Host (solo too): the business tick (D-0232) runs the host's rules at CompanyTuning.BUSINESS_TICK_HZ,
+## DayCycle.poll first; the cycle's own poll in _process goes off on every peer (a client's poll does
+## nothing anyway).
+func _add_business_tick() -> void:
+	day_cycle.set_process(false)
+	if not net.is_host():
+		return
+	business_tick = BusinessTick.new()
+	business_tick.name = "BusinessTick"
+	add_child(business_tick)
+	business_tick.add_step(&"day_cycle", day_cycle.poll)
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -292,6 +318,32 @@ func save_interrupted_day() -> bool:
 	return saved
 
 
+## Host (solo too), with the day closed (DayCycle in SUMMARY): the company saved as the next day's
+## opening (D-0236), day + 1 at DAY_START_MIN, not interrupted, with the live stock as a save keeps
+## it (stock_for_save()). Loading it opens that day, as next_day() would. The company itself keeps
+## its day: only the saved copy moves on. False on a client, without a company on, outside SUMMARY,
+## over a newer build's save or when the file could not be written.
+func save_closed_day() -> bool:
+	if _hosted_state == null or not is_instance_valid(_hosted_state) or not _hosted_state.is_active():
+		return false
+	if day_cycle == null or not is_instance_valid(day_cycle):
+		return false
+	if day_cycle.phase() != DayCycle.Phase.SUMMARY:
+		return false
+	if net != null and is_instance_valid(net) and net.inventory != null:
+		_hosted_state.store_stock(stock_for_save(net.inventory))
+	var next_opening := COMPANY_STATE.new()
+	next_opening.from_dict(_hosted_state.to_dict())
+	next_opening.day = _hosted_state.day + 1
+	next_opening.clock_minutes = CompanyTuning.DAY_START_MIN
+	var saved: bool = CompanySave.save(next_opening, save_slot, save_dir)
+	next_opening.free()
+	if not saved:
+		push_warning("CompanyRoot: the closed day %d could not be saved to %s"
+			% [_hosted_state.day, CompanySave.path_for(save_slot, save_dir)])
+	return saved
+
+
 ## A copy of `stock` as a save keeps it (D-2005): what every hands:<peer> held lies in
 ## SAVED_HANDS_LOCATION, with the total of each product and the reservations unchanged. `stock`
 ## itself (CompanyNet's live one) is not touched.
@@ -326,7 +378,8 @@ func host_day_seen() -> Dictionary:
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
 	if _hosted_state != null:
-		save_interrupted_day()
+		if not save_closed_day():
+			save_interrupted_day()
 		_hosted_state = null
 	_restore_own_company()
 	_publish_presence()
@@ -350,9 +403,20 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 
 ## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
 ## units and layout events itself (CompanyShed.follow(), D-0910).
-func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
+## the summary takes no other day_phase until next_day().
+func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
+		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
+			save_closed_day()
 		_publish_presence()
+
+
+## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
+## a company in the red is told why fewer orders come in (Bankruptcy.opening_text, D-0510.2). The
+## money is the host's, replicated, so every peer reads the same.
+func _opening_notice() -> String:
+	return Bankruptcy.opening_text(_shown_company())
 
 
 ## The company Steam shows for this peer (D-2009): the host's own (solo too) while its world is up; on
@@ -504,24 +568,28 @@ func _redraw_shed() -> void:
 		shed.rebuild(net.company, net.inventory)
 
 
-## The streamed cells of the map, on every peer: `anchors` follow whoever is in the crew group or
-## drives a company vehicle (CompanyTrips' group), refreshed each frame by `_process`.
+## The streamed cells of the map, on every peer: `anchors` follow, on the host, every player (the crew
+## group) and every company vehicle (CompanyTrips' group); on a client only its own player (D-0316).
+## Refreshed each frame by `_process`.
 func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
 
 
+## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
+func _add_interest() -> void:
+	interest = CompanyInterest.new()
+	interest.name = "Interest"
+	interest.crew_group = CREW_GROUP
+	add_child(interest)
+
+
 func _process(_delta: float) -> void:
 	if cells == null:
 		return
-	var found: Array[Vector3] = []
-	for group: StringName in [CREW_GROUP, CompanyTrips.VEHICLE_GROUP]:
-		for node: Node in get_tree().get_nodes_in_group(group):
-			var body := node as Node3D
-			if body != null and body.is_inside_tree():
-				found.append(body.global_position)
-	cells.anchors = found
+	var as_host: bool = net == null or net.is_host()
+	cells.anchors = CompanyInterest.cell_anchors(self, CREW_GROUP, CompanyTrips.VEHICLE_GROUP, as_host)
 
 
 ## Host: the gate across the shed's exit (north wall, centered) and the trips that cross it; the
