@@ -112,20 +112,22 @@ func _test_open_close() -> void:
 	var board: StockBoard = made[0]
 	await process_frame
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# Headless may ignore the mouse mode: only check it where it sticks.
+	var mouse_sticks: bool = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	_expect(board.open(), "the list opens")
 	_expect(board.is_open() and board.panel.visible, "the panel is on screen")
-	_expect(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "the mouse is free while it is open")
+	_expect(not mouse_sticks or Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "the mouse is free while it is open")
 	_expect(not player.input_on(), "the player's input is off while it is open")
 	_expect(not board.open(), "an open list is not opened twice")
 	board.close()
 	_expect(not board.is_open(), "close hides the panel")
-	_expect(Input.mouse_mode == Input.MOUSE_MODE_CAPTURED, "the mouse goes back to what it was")
+	_expect(not mouse_sticks or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED, "the mouse goes back to what it was")
 	_expect(player.input_on(), "the player's input is back")
-	var building: bool = true
+	var building: Array[bool] = [true]
 	board.busy = func() -> bool:
-		return building
+		return building[0]
 	_expect(not board.open() and not board.is_open(), "the build mode keeps the list closed")
-	building = false
+	building[0] = false
 	_expect(board.open(), "once the build mode ends it opens")
 	board.close()
 	(made[1] as Node).queue_free()
