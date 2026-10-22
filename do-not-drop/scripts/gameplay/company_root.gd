@@ -740,10 +740,8 @@ func _add_cells() -> void:
 	add_child(cells)
 
 
-## The packages the sealed boxes become (D-0715.b), on every peer under World/Packages: the same path
-## everywhere, so each one's synchronizer pairs up with the host's. CompanyNet's tables build them
-## there (CompanyPackages); the host's are watched by the cells, and every peer's by the interest
-## (_on_package_added()).
+## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages
+## builds them), so each synchronizer pairs up with the host's; see _on_package_added().
 func _add_packages() -> void:
 	if net == null:
 		return
@@ -754,11 +752,8 @@ func _add_packages() -> void:
 	net.table.packages.added.connect(_on_package_added)
 
 
-## Every peer (D-0316.3): a package is a loose box of the interest (add_loose_box()), and on the host
-## consume() lets it go before broadcasting the removal (consuming), so a far peer drops it too. Host
-## (D-0318.1): it freezes while its cell isn't loaded (no floor under it) and thaws when it is back
-## (WorldCellStreamer.track_body), let go as it leaves the tree; the cells never track a client's
-## copy. Called while box_sealed is applied: no CompanyNet request here.
+## Every peer: a loose box of the interest, let go before consume() broadcasts (D-0316.3). Host: frozen
+## while its cell isn't loaded (cells.track_body, D-0318.1). No CompanyNet request here (box_sealed).
 func _on_package_added(package: DeliveryPackage) -> void:
 	if interest != null and is_instance_valid(interest):
 		interest.add_loose_box(package, package.consuming)
@@ -768,7 +763,6 @@ func _on_package_added(package: DeliveryPackage) -> void:
 	package.tree_exiting.connect(cells.untrack_body.bind(package), CONNECT_ONE_SHOT)
 
 
-## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
 func _add_interest() -> void:
 	interest = CompanyInterest.new()
 	interest.name = "Interest"
