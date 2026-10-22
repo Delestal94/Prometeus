@@ -145,11 +145,13 @@ func problems() -> Array[String]:
 	if not WalkReachability.entries_connected(grid, scratch.layout, entries):
 		found.append("the dock is cut off from the exit")
 	var shelf_slots: Dictionary = {}
+	var shelf_cold: Dictionary = {}
 	for index: int in scratch.layout.size():
 		var def: PlaceableDefinition = PlaceableShop.definition(
 			StringName(str(scratch.layout[index]["id"])))
 		if def != null and def.role == &"storage":
 			shelf_slots[str(piece_uid(scratch.layout, index))] = def.slots
+			shelf_cold[str(piece_uid(scratch.layout, index))] = def.cold
 	var labeled: Dictionary = {}
 	for entry: Dictionary in shelf_stock:
 		var shelf: String = str(entry.get("shelf", ""))
@@ -160,8 +162,13 @@ func problems() -> Array[String]:
 		if labeled.has(key):
 			found.append("shelf slot %s is labeled twice" % key)
 		labeled[key] = true
-		if not ResourceLoader.exists("res://data/products/%s.tres" % str(entry.get("product", ""))):
+		var product: ProductDefinition = load(
+			"res://data/products/%s.tres" % str(entry.get("product", ""))) as ProductDefinition \
+			if ResourceLoader.exists("res://data/products/%s.tres" % str(entry.get("product", ""))) else null
+		if product == null:
 			found.append("unknown product %s" % entry.get("product", ""))
+		elif shelf_cold.has(shelf) and (product.temperature == ColdPack.COLD) != bool(shelf_cold[shelf]):
+			found.append("%s on shelf %s: cold products go only in a fridge (D-0617)" % [product.id, shelf])
 	if first_pallets().size() > pallet_spots.size():
 		found.append("%d pallets but only %d spots" % [first_pallets().size(), pallet_spots.size()])
 	return found

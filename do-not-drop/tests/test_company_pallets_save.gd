@@ -5,6 +5,9 @@ extends SceneTree
 ## CompanyPallets.to_save / load_save, CompanyState.pallets, CompanyRoot):
 ## - to_save() survives a JSON round trip (whole numbers back as float, the jack's spot as [x, z]): the book
 ##   (bed, jack and floor with their spots), loaded_day, departed_day and the note come back the same;
+## - a forklift that was moved and had a driver saves its spot as [x, z] and nobody driving, and loads back with
+##   the book, departed_day and the spot intact (the forklift's Vector2 used to turn into text in the JSON and
+##   the whole book was lost);
 ## - load_save() refuses what does not fit (not a dictionary, a spot that is not two numbers, a pallet on the
 ##   jack that the book does not carry) and changes nothing;
 ## - CompanyState keeps it through CompanySave's JSON; a broken `pallets` loads the company with an empty book,
@@ -33,6 +36,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_round_trip()
 	_test_refused()
+	_test_moved_forklift()
 	_test_state()
 	_test_no_second_truck()
 	await _test_root()
@@ -84,6 +88,22 @@ func _test_round_trip() -> void:
 	var fresh := CompanyPallets.new()
 	_expect(fresh.load_save(_json(fresh.to_save())) and fresh.jack_at == null and fresh.book.places.is_empty(),
 		"An empty book round-trips with the jack at home")
+
+
+func _test_moved_forklift() -> void:
+	var pallets: CompanyPallets = _filled(Inventory.new())
+	var spot := Vector2(-2.5, 6.0)
+	_expect(pallets.forklift.apply({"driver": 7, "at": spot, "yaw": 1.5, "dir": 0, "height": 0.0}, 0),
+		"The forklift is driven somewhere")
+	var saved: Variant = _json(pallets.to_save())
+	_expect(saved is Dictionary and saved["forklift"]["at"] is Array and saved["forklift"]["driver"] == 0,
+		"The forklift's spot goes as [x, z] and nobody drives it")
+	var back := CompanyPallets.new()
+	_expect(back.load_save(saved), "A save with the forklift moved loads")
+	_expect(back.forklift.at is Vector2 and back.forklift.at == spot and back.forklift.driver == 0,
+		"The forklift stands where it was, with no driver")
+	_expect(back.book.carrying == &"d2_2" and back.departed_day == DAY - 1 and back.loaded_day == DAY,
+		"The book and departed_day came back")
 
 
 func _test_refused() -> void:

@@ -630,7 +630,7 @@ func _step_raw() -> void:
 		# As submit_driver_input: only while this client is the host's driver (inputs still on the way when the
 		# wheel changed hands are dropped).
 		if int(_host.get(&"driver_peer_id")) == HOST_ID + 1:
-			_host.call(&"receive_driver_input", int(input[0]), float(input[1]), float(input[2]), bool(input[3]))
+			_host.call(&"_receive_driver_input", int(input[0]), float(input[1]), float(input[2]), bool(input[3]))
 	while not _downlink.is_empty() and int(_downlink[0][0]) <= _tick:
 		var state: Array = _downlink.pop_front()[1]
 		_client.set(&"net_simulating", state[6])
