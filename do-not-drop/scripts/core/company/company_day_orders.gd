@@ -18,10 +18,10 @@ extends RefCounted
 ## CompanyNet.event_applied.
 
 ## Host: the orders of `day` for a crew of `players`, planned on `net` (CompanyOrdersNet.plan_day()) from
-## `company`'s day seed, the zones open to it and the catalogs. Returns how many are planned: 0 on a
-## client or without a company.
+## `company`'s day seed, the zones open to it and the catalogs, once per day (a freeze toggle in OPENING
+## plans nothing). Returns how many are planned: 0 on a client, without a company or for a planned day.
 static func plan(net: CompanyNet, company: Object, day: int, players: int) -> int:
-	if net == null or not net.is_host() or company == null:
+	if net == null or not net.is_host() or not is_instance_valid(company) or net.orders.planned_day == day:
 		return 0
 	var catalog: CompanyCatalog = CompanyCatalog.load_all()
 	var products: Dictionary = {}

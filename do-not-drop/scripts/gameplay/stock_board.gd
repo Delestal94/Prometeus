@@ -11,9 +11,8 @@ extends Node
 ## (CompanyNet.orders.book, D-0813.1), so a client marks the same as the host; without a book (book_of
 ## unset or null) the list has no marks. With only_today (CompanyRoot) only today's pending orders
 ## count: nothing closes an order of that book yet (D-0815.b, D-0302), so past days' pile up there.
-## The units already ordered from a supplier count as "on the way" only when the supplier calendar
-## holds real orders: the stand-in calendar (CompanyRoot._seed_stand_in_calendar) brings nothing, so
-## it is not counted.
+## The units already ordered from a supplier count as "on the way" when `real_calendar` (CompanyRoot sets
+## it: since D-0603.b.2 the calendar holds only real orders, by CompanyNet on every peer).
 
 const ACTION_TOGGLE: StringName = &"company_stock"
 
@@ -24,7 +23,7 @@ var book_of: Callable = Callable()
 ## Only the orders of the company's day (OrderGenerator.is_of_day()) count for the marks.
 var only_today: bool = false
 var schedule: SupplierSchedule
-## False while the calendar is the stand-in one: nothing is "on the way" then.
+## True when the calendar holds real orders (CompanyRoot, D-0603.b.2); false counts nothing "on the way".
 var real_calendar: bool = false
 ## id -> ProductDefinition, only for the names.
 var products: Dictionary = {}
@@ -92,15 +91,15 @@ func _ready() -> void:
 
 ## The company world's board: it marks what today's orders of the book every peer shares miss
 ## (CompanyNet.orders.book, D-0813.1; read only, so a client marks the same as the host; only today's
-## until D-0815.b and D-0302 close orders there, or the past days' would pile up). The calendar is the
-## stand-in until D-0603 feeds it, so nothing counts as on the way yet. Not in the tree yet.
+## until D-0815.b and D-0302 close orders there, or the past days' would pile up). The calendar holds
+## real orders (D-0603.b.2), so what is ordered counts as on the way. Not in the tree yet.
 static func for_company(company_net: CompanyNet, calendar: SupplierSchedule, player_fn: Callable,
 		busy_fn: Callable) -> StockBoard:
 	var board := StockBoard.new()
 	board.name = "StockBoard"
 	board.setup(company_net)
 	board.schedule = calendar
-	board.real_calendar = false
+	board.real_calendar = true
 	board.book_of = func() -> OrderBook:
 		return company_net.orders.book if is_instance_valid(company_net) else null
 	board.only_today = true

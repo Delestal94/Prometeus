@@ -62,6 +62,8 @@ const BOOK_KEYS: Array[String] = ["box_id", "trip_id", "late_from", "quality", "
 ## reads this one).
 var book: OrderBook = OrderBook.new()
 
+## Host: the day plan_day() planned last (CompanyDayOrders.plan() plans each day once).
+var planned_day: int = 0
 ## Host: the day's orders still to come in, oldest first (plan()).
 var _planned: Array[Dictionary] = []
 ## Host: poll() already warned that the book is full (again once it had room and filled up).
@@ -82,6 +84,7 @@ func _notification(what: int) -> void:
 ## orders. Returns how many are planned (plan()).
 func plan_day(day_seed: int, day: int, players: int, zones: Array[ZoneDefinition], products: Dictionary,
 		requirements: Dictionary, company: Object = null) -> int:
+	planned_day = day
 	return plan(OrderGenerator.generate_day(day_seed, day, players, zones, products, requirements, 0, company))
 
 

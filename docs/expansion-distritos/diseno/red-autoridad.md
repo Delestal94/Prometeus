@@ -446,7 +446,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Test: `test_company_orders_net` (solo, la parte del snapshot, y host + cliente + uno que entra tarde por ENet);
   `test_order_book` suma `overdue()` y `expire_one()`; `test_company_layout_net` ya lee las ramas nuevas de
   `_apply_state()`.
-- **El mundo (D-0813.1):** el host planea cada día nuevo en el `OPENING` (`CompanyRoot._plan_orders()` →
+- **El mundo (D-0813.1):** el host planea cada día nuevo en el `OPENING` (`CompanyDayOrders.plan()` →
   `CompanyDayOrders.plan()`: `day_seed(CompanySeed.ORDERS)`, tripulación de la sesión, zonas sin portón o con todos los
   suyos abiertos, catálogos; una vez por día, así un `OPENING` repetido por congelar el galpón no replanea) y el
   `BusinessTick` suma el paso `orders` después de `day_cycle` (`CompanyDayOrders.poll()`: `poll(net,

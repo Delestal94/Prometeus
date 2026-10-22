@@ -47,7 +47,7 @@ extends Node
 ## made there is refused (it would number its event before the one being applied).
 
 ## Every peer, the host too, right after an event changed the state here: presentation (HUD, sounds)
-## and the host's rules that react to a fact (see above: save_closed_day, _plan_orders) listen to this.
+## and the host's rules that react to a fact (see above: save_closed_day, CompanyDayOrders.plan) listen to this.
 signal event_applied(seq: int, kind: StringName, data: Dictionary)
 ## The requester only: the host refused request `rid` (what request() returned), and why
 ## (one of the REASON_* names). Only a notice: nothing changed anywhere.
@@ -68,11 +68,11 @@ const UNITS_DROP: StringName = &"units_drop"
 ## Request kinds the host takes (the contract's section 2 whitelist); anything else is
 ## dropped. Later tasks append theirs.
 const REQUEST_KINDS: Array[StringName] = [
-	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
-	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START,
-	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
-	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH,
-	CompanyPallets.PICK, CompanyPallets.PUT, CompanyPallets.PUSH,
+	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE, CompanyLayoutNet.MOVE,
+	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
+	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
+	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
+	CompanyPallets.PUT, CompanyPallets.PUSH,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
@@ -89,15 +89,14 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
 	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED,
 	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
-	CompanyOrdersNet.EXPIRED,
+	CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, the truck's pallets,
 ## its orders); units_moved never.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED,
 	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
 	CompanyOrdersNet.EXPIRED]
-## Host: one snapshot request per peer in this long (a broken client would ask once per
-## event). The client waits as long before asking again.
+## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a snapshot
 ## taken later covers them anyway.
@@ -151,8 +150,7 @@ var day_cycle: DayCycle = null
 var trips_view: CompanyTripsView = null
 ## The shed layout's build requests (host) and events (every peer) on `company`'s layout (D-0910).
 var build: CompanyLayoutNet = CompanyLayoutNet.new()
-## The shared packing tables' requests (host) and events (every peer), and their state (D-0715). Its
-## tables travel in every snapshot (CompanyTableNet.SNAPSHOT_KEY, added in _init()).
+## The shared packing tables' requests (host), events (every peer) and state (D-0715); in every snapshot.
 var table: CompanyTableNet = CompanyTableNet.new()
 ## Where the picking carts stand after a push (D-0610.b); a snapshot part.
 var carts: CompanyCarts = CompanyCarts.new()
@@ -160,11 +158,11 @@ var carts: CompanyCarts = CompanyCarts.new()
 var pallets: CompanyPallets = CompanyPallets.new()
 ## The day's orders (D-0813): the book every peer shares, the host's plan and their events; in every snapshot.
 var orders: CompanyOrdersNet = CompanyOrdersNet.new()
-## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
-## small ones to cut a snapshot in many).
+## The supplier orders (D-0603.b.2) on the calendar `supplier.schedule` (the truck's); a snapshot part.
+var supplier: CompanySupplierNet = CompanySupplierNet.new()
+## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (tests force small ones).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
-## Host: a station id -> what the host needs to check a request at it (rule 4), as
-## Callable(station: StringName) -> Dictionary:
+## Host: a station id -> what the host needs to check a request at it (rule 4), as Callable(station) -> Dictionary:
 ##   location  StringName  where its units are counted (pallet:<id>, shelf:<id>_<slot>...)
 ##   spot      Vector3     where reach is measured to: the slot or cell, not the furniture
 ##   accepts   StringName  optional: the only product a store may put there (a slot label)
@@ -217,6 +215,7 @@ func _init() -> void:
 	add_snapshot_part(CompanyCarts.SNAPSHOT_KEY, carts.to_dict, carts.put_snapshot)
 	add_snapshot_part(CompanyPallets.SNAPSHOT_KEY, pallets.to_dict, pallets.put_snapshot)
 	add_snapshot_part(CompanyOrdersNet.SNAPSHOT_KEY, orders.to_dict, orders.put_snapshot)
+	add_snapshot_part(CompanySupplierNet.SNAPSHOT_KEY, supplier.to_dict, supplier.put_snapshot)
 
 
 func _ready() -> void:
@@ -352,9 +351,7 @@ func grant_snapshot(peer: int, now_msec: int) -> bool:
 ## snapshot). Every peer adds the same parts before its world is up. False, adding nothing,
 ## when `key` is taken or a callable isn't valid.
 func add_snapshot_part(key: String, take: Callable, put: Callable) -> bool:
-	if key.is_empty() or SNAPSHOT_KEYS.has(key) or _parts.has(key):
-		return false
-	if not take.is_valid() or not put.is_valid():
+	if key.is_empty() or SNAPSHOT_KEYS.has(key) or _parts.has(key) or not take.is_valid() or not put.is_valid():
 		return false
 	_parts[key] = [take, put]
 	return true
@@ -370,20 +367,20 @@ func remove_snapshot_part(key: String) -> bool:
 ## Host: the business state as a snapshot carries it (section 3), as plain data:
 ##   seq        int: the last event it covers; the peer drops every event up to it
 ##   inventory  the live stock with its reservations (Inventory.to_dict())
-##   company    CompanyState.to_dict() without its stored stock (the live one is `inventory`):
+##   company    CompanyState.to_dict() without its stored stock and calendar (live: `inventory`, `supplier`):
 ##              money, day and clock, reputation, gates (the locks), fleet, employees,
 ##              milestones, layout, ledger. Missing without a `company`
 ##   floor      {floor:<n>: Vector3}: where each bundle on the floor lies (FloorBundles)
 ##   <part>     one per add_snapshot_part()
 func snapshot() -> Dictionary:
 	var stock: Inventory = inventory if inventory != null else Inventory.new()
-	var data: Dictionary = {"seq": seq, "inventory": stock.to_dict()}
-	data["floor"] = floor_bundles.to_dict()
+	var data: Dictionary = {"seq": seq, "inventory": stock.to_dict(), "floor": floor_bundles.to_dict()}
 	if company != null and company.has_method(&"to_dict"):
 		var state: Variant = company.call(&"to_dict")
 		if state is Dictionary:
 			var stored: Dictionary = state
 			stored.erase("inventory")
+			stored.erase("supplier_calendar")
 			data["company"] = stored
 	for key: String in _parts:
 		var take: Callable = _parts[key][0]
@@ -590,13 +587,10 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 		return _build(peer, kind, data)
 	if CompanyTableNet.REQUEST_KINDS.has(kind) or kind == CompanyPackages.ACK:
 		return _pack(peer, kind, data)
-	if CompanyCarts.REQUEST_KINDS.has(kind):
-		var push: Dictionary = CompanyCarts.push_ask(data)
-		var cart: Dictionary = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
-		return _on_object(peer, cart, func(station: Dictionary) -> Dictionary: return carts.check(push, station))
-	if CompanyPallets.REQUEST_KINDS.has(kind):
-		return _on_object(peer, {"station": CompanyPallets.STATION},
-			func(station: Dictionary) -> Dictionary: return pallets.check(kind, data, station))
+	if CompanyCarts.REQUEST_KINDS.has(kind) or CompanyPallets.REQUEST_KINDS.has(kind):
+		return _on_object(peer, kind, data)
+	if CompanySupplierNet.REQUEST_KINDS.has(kind):
+		return _grant(supplier.ask(self, peer, data))
 	match kind:
 		&"units_take":
 			return _take_units(peer, data)
@@ -632,10 +626,15 @@ func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	return _grant(table.check(company, inventory, kind, data, station, hands_location(peer)))
 
 
-## Host: a request on a world object (a picking cart, D-0610.b; the pallet jack, D-0605.b): `ask` names its station
-## and it must be within the sender's reach (as for units); `check` is the object's own rule, Callable(station) ->
-## the refusal or the one event to publish.
-func _on_object(peer: int, ask: Dictionary, check: Callable) -> StringName:
+## Host: a request on a world object (a picking cart, D-0610.b; the pallet jack, D-0605.b): its station must be
+## within the sender's reach (as for units), then the object's own check gives the refusal or the one event.
+func _on_object(peer: int, kind: StringName, data: Dictionary) -> StringName:
+	var push: Dictionary = CompanyCarts.push_ask(data)
+	var ask: Dictionary = {"station": CompanyPallets.STATION}
+	var check: Callable = func(station: Dictionary) -> Dictionary: return pallets.check(kind, data, station)
+	if kind == CompanyCarts.PUSH:
+		ask = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
+		check = func(station: Dictionary) -> Dictionary: return carts.check(push, station)
 	var station: Dictionary = _lookup_station(ask)
 	var problem: StringName = _station_problem(peer, ask, station)
 	return problem if problem != &"" else _grant(check.call(station))
@@ -840,6 +839,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = pallets.apply(inventory, kind, data)
 		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED:
 			applied = orders.apply(kind, data)
+		CompanySupplierNet.ORDERED:
+			applied = supplier.apply(data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false

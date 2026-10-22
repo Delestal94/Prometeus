@@ -18,7 +18,8 @@ func _initialize() -> void:
 		SynthAudio.crossing_bell, SynthAudio.roller_door, SynthAudio.reverse_beep, SynthAudio.dog_bark,
 		SynthAudio.sheep_bleat, SynthAudio.doorbell_ding_dong, SynthAudio.neighbor_cheer, SynthAudio.train_horn,
 		SynthAudio.scanner_beep, SynthAudio.care_step, SynthAudio.care_error, SynthAudio.care_success,
-		SynthAudio.care_whoosh, SynthAudio.care_tick,
+		SynthAudio.care_whoosh, SynthAudio.care_tick, SynthAudio.rooster_crow, SynthAudio.morning_chirps,
+		SynthAudio.extra_stinger, SynthAudio.paper_rustle, SynthAudio.page_turn, SynthAudio.mate_spit,
 	]
 	for build: Callable in one_shots:
 		_check_stream(build.call(), String(build.get_method()))
@@ -35,6 +36,7 @@ func _initialize() -> void:
 	_expect(first_horn == SynthAudio.honk_horn(), "The same sound is built once and shared")
 	_check_stream(SynthAudio.callout_voice(2, 3), "callout_voice")
 	_expect(SynthAudio.callout_voice(0, 2) != SynthAudio.callout_voice(1, 2), "Callouts differ by voice")
+	_check_newspaper_sounds()
 	_check_stream(SynthAudioSteps.footstep(), "footstep")
 	_check_stream(SynthAudioTraps.cushion_pad(), "cushion_pad")
 	_check_stream(SynthAudioRadio.knob_click(), "knob_click")
@@ -62,3 +64,24 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+
+## The newspaper scene's sounds (N-606.4a): the length each is meant to have,
+## and the same bytes on every build (they are seeded, unlike the older ones).
+func _check_newspaper_sounds() -> void:
+	var lengths: Dictionary = {
+		"make_rooster_crow": [1.6, 2.0], "make_morning_chirps": [1.6, 2.0], "make_extra_stinger": [1.7, 2.1],
+		"make_paper_rustle": [0.6, 0.9], "make_page_turn": [0.4, 0.7], "make_mate_spit": [0.8, 1.2],
+	}
+	for method: String in lengths:
+		var builder := SynthAudioNewspaper as GDScript
+		var first: AudioStreamWAV = builder.call(method)
+		var seconds: float = float(first.data.size() / 2) / first.mix_rate
+		_expect(seconds >= lengths[method][0] and seconds <= lengths[method][1],
+			"%s lasts %.2f s (wanted %s)" % [method, seconds, str(lengths[method])])
+		_expect(first.loop_mode == AudioStreamWAV.LOOP_DISABLED, "%s is a one-shot" % method)
+		_expect(first.data == (builder.call(method) as AudioStreamWAV).data,
+			"%s sounds the same on every build" % method)
+		# Rounded in and out: the first and last samples are near silence (no click).
+		_expect(absi(first.data.decode_s16(0)) < 2000 and absi(first.data.decode_s16(first.data.size() - 2)) < 2000,
+			"%s begins and ends near silence" % method)

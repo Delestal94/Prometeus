@@ -7,7 +7,7 @@ extends SceneTree
 ##   order book gets the list with no marks; with a day (only_today, as CompanyRoot sets it, D-0813.1) only
 ##   that day's orders count (ids d<day>_, OrderGenerator.is_of_day());
 ## - incoming_from() adds up the supplier calendar from a day on; the board counts it as "on the way"
-##   only with a real calendar (the stand-in one brings nothing);
+##   only with real_calendar on (CompanyRoot turns it on: since D-0603.b.2 the calendar holds only real orders);
 ## - open() shows the panel, frees the mouse and turns the local player's input off; close() gives both
 ##   back; an open list is blocked while the build mode is on;
 ## - a change the net applies redraws the open list from this peer's inventory;

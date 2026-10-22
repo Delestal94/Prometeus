@@ -194,7 +194,7 @@ func _check_solo() -> void:
 	var listen: Callable = func(id: StringName) -> void: told.append(id)
 	bus.connect(&"order_added", listen)
 	b.clock.start(float(CompanyTuning.ORDER_LAST_ARRIVAL_MIN))
-	b.call(&"_poll_orders")
+	CompanyDayOrders.poll(b.net, b.day_cycle)
 	bus.disconnect(&"order_added", listen)
 	var ids: Array = plan_a.map(func(o: Dictionary) -> StringName: return o["id"])
 	_expect(b.net.orders.planned().is_empty() and b.net.orders.book.size() == plan_a.size(),
@@ -205,7 +205,7 @@ func _check_solo() -> void:
 	for next: DayCycle.Phase in [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]:
 		b.day_cycle.call(&"_transition", next)
 		if next != DayCycle.Phase.OPERATING:
-			b.call(&"_poll_orders")
+			CompanyDayOrders.poll(b.net, b.day_cycle)
 			_expect(b.net.orders.planned().size() == 1 and not b.net.orders.book.has(&"late_comer"),
 				"In %s the orders step brings nothing in" % b.day_cycle.phase_name())
 	b.queue_free()

@@ -20,6 +20,7 @@ extends RefCounted
 ##   music    loop RMS       -24 dBFS   the depot's radio (Music bus)
 ##   machine  loop RMS       -40 dBFS   the forklift's engine going back and forth
 ##   repeat   loudest 100 ms -30 dBFS   the forklift's reverse beep, over and over
+##   foley    loudest 100 ms -24 dBFS   paper and other close, dry handling sounds (N-606.4a)
 ## (The last two were "ambient" and "signal" at first, and the depot got
 ## grating: a sound that never stops sits well under one that calls once.)
 ##
@@ -80,6 +81,17 @@ const TRAIN_CHUG_DB: float = -6.0
 ## A crewmate's quick callout (N-505, hud_notices.gd): callout_voice()
 ## self-normalises like the doorbell, so this is the "signal" target minus that.
 const CALLOUT_VOICE_DB: float = -6.0
+
+# The next-day newspaper scene (newspaper_director.gd, N-606.4a). Every
+# one self-normalises to SynthAudioNewspaper.STREAM_LOUDEST_DB (-12): the rooster,
+# the hawker's hit and the spit are "signal" (-18), the little birds "nature"
+# (-24), the paper and the page "foley" (-24).
+const NEWSPAPER_ROOSTER_DB: float = -6.0
+const NEWSPAPER_CHIRPS_DB: float = -12.0
+const NEWSPAPER_EXTRA_DB: float = -6.0
+const NEWSPAPER_PAPER_DB: float = -12.0
+const NEWSPAPER_PAGE_DB: float = -12.0
+const NEWSPAPER_SPIT_DB: float = -6.0
 
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
 ## The radio plays mus_depot_radio_loop.ogg (N-403, tools/audio/compose_music.py),

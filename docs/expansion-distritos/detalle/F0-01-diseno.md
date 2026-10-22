@@ -203,3 +203,15 @@ Cada riesgo con su mitigación y la tarea que la hace.
 Decisión: `docs/decisiones/2026-10-22-narrativa-empresa.md`. Los textos fuera de tono se reescriben en
 las tareas de pedidos y cierre (D-0822 mensajes con humor).
 **Hecho cuando:** `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md`.
+
+### D-0123 · Diseño de eventos del día — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/eventos-del-dia.md`: 15 eventos (6 Núcleo F1, 5 Ampliación F1, 4 Ampliación F2; 4 positivos, 3 negativos, 8 mixtos), reglas de frecuencia y anuncio, sorteo con la corriente `events` de la semilla del día, techo diario de 150 / 300, red por `CompanyNet` y tareas nuevas a crear en el grupo 05.
+**Depende de:** D-0101, D-0110, D-0117, D-0121, D-0246, D-2001
+**Qué:** `diseno/eventos-del-dia.md`, que no resucita nada de P14 ni de R4:
+- [x] **D-0123.1** Propósito, qué no son (ni peligros de zona ni contratos de varios días) y cómo conviven con `RouteEventManager` (ids distintos: `shed_inspection` ≠ `inspection`).
+- [x] **D-0123.2** Reglas generales: cuántos por día según el día de campaña y la tripulación, cuándo se anuncian (víspera, apertura, a una hora, al llegar), sorteo en el host con `CompanySeed.for_day(…, "events")` al cerrar el día anterior, sin repetir dos días seguidos, techo de castigo y premio por día, escalado de 1 a 8 jugadores y modo solo, constantes en `CompanyTuning` y `.tres` en `data/day_events/`.
+- [x] **D-0123.3** Los 15 eventos (incluye inspección, proveedor tarde, pedido gigante, huelga de transporte y ola de calor), cada uno con anuncio en el tono de narrativa-empresa.md, sistema que toca, números, decisión, resultado, día mínimo, fase y requisitos; tabla resumen con costo.
+- [x] **D-0123.4** Red y guardado (`day_event_announced/started/progress/ended`, petición `day_event_answer`, parte de snapshot `day_events`, `CompanyState.day_events` en el save), tareas que lo construyen, riesgos y "Decidir al final".
+Decisión: `docs/decisiones/2026-10-22-eventos-del-dia.md`. Lo que se construye son tareas nuevas a crear
+en el grupo 05, después de cerrar el corte vertical.
+**Hecho cuando:** `diseno/eventos-del-dia.md` tiene los 15 eventos y su tabla resumen.
