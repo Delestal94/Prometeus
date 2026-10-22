@@ -124,7 +124,7 @@ func _on_copy_shown(body: Node3D) -> void:
 	var box := body as DeliveryPackage
 	if box == null:
 		return
-	if box._consumed:
+	if box.consumed:
 		box.collision_layer = 0
 		box.collision_mask = 0
 	else:

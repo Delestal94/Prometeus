@@ -154,6 +154,10 @@ const TENDER_INPUT_TIMEOUT: float = 0.25
 ## Handed over at a door: on a client the network stops placing it, the
 ## hand-over plays out and it goes.
 var _consumed: bool = false
+## Read-only view of _consumed for code outside the package (CompanyInterest, D-0316.3).
+var consumed: bool:
+	get:
+		return _consumed
 ## How far past the cargo bay's edge a box already aboard still counts as
 ## aboard (see Vehicle.carries()).
 const RIDE_MARGIN: float = 0.4

@@ -392,10 +392,14 @@ func _on_synchronized(sync: MultiplayerSynchronizer) -> void:
 ## into it since it was hidden (by an update or by the game; non-zero, as a 0 can't be told from
 ## the zeroing) is what the showing gives back, and the copy stays out of physics meanwhile.
 func _keep_hidden_solids(entry: _Entry) -> void:
-	for solid: Variant in entry.collisions:
+	for solid: Variant in entry.collisions.keys():
 		if not is_instance_valid(solid):
 			continue
 		var typed := solid as CollisionObject3D
+		if typed != entry.body and not (is_instance_valid(entry.body) and entry.body.is_ancestor_of(typed)):
+			# The game took it out of the body (a part that falls off): no longer this copy's to hide.
+			entry.collisions.erase(solid)
+			continue
 		var saved: Array = entry.collisions[solid]
 		if typed.collision_layer != 0:
 			saved[0] = typed.collision_layer
