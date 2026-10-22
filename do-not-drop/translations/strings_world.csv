@@ -398,6 +398,7 @@ WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
 WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
 WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
+WORLD_SHED_TAKE_FROM_CART,Tomar %s del carrito,Take %s from the cart
 WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
 WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
 WORLD_SHED_USE_SUPPLIER,Pedir al proveedor,Order from the supplier

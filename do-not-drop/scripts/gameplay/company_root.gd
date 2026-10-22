@@ -640,12 +640,12 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		_pick_after[key] = plan["slot"]
 
 
-## Host: a crew member worked a picking cart (D-0610.b): load or unload it, or push it. PickingCartUse asks
-## the host's own CompanyNet on their behalf, which checks reach, hands and room.
-func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3) -> void:
+## Host: a crew member worked a picking cart (D-0610.b, take D-0610.c2). PickingCartUse asks the host's own
+## CompanyNet on their behalf, which checks reach, hands and room.
+func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, what: StringName) -> void:
 	if net == null or not net.is_host():
 		return
-	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from)
+	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from, what)
 
 
 ## Host: a crew member worked the pallet jack (D-0605.b): pick a pallet up or put it down, or push the jack.
