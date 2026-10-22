@@ -19,11 +19,11 @@ func _run() -> void:
 	_expect(ProductOrientation.needs_upright(&"wedding_cake"), "cake needs upright")
 	_expect(not ProductOrientation.needs_upright(&"glass_tower"), "glass does not")
 	for id: StringName in ProductOrientation.UPRIGHT_ONLY:
-		_expect(ResourceLoader.exists("res://data/contents/%s.tres" % id), "%s is in the catalog" % id)
+		_expect(ResourceLoader.exists("res://data/products/%s.tres" % id), "%s is in the catalog" % id)
 
 	var box := PackedBox.new(&"L")
-	_expect(box.place(load("res://data/contents/milk_canister.tres"), Vector3i.ZERO), "milk placed")
-	var lamp: ProductDefinition = load("res://data/contents/antique_lamp.tres")
+	_expect(box.place(load("res://data/products/milk_canister.tres"), Vector3i.ZERO), "milk placed")
+	var lamp: ProductDefinition = load("res://data/products/antique_lamp.tres")
 	_expect(box.place(lamp, box.first_fit(lamp)), "lamp placed")
 	_expect(ProductOrientation.is_safe(box), "standing box is safe")
 	_expect(ProductOrientation.penalty(box) == 0, "standing box has no penalty")
@@ -35,7 +35,7 @@ func _run() -> void:
 	)
 	var other := PackedBox.new(&"M")
 	other.on_side = true
-	other.place(load("res://data/contents/glass_tower.tres"), Vector3i.ZERO)
+	other.place(load("res://data/products/glass_tower.tres"), Vector3i.ZERO)
 	_expect(ProductOrientation.is_safe(other), "glass lying down is fine")
 	_expect(ProductOrientation.tipped(null).is_empty(), "null box lists nothing")
 	_expect(ProductOrientation.penalty(null) == 0, "null box has no penalty")
