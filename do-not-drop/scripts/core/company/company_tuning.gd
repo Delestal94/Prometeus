@@ -51,6 +51,13 @@ const CELL_IMPOSTOR_RADIUS: int = 5
 ## Instancing budget per frame, in real milliseconds (the N-917 lesson: never a big frame).
 const CELL_SLICE_MSEC: float = 4.0
 
+# --- GPS (D-0308) ---
+## Typical speed on each street surface, in m/s: the GPS weighs a street by length / speed (time),
+## so it prefers a longer asphalt road to a short mud track. Unknown surface: 10.
+const SURFACE_SPEED: Dictionary = {&"asphalt": 14.0, &"cobble": 10.0, &"gravel": 9.0, &"dirt": 7.0}
+## How far ahead along the route the GPS arrow points, in meters.
+const GPS_LOOKAHEAD: float = 30.0
+
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
 ## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
