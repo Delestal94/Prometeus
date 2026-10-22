@@ -605,3 +605,17 @@ voto es D-0518.b).
     pero `CompanyShed.follow` no redibuja con `shop_bought`: el galpón grande se dibuja con el próximo evento de
     layout o snapshot. Va con D-0910.2 o con D-0511.2;
   - un vehículo comprado entra a `fleet` como dato; que aparezca en el mundo es de cada vehículo (D-1207, D-1221…).
+
+## 14. Lo construido (D-0616.b): la leche que se echa a perder
+
+- **Evento** `units_spoiled` `{product, qty, location}` (protocolo 51): lo publica solo el host (`HOST_EVENT_KINDS`, ningún
+  pedido lo origina) cuando `ColdChainTick` ve que las unidades de un producto frío llevan `COLD_SPOIL_MINUTES` fuera
+  de una heladera; cada peer, el host también, lo aplica con `Inventory.discard` (`CompanyColdNet.apply`, una rama de
+  `_apply_state()`). Es el stock del lugar entero. No dice qué pedidos pierden reserva: `discard` recorta las
+  reservas más nuevas hasta que entren y todos los peers tienen las mismas reservas (viajan en el snapshot), así que
+  todos recortan las mismas. Si el lugar no tiene esas unidades, el evento no entra y el cliente pide snapshot.
+- **Los relojes son solo del host** (`ColdChain`): el cliente ve la pérdida como stock y nada más. Van a
+  `CompanyState.cold_clocks` solo para el guardado (`ColdChainTick.write_clocks` antes de cada `CompanySave.save`) y
+  `CompanyNet.snapshot()` los saca de la parte `company`. Un guardado viejo sin esa clave carga con relojes en cero
+  (no hace falta subir `CompanySave.VERSION`).
+- `company_net.gd` queda en 996 de las 1000 líneas de gdlint: lo que siga va en archivos nuevos.
