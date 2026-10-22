@@ -2,13 +2,16 @@ class_name CompanyTrips
 extends Node
 ## The trips out of the shed, hooked to the world (expansion D-0302.1).
 ##
-## Child of CompanyRoot on the host (a client has none: the host decides, a client only sees the
-## vehicle). It owns the TripGate across the shed's exit and the active Trips, and every physics
+## Child of CompanyRoot on the host only: the host decides. A client has none and sees the trips out
+## through its CompanyTripsView (D-0302.2.a), which the host's view keeps by publishing every
+## trip_started, departure_refused, trip_closed and refused_returned of this node as a CompanyNet
+## event. It owns the TripGate across the shed's exit and the active Trips, and every physics
 ## tick it feeds the gate with the position of each node in group VEHICLE_GROUP (named by its
 ## vehicle id). Cargo the dispatch zone hands a vehicle waits in stage_cargo(); when the vehicle
 ## crosses the gate outward the Trip starts with it (orders go OUT), and when it comes back in the
-## Trip closes (what was not delivered fails). trips_out() is what DayCycle.trips_out reads, so the
-## day waits for a vehicle still out (S3).
+## Trip closes (what was not delivered fails). trips_out() is what the host's DayCycle.trips_out
+## reads, so the day waits for a vehicle still out (S3); this node stays the authority there, the
+## views only follow it. Nothing here sends anything: the host's view publishes (its follow()).
 ##
 ## No company vehicle exists yet (D-0207 and later put it in the world), so nothing joins the group
 ## and the gate stays idle; the OrderBook is this node's own until D-0801 puts the company's in the
@@ -18,14 +21,17 @@ extends Node
 ## out is one whose trip is out, or one that crossed outward while refused. departure_verdict() is
 ## what the dispatch board asks before loading a vehicle; a vehicle that crosses the gate outward
 ## with that many already out starts no trip (departure_refused, with the same reason) but counts
-## as out until it crosses back in (trips_out(), so the day waits for it too), and keeps its cargo
-## staged for its next departure. Stopping it at the gate and telling its driver why is D-0316.2.
+## as out until it crosses back in (trips_out(), so the day waits for it too; refused_returned when
+## it does), and keeps its cargo staged for its next departure. Stopping it at the gate and telling
+## its driver why is D-0316.2.
 
 signal trip_started(trip: Trip)
 signal trip_closed(trip: Trip, failed: Array[StringName])
 ## A vehicle crossed outward with `far_max` vehicles out: no trip started, it counts as out until
 ## it is back. `reason` is departure_verdict()'s {ok, key, args}.
 signal departure_refused(vehicle_id: StringName, reason: Dictionary)
+## A vehicle that left while refused crossed back in: it no longer counts as out (no trip closes).
+signal refused_returned(vehicle_id: StringName)
 
 ## The group of the vehicles the gate watches.
 const VEHICLE_GROUP: StringName = &"company_vehicle"
@@ -115,7 +121,7 @@ func _on_departed(vehicle_id: StringName) -> void:
 		return
 	var cargo: Dictionary = _staged[vehicle_id]
 	var trip_id := StringName("trip_%d" % _next_id)
-	var trip: Trip = Trip.start(trip_id, vehicle_id, cargo["orders"], cargo["boxes"], book, _minute())
+	var trip: Trip = Trip.start(trip_id, vehicle_id, cargo["orders"], cargo["boxes"], book, minute())
 	if trip == null:
 		return
 	_next_id += 1
@@ -125,15 +131,18 @@ func _on_departed(vehicle_id: StringName) -> void:
 
 
 func _on_returned(vehicle_id: StringName) -> void:
-	_refused_out.erase(vehicle_id)
+	if _refused_out.erase(vehicle_id):
+		refused_returned.emit(vehicle_id)
 	var trip: Trip = _active.get(vehicle_id)
 	if trip == null:
 		return
 	_active.erase(vehicle_id)
-	var failed: Array[StringName] = trip.close(book, _minute())
+	var failed: Array[StringName] = trip.close(book, minute())
 	_closed.append(trip)
 	trip_closed.emit(trip, failed)
 
 
-func _minute() -> int:
+## The game minute now (minute_now's, 0 while it is unset): the trips' times, and the minute a
+## refusal or a refused vehicle's return is published with (CompanyTripsView).
+func minute() -> int:
 	return int(minute_now.call()) if minute_now.is_valid() else 0
