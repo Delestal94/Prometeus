@@ -237,7 +237,7 @@ salida muestra la hora de salida y de vuelta, y el GPS estima la llegada en hora
 **Hecho cuando:** el test pasa.
 
 ### D-0320 · Resultado de la salida al cierre del día — A · Opus 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-21, PR pendiente)** — `TripResult` (`scripts/gameplay/districts/trip_result.gd`): `build()` arma el resumen de un `Trip` cerrado (línea por pedido con resultado, estado de la caja intacta/en riesgo/rota/sin entregar, paga, penalidad y reputación, más totales y mérito por jugador), `apply()` da el mérito al que llevó cada caja intacta (`CompanyTuning.TRIP_MERIT_INTACT`, sin repetirse) y `add_to_day()` suma las salidas al resumen del día; `test_company_trip_result`. Falta que el cierre del día lo llame (D-0508.3).
+**[x] Hecho (2026-10-21, PR pendiente)** — `TripResult` (`scripts/gameplay/districts/trip_result.gd`): `build()` arma el resumen de un `Trip` cerrado (línea por pedido con resultado, estado de la caja intacta/en riesgo/rota/sin entregar, paga, penalidad y reputación, más totales y mérito por jugador), `apply()` da el mérito al que llevó cada caja intacta (`CompanyTuning.TRIP_MERIT_INTACT`, sin repetirse) y `add_to_day()` suma las salidas al resumen del día; `test_company_trip_result`. Falta que el cierre del día lo llame (D-0508.3). D-0520 (2026-10-22): el mérito sale del puntaje de la salida (`TripScoring`: intacta 10, abollada 5) y `build()` suma `score`; ver `detalle/F1-05-economia.md`.
 **Depende de:** D-0305, D-0501
 **Qué:** al cerrar un `Trip` se arma su resumen: pedidos entregados, estado de cada caja (intacta, en
 riesgo, rota; como `RunManager` hoy), paga, penalidades y mérito por jugador (`CrewProgression`). Se suma
