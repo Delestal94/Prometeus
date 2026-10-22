@@ -9,8 +9,8 @@ extends Node
 ##
 ## The "missing for pending orders" marks (StockAlert) need the order book, which is the host's
 ## until D-0813.1: a client lists its units without marks. The units already ordered from a supplier
-## count as "on the way" only when the supplier calendar holds real orders: the stand-in calendar
-## (CompanyRoot._seed_stand_in_calendar) brings nothing, so it is not counted.
+## count as "on the way" when `real_calendar` (CompanyRoot sets it: since D-0603.b.2 the calendar holds
+## only real orders, by CompanyNet on every peer).
 
 const ACTION_TOGGLE: StringName = &"company_stock"
 
@@ -19,7 +19,7 @@ var net: CompanyNet
 ## Returns the OrderBook to read (the host's), or null.
 var book_of: Callable = Callable()
 var schedule: SupplierSchedule
-## False while the calendar is the stand-in one: nothing is "on the way" then.
+## True when the calendar holds real orders (CompanyRoot, D-0603.b.2); false counts nothing "on the way".
 var real_calendar: bool = false
 ## id -> ProductDefinition, only for the names.
 var products: Dictionary = {}

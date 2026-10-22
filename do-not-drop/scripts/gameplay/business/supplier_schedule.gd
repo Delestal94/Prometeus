@@ -112,6 +112,24 @@ func clear_day(day: int) -> void:
 	_deliveries.erase(day)
 
 
+## Drops every delivery of a day before `day` (they are past: D-0603.b.2 keeps the calendar short).
+func forget_before(day: int) -> void:
+	for past: int in _deliveries.keys():
+		if past < day:
+			_deliveries.erase(past)
+
+
+## Puts `other`'s deliveries in place of these, a copy (a snapshot or a save lands in the calendar
+## the truck already reads, D-0603.b.2).
+func copy_from(other: SupplierSchedule) -> void:
+	_deliveries = other._deliveries.duplicate(true) if other != null else {}
+
+
+## How many days have a truck.
+func day_count() -> int:
+	return _deliveries.size()
+
+
 func to_dict() -> Dictionary:
 	var out: Dictionary = {}
 	for day: int in _deliveries:

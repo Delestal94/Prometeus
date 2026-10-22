@@ -1,4 +1,4 @@
-# 2026-10-22 · Las cajas de Empresa se mandan solo a los que están cerca (D-0316.3): `PROTOCOL_VERSION` 44
+# 2026-10-22 · Las cajas de Empresa se mandan solo a los que están cerca (D-0316.3): `PROTOCOL_VERSION` 45
 
 Para Slatex. Desde D-0316.3, cada `DeliveryPackage` que deja `box_sealed` en el modo Empresa
 (`World/Packages/Package_<id>`) entra al grupo `company_loose_box`: el host manda su `MultiplayerSynchronizer`
@@ -31,14 +31,13 @@ cambia nada:** nadie conecta la señal nueva y las cajas de Delivery y Endless n
   seguir el cuerpo y lo saca de `groups`; lo que se llame después sobre él llega a todos), señal
   `copy_shown(body)` (una copia escondida se volvió a mostrar) y la cuenta de capas de la copia escondida (lo no nulo
   que se le escribe mientras está escondida es lo que vuelve al mostrarla). Firmas existentes iguales.
-- `do-not-drop/scripts/core/network_manager.gd`: `PROTOCOL_VERSION` 43 → **44** (línea "44" en el historial).
+- `do-not-drop/scripts/core/network_manager.gd`: `PROTOCOL_VERSION` 44 → **45** (línea "45" en el historial).
   Ninguna firma, RPC ni señal de `NetworkManager` / `NetSession` cambia; `modules/net_session/` no se tocó.
-- **El protocolo cambia:** el host nuevo deja de mandar la caja a un peer lejano; un cliente viejo (43) no esconde
+- **El protocolo cambia:** el host nuevo deja de mandar la caja a un peer lejano; un cliente viejo (44) no esconde
   esa copia vieja ni la saca de la física, y con un host viejo un cliente nuevo escondería cajas lejanas que el host
   le sigue mandando. Con el número nuevo el handshake los separa con el error de versión.
-- **Por qué 44:** `main` está en 43 (D-0605.b). Los PRs abiertos #629 (D-0603.b2, dice 43) y #630 (D-0618.b, dice
-  44) también suben; el que se mezcle después que otro sube al siguiente libre y corrige su línea
-  (`test_protocol_version`).
+- **Por qué 45:** `main` ya está en 44 (D-0603.b.2, PR #629). Otras ramas `exp/` en vuelo también suben; la que
+  se mezcle después sube al siguiente libre y corrige su línea (`test_protocol_version`).
 
 ## Del juego (dominio de Nacho, sin aviso propio)
 

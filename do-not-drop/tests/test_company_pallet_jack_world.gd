@@ -463,6 +463,11 @@ func _test_root() -> void:
 	await process_frame
 	_expect(net.pallets.loaded_day == 0 and net.pallets.book.places.is_empty(),
 		"Day 1 loads nothing (its pallets start in the shed)")
+	# A new company's calendar is empty (D-0603.b.2): day 1's order of the shed's first lines brings day 2's truck.
+	var first: Array = []
+	for line: Dictionary in DefaultShed.load_default().first_order:
+		first.append({"product": line.get("product", &""), "qty": line.get("qty", 0)})
+	_expect(net.supplier.apply({"order_day": DAY - 1, "lines": first, "peer": 1}), "Day 1's order is in the calendar")
 	state.set(&"day", DAY)
 	level.clock.start(float(SupplierSchedule.arrival_minute()) - 8.0)
 	await process_frame

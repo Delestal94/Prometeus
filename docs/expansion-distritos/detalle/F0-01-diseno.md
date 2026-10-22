@@ -191,3 +191,15 @@ Regla: modo Entrega y Endless no cambian de comportamiento (S1).
 - Jolt con muchos cuerpos (N-917).
 Cada riesgo con su mitigación y la tarea que la hace.
 **Hecho cuando:** 10+ riesgos, cada P0-P1 con su tarea `D-`.
+
+### D-0121 · Narrativa de la empresa — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #626)** — `diseno/narrativa-empresa.md`: la Jefa sigue mandando sin cara, premisa del galpón prestado, tono de 6 tipos de mensaje y textos actuales fuera de tono.
+**Depende de:** D-0101
+**Qué:** `diseno/narrativa-empresa.md`, alineado con `docs/narrativa.md` (que no se edita):
+- [x] D-0121.1 Quién manda (la Jefa Marta sin cara, el Jefe del depósito visible), por qué empezamos y por
+  qué crece a distritos.
+- [x] D-0121.2 Tono por tipo de mensaje (pedido, vencimiento, reclamo, felicitación, cierre, quiebra) con
+  ejemplos, reglas para textos nuevos y tabla de qué texto del código queda fuera de tono.
+Decisión: `docs/decisiones/2026-10-22-narrativa-empresa.md`. Los textos fuera de tono se reescriben en
+las tareas de pedidos y cierre (D-0822 mensajes con humor).
+**Hecho cuando:** `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md`.

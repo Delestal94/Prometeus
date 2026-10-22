@@ -415,6 +415,8 @@ static func _flat(at: Vector3) -> Vector2:
 static func _company(state: Object) -> Dictionary:
 	var data: Dictionary = state.call(&"to_dict")
 	data.erase("inventory")
+	# The snapshot's company part leaves the calendar out too: it travels as the "supplier" part (D-0603.b.2).
+	data.erase("supplier_calendar")
 	return data
 
 
