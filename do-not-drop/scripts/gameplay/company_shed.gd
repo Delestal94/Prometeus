@@ -211,6 +211,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	stage = int(state.warehouse_stage)
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
+	add_child(ShedExterior.build(stage, WarehouseStages.floor_size_m(stage), WALL_HEIGHT))
 	_build_lights(state.layout)
 	_build_supplier_board()
 	var furniture := Node3D.new()
