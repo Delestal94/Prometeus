@@ -328,14 +328,25 @@ func _drive_out(level: CompanyRoot, van: Node3D, cargo: int) -> Dictionary:
 	var exit: Vector3 = CompanyFleet.exit_of(level.shed, level.net.company)
 	var outward: Vector3 = -level.shed.global_basis.z
 	await _put(van, exit - outward)
-	await _put(van, exit + outward * 3.0)
+	await _put(van, CompanyFleet.gate_of(level.shed, level.net.company) + outward * 3.0)
+	await _wait_kind(found.trip_kinds, CompanyTripsView.STARTED)
 	found.vehicle = _sync_entry(sync, "World/Vehicles/%s/%s" % [van.name, CompanyFleet.SYNC_PATH])
 	await _put(van, exit - outward)
+	await _wait_kind(found.trip_kinds, CompanyTripsView.CLOSED)
 	van.global_transform = parked
 	await physics_frame
 	await physics_frame
 	level.net.event_applied.disconnect(listen)
 	return found
+
+
+## Physics frames until `kind` is in `kinds` (at most 300: a slow runner needs more than the two
+## frames _put() gives the gate; the caller's check then reports what is missing).
+func _wait_kind(kinds: Array, kind: StringName) -> void:
+	for _frame: int in range(300):
+		if kinds.has(kind):
+			return
+		await physics_frame
 
 
 ## Moves the (frozen) van and lets the gate look at it.
