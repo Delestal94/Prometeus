@@ -55,3 +55,16 @@ static func close_day(book: OrderBook, now_min: int, early: bool) -> Dictionary:
 	for id: StringName in plan["cancelled"]:
 		book.cancel(id)
 	return plan
+
+
+## The day's closing hooks on the host's trips: departures are denied once the day is closed and an
+## order a vehicle brings back undelivered fails (D-0851).
+static func wire(trips: CompanyTrips, net: CompanyNet, day_cycle: DayCycle) -> void:
+	trips.day_open = func() -> bool: return not day_cycle.is_day_closed()
+	trips.trip_closed.connect(func(_trip: Trip, failed: Array[StringName]) -> void:
+		net.orders.fail_returned(net, failed))
+
+
+## Whether a vehicle carries the order, for `abandon`; a client has no trips and carries nothing.
+static func out(trips: CompanyTrips) -> Callable:
+	return func(id: StringName) -> bool: return trips != null and trips.carries(id)
