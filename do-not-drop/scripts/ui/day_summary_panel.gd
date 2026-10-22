@@ -7,6 +7,10 @@ class_name DaySummaryPanel
 ## and the opening and closing balance. It reads the dictionary and nothing else, so a client
 ## shows what the host closed. Reason names are the translation keys UI_FINANCE_REASON_<REASON> (REASON_KEYS); a
 ## reason without a key shows its own id, so a new charge never needs this file.
+##
+## Below the money, the supplier's delivery note of the day (D-0614.c): one row per product the truck
+## left short or brought extra (DeliveryNote.discrepancies(), which every peer keeps through
+## CompanyPallets), hidden when the delivery came out even.
 
 signal continued
 
@@ -34,6 +38,8 @@ var _cost_list: VBoxContainer
 var _profit_label: Label
 var _balance_label: Label
 var _truncated_label: Label
+var _note_box: VBoxContainer
+var _note_list: VBoxContainer
 var _continue_button: Button
 
 
@@ -44,10 +50,11 @@ func _ready() -> void:
 	hide()
 
 
-## Shows the closing screen for `summary` (DaySummary.build()'s shape) and takes focus.
-func open(summary: Dictionary) -> void:
+## Shows the closing screen for `summary` (DaySummary.build()'s shape) and the day's delivery note
+## lines (DeliveryNote.discrepancies(): {product, ordered, received, missing, extra}), and takes focus.
+func open(summary: Dictionary, note_lines: Array = []) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	refresh(summary)
+	refresh(summary, note_lines)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_continue_button.grab_focus.call_deferred()
@@ -59,8 +66,8 @@ func close() -> void:
 	continued.emit()
 
 
-## Redraws the panel from `summary`. A missing key counts as zero / empty.
-func refresh(summary: Dictionary) -> void:
+## Redraws the panel from `summary` and `note_lines`. A missing key counts as zero / empty.
+func refresh(summary: Dictionary, note_lines: Array = []) -> void:
 	if _day_label == null:
 		return
 	_day_label.text = tr("UI_FINANCE_DAY") % int(summary.get("day", 0))
@@ -72,6 +79,7 @@ func refresh(summary: Dictionary) -> void:
 	_balance_label.text = tr("UI_FINANCE_BALANCE") % [money(int(summary.get("opening", 0))),
 			money(int(summary.get("closing", 0)))]
 	_truncated_label.visible = bool(summary.get("truncated", false))
+	_fill_note(note_lines)
 
 
 ## The shown name of a ledger reason: its translation, or the id itself when it has none.
@@ -104,6 +112,39 @@ static func rows(by_reason: Dictionary) -> Array:
 	return result
 
 
+## The rows of the delivery note: lines that are short or extra, at most MAX_ROWS, each
+## [product, text]; past MAX_ROWS - 1 the rest is one [OTHER_REASON, text] row with how many more.
+## A line that is not a dictionary, has no product or comes out even is skipped.
+static func note_rows(note_lines: Array) -> Array:
+	var shown: Array = []
+	for raw: Variant in note_lines:
+		if not raw is Dictionary:
+			continue
+		var line: Dictionary = raw
+		var product := StringName(str(line.get("product", "")))
+		if product == &"" or (int(line.get("missing", 0)) < 1 and int(line.get("extra", 0)) < 1):
+			continue
+		shown.append([product, note_text(line)])
+	if shown.size() <= MAX_ROWS:
+		return shown
+	var result: Array = shown.slice(0, MAX_ROWS - 1)
+	var more: int = shown.size() - result.size()
+	result.append([OTHER_REASON, TranslationServer.translate("UI_FINANCE_NOTE_MORE") % more])
+	return result
+
+
+## One line of the note as read: "<product>: llegaron 4 de 10 (faltan 6)" or "(sobran 2)".
+static func note_text(line: Dictionary) -> String:
+	var shown_name: String = PickingCartPoint.product_name(StringName(str(line.get("product", ""))))
+	var ordered: int = int(line.get("ordered", 0))
+	var received: int = int(line.get("received", 0))
+	var missing: int = int(line.get("missing", 0))
+	if missing > 0:
+		return TranslationServer.translate("UI_FINANCE_NOTE_SHORT") % [shown_name, received, ordered, missing]
+	var extra: int = int(line.get("extra", 0))
+	return TranslationServer.translate("UI_FINANCE_NOTE_EXTRA") % [shown_name, received, ordered, extra]
+
+
 func _build() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(UiTheme.BACKDROP, 0.86)
@@ -127,6 +168,15 @@ func _build() -> void:
 	_balance_label.name = "Balance"
 	_truncated_label = UiTheme.label(column, tr("UI_FINANCE_TRUNCATED"), 14, UiTheme.ORANGE)
 	_truncated_label.name = "Truncated"
+	_note_box = VBoxContainer.new()
+	_note_box.name = "Note"
+	_note_box.add_theme_constant_override("separation", 3)
+	column.add_child(_note_box)
+	UiTheme.tag(_note_box, tr("UI_FINANCE_NOTE"), UiTheme.ORANGE, 0.0, 15)
+	_note_list = VBoxContainer.new()
+	_note_list.add_theme_constant_override("separation", 3)
+	_note_box.add_child(_note_list)
+	_note_box.hide()
 	_continue_button = UiTheme.button(column, tr("UI_FINANCE_CONTINUE"), true)
 	_continue_button.pressed.connect(close)
 
@@ -160,6 +210,18 @@ func _fill(list: VBoxContainer, by_reason: Variant, total: int, color: Color) ->
 		UiTheme.label(row, money(int(entry[1])), 16, color, true).name = "Amount"
 	var total_label: Label = UiTheme.label(list, tr("UI_FINANCE_TOTAL") % money(total), 16, color, true)
 	total_label.name = "Total"
+
+
+func _fill_note(note_lines: Array) -> void:
+	for child: Node in _note_list.get_children():
+		_note_list.remove_child(child)
+		child.queue_free()
+	var rows_shown: Array = note_rows(note_lines)
+	for entry: Array in rows_shown:
+		var label: Label = UiTheme.label(_note_list, String(entry[1]), 15, UiTheme.INK)
+		label.name = "Note_%s" % entry[0]
+		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_note_box.visible = not rows_shown.is_empty()
 
 
 static func _signed(amount: int) -> String:
