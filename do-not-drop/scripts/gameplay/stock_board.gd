@@ -7,16 +7,17 @@ extends Node
 ## it gives both back. Every change the net applies (units moved, snapshot) redraws the list from this
 ## peer's own copy of the Inventory, so a client sees what the host sees.
 ##
-## The "missing for pending orders" marks (StockAlert) need the order book, which is the host's
-## until D-0813.1: a client lists its units without marks. The units already ordered from a supplier
-## count as "on the way" only when the supplier calendar holds real orders: the stand-in calendar
+## The "missing for pending orders" marks (StockAlert) read the order book every peer shares
+## (CompanyNet.orders.book, D-0813.1), so a client marks the same as the host; without a book (book_of
+## unset or null) the list has no marks. The units already ordered from a supplier count as "on the
+## way" only when the supplier calendar holds real orders: the stand-in calendar
 ## (CompanyRoot._seed_stand_in_calendar) brings nothing, so it is not counted.
 
 const ACTION_TOGGLE: StringName = &"company_stock"
 
 var panel: StockPanel
 var net: CompanyNet
-## Returns the OrderBook to read (the host's), or null.
+## Returns the OrderBook to read (CompanyRoot: the shared one, CompanyNet.orders.book), or null.
 var book_of: Callable = Callable()
 var schedule: SupplierSchedule
 ## False while the calendar is the stand-in one: nothing is "on the way" then.

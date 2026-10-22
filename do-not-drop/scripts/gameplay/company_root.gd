@@ -66,6 +66,13 @@ extends Node3D
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
 ## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
+##
+## Orders (D-0813.1): the host plans each new day's orders at its OPENING (CompanyDayOrders.plan(): the
+## company's day seed, the crew, the zones open) and its business tick brings them in at the shed's minute
+## while the day is open (CompanyDayOrders.poll()), into the book every peer shares (CompanyNet.orders.book,
+## which the stock board reads). Every peer tells EventBus.order_added from CompanyNet.event_applied, once
+## per order and never for a snapshot's, nor from the book's own signals (they fire inside the apply).
+## CompanyTrips keeps its own book until packing, dispatch and delivery are events: nothing here feeds it.
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -162,6 +169,9 @@ var save_dir: String = CompanySave.SAVE_DIR
 ## The arguments CompanyDevFlags reads on the host when the world comes up (--company-day=, --district=,
 ## --money=, D-0238): the command line's, unless a test hands its own before adding the root.
 var dev_args: PackedStringArray = OS.get_cmdline_user_args()
+## Host: the crew the day's orders are planned for (OrderRhythm); 0, the session's (_crew_ids()). A run
+## with no peers that plays a bigger crew's day (the day bot's --players) sets it before adding the root.
+var order_crew: int = 0
 ## The session and the CompanyState this world plays with. Unset, the NetworkManager and the
 ## CompanyState autoloads, found by path when the world comes up (N-919). Two peers in one process
 ## (a test) hand each root its own before adding it, as they do save_dir.
@@ -189,6 +199,8 @@ var _saw_host_day: bool = false
 var _host_gone: bool = false
 ## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
 var _presence_shown: Array = []
+## Host: the day whose orders are planned (_plan_orders()), so a freeze toggle in OPENING plans nothing.
+var _orders_day: int = 0
 
 
 func _ready() -> void:
@@ -285,8 +297,8 @@ func _add_day(state: COMPANY_STATE) -> void:
 
 
 ## Host (solo too): the business tick (D-0232) runs the host's rules at CompanyTuning.BUSINESS_TICK_HZ,
-## DayCycle.poll first; the cycle's own poll in _process goes off on every peer (a client's poll does
-## nothing anyway).
+## DayCycle.poll first, then the day's orders (D-0813.1); the cycle's own poll in _process goes off on
+## every peer (a client's poll does nothing anyway).
 func _add_business_tick() -> void:
 	day_cycle.set_process(false)
 	if not net.is_host():
@@ -295,6 +307,21 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
+	business_tick.add_step(&"orders", _poll_orders)
+
+
+## Host: the day's orders come in, and go late, at the shed's minute while the day is open.
+func _poll_orders() -> void:
+	CompanyDayOrders.poll(net, day_cycle)
+
+
+## Host: a new day opened, its orders are planned (once per day) for order_crew or the session's crew.
+func _plan_orders() -> void:
+	var day: int = day_cycle.current_day()
+	if day == _orders_day or _hosted_state == null or not is_instance_valid(_hosted_state):
+		return
+	_orders_day = day
+	CompanyDayOrders.plan(net, _hosted_state, day, order_crew if order_crew > 0 else _crew_ids().size())
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -474,12 +501,19 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 ## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
 ## units and layout events itself (CompanyShed.follow(), D-0910).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
-## the summary takes no other day_phase until next_day().
+## the summary takes no other day_phase until next_day(). One that opens a day plans its orders on the
+## host (_plan_orders()). An order that came in goes out as EventBus.order_added on every peer (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
 			save_closed_day()
+		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
+			_plan_orders()
 		_publish_presence()
+	elif kind == CompanyOrdersNet.ADDED:
+		var bus: Node = _event_bus()
+		if bus != null:
+			bus.emit_signal(&"order_added", StringName((data["order"] as Dictionary)["id"]))
 
 
 ## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
@@ -732,9 +766,10 @@ func _add_builder() -> void:
 	builder.setup(shed, net, player)
 
 
-## The stock list (D-0612.b): I / d-pad right opens it on any peer. The order book is the host's
-## (trips.book until D-0813.1), so only the host marks what the pending orders are missing; the
-## calendar is the stand-in until D-0603 feeds it, so nothing counts as on the way yet.
+## The stock list (D-0612.b): I / d-pad right opens it on any peer. It marks what the pending orders
+## are missing from the book every peer shares (CompanyNet.orders.book, D-0813.1; read only), so a
+## client marks the same as the host; the calendar is the stand-in until D-0603 feeds it, so nothing
+## counts as on the way yet.
 func _add_stock_board() -> void:
 	if net == null:
 		return
@@ -745,7 +780,7 @@ func _add_stock_board() -> void:
 	stock_board.schedule = supplier_schedule
 	stock_board.real_calendar = false
 	stock_board.book_of = func() -> OrderBook:
-		return trips.book if trips != null else null
+		return net.orders.book if net != null and is_instance_valid(net) else null
 	stock_board.player_of = func() -> Node:
 		return player
 	stock_board.busy = func() -> bool:

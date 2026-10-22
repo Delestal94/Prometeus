@@ -4,7 +4,7 @@ extends SceneTree
 ## The stock list in the company's world (expansion D-0612.b), StockBoard:
 ## - the action (I / gamepad d-pad right) is registered once with both devices;
 ## - context() marks the products the host's pending orders are short of, and a peer without the
-##   order book (a client until D-0813.1) gets the list with no marks;
+##   order book gets the list with no marks;
 ## - incoming_from() adds up the supplier calendar from a day on; the board counts it as "on the way"
 ##   only with a real calendar (the stand-in one brings nothing);
 ## - open() shows the panel, frees the mouse and turns the local player's input off; close() gives both

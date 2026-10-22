@@ -21,17 +21,22 @@ extends RefCounted
 ##   order_expired  {order: id, minute: the host's minute}: OrderBook.expire_one(), the order goes LATE
 ##                  (D-0807: still deliverable, the late penalty comes with the payout; nothing is
 ##                  reserved for an order until order_claim, row 8, so there is no reservation to free)
-## Who calls plan_day() and poll() in the company world (the business tick, the shed's minute, the
-## day's seed) is D-0813.1.
+## In the company world (D-0813.1) the host's CompanyRoot plans each new day at its OPENING and polls on
+## its business tick while the day is open (CompanyDayOrders), and every peer's tells EventBus.order_added
+## from CompanyNet.event_applied. Each new day's opening drops the closed orders on every peer, inside
+## its day_phase event (prune_closed(), from DayCycle.apply_phase()). CompanyTrips and OrderBoxLink keep
+## a book of their own until packing, dispatch and delivery are events (rows 15, 17, 19 and 20).
 
 const ADDED: StringName = &"order_added"
 const EXPIRED: StringName = &"order_expired"
 const EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED]
 ## Key of the book in CompanyNet's snapshot (CompanyNet adds the part itself).
 const SNAPSHOT_KEY: String = "orders"
-## Most orders a book holds: an order_added past it is not applied, a snapshot over it is refused. 256
-## days of the busiest crew (CompanyTuning.ORDERS_MAX_PER_DAY), the bound of CompanyNet's held events.
-const MAX_ORDERS: int = 4096
+## Most orders a book holds: an order_added past it is not applied, a snapshot over it is refused; poll()
+## waits while the book is full. 16 days of the busiest crew (CompanyTuning.ORDERS_MAX_PER_DAY): each new
+## day drops the closed orders (prune_closed()), so it holds today's and the ones still open. About 150 KB
+## of the snapshot when full (4096 were 2.4 MB and 230 ms to check on a client; revisar/D-0813.md).
+const MAX_ORDERS: int = 256
 ## Longest id or name an order may carry.
 const MAX_TEXT: int = RpcGuard.MAX_TEXT_LENGTH
 ## Latest minute an order or an expiry may name: GameClock.MAX_MINUTE (a year of game time), as an int.
@@ -150,6 +155,14 @@ func apply(kind: StringName, data: Dictionary) -> bool:
 				return false
 			return book.expire_one(StringName(id), int(minute))
 	return false
+
+
+## Every peer, the host too, inside the day_phase event that opens a new day (DayCycle.apply_phase(),
+## the same seq everywhere, so every book drops the same orders): the closed orders (delivered, failed,
+## cancelled) leave the book, all of them from days gone by; open, packed, out and late ones stay,
+## whatever their day (OrderBook.prune_closed(), no signal). Returns how many went.
+func prune_closed() -> int:
+	return book.prune_closed().size()
 
 
 ## Host: the book as CompanyNet's snapshot carries it (OrderBook.to_dict(): {orders, now_min}).

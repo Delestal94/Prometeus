@@ -12,9 +12,10 @@ extends SceneTree
 ##   and the day reaches OPENING within the bounded wait; closing leaves no error behind;
 ## - the stages, run in order on that one world (run_stage): receive_pallet, shelve_stock,
 ##   take_orders, pack_boxes, dispatch and close_day return ok, and what each leaves is checked
-##   in the world (the pallets open and the stock on the labelled shelf slots, the day's orders
-##   OPEN in the book, one order PACKED by a sealed box with no assembly error and its packaging
-##   in the ledger, the cargo loaded with the trip not started, the day in SUMMARY with the
+##   in the world (the pallets open and the stock on the labelled shelf slots, the day's whole plan
+##   brought by the world into the shared book, CompanyNet.orders.book, and copied OPEN into
+##   CompanyTrips' own book, D-0813.1; one order PACKED by a sealed box with no assembly error and
+##   its packaging in the ledger, the cargo loaded with the trip not started, the day in SUMMARY with the
 ##   costs of the packing in its summary and saved); drive, deliver and return stay
 ##   not_implemented naming the task they wait for (D-0302.2/D-1501, D-0311, D-0307); a stage
 ##   run out of order fails with a reason, and so do a stage name that does not exist and a
@@ -188,11 +189,16 @@ func _check_shelved(level: CompanyRoot, ctx: Dictionary) -> void:
 
 func _check_orders(level: CompanyRoot, ctx: Dictionary) -> void:
 	var book: OrderBook = level.trips.book
+	var shared: OrderBook = level.net.orders.book
 	var orders: Array = ctx["orders"]
-	_expect(orders.size() >= 1 and book.size() == orders.size(),
-		"The day's orders are in the book (got %d of %d)" % [book.size(), orders.size()])
+	_expect(orders.size() >= 1 and level.net.orders.planned().is_empty() and shared.size() == orders.size(),
+		"The world brought the whole day's plan into the shared book (got %d of %d, %d still planned)"
+		% [shared.size(), orders.size(), level.net.orders.planned().size()])
+	_expect(book != shared and book.size() == orders.size(),
+		"The day's orders are copied into CompanyTrips' own book (got %d of %d)" % [book.size(), orders.size()])
 	for order: Dictionary in orders:
-		_expect(book.state_of(order["id"]) == Order.STATE_OPEN, "Order %s is OPEN" % order["id"])
+		_expect(book.state_of(order["id"]) == Order.STATE_OPEN and shared.has(order["id"]),
+			"Order %s is OPEN in CompanyTrips' book and in the shared one" % order["id"])
 
 
 func _check_packed(level: CompanyRoot, ctx: Dictionary, money: int) -> void:
