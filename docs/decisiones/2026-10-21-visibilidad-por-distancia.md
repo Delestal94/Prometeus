@@ -29,7 +29,7 @@ D-0316; D-0317 confirma o sube el tope con las mediciones de D-2002.
    `CompanyTuning.VEHICLES_FAR_MAX = 2`. El tablero de despacho no carga un tercer vehículo (motivo
    `WORLD_DISPATCH_FAR_LIMIT`) y el portón no le abre salida a un tercero que cruce igual
    (`CompanyTrips.departure_refused`), pero ese vehículo cuenta como afuera (`trips_out()`, el día lo espera)
-   hasta que vuelve a cruzar; su carga queda guardada. Frenarlo en el portón y avisarle al conductor es D-0316.2.
+   hasta que vuelve a cruzar; su carga queda guardada. Desde D-0316.2 (2026-10-22) el portón lo frena: vuelve a su última pose adentro, y su conductor recibe el motivo.
 6. **Contrato para lo que entra a esos grupos:** un RPC llamado sobre el cuerpo (la raíz del sincronizador) no llega
    a los peers que no lo ven, tampoco un broadcast; un hecho único o una baja va como propiedad ON_CHANGE, como
    evento de `CompanyNet` o después de `untrack()`. Nada que cree un `MultiplayerSpawner` (no verlo lo despawnea;

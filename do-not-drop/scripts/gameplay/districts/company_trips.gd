@@ -22,11 +22,15 @@ extends Node
 ##
 ## At most `far_max` vehicles are out at once (D-0316, CompanyTuning.VEHICLES_FAR_MAX): a vehicle
 ## out is one whose trip is out, or one that crossed outward while refused. departure_verdict() is
-## what the dispatch board asks before loading a vehicle; a vehicle that crosses the gate outward
-## with that many already out starts no trip (departure_refused, with the same reason) but counts
-## as out until it crosses back in (trips_out(), so the day waits for it too; refused_returned when
-## it does), and keeps its cargo staged for its next departure. Stopping it at the gate and telling
-## its driver why is D-0316.2.
+## what the dispatch board asks before loading a vehicle. A vehicle with cargo staged that tries to
+## cross the gate outward with that many already out is held at the gate (D-0316.2, `hold_at_gate`):
+## every tick it would cross, it is put back where it last stood inside, its horizontal motion stopped,
+## so it never leaves, nor counts as out (its heading is its own: it can steer along the line); departure_held
+## says so, with the reason and its driver, at most once every `held_notice_msec` per vehicle and driver
+## (CompanyTripsView tells that driver). Its cargo
+## stays staged. Only one fed through track(), with no node to hold (or with hold_at_gate off), still
+## crosses: it starts no trip (departure_refused) but counts as out until it crosses back in
+## (trips_out(), so the day waits for it too; refused_returned when it does).
 ##
 ## Once the day is closed (day_open false: CLOSING or SUMMARY, D-0851) nobody starts a trip: departure_verdict() says
 ## DAY_CLOSED. A vehicle that crosses anyway is refused like the one over the cap, but it does not count in trips_out():
@@ -40,6 +44,11 @@ signal trip_closed(trip: Trip, failed: Array[StringName])
 signal departure_refused(vehicle_id: StringName, reason: Dictionary)
 ## A vehicle that left while refused crossed back in: it no longer counts as out (no trip closes).
 signal refused_returned(vehicle_id: StringName)
+## A vehicle with cargo tried to cross outward with `far_max` out and was held inside the gate (D-0316.2):
+## `reason` is departure_verdict()'s, `driver` its driver_peer_id (0: nobody at the wheel). At most once
+## every held_notice_msec per vehicle and driver, however many ticks it pushes against the gate (a new driver
+## is told at once).
+signal departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
 
 ## The group of the vehicles the gate watches.
 const VEHICLE_GROUP: StringName = &"company_vehicle"
@@ -61,6 +70,10 @@ var minute_now: Callable = Callable()
 var day_open: Callable = Callable()
 ## Most vehicles out at once.
 var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
+## Hold at the gate a vehicle that may not leave (D-0316.2); off, it crosses refused and counts as out.
+var hold_at_gate: bool = true
+## Real milliseconds between two departure_held of the same vehicle.
+var held_notice_msec: int = 3000
 
 var _staged: Dictionary = {}
 var _active: Dictionary = {}
@@ -70,6 +83,10 @@ var _refused_out: Dictionary = {}
 var _night_out: Dictionary = {}
 var _closed: Array[Trip] = []
 var _next_id: int = 1
+## vehicle id -> its global_position the last tick it stood inside the gate (where a hold puts it back).
+var _inside_pose: Dictionary = {}
+## vehicle id -> [driver, Time.get_ticks_msec()] of its last departure_held: a new driver is told at once.
+var _held_told: Dictionary = {}
 
 
 ## The gate across the playon's far edge: `exit_origin` is the middle of the opening in world coordinates
@@ -175,6 +192,8 @@ func forget(vehicle_id: StringName) -> void:
 	if gate != null:
 		gate.forget(vehicle_id)
 	_staged.erase(vehicle_id)
+	_inside_pose.erase(vehicle_id)
+	_held_told.erase(vehicle_id)
 	_on_returned(vehicle_id)
 
 
@@ -183,7 +202,53 @@ func _physics_process(_delta: float) -> void:
 		return
 	for vehicle: Node in get_tree().get_nodes_in_group(VEHICLE_GROUP):
 		if vehicle is Node3D and vehicle.multiplayer == multiplayer:
-			gate.track(StringName(vehicle.name), (vehicle as Node3D).global_position)
+			_watch(vehicle as Node3D)
+
+
+## One vehicle's tick at the gate: held inside when it would leave refused (hold_at_gate), else fed to
+## the gate, its pose kept while it stands inside.
+func _watch(body: Node3D) -> void:
+	var id := StringName(body.name)
+	var at: Vector3 = body.global_position
+	if hold_at_gate and _inside_pose.has(id) and gate.departs(id, at) and _would_refuse(id):
+		_hold(body, id)
+		return
+	gate.track(id, at)
+	if gate.side_of(at) == TripGate.INSIDE:
+		_inside_pose[id] = at
+	else:
+		_inside_pose.erase(id)
+
+
+## What _on_departed() would refuse: a vehicle in, with cargo staged, that departure_verdict() doesn't let go.
+func _would_refuse(vehicle_id: StringName) -> bool:
+	return _staged.has(vehicle_id) and not is_out(vehicle_id) and not departure_verdict(vehicle_id)["ok"]
+
+
+## Puts `body` back where it last stood inside the gate (at its own height: its suspension holds that), its
+## horizontal motion stopped, and says so (departure_held) unless it told this driver about this vehicle in
+## the last held_notice_msec. Its heading is left as it is, turning too: the gate is a wall it can steer along,
+## not a lock. The gate never sees it outside.
+func _hold(body: Node3D, vehicle_id: StringName) -> void:
+	var inside: Vector3 = _inside_pose[vehicle_id]
+	body.global_transform = Transform3D(body.global_basis, Vector3(inside.x, body.global_position.y, inside.z))
+	var rigid := body as RigidBody3D
+	if rigid != null and not rigid.freeze:
+		# On the body's live state: RigidBody3D.linear_velocity is the copy from before a VehicleBody3D's
+		# suspension impulses of this step, and writing it undid them (the van sank onto its chassis, as
+		# vehicle_prediction.gd notes).
+		var state: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(rigid.get_rid())
+		if state != null:
+			state.linear_velocity = Vector3(0.0, state.linear_velocity.y, 0.0)
+	body.reset_physics_interpolation()
+	var wheel: Variant = body.get(&"driver_peer_id")
+	var driver: int = int(wheel) if wheel is int else 0
+	var now: int = Time.get_ticks_msec()
+	var told: Array = _held_told.get(vehicle_id, [])
+	if not told.is_empty() and int(told[0]) == driver and now - int(told[1]) < held_notice_msec:
+		return
+	_held_told[vehicle_id] = [driver, now]
+	departure_held.emit(vehicle_id, departure_verdict(vehicle_id), driver)
 
 
 func _on_departed(vehicle_id: StringName) -> void:

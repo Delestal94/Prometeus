@@ -65,6 +65,6 @@
 | ~~D-0945~~ | ~~Iconos del catálogo de construcción~~ **Fusionada en D-1845 (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | íconos |
 | D-0946 | Captura del galpón en cada etapa | revisor-visual | low | 4 capturas |
 | D-0947 | `bench_depot` con galpón grande lleno (incluye D-0248, fusión de D-0112) | perfilador-rendimiento | high | FPS ≥ objetivo |
-| D-0948 | Test de layouts inválidos (estación encerrada) (incluye D-0940, fusión de D-0112) | escritor-tests | medium | test |
+| D-0948 | ✅ Test de layouts inválidos (estación encerrada) (incluye D-0940, fusión de D-0112) | escritor-tests | medium | test |
 | D-0949 | QA del modo construcción | probador-qa | medium | tabla |
 | ~~D-0950~~ | ~~Documentar cómo agregar un objeto colocable~~ **Fusionada en D-0244 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | guía |

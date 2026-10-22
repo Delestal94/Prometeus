@@ -80,6 +80,13 @@ func track(vehicle_id: StringName, pos: Vector3) -> StringName:
 	return &"returned"
 
 
+## Whether track(vehicle_id, pos) would be a departure now, changing nothing: CompanyTrips asks before
+## feeding a vehicle it may hold at the gate instead (D-0316.2).
+func departs(vehicle_id: StringName, pos: Vector3) -> bool:
+	return int(_side_of.get(vehicle_id, 0)) == INSIDE and side_of(pos) == OUTSIDE \
+		and (has_yard() or _in_opening(pos))
+
+
 func forget(vehicle_id: StringName) -> void:
 	_side_of.erase(vehicle_id)
 
