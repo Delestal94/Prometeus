@@ -35,24 +35,40 @@ extends RefCounted
 ##   layout_move    {uid, x, z}                            ->  layout_moved  {uid, x, z, turns}
 ##   layout_rotate  {uid, turns: 1..3 quarter turns more}  ->  layout_moved  {uid, x, z, turns}
 ##   layout_sell    {uid}                                  ->  layout_sold   {uid, minute, money}
+##   shed_expand    {stage: the stage to reach}            ->  shed_expanded {stage, minute, money}
 ## The wallet travels as absolute values: `money` is the host's balance after the movement and
 ## `minute` the host's CompanyState.clock_minutes. Every peer starts the movement from the host's
 ## balance before it (money - its amount), so the wallet and the entry's balance (placeable_buy,
-## placeable_sell) end as the host's; the entry takes `minute` (a client's clock_minutes is never
-## written: only the host's clock writes it). A copy whose balance was off is set right and
-## remembers it (take_drift()): CompanyNet then asks for a snapshot for the rest of the history.
+## placeable_sell, warehouse_expand) end as the host's; the entry takes `minute` (a client's
+## clock_minutes is never written: only the host's clock writes it). A copy whose balance was off is
+## set right and remembers it (take_drift()): CompanyNet then asks for a snapshot for the rest of the history.
 ## Refusals: host_only, bad_data, no_piece, not_empty and BuildPlacement's out_of_bounds,
-## fixed_area, overlap, blocks_path, no_definition and no_money.
+## fixed_area, overlap, blocks_path, no_definition and no_money; growing the shed, also max_stage and
+## wrong_stage.
+##
+## Growing the shed (D-0910.2) is WarehouseStages.expand() on every peer: the host checks it as the
+## local upgrade does (a next stage, the wallet, CompanyTuning's price) and one more thing: every piece
+## must stay on the bigger floor as it is (BuildLayoutSave.misfit(); the dock and the exit move with the
+## walls). A layout the next stage would not keep whole would load differently on a late joiner, whose
+## snapshot goes through BuildLayoutSave.sanitize(), than on the peers that applied the event; so the
+## host refuses with the piece's reason (fixed_area, blocks_path) and the player moves it first. The
+## request names the stage to reach: a second press sent before the first one's event is wrong_stage,
+## never a second upgrade. Every peer redraws with the new grid (CompanyShed.follow(): the event is one
+## of EVENT_KINDS) and a late joiner gets the stage in the `company` part of the snapshot.
 
 const PLACE: StringName = &"layout_place"
 const MOVE: StringName = &"layout_move"
 const ROTATE: StringName = &"layout_rotate"
 const SELL: StringName = &"layout_sell"
-const REQUEST_KINDS: Array[StringName] = [PLACE, MOVE, ROTATE, SELL]
+## Grow the shed to the next stage (D-0910.2): {stage}.
+const EXPAND: StringName = &"shed_expand"
+const REQUEST_KINDS: Array[StringName] = [PLACE, MOVE, ROTATE, SELL, EXPAND]
 const PLACED: StringName = &"layout_placed"
 const MOVED: StringName = &"layout_moved"
 const SOLD: StringName = &"layout_sold"
-const EVENT_KINDS: Array[StringName] = [PLACED, MOVED, SOLD]
+## The shed grew: {stage, minute, money} (D-0910.2).
+const EXPANDED: StringName = &"shed_expanded"
+const EVENT_KINDS: Array[StringName] = [PLACED, MOVED, SOLD, EXPANDED]
 
 ## The requester is not the host: only the host builds (D-0910; the crew's vote is D-0910.1).
 const REASON_HOST_ONLY: StringName = &"host_only"
@@ -61,6 +77,8 @@ const REASON_NO_PIECE: StringName = &"no_piece"
 ## The piece still holds units (a shelf slot, a packing table): selling it would lose them.
 const REASON_NOT_EMPTY: StringName = &"not_empty"
 const REASON_BAD_DATA: StringName = &"bad_data"
+## shed_expand names a stage that is not the one after the shed's (a second press, an old screen).
+const REASON_WRONG_STAGE: StringName = &"wrong_stage"
 ## Cells a request or an event may name, from the corner either way: far past the biggest stage
 ## (32 x 20) and small enough that a Vector2i never wraps one back onto the floor.
 const MAX_CELL: int = 256
@@ -104,6 +122,8 @@ func check(state: Object, stock: Inventory, kind: StringName, data: Dictionary,
 			return _check_move(state, kind, data)
 		SELL:
 			return _check_sell(state, stock, data)
+		EXPAND:
+			return _check_expand(state, data)
 	return _refused(REASON_BAD_DATA)
 
 
@@ -123,6 +143,8 @@ func apply(state: Object, kind: StringName, data: Dictionary) -> bool:
 			applied = _apply_moved(state, data)
 		SOLD:
 			applied = _apply_sold(state, data)
+		EXPANDED:
+			applied = _apply_expanded(state, data)
 	if applied:
 		rebake(state)
 	return applied
@@ -279,6 +301,28 @@ func _check_sell(state: Object, stock: Inventory, data: Dictionary) -> Dictionar
 	return _granted(SOLD, {"uid": uid, "minute": int(state.clock_minutes), "money": int(state.money) + def.refund()})
 
 
+## shed_expand {stage}: the stage after the company's, as WarehouseStages.expand() checks it (there is one,
+## the wallet covers CompanyTuning's price), and a layout the bigger floor keeps whole (BuildLayoutSave
+## .misfit(): its reason for the first piece it would drop). No progression cap yet (D-0436): -1.
+func _check_expand(state: Object, data: Dictionary) -> Dictionary:
+	var stage: Variant = data.get("stage")
+	if typeof(stage) != TYPE_INT:
+		return _refused(REASON_BAD_DATA)
+	var verdict: Dictionary = WarehouseStages.preview(state)
+	if verdict["reason"] == WarehouseStages.REFUSAL_MAX_STAGE:
+		return _refused(WarehouseStages.REFUSAL_MAX_STAGE)
+	if int(stage) != int(verdict["stage"]):
+		return _refused(REASON_WRONG_STAGE)
+	if not bool(verdict["ok"]):
+		return _refused(verdict["reason"])
+	var misfit: StringName = BuildLayoutSave.misfit(state.layout, int(stage))
+	if misfit != &"":
+		return _refused(misfit)
+	return _granted(EXPANDED, {
+		"stage": int(stage), "minute": int(state.clock_minutes), "money": int(state.money) - int(verdict["price"]),
+	})
+
+
 ## Every check first: past them nothing fails and only then the state changes.
 func _apply_placed(state: Object, data: Dictionary) -> bool:
 	var id: Variant = data.get("id")
@@ -332,6 +376,22 @@ func _apply_sold(state: Object, data: Dictionary) -> bool:
 	PlaceableShop.sell(state, index)
 	if refund > 0:
 		_entry_minute(state, data["minute"])
+	return true
+
+
+## The stage after this copy's (so a repeated or skipped one does not fit), the host's balance after it
+## (0..MAX_MONEY) and minute; then the same WarehouseStages.expand() as the host, from its balance before.
+func _apply_expanded(state: Object, data: Dictionary) -> bool:
+	var stage: Variant = data.get("stage")
+	if not (typeof(stage) == TYPE_INT and _minute_ok(data.get("minute")) and _money_ok(data.get("money"), 0)):
+		return false
+	if int(stage) != int(state.get(&"warehouse_stage")) + 1 or int(stage) >= WarehouseStages.stage_count():
+		return false
+	# The host's balance before always covers the price (money >= 0), so the upgrade goes through.
+	_set_balance(state, int(data["money"]) + WarehouseStages.price_for(int(stage)))
+	if not bool(WarehouseStages.expand(state)["ok"]):
+		return false
+	_entry_minute(state, data["minute"])
 	return true
 
 

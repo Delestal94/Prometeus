@@ -148,6 +148,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 | 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
 | 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
 | 25 | Movimiento de plata del host sin pedido propio (cobro al entregar, propina, alquiler, proveedor, tienda; D-0517) | solo el host (`CompanyNet.publish_wallet`) | — (no hay pedido: lo decide el host) | quien cobra comprueba `can_afford` antes; `amount` ≠ 0, `reason` id corto, `money` y `minute` en rango | `wallet_moved` `{amount, reason, money, minute}` (plata absoluta como D-0910) | cada peer parte de `money − amount` y hace un solo `earn` / `charge`; libro con el `minute` del host; deriva → `take_drift()` y snapshot |
+| 26 | Ampliar el galpón a la etapa siguiente (D-0905, D-0910.2) | host | `shed_expand` `{stage, rid}` (`stage`: la etapa a la que se llega) | que lo pida el host; `stage` entero (`bad_data`); hay etapa siguiente (`max_stage`); `stage` es exactamente la siguiente (`wrong_stage`: un segundo apretón no compra dos); plata para el precio de `CompanyTuning` (`no_money`); el layout entero entra en la etapa nueva (`BuildLayoutSave.misfit`: `fixed_area` o `blocks_path` de la primera pieza que no entra, porque dársena y salida se corren con las paredes) | `shed_expanded` `{stage, minute, money}` | `WarehouseStages.expand` desde `money + precio` (libro `warehouse_expand` con el `minute` del host, saldo final `money`); `warehouse_stage` sube uno; `CompanyShed.follow` redibuja piso, paredes, portones y zonas; el layout no cambia |
 
 ### Comprar en la tienda (D-0518, fuera del corte)
 
@@ -356,9 +357,7 @@ voto es D-0518.b).
 - Test: `test_company_layout_net` (solo, host + cliente ENet y un tercero que entra tarde).
 - **Pendiente:**
   - el voto de la tripulación para que un cliente construya (D-0910.1);
-  - ampliar la etapa por red (D-0910.2): `WarehouseStages.expand` hoy es local; quien lo cablee en el host
-    sin un evento deja a los clientes con otra grilla hasta el próximo snapshot (la ampliación comprada en la
-    tienda ya viaja como `shop_bought`, §13);
+  - ~~ampliar la etapa por red (D-0910.2)~~ (hecho, §15);
   - `CompanyLayoutNet.navigation` (D-0908) lo da el mundo cuando existan empleados (D-1011), y ese dueño
     llama a `rebake()` también en `company_state_restored`;
   - ~~`not_empty` mira `shelf:<uid>_<hueco>` y `table:<uid>`; cuando la caja en armado viaje por red
@@ -606,9 +605,10 @@ voto es D-0518.b).
     votación de la tienda del depósito de Entrega, de Slatex, y no se usa acá);
   - la pantalla de la tienda (D-0511.2) pide con `CompanyNet.request(CompanyShopNet.BUY, {"item": id})` y muestra
     el motivo de `request_rejected` (`tr()` para las claves `WORLD_SHOP_*`, un texto propio para `host_only`);
-  - una ampliación comprada cambia `warehouse_stage` en todos por evento (lo que D-0910.2 pedía para la grilla),
-    pero `CompanyShed.follow` no redibuja con `shop_bought`: el galpón grande se dibuja con el próximo evento de
-    layout o snapshot. Va con D-0910.2 o con D-0511.2;
+  - ~~una ampliación comprada cambia `warehouse_stage` en todos por evento, pero `CompanyShed.follow` no redibuja
+    con `shop_bought`~~ (`CompanyShed` redibuja con `shop_bought` si cambió la etapa, y desde D-0910.2 el modo
+    construcción toma la grilla nueva). Queda: `CompanyShop.check` no mira si el layout entra en la etapa nueva
+    (§15), así que una ampliación comprada con la zona de despacho por defecto sigue pasando;
   - un vehículo comprado entra a `fleet` como dato; que aparezca en el mundo es de cada vehículo (D-1207, D-1221…).
 
 ## 14. Lo construido (D-0616.b): la leche que se echa a perder
@@ -670,3 +670,48 @@ voto es D-0518.b).
   - dibujar el bulto que deja `box_discarded` (D-0611): está en el `spot` de la mesa, a la altura de la tabla, y
     puede quedar debajo de la caja nueva que se abra ahí;
   - textos de UI para `supply_full` (y los demás motivos de la mesa).
+
+## 16. Lo construido (D-0910.2): ampliar el galpón por red
+
+- **Petición** `shed_expand` `{stage, rid}` y **evento** `shed_expanded` `{stage, minute, money}` (fila 26,
+  protocolo 59), por el `_request` / `_apply_event` de siempre: ningún RPC nuevo. Los dos son de `CompanyLayoutNet`
+  (`REQUEST_KINDS` / `EVENT_KINDS`), así que `CompanyNet._build` los manda a `check()` y `_apply_state()` los aplica
+  en la rama de layout (`CompanyLayoutNet.EXPANDED` en la misma línea). No es crítica (regla 8).
+- **Solo el host**, como construir (§8): cualquier otro oye `host_only` antes de que se mire nada.
+- **El host valida como la ampliación local** (`WarehouseStages.preview`: hay etapa siguiente, plata para el
+  precio de `CompanyTuning`; sin tope de progresión todavía, D-0436 llegaría como `unlocked_stage`) y además que el
+  layout entero entre en la etapa nueva: `BuildLayoutSave.misfit(layout, stage)`, la misma pasada de `sanitize()`,
+  da el motivo de la primera pieza que dejaría afuera. **Decisión:** las etapas crecen desde la esquina, pero la
+  dársena y la salida van centradas en sus muros y se corren; la zona de despacho por defecto (7, 0) queda sobre la
+  salida de la etapa 1 (8, 0). Sin este chequeo los peers que aplican el evento conservan esa pieza y el que entra
+  tarde (snapshot → `from_dict` → `sanitize`) o el host al cargar el guardado la pierden: desincronía. Con él, el
+  host oye `fixed_area` (o `blocks_path`) y tiene que mover la pieza antes de ampliar.
+- **`stage` en la petición** es la etapa a la que se llega: un segundo apretón antes de que vuelva el evento es
+  `wrong_stage` y no una segunda compra. Motivos: `host_only`, `bad_data`, `max_stage`, `wrong_stage`, `no_money`
+  y los de `BuildPlacement` que da `misfit` (`fixed_area`, `blocks_path`). Rechazos sin `seq`.
+- **Cada peer aplica** con el mismo `WarehouseStages.expand` desde el saldo del host antes (`money + precio`):
+  plata y `balance` iguales, la entrada `warehouse_expand` con el `minute` del host, deriva → `take_drift()` y
+  snapshot. Comprueba solo los datos (regla 6), todo antes del primer cambio: `stage` entero y justo la siguiente a
+  la suya (ni repetida ni salteada, y existente), `money` entero 0..`MAX_MONEY`, `minute` del día.
+- **Dibujo:** `shed_expanded` es un evento de layout, así que `CompanyShed.follow` hace `rebuild()` con la etapa
+  nueva en cada peer (piso, paredes con los portones nuevos, zonas de dársena y salida en su lugar nuevo, luces) y
+  `CompanyLayoutNet.rebake()` rehornea la navegación con la grilla nueva. Las zonas pintadas, los carros y los
+  lugares de palets del galpón por defecto se dibujan en cualquier etapa igual o más grande (sus celdas siguen en el
+  piso); antes desaparecían al salir de la etapa 0. `ShedBuilder` en modo construcción toma la grilla, la dársena y
+  la salida nuevas para su cursor (con `shed_expanded` y con `shop_bought`), y su cámara, grilla y fantasma están en
+  `CompanyShed.OVERLAY_GROUP`: `rebuild()` ya no los libera (antes cualquier evento de layout dejaba el modo
+  construcción sin cámara).
+- **Join tardío:** sin parte nueva: `warehouse_stage` va en `company` (`CompanyState.to_dict()`) y el layout pasa
+  entero por `sanitize()` porque el host solo amplía si entra.
+- Test: `test_company_shed_expand_net` (solo, datos malos, espejo con plata desfasada, `ShedBuilder`, y host +
+  cliente ENet + uno que entra tarde).
+- **Pendiente:**
+  - el galpón está centrado en su nodo: al crecer, cada celda se corre medio crecimiento en el mundo (de la etapa 0
+    a la 1, 3 m al oeste y 2 m al norte) y los cuerpos no (jugadores, carros empujados, autoelevador, palets de la
+    zorra, bultos del piso con `pos`): pueden quedar dentro de un mueble. Anclar el galpón por su esquina o correr
+    los cuerpos es de diseño del mundo (D-0943);
+  - `CompanyShop.check` / `CompanyShopNet` (ampliación comprada en la tienda) no miran `misfit`: la misma
+    desincronía del que entra tarde sigue posible por `shop_bought`; además hay dos caminos a la misma ampliación
+    con distinto motivo en el libro (`shop` y `warehouse_expand`);
+  - nadie pide `shed_expand` todavía: falta el botón (modo construcción o tienda, D-0943 / D-0511.2) y el texto de
+    `max_stage` / `wrong_stage` en `ShedBuilder.HINT_REASON_KEYS` (hoy caen en `UI_BUILD_REASON_OTHER`).

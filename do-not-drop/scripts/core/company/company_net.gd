@@ -23,8 +23,8 @@ extends Node
 ## by path, only to know which peers have their world up.
 ##
 ## Kinds today: units_take, units_store and units_drop (rows 5 to 7; units_drop is critical), snapshot_request, the
-## shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`), the packing tables' box_* (rows 9
-## to 15b, D-0715: CompanyTableNet, `table`), package_ack (D-0715.b: CompanyPackages, `table.packages`), cart_push
+## shed layout's place, move, rotate, sell and expand (D-0910: CompanyLayoutNet, `build`), the packing tables' box_*
+## (rows 9 to 15b, D-0715: CompanyTableNet, `table`), package_ack (D-0715.b: CompanyPackages, `table.packages`), cart_push
 ## (D-0610.b: CompanyCarts, `carts`; units move with units_take / units_store at the station cart:<id>), the pallet
 ## jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`), supplier_order (D-0603.b.2:
 ## CompanySupplierNet, `supplier`), shop_buy (D-0518: CompanyShopNet, `shop`, the host's only) and trip_tow (D-0307.1:
@@ -72,7 +72,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
 	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
 	CompanyPallets.PUT, CompanyPallets.PUSH, CompanyPallets.FORK_ACT, CompanyShopNet.BUY,
-	CompanyTableNet.RESTOCK, CompanyTableNet.DISCARD, CompanyTowNet.ASK,
+	CompanyTableNet.RESTOCK, CompanyTableNet.DISCARD, CompanyTowNet.ASK, CompanyLayoutNet.EXPAND,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
@@ -93,7 +93,7 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyPallets.DEPARTED, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
 	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED, WALLET, CompanyShopNet.BOUGHT,
 	CompanyTableNet.RESTOCKED, CompanyTableNet.DISCARDED,
-	CompanyColdNet.SPOILED,
+	CompanyColdNet.SPOILED, CompanyLayoutNet.EXPANDED,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
 ## publish_wallet(), the supplier order of the day's close: SupplierAutoOrderHook); never units_moved.
@@ -822,7 +822,7 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				applied = day_cycle.apply_phase(data)
 		CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED:
 			applied = is_instance_valid(trips_view) and trips_view.apply_trip(kind, data)
-		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD:
+		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD, CompanyLayoutNet.EXPANDED:
 			applied = build.apply(company, kind, data)
 			if applied and kind == CompanyLayoutNet.SOLD:
 				table.forget(CompanyAsk.as_id(data.get("uid")))
