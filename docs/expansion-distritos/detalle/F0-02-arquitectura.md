@@ -406,6 +406,7 @@ sección dice qué `.tres` crear (campos y rangos leídos de su clase), cómo lo
 **Hecho cuando:** la guía existe, está enlazada desde el README de la expansión y `agregar-vehiculo.md`.
 
 ### D-0245 · Validador de los `.tres` de la expansión en CI — B · Opus 5.5 · medium · Aviso: no · F0 (Pulido)
+**[x] Hecho (2026-10-22, PR pendiente)** — `ExpansionResourceCheck.run()` (`scripts/core/company/expansion_resource_check.gd`): ids únicos e iguales al archivo en las diez carpetas, referencias (proveedor → productos, producto → zonas y trampa, zona → gates, gate y tienda → flota), escenas existentes y rangos; `test_expansion_resources`.
 **Depende de:** D-0216, D-0217, D-0218
 **Qué:** un chequeo transversal de todo `data/` de la expansión, que los tests por clase no ven: ids
 únicos por carpeta (lo que `CompanyCatalog` ya junta en `errors`, más `placeables/`, `order_requirements/`,
