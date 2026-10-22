@@ -13,6 +13,20 @@ extends RefCounted
 ## carry units between places go through move() or receive() so the clock travels with them:
 ## when units join others the clock is the average weighted by units. A place with no units
 ## has no clock.
+##
+## In the company world (ColdChainTick, D-0616.b) the stock is the one CompanyNet's events
+## change, so the host does not discard by itself: age() only counts the minutes and says what
+## is due, the host publishes each one as a units_spoiled event (CompanyColdNet) that every
+## peer applies with Inventory.discard, and note_moved() carries the clock after an event
+## that already moved the units. advance() is age() plus the discard, for a stock nobody
+## else mirrors.
+##
+## Only places where units wait age (ages_at()): what is in a hand, a box on a table or a
+## package is in somebody's work, and a box has ColdPack.
+
+## Places whose units never age here: hands, the contents of a packing table, open boxes and
+## sealed packages (CompanyNet.HANDS_PREFIX, CompanyTableNet's prefixes).
+const UNAGED_PREFIXES: Array[String] = ["hands:", "table:", "box:", "package:"]
 
 ## product id -> { location -> game minutes out of cold storage }
 var _warm: Dictionary = {}
@@ -27,6 +41,15 @@ static func is_cold_location(location: StringName, cold_shelves: Dictionary) -> 
 	if cut <= 6:
 		return false
 	return cold_shelves.has(StringName(text.substr(6, cut - 6)))
+
+
+## False for a place whose units don't age (UNAGED_PREFIXES).
+static func ages_at(location: StringName) -> bool:
+	var text: String = String(location)
+	for prefix: String in UNAGED_PREFIXES:
+		if text.begins_with(prefix):
+			return false
+	return true
 
 
 static func is_cold_product(product: StringName, products: Dictionary) -> bool:
@@ -58,35 +81,61 @@ func move(
 	return _carry(inventory, product, qty, from, to, warm_minutes(product, from))
 
 
-## Lets `minutes` of game time go by. Every cold product stored outside a fridge gets older;
-## the units whose clock passed the limit rot. Returns what rotted, one entry per product and
-## place: { "product", "location", "qty", "lost": { order id -> units } }.
+## Lets `minutes` of game time go by and discards what rotted. Returns what rotted, one entry per
+## product and place: { "product", "location", "qty", "lost": { order id -> units } }.
 func advance(
 	inventory: Inventory, products: Dictionary, cold_shelves: Dictionary, minutes: float
 ) -> Array[Dictionary]:
 	var rotten: Array[Dictionary] = []
+	for due: Dictionary in age(inventory, products, cold_shelves, minutes):
+		var lost: Variant = inventory.discard(due["product"], due["qty"], due["location"])
+		if lost is Dictionary:
+			rotten.append({"product": due["product"], "location": due["location"], "qty": due["qty"], "lost": lost})
+	_prune(inventory)
+	return rotten
+
+
+## Lets `minutes` of game time go by without touching the stock: every cold product stored outside
+## a fridge, where units wait (ages_at()), gets older. Returns where the clock reached the limit,
+## one entry per product and place: { "product", "location", "qty" } (all the units there). The
+## caller takes them out of the stock and then calls forget_empty(); until then they stay due,
+## so a failed attempt is reported again by the next call.
+func age(
+	inventory: Inventory, products: Dictionary, cold_shelves: Dictionary, minutes: float
+) -> Array[Dictionary]:
+	var due: Array[Dictionary] = []
 	if minutes <= 0.0:
-		return rotten
+		return due
 	for product: StringName in _tracked(inventory, products):
 		var places: Dictionary = inventory.locations_of(product)
 		var clocks: Dictionary = _warm.get(product, {})
 		for location: StringName in places.keys():
-			if is_cold_location(location, cold_shelves):
+			if not ages_at(location) or is_cold_location(location, cold_shelves):
 				continue
-			var age: float = float(clocks.get(location, 0.0)) + minutes
-			if age < CompanyTuning.COLD_SPOIL_MINUTES:
-				clocks[location] = age
-				continue
-			var qty: int = int(places[location])
-			var lost: Variant = inventory.discard(product, qty, location)
-			clocks.erase(location)
-			if lost is Dictionary:
-				rotten.append(
-					{"product": product, "location": location, "qty": qty, "lost": lost}
-				)
+			var minutes_out: float = float(clocks.get(location, 0.0)) + minutes
+			clocks[location] = minutes_out
+			if minutes_out >= CompanyTuning.COLD_SPOIL_MINUTES:
+				due.append({"product": product, "location": location, "qty": int(places[location])})
 		_warm[product] = clocks
+	return due
+
+
+## An event already moved `qty` units of `product` from `from` to `to` in `inventory` (the host
+## saw it applied): the clock goes with them, as move() does, joining the ones at `to` by the
+## average weighted by units.
+func note_moved(
+	inventory: Inventory, product: StringName, qty: int, from: StringName, to: StringName
+) -> void:
+	var after: int = inventory.count(product, to)
+	if qty <= 0 or from == to or after < qty:
+		return
+	_merge(product, to, after - qty, qty, warm_minutes(product, from))
 	_prune(inventory)
-	return rotten
+
+
+## Forgets the clock of every place that no longer holds units (after the due ones were taken out).
+func forget_empty(inventory: Inventory) -> void:
+	_prune(inventory)
 
 
 func to_dict() -> Dictionary:
@@ -94,17 +143,31 @@ func to_dict() -> Dictionary:
 
 
 ## Rebuilds from to_dict() (also after a JSON round trip). Bad entries are dropped.
-func from_dict(data: Dictionary) -> void:
+func from_dict(data: Variant) -> void:
 	_warm.clear()
-	var warm: Dictionary = data.get("warm", {})
+	var warm: Variant = {}
+	if data is Dictionary:
+		warm = (data as Dictionary).get("warm", {})
+	if not warm is Dictionary:
+		return
 	for product: Variant in warm:
+		var places: Variant = (warm as Dictionary)[product]
+		if not CompanyAsk.is_id(product) or not places is Dictionary:
+			continue
 		var clocks: Dictionary = {}
-		for location: Variant in warm[product]:
-			var minutes: float = float(warm[product][location])
-			if minutes > 0.0 and minutes < CompanyTuning.COLD_SPOIL_MINUTES:
-				clocks[StringName(location)] = minutes
+		for location: Variant in places:
+			var minutes: Variant = (places as Dictionary)[location]
+			if not CompanyAsk.is_id(location) or not (minutes is int or minutes is float):
+				continue
+			if float(minutes) > 0.0 and float(minutes) < CompanyTuning.COLD_SPOIL_MINUTES:
+				clocks[StringName(location)] = float(minutes)
 		if not clocks.is_empty():
 			_warm[StringName(product)] = clocks
+
+
+## True when some place has a clock running.
+func is_ticking() -> bool:
+	return not _warm.is_empty()
 
 
 func _carry(
@@ -116,7 +179,6 @@ func _carry(
 	incoming_minutes: float
 ) -> bool:
 	var before: int = inventory.count(product, to)
-	var at_dest: float = warm_minutes(product, to)
 	var ok: bool
 	if from == &"":
 		ok = inventory.receive(product, qty, to)
@@ -124,13 +186,20 @@ func _carry(
 		ok = inventory.move(product, qty, from, to)
 	if not ok:
 		return false
-	var merged: float = (at_dest * before + incoming_minutes * qty) / float(before + qty)
+	_merge(product, to, before, qty, incoming_minutes)
+	_prune(inventory)
+	return true
+
+
+## `qty` units with `incoming_minutes` on their clock joined the `before` that were at `to`.
+func _merge(product: StringName, to: StringName, before: int, qty: int, incoming_minutes: float) -> void:
+	var merged: float = (warm_minutes(product, to) * before + incoming_minutes * qty) / float(before + qty)
 	var clocks: Dictionary = _warm.get(product, {})
 	if merged > 0.0:
 		clocks[to] = merged
 		_warm[product] = clocks
-	_prune(inventory)
-	return true
+	else:
+		clocks.erase(to)
 
 
 func _tracked(inventory: Inventory, products: Dictionary) -> Array[StringName]:
