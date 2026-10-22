@@ -72,6 +72,13 @@ const TOW_BLACK_SCREEN_SECONDS: float = 3.0
 ## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
 ## D-0317 confirms or raises it with D-2002's measurements.
 const VEHICLES_FAR_MAX: int = 2
+## The gate holds a vehicle with cargo that may not leave (CompanyTrips.hold_at_gate, D-0316.2) and tells its
+## driver why at most this often, in real seconds, however long it pushes (CompanyTrips.held_notice_msec).
+const GATE_HELD_NOTICE_REAL_SECONDS: float = 3.0
+## A client at the wheel of a held vehicle brakes its own predicted copy at the gate, as the host does, for this
+## long after each notice (CompanyGateBrake, D-0316.4): the notice's period and a round trip to spare, so a vehicle
+## pushed against the gate for good stays braked from one notice to the next.
+const GATE_BRAKE_REAL_SECONDS: float = 3.5
 ## Who gets a company vehicle's or loose box's updates (CompanyInterest): the peers whose player is
 ## within CELL_LOAD_RADIUS cells of it, until it is past CELL_UNLOAD_RADIUS. They look again this often,
 ## in real seconds: a vehicle at 100 km/h covers 7 m, far under a cell.
@@ -156,6 +163,11 @@ const COLD_SPOIL_MINUTES: float = 120.0
 ## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
 const GIFT_WRAP_BONUS: float = 0.15
 const GIFT_WRAP_COST: int = 3
+
+## Quality check by a second player (D-0734, BoxReview): a box that someone other than its packer opened and
+## found faultless, and that was not touched afterwards, pays BOX_REVIEW_BONUS of its pay on top (stacks with
+## the condition bonus; small, because the check costs a second player's time).
+const BOX_REVIEW_BONUS: float = 0.05
 
 ## Multi-box orders (D-0729, OrderParts): an order whose products need more than MULTI_BOX_FILL of one
 ## XL box is split into up to ORDER_BOXES_MAX boxes, all of them delivered together.
@@ -359,6 +371,9 @@ const SUPPLIER_TRUCKS_PER_DAY: int = 1
 const SUPPLIER_ARRIVAL_MIN: int = 8 * 60 + 30
 ## It waits this long at the dock (3 game hours).
 const SUPPLIER_WAIT_MIN: int = 180
+## Docks the shed has for supplier trucks (D-0621.c.a, DockQueue): trucks that overlap in time queue for one.
+## D-0640 (a second dock) raises it.
+const SUPPLIER_DOCK_BAYS: int = 1
 ## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
 ## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
 ## turn radius, how far it reverses in a straight line, the straight run before the turn, and the

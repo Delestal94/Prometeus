@@ -27,7 +27,8 @@ extends Node
 ## every tick it would cross, it is put back where it last stood inside, its horizontal motion stopped,
 ## so it never leaves, nor counts as out (its heading is its own: it can steer along the line); departure_held
 ## says so, with the reason and its driver, at most once every `held_notice_msec` per vehicle and driver
-## (CompanyTripsView tells that driver). Its cargo
+## (CompanyTripsView tells that driver; a client there brakes the copy it predicts the same way, put_back(),
+## CompanyGateBrake, D-0316.4). Its cargo
 ## stays staged. Only one fed through track(), with no node to hold (or with hold_at_gate off), still
 ## crosses: it starts no trip (departure_refused) but counts as out until it crosses back in
 ## (trips_out(), so the day waits for it too; refused_returned when it does).
@@ -64,7 +65,7 @@ var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
 ## Hold at the gate a vehicle that may not leave (D-0316.2); off, it crosses refused and counts as out.
 var hold_at_gate: bool = true
 ## Real milliseconds between two departure_held of the same vehicle.
-var held_notice_msec: int = 3000
+var held_notice_msec: int = roundi(CompanyTuning.GATE_HELD_NOTICE_REAL_SECONDS * 1000.0)
 
 var _staged: Dictionary = {}
 var _active: Dictionary = {}
@@ -82,7 +83,13 @@ var _held_told: Dictionary = {}
 ## (CompanyFleet.gate_of()), `width` its width in metres, `outward` the way out (the shed's north, -Z of its basis;
 ## default the world's -Z). The yard (set_yard()) makes the whole compound the inside.
 func setup(exit_origin: Vector3, width: float, outward: Vector3 = Vector3.FORWARD) -> void:
-	gate = TripGate.new(exit_origin, outward, width)
+	use_gate(TripGate.new(exit_origin, outward, width))
+
+
+## Watches `with` from now on (CompanyRoot hands it CompanyFleet.trip_gate(), the one a client's CompanyGateBrake
+## builds too, D-0316.4). Its yard is whatever it was given.
+func use_gate(with: TripGate) -> void:
+	gate = with
 	gate.departed.connect(_on_departed)
 	gate.returned.connect(_on_returned)
 
@@ -146,6 +153,11 @@ func is_out(vehicle_id: StringName) -> bool:
 	return _active.has(vehicle_id) or _refused_out.has(vehicle_id)
 
 
+## Whether the dispatch zone staged cargo on `vehicle_id` that has not left yet (stage_cargo() would replace it).
+func has_cargo(vehicle_id: StringName) -> bool:
+	return _staged.has(vehicle_id)
+
+
 ## May `vehicle_id` leave now? {ok, key, args} as DispatchRules answers: not ok, with FAR_LIMIT and
 ## [far_max], while `far_max` other vehicles are out. A vehicle already out is never refused.
 func departure_verdict(vehicle_id: StringName) -> Dictionary:
@@ -204,17 +216,7 @@ func _would_refuse(vehicle_id: StringName) -> bool:
 ## the last held_notice_msec. Its heading is left as it is, turning too: the gate is a wall it can steer along,
 ## not a lock. The gate never sees it outside.
 func _hold(body: Node3D, vehicle_id: StringName) -> void:
-	var inside: Vector3 = _inside_pose[vehicle_id]
-	body.global_transform = Transform3D(body.global_basis, Vector3(inside.x, body.global_position.y, inside.z))
-	var rigid := body as RigidBody3D
-	if rigid != null and not rigid.freeze:
-		# On the body's live state: RigidBody3D.linear_velocity is the copy from before a VehicleBody3D's
-		# suspension impulses of this step, and writing it undid them (the van sank onto its chassis, as
-		# vehicle_prediction.gd notes).
-		var state: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(rigid.get_rid())
-		if state != null:
-			state.linear_velocity = Vector3(0.0, state.linear_velocity.y, 0.0)
-	body.reset_physics_interpolation()
+	put_back(body, _inside_pose[vehicle_id])
 	var wheel: Variant = body.get(&"driver_peer_id")
 	var driver: int = int(wheel) if wheel is int else 0
 	var now: int = Time.get_ticks_msec()
@@ -223,6 +225,41 @@ func _hold(body: Node3D, vehicle_id: StringName) -> void:
 		return
 	_held_told[vehicle_id] = [driver, now]
 	departure_held.emit(vehicle_id, departure_verdict(vehicle_id), driver)
+
+
+## What a hold does to `body` each tick: back at `inside` (at its own height: its suspension holds that), its
+## horizontal motion stopped, its heading as it is. The host's hold (_hold()) and a client's on the copy it predicts
+## (CompanyGateBrake, D-0316.4) are the same, so the two land in the same place.
+static func put_back(body: Node3D, inside: Vector3) -> void:
+	body.global_transform = Transform3D(body.global_basis, Vector3(inside.x, body.global_position.y, inside.z))
+	stop(body)
+	body.reset_physics_interpolation()
+
+
+## Stops `body`'s horizontal motion where it is (put_back() does it after moving it); falling and turning go on.
+static func stop(body: Node3D) -> void:
+	var state: PhysicsDirectBodyState3D = _live_state(body)
+	if state != null:
+		state.linear_velocity = Vector3(0.0, state.linear_velocity.y, 0.0)
+
+
+## Takes away the part of `body`'s motion that goes `out` (flat, length 1: TripGate.outward_at()), only when it goes
+## that way; back, along the line and falling it keeps. A client's brake on a copy already past the gate when told
+## (CompanyGateBrake, D-0316.4): it backs up and steers, and follows the host's if the host let it go meanwhile.
+static func stop_outward(body: Node3D, out: Vector3) -> void:
+	var state: PhysicsDirectBodyState3D = _live_state(body)
+	if state != null:
+		state.linear_velocity -= out * maxf(state.linear_velocity.dot(out), 0.0)
+
+
+## `body`'s live physics state while it is simulated (a RigidBody3D not frozen), else null. Its velocity is written
+## there: RigidBody3D.linear_velocity is the copy from before a VehicleBody3D's suspension impulses of this step, and
+## writing it undid them (the van sank onto its chassis, as vehicle_prediction.gd notes).
+static func _live_state(body: Node3D) -> PhysicsDirectBodyState3D:
+	var rigid := body as RigidBody3D
+	if rigid == null or rigid.freeze:
+		return null
+	return PhysicsServer3D.body_get_direct_state(rigid.get_rid())
 
 
 func _on_departed(vehicle_id: StringName) -> void:

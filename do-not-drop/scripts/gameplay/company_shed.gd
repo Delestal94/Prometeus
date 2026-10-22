@@ -102,6 +102,9 @@ var grid: Vector2i = Vector2i.ZERO
 var pieces: Array[Dictionary] = []
 ## The point to use each piece drawn, by uid (ShedPiecePoint, D-0914), and who used which.
 var use_points: Dictionary = {}
+## The dispatch board's station of each dispatch zone drawn, by the piece's uid (DispatchStation, D-0310.b): the
+## dispatch zone has this instead of a use point.
+var dispatch_stations: Dictionary = {}
 ## The supplier board's point, hung again on every drawing.
 var supplier_point: SupplierBoardPoint
 ## Where the pallets stood at the last redraw: pallet id -> its node.
@@ -200,6 +203,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 		child.queue_free()
 	pieces.clear()
 	use_points.clear()
+	dispatch_stations.clear()
 	_slot_views.clear()
 	pallet_nodes.clear()
 	cart_views.clear()
@@ -418,8 +422,10 @@ func _build_piece(kit: DepotKit, uid: StringName, def: PlaceableDefinition, piec
 		&"assembly":
 			_build_table(kit, uid, def, at)
 		&"dispatch":
-			# Painted on the floor (it does not block walking): the patch and its name are all of it.
+			# Painted on the floor (it does not block walking): the patch and its name, and the station
+			# that opens the dispatch board (D-0310.b).
 			_paint_zone(kit, &"dispatch", rect, Vector2(rect.position) + Vector2(rect.size) * 0.5)
+			_add_dispatch_station(uid, def, at)
 		_:
 			kit.box(Vector3(def.footprint.x, def.height_m, def.footprint.y) * CompanyTuning.WAREHOUSE_GRID_M,
 				center + Vector3.UP * def.height_m * 0.5, DepotKit.flat(Color(0.5, 0.5, 0.52)), true)
@@ -436,6 +442,14 @@ func _add_use_point(uid: StringName, def: PlaceableDefinition, at: Transform3D) 
 		piece_used.emit(piece_uid, role, peer_id))
 	add_child(point)
 	use_points[uid] = point
+
+
+## The dispatch board's station in the middle of the zone, under the piece's own transform.
+func _add_dispatch_station(uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:
+	var station := DispatchStation.make(uid, def.footprint.y * CompanyTuning.WAREHOUSE_GRID_M)
+	station.transform = at * Transform3D(Basis.IDENTITY, station.position)
+	add_child(station)
+	dispatch_stations[uid] = station
 
 
 func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D,

@@ -46,9 +46,9 @@
 | ✅ D-0729 | Pedidos multi-caja (un pedido en 2-3 cajas) | constructor-negocio | high | test |
 | ~~D-0730~~ | ~~Paquetes sin caja (bici, colchón) con film y esquineros~~ **Fusionada en D-0626 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
 | ✅ D-0731 | Mensaje escrito a mano del cliente (`package_scribble.gd`) | constructor-negocio | low | dibujo/firma en la caja |
-| D-0732 | Etiquetas de colores por distrito | constructor-negocio | low | test |
+| ✅ D-0732 | Etiquetas de colores por distrito | constructor-negocio | low | test |
 | ~~D-0733~~ | ~~Armado con temporizador para pedidos urgentes~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
-| D-0734 | Control de calidad por otro jugador (abrir y revisar antes de cerrar) | constructor-negocio | medium | test |
+| ✅ D-0734 | Control de calidad por otro jugador (abrir y revisar antes de cerrar) | constructor-negocio | medium | test |
 | ~~D-0735~~ | ~~Contenido sorpresa: el pedido dice "algo para mi abuela" (interpretación)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión |
 | ~~D-0736~~ | ~~Trampa nueva que nace del armado: "Mal cerrada" (la tapa se abre con los saltos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | high | trampa con test y feedback |
 | ~~D-0737~~ | ~~Trampa nueva: "Sobrecargada" (fondo que cede si se lleva mal)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | high | idem |

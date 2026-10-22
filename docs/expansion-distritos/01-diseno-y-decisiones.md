@@ -51,7 +51,7 @@
 | D-0136 | ✅ Definir reglas de horario de clientes (no reciben de noche, ventanas de entrega) | constructor-progresion | low | sección en `diseno/clientes.md` |
 | D-0137 | ✅ Diseño de cosméticos de la empresa (logo, colores de la flota, uniforme) | critico-diseno | low | `diseno/cosmeticos-empresa.md` |
 | D-0138 | ✅ Ideas de logros de Steam de la expansión (30) | estratega-steam | low | lista en `docs/marketing/` |
-| D-0139 | Encaje de la expansión en la página de Steam y el tráiler (qué promete y qué no) | estratega-steam | medium | nota en `docs/marketing/` |
+| D-0139 | ✅ Encaje de la expansión en la página de Steam y el tráiler (qué promete y qué no) | estratega-steam | medium | nota en `docs/marketing/` |
 | D-0140 | Revisión de `abogado-del-diablo` del diseño completo una vez escrito D-0101 a D-0139 | abogado-del-diablo | high | informe con lista SIMPLIFICAR/REHACER y tareas ajustadas |
 | D-0151 | Ayudas del modo solo de `diseno/roles-tripulacion.md` §6.2: pausa de verdad sin peers, pedidos que entran antes con 1 jugador, pedido automático al proveedor al cierre | constructor-progresion | high | `test_company_solo_assists` verde; el bot de D-2024 vive del pedido automático |
 
@@ -59,7 +59,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0141 | Crear el agente `constructor-negocio` (galpón, stock, armado, empleados, automatización) en `.claude/agents/` | claude | medium | archivo versionado, con modelo y esfuerzo como los demás; listado en `CLAUDE.md` |
+| D-0141 | ✅ Crear el agente `constructor-negocio` (galpón, stock, armado, empleados, automatización) en `.claude/agents/` | claude | medium | archivo versionado, con modelo y esfuerzo como los demás; listado en `CLAUDE.md` |
 | D-0142 | Ampliar `constructor-camion` a toda la flota (o crear `constructor-vehiculos`) | claude | medium | descripción del agente cubre bici, carrito, lancha y avioneta |
 | D-0143 | Ampliar `constructor-tramos` con tramos de agua, aire y montaña | claude | low | descripción actualizada |
 | D-0144 | ✅ Agregar los dominios nuevos (`scripts/gameplay/business/`, `scripts/gameplay/fleet/`, `scripts/gameplay/districts/`) a `file_domain` en `.claude/hooks/lib.sh` y a `colaboracion-equipo.md` | claude | low | hook clasifica bien los archivos nuevos (test del hook) |

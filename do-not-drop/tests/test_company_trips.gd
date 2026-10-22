@@ -18,7 +18,17 @@ extends SceneTree
 ##   departure_held tells its id, the reason and its driver_peer_id once per held_notice_msec and driver (a new
 ##   driver at once; every hold with 0); it keeps its own heading (a wall, not a lock); a
 ##   CompanyTripsView following it tells that driver (solo: itself) with WORLD_DISPATCH_FAR_LIMIT and the cap
-##   (its departure_held); one with no cargo still leaves; with hold_at_gate off it crosses refused as before;
+##   (its departure_held, and held_at_gate with the cap); one with no cargo still leaves; with hold_at_gate off it
+##   crosses refused as before;
+## - a client's CompanyGateBrake (D-0316.4) builds its gate once (gate_source), the first tick a copy is predicted,
+##   and again after a snapshot (company_state_restored), not on each notice; told by its view's held_at_gate, on a
+##   copy it predicts it does what the host's hold does: one crossing from inside is put back where it last stood
+##   inside, its heading kept; one already past the line when told is not put back (the reconciler brings it) and, a
+##   real body, keeps backing in and going along the line, losing only the motion further out (TripGate.outward_at():
+##   away across the edge it left by, outside_by() how far); a copy not predicted is left alone; it lets go with
+##   fewer than the cap out, with the vehicle out in the view, with the host's pose of it (predicted_host_pose)
+##   past the line by more than HOST_OUT_M (half a metre is still a hold), or when brake_msec is up; it brakes for
+##   longer than the host's pause between two notices;
 ## - forget() (D-0302.2.b): a vehicle that leaves the world no longer counts as out: its trip closes as if
 ##   it came back (what wasn't delivered fails, trip_closed), one out refused is back (refused_returned),
 ##   its staged cargo is dropped and the gate starts over with it (its next position only sets the side);
@@ -44,6 +54,7 @@ func _run() -> void:
 	_test_yard()
 	await _test_group_tracking()
 	await _test_gate_hold()
+	await _test_gate_brake()
 	await _test_root()
 	quit(_failures)
 
@@ -254,6 +265,25 @@ class DrivenVan:
 	var driver_peer_id: int = 7
 
 
+## A client's copy of a vehicle, predicted by this peer or not (vehicle.gd is_predicted()).
+class PredictedVan:
+	extends Node3D
+	var predicted: bool = true
+	## The host's pose of it the prediction last compared with (vehicle.gd's).
+	var predicted_host_pose: Transform3D = Transform3D.IDENTITY
+
+	func is_predicted() -> bool:
+		return predicted
+
+
+## The same, a simulated body: what the brake does to its velocity.
+class PredictedBody:
+	extends RigidBody3D
+
+	func is_predicted() -> bool:
+		return true
+
+
 ## Puts `van` at `z` (the gate's line at -4, outward -Z) and lets the gate look twice.
 func _drive_to(van: Node3D, z: float) -> void:
 	van.global_position = Vector3(0, 0, z)
@@ -274,6 +304,8 @@ func _test_gate_hold() -> void:
 		held.append([id, reason, driver]))
 	var told: Array = []
 	view.departure_held.connect(func(id: StringName, text: String) -> void: told.append([id, text]))
+	var capped: Array = []
+	view.held_at_gate.connect(func(id: StringName, cap: int) -> void: capped.append([id, cap]))
 	var refused: Array[int] = [0]
 	trips.departure_refused.connect(func(_id: StringName, _reason: Dictionary) -> void: refused[0] += 1)
 	_packed(trips, [&"o1", &"o2"])
@@ -302,6 +334,7 @@ func _test_gate_hold() -> void:
 	if text.count("%") == 1:
 		text = text % 1
 	_expect(told == [[&"van_held", text]], "the view tells its driver (solo: this peer) why (got %s)" % [told])
+	_expect(capped == [[&"van_held", 1]], "...and held_at_gate carries the cap, for its GateBrake (got %s)" % [capped])
 	await _drive_to(second, -6.0)
 	_expect(is_equal_approx(second.global_position.z, -3.5) and held.size() == 1,
 		"pushed again within held_notice_msec it is held again, and nobody is told twice (%d)" % held.size())
@@ -334,6 +367,135 @@ func _test_gate_hold() -> void:
 	_expect(trips.is_out(&"van_out") and refused[0] == 1 and is_equal_approx(first.global_position.z, -7.0),
 		"with hold_at_gate off it crosses refused and counts as out")
 	for node: Node in [first, second, view, trips]:
+		node.queue_free()
+	await process_frame
+
+
+## A braked copy already past the gate (a real body, no gravity or damping) keeps going back and along the line, and
+## only loses the motion that takes it further out (CompanyTrips.stop_outward(), TripGate.outward_at()).
+func _check_brake_outward(brake: CompanyGateBrake) -> void:
+	var body := PredictedBody.new()
+	body.name = "rigid_van"
+	body.gravity_scale = 0.0
+	body.linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	body.linear_damp = 0.0
+	body.add_to_group(CompanyTrips.VEHICLE_GROUP)
+	root.add_child(body)
+	body.global_position = Vector3(0, 0, -6)
+	await physics_frame
+	brake.hold(&"rigid_van", 0)
+	body.linear_velocity = Vector3(1.0, 0.0, 2.0)
+	await physics_frame
+	await physics_frame
+	_expect(body.linear_velocity.distance_to(Vector3(1.0, 0.0, 2.0)) < 0.05 and body.global_position.z > -6.0,
+		"braked and past the line, a copy backing in and along the line keeps that motion (%s)" % body.linear_velocity)
+	body.linear_velocity = Vector3(1.0, 0.0, -3.0)
+	await physics_frame
+	await physics_frame
+	_expect(absf(body.linear_velocity.z) < 0.05 and absf(body.linear_velocity.x - 1.0) < 0.05,
+		"...and going on out it loses only that: along the line it goes on (%s)" % body.linear_velocity)
+	var gate := TripGate.new(Vector3(0, 0, -4), Vector3.FORWARD, 4.0)
+	gate.set_yard(10.0, 5.0)
+	var outs: Array[Vector3] = [gate.outward_at(Vector3(0, 0, -5)), gate.outward_at(Vector3(7, 0, -2)),
+		gate.outward_at(Vector3(-7, 0, -2)), gate.outward_at(Vector3(0, 0, 8)), gate.outward_at(Vector3(6, 0, -4.5))]
+	_expect(outs == [Vector3(0, 0, -1), Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)],
+		"outward_at() is away from the yard across the edge it left by: far edge, sides, back, the furthest (%s)"
+		% [outs])
+	var by: Array[float] = []
+	for at: Vector3 in [Vector3(0, 0, -5), Vector3(7, 0, -2), Vector3(0, 0, 8), Vector3(6, 0, -4.5), Vector3(0, 0, -3)]:
+		by.append(gate.outside_by(at))
+	_expect(by == [1.0, 2.0, 2.0, 1.0, -1.0],
+		"outside_by() is how far past that edge (0 or less inside: %s)" % [by])
+	body.queue_free()
+	await process_frame
+
+
+## D-0316.4: a client's CompanyGateBrake does to the copy it predicts what the host's hold does, once told.
+func _test_gate_brake() -> void:
+	var view := CompanyTripsView.new()
+	root.add_child(view)
+	var brake := CompanyGateBrake.new()
+	var built: Array[int] = [0]
+	brake.gate_source = func() -> TripGate:
+		built[0] += 1
+		return TripGate.new(Vector3(0, 0, -4), Vector3.FORWARD, 4.0)
+	root.add_child(brake)
+	brake.attach(view)
+	var van := PredictedVan.new()
+	van.name = "van"
+	van.add_to_group(CompanyTrips.VEHICLE_GROUP)
+	root.add_child(van)
+	# Another vehicle out (refused, no trip): one out, the cap of 1 reached.
+	_expect(view.apply_trip(CompanyTripsView.REFUSED, {"vehicle": "van_other", "minute": 0}) and view.trips_out() == 1,
+		"the view has one vehicle out")
+	await _drive_to(van, -3.5)
+	await _drive_to(van, -4.6)
+	_expect(is_equal_approx(van.global_position.z, -4.6) and not brake.is_braking(&"van") and built[0] == 1,
+		"untold, a predicted copy crosses the gate (built once, the first tick it was predicted)")
+	view.held_at_gate.emit(&"van", 1)
+	_expect(brake.is_braking(&"van") and built[0] == 1,
+		"told by its view, the brake is on, on the gate it already had (built once, like the host's)")
+	await _drive_to(van, -4.8)
+	_expect(is_equal_approx(van.global_position.z, -4.8),
+		"a copy already past the line when told is left where it is, not put back (the reconciler brings it)")
+	await _check_brake_outward(brake)
+	var net := CompanyNet.new()
+	brake.follow(net)
+	net.company_state_restored.emit(1)
+	_expect(brake.gate() == null and built[0] == 1, "a snapshot (company_state_restored) drops the gate...")
+	await _drive_to(van, -4.8)
+	_expect(brake.gate() != null and built[0] == 2, "...and the next predicted tick builds it again (%d)" % built[0])
+	net.free()
+	await _drive_to(van, -3.5)
+	van.rotation.y = 0.6
+	await _drive_to(van, -4.6)
+	_expect(is_equal_approx(van.global_position.z, -3.5) and is_equal_approx(van.rotation.y, 0.6),
+		"one crossing from inside is put back where it last stood inside, its heading its own (z %.2f, yaw %.2f)"
+		% [van.global_position.z, van.rotation.y])
+	van.predicted_host_pose = Transform3D(Basis.IDENTITY, Vector3(0, 0, -4.5))
+	await _drive_to(van, -4.6)
+	_expect(brake.is_braking(&"van") and is_equal_approx(van.global_position.z, -3.5),
+		"the host's pose of it half a metre past the line is a hold still")
+	van.predicted_host_pose = Transform3D(Basis.IDENTITY, Vector3(0, 0, -5.5))
+	await _drive_to(van, -4.6)
+	_expect(not brake.is_braking(&"van") and is_equal_approx(van.global_position.z, -4.6),
+		"...past the line by more than HOST_OUT_M the host let it go: so does the brake, and the copy crosses")
+	van.predicted_host_pose = Transform3D.IDENTITY
+	view.held_at_gate.emit(&"van", 1)
+	van.predicted = false
+	await _drive_to(van, -4.6)
+	_expect(is_equal_approx(van.global_position.z, -4.6),
+		"a copy not predicted here (drawn from the host's) is left alone")
+	van.predicted = true
+	await _drive_to(van, -3.5)
+	# Fewer than the cap out: the host lets it go, and so does the brake.
+	var none: Array[StringName] = []
+	view.apply_trip(CompanyTripsView.CLOSED, {"trip": "", "vehicle": "van_other", "failed": none, "minute": 0})
+	await _drive_to(van, -4.6)
+	_expect(not brake.is_braking(&"van") and is_equal_approx(van.global_position.z, -4.6),
+		"with fewer than the cap out the brake lets go and the copy crosses")
+	await _drive_to(van, -3.5)
+	view.held_at_gate.emit(&"van", 0)
+	view.apply_trip(CompanyTripsView.REFUSED, {"vehicle": "van", "minute": 0})
+	await _drive_to(van, -4.6)
+	_expect(not brake.is_braking(&"van") and is_equal_approx(van.global_position.z, -4.6),
+		"...and when the view has the vehicle out (the host let it leave)")
+	view.apply_trip(CompanyTripsView.CLOSED, {"trip": "", "vehicle": "van", "failed": none, "minute": 0})
+	await _drive_to(van, -3.5)
+	var default_msec: int = brake.brake_msec
+	brake.brake_msec = 0
+	brake.hold(&"van", 0)
+	await _drive_to(van, -4.6)
+	_expect(not brake.is_braking(&"van") and is_equal_approx(van.global_position.z, -4.6),
+		"...and when its time is up with no new notice (brake_msec)")
+	var trips := CompanyTrips.new()
+	_expect(default_msec == roundi(CompanyTuning.GATE_BRAKE_REAL_SECONDS * 1000.0)
+		and default_msec > trips.held_notice_msec
+		and trips.held_notice_msec == roundi(CompanyTuning.GATE_HELD_NOTICE_REAL_SECONDS * 1000.0),
+		"a notice brakes for longer (%d ms) than the host's pause between two notices (%d ms)"
+		% [default_msec, trips.held_notice_msec])
+	trips.free()
+	for node: Node in [van, brake, view]:
 		node.queue_free()
 	await process_frame
 

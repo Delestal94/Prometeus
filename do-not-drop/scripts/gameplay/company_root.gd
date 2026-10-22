@@ -66,7 +66,8 @@ extends Node3D
 ## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the playon's gate (its far edge) and decides
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
-## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
+## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips; its "GateBrake"
+## (CompanyGateBrake, D-0316.4) brakes the copy it drives at the same gate while the host holds it there.
 ##
 ## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
 ## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
@@ -76,9 +77,8 @@ extends Node3D
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
-## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here in
-## gameplay/: once the company HUD exists, the host-gone screen and the way to the menu move
-## there, as N-222's live in hud_pause.gd.
+## Where a client goes when its host is gone (as hud_pause.leave_to_menu()). Temporary here: once the
+## company HUD exists, the host-gone screen and the way to the menu move there, as N-222's in hud_pause.gd.
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 ## Where a close's save puts the units players held (D-2005, D-0236): a loaded day opens with empty hands. The
 ## shed has no fixed spot for them yet (no station gives a location), so they lie in floor
@@ -155,6 +155,8 @@ var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
 var trips_view: CompanyTripsView
+## Client: brakes the copy it drives at the gate while the host holds it (D-0316.4). Null on the host.
+var gate_brake: CompanyGateBrake
 var fleet: CompanyFleet
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
@@ -234,6 +236,7 @@ func _ready() -> void:
 	_add_crew()
 	_add_builder()
 	_add_stock_board()
+	CompanyDispatch.add_to(self)
 	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()
@@ -360,7 +363,8 @@ func _event_bus() -> Node:
 
 func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
-		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [])
+		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [],
+			net.supplier.auto_units(day) if net != null else 0)
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.
@@ -492,8 +496,7 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 	_publish_presence()
 
 
-## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
-## units and layout events itself (CompanyShed.follow(), D-0910).
+## A new day (or phase): Steam shows it (D-2009); the shed follows units and layout itself (CompanyShed.follow()).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
 ## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
@@ -721,6 +724,7 @@ func _add_supplier_orders() -> void:
 	if net.is_host() and _hosted_state != null:
 		_hosted_state.supplier_calendar = CompanySupplierNet.load_saved(supplier_schedule, _hosted_state)
 		net.event_applied.connect(_on_supplier_ordered)
+		SupplierAutoOrderHook.attach(self, net)
 	supplier_board = SupplierBoard.new()
 	supplier_board.name = "SupplierBoard"
 	add_child(supplier_board)
@@ -750,7 +754,7 @@ func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
-	# The map's streets (D-0304.1) and Centro's decor (D-0314), laid as the cells load; events off (D-0315.b).
+	# Streets (D-0304.1) and Centro's decor (D-0314) load with the cells; events off (D-0315.b).
 	cells.use_graph(RoadGraph.load_default(), CompanyCells.seed_of(session), false, CompanyCells.shed_ground(shed))
 
 
@@ -807,12 +811,12 @@ func _add_trips() -> void:
 	trips_view.attach(net)
 	if not net.is_host():
 		day_cycle.trips_out = trips_view.trips_out
+		gate_brake = CompanyGateBrake.add_to(self, trips_view, shed, net)
 		return
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M, -shed.global_basis.z)
-	trips.set_yard(CompanyFleet.yard_back_m(net.company), CompanyFleet.yard_half_width_m(net.company))
+	trips.use_gate(CompanyFleet.trip_gate(shed, net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
@@ -989,8 +993,7 @@ static func _player_name(id: int) -> String:
 
 ## Every player of the company's world, before it enters the tree: one of the crew (CREW_GROUP),
 ## sending its pose at the shed's rate while on foot (D-2002.3, CompanyTuning.SHED_POSE_RATE_HZ),
-## at SEATED_POSE_RATE_HZ seated in a vehicle (D-2002.4) and at the game's standing in its bay. Only
-## the owner's copy sends: a remote copy may come through here too, nothing changes for it.
+## at SEATED_POSE_RATE_HZ seated (D-2002.4) and at the game's in its bay. Only the owner's copy sends.
 static func join_crew(crew_member: Player) -> void:
 	crew_member.add_to_group(CREW_GROUP)
 	Ride.set_on_foot_pose_rate(crew_member, CompanyTuning.SHED_POSE_RATE_HZ)

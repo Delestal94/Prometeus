@@ -226,7 +226,7 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 
 ## Ancho de banda del modo Empresa (D-2002)
 
-**Fecha:** 2026-10-22 (D-2002.5: la caja en la mano no manda su pose). **Commit:** base `origin/main` `d7e12b63`
+**Fecha:** 2026-10-22 (D-2002.5: la caja en la mano no manda su pose). **Commit:** base `origin/main` `1905b0dd`
 (rama `exp/D-2002.5-carried-box-pose`). Antes: D-2002.4 el mismo día sobre `7ac2db32`
 (`exp/D-2002.4-bandwidth-exits`), D-2002.2 el mismo día sobre `a7405f5`
 (`exp/D-2002.2-exit-bandwidth`), D-2002.3 el 2026-10-19 sobre `425041a` (`exp/D-2002-shed-pose-rate`) y
@@ -340,9 +340,10 @@ una salida pasa 40 KB/s o 2 vehículos lejos pasan 64**; con 8 esos dos no entra
 
 | Caso | Presupuesto por cliente | 4 jugadores (modelo / ENet) | 8 jugadores (modelo / ENet) | Estado |
 |---|---|---|---|---|
-| **Galpón, cada uno con una caja en la mano (D-2002.5)** | ≤ 24 KB/s | **9,2 / 6,0** | **20,3 / 11,8-13,1** | Entran los dos (el test falla si alguno se pasa) |
-| **Una salida afuera (D-2002.5, la caja en la mano sin pose)** | ≤ 40 KB/s | **27,8 / 19,8-20,5** | **39,0 / 25,0-26,7** | Entran los dos (el test falla si alguno se pasa) |
-| **2 vehículos lejos (D-2002.5)** | ≤ 64 KB/s | **41,6 / 32,2-32,9** | **52,7 / 36,5-37,4** | Entran los dos (el test falla si alguno se pasa) |
+| **Galpón, cada uno con una caja en la mano (D-2002.5, con `net_vehicle`)** | ≤ 24 KB/s | **9,4 / 6,1** | **20,9 / 12,9-13,0** | Entran los dos (el test falla si alguno se pasa) |
+| **Una salida afuera (D-2002.5, la caja en la mano sin pose, con `net_vehicle`)** | ≤ 40 KB/s | **28,2-28,3 / 19,4-20,6** | **39,7 / 24,6-26,6** | Entran los dos (el test falla si alguno se pasa); con 8 sobran 0,3 |
+| **2 vehículos lejos (D-2002.5, con `net_vehicle`)** | ≤ 64 KB/s | **42,2 / 32,5-33,0** | **53,6 / 36,0-38,4** | Entran los dos (el test falla si alguno se pasa) |
+| Las tres, D-2002.5 antes de mezclar `net_vehicle` (D-0302.2.b.4.b) | | 9,2 / 27,8 / 41,6 | 20,3 / 39,0 / 52,7 | `net_vehicle` suma 5 B a cada pose de caja y de jugador |
 | Galpón, cada uno con una caja en la mano a 30/s (antes de D-2002.5, solo modelo, calculado) | ≤ 24 KB/s | ~29,1 / — | ~57,7 / — | No entraba ni con 4 (nadie lo contaba) |
 | Galpón, poses a 15/s (D-2002.3, igual en D-2002.4; sin cajas en la mano) | ≤ 24 KB/s | 9,1 / 5,9-6,0 | 20,2 / 12,8-13,6 | Superado por D-2002.5 |
 | Una salida afuera (D-2002.4, todo contado y 4 palancas) | ≤ 40 KB/s | 38,7 / 30,2-30,8 | 67,3 / 52,2-54,0 | 8 no entraba: las 6 cajas en la mano de los que cargan |
@@ -385,7 +386,7 @@ pero el presupuesto se decide con el techo, como en el galpón.
 
 Lo que pesa cada pieza (modelo, por cliente que la ve): la camioneta en movimiento manda 133 B cada 16,7 ms
 (12,6 KB/s sola en su paquete, 4,7 de datagramas; la segunda suma 7,8 en el mismo paquete); una caja manda 150 B
-(dos `Transform3D`: `net_transform` y `hold_offset`; 98 B desde D-2002.5, sin `hold_offset`), 6,8 KB/s cuidada a
+(dos `Transform3D`: `net_transform` y `hold_offset`; 98 B desde D-2002.5, sin `hold_offset`, 103 con `net_vehicle`), 6,8 KB/s cuidada a
 30/s y 0,3 en reposo (en el paquete de las demás); un jugador a bordo reenviado por el host, 5,0 KB/s (a pie en el galpón, 2,5). Un vehículo vacío afuera
 (no cuenta para el tope de `CompanyTrips`) cuesta lo mismo que uno cargado menos sus cajas.
 
@@ -509,25 +510,26 @@ los deltas de `care_state`, que antes no estaban; la camioneta y los sentados ba
    minutos). Al soltarla vuelve a cada tick desde el tick siguiente.
 2. Cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del que la lleva (cabeza, rayo contra lo que
    estorba, subida desde `pick_up`), en el cuerpo como lo dibuja. `hold_offset` sale de la replicación: una caja que
-   se mueve manda 98 B en vez de 150 (por eso bajan también la caja cuidada y las quietas).
+   se mueve manda 98 B en vez de 150 (por eso bajan también la caja cuidada y las quietas); con `net_vehicle`
+   (D-0302.2.b.4.b, mezclado después), 103 en vez de 155.
 3. Al soltarla, las poses viejas (de antes de tomarla y del goteo) no se usan: la caja queda donde se dibujó hasta la
    primera pose nueva del host y se acerca en 0,25 s (`test_remote_carry_alignment`).
 
-Culpables después (modelo, peor cliente):
+Culpables después (modelo, peor cliente; con `net_vehicle`, mezclado después de medir D-2002.5):
 
-- Salida con 8 (39,0 de 40, entra justo; el peor va a bordo, el host en el galpón): 5 del galpón reenviados 12,5 / la
-  camioneta 7,0 / la caja cuidada 5,3 / su `care_state` 4,9 / el otro de a bordo 2,5 / la pose del host 2,4 / los
-  eventos de negocio 2,3 / las 6 quietas 1,3 / los eventos de salida 0,5 / las 6 cajas en la mano 0,1.
-- Salida con 4 (27,8): la camioneta 7,0 / la caja cuidada 5,3 / `care_state` 4,9 / el otro de a bordo 2,5 / el del
-  galpón 2,5 / el resto 5,6.
-- 2 lejos con 8 (52,7): las 2 camionetas 11,4 / los 2 `care_state` 9,9 / las 2 cajas cuidadas 8,2 / 3 de a bordo 7,5
-  / 3 del galpón 7,5 / el resto 8,3 (los pulsos de las 4 cajas en la mano del galpón, 0,1). Con 4, 41,6.
-- Galpón con 8 (20,3): igual que en D-2002.3 más las 8 cajas en la mano (0,2). A 30/s y 150 B, como mandaban antes,
+- Salida con 8 (39,7 de 40, entra justo; el peor va a bordo, el host en el galpón): 5 del galpón reenviados 12,9 / la
+  camioneta 7,0 / la caja cuidada 5,5 / su `care_state` 4,9 / el otro de a bordo 2,6 / la pose del host 2,5 / los
+  eventos de negocio 2,3 / las 6 quietas 1,4 / los eventos de salida 0,5 / las 6 cajas en la mano 0,1.
+- Salida con 4 (28,2): la camioneta 7,0 / la caja cuidada 5,5 / `care_state` 4,9 / el otro de a bordo 2,6 / el del
+  galpón 2,6 / el resto 5,8.
+- 2 lejos con 8 (53,6): las 2 camionetas 11,4 / los 2 `care_state` 9,9 / las 2 cajas cuidadas 8,5 / 3 de a bordo 7,7
+  / 3 del galpón 7,7 / el resto 8,5 (los pulsos de las 4 cajas en la mano del galpón, 0,1). Con 4, 42,2.
+- Galpón con 8 (20,9): igual que en D-2002.3 más las 8 cajas en la mano (0,2). A 30/s y 150 B, como mandaban antes,
   habrían sido ~37,6 KB/s más (~57,7 en total; con 4, ~29,1: tampoco entraba).
 
-En el Reparto (`test_net_bandwidth_budget`, 8 jugadores, 14 cajas): host → cada cliente, caso estable 80,7 → 67,9
-KB/s (la caja de 148 a 96 B; el modelo sigue contando una caja por jugador moviéndose, un techo: la que se lleva a pie
-ya no manda), todo moviéndose 107,2 → 85,9, subida del host 4,6 → 3,9 Mbit/s.
+En el Reparto (`test_net_bandwidth_budget`, 8 jugadores, 14 cajas): host → cada cliente, caso estable 80,7 → 68,8
+KB/s (la caja de 148 a 98 B con `net_vehicle`; el modelo sigue contando una caja por jugador moviéndose, un techo: la
+que se lleva a pie ya no manda), todo moviéndose 107,2 → 87,1, subida del host 4,6 → 3,9 Mbit/s.
 
 **Cómo está hecho D-2002.3:**
 

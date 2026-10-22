@@ -361,6 +361,19 @@ Decisión: `docs/decisiones/2026-10-22-cosmeticos-empresa.md`.
 Decisión: `docs/decisiones/2026-10-22-logros-expansion.md`.
 **Hecho cuando:** `docs/marketing/logros-expansion.md` existe y D-0440 lo puede construir sin preguntar.
 
+### D-0139 · Encaje de la expansión en la página de Steam y el tráiler — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #709)** — `docs/marketing/expansion-pagina-y-trailer.md`: solo se promete lo que tiene su fase cerrada y una captura real sin gris; página en versión A (sin Empresa) hasta que F1 cierre con arte final, después versión B; tráiler actual sin cambios y un segundo video de la Empresa (8 planos con condición); F3-F4 fuera de la página.
+**Depende de:** D-0101 (`diseno/vision.md`), D-0111 (`diseno/corte-vertical.md`), D-0112 (lo recortado no se promete), D-0138
+**Qué:** nota en `docs/marketing/` con qué promete la página con la expansión y qué no, para que la rutina de
+lanzamiento la aplique cuando haya con qué mostrarla.
+- [x] D-0139.1 Estado real por fase (qué está construido, qué es gris) y la regla de qué se puede prometer.
+- [x] D-0139.2 Descripción corta y bullets en es/en (versiones A y B), etiquetas que entran, salen o esperan.
+- [x] D-0139.3 Tabla promesa → tarea `D-` → condición para mostrarla, y lista de lo que no se promete.
+- [x] D-0139.4 Tráiler (segundo video, planos E1-E8), capturas C1-C6, riesgos de reseñas y cambios pendientes en
+  `estado-steam.md`, `trailer.md`, `S-901`, `plan-desarrollo.md` y `logros-expansion.md`.
+Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
+**Hecho cuando:** la nota existe y la rutina de lanzamiento puede pasar la página a la versión B sin preguntar qué prometer.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
@@ -372,7 +385,11 @@ Decisión: `docs/decisiones/2026-10-22-logros-expansion.md`.
 - [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
 - [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el
-  2026-10-22; falta D-0151.3b: el carrito precargado, **menos lo ya pedido para mañana** con la línea "ya pedido: X"
+  2026-10-22). **D-0151.3b hecha (2026-10-22):** al pasar a CLOSING (20:00 o cierre anticipado), si no hay camión
+  para mañana, el host manda el sugerido una vez por día (`SupplierAutoOrder` puro + `SupplierAutoOrderHook`, que
+  sigue `event_applied`), por el mismo `ask()` que un pedido de jugador y como evento `ORDERED` con `peer` 0
+  (`CompanySupplierNet.AUTO_PEER`); el resumen del día dice "Pedido automático al proveedor: N unidades". Falta
+  **D-0151.3c**: el carrito que se abre precargado con el sugerido menos lo ya pedido. Lo que decía D-0151.3b: el carrito precargado, **menos lo ya pedido para mañana** con la línea "ya pedido: X"
   ([portapapeles.md](../diseno/portapapeles.md) §3), y el envío del host al pasar a CLOSING con su línea en el
   resumen) (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
   producto, recortado desde el de menos unidades hasta `plata − RENT_PER_DAY − SOLO_ORDER_CASH_RESERVE`; el carrito
@@ -381,3 +398,15 @@ Decisión: `docs/decisiones/2026-10-22-logros-expansion.md`.
 con 1 jugador ningún pedido llega después de las 15:00 y con 2 sí puede; el sugerido de un día conocido da las
 unidades esperadas y respeta la reserva; un cierre sin pedido deja uno en `SupplierSchedule` para mañana.
 **Hecho cuando:** el test pasa y el bot de 1 jugador (D-2016) cierra el día 2 con stock comprado sin tocar el tablero.
+
+### D-0141 · Agente `constructor-negocio` — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #724)** — `.claude/agents/constructor-negocio.md` (Sonnet 5.5, `high`, como los demás constructores) para galpón, stock, armado, pedidos puestos en el galpón, empleados y automatización; listado en `CLAUDE.md`, en la tabla de `construccion.md` §3 y en los carriles 2 y 3 de `desarrollador.md`.
+**Depende de:** D-0144 (dominios de `business/`, `fleet/`, `districts/`)
+**Qué:** el agente que construye `scripts/gameplay/business/` y sus vistas, con el mapa de archivos por
+familia, las reglas del modo (host autoritativo, simulación aparte, números en `CompanyTuning`, guardado
+y snapshot, placeholder gris, límite de 1000 líneas) y qué devuelve. La plata, los precios y el libro de
+pedidos siguen con `constructor-progresion`; la red de la Empresa, con `constructor-red`.
+**Test:** no hay código; `tools/panel/build_data.py` ya lo tenía en el pilar "Sistemas". Cierra la
+mitad de A-3.8 (auditoría del 2026-10-19, el agente que no existía); `fleet/`, `districts/` y `town/`
+siguen sin fila en `construccion.md` §3.
+**Hecho cuando:** el archivo está versionado con `model` y `effort`, y `CLAUDE.md` lo nombra.

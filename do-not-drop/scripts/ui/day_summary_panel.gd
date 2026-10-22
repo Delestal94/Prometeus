@@ -12,6 +12,8 @@ class_name DaySummaryPanel
 ## left short or brought extra (DeliveryNote.discrepancies(), which every peer keeps through
 ## CompanyPallets), hidden when the delivery came out even.
 ##
+## And one line when the host sent the supplier order by itself at the close (D-0151.3b), hidden otherwise.
+##
 ## The company's shop (D-0511.2) opens from here: a "Shop" button beside Continue, off until the world that
 ## hosts the screen turns it on (set_shop_available()); it only emits `shop_requested`, CompanyShopScreen opens
 ## the shop over this panel.
@@ -45,6 +47,7 @@ var _balance_label: Label
 var _truncated_label: Label
 var _note_box: VBoxContainer
 var _note_list: VBoxContainer
+var _auto_label: Label
 var _continue_button: Button
 var _shop_button: Button
 
@@ -58,9 +61,10 @@ func _ready() -> void:
 
 ## Shows the closing screen for `summary` (DaySummary.build()'s shape) and the day's delivery note
 ## lines (DeliveryNote.discrepancies(): {product, ordered, received, missing, extra}), and takes focus.
-func open(summary: Dictionary, note_lines: Array = []) -> void:
+## `auto_units` is what the automatic supplier order of the close brought (0: none).
+func open(summary: Dictionary, note_lines: Array = [], auto_units: int = 0) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	refresh(summary, note_lines)
+	refresh(summary, note_lines, auto_units)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_continue_button.grab_focus.call_deferred()
@@ -89,8 +93,8 @@ func focus_default() -> void:
 		_continue_button.grab_focus()
 
 
-## Redraws the panel from `summary` and `note_lines`. A missing key counts as zero / empty.
-func refresh(summary: Dictionary, note_lines: Array = []) -> void:
+## Redraws the panel from `summary`, `note_lines` and `auto_units`. A missing key counts as zero / empty.
+func refresh(summary: Dictionary, note_lines: Array = [], auto_units: int = 0) -> void:
 	if _day_label == null:
 		return
 	_day_label.text = tr("UI_FINANCE_DAY") % int(summary.get("day", 0))
@@ -103,6 +107,8 @@ func refresh(summary: Dictionary, note_lines: Array = []) -> void:
 			money(int(summary.get("closing", 0)))]
 	_truncated_label.visible = bool(summary.get("truncated", false))
 	_fill_note(note_lines)
+	_auto_label.text = tr("UI_FINANCE_AUTO_ORDER") % auto_units
+	_auto_label.visible = auto_units > 0
 
 
 ## The shown name of a ledger reason: its translation, or the id itself when it has none.
@@ -200,6 +206,9 @@ func _build() -> void:
 	_note_list.add_theme_constant_override("separation", 3)
 	_note_box.add_child(_note_list)
 	_note_box.hide()
+	_auto_label = UiTheme.label(column, "", 15, UiTheme.INK)
+	_auto_label.name = "AutoOrder"
+	_auto_label.hide()
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
 	column.add_child(buttons)

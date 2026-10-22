@@ -43,7 +43,7 @@
 | ~~D-0928~~ | ~~Pisos y paredes pintables con la marca de la empresa~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | cosmético |
 | ~~D-0929~~ | ~~Segundo piso/mezanine construible (D-0631)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | test |
 | ~~D-0930~~ | ~~Ventanas y techo con claraboyas (día/noche)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | low | captura |
-| D-0931 | Zona de carga para varios vehículos a la vez | constructor-mundo | medium | test |
+| D-0931 | ◐ (D-0931.a hecha; falta D-0931.b: el mundo) Zona de carga para varios vehículos a la vez | constructor-mundo | medium | test |
 | ~~D-0932~~ | ~~Estacionamiento de camiones de proveedores ampliado~~ **Fusionada en D-0640 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | ver D-0640 |
 | ~~D-0933~~ | ~~Alarma de incendio/evento (caja explosiva en el galpón)~~ **Fusionada en D-1138 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | medium | evento |
 | ~~D-0934~~ | ~~Mapa de calor de tránsito de empleados (para optimizar)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | overlay |
