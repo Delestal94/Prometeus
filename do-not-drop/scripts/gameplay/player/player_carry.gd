@@ -10,27 +10,7 @@ func _ready() -> void:
 
 
 func update_carried_package() -> void:
-	var carry_transform := Transform3D(player.global_basis, carry_position())
-	if not player.seat_node_path.is_empty():
-		var seat := player.get_node_or_null(player.seat_node_path) as Node3D
-		if seat != null:
-			var care = player.carried_package.care
-			carry_transform = seat.global_transform.translated_local(Vector3(care.balance_target.x * 0.1, -0.40, -0.65))
-			var lean := Vector3(care.balance_target.y, 0.0, -care.balance_target.x) * 0.18
-			carry_transform.basis = carry_transform.basis * Basis.from_euler(lean)
-	# The box waits for the reaching hands, then follows the lift instead of
-	# teleporting to chest height on the first pickup tick.
-	if player._pickup_elapsed < 1.3 and player.seat_node_path.is_empty():
-		var origin: Transform3D = player._pickup_from
-		var pickup_vehicle: Node3D = player._find_vehicle()
-		if player._pickup_in_vehicle and pickup_vehicle != null:
-			origin = pickup_vehicle.global_transform * origin
-		var lift: float = smoothstep(0.42, 1.3, player._pickup_elapsed)
-		if player.locomotion_speed > 0.3:
-			lift = maxf(lift, smoothstep(0.16, 0.5, player._pickup_elapsed))
-		carry_transform = origin.interpolate_with(carry_transform, lift)
-	# The same pose in the body's space: the other peers draw it on this body as they draw it (N-217).
-	var in_hands: Transform3D = player.global_transform.affine_inverse() * carry_transform
+	var carry_transform: Transform3D = hands_pose(player.carried_package)
 	# Use truck-local coordinates aboard so a client's trailing truck copy does
 	# not leave the host-authoritative package behind the hands at speed.
 	var vehicle: Node3D = player._find_vehicle()
@@ -39,7 +19,7 @@ func update_carried_package() -> void:
 		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
 	# Which vehicle's space, among several (D-0302.2.b.4.b): the host and the prediction put it on that one.
 	var index: int = VehiclePick.index_of(player.get_tree(), vehicle) if aboard else -1
-	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard, in_hands, index)
+	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard, index)
 	player.carried_package.predict_carry(carry_transform, aboard, vehicle if aboard else null)
 	if player._package_focus != null:
 		player._package_focus.dof_blur_far_enabled = true
@@ -48,12 +28,46 @@ func update_carried_package() -> void:
 		player._package_focus.dof_blur_amount = 0.18
 
 
+## Where this player's hands hold `package` now, in world space: what the owner sends the host
+## (update_carried_package()) and, on every other peer, where its copy of this player holds the box. A box in
+## the hands of someone on foot sends its pose only now and then (D-2002.5): PackageNetPose draws it here, from
+## the head's turn the owner's pose already carries and the lift since pick_up(). On foot: the hold point under
+## the camera, pulled back from what's in the way; seated: on the lap, leaning with the box's care balance. A
+## copy that never got a pose of the box (a late joiner, to whom the host repeats pick_up(): N-908) has nowhere
+## to lift it from: in the hands at once.
+func hands_pose(package: DeliveryPackage) -> Transform3D:
+	var carry_transform := Transform3D(player.global_basis, carry_position(package))
+	if not player.seat_node_path.is_empty():
+		var seat := player.get_node_or_null(player.seat_node_path) as Node3D
+		if seat != null:
+			var care = package.care
+			carry_transform = seat.global_transform.translated_local(Vector3(care.balance_target.x * 0.1, -0.40, -0.65))
+			var lean := Vector3(care.balance_target.y, 0.0, -care.balance_target.x) * 0.18
+			carry_transform.basis = carry_transform.basis * Basis.from_euler(lean)
+	# The box waits for the reaching hands, then follows the lift instead of
+	# teleporting to chest height on the first pickup tick.
+	if player._pickup_elapsed < 1.3 and player.seat_node_path.is_empty() \
+			and (package._has_net_state or player.is_local()):
+		var origin: Transform3D = player._pickup_from
+		var pickup_vehicle: Node3D = player._find_vehicle()
+		if player._pickup_in_vehicle and pickup_vehicle != null:
+			origin = pickup_vehicle.global_transform * origin
+		var lift: float = smoothstep(0.42, 1.3, player._pickup_elapsed)
+		if player.locomotion_speed > 0.3:
+			lift = maxf(lift, smoothstep(0.16, 0.5, player._pickup_elapsed))
+		carry_transform = origin.interpolate_with(carry_transform, lift)
+	return carry_transform
+
+
 func clear_carry_focus() -> void:
 	if player._package_focus != null:
 		player._package_focus.dof_blur_far_enabled = false
 
 
-func carry_position() -> Vector3:
+## `package`: the box held (the carried one by default), for its size.
+func carry_position(package: DeliveryPackage = null) -> Vector3:
+	if package == null:
+		package = player.carried_package
 	var from: Vector3 = player._camera.global_position
 	var target: Vector3 = player._hold_point.global_position
 	target.y = clampf(target.y, player.global_position.y + 0.8, player.global_position.y + 1.3)
@@ -62,7 +76,7 @@ func carry_position() -> Vector3:
 	if reach < 0.001:
 		return target
 	var direction: Vector3 = offset / reach
-	var half: Vector3 = player.carried_package.get_half_extents()
+	var half: Vector3 = package.get_half_extents()
 	var support: float = (absf(direction.dot(player.global_basis.x)) * half.x
 		+ absf(direction.dot(player.global_basis.y)) * half.y
 		+ absf(direction.dot(player.global_basis.z)) * half.z)

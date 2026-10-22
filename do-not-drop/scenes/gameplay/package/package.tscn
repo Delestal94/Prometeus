@@ -78,12 +78,9 @@ properties/18/replication_mode = 1
 properties/19/path = NodePath(".:carrier_peer_id")
 properties/19/spawn = true
 properties/19/replication_mode = 2
-properties/20/path = NodePath(".:hold_offset")
+properties/20/path = NodePath(".:net_vehicle")
 properties/20/spawn = true
 properties/20/replication_mode = 1
-properties/21/path = NodePath(".:net_vehicle")
-properties/21/spawn = true
-properties/21/replication_mode = 1
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4
@@ -104,7 +101,7 @@ replication_config = SubResource("Repl_package")
 
 [node name="NetRestThrottle" type="Node" parent="."]
 script = ExtResource("6_rest")
-watched = Array[StringName]([&"net_transform", &"net_in_vehicle", &"carrier_peer_id", &"hold_offset", &"net_vehicle"])
+watched = Array[StringName]([&"net_transform", &"net_in_vehicle", &"carrier_peer_id", &"net_vehicle"])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_crate")

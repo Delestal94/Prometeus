@@ -17,9 +17,9 @@ extends SceneTree
 ## 1-2"; a lone driver tends his own) and a full load (its definition's cargo_slots). A case's
 ## number is its worst client: the host in the shed or aboard any vehicle, every client
 ## (CASES.worst()). Every case must fit its budget with 4 players (MEASURED_CREW); the full crew
-## where FULL_CREW_FITS says it does (the shed, far), else its over_budget line and culprits are printed,
-## not failed. The crowded trips (CROWDED_RIDERS aboard, the design's ceiling, one player left in
-## the shed) are printed only.
+## where FULL_CREW_FITS says it does (all three since D-2002.5), else its over_budget line and culprits
+## are printed, not failed. The crowded trips (CROWDED_RIDERS aboard, the design's ceiling, one player
+## left in the shed) are printed only.
 ## - Model (tests/bandwidth_model.gd, the framing test_net_bandwidth_budget counts with): the real
 ##   company world (company_root.tscn, solo) is opened and every MultiplayerSynchronizer in it
 ##   counted at the interval the world leaves it on: the shed's own once (the host's), a parked
@@ -35,8 +35,10 @@ extends SceneTree
 ##   The load is package.tscn's synchronizer (BoxToPackage.PACKAGE_SCENE): the tended boxes moving,
 ##   each publishing its care_state (the largest real one publish_care() leaves, of any trap) at the
 ##   company's rate (BoxToPackage.tune()), an ON_CHANGE delta; the rest riding still at the rest
-##   interval. While vehicles are out, each player in the shed carries a box loading the next one,
-##   moving (D-2002.4, the caveats of auditor-red on D-2002.2). Floats as 64-bit and ints as 32-bit
+##   interval. Each player in the shed carries a box loading a vehicle (D-2002.4, the caveats of
+##   auditor-red on D-2002.2; in the shed's own case too since D-2002.5), at what a real box held by a
+##   player on foot sends: its pose muted (D-2002.5, NetRestThrottle.muted_interval), and far, a
+##   rider gets them for their keepalive pulses. Floats as 64-bit and ints as 32-bit
 ##   (a pose in motion, a clock past 33 s) and a datagram at Steam's ceiling around every packet. On
 ##   top, the business events (CompanyNet's _apply_event, reliable, sized the same way) of a busy
 ##   line: every player does a business action a second (aboard, a delivery) plus the host's own
@@ -52,13 +54,15 @@ extends SceneTree
 ##   world does it, standing still; a rider's owner sends as one, net_in_vehicle) and a CompanyNet;
 ##   out of the shed, the vehicles out (their definition's scene at the fleet's interval), their
 ##   loads (package.tscn; the tended ones publish the measured care_state) and the boxes carried in
-##   the shed on every side, the host's reaching the clients that see them as CompanyInterest
-##   decides. The host publishes real units_moved at the busy rate; read as the network overlay reads LAN (NetStats,
-##   N-216). Every client stays under its own model's ceiling and, where held, the worst under the
-##   budget; the worst got over half of its model's data (it did flow; skipped under two frames of
-##   the fastest pose), and every client applies every event. Trip events and the keepalive are only
-##   in the model. If a session of 4 players doesn't come up on localhost it fails; the full crew's
-##   is then only printed as skipped.
+##   the shed on every side (held on the host by a player there: muted by package.gd itself), the host's
+##   reaching the clients that see them as CompanyInterest decides. The host publishes real units_moved
+##   at the busy rate; read as the network overlay reads LAN (NetStats, N-216). Every client stays under
+##   its own model's ceiling and, where held, the worst under the budget; ENet counted over half of what
+##   landed on the worst (each synced send at its model size, and the events: it did flow, at whatever
+##   frame rate); every client applies every event, and the held boxes' copies got at most a pose per
+##   muted_interval each (a burst when shown to a peer is over before the count). Trip events
+##   and the keepalive are only in the model. If a session of 4 players doesn't come up on localhost
+##   it fails; the full crew's is then only printed as skipped.
 ## - The late-join snapshot of the furnished shed, a one-off burst, is printed.
 ## Prints `COMPANY_BW key=value` lines.
 
@@ -99,6 +103,13 @@ var _failures: int = 0
 var _tended: Array[DeliveryPackage] = []
 var _sync_mtu: int = 1350
 var _product: StringName = &""
+## The boxes held in the shed of the case being measured: the clients' copies that get them, and the poses
+## those copies got during the count (muted: D-2002.5).
+var _held_copies: int = 0
+var _held_syncs: int = 0
+## Per side, the bytes of the sends that landed there during the count, each sized as the model sizes its
+## synchronizer's entry (_sync_entry()): what ENet had to carry at least, whatever the frame rate let through.
+var _landed: Array[float] = []
 
 
 func _initialize() -> void:
@@ -107,7 +118,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_clean()
-	_product = _first_product()
+	_product = CASES.first_product()
 	_expect(_product != &"", "There is a product in %s to move" % CompanyAsk.PRODUCTS_DIR)
 	var scene_multiplayer := root.multiplayer as SceneMultiplayer
 	if scene_multiplayer != null:
@@ -243,8 +254,11 @@ func _print_world(world: Dictionary) -> bool:
 	_line("vehicle_synchronizer", "%s %d B every %.4f s moving (parked: every %.3f s)" % [
 		ride.vehicle[2], ride.vehicle[1], ride.vehicle[0], ride.parked_interval])
 	_line("box_synchronizer", ("Package/MultiplayerSynchronizer %d B every %.4f s moving, every"
-		+ " %.3f s riding still (settles in %.2f s); %d boxes a vehicle (cargo_slots)") % [
-			ride.box_entry, ride.box_interval, ride.box_rest, ride.box_settle, ride.cargo])
+		+ " %.3f s riding still (settles in %.2f s), every %.1f s held on foot (muted); %d boxes a vehicle"
+		+ " (cargo_slots)") % [ride.box_entry, ride.box_interval, ride.box_rest, ride.box_settle, ride.box_held,
+			ride.cargo])
+	_expect(float(ride.box_held) > float(ride.box_rest) * 4.0, ("A box in the hands of a player on foot sends its"
+		+ " pose seldom: muted, every %.1f s (D-2002.5)") % ride.box_held)
 	_line("trip_event_bytes", "%d, the larger of %s (%d orders and boxes)" % [
 		ride.trip_bytes, ", ".join(PackedStringArray(ride.trip_kinds)), ride.cargo])
 	_line("keepalive", ("a hidden body every %.0f s for %.2f s or two of its intervals"
@@ -416,9 +430,10 @@ func _put(van: Node3D, at: Vector3) -> void:
 
 
 ## A box's synchronizer, as the company's sealed boxes have it (BoxToPackage.PACKAGE_SCENE):
-## {box_entry, box_interval (moving), box_rest and box_settle (its NetRestThrottle's)}.
+## {box_entry, box_interval (moving), box_rest and box_settle (its NetRestThrottle's), box_held: what a real
+## box in the tree sends at once held by a player on foot (D-2002.5: muted, package.gd itself)}.
 func _box() -> Dictionary:
-	var box: Node = BoxToPackage.PACKAGE_SCENE.instantiate()
+	var box := BoxToPackage.PACKAGE_SCENE.instantiate() as DeliveryPackage
 	var sync := box.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	var entry: Array = _sync_entry(sync, "Package/MultiplayerSynchronizer")
 	var throttle: Node = box.get_node(^"NetRestThrottle")
@@ -427,6 +442,11 @@ func _box() -> Dictionary:
 		"box_rest": float(throttle.get(&"rest_interval")),
 		"box_settle": float(throttle.get(&"settle_seconds")),
 	}
+	root.add_child(box)
+	box.set_held(true)
+	box.carrier_peer_id = PULSE_PEER
+	box._publish_net_state()
+	found.box_held = MODEL.interval(sync)
 	box.free()
 	return found
 
@@ -453,7 +473,7 @@ func _care_and_pulse() -> Dictionary:
 		box.care.work_tool = &"tape"
 		box.care.work = 0.37
 		PackageRescue.publish_care(box)
-		var state: Variant = _worst_floats(box.care_state)
+		var state: Variant = CASES.worst_floats(box.care_state)
 		var bytes: int = MODEL.encoded_size(state)
 		if bytes > int(found.care_bytes):
 			found.care_bytes = bytes
@@ -473,7 +493,7 @@ func _care_and_pulse() -> Dictionary:
 	for show: bool in [true, false]:
 		if not await _wait_rest(throttle):
 			break
-		_pulse(sync, show)
+		CASES.pulse(sync, PULSE_PEER, show)
 		if not throttle.is_resting():
 			found.pulse_wakes = int(found.pulse_wakes) + 1
 			found.pulse_wake_on = bool(found.pulse_wake_on) or show
@@ -495,32 +515,6 @@ func _wait_rest(throttle: NetRestThrottle) -> bool:
 		await physics_frame
 	_expect(throttle.is_resting(), "A box left still rests within %d frames" % PARK_FRAMES)
 	return throttle.is_resting()
-
-
-## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to PULSE_PEER, on or off.
-func _pulse(sync: MultiplayerSynchronizer, show: bool) -> void:
-	# Solo, SceneMultiplayer has no such peer to update and says so: only the throttle's answer counts here.
-	Engine.print_error_messages = false
-	WorldCellInterest.pulse_visibility(sync, PULSE_PEER, show)
-	Engine.print_error_messages = true
-
-
-## `value` with every float as one that needs 64 bits (MODEL.encoded_size()'s worst case), nested.
-static func _worst_floats(value: Variant) -> Variant:
-	match typeof(value):
-		TYPE_FLOAT:
-			return 0.1
-		TYPE_DICTIONARY:
-			var out: Dictionary = {}
-			for key: Variant in value:
-				out[key] = _worst_floats(value[key])
-			return out
-		TYPE_ARRAY:
-			var items: Array = []
-			for item: Variant in value:
-				items.append(_worst_floats(item))
-			return items
-	return value
 
 
 # --- Reports ------------------------------------------------------------------
@@ -707,7 +701,7 @@ func _measure_enet(world: Dictionary, layout: Dictionary, port: int) -> Dictiona
 ## [{index, total (B/s, IP and UDP included), enet (what the overlay shows: ENet's count), datagrams
 ## (a second)}], worst: the index of the client that got the most, per_client, per_client_enet and
 ## datagrams: its, host_sent (B/s, the overlay's out on the host), events (sent), events_seen
-## (applied, all clients), seconds, fps}.
+## (applied, all clients), seconds, fps, held_copies and held_syncs (_add_trip_bodies())}.
 func _count_traffic(
 	world: Dictionary, layout: Dictionary, sides: Array[Node], peers: Array[ENetMultiplayerPeer]
 ) -> Dictionary:
@@ -764,7 +758,18 @@ func _count_traffic(
 		stats.append(NetStats.new())
 		stats.back().sample(peer, ids, Time.get_ticks_usec())
 		peer.host.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_PACKETS)
+	_landed.clear()
+	for index: int in range(crew):
+		_landed.append(0.0)
+		for node: Node in sides[index].find_children("*", "MultiplayerSynchronizer", true, false):
+			var copy := node as MultiplayerSynchronizer
+			if index == 0 or copy.is_multiplayer_authority():
+				continue
+			var bytes: int = int(_sync_entry(copy, str(copy.get_path()))[1])
+			if bytes > 0:
+				copy.synchronized.connect(func() -> void: _landed[index] += bytes)
 	var start: int = Time.get_ticks_usec()
+	_held_syncs = 0
 	var sent: int = 0
 	var frames: int = 0
 	while Time.get_ticks_usec() - start < int(MEASURE_SECONDS * 1e6):
@@ -797,15 +802,16 @@ func _count_traffic(
 		"clients": clients, "worst": worst.index, "per_client": worst.total,
 		"per_client_enet": worst.enet, "datagrams": worst.datagrams, "host_sent": host_sent,
 		"events": sent, "events_seen": applied[0], "seconds": seconds, "fps": frames / seconds,
+		"held_copies": _held_copies, "held_syncs": _held_syncs, "landed": _landed.duplicate(),
 	}
 
 
 ## The vehicles out of `layout` and their loads on every side, the same names everywhere (the host's
 ## the authority): the vehicle's definition scene and package.tscn, frozen, with no NetRestThrottle
-## (a vehicle out moves; a tended box moves, the rest of the load rides at its rest interval). On
-## the host each one's synchronizer reaches only the clients that see it as CompanyInterest decides:
-## its riders (every vehicle: they ride near each other) and, near, the shed's. Returns the host's
-## synchronizers it gated.
+## (a vehicle out moves; a tended box moves, the rest of the load rides at its rest interval); and a
+## box in the hands of each player in the shed, every case (CASES.loading()). On the host each one's
+## synchronizer reaches only the clients that see it as CompanyInterest decides: its riders (every
+## vehicle: they ride near each other) and, near, the shed's. Returns the host's synchronizers it gated.
 func _add_trip_bodies(
 	world: Dictionary, layout: Dictionary, sides: Array[Node], ids: Array[int]
 ) -> Array[MultiplayerSynchronizer]:
@@ -813,8 +819,8 @@ func _add_trip_bodies(
 	var riders: Array = layout.riders
 	var places: Array = layout.model.places
 	var gated: Array[MultiplayerSynchronizer] = []
-	if riders.is_empty():
-		return gated
+	var holders: Array = range(places.size()).filter(func(index: int) -> bool: return int(places[index]) < 0)
+	_held_copies = 0
 	var van_scene := load(String(ride.scene)) as PackedScene
 	for side_index: int in range(sides.size()):
 		var world_node: Node = sides[side_index].get_node(^"World")
@@ -853,21 +859,25 @@ func _add_trip_bodies(
 					var sees: bool = int(places[client]) >= 0 or bool(layout.near)
 					sync.set_visibility_for(ids[client], sees)
 				gated.append(sync)
-		# A box in the hands of each player in the shed, loading (CASES.loading()), moving.
-		for index: int in range(CASES.loading(layout, places)):
-			var carried := BoxToPackage.PACKAGE_SCENE.instantiate() as RigidBody3D
+		# Held on the host by a player in the shed, loading: package.gd mutes its pose (D-2002.5). The clients'
+		# copies count the poses that still come (_held_syncs).
+		for index: int in range(holders.size()):
+			var carried := BoxToPackage.PACKAGE_SCENE.instantiate() as DeliveryPackage
 			carried.name = "Loading_%d" % index
 			carried.freeze = true
 			carried.position = Vector3(index - 4.0, 0.4, -6.0)
-			carried.get_node(^"NetRestThrottle").free()
-			var carried_sync := carried.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-			carried_sync.replication_interval = float(ride.box_interval)
 			world_node.add_child(carried)
+			var carried_sync := carried.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 			if side_index > 0:
+				carried_sync.synchronized.connect(func() -> void: _held_syncs += 1)
 				continue
+			carried.set_held(true)
+			carried.carrier_peer_id = ids[int(holders[index])]
 			carried_sync.public_visibility = false
 			for client: int in range(1, sides.size()):
-				carried_sync.set_visibility_for(ids[client], int(places[client]) < 0 or bool(layout.near))
+				var sees_held: bool = int(places[client]) < 0 or bool(layout.near)
+				carried_sync.set_visibility_for(ids[client], sees_held)
+				_held_copies += 1 if sees_held else 0
 			gated.append(carried_sync)
 	return gated
 
@@ -901,17 +911,19 @@ func _report_measured(layout: Dictionary) -> void:
 		each.append("%s %.1f-%.1f" % [where, ranges[where].x / KB, ranges[where].y / KB])
 	_line("enet_%s" % CASES.key(layout), ("per_client_kbps=%.1f (ENet %.1f + IP/UDP %.1f; a client"
 		+ " %s) clients_kbps=%s datagrams_s=%.0f host_upload_kbps=%.1f events=%d seconds=%.2f"
-		+ " fps=%.0f%s") % [float(measured.per_client) / KB, float(measured.per_client_enet) / KB,
-			(float(measured.per_client) - float(measured.per_client_enet)) / KB,
+		+ " fps=%.0f landed_syncs_kbps=%.1f%s") % [float(measured.per_client) / KB,
+			float(measured.per_client_enet) / KB, (float(measured.per_client) - float(measured.per_client_enet)) / KB,
 			CASES.place_name(int(places[int(measured.worst)])), ", ".join(each),
-			float(measured.datagrams), float(measured.host_sent) / KB, measured.events,
-			measured.seconds, float(measured.fps), " over_budget" if over else ""])
+			float(measured.datagrams), float(measured.host_sent) / KB, measured.events, measured.seconds,
+			float(measured.fps), float(measured.landed[int(measured.worst)]) / float(measured.seconds) / KB,
+			" over_budget" if over else ""])
 
 
 ## `layout`'s measurement against its budget (where held) and, client by client, against the model's
 ## ceiling for that client (CASES.client_case(); what the model counts on top, trip events and
-## keepalive, isn't sent here). The check that the streams flowed needs two frames of the fastest
-## pose: slower, the frame rate holds the sync rate down and it is only printed as skipped.
+## keepalive, isn't sent here). The check that the streams flowed counts what landed on the worst client
+## (_landed: each send that arrived, at the model's size, and the events sent): a loaded runner's frame
+## rate holds the sends down, and this follows them.
 func _check_measured(world: Dictionary, layout: Dictionary) -> void:
 	var measured: Dictionary = layout.measured
 	var title: String = CASES.title(layout)
@@ -930,19 +942,15 @@ func _check_measured(world: Dictionary, layout: Dictionary) -> void:
 			"%s: client %d (%s) stays under the model's ceiling (%.1f <= %.1f KB/s)" % [title,
 				client.index, CASES.place_name(int(places[int(client.index)])),
 				float(client.total) / KB, float(ceiling.total) / KB])
-	var worst: Dictionary = CASES.client_case(world, layout, places, int(measured.worst))
-	var model_data: float = float(worst.host) + float(worst.relayed) + float(worst.events_data)
-	var fastest: float = CASES.fastest(world.syncs.player)
-	if not (layout.riders as Array).is_empty():
-		fastest = minf(fastest, CASES.fastest(world.ride.player))
-	if float(measured.fps) < 2.0 / fastest:
-		_line("enet_%s_flow_check" % CASES.key(layout),
-			"skipped (%.0f fps, under %.0f: fewer sends than the game's)"
-			% [float(measured.fps), 2.0 / fastest])
-	else:
-		_expect(float(measured.per_client_enet) >= 0.5 * model_data,
-			"%s: the streams flowed, ENet counted over half the model's data (%.1f of %.1f KB/s)"
-			% [title, float(measured.per_client_enet) / KB, model_data / KB])
+	var landed: float = (float(measured.landed[int(measured.worst)])
+		+ int(measured.events) * int(world.events.busy_bytes)) / float(measured.seconds)
+	_expect(float(measured.landed[int(measured.worst)]) > 0.0 and float(measured.per_client_enet) >= 0.5 * landed,
+		"%s: the streams flowed, ENet counted over half of what landed at the model's sizes (%.1f of %.1f KB/s)"
+		% [title, float(measured.per_client_enet) / KB, landed / KB])
+	var most: int = int(measured.held_copies) * (ceili(float(measured.seconds) / float(world.ride.box_held)) + 1)
+	_expect(int(measured.held_copies) > 0 and int(measured.held_syncs) <= most, ("%s: the boxes held in the"
+		+ " shed sent their pose at most every %.1f s (%d poses to %d copies in %.1f s)") % [title,
+			world.ride.box_held, measured.held_syncs, measured.held_copies, measured.seconds])
 	var events: int = measured.events
 	var crew: int = layout.crew
 	_expect(events > 0 and int(measured.events_seen) == events * (crew - 1),
@@ -951,15 +959,6 @@ func _check_measured(world: Dictionary, layout: Dictionary) -> void:
 
 
 # --- Helpers --------------------------------------------------------------------
-
-
-func _first_product() -> StringName:
-	var files: PackedStringArray = DirAccess.get_files_at(CompanyAsk.PRODUCTS_DIR)
-	files.sort()
-	for file: String in files:
-		if file.ends_with(".tres"):
-			return StringName(file.get_basename())
-	return &""
 
 
 func _wait_for(condition: Callable, seconds: float) -> bool:

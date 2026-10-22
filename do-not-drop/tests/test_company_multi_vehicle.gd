@@ -27,6 +27,10 @@ extends SceneTree
 ##   into the second van), stays there on the next tick, and a drop there (request_drop's index) too.
 ## - The carrier's own client draws its predicted hands in its own vehicle's space (predict_carry's `vehicle`),
 ##   while the host's copy names none yet.
+## - A client's copy of a box held by another peer's player riding in the second (D-2002.5: the box's own
+##   net_vehicle is stale, naming the first, while its pose is muted), let go of while the second drives on at
+##   20 m/s (its copy of the carrier sits down first): it stays where the hands held it in the second's space,
+##   within 5 cm, drawn by hand at 60 fps, not left behind in the first's or the world's.
 ## - One vehicle: nothing changes; a copy rides the only one whatever index it is told.
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
@@ -175,6 +179,7 @@ func _check_package(first: Bay, second: Bay) -> void:
 	await _check_remote_box(second, box as RigidBody3D)
 	await _check_carry(first, second, box as RigidBody3D)
 	await _check_predicted(first, second)
+	await _check_held_let_go(first, second)
 	box.queue_free()
 
 
@@ -227,7 +232,7 @@ func _check_carry(first: Bay, second: Bay, box: RigidBody3D) -> void:
 	box.call(&"set_held", true)
 	# Just outside the second's bay, within the carrier's margin (player.RIDE_MARGIN): aboard for the carrier.
 	var carry := Transform3D(Basis(), Vector3(-2.3, 0.5, 0.0))
-	box.call(&"submit_carry_transform", carry, true, Transform3D(), VehiclePick.index_of(self, second))
+	box.call(&"submit_carry_transform", carry, true, VehiclePick.index_of(self, second))
 	var expected: Vector3 = second.global_transform * carry.origin
 	_expect(box.global_position.distance_to(expected) < 0.01,
 		"the host puts the carried box in the space of the vehicle the carrier names (off by %.2f m)"
@@ -260,6 +265,48 @@ func _check_predicted(first: Bay, second: Bay) -> void:
 		"the carrier's client draws its hands on its own vehicle, the second, not the box's (off by %.2f m)"
 		% copy.global_position.distance_to(expected))
 	copy.queue_free()
+
+
+## A client's copy of a box another peer's player holds on foot in the second (muted, D-2002.5), let go of there.
+func _check_held_let_go(first: Bay, second: Bay) -> void:
+	var carrier: Player = PLAYER_SCENE.instantiate()
+	carrier.name = "Player_2"
+	root.add_child(carrier)
+	var copy := PACKAGE_SCENE.instantiate() as DeliveryPackage
+	copy.set_multiplayer_authority(3)
+	root.add_child(copy)
+	await physics_frame
+	carrier.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	carrier.net_in_vehicle = true
+	carrier.net_vehicle = 1
+	copy.net_vehicle = 0
+	copy.is_held = true
+	copy.carrier_peer_id = 2
+	var view: PackageNetPose = copy._net_view
+	var parked: Vector3 = second.global_position
+	var body := Transform3D(Basis(), Vector3(0.0, -1.0, 1.0))
+	var held_at: Variant = null
+	var worst: float = 0.0
+	for frame: int in range(40):
+		second.global_position = parked + Vector3(0, 0, -20.0 * frame / 60.0)
+		carrier.global_transform = second.global_transform * body
+		if frame == 10:
+			carrier.seat_node_path = ^"Seat"
+		view.draw(copy, 1.0 / 60.0, 100.0 + frame / 60.0)
+		var here: Vector3 = second.global_transform.affine_inverse() * copy.global_position
+		if frame == 9:
+			held_at = here
+		elif frame > 9:
+			worst = maxf(worst, here.distance_to(held_at as Vector3))
+	_expect(copy.call(&"_find_vehicle") == first and carrier.call(&"_find_vehicle") == second,
+		"the box's copy still names the first (muted), its carrier rides the second")
+	_expect(held_at != null and second.carries(second.global_transform * (held_at as Vector3)) and worst < 0.05,
+		"let go of in the second at 20 m/s, the copy stays where the hands held it in the second's space (%.1f cm)"
+		% (worst * 100.0))
+	second.global_position = parked
+	carrier.queue_free()
+	copy.queue_free()
+	await physics_frame
 
 
 ## One vehicle: as before D-0302.2.b.4.b.

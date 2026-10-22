@@ -23,10 +23,11 @@ const MEASURED_CREW: int = 4
 ## Whether the full crew (NetworkManager.MAX_PLAYERS) is held to each case's budget: the shed's
 ## since its pose rate (D-2002.3); two far vehicles' since D-2002.4 (the fleet's vehicle at ~30/s,
 ## seated riders at 15/s, care_state at 5/s, keepalive pulses that don't wake the boxes); a trip's
-## doesn't fit yet: the boxes the 6 left in the shed carry while loading (over_budget and the
-## culprits are printed, docs/rendimiento-pc.md says what would make it fit). The test says so when
-## one fits: hold it then.
-const FULL_CREW_FITS: Dictionary = {"shed": true, "trip": false, "far": true}
+## since D-2002.5 (a box in the hands of a player on foot sends its pose only every
+## NetRestThrottle.muted_interval, and no hold_offset: before, the 6 left in the shed loading sent
+## 28.5 KB/s). A case that doesn't fit prints over_budget and its culprits; the test says so when one
+## fits: hold it then.
+const FULL_CREW_FITS: Dictionary = {"shed": true, "trip": true, "far": true}
 ## Players aboard each vehicle out (roles-tripulacion.md §2.3-2.4, "Ruta 1-2"): a driver and a
 ## passenger who tends a box.
 const TRIP_RIDERS: int = 2
@@ -153,10 +154,11 @@ static func client_case(
 	return case
 
 
-## Players in the shed of `where` (the host too) while vehicles are out: each loads the next vehicle,
-## a box in its hands moving at a box's full rate (D-2002.4, auditor-red's 3rd caveat of D-2002.2).
-static func loading(layout: Dictionary, where: Array) -> int:
-	return where.count(-1) if not (layout.riders as Array).is_empty() else 0
+## Players in the shed of `where` (the host too): each loads a vehicle (the parked one, the next one
+## out), a box in its hands (D-2002.4, auditor-red's 3rd caveat of D-2002.2; in the shed's own case
+## too since D-2002.5). Held on foot, its pose goes every world.ride.box_held (muted, D-2002.5).
+static func loading(where: Array) -> int:
+	return where.count(-1)
 
 
 ## The load of the first `out` vehicles of `riders`: (boxes tended, one by each passenger or by a
@@ -228,12 +230,12 @@ static func _host_groups(world: Dictionary, layout: Dictionary, where: Array, cl
 	for entry: Array in (ride.player if int(where[0]) >= 0 else syncs.player):
 		groups.append([entry[0], entry[1], 1])
 		owners.append("the host's player %s (%s)" % [place_name(int(where[0])), entry[2]])
+	var carried: int = loading(where) if not aboard or bool(layout.near) else 0
+	groups.append([ride.box_held, ride.box_entry, carried])
+	owners.append("%d boxes carried in the shed, loading (muted)" % carried)
 	if riders.is_empty():
 		return [groups, owners]
 	var out: int = riders.size() if aboard or bool(layout.near) else 0
-	var carried: int = loading(layout, where) if not aboard or bool(layout.near) else 0
-	groups.append([ride.box_interval, ride.box_entry, carried])
-	owners.append("%d boxes carried in the shed, loading" % carried)
 	var boxes: Vector2i = cargo(ride, riders, out)
 	groups.append([ride.vehicle[0], ride.vehicle[1], out])
 	owners.append("%d vehicles out, moving (%s)" % [out, ride.vehicle[2]])
@@ -307,8 +309,9 @@ static func _care_items(world: Dictionary, layout: Dictionary, where: Array, cli
 ## (ride.pulse_wakes: how many times a pulse, on and off, wakes a resting box's NetRestThrottle, as
 ## WorldCellInterest pulses it, 2 before D-2002.4; ride.pulse_wake_on: whether showing it does), for
 ## every client in the shed: each one's pulses
-## have their own clock (hidden_at, D-2002.4: the clients hidden at different looks). A ceiling: a
-## pulse's sends a packet each.
+## have their own clock (hidden_at, D-2002.4: the clients hidden at different looks); and the boxes
+## held in the shed (loading(), muted: D-2002.5) for their pulse, two of their muted intervals. A
+## ceiling: a pulse's sends a packet each.
 static func _keepalive_items(
 	world: Dictionary, layout: Dictionary, where: Array, client: int
 ) -> Array:
@@ -322,13 +325,22 @@ static func _keepalive_items(
 	var full: float = float(ride.box_interval)
 	var wakes: int = int(ride.get("pulse_wakes", 2))
 	if int(where[client]) >= 0:
+		var items: Array = []
+		var held: int = loading(where)
+		if held > 0:
+			var muted: float = float(ride.box_held)
+			var held_sends: float = held * maxf(float(ride.pulse), 2.0 * muted) / muted / every
+			var held_framing: float = held_sends * MODEL.PACKET_OVERHEAD_BYTES
+			items.append(["keepalive pulses of %d boxes held in the shed (muted)" % held, held_sends
+				* (MODEL.SYNC_PACKET_HEADER + int(ride.box_entry)) + held_framing, held_framing, held_sends])
 		var shed_clients: int = where.slice(1).count(-1)
 		if shed_clients == 0 or boxes.y == 0 or wakes == 0:
-			return []
+			return items
 		var extra: float = 1.0 / full - 1.0 / float(ride.box_rest)
 		var woken: float = boxes.y * wakes * settle * extra / every * shed_clients
-		return [[("keepalive wakes of %d boxes riding still (NetRestThrottle), %d clients in the shed"
-			+ " pulsed apart") % [boxes.y, shed_clients], woken * int(ride.box_entry), 0.0, 0.0]]
+		items.append([("keepalive wakes of %d boxes riding still (NetRestThrottle), %d clients in the shed"
+			+ " pulsed apart") % [boxes.y, shed_clients], woken * int(ride.box_entry), 0.0, 0.0])
+		return items
 	# [how many, interval when the pulse starts, entry bytes, woken by it]
 	var bodies: Array = [
 		[riders.size(), float(ride.vehicle[0]), int(ride.vehicle[1]), false],
@@ -368,3 +380,39 @@ static func _host_shares(groups: Array, mtu: int) -> Array:
 		var framing: float = packed.x * MODEL.PACKET_OVERHEAD_BYTES * share
 		shares.append([(packed.y + packed.x * MODEL.PACKET_OVERHEAD_BYTES) * share, framing])
 	return shares
+
+
+## `value` with every float as one that needs 64 bits (MODEL.encoded_size()'s worst case), nested.
+static func worst_floats(value: Variant) -> Variant:
+	match typeof(value):
+		TYPE_FLOAT:
+			return 0.1
+		TYPE_DICTIONARY:
+			var out: Dictionary = {}
+			for key: Variant in value:
+				out[key] = worst_floats(value[key])
+			return out
+		TYPE_ARRAY:
+			var items: Array = []
+			for item: Variant in value:
+				items.append(worst_floats(item))
+			return items
+	return value
+
+
+## The first product of CompanyAsk.PRODUCTS_DIR, by file name; &"" with none.
+static func first_product() -> StringName:
+	var files: PackedStringArray = DirAccess.get_files_at(CompanyAsk.PRODUCTS_DIR)
+	files.sort()
+	for file: String in files:
+		if file.ends_with(".tres"):
+			return StringName(file.get_basename())
+	return &""
+
+
+## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to `peer`, on or off.
+static func pulse(sync: MultiplayerSynchronizer, peer: int, show: bool) -> void:
+	# Solo, SceneMultiplayer has no such peer to update and says so: only the throttle's answer counts here.
+	Engine.print_error_messages = false
+	WorldCellInterest.pulse_visibility(sync, peer, show)
+	Engine.print_error_messages = true
