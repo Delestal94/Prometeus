@@ -19,8 +19,7 @@ extends SceneTree
 ##   draws the same cart: same spot, same cubes in the same slots, after loads, an unload and pushes;
 ## - a peer that joins late gets the cart's spot and units from the host's snapshot parts and draws the same;
 ##   a snapshot part that does not fit (bad id, NaN, too many carts) is refused and changes nothing.
-## Not covered: the ENet pair (a client's request over the wire) -- the push and the units use the same
-## CompanyNet requests the pair tests already carry; see D-0610.c.
+## The ENet pair (a client's request over the wire) and two carts side by side: test_company_picking_cart_net.
 
 const HEN: StringName = &"hen"
 const LAMP: StringName = &"antique_lamp"
@@ -223,8 +222,10 @@ func _test_world() -> void:
 				and view.position.is_equal_approx(before_at)
 			break
 	_expect(blocked, "Pushed into the shelves the host refuses with blocked and the cart stays (%s)" % [_refusals])
-	_expect(_shed.cart_can_stand(view.position) and not _shed.cart_can_stand(_shed.cell_to_local(Vector2(0.5, 2.5)))
-		and not _shed.cart_can_stand(Vector3(500.0, 0.0, 0.0)), "The floor check knows shelves and walls")
+	_expect(_shed.cart_can_stand(view.position, CART) and not _shed.cart_can_stand(view.position)
+		and not _shed.cart_can_stand(_shed.cell_to_local(Vector2(0.5, 2.5)))
+		and not _shed.cart_can_stand(Vector3(500.0, 0.0, 0.0)),
+		"The floor check knows shelves and walls, and the cart's own spot is taken for any other cart")
 
 	# Bad pushes.
 	var seq_bad: int = _net.seq
