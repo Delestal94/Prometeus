@@ -56,7 +56,9 @@ extends Node
 ## or by the game) is kept for the showing and zeroed again, at that update or at the next
 ## look: the copy stays out of physics. copy_shown tells the game a copy is back, so it can
 ## derive again the layers it owns (one written as 0 while hidden can't be told from the
-## zeroing).
+## zeroing). A copy `keep_shown` names (one this peer simulates itself, a vehicle it drives
+## and predicts: with its mask zeroed it would fall through the world) is never hidden, and
+## shows at the next look if it was.
 ##
 ## Bodies come in through track(), or by themselves while they are in one of
 ## `groups` (each MultiplayerSynchronizer child whose root is the body). Only nodes
@@ -65,6 +67,9 @@ extends Node
 
 ## Client: a copy this node hid shows again, its collision layers given back.
 signal copy_shown(body: Node3D)
+## Client: this node hid a copy, or a copy it keeps hidden got an update (which may have written
+## something the game derives elsewhere, a slot it claims: the game can let go of it until copy_shown).
+signal copy_hidden(body: Node3D)
 
 ## Only the cell size and the two radii are read.
 var grid := WorldCellGrid.new()
@@ -72,6 +77,8 @@ var grid := WorldCellGrid.new()
 var anchor_of: Callable
 ## Callable(body: Node3D) -> Array: ids of the peers that always get this body. Optional.
 var viewers_of: Callable
+## Client, Callable(body: Node3D) -> bool: a copy this peer must never hide (it predicts it). Optional.
+var keep_shown: Callable
 ## Nodes in these groups are tracked by themselves (and untracked when they leave).
 var groups: Array[StringName] = []
 ## Seconds between two looks at the anchors and the bodies.
@@ -324,7 +331,7 @@ func _end_pulses(now: float) -> void:
 ## load radius when stale, or near but never updated once the grace is over; shows within the load
 ## radius once an update came since the last look.
 func _follow_copy(entry: _Entry, local_anchor: Variant, now: float) -> void:
-	if not (local_anchor is Vector3):
+	if not (local_anchor is Vector3) or (keep_shown.is_valid() and bool(keep_shown.call(entry.body))):
 		_show_copy(entry)
 		return
 	if entry.tracked_at < 0.0:
@@ -359,6 +366,7 @@ func _hide_copy(entry: _Entry) -> void:
 		entry.collisions[solid] = [solid.collision_layer, solid.collision_mask]
 		solid.collision_layer = 0
 		solid.collision_mask = 0
+	copy_hidden.emit(entry.body)
 
 
 func _show_copy(entry: _Entry) -> void:
@@ -386,6 +394,8 @@ func _on_synchronized(sync: MultiplayerSynchronizer) -> void:
 	entry.synced_at = _clock
 	if entry.hidden_here:
 		_keep_hidden_solids(entry)
+		if is_instance_valid(entry.body):
+			copy_hidden.emit(entry.body)
 
 
 ## A hidden copy got an update, is looked at again or is about to show: a layer or mask written

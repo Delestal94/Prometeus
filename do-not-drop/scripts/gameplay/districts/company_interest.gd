@@ -11,10 +11,17 @@ extends WorldCellInterest
 ## other side of the map, while the host keeps simulating every vehicle (decision 2026-10-04, point
 ## 6). The driver (the vehicle's driver_peer_id) always gets the vehicle it drives; a rider counts at
 ## its seat, so it gets the vehicle and the boxes it rides with. A peer whose player has no node here
-## yet gets everything, as before. On a client, the copy of a far vehicle or box is hidden and taken out of
-## physics until an update puts it back near (nobody sees it jump, or bumps into it, meanwhile); a
+## yet gets everything, as before. On a client, the copy of a far vehicle or box is hidden and taken out
+## of physics until an update puts it back near (nobody sees it jump, or bumps into it, meanwhile); a
 ## box shown again derives its own layers again (its is_held setter, out of physics if consumed:
-## copy_shown).
+## copy_shown). Hidden, a box leaves free here the rack or shelf slot it was last seen in (copy_hidden,
+## D-0316.2: a stale copy kept it taken, latent since D-0316.3) and takes it back when shown, if still
+## free. The vehicle this peer drives is never hidden here (keep_shown, D-0316.2): its copy is the one
+## it predicts, simulated, and with its mask zeroed it would fall through the world. A vehicle's copy
+## shown again needs nothing more: vehicle.gd draws it from its NetPoseSmoother, which starts over at a
+## pose more than TELEPORT_DISTANCE from the last one it had (back from far), and draws a nearer one a
+## cushion behind the newest (a vehicle parked far that a player walked up to: the last keepalive
+## pulse's pose, where it still is).
 ##
 ## Contract for what joins those groups (WorldCellInterest's header):
 ## - an RPC called on the body itself (the synchronizer's root) skips the peers it is hidden from,
@@ -51,7 +58,9 @@ func _init() -> void:
 	groups = [CompanyTrips.VEHICLE_GROUP, LOOSE_BOX_GROUP]
 	anchor_of = _anchor_of
 	viewers_of = _viewers_of
+	keep_shown = _drives_here
 	copy_shown.connect(_on_copy_shown)
+	copy_hidden.connect(_on_copy_hidden)
 
 
 ## Every peer: `box` (a company DeliveryPackage) is a loose box from now on, sent only to the players
@@ -117,9 +126,16 @@ func _viewers_of(body: Node3D) -> Array:
 	return [int(driver)] if driver is int and int(driver) > 0 else []
 
 
+## Client: this peer drives `body` (its driver_peer_id), so it predicts it: never hidden.
+func _drives_here(body: Node3D) -> bool:
+	var driver: Variant = body.get(&"driver_peer_id")
+	return driver is int and int(driver) > 0 and is_inside_tree() and int(driver) == multiplayer.get_unique_id()
+
+
 ## A loose box's copy shown again: its own is_held setter derives its layers again (none while held,
 ## its own while loose); one written as 0 while the copy was hidden can't be told from the hiding. A
-## box already consumed (play_consume() took it out of physics) stays out.
+## box already consumed (play_consume() took it out of physics) stays out. One in a mount (its
+## current_mount) takes the slot back when nothing else holds it here (_on_copy_hidden() let it go).
 func _on_copy_shown(body: Node3D) -> void:
 	var box := body as DeliveryPackage
 	if box == null:
@@ -129,3 +145,18 @@ func _on_copy_shown(body: Node3D) -> void:
 		box.collision_mask = 0
 	else:
 		box.is_held = box.is_held
+		if is_instance_valid(box.current_mount) and &"occupied_by" in box.current_mount \
+				and box.current_mount.get(&"occupied_by") == null:
+			box.current_mount.set(&"occupied_by", box)
+
+
+## A loose box's copy hidden here, or updated while hidden (D-0316.2): the mount its current_mount_path names
+## (a rack of a van, a shelf) stops counting it here. A copy the host no longer sends can't learn it was taken
+## out, and its slot stayed taken on this peer, with no prompt to leave another box there; shown again it
+## takes the slot back if it is still free (_on_copy_shown()). The host decides who really is in it.
+func _on_copy_hidden(body: Node3D) -> void:
+	var box := body as DeliveryPackage
+	if box == null or not is_instance_valid(box.current_mount):
+		return
+	if &"occupied_by" in box.current_mount and box.current_mount.get(&"occupied_by") == box:
+		box.current_mount.set(&"occupied_by", null)

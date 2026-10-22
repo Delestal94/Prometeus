@@ -140,10 +140,14 @@ const MAX_PLAYERS: int = 8
 ## 51: CompanyNet's _apply_event takes a new host kind, units_spoiled {product, qty,
 ## location}: cold products left outside a fridge rotted, and every peer discards them
 ## from its stock (company mode, D-0616.b).
+## 52: CompanyTripsView (the company world's TripsView) has a new RPC, _held_here(vehicle, cap): the
+## host tells the driver of a company vehicle it holds at the gate why (one with cargo that may not
+## leave with VEHICLES_FAR_MAX out: before, it crossed and counted as out); an older client gets an
+## RPC it doesn't have (company mode, D-0316.2).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 51
+const PROTOCOL_VERSION: int = 52
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
