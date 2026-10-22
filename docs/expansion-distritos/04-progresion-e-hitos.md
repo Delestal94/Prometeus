@@ -14,7 +14,7 @@
 | D-0404 | Cargar los 30 hitos de D-0118 como `.tres` | constructor-progresion | medium | `test_milestones_data` valida los 30 |
 | D-0405 | Reputación de la empresa (0-100) con subidas por entregas buenas y bajadas por roturas, tardanzas y errores de armado | constructor-progresion | high | test: curva de reputación en sim de 10 días |
 | D-0406 | Reputación por distrito además de la global | constructor-progresion | medium | test: entregas en Centro no suben Islas |
-| D-0407 | Licencias como ítems comprables con requisito (hito + plata) | constructor-progresion | medium | test: comprar licencia sin hito falla |
+| D-0407 | Licencias como ítems comprables con requisito (hito + plata), según "Las licencias" de [hitos.md](diseno/hitos.md) (D-0124): tipo `license`, `requires` en vehículos, `requires` en `check()` y `owns()` con `license`, `gate_puerto` pide `license_nautical` en lugar del hito, `aerodrome` en `gate_montana_altura` | constructor-progresion | medium | test: comprar licencia sin hito falla |
 | D-0408 | Integrar desbloqueos con `UnlockManager` existente sin romper lo de hoy | constructor-progresion | xhigh | tests actuales de desbloqueos verdes + nuevos |
 | D-0409 | Aviso en pantalla cuando se cumple un hito (tarjeta, sonido) | constructor-ui | medium | captura y test del evento |
 | D-0410 | Tablero de hitos en el galpón (qué falta para el próximo distrito) (incluye D-0411, fusión de D-0112) | constructor-ui | high | captura legible; cada hito muestra progreso |

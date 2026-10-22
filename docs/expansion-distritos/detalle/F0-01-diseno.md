@@ -215,3 +215,16 @@ las tareas de pedidos y cierre (D-0822 mensajes con humor).
 Decisión: `docs/decisiones/2026-10-22-eventos-del-dia.md`. Lo que se construye son tareas nuevas a crear
 en el grupo 05, después de cerrar el corte vertical.
 **Hecho cuando:** `diseno/eventos-del-dia.md` tiene los 15 eventos y su tabla resumen.
+
+### D-0124 · Diseño de las licencias — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — sección "Las licencias" de `diseno/hitos.md`: 5 licencias con precio (650 / 600 / 1 000 / 1 000 / 1 000), qué abren, compra única de la empresa en la tienda, nunca se pierden, claves de `equipment` con tipo de tienda `license` y `requires` para vehículos.
+**Depende de:** D-0115, D-0117, D-0118
+**Qué:** completar la sección "Las licencias" de `diseno/hitos.md` (D-0118 fijó cuándo se ofrecen):
+- [x] D-0124.1 Precio y qué abre (y qué no) cada una de las cinco, sin mover los días de apertura de la tabla
+  de distritos.
+- [x] D-0124.2 Cómo se obtienen: hito → tienda → compra única de la empresa; sin examen, sin vencimiento, no se
+  pierden con la quiebra; qué se ve en el bloqueo y en la tienda; primer vuelo guiado (D-1418).
+- [x] D-0124.3 Cómo se guardan y se piden, para D-0407: claves `license_*` en `CompanyState.equipment`, tipo
+  `license` en `ShopItem`, `requires` también para vehículos, `GateRequirement.equipment` en los bloqueos (`gate_puerto` cambia el hito por la licencia).
+Decisión: `docs/decisiones/2026-10-22-licencias.md`.
+**Hecho cuando:** `diseno/hitos.md` dice cómo se obtiene cada licencia, cuánto cuesta y qué abre.
