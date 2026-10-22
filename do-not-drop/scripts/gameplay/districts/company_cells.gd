@@ -62,10 +62,12 @@ func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_S
 	return count
 
 
-## Fills the cells with the graph's streets (EdgeCellContent, D-0304.1) and pins
-## the main streets. Returns the content, for tests and for callers that want it.
+## Fills the cells with the graph's streets (EdgeCellContent, D-0304.1) and the gray Barrio Centro
+## around them (houses, sidewalks, lights: CentroDecor, D-0314), and pins the main streets. Returns
+## the content, for tests and for callers that want it.
 func use_graph(graph: RoadGraph) -> EdgeCellContent:
-	var content := EdgeCellContent.new(graph, grid.cell_size)
+	var decor := CentroDecor.new(graph, HouseMap.load_default(), grid.cell_size)
+	var content := EdgeCellContent.new(graph, grid.cell_size, decor)
 	content_for = content.build_cell
 	pin_streets(graph)
 	return content
