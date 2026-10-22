@@ -17,8 +17,9 @@ extends SceneTree
 ##   it came back (what wasn't delivered fails, trip_closed), one out refused is back (refused_returned),
 ##   its staged cargo is dropped and the gate starts over with it (its next position only sets the side);
 ## - only the vehicles of CompanyTrips' own multiplayer are tracked (another session's copy isn't);
-## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the exit (north wall)
-##   and DayCycle.trips_out reads it.
+## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the far edge of the playon outside
+##   the north exit (CompanyFleet.gate_of(), D-0302.2.b.2), the shed's wall and exit on the inside of it, and
+##   DayCycle.trips_out reads it.
 
 var _failures: int = 0
 
@@ -216,8 +217,10 @@ func _test_root() -> void:
 	_expect(trips != null and trips.get_parent() == level, "the host root has CompanyTrips")
 	if trips != null:
 		var half_depth: float = CompanyRoot.SHED_SIZE.y * 0.5
-		_expect(is_equal_approx(trips.gate.distance(Vector3(0, 0, -half_depth - 1.0)), 1.0),
-			"the gate lies across the north exit")
+		var edge: float = half_depth + CompanyShed.WALL_THICKNESS + CompanyFleet.PLAYON_DEPTH_M
+		_expect(is_equal_approx(trips.gate.distance(Vector3(0, 0, -edge - 1.0)), 1.0)
+			and is_equal_approx(trips.gate.distance(Vector3(0, 0, -half_depth - 1.0)), 1.0 - edge + half_depth),
+			"the gate lies across the far edge of the playon outside the north exit")
 		_expect(level.day_cycle.trips_out.is_valid() and level.day_cycle.trips_out.call() == 0,
 			"DayCycle reads trips_out from it")
 	level.queue_free()

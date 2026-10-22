@@ -8,14 +8,15 @@ extends SceneTree
 ##   that exists (a bike, junk) are skipped, at most MAX_VEHICLES; node_names() names the second of an id
 ##   "<id>_2" and never repeats a name.
 ## - Solo, company_root.tscn: World/Vehicles is a CompanyFleet holding exactly the fleet's vehicles, named by
-##   id, each its definition's scene with its variant and in CompanyTrips.VEHICLE_GROUP, parked past the gate's
-##   line with its rear doors out of the shed and its nose away from it, sitting on the ground; no trip started
+##   id, each its definition's scene with its variant and in CompanyTrips.VEHICLE_GROUP, drivable outside a run
+##   (test_company_van_drive) and parked in the playon, inside the gate (its far edge, CompanyFleet.gate_of()),
+##   with its rear doors out of the shed and its nose away from it, sitting on the ground; no trip started
 ##   (trips_out() 0); the interest tracks its synchronizer and the host's cells anchor on it. build() with a
 ##   two-van fleet adds only the missing one, van_classic_2, parked beside it.
 ## - A player sits at the wheel (cab door open, the driver seat's interact(), as the host does): the van's
 ##   driver_peer_id is its peer and the player is seated there; getting up gives the wheel back.
-## - With cargo staged on the van, moving it across the gate's line outward starts a trip with that order (OUT,
-##   and out in the TripsView); back across it closes the trip.
+## - With cargo staged on the van, moving it across the gate's line (the playon's far edge) outward starts a trip
+##   with that order (OUT, and out in the TripsView); back across it closes the trip.
 ## - ENet pair in one process (the host on the NetworkManager autoload, the client on a second copy, each in
 ##   the real company_root.tscn, as test_company_online): the client builds the same
 ##   World/Vehicles/van_classic from the host's snapshot, a frozen copy it doesn't own. Until the client acks
@@ -163,6 +164,7 @@ func _check_solo(state: Node) -> void:
 		"...with its definition's variant %s (got %s)" % [definition.variant, van.get(&"variant_id")])
 	_expect(van.is_in_group(CompanyTrips.VEHICLE_GROUP) and van.freeze,
 		"...in CompanyTrips.VEHICLE_GROUP, parked (frozen) on the host")
+	_expect(bool(van.get(&"drivable_outside_run")), "...drivable outside a run")
 	_check_parked(level, van)
 	await _check_tracked(level, van)
 	await _check_second_van(level, fleet)
@@ -172,15 +174,21 @@ func _check_solo(state: Node) -> void:
 	await process_frame
 
 
-## Parked past the gate's line, rear doors out of the shed, nose away from it, on the ground, no trip.
+## Parked in the playon (inside the gate's line), rear doors out of the shed, nose away from it, on the ground, no
+## trip.
 func _check_parked(level: CompanyRoot, van: VehicleBody3D) -> void:
 	var trips: CompanyTrips = level.trips
 	var outward: Vector3 = -level.shed.global_basis.z
-	_expect(trips != null and trips.gate.side_of(van.global_position) == TripGate.OUTSIDE
-		and trips.gate.distance(van.global_position) > CompanyShed.WALL_THICKNESS + CompanyFleet.PARK_GAP_M,
-		"The van parks past the gate's line (%.2f m out)" % trips.gate.distance(van.global_position))
+	var wall_out: float = trips.gate.distance(CompanyFleet.exit_of(level.shed, level.net.company)) \
+		+ CompanyFleet.PLAYON_DEPTH_M + CompanyShed.WALL_THICKNESS
+	var nose_tip: Vector3 = van.to_global(Vector3(0.0, 1.0, -2.7))
+	_expect(trips != null and trips.gate.side_of(van.global_position) == TripGate.INSIDE
+		and trips.gate.side_of(nose_tip) == TripGate.INSIDE and absf(wall_out) < SAME_M,
+		"The van parks in the playon, inside the gate's line (%.2f m from it, nose %.2f m)"
+		% [trips.gate.distance(van.global_position), trips.gate.distance(nose_tip)])
 	var rear: Vector3 = van.to_global(Vector3(0.0, 1.0, 4.6))
-	_expect(not level.shed.holds(rear) and trips.gate.distance(rear) > CompanyShed.WALL_THICKNESS,
+	_expect(not level.shed.holds(rear) and trips.gate.distance(rear)
+		< -CompanyFleet.PLAYON_DEPTH_M + CompanyFleet.PARK_GAP_M + 0.5 + CompanyShed.WALL_THICKNESS,
 		"...its rear doors out of the shed and its wall (%s)" % rear)
 	var nose: Vector3 = -van.global_basis.z
 	_expect(nose.dot(outward) > 0.99, "...nose away from the shed (front %s, out %s)" % [nose, outward])
@@ -223,7 +231,7 @@ func _check_second_van(level: CompanyRoot, fleet: CompanyFleet) -> void:
 		var apart: float = Vector2(second.global_position.x - first.global_position.x,
 			second.global_position.z - first.global_position.z).length()
 		_expect(apart > CompanyFleet.PARK_SPACING_M - SAME_M and level.trips.gate.side_of(second.global_position)
-			== TripGate.OUTSIDE, "...parked beside it, %.2f m apart, past the gate's line too" % apart)
+			== TripGate.INSIDE, "...parked beside it, %.2f m apart, inside the gate's line too" % apart)
 		second.free()
 	await physics_frame
 
@@ -261,7 +269,7 @@ func _check_crossing(level: CompanyRoot, van: VehicleBody3D) -> void:
 		products))
 	trips.book.mark_packed(&"o_fleet", &"box_fleet")
 	trips.stage_cargo(&"van_classic", [&"o_fleet"], [&"box_fleet"])
-	var exit: Vector3 = CompanyFleet.exit_of(level.shed, level.net.company)
+	var exit: Vector3 = CompanyFleet.gate_of(level.shed, level.net.company)
 	var outward: Vector3 = -level.shed.global_basis.z
 	await _put(van, exit - outward * 1.0)
 	_expect(trips.trips_out() == 0, "Inside the gate's line with cargo staged, nothing has left yet")

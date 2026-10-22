@@ -5,17 +5,17 @@ extends Node
 ## Child of CompanyRoot on the host only: the host decides. A client has none and sees the trips out
 ## through its CompanyTripsView (D-0302.2.a), which the host's view keeps by publishing every
 ## trip_started, departure_refused, trip_closed and refused_returned of this node as a CompanyNet
-## event. It owns the TripGate across the shed's exit and the active Trips, and every physics
-## tick it feeds the gate with the position of each node in group VEHICLE_GROUP (named by its
-## vehicle id). Cargo the dispatch zone hands a vehicle waits in stage_cargo(); when the vehicle
+## event. It owns the TripGate across the playon's far edge (CompanyFleet.gate_of(), the yard outside the shed's
+## exit) and the active Trips, and every physics tick it feeds the gate with the position of each node in group
+## VEHICLE_GROUP (named by its vehicle id). Cargo the dispatch zone hands a vehicle waits in stage_cargo(); when the vehicle
 ## crosses the gate outward the Trip starts with it (orders go OUT), and when it comes back in the
 ## Trip closes (what was not delivered fails). trips_out() is what the host's DayCycle.trips_out
 ## reads, so the day waits for a vehicle still out (S3); this node stays the authority there, the
 ## views only follow it. Nothing here sends anything: the host's view publishes (its follow()).
 ##
-## The company's vehicles join the group in CompanyFleet (World/Vehicles, D-0302.2.b), parked past the
-## gate's line; only those of this node's own multiplayer count (a test holds several sessions in one
-## tree). The OrderBook is this node's own, not the one every peer shares
+## The company's vehicles join the group in CompanyFleet (World/Vehicles, D-0302.2.b), parked inside the
+## gate's line (the playon); only those of this node's own multiplayer count (a test holds several sessions in
+## one tree). The OrderBook is this node's own, not the one every peer shares
 ## (CompanyNet.orders.book, D-0813), until what it does to it (mark_out, close) goes out as events
 ## (rows 17, 19 and 20 of red-autoridad.md). Boxes are only ids here; where they ride is the
 ## vehicle's business.
@@ -61,8 +61,8 @@ var _closed: Array[Trip] = []
 var _next_id: int = 1
 
 
-## The gate across the shed's exit (north wall, -Z, centered): `exit_origin` is the middle of the
-## opening in world coordinates, `width` its width in metres.
+## The gate across the playon's far edge (outward is -Z, centered): `exit_origin` is the middle of the
+## opening in world coordinates (CompanyFleet.gate_of()), `width` its width in metres.
 func setup(exit_origin: Vector3, width: float) -> void:
 	gate = TripGate.new(exit_origin, Vector3.FORWARD, width)
 	gate.departed.connect(_on_departed)

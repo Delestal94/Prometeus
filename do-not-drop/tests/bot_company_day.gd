@@ -841,15 +841,12 @@ static func _first_table(level: CompanyRoot) -> StringName:
 
 
 ## The floor of the shed's dispatch piece in world coordinates (height 2 m), or an empty AABB.
-## Two points on the shed's axis, GATE_STEP_M inside and outside the exit: where CompanyRoot put
-## CompanyTrips' gate (the middle of the north wall).
+## Two points on the shed's axis, GATE_STEP_M inside and outside the gate: where CompanyRoot put CompanyTrips' gate
+## (the far edge of the playon outside the north exit, CompanyFleet.gate_of()).
 static func _gate_points(level: CompanyRoot) -> Array[Vector3]:
-	var stage: int = int((level.net.company as Node).get(&"warehouse_stage"))
-	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
-	return [
-		level.shed.to_global(Vector3(0.0, 0.0, -half_depth + GATE_STEP_M)),
-		level.shed.to_global(Vector3(0.0, 0.0, -half_depth - GATE_STEP_M)),
-	]
+	var gate: Vector3 = CompanyFleet.gate_of(level.shed, level.net.company)
+	var outward: Vector3 = -level.shed.global_basis.z
+	return [gate - outward * GATE_STEP_M, gate + outward * GATE_STEP_M]
 
 
 static func _dispatch_area(level: CompanyRoot) -> AABB:

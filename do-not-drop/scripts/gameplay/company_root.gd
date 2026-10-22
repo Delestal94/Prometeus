@@ -21,7 +21,8 @@ extends Node3D
 ## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
 ## one: the same player at SPAWN it always was.
 ##
-## The company's vehicles (`fleet`) park outside the shed's exit on every peer (CompanyFleet, D-0302.2.b);
+## The company's vehicles (`fleet`) park in the playon outside the shed's exit on every peer and can be driven
+## (CompanyFleet, D-0302.2.b);
 ## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
@@ -63,7 +64,7 @@ extends Node3D
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
-## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the shed's gate and decides
+## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the playon's gate (its far edge) and decides
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
 ## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
@@ -148,7 +149,7 @@ var day_cycle: DayCycle
 var summary_panel: DaySummaryPanel
 ## Host only (null on a client): the host's rules at a fixed rate (D-0232).
 var business_tick: BusinessTick
-## Host: the shed gate and the trips out (D-0302.1). Null on a client.
+## Host: the playon's gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
@@ -788,7 +789,8 @@ func _process(_delta: float) -> void:
 
 ## Every peer: the view of the trips out (CompanyTripsView, attached to CompanyNet in the frame the
 ## world comes up, like the day's clock, so its snapshot part goes in the first snapshot). Host: the
-## gate across the shed's exit (north wall, centered) and the trips that cross it, which the view
+## gate across the playon's far edge (CompanyFleet.gate_of(): the yard outside the shed's north exit, where the
+## vehicles park, so nothing is out until one is driven across it) and the trips that cross it, which the view
 ## publishes; the day waits for a trip still out (DayCycle.trips_out: CompanyTrips, the authority, on
 ## the host; the view on a client, where the cycle never polls).
 func _add_trips() -> void:
@@ -801,11 +803,10 @@ func _add_trips() -> void:
 	if not net.is_host():
 		day_cycle.trips_out = trips_view.trips_out
 		return
-	var width: float = float(CompanyTuning.WAREHOUSE_EXIT_CELLS.x) * CompanyTuning.WAREHOUSE_GRID_M
 	trips = CompanyTrips.new()
 	trips.name = "CompanyTrips"
 	add_child(trips)
-	trips.setup(CompanyFleet.exit_of(shed, net.company), width)
+	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M)
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out

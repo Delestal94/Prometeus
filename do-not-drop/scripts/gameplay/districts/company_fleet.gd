@@ -11,13 +11,22 @@ extends Node3D
 ## so the node and its MultiplayerSynchronizer have the same path on every peer and pair up with the host's, as
 ## the delivery's static truck does. Each joins CompanyTrips.VEHICLE_GROUP: the host's gate watches it,
 ## CompanyInterest sends it only to the players near it and to its driver, and the host's cells load around it.
-## Parked side by side outside the shed's exit (park_transform()): rear doors PARK_GAP_M past the north wall,
-## facing the exit, nose away from the shed, its centre past the gate's line, so nothing starts a trip at spawn.
+## Parked side by side in the playon, the yard outside the shed's north exit (park_transform()): rear doors
+## PARK_GAP_M past the north wall, facing the exit, nose away from the shed. The playon is PLAYON_DEPTH_M deep
+## from the outside of that wall and PLAYON_WIDTH_M wide (three vans side by side), and its far edge is where
+## CompanyTrips' gate stands (gate_of()): a parked vehicle is inside it, a trip starts only when one is driven
+## out across that edge. The shed's own exit (2 m) is narrower than a van (2.2 m): the vehicles live and are loaded
+## in the playon, the exit is for people and boxes.
 ##
-## Parked, the host's (solo too) is frozen, as the delivery's level holds its truck before a run (vehicle.gd parks
-## itself only during a run); a client's copy is frozen and drawn from the host's poses. While it stays put it
-## sends its pose every NetRestThrottle.rest_interval (a child watching the pose and the driver's input), at the
-## full rate again the tick it moves or someone drives: parked, it costs the shed's bandwidth next to nothing.
+## Driven (D-0302.2.b.2): each is built drivable_outside_run (vehicle.gd), on every peer, so the van drives, parks
+## and brakes in this world as it does in a delivery run; its telemetry and impacts stay the run's. The host's is
+## built parked (vehicle.gd park(): frozen, `_parked`), held still by vehicle.gd while nobody drives and let go the
+## moment somebody takes the wheel; the driver's client predicts its copy as in a delivery (N-218).
+##
+## Parked, the host's (solo too) is frozen; a client's copy is frozen and drawn from the host's poses. While it
+## stays put it sends its pose every NetRestThrottle.rest_interval (a child watching the pose and the driver's
+## input), at the full rate again the tick it moves or someone drives: parked, it costs the shed's bandwidth next
+## to nothing.
 ##
 ## How a client knows the fleet: the host's snapshot, whose company part is the host's CompanyState (fleet and
 ## stage). The client builds its vehicles when the snapshot is in (CompanyNet.company_state_restored), only the
@@ -31,10 +40,9 @@ extends Node3D
 ## peer acks it. A peer that leaves, or whose world comes up again, is closed until it acks again, and the host
 ## takes it off any wheel it held (release_peer()): a dropped driver doesn't keep the van, nor its input.
 ##
-## Not here yet (D-0302.2.b.2): a vehicle bought or sold mid-day (an event every peer builds it from, then
-## tell_host()), driving it (vehicle.gd drives only during a delivery run) and CompanyTrips.forget() for one that
-## leaves mid-day. Closing the world frees them all, which is no
-## vehicle leaving: the day is saved as it stood (D-2005). Nothing here names an autoload (lesson N-919).
+## Not here yet (D-0302.2.b.2, rest): a vehicle bought or sold mid-day (an event every peer builds it from, then
+## tell_host()) and CompanyTrips.forget() for one that leaves mid-day. Closing the world frees them all, which is
+## no vehicle leaving: the day is saved as it stood (D-2005). Nothing here names an autoload (lesson N-919).
 
 const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
 
@@ -47,6 +55,14 @@ const MAX_VEHICLES: int = 16
 const PARK_GAP_M: float = 2.0
 ## Metres between two vehicles parked side by side (a van is 2.2 m wide).
 const PARK_SPACING_M: float = 3.5
+## The playon, the yard outside the shed's north exit: metres from the outside of the north wall to its far edge,
+## where the trips' gate stands (gate_of()). A van parked by park_transform() has its nose 9.3 m past the wall; the
+## rest is the room between it and the gate.
+const PLAYON_DEPTH_M: float = 12.0
+## ... and its width, centred on the exit: the opening of the gate (CompanyTrips.setup()). Three vans side by side
+## (PARK_SPACING_M) fit; a fourth and beyond stand past its sides, inside the gate's line but not in its opening,
+## until the yard grows with the shed (D-1201).
+const PLAYON_WIDTH_M: float = 12.0
 ## Height a parked vehicle is put at: the host's sits on the ground on its first tick (vehicle.gd
 ## _snap_to_ground, RIDE_HEIGHT 0.666 over it), a client's is moved by the host's first pose.
 const PARK_HEIGHT_M: float = 0.7
@@ -244,11 +260,20 @@ static func node_names(ids: Array[StringName]) -> Array[String]:
 
 
 ## The middle of `at_shed`'s exit, in world space: the north wall's gate, at the inner edge of the floor of
-## `company`'s stage (CompanyState.warehouse_stage; 0 with none). It is where CompanyTrips' gate stands.
+## `company`'s stage (CompanyState.warehouse_stage; 0 with none). The playon (gate_of(), park_transform()) is
+## measured from here.
 static func exit_of(at_shed: Node3D, company: Object) -> Vector3:
 	var stage: Variant = company.get(&"warehouse_stage") if company != null else 0
 	var local := Vector3(0.0, 0.0, -WarehouseStages.floor_size_m(int(stage) if stage is int else 0).y * 0.5)
 	return at_shed.to_global(local) if at_shed != null and at_shed.is_inside_tree() else local
+
+
+## The middle of the playon's far edge, in world space: where CompanyTrips' gate stands (CompanyRoot), PLAYON_DEPTH_M
+## past the outside of the exit's wall, its opening PLAYON_WIDTH_M wide. Outward is the shed's north (-Z).
+static func gate_of(at_shed: Node3D, company: Object) -> Vector3:
+	var facing: Basis = at_shed.global_basis.orthonormalized() if at_shed != null and at_shed.is_inside_tree() \
+		else Basis.IDENTITY
+	return exit_of(at_shed, company) + facing * Vector3(0.0, 0.0, -(CompanyShed.WALL_THICKNESS + PLAYON_DEPTH_M))
 
 
 ## Where the `index`-th vehicle parks, in world space: centred on the exit (exit_of()), the next ones side by side
@@ -294,6 +319,12 @@ func _make(definition: VehicleDefinition, node_name: String) -> Node3D:
 		body.set(&"variant_id", definition.variant)
 	if body is RigidBody3D:
 		(body as RigidBody3D).freeze = true
+	# Drives outside a delivery run too, on every peer (the client's input component reads it), and the host's
+	# starts parked so vehicle.gd lets it go when somebody drives. Only vehicles that have them (vehicle.gd).
+	if &"drivable_outside_run" in body:
+		body.set(&"drivable_outside_run", true)
+	if _host and body.has_method(&"park"):
+		body.call(&"park")
 	body.add_to_group(CompanyTrips.VEHICLE_GROUP)
 	var sync := body.get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
 	if sync == null:

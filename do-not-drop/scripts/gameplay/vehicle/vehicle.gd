@@ -206,6 +206,13 @@ var _grounded_once: bool = false
 ## Nobody at the wheel and stopped: the truck is held still (see
 ## _update_parking) instead of creeping downhill on its brakes.
 var _parked: bool = false
+## Set on every peer by whoever builds the vehicle for a world that is not a delivery (CompanyFleet, D-0302.2.b.2):
+## the van drives, parks and brakes outside a run too (is_drivable()). Off for the delivery's truck, which
+## drives only while RunManager.is_running. Not replicated: each peer's builder sets it; the client at the wheel
+## predicts from what the host replicates (presentation_engine_running), not from this.
+var drivable_outside_run: bool = false
+## A parked-at-birth van (park()) has its wheels set where the settled suspension holds them on its first tick.
+var _wheels_to_pose: bool = false
 const PARK_SPEED_KMH: float = 3.0
 ## Right after a stop the body still rocks on its springs; frozen then, it
 ## kept the nose dipped and the ramp hanging off the road for good. It parks
@@ -400,10 +407,11 @@ func _on_package_placed(package_id: StringName) -> void:
 ## brake never quite holds, so it crept off a few centimetres a second (more
 ## on a slope), out from under the crew and away from the door they'd just
 ## climbed out of. Once it's slow and driverless it is frozen in place, and
-## let go the moment somebody takes the wheel. Only during a delivery --
-## before and after one, the level freezes and releases the truck itself.
+## let go the moment somebody takes the wheel. Only while the van is driven
+## (is_drivable(): during a delivery, or always for a van built drivable_outside_run, like the
+## company's) -- before and after a delivery, the level freezes and releases the truck itself.
 func _update_parking(delta: float) -> void:
-	if not RunManager.is_running:
+	if not is_drivable():
 		_parked = false
 		_park_settled_time = 0.0
 		_park_wait_time = 0.0
@@ -433,6 +441,26 @@ func _update_parking(delta: float) -> void:
 		linear_velocity = Vector3.ZERO
 		angular_velocity = Vector3.ZERO
 		freeze = true
+
+
+## Whether the van is driven now: during a delivery run, or always when it was built drivable_outside_run (the
+## company's). The one condition _drive(), the parking and VehicleInputComponent read; what belongs to a run alone
+## (the HUD's telemetry, the impacts that shake the boxes) keeps asking RunManager.is_running.
+func is_drivable() -> bool:
+	return RunManager.is_running or drivable_outside_run
+
+
+## Host: the van held still where it stands, as _update_parking() leaves one that stopped: frozen, with nobody at the
+## wheel, and let go the moment somebody takes it or presses the pedal. For a vehicle built parked
+## (CompanyFleet); its wheels are put where the settled suspension holds them on the first tick.
+func park() -> void:
+	_parked = true
+	_park_settled_time = 0.0
+	_park_wait_time = 0.0
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	freeze = true
+	_wheels_to_pose = true
 
 
 ## Host only, first physics tick: sit the truck on whatever ground is under
@@ -691,16 +719,19 @@ func _physics_process(delta: float) -> void:
 	_prediction.host_tick(self)
 	_update_parking(delta)
 	net_simulating = not freeze
-	if freeze and not _parked:
+	if freeze and (not _parked or _wheels_to_pose):
 		_pose_frozen_wheels()
+		_wheels_to_pose = false
 	fleet_cargo.follow(delta)
 	if rear_ramp_deployed and (not rear_cargo_open or speed_kmh > RAMP_STOW_SPEED):
 		rear_ramp_deployed = false
 	elif not rear_ramp_deployed and rear_cargo_open and speed_kmh < RAMP_DEPLOY_SPEED:
 		rear_ramp_deployed = true
 	var running: bool = RunManager.is_running
-	presentation_engine_running = running
-	_drive(delta, running)
+	# The engine is on during a run, and outside one while somebody holds the wheel or the van still rolls to a stop
+	# (a parked, driverless company van is off); the client at the wheel predicts with this (_drive(), above).
+	presentation_engine_running = running or (drivable_outside_run and (driver_peer_id != 0 or not _parked))
+	_drive(delta, is_drivable())
 
 	# The HUD's speed, only during a run: parked out of one (the depot before it, the company's yard, D-0302.2.b)
 	# the van told every peer, reliably and however far, its 0 km/h ten times a second. The tick a run ends sends
