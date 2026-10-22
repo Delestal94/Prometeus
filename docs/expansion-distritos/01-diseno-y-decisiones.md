@@ -59,7 +59,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0141 | Crear el agente `constructor-negocio` (galpón, stock, armado, empleados, automatización) en `.claude/agents/` | claude | medium | archivo versionado, con modelo y esfuerzo como los demás; listado en `CLAUDE.md` |
+| D-0141 | ✅ Crear el agente `constructor-negocio` (galpón, stock, armado, empleados, automatización) en `.claude/agents/` | claude | medium | archivo versionado, con modelo y esfuerzo como los demás; listado en `CLAUDE.md` |
 | D-0142 | Ampliar `constructor-camion` a toda la flota (o crear `constructor-vehiculos`) | claude | medium | descripción del agente cubre bici, carrito, lancha y avioneta |
 | D-0143 | Ampliar `constructor-tramos` con tramos de agua, aire y montaña | claude | low | descripción actualizada |
 | D-0144 | ✅ Agregar los dominios nuevos (`scripts/gameplay/business/`, `scripts/gameplay/fleet/`, `scripts/gameplay/districts/`) a `file_domain` en `.claude/hooks/lib.sh` y a `colaboracion-equipo.md` | claude | low | hook clasifica bien los archivos nuevos (test del hook) |
