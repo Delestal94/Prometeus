@@ -45,6 +45,10 @@ var supplier_calendar: Dictionary = {"deliveries": {}}
 ## jack stands and the delivery note. The live one is CompanyNet's; the host writes it here before every save.
 ## {} for none (a company before D-0605.c, or a broken save): the shed starts with an empty book.
 var pallets: Dictionary = {}
+## How long the cold units of each place have been out of a fridge (D-0616.b), in the ColdChain.to_dict() form.
+## The live clocks are the host's ColdChainTick; it writes them here before every save. Optional in a save (a
+## company from before D-0616.b starts with fresh ones) and never in a snapshot: a client has no clocks.
+var cold_clocks: Dictionary = {}
 
 var _active: bool = false
 
@@ -96,6 +100,7 @@ func to_dict() -> Dictionary:
 		"ledger": ledger.duplicate(true),
 		"supplier_calendar": supplier_calendar.duplicate(true),
 		"pallets": pallets.duplicate(true),
+		"cold_clocks": cold_clocks.duplicate(true),
 	}
 
 
@@ -146,6 +151,9 @@ func from_dict(data: Dictionary) -> bool:
 	var saved_pallets := CompanyPallets.new()
 	if saved_pallets.load_save(data.get("pallets")):
 		pallets = saved_pallets.to_save()
+	var saved_clocks := ColdChain.new()
+	saved_clocks.from_dict(data.get("cold_clocks", {}))
+	cold_clocks = saved_clocks.to_dict() if saved_clocks.is_ticking() else {}
 	_active = true
 	return true
 
@@ -281,6 +289,7 @@ func _set_defaults() -> void:
 	ledger = []
 	supplier_calendar = SupplierSchedule.new().to_dict()
 	pallets = {}
+	cold_clocks = {}
 	company_name = ""
 	company_seed = 0
 
