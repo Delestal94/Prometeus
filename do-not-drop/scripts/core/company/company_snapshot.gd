@@ -7,7 +7,9 @@ extends RefCounted
 ##
 ## Static only, no state. Split out of company_net.gd in D-0715 (the file was at gdlint's 1000-line
 ## edge); CompanyNet keeps pack_snapshot(), unpack_snapshot() and stock_ok() as the same calls. The
-## limits are CompanyNet's own constants (SNAPSHOT_*) and CompanyTableNet's (MAX_*), read here.
+## limits are CompanyNet's own constants (SNAPSHOT_*) and CompanyTableNet's (MAX_*), read here. The
+## checks of one chunk and the joining (chunk_ok(), join()) came out of CompanyNet._take_chunk() in
+## D-0518, for the same reason.
 
 
 ## A snapshot as _snapshot carries it: {size: its var_to_bytes size, chunks: the compressed
@@ -25,6 +27,25 @@ static func pack(data: Dictionary, chunk_bytes: int) -> Dictionary:
 	if chunks.is_empty() or chunks.size() > CompanyNet.SNAPSHOT_MAX_CHUNKS:
 		return {}
 	return {"size": raw.size(), "chunks": chunks}
+
+
+## One chunk as _snapshot carries it fits (rule 5): snapshot id and chunk count from 1, the count up to
+## SNAPSHOT_MAX_CHUNKS and the chunk inside it, the size uncompressed 1 to SNAPSHOT_MAX_BYTES and 1 to
+## SNAPSHOT_CHUNK_BYTES bytes. Whether it belongs to the snapshot being put together is CompanyNet's.
+static func chunk_ok(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> bool:
+	if id < 1 or total < 1 or total > CompanyNet.SNAPSHOT_MAX_CHUNKS or chunk < 0 or chunk >= total:
+		return false
+	if size < 1 or size > CompanyNet.SNAPSHOT_MAX_BYTES:
+		return false
+	return not bytes.is_empty() and bytes.size() <= CompanyNet.SNAPSHOT_CHUNK_BYTES
+
+
+## The chunks of one snapshot ({index: bytes}, every index from 0 to `total` - 1) joined in order.
+static func join(chunks: Dictionary, total: int) -> PackedByteArray:
+	var joined := PackedByteArray()
+	for index: int in range(total):
+		joined.append_array(chunks[index])
+	return joined
 
 
 ## The snapshot back from its joined chunks and its uncompressed `size`, or {} when they don't
