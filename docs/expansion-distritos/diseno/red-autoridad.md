@@ -507,3 +507,18 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
     0,65 m centrado ahí puede quedar metido en la tabla; revisarlo con `probador-qa` cuando exista la mesa
     visible (D-0701.b);
   - `order_packed`; `_serial` con el día (D-0206).
+
+## 12. La semilla de la empresa (D-0246)
+
+- **Una semilla por empresa**, `CompanyState.company_seed` (1 a 2³¹−1), sorteada en `new_company()` y guardada con la
+  empresa. Viaja en la parte de `CompanyState` del snapshot como cualquier campo, pero **ningún cliente sortea con
+  ella**: los pedidos salen enteros (`order_added`, §10). Que el cliente la tenga no le da nada que decidir.
+- **La del día:** `CompanyState.day_seed(CompanySeed.ORDERS)` = `hash([company_seed, día, "orders"])`. Es la que el host
+  le pasa a `CompanyOrdersNet.plan_day()` en el `OPENING` (D-0813.1). Una corriente por sistema (`ORDERS`, `SUPPLIERS`
+  para el mercado de D-0133), así sumar un sorteo en uno no corre los del otro.
+- **Regla para lo que venga:** todo sorteo del negocio sale de un `RandomNumberGenerator` con una semilla de
+  `day_seed()` (o derivada de ella), y solo en el host. `test_company_seed` falla si aparece un `randi()`, `randf()`,
+  `randomize()`, `shuffle()` o `pick_random()` global en `scripts/gameplay/business/` o `scripts/core/company/`.
+- Guardado de antes de D-0246: semilla sacada del nombre (`CompanySeed.from_name`), estable entre cargas.
+- "Mismo día" es con la misma semilla, día, tripulación y plata (`OrderRhythm`, `Bankruptcy`). `test_company_seed` fija
+  `for_day(1234, 3, "orders")` = 550168617 (Godot 4.7.2): si un motor nuevo hashea distinto, el test avisa.
