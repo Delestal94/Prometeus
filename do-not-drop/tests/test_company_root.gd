@@ -41,7 +41,8 @@ extends SceneTree
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
 ## - D-0508.3: the day's SUMMARY opens the closing screen (DaySummaryPanel) and its "continue" opens the
-##   next day on the host;
+##   next day on the host; D-0614.c: the screen lists the day's delivery note (the root's
+##   CompanyNet.pallets.note): a product the truck left short shows its row;
 ## - the main menu knows the scene, the --mode=company flag and has the button;
 ## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
 ##   as interrupted there, and the real slot (user://saves/company/) is never touched;
@@ -240,10 +241,15 @@ func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
 		return
 	var day: int = cycle.current_day()
 	state.call(&"earn", 120, &"order_paid")
+	if level.net != null:
+		level.net.pallets.note.check(day, {&"hen": 10}, {&"hen": 4})
 	for next: DayCycle.Phase in [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]:
 		cycle.call(&"_transition", next)
 	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and panel.visible,
 		"SUMMARY opens the closing screen (phase %s)" % cycle.phase_name())
+	var note_box: Control = panel.find_child("Note", true, false) as Control
+	_expect(note_box != null and note_box.visible and panel.find_child("Note_hen", true, false) != null,
+		"The closing screen lists the day's delivery note: hen came 6 short (D-0614.c)")
 	panel.close()
 	_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == day + 1 and not panel.visible,
 		"Its continue opens the next day (day %d, %s)" % [cycle.current_day(), cycle.phase_name()])
