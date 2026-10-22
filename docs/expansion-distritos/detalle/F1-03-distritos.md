@@ -229,6 +229,7 @@ después de que su celda se descarga y se vuelve a cargar.
 **Hecho cuando:** el test pasa.
 
 ### D-0319 · El viaje gasta horas del día — A · Opus 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — el reloj ya corre durante el viaje; `TripResult.build()` suma `depart_clock` / `return_clock` ("HH:MM", `TripResult.clock_text`) y el GPS ya daba `game_minutes` (D-0308.1a). `test_company_trip` comprueba 270 s reales = 180 min de juego (±1).
 **Depende de:** D-0219, D-0302
 **Qué:** no hace falta código especial, porque el reloj corre siempre (S3). Lo que sí: el resumen de la
 salida muestra la hora de salida y de vuelta, y el GPS estima la llegada en hora de juego.
