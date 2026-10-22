@@ -108,6 +108,8 @@ P3: vigilar.
      entrar en SUMMARY, con el día siguiente como próximo, y al salir.
   2. Un día interrumpido carga el último cierre, o se guarda completo (pedidos, mesas, `_serial`, salidas).
      Nunca a medias.
+     Decidido en [guardado.md](guardado.md) (D-0134): vuelve a su apertura (D-0251); lo suelto va al bulto de
+     devolución (D-0252).
   3. Tests: matar el proceso a mitad de día y recuperar el último cierre (el "hecho cuando" de D-0236), y
      salir en SUMMARY y volver no cobra ni descuenta dos veces.
   4. `bot_company_day` deja de guardar por su cuenta cuando el gancho exista.

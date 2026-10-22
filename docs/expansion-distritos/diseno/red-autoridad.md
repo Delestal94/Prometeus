@@ -148,8 +148,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 
 ## 3. Secuencia, huecos y snapshot
 
-- El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. Se guarda en el slot
-  para que un día cargado siga numerando.
+- El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. No se guarda: un día
+  cargado abre desde la apertura y todo cliente que entra lo hace por snapshot ([guardado.md](guardado.md) §4).
 - `reliable` no pierde mensajes, así que el único hueco real es **el evento que llega antes que el mundo**
   (el peer todavía no tiene `CompanyWorld`). Por eso el host manda eventos solo a peers con
   `is_peer_ready()` y, al quedar listo un peer, le manda el snapshot con el `seq` actual; el peer descarta
@@ -203,7 +203,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   cada 5 s mientras espera). En el host (y solo) arranca la empresa y le pasa `CompanyState.stock()`.
 - **Pendiente:**
   - ~~el snapshot y la llamada a `resume_after_snapshot()` del lado que lo recibe~~ (hecho en D-2004, §6);
-    guardar `seq` en el slot (D-0206);
+    ~~guardar `seq` en el slot (D-0206)~~ (no hace falta: un mundo cargado arranca en `seq` 0 y todo cliente
+    entra por snapshot, [guardado.md](guardado.md) §4);
   - el modo Empresa todavía no es una sesión: `company_root.tscn` no está en `NetworkManager.LEVEL_SCENES` y
     `company_root.gd` no llama a `NetworkManager.level_ready()`. Lo cablea la tarea que lo ponga en línea
     (la continuación de D-0214; D-2004 dejó el gancho listo, §6);

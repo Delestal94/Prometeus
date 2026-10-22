@@ -28,6 +28,8 @@
 | D-0218 | ✅ Registro de productos y proveedores leído de `.tres` | constructor-negocio | medium | idem con productos |
 | D-0219 | ✅ Reloj del juego determinista desde el host (hora del día, aceleración, pausa) | constructor-red | high | test con dos peers ve la misma hora ±1 tick |
 | D-0220 | ✅ Decidir dónde vive cada script nuevo (`business/`, `fleet/`, `districts/`) y qué va a módulos | Plan | medium | árbol de carpetas en `docs/arquitectura.md`; `check_modules` verde |
+| D-0251 | Un día cortado vuelve a su apertura: el host guarda la empresa tal como abrió el día, no a medias ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_company_autosave` ampliado: cobrar un pedido, salir a mitad de día y cargar da la plata, el stock y el libro de caja de la apertura |
+| D-0252 | Stock sin lugares en curso al guardar: manos, piso, cajas y paquetes al bulto de devolución con posición ([guardado.md](diseno/guardado.md) §3) | constructor-progresion | medium | test: después de cargar, toda unidad está en un lugar con estación y el bulto se puede tomar |
 
 ## Ampliación
 
