@@ -30,7 +30,8 @@ func _run() -> void:
 	var csv: String = FileAccess.get_file_as_string("res://translations/strings_ui.csv")
 	for key: StringName in CustomerNote.KEYS:
 		_expect(csv.contains("\n%s," % key), "%s is in strings_ui.csv" % key)
-	_expect(CustomerNote.KEYS.size() == CustomerNote.PLAIN_KEYS.size() + CustomerNote.GIFT_KEYS.size(), "KEYS lists both pools")
+	var pools: int = CustomerNote.PLAIN_KEYS.size() + CustomerNote.GIFT_KEYS.size()
+	_expect(CustomerNote.KEYS.size() == pools, "KEYS lists both pools")
 
 	var box := PackedBox.new(&"M")
 	_expect(CustomerNote.text(box) == "", "a new box carries no note")
