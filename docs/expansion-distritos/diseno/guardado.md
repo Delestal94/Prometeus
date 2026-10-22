@@ -2,7 +2,8 @@
 
 > Qué guarda el modo Empresa y qué no. Cubre la empresa, el stock, los empleados y el día en curso, más lo que
 > el código ya hace y lo que falta. El formato y los slots son de D-0206 y D-0235 (`CompanySave`), y los
-> momentos de guardado, de D-0236 y D-2005 (`CompanyRoot`). Lo que falta construir lo hacen D-0251 y D-0252.
+> momentos de guardado, de D-0236 y D-2005 (`CompanyRoot`). Lo que falta construir lo hacen D-0251, D-0252 y
+> D-0253. Revisado por `critico-diseno`.
 > Fuentes: [riesgos.md](riesgos.md) R-03 y R-04, [red-autoridad.md](red-autoridad.md) §3,
 > [eventos-del-dia.md](eventos-del-dia.md) §2.2, [onboarding.md](onboarding.md) y
 > [portapapeles.md](portapapeles.md). Decisión: `docs/decisiones/2026-10-22-guardado.md`.
@@ -11,7 +12,9 @@
 
 1. **Un punto de guardado por día: la apertura.** El save siempre describe una empresa **a las 08:00 de un
    día que todavía no empezó**. Cargar siempre abre un día (`DayCycle.open_day`), nunca retoma uno a la mitad
-   ni vuelve a mostrar un resumen. Ya pasa así con el cierre (D-0236 guarda "día + 1 a las 08:00").
+   ni vuelve a mostrar un resumen. Ya pasa así con el cierre (D-0236 guarda "día + 1 a las 08:00"). **Crear la
+   empresa guarda su apertura del día 1** (con el galpón por defecto y antes de los flags de desarrollo): sin eso,
+   cortar el día 1 la borraría, porque no habría archivo.
 2. **Un día que se corta vuelve a su apertura.** Salir al menú, que el host se vaya (D-2005), que se corte la
    luz o que el proceso muera: el día cortado **no deja nada**. La empresa queda como estaba al abrir ese día.
    Hoy el guardado de día interrumpido conserva plata, stock y libro de caja **del último evento**, con el
@@ -24,13 +27,21 @@
      tomar.
    - **El resumen suma de más.** `DaySummary` suma todo el libro de caja del día: el pedazo cortado más el día
      repetido.
-   Lo construye **D-0251**. El flag `interrupted` sigue existiendo, pero ahora quiere decir "este día se cortó
-   y se juega de nuevo desde la apertura". El menú puede avisarlo.
+   **Un corte no escribe la empresa:** el archivo que está ya es la apertura de este día (la escribió el cierre
+   de ayer o la creación de la empresa). Solo se le marca `interrupted: true`, que ahora quiere decir "este día se
+   cortó y se juega de nuevo desde la apertura", para que el menú lo avise. Así ningún dato de la mitad del día
+   llega al disco y los flags de desarrollo tampoco. Lo construye **D-0251**.
+   **Para cortar sin perder lo hecho, el host cierra el día antes** (pausa → "Cerrar el día", D-0253): el día
+   pasa a `CLOSING` en ese momento. No entran pedidos nuevos, se espera a que vuelvan las salidas, viene el
+   resumen y se guarda como cualquier cierre. Lo que no se entregó se penaliza igual que a las 20:00, así que no
+   sirve para esquivar nada. Las dos salidas del menú lo avisan: "Salir ahora pierde lo hecho desde las 08:00".
 3. **Solo guarda el host** (también jugando solo). Un cliente tiene un espejo, que nunca se escribe
    (red-autoridad §3). Al irse, el cliente recupera su propia empresa (`_restore_own_company`).
 4. **Lo que se puede volver a calcular no se guarda.** Lo que sale de la semilla (`company_seed` +
    día + corriente, D-0246) o de otro dato guardado se recalcula al abrir. Así el save es chico y no hay dos
-   fuentes de la verdad.
+   fuentes de la verdad. Por eso un día que se repite saca los mismos pedidos, el mismo proveedor y, si el plan
+   de eventos se sorteó en la apertura (día 1 o un save viejo), los mismos eventos: todo sorteo del día sale de
+   su corriente de la semilla y de datos de la apertura, nunca de algo que pasó en el día.
 5. **Una clave que cambia de significado sube la versión.** `CompanySave.VERSION` sube con una migración en
    `MIGRATIONS` y con un save de la versión anterior como fixture en `tests/` (R-04). Una clave nueva con un
    valor por defecto razonable no sube la versión: `from_dict` ya tolera que falte.
@@ -48,8 +59,8 @@ Todo vive en `CompanyState.to_dict()`, dentro de `user://saves/company/<slot>.js
 | `reputation`, `district_reputation` | Reputación general y por zona | — |
 | `opened_gates`, `equipment` | Portones abiertos, equipo y licencias (`license_*`, D-0124) | Nunca se cierran ni se pierden |
 | `milestones_done` | Hitos cumplidos | Los textos de "aprendiste X" van en el perfil (§4) |
-| `fleet` | Vehículos comprados | Al cargar se estacionan en la salida; sin posición ni carga |
-| `employees` | Empleados contratados | En F1 está vacío. D-1016 suma la estación asignada y el sueldo pendiente |
+| `fleet` | Vehículos comprados | Al cargar se estacionan en la salida, sin posición ni carga. Un vehículo prestado por un evento no entra |
+| `employees` | Empleados contratados | En F1 está vacío. D-1016 suma la estación asignada; se guarda el contrato, no la posición ni la tarea en curso, y cada uno arranca en su estación. El temporal de un evento no se guarda (se va al cierre) |
 | `layout`, `warehouse_stage` | Piezas del galpón con su `uid` y etapa del piso | `BuildLayoutSave.sanitize` descarta lo que no entra |
 | `inventory` | Stock por producto y lugar | Al guardar, las manos pasan al piso. D-0252 normaliza el resto (§3) |
 | `supplier_calendar` | Pedidos al proveedor y qué día llegan | La factura ya se cobró al pedir |
@@ -73,10 +84,13 @@ existe cuando se carga:
 | `package:<id>` (caja cerrada sin despachar) | Al bulto de devolución, desarmada | El pedido de esa caja ya no existe al día siguiente, y una caja sin pedido no tiene a quién ir |
 | Carga de un vehículo o de una salida | — | El resumen espera a que vuelvan todas las salidas (`trips_out() == 0`), así que al cierre no hay nada afuera. El corte a mitad de día no guarda (regla 2) |
 
+**Las reservas quedan en 0 al guardar:** son de pedidos que al día siguiente ya no existen.
+
 **El bulto de devolución** es un único `floor:0` que se guarda **con su posición**, en un punto fijo del galpón
 al lado de las mesas (`CompanyTuning.RETURN_BUNDLE_SPOT`). Es un bulto normal: se toma de a una unidad y se lleva
 al estante. No se cobra ni se pierde nada. El jugador que dejó una caja sin cerrar la encuentra desarmada en el
-bulto a la mañana. Así el "Hecho cuando" de D-0252 se puede probar sin abrir el juego: después de cargar, ninguna
+bulto a la mañana. Ordenarlo es trabajo de la apertura para los que cargan. Con 8 personas y un galpón de F2
+puede ser mucho: D-0252 lo mide en el bot, y si hace falta se parte en un bulto por producto. Así el "Hecho cuando" de D-0252 se puede probar sin abrir el juego: después de cargar, ninguna
 unidad del stock queda en un lugar sin estación.
 
 ## 4. Qué no se guarda, y de dónde sale al cargar
@@ -110,16 +124,25 @@ mundo**, o el agujero de la regla 2 se abre en el juego. La tarea que enganche e
 - [red-autoridad.md](red-autoridad.md) §3: "guardar `seq` en el slot (D-0206)" queda tachado. Un mundo cargado
   arranca en `seq` 0, y todo cliente que entra lo hace por snapshot, así que no hay eventos viejos que
   numerar.
-- [riesgos.md](riesgos.md) R-03: la mitigación 2 se resuelve con "vuelve a su apertura" (D-0251), y las
-  unidades varadas con D-0252.
+- [red-autoridad.md](red-autoridad.md) §7, §9 y §10: tampoco se guardan las posiciones de los bultos, las mesas,
+  `_serial` ni el libro de pedidos (tachado, con el motivo).
+- [riesgos.md](riesgos.md): R-03, la mitigación 2 se resuelve con "vuelve a su apertura" (D-0251) y las unidades
+  varadas con D-0252. R-14: el `OrderBook` no se guarda, se vuelve a sortear. R-04: lo nuevo del save es el plan
+  de eventos, no pedidos ni mesas.
+- `revisar/D-0236.md`: lleva una nota de que salir a mitad de día ya no guarda "con lo hecho".
+- Los comentarios de `company_save.gd` ("what happened after it is kept") los corrige D-0251.
 
 ## 7. Qué se pierde y por qué está bien
 
-- **Un día cortado se pierde entero.** Un día dura 12 h de juego × 90 s, unos 18 minutos reales. Repetirlo es lo
-  mismo que pasa en el modo Entrega cuando se corta una ruta. Guardar el día completo (pedidos, mesas, `_serial`,
+- **Salir sin cerrar pierde el día entero.** Un día dura 12 h de juego × 90 s, unos 18 minutos reales, y con
+  varias personas eso pesa. Por eso existe el cierre anticipado (regla 2, D-0253): quien tiene que irse a los 15
+  minutos le pide al host que cierre, y lo hecho queda. Guardar el día a la mitad (pedidos, mesas, `_serial`,
   posiciones, salidas en la ruta) cuesta un formato nuevo por cada sistema y un test de ida y vuelta para cada
-  uno. Eso queda para después de F1, si las pruebas muestran que se pierde demasiado. La alternativa más barata
-  sería guardar a cada hora de juego, con estas mismas reglas, en una hora "cerrada".
+  uno. Eso queda para después de F1, y solo si las pruebas muestran que el cierre anticipado no alcanza.
+- **Un día malo se puede repetir.** Salir a las 19:59, antes del cobro, vuelve a la apertura. Eso le saca peso a
+  la quiebra y a las penalidades. Se acepta, como el reintento de nivel de *Overcooked*: es un juego coop para
+  pasarla bien, la semilla da los mismos pedidos (no se puede "buscar" un día fácil) y repetirlo cuesta los 18
+  minutos. Si en las pruebas se abusa, se cuentan los días cortados en el slot y se cobran en reputación.
 - **Lo pedido o comprado en el día cortado también se pierde.** Eso incluye pedidos al proveedor, compras de la
   tienda y piezas puestas. Es parejo: la plata que se gastó en eso vuelve con la apertura.
 - **Matar el proceso** ya vuelve al último cierre (D-0236), y con D-0251 no hay diferencia entre salir bien y

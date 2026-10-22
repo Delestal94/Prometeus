@@ -295,8 +295,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - **Pendiente:**
   - dibujar los bultos (nodos estáticos, regla 10) leyendo `floor_bundles` en `event_applied` y
     `company_state_restored` (D-0611);
-  - guardar las posiciones con el día (D-0206): un día cargado trae los `floor:<n>` sin posición y no se
-    pueden tomar hasta que el guardado las lleve (lo mismo vale para las manos que D-2005 deja en `floor:0`);
+  - ~~guardar las posiciones con el día (D-0206)~~: no se guardan; al guardar, todo bulto del piso y las manos
+    pasan al bulto de devolución `floor:0`, que sí lleva posición (D-0252, [guardado.md](guardado.md) §3);
   - `company_net.gd` quedó en 967 de las 1000 líneas que permite gdlint (ya salieron `FloorBundles` y
     `CompanyAsk`): la próxima acción grande tiene que sacar algo más a otra clase;
   - el margen de `reach_slack()` en `DROP_REACH` depende del RTT y no tiene test propio.
@@ -415,12 +415,13 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   - ~~**D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10), validando
     antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §11); de D-0715.b quedan las cajas vivas
     en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
-    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) y `CompanyTableNet._serial` guardado con el día (D-0206);
+    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) (`_serial` no se guarda: [guardado.md](guardado.md) §4);
   - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
     `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
-  - guardar las mesas con el día (D-0206): hoy un día cargado trae unidades en `box:<id>` sin mesa.
+  - ~~guardar las mesas con el día (D-0206)~~: no se guardan; lo de `box:<id>` va al bulto de devolución al
+    guardar (D-0252, [guardado.md](guardado.md) §3).
 
 ## 10. Lo construido (D-0813): los pedidos del día
 
@@ -482,7 +483,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
-  - guardar el libro con el día (D-0206). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
+ - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
     poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
     sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
 
