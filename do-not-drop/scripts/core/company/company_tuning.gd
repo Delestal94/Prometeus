@@ -174,6 +174,9 @@ const SHELF_SLOT_CAPACITY: int = 24
 ## Units a player carries in their hands, all of one product (red-autoridad.md section 2,
 ## row 5; CompanyNet checks it on units_take, D-2003). Picking (D-0609) and D-0117 tune it.
 const HAND_MAX_UNITS: int = 4
+## Units a picking cart carries in total, products mixed (D-0610, the "carries 6" of its table row). More than
+## the hands (HAND_MAX_UNITS) so the cart is worth the trip; PickingCart refuses the unit that would pass it.
+const CART_MAX_UNITS: int = 6
 
 # --- Orders ---
 ## Shipping fee added to an order's pay, by zone id (unknown zones pay 0).
