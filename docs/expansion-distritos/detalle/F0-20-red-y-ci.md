@@ -184,13 +184,20 @@ simulados (peers ENet locales o actores locales).
   para cada etapa que todavía no existe, sin colgarse.
 - [x] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya). Hechas: 9 de 9.
 - [x] **D-2016.3** (2026-10-22, PR pendiente: piloto `drive_to` en `tests/bot_company_van.gd` por `RoadNavigator.route`, la van llega a la calle de cada parada de Centro y vuelve al playón; `off_road_max` 0 m en la ida, `BOT_OK` en 161 s; la puerta sigue con `OrderSettlement` porque el modo Empresa no tiene entrega en la casa; `test_company_bot_autopilot`; revisar: [`revisar/D-2016.3.md`](../revisar/D-2016.3.md)) `drive` lleva la van con piloto automático por el grafo de calles hasta las casas de sus paradas (y `return` la trae por el mismo camino), cuando el grafo esté en el mundo de la empresa (D-0314.a, `use_graph`); `deliver` deja la caja en la puerta cuando la entrega en la casa exista (D-0311).
-**Hecho cuando:** con todo F1 cerrado imprime `BOT_OK` con 2 jugadores, y es el criterio de cierre de D-0111.
+- [ ] **D-2016.4** (revisión D-0140, [revisión D-0140](../diseno/revision-diseno.md) §5) Sin etapas simuladas: `deliver` pasa por la puerta del
+  mundo (`DeliveryHouse`, D-0340) y el bot no llama `OrderSettlement` por su cuenta; arma **6 cajas**; el alquiler lo
+  cobra el juego al cierre (D-0509.b); registra por jugador el mayor tramo sin caja ni volante (≤ 120 s); corre
+  también con `--players=1`. Cada etapa que siga simulada imprime `BOT_STUB <etapa>` y bloquea `BOT_OK`.
+**Hecho cuando:** con todo F1 cerrado imprime `BOT_OK` sin ningún `BOT_STUB` con 1 y con 2 jugadores, y es el criterio de
+cierre de D-0111 (la compuerta F1 → F2 de `.claude/rutinas/desarrollador.md` §2).
 
 ### D-2017 · QA de red par y trío en modo Empresa — B · Opus 5.5 · high · Aviso: no · F0
 **Depende de:** D-2016, D-2003
 **Qué:** variante de `bot_company_day` con 2 y 3 peers que comparan `CompanyState.to_dict()` al cierre
 del día. El guion de `probador-qa` suma "Empresa en red".
-**Hecho cuando:** los 3 peers terminan con el mismo diccionario y no hay `ERROR` en ninguno de los logs.
+**Hecho cuando:** los 3 peers terminan con el mismo diccionario y no hay `ERROR` en ninguno de los logs; el armado, el
+despacho y la puerta corren con el armador o el repartidor en un cliente, no en el host (revisión D-0140). Antes,
+`bot_company_day` dice en su encabezado qué acciones siguen fuera de `CompanyNet._request`.
 
 ### D-2018 · Módulos nuevos en `portability-check.sh` — A · Opus 5.5 · low · Aviso: no · F0
 **[x] Hecho (2026-10-12, a1374c1, PR pendiente)** — ya estaba: `portability-check.sh` descubre solo cada `modules/<x>/` con `module.cfg` y `check_modules.py` (CI, lint) rechaza un módulo sin `module.cfg` o sin `tests/test_*.gd`; el run de main de a1374c1 da `OK day_clock`, `OK world_cells`, 25/25. `inventory`, `order_queue` y `build_grid` entran solos cuando D-0221, D-0222 y D-0225 los creen.

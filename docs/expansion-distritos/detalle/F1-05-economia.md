@@ -114,8 +114,10 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Depende de:** D-0501
 **Qué:** funciones estáticas sin nodos sobre la billetera (`CompanyState`). `due()` devuelve los costos del día por motivo (hoy solo `rent`; la luz no es un gasto fijo, la maneja D-0912). `settle(company)` los cobra con `charge` (pasan aunque el saldo quede negativo) y devuelve lo cobrado. `shortfall(company)` dice cuánto no cubre la billetera, para que D-0510 decida la quiebra.
 **Decisión:** la clase no guarda estado (no hay "último día cobrado" que replicar ni migrar): el cierre del día (D-0203) la llama una vez por día. Se cobra al cierre, antes del resumen D-0508, así el alquiler aparece como costo `rent`.
+- [ ] **D-0509.b** (revisión D-0140; `constructor-progresion`, low) El host engancha `FixedCosts.settle` a
+  `company_day_closing`, una vez por día y antes del resumen. Hoy solo lo llaman los tests. Depende de D-0251 y D-0254.
 **Test** `test_fixed_costs`: el día cuesta 100; `settle` cobra con motivo `rent`; con 30 de saldo queda en -70 y `shortfall` da 70; saldo negativo debe el alquiler entero; sin empresa no cobra.
-**Hecho cuando:** el test pasa.
+**Hecho cuando:** el test pasa y (D-0509.b) fuera de `tests/` hay una llamada a `FixedCosts.settle` en el cierre del host.
 
 ### D-0510 · Quiebra — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `Bankruptcy` (`scripts/gameplay/business/bankruptcy.gd`): `is_bankrupt`, `order_share` y `orders_for_day`; `CompanyTuning.BANKRUPT_ORDER_SHARE` = 0,6; `test_bankruptcy`. D-0510.2 hecha (2026-10-21, PR pendiente): el generador de pedidos y el aviso de apertura usan la quiebra.

@@ -23,9 +23,9 @@
 | D-0413 | Hito "Primer empleado" desbloquea contratación | constructor-progresion | low | test |
 | D-0414 | Hito "Primera máquina" desbloquea la tienda de automatización | constructor-progresion | low | test |
 | D-0415 | Hito de Puerto (licencia náutica) | constructor-progresion | low | test |
-| D-0416 | Hito de Montaña (4x4 comprada + 50 entregas en Campo) — **a reescribir:** con el mapa continuo Montaña se abre con la avioneta (`gate_montana_altura`); la 4x4 es para entregar adentro ([flota.md](diseno/flota.md), D-0115) | constructor-progresion | low | test |
-| D-0417 | Hito de Nieve (Montaña + abrigo de la tripulación + conservadoras) | constructor-progresion | low | test |
-| D-0418 | Hito de Volcán (aeródromo + licencia de vuelo + reputación 80) | constructor-progresion | low | test |
+| D-0416 | Hito de Montaña (4x4 comprada + 50 entregas en Campo) — **a reescribir:** con el mapa continuo Montaña se abre con la avioneta (`gate_montana_altura`); la 4x4 es para entregar adentro ([flota.md](diseno/flota.md), D-0115) — **manda [hitos.md](diseno/hitos.md) (hitos 20, 26 y 28)**, no este texto | constructor-progresion | low | test |
+| D-0417 | Hito de Nieve (Montaña + abrigo de la tripulación + conservadoras) — **manda [hitos.md](diseno/hitos.md) (hitos 20, 26 y 28)**, no este texto | constructor-progresion | low | test |
+| D-0418 | Hito de Volcán (aeródromo + licencia de vuelo + reputación 80) — **manda [hitos.md](diseno/hitos.md) (hitos 20, 26 y 28)**, no este texto | constructor-progresion | low | test |
 | D-0419 | Guardar el progreso de hitos en el save de empresa | constructor-progresion | medium | test de guardar y cargar |
 | D-0420 | Hitos replicados: los clientes ven el mismo progreso que el host | auditor-red | high | test de red con 2 peers |
 
@@ -58,7 +58,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0441 | Curva de progreso: tiempo hasta cada distrito medido con bot (objetivo en D-0117) | pulidor-jugabilidad | high | tabla de días por distrito dentro de ±20 % del objetivo |
+| D-0441 | Curva de progreso: tiempo hasta cada distrito medido con bot (objetivo en D-0117) | pulidor-jugabilidad | high | tabla de días por distrito dentro de ±20 % del objetivo ; un bot de 1 jugador termina la campaña en ≤ 40 días (palancas: precio de la avioneta, hito 20 y premios; pasa por `critico-diseno` antes de tocar los `.tres`; revisión D-0140) |
 | D-0442 | Ningún hito imposible para un jugador solo | pulidor-jugabilidad | medium | bot solo cumple todos en sim |
 | ~~D-0443~~ | ~~Textos de hitos traducibles y cortos~~ **Fusionada en D-1920 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | todos por `tr()` |
 | D-0444 | Celebración al desbloquear distrito (confeti, jefe que habla) (incluye D-1933, fusión de D-0112) | artista-vfx | medium | captura |

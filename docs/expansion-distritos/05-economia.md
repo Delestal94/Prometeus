@@ -16,7 +16,7 @@
 | D-0506 | ✅ Penalidades: rotura, producto equivocado, tarde, caja mal etiquetada | constructor-progresion | high | test por tipo |
 | D-0507 | ✅ Propinas por entrega perfecta y rápida | constructor-progresion | low | test |
 | D-0508 | ✅ Resumen financiero del cierre del día (ingresos, costos, ganancia) | constructor-ui | high | captura y test de los números |
-| D-0509 | ✅ Gastos fijos diarios (alquiler del galpón, luz) | constructor-progresion | medium | test |
+| D-0509 | ◐ (falta D-0509.b: el cierre del juego cobra el alquiler) Gastos fijos diarios (alquiler del galpón, luz) | constructor-progresion | medium | test |
 | D-0510 | ✅ Quiebra: qué pasa con saldo negativo N días (préstamo forzado, reinicio, aviso) | constructor-progresion | medium | test del caso |
 | ✅ D-0511 | Tienda de la empresa (máquinas, vehículos, ampliaciones, licencias) con catálogo de `.tres` | constructor-progresion | high | comprar ítem en test descuenta y otorga |
 | ✅ D-0512 | Precios de vehículos (bici < carrito < camioneta 4x4 < lancha < avioneta) | constructor-progresion | low | tabla en `.tres` |
@@ -53,6 +53,7 @@
 | D-0538 | Economía en modo solo escalada | pulidor-jugabilidad | medium | bot solo no quiebra en 20 días |
 | D-0539 | Economía escalada por cantidad de jugadores (1-8) | pulidor-jugabilidad | high | sim con 1, 2, 4, 8: ganancia por jugador dentro de ±25 % |
 | D-0540 | `tools/sim_economy.gd`: simula N días con un bot de decisiones y saca CSV (incluye D-0231, fusión de D-0112) | constructor-progresion | high | corre 30 días en < 10 s; CSV en `tests/output/` |
+| D-0551 | Eventos del día, primera tanda: marco + `supplier_late`, `supplier_gift` y `shed_inspection` ([eventos-del-dia.md](diseno/eventos-del-dia.md) §"tanda mínima"), sin víspera, sin segundo evento y sin tramos por tripulación. F2: depende de D-2016 ([revisión D-0140](diseno/revision-diseno.md)) | constructor-progresion | high | test: con la misma semilla los tres eventos salen el mismo día en host y cliente y `calm_days` los apaga |
 
 ## Pulido
 

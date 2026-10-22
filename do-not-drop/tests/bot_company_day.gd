@@ -638,6 +638,11 @@ static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 	# The phase it starts from too: after a real drive the day may be OPERATING already.
 	var seen: Array[int] = [int(cycle.phase())]
 	var came: int = seen[0]
+	# Only the bot polls while it watches: the host's BusinessTick (4 Hz) polls the same cycle and
+	# could cross a phase between two of the bot's reads, so CLOSING would go unseen.
+	var tick: BusinessTick = level.business_tick
+	if tick != null:
+		tick.set_process(false)
 	for _frame: int in PHASE_FRAMES:
 		cycle.poll()
 		if seen.is_empty() or seen[seen.size() - 1] != int(cycle.phase()):
@@ -645,6 +650,8 @@ static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 		if cycle.phase() == DayCycle.Phase.SUMMARY:
 			break
 		await tree.process_frame
+	if tick != null:
+		tick.set_process(true)
 	var path: Array[int] = [
 		DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]
 	if cycle.phase() != DayCycle.Phase.SUMMARY:

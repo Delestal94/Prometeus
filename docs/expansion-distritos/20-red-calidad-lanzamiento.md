@@ -23,7 +23,7 @@
 | D-2013 | Leak check de un día completo y de 10 días | perfilador-rendimiento | high | sin huérfanos (como S-908) |
 | D-2014 | ✅ Tests de la expansión entran en `run-tests.sh` por filtro (`company`, `district`, `fleet`) | escritor-tests | low | filtros funcionan |
 | D-2015 | ✅ Tests afectados en el hook `pre-push` para carpetas nuevas | escritor-tests | low | hook los detecta |
-| D-2016 | ✅ Recorrido de QA del día completo para `probador-qa` | probador-qa | medium | guion en `docs/qa-recorrido.md` |
+| D-2016 | Bot `bot_company_day` y guion de QA del día completo (criterio de cierre de F1) | probador-qa | medium | `BOT_OK` sin `BOT_STUB` con 1 y 2 jugadores (D-2016.4) y guion en `docs/qa-recorrido.md` |
 | D-2017 | Recorrido de QA de red par y trío en modo Empresa | probador-qa | high | guion |
 | D-2018 | ✅ `portability-check.sh` incluye los módulos nuevos | escritor-tests | low | CI verde |
 | D-2019 | ◐ (falta el arranque en la build de la PC) Build de Windows con la expansión | empaquetador-release | medium | build y smoke test |
