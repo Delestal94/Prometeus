@@ -6,7 +6,7 @@
 
 - **`PROTOCOL_VERSION` 49** (`scripts/core/network_manager.gd`, zona compartida): solo la constante y su línea del
   historial (46 es D-0618.b, 47 D-0517 y 48 D-0606.b, ya en `main`). Ninguna firma ni RPC de `NetworkManager`, `NetSession` o
-  `EventBus` cambió y `modules/` no se tocó.
+  `EventBus` cambió.
   **Cambió el protocolo:** el mundo de la empresa tiene un nodo replicado nuevo en cada peer,
   `World/Vehicles/van_classic` (la `vehicle.tscn` con su `MultiplayerSynchronizer` de siempre), y un RPC nuevo,
   `CompanyFleet._have_fleet(names: PackedStringArray)` (`any_peer`, `call_remote`, `reliable`, en el nodo
@@ -33,6 +33,11 @@
   `test_company_root` (las anclas cuentan la flota; el chequeo de la tasa de pose al ir a bordo usa la camioneta real,
   no un `Carrier` de prueba) y `test_company_online` (el cliente en el mismo proceso tiene su propio `EventBus`: la
   camioneta del host retransmite `vehicle_telemetry` por ahí, como en la ruta).
+
+- **`modules/interaction/seat_point.gd`** (zona compartida) y `scripts/presentation/reference_truck_cargo.gd`: las
+  búsquedas de asiento toleran un nodo del grupo sin `seat_node_path` (en el mundo de la empresa ahora hay asientos de
+  la camioneta y el jugador de prueba de `test_company_forklift_world` no tiene esa propiedad: `NodePath(null)` tiraba
+  `SCRIPT ERROR`). Sin cambio de comportamiento para un jugador real.
 
 ## Qué tiene que hacer Slatex
 
