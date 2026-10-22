@@ -164,6 +164,11 @@ const COLD_SPOIL_MINUTES: float = 120.0
 const GIFT_WRAP_BONUS: float = 0.15
 const GIFT_WRAP_COST: int = 3
 
+## Quality check by a second player (D-0734, BoxReview): a box that someone other than its packer opened and
+## found faultless, and that was not touched afterwards, pays BOX_REVIEW_BONUS of its pay on top (stacks with
+## the condition bonus; small, because the check costs a second player's time).
+const BOX_REVIEW_BONUS: float = 0.05
+
 ## Multi-box orders (D-0729, OrderParts): an order whose products need more than MULTI_BOX_FILL of one
 ## XL box is split into up to ORDER_BOXES_MAX boxes, all of them delivered together.
 const ORDER_BOXES_MAX: int = 3
