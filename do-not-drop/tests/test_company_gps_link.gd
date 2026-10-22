@@ -73,7 +73,7 @@ func _test_route_map() -> void:
 	map.show_route(ahead, here, right, forward)
 	_expect(map.visible and map.mesh != null and map.mesh.get_surface_count() == 1, "A path builds a ribbon")
 	map.show_route(PackedVector2Array(), here, right, forward)
-	_expect(not map.visible, "An empty path hides the line")
+	_expect(not map.visible and map.mesh != null, "An empty path hides the line, with an empty mesh")
 	map.free()
 
 

@@ -24,6 +24,8 @@ func _init() -> void:
 	material.albedo_color = LINE_COLOR
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material_override = material
+	# Never null: ReferenceTruck.set_paint walks every MeshInstance3D under the model.
+	mesh = ArrayMesh.new()
 	visible = false
 
 
@@ -33,7 +35,7 @@ func show_route(polyline: PackedVector2Array, position: Vector2, right: Vector2,
 	var segments: PackedVector2Array = screen_segments(polyline, position, right, forward)
 	visible = not segments.is_empty()
 	if not visible:
-		mesh = null
+		mesh = ArrayMesh.new()
 		return
 	mesh = _ribbon(segments)
 
