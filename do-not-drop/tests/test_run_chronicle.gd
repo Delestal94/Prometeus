@@ -10,7 +10,11 @@ extends SceneTree
 ## - it ignores what happens outside a run, a route event that isn't an incident
 ##   and a photo that wasn't accepted; a new run starts from nothing;
 ## - the results add what only they know (a door the run never reached, the
-##   complaints, how a failed or Endless run ended);
+##   complaints, how a failed or Endless run ended); a van on its side
+##   (reason HUD_RUN_TIPPED) leads the paper as a rollover instead of a plain
+##   failed run (beside the Endless ending in Endless);
+## - a dog that chased the van (once per run, tagged if the horn sent it home)
+##   and a train the van waited for come as EventBus roadside_moment (N-606.4b);
 ## - the host writes the paper from the decided results and relays it as
 ##   newspaper_ready before anyone hears run_ended, ids and slots without text,
 ##   and the next paper avoids the variants of this one.
@@ -139,6 +143,45 @@ func _run() -> void:
 	_expect(endless["front"]["id"] == "endless_end" and absf(float(endless_slots["km"]) - 3.2) < 0.01
 			and int(endless_slots["minutes"]) == 4,
 			"An Endless run is the truck last seen at its distance (got %s)" % str(endless["front"]))
+
+	# N-606.4b: the van on its side, the dog that chased it, the train it waited for.
+	chronicle.facts.clear()
+	var tipped: Dictionary = chronicle.compose({"delivered": false, "reason": "HUD_RUN_TIPPED",
+			"elapsed_seconds": 90.0}, crew, 4)
+	_expect(tipped["front"]["id"] == "rollover" and not DESK.entries(tipped).any(func(entry: Dictionary) -> bool:
+			return entry["id"] == "run_failed"),
+			"A van on its side leads and replaces the failed run's story (got %s)" % str(tipped["front"]["id"]))
+	var stuck: Dictionary = chronicle.compose({"delivered": false, "reason": "HUD_RUN_STUCK",
+			"elapsed_seconds": 90.0}, crew, 4)
+	_expect(stuck["front"]["id"] == "run_failed",
+			"Any other reason is still the failed run (got %s)" % stuck["front"]["id"])
+	var tipped_endless: Dictionary = chronicle.compose({"distance_traveled": 3200.0, "reason": "HUD_RUN_TIPPED",
+			"elapsed_seconds": 240.0}, crew, 4)
+	var endless_ids: Array = DESK.entries(tipped_endless).map(func(entry: Dictionary) -> String: return entry["id"])
+	_expect(tipped_endless["front"]["id"] == "rollover" and "endless_end" in endless_ids,
+			"In Endless the rollover leads and the truck's last km still runs (got %s)" % str(endless_ids))
+
+	bus.roadside_moment.emit(&"dog_chase", [])
+	_expect(_kinds(chronicle).count("dog_chase") == 1, "A dog that chased the van is noted")
+	bus.roadside_moment.emit(&"dog_chase", ["honked"])
+	bus.roadside_moment.emit(&"dog_chase", [])
+	_expect(_kinds(chronicle).count("dog_chase") == 1 and _last(chronicle, "dog_chase")["tags"] == ["honked"],
+			"Dogs make one story, tagged when the horn sent one home (got %s)" % str(_last(chronicle, "dog_chase")))
+	bus.roadside_moment.emit(&"train_stop", [])
+	bus.roadside_moment.emit(&"train_stop", [])
+	bus.roadside_moment.emit(&"unknown_moment", [])
+	_expect(_kinds(chronicle).count("train_stop") == 1 and not _kinds(chronicle).has("unknown_moment"),
+			"A train it waited for is noted once, and a moment the paper doesn't know is not")
+	var roadside: Dictionary = chronicle.compose({"delivered": true, "elapsed_seconds": 90.0}, crew, 4)
+	var roadside_ids: Array = DESK.entries(roadside).map(func(entry: Dictionary) -> String: return entry["id"])
+	_expect(DESK.is_valid(roadside) and "dog_chase" in roadside_ids and "train_stop" in roadside_ids,
+			"The paper prints both (got %s)" % str(roadside_ids))
+	var tail: int = chronicle.facts.size()
+	bus.run_ended.emit(0, {})
+	bus.roadside_moment.emit(&"dog_chase", [])
+	_expect(chronicle.facts.size() == tail, "...but not once the run is over")
+	bus.run_started.emit(&"test_route", [1])
+	chronicle.facts.clear()
 
 	# The crew is who is in the level, with the nickname each one carries.
 	var scene: PackedScene = load("res://scenes/gameplay/player/player.tscn")

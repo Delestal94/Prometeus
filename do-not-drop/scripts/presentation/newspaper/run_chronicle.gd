@@ -31,6 +31,10 @@ const CONTENT_FAMILIES: Dictionary = {
 }
 ## route_event_started ids that are an incident on the road, and their story.
 const INCIDENT_KINDS: Dictionary = {&"deer_hit": "deer_hit", &"sheep_hit": "sheep_hit"}
+## roadside_moment kinds that are a story of their own, as the story they are.
+const ROADSIDE_KINDS: Dictionary = {&"dog_chase": "dog_chase", &"train_stop": "train_stop"}
+## How a run ends when the van lies on its side (RunManager results "reason").
+const TIPPED_REASON: String = "HUD_RUN_TIPPED"
 
 ## What the last paper printed (kind -> variant), for the next one to avoid.
 ## Static: it outlives the level, so a restart doesn't repeat the same jokes.
@@ -57,6 +61,7 @@ func _ready() -> void:
 	EventBus.delivery_care_noted.connect(_on_care_noted)
 	EventBus.cargo_overboard_ended.connect(_on_overboard_ended)
 	EventBus.route_event_started.connect(_on_route_event)
+	EventBus.roadside_moment.connect(_on_roadside_moment)
 	EventBus.vehicle_fault_started.connect(_on_fault_started)
 	EventBus.vehicle_fault_repaired.connect(_on_fault_repaired)
 	EventBus.package_ruined.connect(_on_package_ruined)
@@ -165,6 +170,21 @@ func _on_route_event(event_id: StringName, event: Dictionary) -> void:
 		note(String(INCIDENT_KINDS[event_id]), -1, [], _driver())
 
 
+## A dog that chased the van or a train it waited for. Repeats make one story
+## (the paper has room for one), and the horn that sent a dog home tags it.
+func _on_roadside_moment(kind: StringName, tags: Array) -> void:
+	if not _running or not ROADSIDE_KINDS.has(kind):
+		return
+	var story: String = String(ROADSIDE_KINDS[kind])
+	for fact: Dictionary in facts:
+		if fact["kind"] == story:
+			for tag: Variant in tags:
+				if tag not in fact["tags"]:
+					(fact["tags"] as Array).append(tag)
+			return
+	note(story, -1, tags.duplicate(), _driver())
+
+
 func _on_fault_started(fault_id: StringName, _position: Vector3) -> void:
 	if _running:
 		_faults[fault_id] = note("fault_" + String(fault_id), -1, [], _driver())
@@ -206,9 +226,14 @@ func compose(results: Dictionary, crew: Array = [], seed_value: int = 0) -> Dict
 	var all: Array = facts.duplicate(true)
 	var endless: bool = results.has("distance_traveled")
 	var kilometres: float = float(results.get("distance_traveled", RunManager.current_distance)) / 1000.0
+	# A rollover is the front page of a failed run (it replaces "run_failed",
+	# which would tell the same news twice) and goes beside an Endless run's end.
+	var tipped: bool = String(results.get("reason", "")) == TIPPED_REASON
+	if tipped:
+		all.append(_stamp({"kind": "rollover", "house": -1, "tags": [], "peer": _driver()}))
 	if endless:
 		all.append(_stamp({"kind": "endless_end", "house": -1, "tags": [], "peer": _driver()}))
-	elif not bool(results.get("delivered", false)):
+	elif not tipped and not bool(results.get("delivered", false)):
 		all.append(_stamp({"kind": "run_failed", "house": -1, "tags": [], "peer": _driver()}))
 	all.append_array(_facts_from_results(results, all))
 	var context: Dictionary = {
