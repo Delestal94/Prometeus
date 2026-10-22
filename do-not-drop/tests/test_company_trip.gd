@@ -8,7 +8,9 @@ extends SceneTree
 ##   the other one becomes FAILED, with the time spent outside recorded;
 ## - TripGate only counts crossings through the opening, in the right
 ##   direction, and ignores the first position it sees;
-## - a closed trip cannot deliver or close again.
+## - a closed trip cannot deliver or close again;
+## - D-0319: the trip lasts as many game minutes as the real time outside x 60 / 90 (the clock
+##   always runs, S3), and its summary shows the leaving and coming back time as HH:MM.
 
 var _failures: int = 0
 
@@ -22,6 +24,7 @@ func _run() -> void:
 	_test_start_skips_unpacked()
 	_test_gate_crossings()
 	_test_closed_trip_is_final()
+	_test_trip_spends_day_hours()
 	quit(_failures)
 
 
@@ -97,3 +100,22 @@ func _test_closed_trip_is_final() -> void:
 	_expect(trip.close(book, 30).is_empty(), "a second close does nothing")
 	_expect(trip.return_min == 20, "return time is the first close")
 	_expect(not trip.deliver(&"o1", book, 100, true, 25), "closed trip delivers nothing")
+
+
+func _test_trip_spends_day_hours() -> void:
+	var clock := GameClock.new()
+	var ticks: Array[int] = [0]
+	clock.ticks = func() -> int: return ticks[0]
+	clock.start(float(CompanyTuning.DAY_START_MIN))
+	var book := _book([&"o1"])
+	var depart: int = roundi(clock.minute_now())
+	var trip := Trip.start(&"t5", &"van", [&"o1"], [], book, depart)
+	ticks[0] = 270000  # 270 real s = 3 game hours at 90 s per hour
+	trip.close(book, roundi(clock.minute_now()))
+	var expected: float = 270.0 * 60.0 / CompanyTuning.SECONDS_PER_GAME_HOUR
+	_expect(absf(float(trip.duration_min()) - expected) <= 1.0, "180 game min for 270 real s, got %d" % trip.duration_min())
+	var result: Dictionary = TripResult.build(trip, book)
+	_expect(result["depart_clock"] == TripResult.clock_text(depart), "summary has the leaving time")
+	_expect(result["return_clock"] == TripResult.clock_text(depart + trip.duration_min()), "summary has the return time")
+	_expect(TripResult.clock_text(1450) == "00:10" and TripResult.clock_text(-1) == "", "clock text wraps past midnight")
+	clock.free()
