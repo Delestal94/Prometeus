@@ -651,7 +651,8 @@ func _add_supplier_truck() -> void:
 ## The supplier orders (D-0603.b.2), on every peer: the calendar the truck reads is CompanyNet's (an order
 ## is a supplier_order request the host checks and a supplier_ordered event every peer applies; a late
 ## joiner gets it in the snapshot) and the shed's board opens the order screen on the peer that used it.
-## Host (solo too): the calendar comes from the company's save (days before today dropped) and is written
+## Host (solo too): the calendar comes from the company's save (days before today dropped, the rest cut to
+## what a client takes, CompanySupplierNet.fit(), so a broken save cannot keep anyone out) and is written
 ## back to it after every order, so a closed or interrupted day keeps what was ordered. A company on its
 ## first day with nothing for it gets the first truck, DefaultShed.first_order: the delivery whose pallets
 ## DefaultShed.first_pallets() put in reception (same ids); the other days bring only what was ordered.
@@ -670,6 +671,9 @@ func _add_supplier_orders() -> void:
 		supplier_schedule.copy_from(SupplierSchedule.from_dict(_hosted_state.supplier_calendar))
 		supplier_schedule.forget_before(_hosted_state.day)
 		_seed_first_truck(_hosted_state.day)
+		var cut: int = CompanySupplierNet.fit(supplier_schedule)
+		if cut > 0:
+			push_warning("CompanyRoot: the saved supplier calendar was cut to what a snapshot carries (%d cut)" % cut)
 		_hosted_state.supplier_calendar = supplier_schedule.to_dict()
 		net.event_applied.connect(_on_supplier_ordered)
 	supplier_board = SupplierBoard.new()
@@ -763,6 +767,7 @@ func _add_builder() -> void:
 	builder.name = "ShedBuilder"
 	add_child(builder)
 	builder.setup(shed, net, player)
+	builder.busy = func() -> bool: return supplier_board != null and supplier_board.is_open()
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,

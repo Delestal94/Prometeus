@@ -10,7 +10,8 @@ extends SceneTree
 ##   closed day is day_closed, a short wallet no_funds and a day's truck past MAX_DAY_QTY too_much, and
 ##   none of them changes the calendar; an event that does not fit (keys, duplicates, units) is refused
 ##   by apply() and changes nothing; applying one drops the days before its order_day; the snapshot
-##   part comes back equal and a malformed one is refused, the calendar as it was;
+##   part comes back equal and a malformed one is refused, the calendar as it was; fit() cuts a calendar
+##   past the snapshot's limits (days, units) to one a client takes, and leaves one that fits alone;
 ## - the save: CompanyState keeps the calendar (supplier_calendar) through CompanySave's JSON, and a
 ##   malformed one loads as an empty calendar;
 ## - solo on the real root: the first day brings the first truck (DefaultShed.first_order) and nothing
@@ -18,13 +19,21 @@ extends SceneTree
 ##   (and focus) an event does not rebuild while it is open; one pallet
 ##   (24 units) ordered with Order is in the calendar of the next day, in the company's save copy too,
 ##   the cart is empty and the screen says so; on that day the truck comes; with no money the host refuses
-##   the request (no_funds) and nothing changes; leaving the root saves the calendar;
+##   the request (no_funds) and nothing changes; leaving the root saves the calendar; a save whose calendar
+##   is past the snapshot's limits loads cut (one warning), so a client's put_snapshot() takes it;
 ## - two ENet peers and a late joiner in one process (each its own CompanyNet and company; the client
 ##   with a SupplierBoard): the client's Order is a request, the screen waits, the host applies it
 ##   and both calendars carry it, and the client's screen shows it ordered with the cart empty; when the
 ##   host's wallet is short (the client's copy still covers it) the host refuses, the client's screen
-##   shows why with its cart as it was, and no calendar changes; a peer that joins late gets the calendar
-##   in the snapshot and sees the same truck.
+##   shows why with its cart as it was, and no calendar changes; "+" while the answer is on its way adds a
+##   unit (ok) and it stays in the cart after the order lands; a resync that covers the order's event
+##   (the client waits for a snapshot before the event comes) still settles the screen as ordered; a
+##   request the host drops without a word ends with the screen giving up after ANSWER_TIMEOUT_MSEC; the
+##   snapshot's company part carries no supplier_calendar (the "supplier" part is the one source); a
+##   peer that joins late gets the calendar in the snapshot and sees the same truck;
+## - SupplierBoardPoint between two peers: the host's interact() with the client's player opens the screen
+##   on the client only (_open_here).
+## Expected in the log: one warning (the broken save's calendar cut) and the engine's leak notes at exit.
 
 const PORT: int = 24676
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -35,6 +44,7 @@ const KEYS: Array[String] = [
 	"WORLD_SHED_USE_SUPPLIER",
 ]
 const DAY: int = 5
+const STATE_DIR_SLOT: String = CompanySave.DEFAULT_SLOT
 
 var _failures: int = 0
 
@@ -58,6 +68,7 @@ func _run() -> void:
 	_test_helper()
 	_test_save()
 	await _test_root()
+	await _test_root_broken_save()
 	await _test_peers()
 	if _failures == 0:
 		print("PASS: supplier orders go through the host and every peer's calendar, by event and snapshot")
@@ -168,6 +179,23 @@ func _test_helper() -> void:
 	for wrong_part: Variant in wrong_parts:
 		_expect(not copy.put_snapshot(wrong_part) and copy.schedule.to_dict() == part,
 			"A malformed snapshot part is refused and changes nothing (%s)" % [str(wrong_part).left(60)])
+	var fitting: SupplierSchedule = SupplierSchedule.from_dict(part)
+	_expect(CompanySupplierNet.fit(fitting) == 0 and fitting.to_dict() == part,
+		"fit() leaves a calendar that fits alone")
+	var oversized: SupplierSchedule = _oversized()
+	_expect(not CompanySupplierNet.new().put_snapshot(oversized.to_dict()), "An oversized calendar is no snapshot part")
+	_expect(CompanySupplierNet.fit(oversized) > 0 and oversized.day_count() == CompanySupplierNet.MAX_DAYS
+		and oversized.ordered_for(2) == {&"hen": CompanySupplierNet.MAX_DAY_QTY},
+		"fit() keeps the first MAX_DAYS days, the units down to MAX_DAY_QTY (got %d days)" % oversized.day_count())
+	_expect(CompanySupplierNet.new().put_snapshot(oversized.to_dict()), "...and a client takes what is left")
+
+
+## A calendar past the snapshot's limits: MAX_DAYS + 8 days from day 2, each MAX_DAY_QTY + 1000 hens.
+static func _oversized() -> SupplierSchedule:
+	var deliveries: Dictionary = {}
+	for day: int in range(2, CompanySupplierNet.MAX_DAYS + 10):
+		deliveries[str(day)] = {"hen": CompanySupplierNet.MAX_DAY_QTY + 1000}
+	return SupplierSchedule.from_dict({"deliveries": deliveries})
 
 
 func _test_save() -> void:
@@ -220,8 +248,11 @@ func _test_root() -> void:
 		and point.get_prompt() != "WORLD_SHED_USE_SUPPLIER", "The board by the dock has its point and prompt")
 	_expect(point != null and level.shed.holds(point.global_position), "...inside the shed")
 	var board: SupplierBoard = level.supplier_board
+	_expect(board != null and level.player != null, "The root has its supplier board and its player")
 	if point == null or board == null or level.player == null:
 		level.free()
+		state.call(&"reset")
+		_clean()
 		return
 	point.interact(level.player)
 	_expect(board.is_open() and board.panel.visible, "Using the board opens the order screen")
@@ -268,6 +299,29 @@ func _test_root() -> void:
 	_expect(SupplierSchedule.from_dict(saved.supplier_calendar).ordered_for(2) == {product: 24},
 		"Leaving the root saves the calendar (got %s)" % [saved.supplier_calendar])
 	saved.free()
+	state.call(&"reset")
+	_clean()
+
+
+## Solo on the real root, from a save whose calendar is past the snapshot's limits: it loads cut.
+func _test_root_broken_save() -> void:
+	_clean()
+	var saved: Node = STATE_SCRIPT.new()
+	saved.new_company("Broken")
+	saved.supplier_calendar = _oversized().to_dict()
+	_expect(CompanySave.save(saved, STATE_DIR_SLOT, DIR), "A company with an oversized calendar is saved")
+	saved.free()
+	var state: Node = root.get_node(^"/root/CompanyState")
+	state.call(&"reset")
+	var level := (load(SCENE) as PackedScene).instantiate() as CompanyRoot
+	level.save_dir = DIR
+	root.add_child(level)
+	await process_frame
+	var part: Variant = level.net.snapshot().get(CompanySupplierNet.SNAPSHOT_KEY)
+	_expect(level.supplier_schedule.day_count() <= CompanySupplierNet.MAX_DAYS
+		and CompanySupplierNet.new().put_snapshot(part),
+		"The host cuts a saved calendar past the limits, so a client's put_snapshot() takes it")
+	level.free()
 	state.call(&"reset")
 	_clean()
 
@@ -326,7 +380,12 @@ func _test_peers() -> void:
 		_expect(host_net.send_snapshot(client_net.multiplayer.get_unique_id()), "The host sends the snapshot")
 		var joined: bool = await _wait_for(func() -> bool: return not client_net.awaiting_snapshot())
 		_expect(joined, "The client joins")
+		_expect(not (host_net.snapshot()["company"] as Dictionary).has("supplier_calendar"),
+			"The snapshot's company part carries no supplier_calendar (the supplier part does)")
+		await _check_board_point(host, client)
 		await _check_client_orders(host, client)
+		await _check_resync_covers_order(host, client)
+		await _check_dropped_request(client)
 		await _check_client_refused(host, client)
 		await _check_late_join(host_net)
 	client_peer.close()
@@ -353,14 +412,91 @@ func _check_client_orders(host: Dictionary, client: Dictionary) -> void:
 		board.panel.more(&"hen")
 	_expect(board.panel.confirm() == 1 and board.panel.is_waiting(), "The client's Order is sent and the screen waits")
 	_expect(client_net.supplier.schedule.day_count() == 0, "...nothing is written on the client ahead of the host")
+	var extra: Dictionary = board.panel.more(&"hen")
+	_expect(extra.get("ok") == true and board.cart.qty(&"hen") == 25 and board.panel.is_waiting()
+		and board.panel.status_text() == tr("UI_SUPPLIER_SENT"),
+		"'+' while the answer is on its way adds a unit, ok, still waiting (got %s)" % [extra])
 	var arrived: bool = await _wait_for(func() -> bool: return not board.panel.is_waiting())
 	_expect(arrived and host_net.supplier.schedule.ordered_for(DAY + 1) == {&"hen": 24},
 		"The host applied the client's order for day %d (got %s)" % [DAY + 1, host_net.supplier.schedule.to_dict()])
 	_expect(client_net.supplier.schedule.to_dict() == host_net.supplier.schedule.to_dict()
 		and client_net.seq == host_net.seq, "...and the client's calendar is the host's")
-	_expect(board.cart.is_empty() and ordered.size() == 1 and ordered[0][1] == DAY + 1
+	_expect(board.cart.qty(&"hen") == 1 and ordered.size() == 1 and ordered[0][1] == DAY + 1
 		and board.panel.status_text() == SupplierOrderPanel.reason_text("UI_SUPPLIER_ORDERED", [1, DAY + 1]),
-		"The client's screen shows it ordered, cart empty (got '%s')" % board.panel.status_text())
+		"The client's screen shows it ordered; only the unit added meanwhile is left (got '%s')"
+		% board.panel.status_text())
+	board.cart.clear()
+
+
+## The client waits for a snapshot before the order's event comes: the event is held and the snapshot
+## covers it (no event_applied for it here), and the screen still settles as ordered.
+func _check_resync_covers_order(host: Dictionary, client: Dictionary) -> void:
+	var host_net: CompanyNet = host["net"]
+	var client_net: CompanyNet = client["net"]
+	var board: SupplierBoard = client["board"]
+	var applied: Array = []
+	var count := func(_seq: int, kind: StringName, _data: Dictionary) -> void: applied.append(kind)
+	client_net.event_applied.connect(count)
+	var before: int = int(host_net.supplier.schedule.ordered_for(DAY + 1).get(&"hen", 0))
+	for _press: int in range(24):
+		board.panel.more(&"hen")
+	_expect(board.panel.confirm() == 1, "Another order goes")
+	client_net._start_waiting()
+	var settled: bool = await _wait_for(func() -> bool: return not board.panel.is_waiting())
+	_expect(settled and not applied.has(CompanySupplierNet.ORDERED) and not client_net.awaiting_snapshot(),
+		"A resync covers the order's event (no event_applied here for it, got %s)" % [applied])
+	_expect(host_net.supplier.schedule.ordered_for(DAY + 1).get(&"hen", 0) == before + 24
+		and client_net.supplier.schedule.to_dict() == host_net.supplier.schedule.to_dict(),
+		"...the calendars agree with the order in")
+	_expect(board.cart.is_empty() and not board.is_pending()
+		and board.panel.status_text() == SupplierOrderPanel.reason_text("UI_SUPPLIER_ORDERED", [1, DAY + 1]),
+		"...and the screen settles as ordered, cart empty (got '%s')" % board.panel.status_text())
+	client_net.event_applied.disconnect(count)
+
+
+## A request the host drops without a word (a product key too long for RpcGuard.dict_ok): the screen
+## gives up after ANSWER_TIMEOUT_MSEC, the cart as it was.
+func _check_dropped_request(client: Dictionary) -> void:
+	var board: SupplierBoard = client["board"]
+	var ctx: Dictionary = board.context()
+	ctx["request"] = func(_lines: Array[Dictionary]) -> int:
+		return board.send([{"product": "x".repeat(RpcGuard.MAX_TEXT_LENGTH + 6), "qty": 1}])
+	board.panel.update_totals(ctx)
+	board.panel.more(&"hen")
+	_expect(board.panel.confirm() == 1 and board.is_pending(), "A request the host will drop goes")
+	for _frame: int in range(10):
+		await process_frame
+	_expect(board.panel.is_waiting() and not board.poll_answer(Time.get_ticks_msec()),
+		"Nobody answers it, and before the timeout the screen still waits")
+	_expect(board.poll_answer(Time.get_ticks_msec() + SupplierBoard.ANSWER_TIMEOUT_MSEC)
+		and not board.panel.is_waiting() and not board.is_pending()
+		and board.panel.status_text() == tr("UI_SUPPLIER_REFUSED") and board.cart.qty(&"hen") == 1,
+		"After ANSWER_TIMEOUT_MSEC the screen gives up, the cart as it was (got '%s')" % board.panel.status_text())
+	board.cart.clear()
+	board.panel.update_totals(board.context())
+
+
+## The host's SupplierBoardPoint used by the client's player opens the screen on the client only.
+func _check_board_point(host: Dictionary, client: Dictionary) -> void:
+	var points: Array[SupplierBoardPoint] = []
+	var opened: Array[int] = [0, 0]
+	for index: int in range(2):
+		var point: SupplierBoardPoint = SupplierBoardPoint.make()
+		(([host, client][index] as Dictionary)["side"] as Node).add_child(point)
+		point.opened.connect(func() -> void: opened[index] += 1)
+		points.append(point)
+	var client_id: int = (client["net"] as CompanyNet).multiplayer.get_unique_id()
+	var stand_in := Node3D.new()
+	stand_in.name = "ClientPlayer"
+	(host["side"] as Node).add_child(stand_in)
+	stand_in.set_multiplayer_authority(client_id)
+	points[0].interact(stand_in)
+	var arrived: bool = await _wait_for(func() -> bool: return opened[1] == 1)
+	_expect(arrived and opened == [0, 1],
+		"The host's interact() opens the screen on the client only (got %s)" % [opened])
+	stand_in.free()
+	for point: SupplierBoardPoint in points:
+		point.free()
 
 
 func _check_client_refused(host: Dictionary, client: Dictionary) -> void:
@@ -402,7 +538,7 @@ func _check_late_join(host_net: CompanyNet) -> void:
 	_expect(host_net.send_snapshot(late_net.multiplayer.get_unique_id()), "The host sends it the snapshot")
 	var joined: bool = await _wait_for(func() -> bool: return not late_net.awaiting_snapshot())
 	_expect(joined and late_net.supplier.schedule.to_dict() == host_net.supplier.schedule.to_dict()
-		and late_net.supplier.schedule.ordered_for(DAY + 1) == {&"hen": 24},
+		and late_net.supplier.schedule.ordered_for(DAY + 1) == {&"hen": 48},
 		"The late peer gets the calendar in the snapshot (got %s)" % [late_net.supplier.schedule.to_dict()])
 	var minute: float = float(SupplierSchedule.arrival_minute()) + 10.0
 	var on_host: Dictionary = SupplierTruck.pose(host_net.supplier.schedule, DAY + 1, minute, 0)

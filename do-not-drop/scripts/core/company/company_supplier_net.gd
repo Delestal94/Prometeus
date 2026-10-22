@@ -182,5 +182,38 @@ func put_snapshot(value: Variant) -> bool:
 	return true
 
 
+## Host: cuts `schedule` down to what a client's put_snapshot() takes (a loaded save may hold more): the
+## first MAX_DAYS days, MAX_DAY_PRODUCTS products a day (in id order) of at most MAX_DAY_QTY units, ids
+## that fit. Returns how many days, products or quantities were cut (0: it already fit, nothing changed).
+static func fit(schedule: SupplierSchedule) -> int:
+	var deliveries: Dictionary = schedule.to_dict()["deliveries"]
+	var days: Array = deliveries.keys()
+	days.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
+	var kept: Dictionary = {}
+	var cut: int = 0
+	for day: String in days:
+		var wanted: Dictionary = deliveries[day]
+		if kept.size() >= MAX_DAYS:
+			cut += 1
+			continue
+		var products: Array = wanted.keys()
+		products.sort()
+		var clean: Dictionary = {}
+		for product: String in products:
+			if not _id_ok(product) or clean.size() >= MAX_DAY_PRODUCTS:
+				cut += 1
+				continue
+			var qty: int = int(wanted[product])
+			if qty > MAX_DAY_QTY:
+				qty = MAX_DAY_QTY
+				cut += 1
+			clean[product] = qty
+		if not clean.is_empty():
+			kept[day] = clean
+	if cut > 0:
+		schedule.copy_from(SupplierSchedule.from_dict({"deliveries": kept}))
+	return cut
+
+
 static func _id_ok(value: Variant) -> bool:
 	return CompanyAsk.is_id(value) and not String(value).is_empty() and String(value).length() <= MAX_ID_LENGTH

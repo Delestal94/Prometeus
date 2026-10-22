@@ -593,15 +593,15 @@ func _build_supplier_board() -> void:
 	board.mesh = mesh
 	board.position = at + Vector3(0.0, SUPPLIER_BOARD_HEIGHT, -SUPPLIER_BOARD_SIZE.z * 0.5)
 	add_child(board)
-	var sign := Label3D.new()
-	sign.name = "Sign"
-	sign.text = tr(SupplierBoardPoint.PROMPT_KEY)
-	sign.font_size = 28
-	sign.pixel_size = 0.004
-	sign.outline_size = 8
-	sign.position = Vector3(0.0, SUPPLIER_BOARD_SIZE.y * 0.5 + 0.12, 0.0)
-	sign.rotation.y = PI
-	board.add_child(sign)
+	var title := Label3D.new()
+	title.name = "Sign"
+	title.text = tr(SupplierBoardPoint.PROMPT_KEY)
+	title.font_size = 28
+	title.pixel_size = 0.004
+	title.outline_size = 8
+	title.position = Vector3(0.0, SUPPLIER_BOARD_SIZE.y * 0.5 + 0.12, 0.0)
+	title.rotation.y = PI
+	board.add_child(title)
 	supplier_point = SupplierBoardPoint.make()
 	supplier_point.position = at + Vector3(0.0, 1.0, -0.6)
 	supplier_point.opened.connect(func() -> void: supplier_board_opened.emit())

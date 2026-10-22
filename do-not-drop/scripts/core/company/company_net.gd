@@ -367,7 +367,7 @@ func remove_snapshot_part(key: String) -> bool:
 ## Host: the business state as a snapshot carries it (section 3), as plain data:
 ##   seq        int: the last event it covers; the peer drops every event up to it
 ##   inventory  the live stock with its reservations (Inventory.to_dict())
-##   company    CompanyState.to_dict() without its stored stock (the live one is `inventory`):
+##   company    CompanyState.to_dict() without its stored stock and calendar (live: `inventory`, `supplier`):
 ##              money, day and clock, reputation, gates (the locks), fleet, employees,
 ##              milestones, layout, ledger. Missing without a `company`
 ##   floor      {floor:<n>: Vector3}: where each bundle on the floor lies (FloorBundles)
@@ -381,6 +381,7 @@ func snapshot() -> Dictionary:
 		if state is Dictionary:
 			var stored: Dictionary = state
 			stored.erase("inventory")
+			stored.erase("supplier_calendar")
 			data["company"] = stored
 	for key: String in _parts:
 		var take: Callable = _parts[key][0]

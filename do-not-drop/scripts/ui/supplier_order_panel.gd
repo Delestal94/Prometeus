@@ -62,7 +62,9 @@ func _ready() -> void:
 func open(ctx: Dictionary) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_clear_status()
-	_sent_lines = []
+	if is_waiting():
+		# Closed and opened again while the host's answer is on its way: it still waits for it.
+		_status_key = "UI_SUPPLIER_SENT"
 	refresh(ctx)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
@@ -318,8 +320,9 @@ func _edit(product: StringName, delta: int) -> Dictionary:
 		return {"ok": false, "key": "UI_SUPPLIER_REFUSED", "args": []}
 	var done: bool = cart.add(product, delta) if delta > 0 else cart.remove(product, -delta)
 	var verdict: Dictionary = {"ok": done, "key": "", "args": []}
-	if done and not is_waiting():
-		_clear_status()
+	if done:
+		if not is_waiting():
+			_clear_status()
 	elif delta > 0:
 		verdict = {"ok": false, "key": "UI_SUPPLIER_LINE_MAX", "args": [SupplierOrderCart.MAX_LINE_QTY]}
 		_status_key = String(verdict["key"])

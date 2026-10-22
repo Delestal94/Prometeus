@@ -15,6 +15,11 @@ Qué cambió en la red de la empresa (Nacho, `scripts/core/company/`):
 - `CompanySupplierNet` (nuevo): chequeo del host y aplicación en cada peer.
 - `CompanyState.supplier_calendar` (nuevo, en `to_dict`/`from_dict`, tolerante): el save de empresa guarda el
   calendario. No sube la versión del save (un save viejo carga con el calendario vacío).
+- `CompanyNet.snapshot()` saca `supplier_calendar` de la parte `company` (como `inventory`): la única fuente
+  es la parte `supplier`. Un test que compare la empresa del cliente con la del host tiene que sacarlo también
+  (`test_company_online._company()` ya lo hace).
+- Al cargar, el host recorta el calendario guardado a lo que acepta `put_snapshot` (`CompanySupplierNet.fit()`,
+  con un warning): un save roto no deja a los clientes sin entrar.
 
 Dominio de Slatex tocado (sin firmas cambiadas, solo agregados):
 - `scripts/ui/supplier_order_panel.gd`: el ctx acepta `request: Callable(lines) -> int`; con eso "Pedir" pide al
@@ -26,6 +31,9 @@ Dominio de Slatex tocado (sin firmas cambiadas, solo agregados):
   `DepotStation._open_locally`. Señal `opened`.
 - Textos: `UI_SUPPLIER_SENT`, `UI_SUPPLIER_DAY_CLOSED`, `UI_SUPPLIER_TOO_MUCH`,
   `UI_SUPPLIER_NAME_DISTRIBUIDORA_CENTRAL` (`strings_ui.csv`) y `WORLD_SHED_USE_SUPPLIER` (`strings_world.csv`).
+
+`shed_builder.gd` (sin dueño): `var busy: Callable` nuevo; `enter()` se niega mientras devuelve true (la raíz le
+pasa `supplier_board.is_open()`, así no se entra al modo construcción con la pantalla de pedido abierta).
 
 Mundo (sin dueño): `company_root.gd` (`_add_supplier_orders()`, `_seed_first_truck()`, `_on_supplier_ordered()`;
 se quitó `_seed_stand_in_calendar()` y `STAND_IN_DAYS`), `company_shed.gd` (`_build_supplier_board()`,
