@@ -2,31 +2,26 @@ class_name CompanyNet
 extends Node
 ## Business events of the company mode, by reliable RPC with a sequence number (D-2003).
 ##
-## The contract is docs/expansion-distritos/diseno/red-autoridad.md (D-2001). A client never
-## writes business state, not even ahead of time: it asks the host (_request, through
-## RpcGuard), the host checks the request with what only it knows (stock, reach, hands),
-## applies the resulting event and sends it, numbered, to every ready peer (_apply_event),
-## where the same code applies it again. A refused request tells only its sender why
-## (_rejected); a dropped one (malformed, over budget) tells nobody.
+## The contract is docs/expansion-distritos/diseno/red-autoridad.md (D-2001). A client never writes business state, not
+## even ahead of time: it asks the host (_request, through RpcGuard), the host checks the request with what only it
+## knows (stock, reach, hands), applies the resulting event and sends it, numbered, to every ready peer (_apply_event),
+## where the same code applies it again. A refused request tells only its sender why (_rejected); a dropped one
+## (malformed, over budget) tells nobody.
 ##
-## Events carry `seq`. Reliable delivery loses nothing, so the only gap is an event sent
-## before this peer's world was up: a peer that sees a number skipped holds what comes next
-## and asks for a snapshot (snapshot_request, at most one per SNAPSHOT_INTERVAL_MSEC per peer
-## on the host).
+## Events carry `seq`. Reliable delivery loses nothing, so the only gap is an event sent before this peer's world was
+## up: a peer that sees a number skipped holds what comes next and asks for a snapshot (snapshot_request, at most one
+## per SNAPSHOT_INTERVAL_MSEC per peer on the host).
 ##
-## The snapshot (D-2004, the contract's section 3) is the whole business state at the host's
-## current seq (snapshot()). The host sends it to a peer when that peer's world comes up
-## (NetworkManager.peer_level_ready) and when it asks; it travels compressed, in chunks of at
-## most SNAPSHOT_CHUNK_BYTES (_snapshot), on the same reliable channel as the events, so it
-## lands before any event that comes after it. The peer holds every event until the last
-## chunk is in, puts the host's state in place of its own (apply_snapshot(): one
-## company_state_restored, no fact signal), drops the held events the snapshot covers and
-## applies the rest in order.
+## The snapshot (D-2004, the contract's section 3) is the whole business state at the host's current seq (snapshot()).
+## The host sends it to a peer when that peer's world comes up (NetworkManager.peer_level_ready) and when it asks; it
+## travels compressed, in chunks of at most SNAPSHOT_CHUNK_BYTES (_snapshot), on the same reliable channel as the
+## events, so it lands before any event that comes after it. The peer holds every event until the last chunk is in, puts
+## the host's state in place of its own (apply_snapshot(): one company_state_restored, no fact signal), drops the held
+## events the snapshot covers and applies the rest in order.
 ##
-## Child of the company world (CompanyRoot today, CompanyWorld once it exists), always named
-## "CompanyNet" so its RPC path is the same on every peer. The owner hands it the live
-## `inventory`, the `company` state, the `stations` lookup and any other snapshot part
-## (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
+## Child of the company world (CompanyRoot today, CompanyWorld once it exists), always named "CompanyNet" so its RPC
+## path is the same on every peer. The owner hands it the live `inventory`, the `company` state, the `stations` lookup
+## and any other snapshot part (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
 ## path, only to know which peers have their world up and when one comes up.
 ##
 ## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section 2; units_drop is
@@ -132,13 +127,11 @@ const REASON_HANDS_BUSY: StringName = &"hands_busy"
 const REASON_WRONG_PRODUCT: StringName = &"wrong_product"
 const REASON_NO_ROOM: StringName = &"no_room"
 
-## The stock every units event moves. The owner sets it (CompanyRoot: CompanyState.stock());
-## the host and each client hold their own copy, kept equal by the events. Writing it back to
-## CompanyState before a save is D-0206's.
+## The stock every units event moves. The owner sets it (CompanyRoot: CompanyState.stock()); the host and each client
+## hold their own copy, kept equal by the events. Writing it back to CompanyState before a save is D-0206's.
 var inventory: Inventory = Inventory.new()
-## The CompanyState node (by reference, never by autoload name), or null. The host puts its
-## to_dict() in every snapshot; a client loads the host's into it, its only write there
-## (rule 1). The owner sets it on every peer (CompanyRoot).
+## The CompanyState node (by reference, never by autoload name), or null. The host puts its to_dict() in every snapshot;
+## a client loads the host's into it, its only write there (rule 1). The owner sets it on every peer (CompanyRoot).
 var company: Object = null
 ## Where each bundle of units on the floor lies (D-2006), kept by the units_moved events and
 ## the snapshot on every peer. Read it, never write it: only events change it.

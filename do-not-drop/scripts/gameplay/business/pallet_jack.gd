@@ -5,7 +5,7 @@ extends RefCounted
 ## Pure data, no node, no autoload: a pallet is on the truck's bed, carried by the jack or standing on
 ## the shed floor at a point in meters, or on a rack slot (D-0606).
 ## The jack takes one pallet at a time. Units reach the Inventory
-## (Pallet.receive) once, when a pallet from the bed is put down on the floor, so a pallet that never
+## (Pallet.receive) once, when a pallet from the bed is first put down (its place's `received`), so a pallet that never
 ## leaves the bed is never counted and leaves with the truck. The nodes that draw and drive it come
 ## with D-0605.b. Host authority: peers apply the same calls in the same order.
 
@@ -15,7 +15,8 @@ const AT_FLOOR: StringName = &"floor"
 ## On a rack slot (D-0606): only the forklift reaches that high (PalletForklift).
 const AT_RACK: StringName = &"rack"
 
-## Pallet id -> {pallet (the Pallet dictionary), at (AT_*), pos (Vector2, only on the floor)}.
+## Pallet id -> {pallet (the Pallet dictionary), at (AT_*), pos (Vector2, only on the floor), received (bool: its
+## units went into the Inventory, at its first put-down; never again, even emptied)}.
 var places: Dictionary = {}
 ## Id of the pallet on the jack, &"" when it is empty.
 var carrying: StringName = &""
@@ -28,7 +29,7 @@ func load_bed(pallets: Array[Dictionary]) -> int:
 		var id := StringName(pallet.get("id", &""))
 		if not Pallet.validate(pallet).is_empty() or places.has(id):
 			continue
-		places[id] = {"pallet": pallet, "at": AT_BED}
+		places[id] = {"pallet": pallet, "at": AT_BED, "received": false}
 		loaded += 1
 	return loaded
 
@@ -84,13 +85,9 @@ func can_put_down(pos: Vector2, floor_rect: Rect2) -> bool:
 ## another floor pallet. A pallet that came from the bed is received into `inventory` here, once.
 ## False, changing nothing, when the jack is empty or the spot is not free.
 func put_down(pos: Vector2, floor_rect: Rect2, inventory: Inventory) -> bool:
-	if not can_put_down(pos, floor_rect):
+	if not can_put_down(pos, floor_rect) or not _receive_carried(inventory):
 		return false
 	var place: Dictionary = places[carrying]
-	var pallet: Dictionary = place["pallet"]
-	if inventory.contents_at(Pallet.location(carrying)).is_empty():
-		if not Pallet.receive(inventory, pallet):
-			return false
 	place["at"] = AT_FLOOR
 	place["pos"] = pos
 	carrying = &""
@@ -101,18 +98,31 @@ func put_down(pos: Vector2, floor_rect: Rect2, inventory: Inventory) -> bool:
 ## holds it. Like put_down, a pallet from the bed is received into `inventory` here, once. False,
 ## changing nothing, when the jack is empty or the slot is taken. Height and reach are PalletForklift's.
 func put_on_rack(slot: StringName, pos: Vector2, inventory: Inventory) -> bool:
-	if carrying == &"" or slot == &"" or rack_pallet(slot) != &"":
+	if carrying == &"" or slot == &"" or rack_pallet(slot) != &"" or not _receive_carried(inventory):
 		return false
 	var place: Dictionary = places[carrying]
-	var pallet: Dictionary = place["pallet"]
-	if inventory.contents_at(Pallet.location(carrying)).is_empty():
-		if not Pallet.receive(inventory, pallet):
-			return false
 	place["at"] = AT_RACK
 	place["pos"] = pos
 	place["slot"] = slot
 	carrying = &""
 	return true
+
+
+## The carried pallet's units into `inventory` the first time it is set down (its `received`), never again, not
+## even once it was emptied (D-0605.b). Units already at its location count as received. False when they do not fit.
+func _receive_carried(inventory: Inventory) -> bool:
+	var place: Dictionary = places[carrying]
+	if not _received(place) and inventory.contents_at(Pallet.location(carrying)).is_empty():
+		if not Pallet.receive(inventory, place["pallet"]):
+			return false
+	place["received"] = true
+	return true
+
+
+## Whether a place's units were received (its `received` is true; missing or not a bool, no).
+static func _received(place: Dictionary) -> bool:
+	var flag: Variant = place.get("received", false)
+	return flag is bool and flag
 
 
 ## Id of the pallet on rack slot `slot`, &"" when it is free.
@@ -143,6 +153,7 @@ func to_dict() -> Dictionary:
 	var out: Dictionary = {}
 	for id: StringName in places:
 		var place: Dictionary = places[id].duplicate()
+		place["received"] = _received(place)
 		if place.has("pos"):
 			place["pos"] = [place["pos"].x, place["pos"].y]
 		if place.has("slot"):
@@ -160,6 +171,7 @@ func from_dict(data: Dictionary) -> void:
 			var xy: Array = place["pos"]
 			place["pos"] = Vector2(float(xy[0]), float(xy[1]))
 		place["at"] = StringName(place["at"])
+		place["received"] = _received(place)
 		if place.has("slot"):
 			place["slot"] = StringName(place["slot"])
 		places[StringName(key)] = place

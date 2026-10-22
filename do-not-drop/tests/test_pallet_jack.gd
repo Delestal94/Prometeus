@@ -9,7 +9,9 @@ extends SceneTree
 ## - a pallet that never leaves the bed is never counted and stays in left_on_bed();
 ## - moving a pallet 50 times loses and duplicates no unit; to_dict/from_dict round trip;
 ## - can_pick_up() and can_put_down() say what pick_up() and put_down() would do, changing nothing (the host's
-##   check of a request, D-0605.b).
+##   check of a request, D-0605.b);
+## - a pallet emptied after its first put-down is not received again, on the floor or a rack (the book's `received`,
+##   kept by to_dict/from_dict).
 
 const FLOOR := Rect2(-6.0, -6.0, 12.0, 12.0)
 
@@ -27,6 +29,7 @@ func _run() -> void:
 	_test_left_on_bed()
 	_test_many_moves_and_json()
 	_test_can_checks()
+	_test_emptied_not_received_again()
 	quit(_failures)
 
 
@@ -133,3 +136,21 @@ func _test_can_checks() -> void:
 	jack.put_down(Vector2(2.0, 0.0), FLOOR, inv)
 	_expect(jack.can_pick_up(&"a", Vector2(1.0, 0.0)) and not jack.can_pick_up(&"a", Vector2(5.0, 0.0)),
 		"a floor pallet is picked up only from within reach")
+
+
+func _test_emptied_not_received_again() -> void:
+	var jack := _yard()
+	var inv := Inventory.new()
+	jack.pick_up(&"a")
+	jack.put_down(Vector2.ZERO, FLOOR, inv)
+	_expect(inv.move(&"hen", 10, &"pallet:a", &"shelf:s1") and inv.contents_at(&"pallet:a").is_empty(),
+		"the pallet is emptied onto a shelf")
+	_expect(jack.pick_up(&"a", Vector2.ZERO) and jack.put_down(Vector2(2.0, 0.0), FLOOR, inv)
+		and inv.total_units() == 10 and inv.count(&"hen", &"pallet:a") == 0,
+		"put down again, an emptied pallet is not received twice")
+	_expect(jack.pick_up(&"a", Vector2(2.0, 0.0)) and jack.put_on_rack(&"r1", Vector2(4.0, 0.0), inv)
+		and inv.total_units() == 10, "... nor on a rack")
+	var copy := PalletJack.new()
+	copy.from_dict(jack.to_dict())
+	_expect(copy.places[&"a"]["received"] == true and copy.places[&"b"]["received"] == false,
+		"the round trip keeps which pallets were received")

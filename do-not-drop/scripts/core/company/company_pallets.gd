@@ -102,19 +102,26 @@ static func load_due(schedule: SupplierSchedule, day: int, minute: int) -> bool:
 	return schedule.has_delivery(day) and minute >= first and minute < SupplierSchedule.departure_minute()
 
 
-## A jack_loaded event for `day` from the truck's `pallets` (Pallet dictionaries): the ones that are not in the
-## book already, whose units are not in `stock` yet (the first truck's pallets start in the shed, DefaultShed),
-## as many as the book has room for. {} when nothing would load.
+## A jack_loaded event for `day` from the truck's `pallets` (Pallet dictionaries): the ones apply() takes
+## (_pallet_of), not in the book already, whose units are not in `stock` yet (the first truck's pallets start in the
+## shed, DefaultShed), as many as the book has room for (a warning for the rest). {} when nothing would load.
 func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dictionary:
 	var room: int = MAX_PALLETS - book.places.size() + book.ids_at(PalletJack.AT_BED).size()
 	var found: Array = []
-	for pallet: Dictionary in planned:
-		var id := StringName(pallet.get("id", &""))
-		if found.size() >= room or book.places.has(id) or not Pallet.validate(pallet).is_empty():
+	var left_out: int = 0
+	for planned_pallet: Dictionary in planned:
+		var pallet: Dictionary = _pallet_of(planned_pallet)
+		if pallet.is_empty() or book.places.has(pallet["id"]):
 			continue
-		if not stock.contents_at(Pallet.location(id)).is_empty():
+		if not stock.contents_at(Pallet.location(pallet["id"])).is_empty():
 			continue
-		found.append({"id": String(id), "product": String(pallet["product"]), "qty": int(pallet["qty"])})
+		if found.size() >= room:
+			left_out += 1
+			continue
+		found.append({"id": String(pallet["id"]), "product": String(pallet["product"]), "qty": int(pallet["qty"])})
+	if left_out > 0:
+		push_warning("CompanyPallets: the book is full (%d pallets); %d of day %d's truck stay off its bed"
+			% [MAX_PALLETS, left_out, day])
 	return {} if found.is_empty() else {"day": day, "pallets": found}
 
 
@@ -302,9 +309,10 @@ static func _is_number(value: Variant) -> bool:
 static func _place_of(place: Dictionary) -> Dictionary:
 	var pallet: Dictionary = _pallet_of(place.get("pallet"))
 	var at: Variant = place.get("at")
-	if pallet.is_empty() or not CompanyAsk.is_id(at) or not _PLACES.has(StringName(at)):
+	var received: Variant = place.get("received", false)
+	if pallet.is_empty() or not received is bool or not CompanyAsk.is_id(at) or not _PLACES.has(StringName(at)):
 		return {}
-	var entry: Dictionary = {"pallet": pallet, "at": String(at)}
+	var entry: Dictionary = {"pallet": pallet, "at": String(at), "received": received}
 	if StringName(at) == PalletJack.AT_FLOOR or StringName(at) == PalletJack.AT_RACK:
 		var xy: Variant = place.get("pos")
 		if not (xy is Array and (xy as Array).size() == 2):

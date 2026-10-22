@@ -9,7 +9,8 @@ Dominio de Slatex tocado (`scripts/gameplay/interaction/`), solo un archivo nuev
   `jack_moved`, `jack_loaded`; parte `pallets` del snapshot; `CompanyPallets` nuevo en `scripts/core/company/`; el pedido de objetos del
   mundo del carrito y el de la zorra comparten `_on_object`), `company_shed.gd`, `company_root.gd`, `supplier_truck_view.gd` (la caja
   queda abierta atrás y dibuja los palets), `company_tuning.gd` (+ `JACK_PUSH_STEP_M`), `pallet_jack.gd` (+ `can_pick_up`,
-  `can_put_down`), `PROTOCOL_VERSION` 39 -> 41.
+  `can_put_down`; cada lugar del libro lleva `received` (bool) en `places`, `to_dict`/`from_dict` y la parte `pallets` del snapshot:
+  un palet se recibe en el `Inventory` solo la primera vez que se apoya, aunque después se vacíe), `PROTOCOL_VERSION` 39 -> 41.
 - Textos: `WORLD_SHED_USE_JACK` y `WORLD_SHED_PUSH_JACK` en `strings_world.csv`.
 
 Para Slatex: nada que hacer. `Interactable`, `Player` y el sondeo de interacción no cambian.

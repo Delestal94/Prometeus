@@ -9,16 +9,18 @@ extends SceneTree
 ##   brings its pallets (from its drive-in to its departure, never without a delivery);
 ## - jack_loaded puts the day's pallets on the bed and draws them there, on the host and on a second peer; the
 ##   shed's first pallets (already in the stock) are not loaded again, and a pallet loaded is not loaded twice;
+##   loaded_event() lists only what apply() takes (a 60-character id stays out), the same on every peer;
 ## - a player takes a pallet off the bed with the jack (the truck parked, the bed in the jack's reach) and puts it down
 ##   on the floor: the units of the pallet enter the stock once, at the put-down, and not before; the pallet is
 ##   drawn on the forks while it is carried and on the floor afterwards (and no longer by the Inventory's own draw);
 ## - a pallet put down on another one is refused (no_room); pushing the jack one step (away from the player) frees
-##   the spot; a pallet picked up from the floor and put down again does not count twice;
+##   the spot; a pallet picked up from the floor and put down again does not count twice, not even emptied first;
 ## - the host refuses: the truck away (truck_away), the jack full, an unknown pallet, a player 40 m away
 ##   (out_of_reach), a push into the wall (blocked); bad data is refused or dropped, and none changes anything;
 ## - a second peer (its own CompanyNet fed the host's events in order) holds and draws the same: stock, book,
 ##   jack, floor pallets, bed; a peer that joins late gets them from the snapshot part, and a part that does not fit
-##   (bad id, NaN, two pallets on the jack, a floor pallet without a spot, too many) is refused changing nothing;
+##   (bad id, NaN, two pallets on the jack, a floor pallet without a spot, a `received` that is not a bool, too many)
+##   is refused changing nothing;
 ## - the next day's truck takes what stayed on the old bed with it (the floor keeps its pallets);
 ## - the real company world (company_root.tscn, solo): on day 2 the host puts the truck's pallets on the bed
 ##   once, in the minute it drives in, and a player works the jack through its points, all the way to the stock.
@@ -62,6 +64,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_geometry()
 	_test_load_due()
+	_test_loaded_event()
 	await _test_world()
 	await _test_root()
 	if _failures == 0:
@@ -118,6 +121,21 @@ func _test_load_due() -> void:
 		and not CompanyPallets.load_due(schedule, DAY, SupplierSchedule.departure_minute()),
 		"The pallets come with the drive-in and wait until the truck leaves")
 	_expect(not CompanyPallets.load_due(schedule, DAY + 1, arrival + 30), "A day without a delivery brings nothing")
+
+
+## loaded_event() publishes only what apply() takes: a pallet whose id is too long for the network stays out.
+func _test_loaded_event() -> void:
+	var host := CompanyPallets.new()
+	var long_id := StringName("d4_hen_" + "x".repeat(53))
+	var planned: Array[Dictionary] = [Pallet.make(long_id, HEN, 5), Pallet.make(&"d4_hen_1", HEN, 5)]
+	var event: Dictionary = host.loaded_event(DAY + 2, planned, Inventory.new())
+	var listed: Array = event.get("pallets", [])
+	_expect(String(long_id).length() == 60 and listed.size() == 1 and listed[0]["id"] == "d4_hen_1",
+		"A pallet with a 60-character id stays out of jack_loaded (%s)" % [event])
+	var peer := CompanyPallets.new()
+	_expect(host.apply(Inventory.new(), CompanyPallets.LOADED, event)
+		and peer.apply(Inventory.new(), CompanyPallets.LOADED, event) and peer.to_dict() == host.to_dict()
+		and host.book.ids_at(PalletJack.AT_BED) == [&"d4_hen_1"], "... and what the host publishes, every peer applies")
 
 
 # --- The world ---
@@ -279,6 +297,17 @@ func _test_world() -> void:
 		and _net.inventory.total_units() == units_before + 34, "... and down again: the stock is still +34")
 	_same_as_mirror("after picking from the floor")
 
+	# Emptied (its units moved off it on every peer) and set down again, it is not received a second time.
+	for peer_stock: Inventory in [_net.inventory, _mirror.inventory]:
+		peer_stock.move(HEN, 24, &"pallet:d2_hen_1", &"shelf:emptied")
+	_expect(_net.inventory.contents_at(&"pallet:d2_hen_1").is_empty() and book.places[&"d2_hen_1"]["received"] == true,
+		"The pallet is emptied; the book remembers it was received")
+	_expect(_use(PalletJackPoint.ACTION_WORK) == PalletJackUse.RESULT_PICKED and book.carrying == &"d2_hen_1"
+		and _use(PalletJackPoint.ACTION_WORK) == PalletJackUse.RESULT_PUT, "The empty pallet goes up and down again")
+	_expect(_net.inventory.total_units() == units_before + 34 and _net.inventory.count(HEN, &"pallet:d2_hen_1") == 0,
+		"... and the stock is still +34: an emptied pallet is not received twice (%d)" % _net.inventory.total_units())
+	_same_as_mirror("after setting an emptied pallet down")
+
 	# Reach, the wall and bad data are the host's.
 	var seq_far: int = _net.seq
 	_refusals.clear()
@@ -391,6 +420,7 @@ func _bad_snapshots(late: CompanyNet, good: Dictionary) -> void:
 		"state": "sealed"}, "at": "bed"})
 	var no_qty: Dictionary = with_place.call("d2_hen_1", {"pallet": {"id": "d2_hen_1", "product": "hen", "qty": 0,
 		"state": "sealed"}, "at": "bed"})
+	var odd_received: Dictionary = with_place.call("d2_hen_1", place.merged({"received": "yes"}, true))
 	var jack_at_nan: Dictionary = good.duplicate(true)
 	jack_at_nan["jack_at"] = Vector2(NAN, 0.0)
 	var carrying_nothing: Dictionary = good.duplicate(true)
@@ -398,7 +428,7 @@ func _bad_snapshots(late: CompanyNet, good: Dictionary) -> void:
 	var many: Dictionary = good.duplicate(true)
 	for index: int in CompanyPallets.MAX_PALLETS + 1:
 		(many["book"]["places"] as Dictionary)["p%d" % index] = place
-	broken.append_array([bad_id, no_pos, nan_pos, on_jack, odd_place, other_id, no_qty, jack_at_nan,
+	broken.append_array([bad_id, no_pos, nan_pos, on_jack, odd_place, other_id, no_qty, odd_received, jack_at_nan,
 		carrying_nothing, many])
 	var refused: int = 0
 	for part: Dictionary in broken:
