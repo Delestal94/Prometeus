@@ -17,7 +17,7 @@
 | D-0607 | ✅ Abrir palet: las cajas del producto pasan a ser tomables | constructor-negocio | medium | test |
 | D-0608 | ✅ Estanterías con huecos etiquetados por producto | constructor-mundo | high | dejar producto en hueco lo suma al `Inventory` (test) |
 | D-0609 | ✅ Tomar productos de la estantería (picking) a mano | constructor-jugador | high | test: tomar 3 unidades baja el stock en 3 |
-| D-0610 | Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
+| D-0610 | ◐ (falta D-0610.b, el carrito en el mundo) Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
 | D-0611 | ✅ Stock visible: etiqueta del hueco muestra cantidad | constructor-mundo | medium | captura con números |
 | D-0612 | ◐ (falta D-0612.b, abrirla en el mundo y la captura) Vista de stock en el portapapeles (lista por producto) | constructor-ui | medium | captura |
 | ✅ D-0613 | Aviso de stock bajo para productos con pedidos pendientes | constructor-negocio | medium | test |
@@ -25,7 +25,7 @@
 | ~~D-0615~~ | ~~Productos que vienen dañados del proveedor (a separar)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-0616 | Productos con temperatura (frío) necesitan heladera; se echan a perder si no (incluye D-0628, fusión de D-0112) | constructor-negocio | high | test: producto frío fuera de heladera 2 h → vencido |
 | D-0617 | Heladera/cámara de frío como estantería especial | constructor-mundo | medium | test |
-| D-0618 | Camión del proveedor se va a una hora; si no se descargó, se lleva lo que quede (o cobra demora) | constructor-negocio | medium | test |
+| D-0618 | ◐ Camión del proveedor se va a una hora; si no se descargó, se lleva lo que quede (o cobra demora) | constructor-negocio | medium | test |
 | D-0619 | Replicación del stock y de los palets en red | auditor-red | xhigh | test de red: 2 peers ven el mismo stock tras 50 movimientos |
 | D-0620 | ✅ Layout inicial del depósito actual adaptado: dársena, zona de recepción, racks, armado, despacho | constructor-mundo | xhigh | captura aérea con zonas rotuladas; `test_depot_*` verdes |
 

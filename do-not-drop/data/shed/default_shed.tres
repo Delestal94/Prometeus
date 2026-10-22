@@ -101,6 +101,7 @@ first_order = Array[Dictionary]([{
 "qty": 6
 }])
 pallet_spots = Array[Vector2]([Vector2(2.6, 6.5), Vector2(2.6, 5.4)])
+cart_spots = Array[Vector2]([Vector2(3.0, 2.5)])
 zones = Array[Dictionary]([{
 "label_at": Vector2(3.0, 4.2),
 "rect": Rect2i(2, 5, 2, 3),

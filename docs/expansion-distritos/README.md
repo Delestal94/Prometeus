@@ -96,6 +96,8 @@ playtesting; ver memoria "playtesting al final").
 | 19 | [19-ui-audio-vfx.md](19-ui-audio-vfx.md) | UI, tutorial, audio y efectos |
 | 20 | [20-red-calidad-lanzamiento.md](20-red-calidad-lanzamiento.md) | Red, rendimiento, QA, tests, Steam |
 
+Para sumar contenido (producto, caja, proveedor, vehículo, requisito de pedido, objeto del galpón, zona): [../agregar-contenido-expansion.md](../agregar-contenido-expansion.md) (D-0244).
+
 Cada grupo tiene 50 tareas en tres bloques: **Núcleo** (lo mínimo para su fase), **Ampliación**
 (suma valor claro) y **Pulido**. Los modelos 3D de cada vehículo y distrito están en su propio grupo;
 el 18 junta el arte compartido (productos, cajas, empleados, máquinas, bibliotecas de props).

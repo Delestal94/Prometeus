@@ -35,6 +35,9 @@ const ROLE_ASSEMBLY: StringName = &"assembly"
 @export var first_order: Array[Dictionary] = []
 ## Where those pallets stand, in cells (centre of each, Vector2), in the order of their ids.
 @export var pallet_spots: Array[Vector2] = []
+## Where the picking carts stand at the start, in cells (centre of each, Vector2); the cart at index i is
+## "cart_<i + 1>" (D-0610.b).
+@export var cart_spots: Array[Vector2] = []
 ## Painted floor zones without a piece or fixed area of their own: {role, rect (Rect2i, cells),
 ## label_at (Vector2, cell where the name is written)}. Dock, exit and dispatch come from
 ## WarehouseStages and the dispatch piece.

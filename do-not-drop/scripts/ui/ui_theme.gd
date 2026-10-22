@@ -23,6 +23,7 @@ const UI_SOUNDS = preload("res://scripts/ui/ui_sounds.gd")
 ## roles moved: panels are cream now, so text on them is INK.
 const INK: Color = Color("1e2235")        # outlines, text on cards, shadows
 const PAPER: Color = Color("fff6e6")      # card fill; light text over the 3D view
+const CREAM: Color = Color("fff3d6")      # sound subtitles: warmer than the prompt's paper (N-983)
 const MUTED: Color = Color("857a6e")      # secondary text on cream
 const MINT: Color = Color("2dd4a3")       # go / OK / primary action
 const YELLOW: Color = Color("ffc93c")     # tape, money, warnings

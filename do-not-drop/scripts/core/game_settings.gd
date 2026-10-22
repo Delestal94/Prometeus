@@ -24,7 +24,7 @@ const SAVED_KEYS: Array[StringName] = [
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
 	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log",
 	&"last_join_address",
-	&"newspaper_mode", &"text_backdrop_opacity", &"pad_bindings",
+	&"newspaper_mode", &"text_backdrop_opacity", &"pad_bindings", &"subtitle_scale",
 ]
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
@@ -248,6 +248,21 @@ var sound_subtitles: bool = false:
 		sound_subtitles_changed.emit(sound_subtitles)
 		_save()
 signal sound_subtitles_changed(enabled: bool)
+
+## How big the sound-subtitle panel is drawn (N-983.3): normal, large, very large.
+## Only that panel scales, not the prompt above it or the rest of the HUD; a stray
+## value snaps to the closest step, so it can never go below 1x or past 1.5x.
+const SUBTITLE_SCALES: Array[float] = [1.0, 1.25, 1.5]
+var subtitle_scale: float = 1.0:
+	set(value):
+		var closest: float = SUBTITLE_SCALES[0]
+		for candidate: float in SUBTITLE_SCALES:
+			if absf(candidate - value) < absf(closest - value):
+				closest = candidate
+		subtitle_scale = closest
+		subtitle_scale_changed.emit(subtitle_scale)
+		_save()
+signal subtitle_scale_changed(scale: float)
 
 ## Opacity of the plate behind the subtitles and the interaction prompts
 ## (N-969): 1 is a solid plate. It never goes below TEXT_BACKDROP_MIN (N-977.3):
@@ -548,6 +563,7 @@ func reset_to_defaults() -> void:
 	opaque_gel = false
 	menu_text_scale = 1.0
 	sound_subtitles = false
+	subtitle_scale = 1.0
 	text_backdrop_opacity = TEXT_BACKDROP_DEFAULT
 	voice_chat_enabled = false
 	voice_push_to_talk = true
