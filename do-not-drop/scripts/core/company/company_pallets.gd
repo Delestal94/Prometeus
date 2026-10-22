@@ -12,9 +12,12 @@ extends RefCounted
 ##   jack_pick {pallet}  -> jack_picked {pallet}     a pallet of the bed or the floor goes on the jack
 ##   jack_put {}         -> jack_placed {pallet, pos} the carried pallet stands on the floor, at the jack
 ##   jack_push {dir}     -> jack_moved {pos}          the jack rolls CompanyTuning.JACK_PUSH_STEP_M along `dir`
-## and one event nobody asks for, published by the host when the day's truck comes (CompanyNet.publish):
+## and two events nobody asks for, published by the host when the day's truck comes and when it leaves
+## (CompanyNet.publish):
 ##   jack_loaded {day, pallets}  the pallets on the truck's bed (what stayed on the bed of an older truck left
 ##   with it: PalletJack.left_on_bed). `pos` is in the shed's own frame (X east, Z south), in metres.
+##   jack_departed {day, lines}  the truck drove off (D-0618.b): what was still on its bed goes with it, and the
+##   delivery note (D-0614.b, `note`) keeps `lines`, the lines of the day that did not come out even.
 ##
 ## What only the shed knows, the station gives: "at" (Vector2, where the jack stands now), "floor" (Rect2, the
 ## floor in metres), "stand_ok" and "free_ok" (Callable(Vector2) -> bool: the jack may stand there / a pallet may
@@ -28,14 +31,18 @@ const PICKED: StringName = &"jack_picked"
 const PLACED: StringName = &"jack_placed"
 const MOVED: StringName = &"jack_moved"
 const LOADED: StringName = &"jack_loaded"
+const DEPARTED: StringName = &"jack_departed"
 const REQUEST_KINDS: Array[StringName] = [PICK, PUT, PUSH]
-const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED]
+const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED, DEPARTED]
 ## The station every request of the jack names: CompanyNet resolves it through its `stations`.
 const STATION: StringName = &"jack"
 const SNAPSHOT_KEY: String = "pallets"
 ## Pallets a company's book holds (a snapshot or an event past this is refused).
 const MAX_PALLETS: int = 200
 const MAX_ID_LENGTH: int = 48
+## Lines of one departure's delivery note (a product each) and the biggest count in one (more is refused).
+const MAX_NOTE_LINES: int = 64
+const MAX_NOTE_UNITS: int = 100000
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 const REASON_NO_STATION: StringName = &"no_station"
@@ -59,6 +66,10 @@ var book: PalletJack = PalletJack.new()
 var jack_at: Variant = null
 ## The last day whose truck brought its pallets (jack_loaded), 0 for none.
 var loaded_day: int = 0
+## The delivery note (D-0614.b): per day, what the truck did not bring or brought extra. It travels in the snapshot.
+var note: DeliveryNote = DeliveryNote.new()
+## The last day whose truck drove off (jack_departed), 0 for none.
+var departed_day: int = 0
 
 
 ## A pallet or jack id that came over the network: letters, digits, '_' and '-', at most MAX_ID_LENGTH long.
@@ -123,6 +134,30 @@ func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dic
 		push_warning("CompanyPallets: the book is full (%d pallets); %d of day %d's truck stay off its bed"
 			% [MAX_PALLETS, left_out, day])
 	return {} if found.is_empty() else {"day": day, "pallets": found}
+
+
+## Host: the jack_departed event for `day` once its truck has left at `minute` (SupplierDeparture), or {}: no delivery
+## that day, or the truck is still there. The pallets of `planned` that are not on the bed (on the floor, on the jack,
+## in a rack, or the shed's first ones, which never were) count as unloaded. `schedule` is not touched: the day
+## leaves it when jack_departed is applied (CompanyRoot), so a refused publish asks again the next minute.
+## `lines` is the whole comparison of the order against what was unloaded, exact or not.
+func departed_event(schedule: SupplierSchedule, day: int, minute: int, planned: Array[Dictionary]) -> Dictionary:
+	if not schedule.has_delivery(day):
+		return {}
+	var on_bed: Array[StringName] = book.ids_at(PalletJack.AT_BED)
+	var unloaded: Array = []
+	for pallet: Dictionary in planned:
+		if not on_bed.has(StringName(pallet.get("id", &""))):
+			unloaded.append(pallet.get("id", &""))
+	var scratch: SupplierSchedule = SupplierSchedule.from_dict(schedule.to_dict())
+	var result: Dictionary = SupplierDeparture.resolve(scratch, day, minute, planned, unloaded)
+	if not bool(result["left"]):
+		return {}
+	var lines: Array = []
+	for line: Dictionary in result["note_lines"]:
+		lines.append({"product": String(line["product"]), "ordered": int(line["ordered"]),
+			"received": int(line["received"])})
+	return {"day": day, "lines": lines}
 
 
 ## Host: the event a request asks for at `station`, or its refusal: {reason: &"", kind, data} or {reason}.
@@ -206,8 +241,8 @@ func apply(inventory: Inventory, kind: StringName, data: Dictionary) -> bool:
 				return false
 			jack_at = data["pos"]
 			return true
-		LOADED:
-			return _apply_loaded(data)
+		LOADED, DEPARTED:
+			return _apply_loaded(data) if kind == LOADED else _apply_departed(data)
 	return false
 
 
@@ -232,6 +267,37 @@ func _apply_loaded(data: Dictionary) -> bool:
 	return true
 
 
+## The truck left: what is still on its bed goes with it and the note keeps the day's lines. The lines are checked
+## first; nothing changes when they do not fit.
+func _apply_departed(data: Dictionary) -> bool:
+	var day: Variant = data.get("day")
+	var raw: Variant = data.get("lines")
+	if typeof(day) != TYPE_INT or int(day) < 1 or not raw is Array or (raw as Array).size() > MAX_NOTE_LINES:
+		return false
+	var ordered: Dictionary = {}
+	var received: Dictionary = {}
+	for entry: Variant in raw:
+		if not entry is Dictionary:
+			return false
+		var line: Dictionary = entry
+		var product: Variant = line.get("product")
+		var want: Variant = line.get("ordered")
+		var got: Variant = line.get("received")
+		var name_ok: bool = CompanyAsk.is_id(product) and not String(product).is_empty()
+		if not (name_ok and String(product).length() <= MAX_ID_LENGTH
+			and typeof(want) == TYPE_INT and typeof(got) == TYPE_INT):
+			return false
+		if int(want) < 0 or int(want) > MAX_NOTE_UNITS or int(got) < 0 or int(got) > MAX_NOTE_UNITS:
+			return false
+		ordered[StringName(product)] = int(want)
+		received[StringName(product)] = int(got)
+	for id: StringName in book.ids_at(PalletJack.AT_BED):
+		book.remove(id)
+	note.check(int(day), ordered, received)
+	departed_day = int(day)
+	return true
+
+
 ## A sealed pallet from {id, product, qty} as it came over the network ({} when it does not fit).
 static func _pallet_of(entry: Variant) -> Dictionary:
 	if not entry is Dictionary:
@@ -251,9 +317,10 @@ static func _pallet_of(entry: Variant) -> Dictionary:
 	return made
 
 
-## The snapshot part: {book: PalletJack.to_dict(), jack_at, loaded_day}.
+## The snapshot part: {book: PalletJack.to_dict(), jack_at, loaded_day, departed_day, note: DeliveryNote.to_dict()}.
 func to_dict() -> Dictionary:
-	return {"book": book.to_dict(), "jack_at": jack_at, "loaded_day": loaded_day}
+	return {"book": book.to_dict(), "jack_at": jack_at, "loaded_day": loaded_day, "departed_day": departed_day,
+		"note": note.to_dict()}
 
 
 ## Client: the host's part in place of what is here. False, changing nothing, when it does not fit.
@@ -266,9 +333,15 @@ func put_snapshot(value: Variant) -> bool:
 	var parsed: Variant = _parse_book(plain.get("book"))
 	if parsed == null or typeof(day) != TYPE_INT or not (at == null or _point_ok(at)):
 		return false
+	var left_on: Variant = plain.get("departed_day", 0)
+	var kept: Variant = plain.get("note", {})
+	if typeof(left_on) != TYPE_INT or not kept is Dictionary:
+		return false
 	book.from_dict(parsed)
 	jack_at = at
 	loaded_day = int(day)
+	departed_day = int(left_on)
+	note = DeliveryNote.from_dict(kept)
 	return true
 
 

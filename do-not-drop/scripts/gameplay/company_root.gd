@@ -200,6 +200,8 @@ var _presence_shown: Array = []
 ## Host: the day whose truck pallets are on the bed (_load_truck_pallets()), and the (day, minute) last looked at.
 var _pallets_day: int = 0
 var _pallets_checked: Vector2i = Vector2i.ZERO
+## Host: the (day, minute) the truck's departure was last looked at (_send_truck_off()).
+var _departure_checked: Vector2i = Vector2i.ZERO
 
 
 func _ready() -> void:
@@ -686,6 +688,23 @@ func _load_truck_pallets() -> void:
 		_pallets_day = day
 
 
+## Host, once a game minute: the truck of the day has driven off (SupplierDeparture): what stayed on its bed goes
+## with it and the delivery note keeps what did not come (D-0618.b, D-0614.b). One jack_departed per day; the
+## day leaves the calendar on every peer when it is applied (_add_supplier_truck).
+func _send_truck_off() -> void:
+	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
+		return
+	var day: int = _hosted_state.day
+	var minute: int = floori(clock.minute_now())
+	if _departure_checked == Vector2i(day, minute) or not supplier_schedule.has_delivery(day):
+		return
+	_departure_checked = Vector2i(day, minute)
+	var planned: Array[Dictionary] = supplier_schedule.pallets_for(day)
+	var event: Dictionary = net.pallets.departed_event(supplier_schedule, day, minute, planned)
+	if not event.is_empty():
+		net.publish(CompanyPallets.DEPARTED, event)
+
+
 ## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
 ## GameClock and CompanyState as every other peer, so there is nothing to send.
 func _add_supplier_truck() -> void:
@@ -701,7 +720,9 @@ func _add_supplier_truck() -> void:
 	if net != null:
 		# The pallets on the bed are the book's (CompanyPallets), the same on every peer (D-0605.b).
 		supplier_truck.pallets = net.pallets.book
-		net.event_applied.connect(func(_seq: int, kind: StringName, _data: Dictionary) -> void:
+		net.event_applied.connect(func(_seq: int, kind: StringName, data: Dictionary) -> void:
+			if kind == CompanyPallets.DEPARTED:
+				supplier_schedule.clear_day(int(data.get("day", 0)))
 			if CompanyPallets.EVENT_KINDS.has(kind):
 				supplier_truck.refresh_bed())
 		net.company_state_restored.connect(func(_snapshot_seq: int) -> void: supplier_truck.refresh_bed())
@@ -782,6 +803,7 @@ func _add_interest() -> void:
 
 func _process(_delta: float) -> void:
 	_load_truck_pallets()
+	_send_truck_off()
 	if cells == null:
 		return
 	var as_host: bool = net == null or net.is_host()
