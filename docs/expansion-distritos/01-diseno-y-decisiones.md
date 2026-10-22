@@ -35,7 +35,7 @@
 |---|---|---|---|---|
 | D-0121 | ✅ Narrativa de la empresa: quién es el jefe, por qué empezamos, tono de los mensajes de clientes | documentador | medium | `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md` |
 | ~~D-0122~~ | ~~Personajes de clientes recurrentes por distrito (2-3 por distrito) con pedidos característicos~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | lista en `diseno/clientes.md` |
-| D-0123 | Diseño de eventos del día (inspección, proveedor tarde, pedido gigante, huelga, ola de calor) | critico-diseno | medium | `diseno/eventos-del-dia.md` con 15 eventos |
+| D-0123 | ✅ Diseño de eventos del día (inspección, proveedor tarde, pedido gigante, huelga, ola de calor) | critico-diseno | medium | `diseno/eventos-del-dia.md` con 15 eventos |
 | D-0124 | Diseño de las licencias (náutica, vuelo, 4x4, alta montaña, zona volcánica) y cómo se obtienen | constructor-progresion | medium | sección en `diseno/hitos.md` |
 | ~~D-0125~~ | ~~Diseño de la competencia NPC (empresa rival que roba clientes si bajás la reputación)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | `diseno/rival.md` o recorte justificado |
 | D-0126 | Definir el modo solo: qué automatiza el juego para que una persona sola pueda llevar el negocio | critico-diseno | high | sección en `diseno/roles-tripulacion.md`; bot de D-2024 lo verifica |
