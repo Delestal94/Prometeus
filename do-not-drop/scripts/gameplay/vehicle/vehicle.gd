@@ -107,9 +107,9 @@ var net_engine_force: float:
 		if not _prediction.active:
 			engine_force = value
 ## Client predicting: the host's pose in the newest state its prediction was
-## compared with, as late as the link brings it (Transform3D.IDENTITY before
-## the first). CompanyGateBrake tells by it that the host let a held truck go
-## (D-0316.4). Read only, not replicated.
+## compared with, as late as the link brings it (Transform3D.IDENTITY until
+## the first one each time it starts predicting; stale after it stops).
+## CompanyGateBrake tells by it that the host let a held truck go (D-0316.4). Read only, not replicated.
 var predicted_host_pose: Transform3D:
 	get:
 		return _prediction.host_pose
@@ -694,7 +694,6 @@ func configure_net_sim(sim: Dictionary) -> void:
 ## Whether this peer is the client predicting the truck it drives (N-218).
 func is_predicted() -> bool:
 	return _prediction.active
-
 
 
 ## Stops this peer predicting its truck, frozen where it is (N-922): the level, when the host is gone mid-drive and
