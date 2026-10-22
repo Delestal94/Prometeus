@@ -3,7 +3,8 @@ extends Node3D
 ## The shed of the Modo Empresa as the players walk in it (expansion D-0911 and D-0620): floor and
 ## walls of the company's stage with the gates open where the dock and the exit are, every piece of
 ## CompanyState.layout (shelves, packing tables, the dispatch zone), the painted floor zones, the
-## shelf labels with their units, the pallets that wait in reception and the picking carts (D-0610.b).
+## shelf labels with their units, the pallets that wait in reception, the picking carts (D-0610.b) and the pallet
+## jack with the pallets it moved (D-0605.b).
 ##
 ## It only DRAWS state: the layout and the stage from CompanyState, the units from the Inventory
 ## (CompanyNet's copy, equal on every peer). The host fills a new company's layout and stock from
@@ -29,6 +30,8 @@ extends Node3D
 signal piece_used(uid: StringName, role: StringName, peer_id: int)
 ## A player worked a picking cart (PickingCartPoint): which cart, how (load or push), who, where they stood.
 signal cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3)
+## A player worked the pallet jack (PalletJackPoint): how (work or push), who, where they stood.
+signal jack_used(action: StringName, peer_id: int, from: Vector3)
 
 const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
@@ -96,6 +99,10 @@ var pallet_nodes: Dictionary = {}
 ## The picking carts drawn, by id (PickingCartView). Each stands at its default spot (DefaultShed.cart_spots)
 ## or, once pushed, where the CompanyNet it follows says (CompanyCarts).
 var cart_views: Dictionary = {}
+## The pallet jack and the pallets on the floor (PalletYardView), redrawn from the CompanyNet it follows.
+var yard: PalletYardView
+## The supplier's truck beside the shed (CompanyRoot sets it): whether its bed is open and where its rear is.
+var truck: SupplierTruckView
 
 var _default: DefaultShed
 var _slot_views: Array[Dictionary] = []
@@ -128,6 +135,10 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		refresh_stock(_net.inventory)
 	elif kind == CompanyCarts.MOVED:
 		_on_cart_moved(data)
+	elif CompanyPallets.EVENT_KINDS.has(kind) and _pallet_root != null:
+		if kind == CompanyPallets.MOVED and yard != null:
+			yard.refresh(_net.pallets, true)
+		refresh_stock(_net.inventory)
 
 
 func _on_state_restored(_snapshot_seq: int) -> void:
@@ -176,6 +187,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	_slot_views.clear()
 	pallet_nodes.clear()
 	cart_views.clear()
+	yard = null
 	stage = int(state.warehouse_stage)
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
@@ -205,6 +217,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	_pallet_root.name = "Pallets"
 	add_child(_pallet_root)
 	_build_carts()
+	_build_yard()
 	refresh_stock(stock)
 
 
@@ -239,6 +252,8 @@ func refresh_stock(stock: Inventory) -> void:
 	_draw_pallets(stock)
 	for cart_view: PickingCartView in cart_views.values():
 		cart_view.refresh(stock)
+	if yard != null and _net != null and is_instance_valid(_net):
+		yard.refresh(_net.pallets)
 
 
 ## The pallets waiting in the Inventory (pallet:<id> locations) as {id, product, qty}, by id.
@@ -470,6 +485,8 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 ## (D-0609). A picking cart is a station too, named by its location, cart:<id> (D-0610.b). {} for anything
 ## else, or a slot with no label.
 func station_for(id: StringName) -> Dictionary:
+	if id == CompanyPallets.STATION:
+		return _jack_station()
 	var cart_id: StringName = PickingCart.parse_location(id)
 	if cart_id != &"":
 		return _cart_station(cart_id)
@@ -550,6 +567,48 @@ func cart_can_stand(local: Vector3) -> bool:
 	return true
 
 
+# --- The pallet jack ---
+
+
+## The jack and the floor pallets, one yard per drawing; its jack's points forward who used it.
+func _build_yard() -> void:
+	yard = PalletYardView.make(stage)
+	yard.jack_used.connect(func(action: StringName, peer_id: int, from: Vector3) -> void:
+		jack_used.emit(action, peer_id, from))
+	add_child(yard)
+
+
+## The pallet jack as CompanyNet's `stations` resolver wants it (D-0605.b, see CompanyPallets): a spot over the
+## forks to measure reach to, where the jack stands now, the floor, the checks only a shed can make, and the
+## truck's bed. {} for a shed that draws no jack.
+func _jack_station() -> Dictionary:
+	if yard == null or not is_instance_valid(yard) or not yard.is_inside_tree():
+		return {}
+	var rear: Vector2 = SupplierTruckView.rear_of(stage)
+	return {
+		"location": &"jack:yard", "spot": yard.jack.global_position + Vector3.UP * 0.5,
+		"at": Vector2(yard.jack.position.x, yard.jack.position.z), "floor": PalletYardView.floor_rect(stage),
+		"stand_ok": jack_can_stand, "free_ok": pallet_spot_free, "bed_at": rear,
+		"bed_open": truck != null and is_instance_valid(truck) and truck.bed_open(),
+	}
+
+
+## Whether the jack may stand at `at` (metres, shed frame): as a picking cart (cart_can_stand).
+func jack_can_stand(at: Vector2) -> bool:
+	return cart_can_stand(Vector3(at.x, 0.0, at.y))
+
+
+## Whether a pallet may lie at `at` (metres, shed frame): not over one of the pallets of reception that
+## the Inventory draws (_draw_pallets). Furniture and walls are the jack's own check (cart_can_stand).
+func pallet_spot_free(at: Vector2) -> bool:
+	var size: Vector2 = CompanyTuning.PALLET_FOOTPRINT_M
+	var footprint := Rect2(at - size * 0.5, size)
+	for node: Node3D in pallet_nodes.values():
+		if footprint.intersects(Rect2(Vector2(node.position.x, node.position.z) - size * 0.5, size)):
+			return false
+	return true
+
+
 func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:
 	var metres: float = CompanyTuning.WAREHOUSE_GRID_M
 	var width: float = def.footprint.x * metres
@@ -573,6 +632,13 @@ func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 
 func _draw_pallets(stock: Inventory) -> void:
 	var waiting: Array[Dictionary] = pallets_in(stock)
+	if _net != null and is_instance_valid(_net):
+		# The pallets the jack moves are the yard's (D-0605.b), wherever they are.
+		var in_reception: Array[Dictionary] = []
+		for entry: Dictionary in waiting:
+			if not _net.pallets.book.places.has(StringName(entry["id"])):
+				in_reception.append(entry)
+		waiting = in_reception
 	var same: bool = waiting.size() == pallet_nodes.size()
 	for entry: Dictionary in waiting:
 		same = same and pallet_nodes.has(entry["id"])
