@@ -7,8 +7,8 @@ mapa (hoy Centro y Campo) nombra una de ellas. Una zona sin casas en el mapa, o 
 
 **Por qué:** el bot del día (`bot_company_day`, etapa `deliver`) no podía entregar: los pedidos pedían
 `centro_house_9`, que no existe en `data/world/houses.tres` (`centro_01`…), así que ningún viaje
-tenía una parada real a la que llegar. La elección usa una sola tirada del generador, como antes,
-así que el resto del día (ids, zonas, productos, minutos, requisitos) sale igual con y sin mapa
+tenía una parada real a la que llegar. El generador del día sigue tirando el `<n>` de siempre y la
+casa del mapa sale de un generador aparte (semilla = día + índice del pedido), así que el resto del día (ids, zonas, productos, minutos, requisitos) sale igual con y sin mapa
 (`test_order_generator`). `CompanyOrdersNet._house_ok` y `OrderLabel` ya aceptaban las dos formas.
 
 **Pendiente:** D-0312.1 (borrar el camino viejo de `OrderLabel` cuando todas las zonas tengan casas).
