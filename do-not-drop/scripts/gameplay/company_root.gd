@@ -361,7 +361,8 @@ func _event_bus() -> Node:
 
 func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
-		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [])
+		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [],
+			net.supplier.auto_units(day) if net != null else 0)
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.
@@ -493,8 +494,7 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 	_publish_presence()
 
 
-## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
-## units and layout events itself (CompanyShed.follow(), D-0910).
+## A new day (or phase): Steam shows it (D-2009); the shed follows units and layout itself (CompanyShed.follow()).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
 ## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
@@ -722,6 +722,7 @@ func _add_supplier_orders() -> void:
 	if net.is_host() and _hosted_state != null:
 		_hosted_state.supplier_calendar = CompanySupplierNet.load_saved(supplier_schedule, _hosted_state)
 		net.event_applied.connect(_on_supplier_ordered)
+		SupplierAutoOrderHook.attach(self, net)
 	supplier_board = SupplierBoard.new()
 	supplier_board.name = "SupplierBoard"
 	add_child(supplier_board)

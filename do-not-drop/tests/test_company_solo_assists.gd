@@ -8,9 +8,20 @@ extends SceneTree
 ## - the suggested supplier order (D-0151.3, SupplierOrderCart.suggested): units ordered today minus
 ##   the stock per product, nothing for a product the stock covers or the supplier does not sell,
 ##   trimmed from the product with the fewest units ordered until it leaves the rent and the reserve
-##   in the wallet, empty when the money does not reach them; ordered_units() sums the day's orders.
+##   in the wallet, empty when the money does not reach them; ordered_units() sums the day's orders;
+## - the automatic order at the close (D-0151.3b, SupplierAutoOrder + SupplierAutoOrderHook), on a host with a
+##   real CompanyNet, GameClock and DayCycle: a day whose orders the stock does not cover leaves exactly one
+##   order for tomorrow in the SupplierSchedule with the suggested units (cancelled orders do not count) when
+##   the day goes to CLOSING, by close_early() and by the 20:00 transition alike, and the wallet is not charged
+##   then; it is the supplier_ordered every peer applies, with AUTO_PEER, so auto_units() tells it; an order for
+##   tomorrow already sent, or a suggestion that is empty (stock covers it), adds nothing; a repeated CLOSING
+##   event, or send() again, does not double it; a client's hook does nothing;
+## - the day summary's line "automatic supplier order: N units" (DaySummaryPanel) shows with N > 0, hides at 0.
+
+const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 
 var _failures: int = 0
+var _now: int = 0
 
 
 func _initialize() -> void:
@@ -21,6 +32,13 @@ func _run() -> void:
 	_test_solo_arrivals()
 	_test_ordered_units()
 	_test_suggested()
+	_test_auto_order_rule()
+	_test_auto_order_close_early()
+	_test_auto_order_at_20()
+	_test_auto_order_not_needed()
+	_test_auto_order_already_sent()
+	_test_auto_order_client()
+	_test_summary_line()
 	quit(_failures)
 
 
@@ -89,6 +107,196 @@ func _test_suggested() -> void:
 	for id: StringName in rich:
 		_expect(cart.set_qty(id, rich[id]), "the suggested lines load into the cart (%s)" % id)
 	_expect(cart.total() == 70, "the loaded cart costs what was suggested")
+
+
+func _test_auto_order_rule() -> void:
+	var products: Dictionary = _catalog()
+	var orders: Array = [
+		{"items": [{"product": &"lamp", "qty": 6}, {"product": &"vase", "qty": 4}], "state": Order.STATE_OPEN},
+		{"items": [{"product": &"mug", "qty": 50}], "state": Order.STATE_CANCELLED},
+	]
+	var kept: Array = SupplierAutoOrder.todays_orders(orders)
+	_expect(kept.size() == 1, "a cancelled order asked for nothing")
+	var schedule := SupplierSchedule.new()
+	var got := SupplierAutoOrder.lines(1000, schedule, kept, {&"lamp": 1}, products, null, 3)
+	_expect(got == [{"product": &"lamp", "qty": 5}, {"product": &"vase", "qty": 4}], "rule lines: %s" % [got])
+	_expect(SupplierAutoOrder.units_of(got) == 9, "units_of sums the lines")
+	_expect(SupplierAutoOrder.lines(1000, null, kept, {}, products, null, 3).is_empty(), "no schedule, nothing")
+	_expect(SupplierAutoOrder.lines(1000, schedule, kept, {}, products, null, 0).is_empty(), "no day, nothing")
+	schedule.place(3, [{"product": &"lamp", "qty": 1}])
+	_expect(SupplierAutoOrder.lines(1000, schedule, kept, {}, products, null, 3).is_empty(),
+		"an order for tomorrow already there: nothing")
+	_expect(not SupplierAutoOrder.lines(1000, schedule, kept, {}, products, null, 4).is_empty(),
+		"...but the day after is free")
+	var inventory := Inventory.new()
+	inventory.receive(&"lamp", 2, &"shelf_a")
+	inventory.receive(&"lamp", 3, &"shelf_b")
+	inventory.receive(&"ghost", 9, &"shelf_a")
+	_expect(SupplierAutoOrder.stock_units(inventory, products) == {&"lamp": 5},
+		"stock is the catalog's units, anywhere")
+	_expect(SupplierAutoOrder.stock_units(null, products).is_empty(), "no inventory, no stock")
+
+
+## Day 1 asks for 6 lamps and 4 vases (a cancelled order for mugs too) and the shed holds 1 lamp.
+func _closing_side(label: String, money: int = 1000) -> Dictionary:
+	var state: Node = STATE_SCRIPT.new()
+	state.call(&"reset")
+	state.call(&"new_company", "Auto SRL")
+	state.set(&"money", money)
+	var side := Node.new()
+	side.name = label
+	root.add_child(side)
+	side.add_child(state)
+	var net := CompanyNet.new()
+	net.name = "CompanyNet"
+	net.company = state
+	side.add_child(net)
+	var clock := GameClock.new()
+	clock.name = "GameClock"
+	clock.ticks = func() -> int: return _now
+	side.add_child(clock)
+	var cycle := DayCycle.new()
+	cycle.name = "DayCycle"
+	cycle.ticks = func() -> int: return _now
+	side.add_child(cycle)
+	_expect(clock.attach(net, state) and cycle.attach(net, clock, state), "%s: clock and cycle attach" % label)
+	net.supplier.products = _catalog()
+	net.supplier.supplier = null
+	var products: Dictionary = net.supplier.products
+	net.orders.book.add(Order.make(&"o1", "Ana", &"centro", &"h1", [{"product": &"lamp", "qty": 6}], 500, products))
+	net.orders.book.add(Order.make(&"o2", "Beto", &"centro", &"h2", [{"product": &"vase", "qty": 4}], 520, products))
+	net.orders.book.add(Order.make(&"o3", "Cai", &"centro", &"h3", [{"product": &"mug", "qty": 50}], 540, products))
+	net.orders.book.cancel(&"o3")
+	net.inventory.receive(&"lamp", 1, &"shelf_a")
+	var hook: SupplierAutoOrderHook = SupplierAutoOrderHook.attach(side, net)
+	_expect(hook != null, "%s: the hook attaches" % label)
+	_expect(cycle.open_day(1), "%s: day 1 opens" % label)
+	_now += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0) + 1000
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING, "%s: day 1 is OPERATING" % label)
+	return {"state": state, "net": net, "clock": clock, "cycle": cycle, "hook": hook, "side": side}
+
+
+func _test_auto_order_close_early() -> void:
+	var parts: Dictionary = _closing_side("EarlySide")
+	var net: CompanyNet = parts["net"]
+	var cycle: DayCycle = parts["cycle"]
+	var money: int = int(parts["state"].get(&"money"))
+	var seq: int = net.seq
+	_expect(net.supplier.schedule.day_count() == 0, "close_early: nothing ordered before the close")
+	_expect(cycle.close_early() and cycle.phase() == DayCycle.Phase.CLOSING, "close_early: the day is CLOSING")
+	var want: Dictionary = {&"lamp": 5, &"vase": 4}
+	_expect(net.supplier.schedule.ordered_for(2) == want and net.supplier.schedule.day_count() == 1,
+		"close_early: one order for tomorrow with the suggested units (got %s)" % [net.supplier.schedule.to_dict()])
+	_expect(net.seq == seq + 2, "close_early: the phase event and the order event (seq +%d)" % (net.seq - seq))
+	_expect(int(parts["state"].get(&"money")) == money, "close_early: nothing is charged at the close")
+	_expect(net.supplier.auto_units(1) == 9, "close_early: auto_units tells 9 (got %d)" % net.supplier.auto_units(1))
+	# A repeated CLOSING event (the shed freezing is one) or a second send() adds nothing.
+	net.event_applied.emit(net.seq, CompanyNet.DAY_PHASE, {"day": 1, "phase": "CLOSING", "frozen": true})
+	_expect(net.supplier.schedule.ordered_for(2) == want and (parts["hook"] as SupplierAutoOrderHook).send() == 0,
+		"a repeated CLOSING does not double the order")
+	_now += 1000
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and net.supplier.schedule.ordered_for(2) == want
+		and not cycle.close_early(), "...nor does the summary, and a second close_early is refused")
+	_free(parts)
+
+
+func _test_auto_order_at_20() -> void:
+	var parts: Dictionary = _closing_side("EightSide")
+	var net: CompanyNet = parts["net"]
+	var cycle: DayCycle = parts["cycle"]
+	_expect((parts["clock"] as GameClock).start(float(CompanyTuning.DAY_END_MIN)), "20:00: the clock reads 20:00")
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.CLOSING, "20:00: the day is CLOSING")
+	_expect(net.supplier.schedule.ordered_for(2) == {&"lamp": 5, &"vase": 4},
+		"20:00: the same order as close_early (got %s)" % [net.supplier.schedule.to_dict()])
+	cycle.poll()
+	_expect(net.supplier.schedule.ordered_for(2) == {&"lamp": 5, &"vase": 4}, "20:00: polling again does not double it")
+	_free(parts)
+
+
+func _test_auto_order_not_needed() -> void:
+	var parts: Dictionary = _closing_side("CoveredSide")
+	var net: CompanyNet = parts["net"]
+	net.inventory.receive(&"lamp", 10, &"shelf_a")
+	net.inventory.receive(&"vase", 10, &"shelf_a")
+	(parts["cycle"] as DayCycle).close_early()
+	_expect(net.supplier.schedule.day_count() == 0 and net.supplier.auto_units(1) == 0,
+		"stock covers the day: no order (got %s)" % [net.supplier.schedule.to_dict()])
+	_free(parts)
+	var poor: Dictionary = _closing_side("PoorSide", 150)
+	(poor["cycle"] as DayCycle).close_early()
+	_expect((poor["net"] as CompanyNet).supplier.schedule.day_count() == 0,
+		"money that does not pass the rent and the reserve: no order")
+	_free(poor)
+
+
+func _test_auto_order_already_sent() -> void:
+	var parts: Dictionary = _closing_side("SentSide")
+	var net: CompanyNet = parts["net"]
+	_expect(net.supplier.apply({"order_day": 1, "lines": [{"product": "mug", "qty": 24}], "peer": 1}),
+		"someone sent tomorrow's order")
+	var seq: int = net.seq
+	(parts["cycle"] as DayCycle).close_early()
+	_expect(net.supplier.schedule.ordered_for(2) == {&"mug": 24} and net.supplier.auto_units(1) == 0
+		and net.seq == seq + 1,
+		"an order already sent: the close adds nothing (got %s)" % [net.supplier.schedule.to_dict()])
+	_free(parts)
+
+
+func _test_auto_order_client() -> void:
+	var parts: Dictionary = _closing_side("ClientSide")
+	var net: CompanyNet = parts["net"]
+	var peer := ENetMultiplayerPeer.new()
+	if peer.create_client("127.0.0.1", 24999) != OK:
+		push_error("FAIL: could not make a client peer")
+		_failures += 1
+		_free(parts)
+		return
+	root.multiplayer.multiplayer_peer = peer
+	_expect(not net.is_host(), "the net is a client's while the connection is not up")
+	var seq: int = net.seq
+	net.event_applied.emit(seq, CompanyNet.DAY_PHASE, {"day": 1, "phase": "CLOSING", "frozen": false})
+	var hook: SupplierAutoOrderHook = parts["hook"]
+	_expect(net.supplier.schedule.day_count() == 0 and net.seq == seq and hook.send() == 0,
+		"a client's hook orders nothing")
+	root.multiplayer.multiplayer_peer = null
+	peer.close()
+	_free(parts)
+
+
+func _test_summary_line() -> void:
+	var panel := DaySummaryPanel.new()
+	root.add_child(panel)
+	var summary: Dictionary = {"day": 1}
+	panel.refresh(summary, [], 9)
+	var found: Array[Node] = panel.find_children("AutoOrder", "Label", true, false)
+	_expect(found.size() == 1, "the summary has its automatic order line")
+	if found.size() == 1:
+		var label: Label = found[0] as Label
+		_expect(label.visible and label.text.contains("9"), "...shown with 9 units (got '%s')" % label.text)
+		_expect(label.text != "UI_FINANCE_AUTO_ORDER", "...and translated")
+		panel.refresh(summary, [], 0)
+		_expect(not label.visible, "...hidden when the host sent none")
+	for locale: String in ["es", "en"]:
+		TranslationServer.set_locale(locale)
+		_expect(TranslationServer.translate("UI_FINANCE_AUTO_ORDER") != "UI_FINANCE_AUTO_ORDER",
+			"%s has the line" % locale)
+	TranslationServer.set_locale("es")
+	panel.queue_free()
+
+
+func _catalog() -> Dictionary:
+	return {
+		&"lamp": _product(&"lamp", 10),
+		&"vase": _product(&"vase", 5),
+		&"mug": _product(&"mug", 2),
+	}
+
+
+func _free(parts: Dictionary) -> void:
+	(parts["side"] as Node).queue_free()
 
 
 func _product(id: StringName, price: int) -> ProductDefinition:
