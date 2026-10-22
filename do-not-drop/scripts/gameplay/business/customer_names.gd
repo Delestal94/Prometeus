@@ -19,7 +19,7 @@ const LAST: Array[String] = [
 	"Rojas", "Vidal", "Costa", "Navarro", "Ferrer", "Molina", "Soler", "Prieto",
 	"Cruz", "Luna", "Ortega", "Bravo", "Ramos", "Pons", "Silva", "Mora",
 	"Vega", "Duarte", "Lara", "Campos", "Reyes", "Paz", "Rey", "Salas",
-	"Moreno", "Peña", "Arias", "Bosch", "Cano", "Gil", "Leal", "Mena",
+	"Moreno", "Pena", "Arias", "Bosch", "Cano", "Gil", "Leal", "Mena",
 ]
 
 
