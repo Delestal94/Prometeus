@@ -200,9 +200,7 @@ func _check_trips() -> void:
 		[{"product": &"hen", "qty": 1}], 0, products))
 	trips.book.mark_packed(&"o_online", &"box_online")
 	trips.stage_cargo(&"van_online", [&"o_online"], [&"box_online"])
-	var stage: int = int(_host_root.net.company.get(&"warehouse_stage"))
-	var exit: Vector3 = _host_root.shed.to_global(
-		Vector3(0.0, 0.0, -WarehouseStages.floor_size_m(stage).y * 0.5))
+	var exit: Vector3 = CompanyFleet.gate_of(_host_root.shed, _host_root.net.company)
 	trips.track(&"van_online", exit + Vector3(0.0, 0.0, 1.0))
 	trips.track(&"van_online", exit + Vector3(0.0, 0.0, -2.0))
 	var seen: bool = await _wait_for(func() -> bool: return view.is_out(&"van_online"))

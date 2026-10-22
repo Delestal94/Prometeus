@@ -86,8 +86,7 @@ do-not-drop/tests/test_endless_multi_cargo.gd|max-line-length 5
 do-not-drop/tests/test_flock_crossing.gd|max-line-length 4
 do-not-drop/tests/test_fragile.gd|max-line-length 1
 do-not-drop/tests/test_hint_relay.gd|max-line-length 1
-do-not-drop/tests/test_horn.gd|duplicated-load 1
-do-not-drop/tests/test_horn.gd|max-line-length 3
+do-not-drop/tests/test_horn.gd|max-line-length 1
 do-not-drop/tests/test_hostile_trap.gd|max-line-length 3
 do-not-drop/tests/test_house_assignment.gd|max-line-length 7
 do-not-drop/tests/test_house_delivery_flow.gd|max-line-length 5

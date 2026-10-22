@@ -16,9 +16,13 @@ extends SceneTree
 ## - forget() (D-0302.2.b): a vehicle that leaves the world no longer counts as out: its trip closes as if
 ##   it came back (what wasn't delivered fails, trip_closed), one out refused is back (refused_returned),
 ##   its staged cargo is dropped and the gate starts over with it (its next position only sets the side);
+## - set_yard() (D-0302.2.b.2): inside is the rectangle behind the gate's line (back, half width), along the
+##   given outward direction (a rotated shed too): leaving it by the far edge, a side or the back departs, coming
+##   in by any of them returns, whatever the opening's width; without a yard the line and its opening rule as before;
 ## - only the vehicles of CompanyTrips' own multiplayer are tracked (another session's copy isn't);
-## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the exit (north wall)
-##   and DayCycle.trips_out reads it.
+## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the far edge of the playon outside
+##   the north exit (CompanyFleet.gate_of(), D-0302.2.b.2), the shed's wall and exit on the inside of it, and
+##   DayCycle.trips_out reads it.
 
 var _failures: int = 0
 
@@ -31,6 +35,7 @@ func _run() -> void:
 	_test_cycle()
 	_test_far_cap()
 	_test_forget()
+	_test_yard()
 	await _test_group_tracking()
 	await _test_root()
 	quit(_failures)
@@ -76,6 +81,38 @@ func _test_cycle() -> void:
 	trips.track(&"empty", Vector3(0, 0, -6))
 	_expect(trips.trips_out() == 0 and started.size() == 1, "no cargo staged, no trip")
 	trips.free()
+
+
+func _test_yard() -> void:
+	# A shed turned to face +X: outward is +X, the line at x = 10, the yard 20 m back and 5 m to each side.
+	var trips := CompanyTrips.new()
+	trips.setup(Vector3(10, 0, 0), 2.0, Vector3.RIGHT)
+	trips.set_yard(20.0, 5.0)
+	_packed(trips, [&"o1", &"o2"])
+	trips.stage_cargo(&"van", [&"o1"], [&"box_o1"])
+	trips.track(&"van", Vector3(4, 0, 0))
+	_expect(trips.track(&"van", Vector3(4, 0, 8)) == &"departed",
+		"round the side (8 m off the axis, far past the opening) the van departs")
+	_expect(trips.trips_out() == 1, "...and a trip is out")
+	_expect(trips.track(&"van", Vector3(4, 0, 2)) == &"returned" and trips.trips_out() == 0,
+		"back in by the side it returns")
+	trips.stage_cargo(&"van", [&"o2"], [&"box_o2"])
+	_expect(trips.track(&"van", Vector3(11, 0, 0)) == &"departed", "through the opening it departs")
+	_expect(trips.track(&"van", Vector3(11, 0, 7)) == &"", "...and stays out at the side")
+	_expect(trips.track(&"van", Vector3(4, 0, 3)) == &"returned" and trips.trips_out() == 0,
+		"back in by the side it returns")
+	_expect(trips.track(&"van", Vector3(-11, 0, 0)) == &"departed", "out of the back of the compound it departs")
+	_expect(trips.gate.side_of(Vector3(9.9, 0, 4.9)) == TripGate.INSIDE and trips.gate.side_of(Vector3(10.1, 0, 0))
+		== TripGate.OUTSIDE and trips.gate.side_of(Vector3(9.9, 0, 5.1)) == TripGate.OUTSIDE, "the rectangle's edges")
+	trips.free()
+	# No yard: the line and its opening, as ever.
+	var plain := CompanyTrips.new()
+	plain.setup(Vector3(0, 0, -4), 2.0)
+	plain.stage_cargo(&"van", [], [])
+	plain.track(&"van", Vector3(8, 0, -2))
+	_expect(plain.track(&"van", Vector3(8, 0, -6)) == &"",
+		"without a yard a crossing off the opening counts for nothing")
+	plain.free()
 
 
 func _test_far_cap() -> void:
@@ -216,8 +253,10 @@ func _test_root() -> void:
 	_expect(trips != null and trips.get_parent() == level, "the host root has CompanyTrips")
 	if trips != null:
 		var half_depth: float = CompanyRoot.SHED_SIZE.y * 0.5
-		_expect(is_equal_approx(trips.gate.distance(Vector3(0, 0, -half_depth - 1.0)), 1.0),
-			"the gate lies across the north exit")
+		var edge: float = half_depth + CompanyShed.WALL_THICKNESS + CompanyFleet.PLAYON_DEPTH_M
+		_expect(is_equal_approx(trips.gate.distance(Vector3(0, 0, -edge - 1.0)), 1.0)
+			and is_equal_approx(trips.gate.distance(Vector3(0, 0, -half_depth - 1.0)), 1.0 - edge + half_depth),
+			"the gate lies across the far edge of the playon outside the north exit")
 		_expect(level.day_cycle.trips_out.is_valid() and level.day_cycle.trips_out.call() == 0,
 			"DayCycle reads trips_out from it")
 	level.queue_free()
