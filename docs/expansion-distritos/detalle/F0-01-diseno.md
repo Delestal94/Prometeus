@@ -230,7 +230,7 @@ Decisión: `docs/decisiones/2026-10-22-licencias.md`.
 **Hecho cuando:** `diseno/hitos.md` dice cómo se obtiene cada licencia, cuánto cuesta y qué abre.
 
 ### D-0126 · Modo solo — B · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR #PRNUM)** — sección "Modo solo" de `diseno/roles-tripulacion.md` (§6): sin modo aparte; tres ayudas nuevas (pausa de verdad sin peers, pedidos que entran hasta las 15:00 del galpón con 1 jugador, pedido automático al proveedor al cierre para todos) y cinco que ya existen; lo construye D-0151.
+**[x] Hecho (2026-10-22, PR #645)** — sección "Modo solo" de `diseno/roles-tripulacion.md` (§6): sin modo aparte; tres ayudas nuevas (pausa de verdad sin peers, pedidos que entran hasta las 15:00 del galpón con 1 jugador, pedido automático al proveedor al cierre para todos) y cinco que ya existen; lo construye D-0151.
 **Depende de:** D-0110, D-0117, D-0123
 **Qué:** escribir qué automatiza el juego para una persona sola, con la crítica de `critico-diseno`:
 - [x] D-0126.1 Regla: `crew_size` al abrir el día para lo del día, en vivo para la pausa y el asistente de
