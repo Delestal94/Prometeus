@@ -74,7 +74,7 @@ static func generate_day(
 			order_id,
 			CUSTOMER_NAMES[rng.randi_range(0, CUSTOMER_NAMES.size() - 1)],
 			zone.id,
-			_pick_house(rng, zone.id, houses),
+			_pick_house(rng, zone.id, houses, day_seed, index),
 			items,
 			minutes[index],
 			products,
@@ -84,13 +84,21 @@ static func generate_day(
 	return out
 
 
-## The house an order of `zone_id` names: one of the zone's houses on the map, else "<zone>_house_<n>". One draw
-## either way, so the rest of the day's orders come out the same with or without a map.
-static func _pick_house(rng: RandomNumberGenerator, zone_id: StringName, houses: HouseMap) -> StringName:
-	var spots: Array[HouseSpot] = houses.in_zone(zone_id) if houses != null else [] as Array[HouseSpot]
+## The house an order of `zone_id` names: one of the zone's houses on the map, else "<zone>_house_<n>". The day's
+## generator draws <n> either way, and the map house comes from its own generator seeded with the day and the
+## order's index, so the rest of the day's orders come out the same with or without a map.
+static func _pick_house(
+	rng: RandomNumberGenerator, zone_id: StringName, houses: HouseMap, day_seed: int, index: int
+) -> StringName:
+	var n: int = rng.randi_range(1, HOUSES_PER_ZONE)
+	var spots: Array[HouseSpot] = []
+	if houses != null:
+		spots = houses.in_zone(zone_id)
 	if spots.is_empty():
-		return StringName("%s_house_%d" % [zone_id, rng.randi_range(1, HOUSES_PER_ZONE)])
-	return spots[rng.randi_range(0, spots.size() - 1)].id
+		return StringName("%s_house_%d" % [zone_id, n])
+	var pick := RandomNumberGenerator.new()
+	pick.seed = hash([day_seed, index])
+	return spots[pick.randi_range(0, spots.size() - 1)].id
 
 
 ## How the ids of `day`'s orders start ("d<day>_"): an order carries no day of its own, so this is how
