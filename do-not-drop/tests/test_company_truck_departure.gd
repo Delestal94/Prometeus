@@ -2,7 +2,7 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_company_truck_departure.gd
 ##
 ## The supplier truck driving off with what was left on its bed, and the delivery note (expansion D-0618.b and
-## D-0614.b: CompanyPallets.departed_event / DEPARTED / note, CompanyNet, CompanyRoot._send_truck_off):
+## D-0614.b: CompanyPallets.departed_event / send_truck_off / DEPARTED / note, CompanyNet, CompanyRoot):
 ## - departed_event() is empty before the departure minute and without a delivery; after it, it lists every ordered
 ##   product with what was unloaded (the pallets that are not on the bed) and leaves the calendar as it was;
 ## - jack_departed on the host takes the pallets of the bed off the book (the ones on the floor stay), records the
