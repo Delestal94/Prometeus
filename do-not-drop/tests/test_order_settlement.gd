@@ -7,7 +7,9 @@ extends SceneTree
 ## - a perfect slow one pays in full with only the clean reputation, no tip;
 ## - late, wrong box, broken unit and mislabeled box pay less and cost reputation, never tip;
 ## - the wallet gets the pay with reason order_paid and the order closes with that pay;
-## - an order that is not out on the road (or unknown, or settled twice) changes nothing.
+## - an order that is not out on the road (or unknown, or settled twice) changes nothing;
+## - the result carries the customer's stars (D-0816): 5 for the quick perfect one, 4 for the slow
+##   one, fewer for each failure, 0 when nothing was settled (test_order_rating covers the rules).
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -61,6 +63,7 @@ func _test_perfect(state: Node) -> void:
 	var result: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 70, [], _products)
 	_expect(result["ok"] and result["paid"] == 200, "a perfect delivery pays in full")
 	_expect(result["tip"] == 30, "and tips 15 %% (got %d)" % result["tip"])
+	_expect(result["stars"] == 5, "and earns 5 stars")
 	var gain: float = CompanyTuning.CLEAN_DELIVERY_REPUTATION + CompanyTuning.TIP_REPUTATION
 	_expect(is_equal_approx(result["reputation"], gain), "reputation reported is clean plus tip")
 	_expect(state.money == money + 230, "the wallet got pay and tip")
@@ -74,6 +77,7 @@ func _test_perfect(state: Node) -> void:
 	_expect(closed["paid"] == 200 and closed["quality"] == 100 and closed["intact"], "closed with its pay")
 	var again: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 70, [], _products)
 	_expect(not again["ok"] and state.money == money + 230, "settling twice pays once")
+	_expect(again["stars"] == 0, "and the second try has no stars")
 	book.free()
 	# Slow but perfect: full pay, clean reputation, no tip.
 	book = _book_out()
@@ -81,6 +85,7 @@ func _test_perfect(state: Node) -> void:
 	rep = state.reputation
 	var slow: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 250, [], _products)
 	_expect(slow["ok"] and slow["paid"] == 200 and slow["tip"] == 0, "slow and perfect: no tip")
+	_expect(slow["stars"] == 4, "slow and perfect: 4 stars")
 	_expect(state.money == money + 200, "only the pay reached the wallet")
 	_expect(
 		is_equal_approx(state.reputation, rep + CompanyTuning.CLEAN_DELIVERY_REPUTATION),
@@ -108,6 +113,7 @@ func _test_penalties(state: Node) -> void:
 		_expect(result["ok"] and c["kind"] in result["kinds"], "%s: delivered with its failure" % name)
 		_expect(result["paid"] < 200 and result["lost"] == 200 - result["paid"], "%s: pays less" % name)
 		_expect(result["tip"] == 0, "%s: no tip" % name)
+		_expect(result["stars"] >= 1 and result["stars"] <= 3, "%s: 1 to 3 stars" % name)
 		_expect(state.money == money + result["paid"], "%s: the wallet got only what it paid" % name)
 		if c["kind"] == &"late":
 			_expect(result["reputation"] == 0.0, "late costs money but no reputation")
@@ -125,6 +131,7 @@ func _test_not_deliverable(state: Node) -> void:
 	book.add(Order.make(&"o1", "C", &"centro", &"h", [{"product": &"avg", "qty": 2}], 60, _products))
 	var open: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 70, [], _products)
 	_expect(not open["ok"] and book.state_of(&"o1") == Order.STATE_OPEN, "an open order is not settled")
+	_expect(open["stars"] == 0, "and has no stars")
 	var ghost: Dictionary = OrderSettlement.settle(book, state, &"nope", _box(2), 70, [], _products)
 	_expect(not ghost["ok"], "an unknown order is not settled")
 	_expect(not OrderSettlement.settle(null, state, &"o1", _box(2), 70, [], _products)["ok"], "no book")

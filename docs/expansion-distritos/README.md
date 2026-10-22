@@ -14,6 +14,7 @@
 ## La idea en una pantalla
 
 > Versión larga, con qué se conserva del juego actual y qué **no** es: [diseno/vision.md](diseno/vision.md) (D-0101).
+> Cómo suena la empresa (quién manda, tono de mensajes): [diseno/narrativa-empresa.md](diseno/narrativa-empresa.md) (D-0121).
 
 **Bucle del día (un turno de juego, 15-25 min reales):**
 

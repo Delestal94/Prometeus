@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EmployeeLevel" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/employee_level.gd" id="1_level"]
+
+[resource]
+script = ExtResource("1_level")
+id = &"expert"
+display_key = "WORLD_EMPLOYEE_EXPERT"
+wage = 130
+output = 1.0
+rank = 3

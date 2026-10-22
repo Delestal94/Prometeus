@@ -50,6 +50,7 @@ func _run() -> void:
 	_expect(grid.grid_size == Vector2i(18, 12), "the placement grid grew")
 	_expect(grid.preview(state.layout, table, 14, 10)["ok"], "the same spot is green on the medium floor")
 
+	state.money = WarehouseStages.price_for(2) - 1
 	var money: int = state.money
 	var refused: Dictionary = WarehouseStages.expand(state)
 	_expect(not refused["ok"] and refused["reason"] == WarehouseStages.REFUSAL_NO_MONEY, "no money is refused")

@@ -398,6 +398,8 @@ WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
 WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
 WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
+WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
+WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
 WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf
 WORLD_PLACEABLE_FRIDGE,Heladera,Fridge
@@ -414,6 +416,11 @@ WORLD_SHOP_LABEL_READER,Lectora de etiquetas,Label reader
 WORLD_SHOP_CONVEYOR,Cinta transportadora,Conveyor belt
 WORLD_SHOP_PACKER,Embaladora,Packing machine
 WORLD_SHOP_EXPANSION_1,Ampliación del galpón 1,Shed expansion 1
+WORLD_SHOP_EXPANSION_2,Ampliación del galpón 2,Shed expansion 2
+WORLD_SHOP_EXPANSION_3,Ampliación del galpón 3,Shed expansion 3
+WORLD_EMPLOYEE_NOVICE,Empleado novato,Novice employee
+WORLD_EMPLOYEE_REGULAR,Empleado normal,Regular employee
+WORLD_EMPLOYEE_EXPERT,Empleado experto,Expert employee
 WORLD_SHOP_VEHICLE_VAN,Camioneta extra,Extra van
 WORLD_SHOP_VEHICLE_BIKE,Bici,Bike
 WORLD_SHOP_VEHICLE_CART,Carrito,Cart

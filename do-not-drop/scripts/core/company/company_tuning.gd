@@ -130,7 +130,7 @@ const PLACEABLE_REFUND_RATIO: float = 0.5
 const WAREHOUSE_STAGE_IDS: Array[StringName] = [&"small", &"medium", &"large", &"logistics_center"]
 const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
 	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
-const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
+const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 800, 2000, 5000]
 ## Most pieces (shelves, tables, zones...) a stage can hold, so the built shed stays inside the
 ## performance budget (D-0915): about one piece per six floor cells. Same index as the arrays above.
 const WAREHOUSE_STAGE_MAX_PIECES: Array[int] = [16, 36, 64, 100]
@@ -255,6 +255,17 @@ const TIP_REPUTATION: float = 1.0
 ## Reputation a delivery with nothing wrong with it earns on top of its pay (D-0815); the tip adds
 ## its own TIP_REPUTATION when it was also quick.
 const CLEAN_DELIVERY_REPUTATION: float = 0.5
+## The customer's rating of a delivery, 1 to 5 stars (D-0816, OrderRating). Only information for now:
+## it moves no money and no reputation. A clean delivery earns 4 stars, 5 when it also tipped (quick);
+## otherwise the worst failure decides: a wrong box 1, a broken product 2, lateness or a label of
+## another order 3.
+const STARS_MIN: int = 1
+const STARS_MAX: int = 5
+const STARS_CLEAN_SLOW: int = 4
+const STARS_WRONG_BOX: int = 1
+const STARS_BROKEN: int = 2
+const STARS_LATE: int = 3
+const STARS_MISLABELED: int = 3
 ## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
 const TRIP_MERIT_INTACT: int = 10
 
@@ -280,6 +291,9 @@ const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
 ## and how close the jack's holder must stand to pick one up.
 const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
 const PALLET_JACK_REACH_M: float = 1.6
+## One push of the pallet jack in the world (D-0605.b): how far it rolls, in metres, away from whoever pushes
+## it. More than a pallet's long side (1.2 m), so a pallet put down is never under the next one.
+const JACK_PUSH_STEP_M: float = 1.3
 ## The forklift (D-0606, PalletForklift): how high the forks go (m), how fast they rise (m/s, the
 ## depot's staff forklift speed) and how close to a level they must be to take or leave a pallet.
 const FORKLIFT_MAX_LIFT_M: float = 2.4

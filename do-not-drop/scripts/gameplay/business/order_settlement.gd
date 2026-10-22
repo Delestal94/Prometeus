@@ -13,9 +13,10 @@ const REASON_PAID: StringName = &"order_paid"
 
 
 ## Settles the order delivered in `box` at game minute now_min. broken is the ids of the products that
-## arrived broken (one entry per unit). Returns {ok, paid, tip, reputation, kinds, lost}: ok is false,
-## and nothing changes, when the order is not deliverable now (not out on the road or late from there).
-## reputation is the net change applied, including the tip's.
+## arrived broken (one entry per unit). Returns {ok, paid, tip, reputation, kinds, lost, stars}: ok is
+## false, and nothing changes, when the order is not deliverable now (not out on the road or late from
+## there). reputation is the net change applied, including the tip's. stars is the customer's rating
+## 1-5 (OrderRating, D-0816; 0 when not ok): it is reported, not stored in the book nor paid.
 static func settle(
 	book: OrderBook,
 	company: Object,
@@ -26,7 +27,13 @@ static func settle(
 	products: Dictionary,
 ) -> Dictionary:
 	var failed: Dictionary = {
-		"ok": false, "paid": 0, "tip": 0, "reputation": 0.0, "kinds": [] as Array[StringName], "lost": 0
+		"ok": false,
+		"paid": 0,
+		"tip": 0,
+		"reputation": 0.0,
+		"kinds": [] as Array[StringName],
+		"lost": 0,
+		"stars": 0,
 	}
 	if book == null or company == null or not book.has(order_id):
 		return failed
@@ -47,7 +54,7 @@ static func settle(
 	var tip: int = OrderTips.apply(company, tip_result)
 	if tip > 0:
 		reputation += float(tip_result["reputation"])
-	return {
+	var result: Dictionary = {
 		"ok": true,
 		"paid": paid,
 		"tip": tip,
@@ -55,3 +62,5 @@ static func settle(
 		"kinds": verdict["kinds"],
 		"lost": int(verdict["lost"]),
 	}
+	result["stars"] = OrderRating.stars(result)
+	return result

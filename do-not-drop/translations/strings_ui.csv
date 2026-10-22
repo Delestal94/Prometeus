@@ -1427,3 +1427,8 @@ UI_SUPPLIER_CLOSE,Cerrar,Close
 UI_ORDER_NOTICE_ONE,Pedido nuevo: %s — %s %d,New order: %s — %s %d
 UI_ORDER_NOTICE_ONE_NO_ADDRESS,Pedido nuevo: %s,New order: %s
 UI_ORDER_NOTICE_MANY,%d pedidos nuevos,%d new orders
+UI_ORDER_STARS_1,Pésima,Awful
+UI_ORDER_STARS_2,Mala,Bad
+UI_ORDER_STARS_3,Regular,Fair
+UI_ORDER_STARS_4,Buena,Good
+UI_ORDER_STARS_5,Excelente,Excellent
