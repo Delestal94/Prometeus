@@ -17,6 +17,9 @@ extends SceneTree
 ##   driver_peer_id is its peer and the player is seated there; getting up gives the wheel back.
 ## - With cargo staged on the van, moving it across the gate's line (the playon's far edge) outward starts a trip
 ##   with that order (OUT, and out in the TripsView); back across it closes the trip.
+## - A rack of the van (a PackageMountPoint) taken by a box (its current_mount_path) is let go when the interest
+##   hides that box's copy (copy_hidden: a stale copy kept it taken, D-0316.2) and taken back when it shows, unless
+##   something else took it meanwhile.
 ## - ENet pair in one process (the host on the NetworkManager autoload, the client on a second copy, each in
 ##   the real company_root.tscn, as test_company_online): the client builds the same
 ##   World/Vehicles/van_classic from the host's snapshot, a frozen copy it doesn't own. Until the client acks
@@ -34,6 +37,13 @@ extends SceneTree
 ##   resting), the client predicts its copy (is_predicted()), the host's van moves and the copy stays within a
 ##   metre of it; close_to() takes the client off the wheel and the van brakes, freezes within the parking wait
 ##   and its engine goes off.
+## - D-0316.2, with the cap at 0 and cargo staged on the van: the client at the wheel drives it at the gate; the
+##   host holds it inside (its centre never past the line, no trip, nothing out), the client's predicted copy
+##   stays within 1.5 m of it and is never hidden, and only the client is told why (its TripsView's
+##   departure_held, over _held_here, with WORLD_DISPATCH_FAR_LIMIT; the host's view tells nobody).
+## - The van driven 1.1 km north in 200 m steps with the client's player in the shed: the client's copy ends up
+##   hidden and out of physics (layer and mask 0); back at 600 m (2 cells) it shows, solid again, on the frame it
+##   shows within 0.5 m of the host's van (drawn from the new pose, not slid from the old one).
 ## - No engine error on the way (a synchronizer reaching the client before its van existed logs one).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -48,6 +58,7 @@ const WAIT_SECONDS: float = 20.0
 const RIDE_HEIGHT: float = 0.666
 const SAME_M: float = 0.05
 const SEAT_PATH: NodePath = ^"CabinInterior/DriverEyePoint/InteractionArea"
+const HEN: Resource = preload("res://data/products/hen.tres")
 
 var _failures: int = 0
 var _catcher := ErrorCatcher.new()
@@ -105,7 +116,8 @@ func _run() -> void:
 	_clean()
 	if _failures == 0:
 		print("PASS: the company's fleet parks outside the exit on every peer, named by id, in the vehicle group;"
-			+ " it seats a driver, starts a trip across the gate and its copy follows the host's")
+			+ " it seats a driver, starts a trip across the gate (or is held there, its driver told why) and its copy"
+			+ " follows the host's, hidden far and shown where it is")
 	quit(_failures)
 
 
@@ -176,6 +188,7 @@ func _check_solo(state: Node) -> void:
 	await _check_second_van(level, fleet)
 	await _check_seat(level, van)
 	await _check_crossing(level, van)
+	await _check_rack_slot(level, van)
 	_free_level(level)
 	await process_frame
 
@@ -270,7 +283,7 @@ func _check_seat(level: CompanyRoot, van: VehicleBody3D) -> void:
 func _check_crossing(level: CompanyRoot, van: VehicleBody3D) -> void:
 	var trips: CompanyTrips = level.trips
 	var parked: Transform3D = van.global_transform
-	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
+	var products: Dictionary = {&"hen": HEN}
 	trips.book.add(Order.make(&"o_fleet", "Ana", &"centro", &"house_1", [{"product": &"hen", "qty": 1}], 0,
 		products))
 	trips.book.mark_packed(&"o_fleet", &"box_fleet")
@@ -292,6 +305,35 @@ func _check_crossing(level: CompanyRoot, van: VehicleBody3D) -> void:
 	await physics_frame
 	await physics_frame
 	_expect(trips.trips_out() == 0, "Parked again with nothing staged, no trip starts")
+
+
+## A rack taken by a box is let go while the interest hides the box's copy and taken back when it shows.
+func _check_rack_slot(level: CompanyRoot, van: VehicleBody3D) -> void:
+	var mount: Node = null
+	for area: Node in van.find_children("*", "Area3D", true, false):
+		if &"occupied_by" in area:
+			mount = area
+			break
+	var box := (load("res://scenes/gameplay/package/package.tscn") as PackedScene).instantiate() as DeliveryPackage
+	_expect(mount != null and box != null, "The van has racks (PackageMountPoint) and a box can be made")
+	if mount == null or box == null:
+		return
+	level.add_child(box)
+	box.current_mount_path = box.get_path_to(mount)
+	_expect(mount.get(&"occupied_by") == box, "The box's current_mount_path takes the rack")
+	level.interest.copy_hidden.emit(box)
+	_expect(mount.get(&"occupied_by") == null, "Its copy hidden, the rack is free here")
+	level.interest.copy_shown.emit(box)
+	_expect(mount.get(&"occupied_by") == box, "Shown again, the box takes the rack back")
+	level.interest.copy_hidden.emit(box)
+	var other := Node.new()
+	mount.set(&"occupied_by", other)
+	level.interest.copy_shown.emit(box)
+	_expect(mount.get(&"occupied_by") == other, "...but not from what took it while the copy was hidden")
+	mount.set(&"occupied_by", null)
+	other.free()
+	box.queue_free()
+	await process_frame
 
 
 ## Moves the (frozen) van and lets the gate look at it.
@@ -390,6 +432,8 @@ func _check_copy() -> void:
 		% [copy.global_position, host_van.global_position])
 	await _check_run_telemetry(telemetry)
 	await _check_client_drives(host_van, copy, client_id)
+	await _check_held_at_gate(host_van, copy, client_id)
+	await _check_far_copy(host_van, copy)
 	await _check_driver_leaves(host_van, client_id)
 
 
@@ -479,6 +523,89 @@ func _check_client_drives(host_van: VehicleBody3D, copy: VehicleBody3D, client_i
 	var seat_free: Callable = func() -> bool:
 		return (driver as Player).seat_node_path.is_empty() and seat.occupant == null
 	_expect(await _wait_for(seat_free), "The client's player gets out and the seat is free again")
+
+
+## D-0316.2: the cap at 0 and cargo staged; the client drives the van at the gate and is held there, and told why.
+func _check_held_at_gate(host_van: VehicleBody3D, copy: VehicleBody3D, client_id: int) -> void:
+	var trips: CompanyTrips = _host_root.trips
+	var seat := host_van.get_node_or_null(SEAT_PATH) as SeatPoint
+	var driver: Node = _host_root.get_node_or_null(NodePath("World/Player_%d" % client_id))
+	if seat == null or driver == null:
+		_expect(false, "The host has the van's driver seat and the client's player")
+		return
+	# close_to() (the last check) closed the van to the client: it acks again, and its copy, still at the wheel there
+	# with the pedal down, hears it no longer is.
+	copy.call(&"set_controls", 0.0, 0.0, false)
+	_expect(_client_root.fleet.tell_host() and await _wait_for(func() -> bool:
+		return _host_root.fleet.is_open_to(client_id, "van_classic") and not copy.is_predicted()),
+		"The client acks the van again and its copy stops predicting")
+	host_van.call(&"park", CompanyFleet.park_transform(_host_root.shed, _host_root.net.company, 0))
+	_expect(await _wait_for(func() -> bool: return copy.global_position.distance_to(host_van.global_position) < 0.1),
+		"Parked back in the playon, the copy stands where the host's van does")
+	var products: Dictionary = {&"hen": HEN}
+	trips.book.add(Order.make(&"o_held", "Ana", &"centro", &"house_1", [{"product": &"hen", "qty": 1}], 0,
+		products))
+	trips.book.mark_packed(&"o_held", &"box_held")
+	trips.stage_cargo(&"van_classic", [&"o_held"], [&"box_held"])
+	trips.far_max = 0
+	var told: Array = []
+	_client_root.trips_view.departure_held.connect(func(id: StringName, text: String) -> void:
+		told.append([id, text]))
+	var host_told: Array[int] = [0]
+	_host_root.trips_view.departure_held.connect(func(_id: StringName, _text: String) -> void: host_told[0] += 1)
+	host_van.call(&"set_door_open", &"cab_left", true)
+	seat.interact(driver)
+	var copy_sync := copy.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var worst_past: float = -INF
+	var worst_gap: float = 0.0
+	var ever_hidden: bool = false
+	for tick: int in range(480):
+		copy.call(&"set_controls", 1.0, 0.0, false)
+		await physics_frame
+		worst_past = maxf(worst_past, trips.gate.distance(host_van.global_position))
+		if copy.is_predicted():
+			worst_gap = maxf(worst_gap, copy.global_position.distance_to(host_van.global_position))
+		ever_hidden = ever_hidden or _client_root.interest.is_hidden_here(copy_sync)
+	_expect(worst_past < 0.4 and worst_past > -2.0 and trips.trips_out() == 0 and trips.trip_of(&"van_classic") == null,
+		"The host holds the van at the gate: its centre reached the line, never a tick's travel past it (%.2f m)"
+		% worst_past)
+	_expect(worst_gap < 1.5 and not ever_hidden,
+		"...the client's predicted copy stays within 1.5 m of it (worst %.2f m) and is never hidden" % worst_gap)
+	var text: String = tr(CompanyTrips.FAR_LIMIT)
+	if text.count("%") == 1:
+		text = text % 0
+	_expect(told.size() >= 1 and told[0] == [&"van_classic", text] and host_told[0] == 0,
+		"...and only the client, its driver, is told why (client %s, host %d)" % [told, host_told[0]])
+	trips.far_max = CompanyTuning.VEHICLES_FAR_MAX
+	trips.forget(&"van_classic")
+	var own: Player = _client_root.get_node_or_null(NodePath("World/Player_%d" % client_id)) as Player
+	if own != null:
+		own.leave_seat()
+	_expect(await _wait_for(func() -> bool: return seat.occupant == null), "The client gets out of the held van")
+
+
+## The van far from the client's player and back: its copy hides, out of physics, and shows where the host has it.
+func _check_far_copy(host_van: VehicleBody3D, copy: VehicleBody3D) -> void:
+	var copy_sync := copy.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var interest: CompanyInterest = _client_root.interest
+	var start: Transform3D = CompanyFleet.park_transform(_host_root.shed, _host_root.net.company, 0)
+	var north: Vector3 = -_host_root.shed.global_basis.z
+	for metres: float in [200.0, 400.0, 600.0, 800.0, 1000.0, 1100.0]:
+		host_van.call(&"park", start.translated(north * metres))
+		await _seconds(0.4)
+	var hidden: bool = await _wait_for(func() -> bool: return interest.is_hidden_here(copy_sync), 5.0)
+	_expect(hidden and not copy.visible and copy.collision_layer == 0 and copy.collision_mask == 0,
+		"1.1 km from the client's player the copy is hidden and out of physics (hidden %s)" % hidden)
+	host_van.call(&"park", start.translated(north * 600.0))
+	# Checked at the start of each frame: the first time it is shown, as the last frame drew it.
+	var shown: bool = await _wait_for(func() -> bool: return not interest.is_hidden_here(copy_sync), 5.0)
+	var shown_gap: float = copy.global_position.distance_to(host_van.global_position)
+	_expect(shown and copy.visible and copy.collision_layer != 0,
+		"Back at 600 m (2 cells) it shows, solid again (layer %d)" % copy.collision_layer)
+	_expect(shown_gap < 0.5,
+		"...on the frame it shows, within 0.5 m of the host's van (%.2f m): drawn from the new pose" % shown_gap)
+	host_van.call(&"park", start)
+	await _seconds(0.5)
 
 
 ## The client sits at the wheel of the host's van and leaves: the host takes it off the wheel and the seat.

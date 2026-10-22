@@ -13,6 +13,11 @@ extends SceneTree
 ##   already out; a third that crosses anyway starts no trip (departure_refused, same reason, its
 ##   orders stay PACKED) but counts as out (trips_out() 3, is_out(), a fourth is refused, it isn't)
 ##   until it crosses back in; it keeps its cargo, which leaves with it once a trip came back;
+## - a vehicle node with cargo that would leave refused is held at the gate (D-0316.2): put back where it last
+##   stood inside, stopped, never out (trips_out() unchanged, its orders PACKED, no departure_refused), and
+##   departure_held tells its id, the reason and its driver_peer_id once per held_notice_msec (again with 0); a
+##   CompanyTripsView following it tells that driver (solo: itself) with WORLD_DISPATCH_FAR_LIMIT and the cap
+##   (its departure_held); one with no cargo still leaves; with hold_at_gate off it crosses refused as before;
 ## - forget() (D-0302.2.b): a vehicle that leaves the world no longer counts as out: its trip closes as if
 ##   it came back (what wasn't delivered fails, trip_closed), one out refused is back (refused_returned),
 ##   its staged cargo is dropped and the gate starts over with it (its next position only sets the side);
@@ -37,6 +42,7 @@ func _run() -> void:
 	_test_forget()
 	_test_yard()
 	await _test_group_tracking()
+	await _test_gate_hold()
 	await _test_root()
 	quit(_failures)
 
@@ -238,6 +244,88 @@ func _test_group_tracking() -> void:
 	side.free()
 	van.queue_free()
 	trips.queue_free()
+	await process_frame
+
+
+## A stand-in vehicle with a driver, as vehicle.gd's driver_peer_id.
+class DrivenVan:
+	extends Node3D
+	var driver_peer_id: int = 7
+
+
+## Puts `van` at `z` (the gate's line at -4, outward -Z) and lets the gate look twice.
+func _drive_to(van: Node3D, z: float) -> void:
+	van.global_position = Vector3(0, 0, z)
+	await physics_frame
+	await physics_frame
+
+
+func _test_gate_hold() -> void:
+	var trips := CompanyTrips.new()
+	trips.setup(Vector3(0, 0, -4), 4.0)
+	trips.far_max = 1
+	root.add_child(trips)
+	var view := CompanyTripsView.new()
+	root.add_child(view)
+	view.follow(trips)
+	var held: Array = []
+	trips.departure_held.connect(func(id: StringName, reason: Dictionary, driver: int) -> void:
+		held.append([id, reason, driver]))
+	var told: Array = []
+	view.departure_held.connect(func(id: StringName, text: String) -> void: told.append([id, text]))
+	var refused: Array[int] = [0]
+	trips.departure_refused.connect(func(_id: StringName, _reason: Dictionary) -> void: refused[0] += 1)
+	_packed(trips, [&"o1", &"o2"])
+	var first := Node3D.new()
+	first.name = "van_out"
+	var second := DrivenVan.new()
+	second.name = "van_held"
+	for van: Node3D in [first, second]:
+		van.add_to_group(CompanyTrips.VEHICLE_GROUP)
+		root.add_child(van)
+		await _drive_to(van, -2.0)
+	trips.stage_cargo(&"van_out", [&"o1"], [&"box_o1"])
+	trips.stage_cargo(&"van_held", [&"o2"], [&"box_o2"])
+	await _drive_to(first, -7.0)
+	_expect(trips.trips_out() == 1, "one vehicle out on its trip: the cap (1) is reached")
+	await _drive_to(second, -3.5)
+	await _drive_to(second, -4.6)
+	_expect(is_equal_approx(second.global_position.z, -3.5) and not trips.is_out(&"van_held")
+		and trips.trips_out() == 1 and trips.book.state_of(&"o2") == Order.STATE_PACKED and refused[0] == 0,
+		"the second, with cargo, is held at the gate where it last stood inside, not out (z %.2f, out %d)"
+		% [second.global_position.z, trips.trips_out()])
+	var verdict: Dictionary = trips.departure_verdict(&"van_held")
+	_expect(held.size() == 1 and held[0][0] == &"van_held" and held[0][1] == verdict and held[0][2] == 7,
+		"departure_held tells which vehicle, why and who drives it (got %s)" % [held])
+	var text: String = tr(CompanyTrips.FAR_LIMIT)
+	if text.count("%") == 1:
+		text = text % 1
+	_expect(told == [[&"van_held", text]], "the view tells its driver (solo: this peer) why (got %s)" % [told])
+	await _drive_to(second, -6.0)
+	_expect(is_equal_approx(second.global_position.z, -3.5) and held.size() == 1,
+		"pushed again within held_notice_msec it is held again, and nobody is told twice (%d)" % held.size())
+	trips.held_notice_msec = 0
+	await _drive_to(second, -5.0)
+	_expect(held.size() == 2 and told.size() == 2, "...with no pause, every hold is told (%d)" % held.size())
+	# The trip back in: there is room, and the held vehicle leaves with its cargo.
+	await _drive_to(first, -1.0)
+	await _drive_to(second, -6.0)
+	_expect(trips.trip_of(&"van_held") != null and trips.book.state_of(&"o2") == Order.STATE_OUT,
+		"with room again the held vehicle leaves with its cargo")
+	# No cargo staged: not held (an empty vehicle doesn't count, D-0316).
+	await _drive_to(first, -7.0)
+	_expect(not is_equal_approx(first.global_position.z, -3.5) and not trips.is_out(&"van_out"),
+		"a vehicle with no cargo crosses freely and isn't out")
+	# hold_at_gate off: a vehicle with cargo crosses refused and counts as out, as before D-0316.2.
+	await _drive_to(first, -2.0)
+	_packed(trips, [&"o3"])
+	trips.stage_cargo(&"van_out", [&"o3"], [&"box_o3"])
+	trips.hold_at_gate = false
+	await _drive_to(first, -7.0)
+	_expect(trips.is_out(&"van_out") and refused[0] == 1 and is_equal_approx(first.global_position.z, -7.0),
+		"with hold_at_gate off it crosses refused and counts as out")
+	for node: Node in [first, second, view, trips]:
+		node.queue_free()
 	await process_frame
 
 

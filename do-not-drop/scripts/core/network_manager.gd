@@ -137,10 +137,14 @@ const MAX_PLAYERS: int = 8
 ## 50: CompanyNet's _request takes a new kind, shop_buy, and _apply_event a new
 ## one, shop_bought {item, money, minute}: the company shop's purchases, only the
 ## host's go through and a client's is refused with host_only (company mode, D-0518).
+## 51: CompanyTripsView (the company world's TripsView) has a new RPC, _held_here(vehicle, cap): the
+## host tells the driver of a company vehicle it holds at the gate why (one with cargo that may not
+## leave with VEHICLES_FAR_MAX out: before, it crossed and counted as out); an older client gets an
+## RPC it doesn't have (company mode, D-0316.2).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 50
+const PROTOCOL_VERSION: int = 51
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

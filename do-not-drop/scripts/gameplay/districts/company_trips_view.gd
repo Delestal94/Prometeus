@@ -33,11 +33,20 @@ extends Node
 ## or publish; trip_closed only for a trip (not for a refused vehicle back), with what failed. A HUD
 ## listens to those two. Without a CompanyNet (attach() not called) the host's facts apply here at
 ## once. It names no autoload (lesson N-919).
+##
+## A vehicle held at the gate (CompanyTrips.departure_held, D-0316.2: it may not leave, VEHICLES_FAR_MAX
+## are out) is no trip fact: nothing changes on any peer, only its driver is told why. The host sends it
+## to that peer alone, as an RPC on this node (_held_here: on every peer and never hidden, unlike the
+## vehicle, whose RPCs skip the peers it is hidden from), or tells itself when it drives; that peer's
+## view emits departure_held and shows the reason (WORLD_DISPATCH_FAR_LIMIT) as EventBus.depot_notice,
+## by path. Nobody at the wheel (pushed): nobody is told.
 
 ## After every trip event applied here and after a snapshot: redraw from vehicles_out()/trip_of().
 signal changed
 ## A trip came back (every peer, after the event): the orders of it that were not delivered.
 signal trip_closed(trip_id: StringName, vehicle_id: StringName, failed: Array[StringName])
+## The driver's peer only: the host held `vehicle_id` at the gate; `text` is the reason, translated.
+signal departure_held(vehicle_id: StringName, text: String)
 
 ## The event kinds (CompanyNet takes them in its EVENT_KINDS and HOST_EVENT_KINDS).
 const STARTED: StringName = &"trip_started"
@@ -107,6 +116,7 @@ func follow(trips: CompanyTrips) -> void:
 	var hooks: Dictionary = {
 		&"trip_started": _on_trip_started, &"trip_closed": _on_trip_closed,
 		&"departure_refused": _on_departure_refused, &"refused_returned": _on_refused_returned,
+		&"departure_held": _on_departure_held,
 	}
 	for hook: StringName in hooks:
 		if not trips.is_connected(hook, hooks[hook]):
@@ -212,6 +222,39 @@ func _on_trip_closed(trip: Trip, failed: Array[StringName]) -> void:
 ## reason is always the cap (CompanyTrips.FAR_LIMIT): a peer that shows it reads it from there.
 func _on_departure_refused(vehicle_id: StringName, _reason: Dictionary) -> void:
 	_publish(REFUSED, {"vehicle": vehicle_id, "minute": _source_minute()})
+
+
+## Host: `vehicle_id` was held at the gate (CompanyTrips.departure_held): its driver is told why, the
+## host itself at once, a client through _held_here. The reason is always the cap: its value travels.
+func _on_departure_held(vehicle_id: StringName, reason: Dictionary, driver: int) -> void:
+	var args: Array = reason.get("args", [])
+	var cap: int = clampi(int(args[0]) if not args.is_empty() and args[0] is int else 0, 0, MAX_OUT)
+	if driver <= 0 or not is_host() or not _id_ok(String(vehicle_id)):
+		return
+	var link: MultiplayerPeer = multiplayer.multiplayer_peer if is_inside_tree() else null
+	if driver == multiplayer.get_unique_id() or link == null or link is OfflineMultiplayerPeer:
+		_tell_held(vehicle_id, cap)
+	elif multiplayer.get_peers().has(driver):
+		_held_here.rpc_id(driver, String(vehicle_id), cap)
+
+
+## The driver's peer, from the host: the vehicle it drives was held at the gate with `cap` vehicles out.
+@rpc("authority", "call_remote", "reliable")
+func _held_here(vehicle: String, cap: int) -> void:
+	if not RpcGuard.from_host(self) or not _id_ok(vehicle) or cap < 0 or cap > MAX_OUT:
+		return
+	_tell_held(StringName(vehicle), cap)
+
+
+## This peer drives `vehicle_id`, held at the gate: departure_held and the reason as a HUD notice.
+func _tell_held(vehicle_id: StringName, cap: int) -> void:
+	var text: String = tr(CompanyTrips.FAR_LIMIT)
+	if text.count("%") == 1:
+		text = text % cap
+	departure_held.emit(vehicle_id, text)
+	var bus: Node = get_node_or_null(^"/root/EventBus") if is_inside_tree() else null
+	if bus != null and bus.has_signal(&"depot_notice"):
+		bus.emit_signal(&"depot_notice", text)
 
 
 ## Host: a vehicle out refused is back (CompanyTrips.refused_returned): trip_closed with no trip.
