@@ -28,6 +28,9 @@
 | D-0218 | ✅ Registro de productos y proveedores leído de `.tres` | constructor-negocio | medium | idem con productos |
 | D-0219 | ✅ Reloj del juego determinista desde el host (hora del día, aceleración, pausa) | constructor-red | high | test con dos peers ve la misma hora ±1 tick |
 | D-0220 | ✅ Decidir dónde vive cada script nuevo (`business/`, `fleet/`, `districts/`) y qué va a módulos | Plan | medium | árbol de carpetas en `docs/arquitectura.md`; `check_modules` verde |
+| D-0251 | Un día cortado vuelve a su apertura: crear la empresa guarda el día 1 y un corte solo marca `interrupted`, no escribe nada a medias ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_company_autosave` ampliado: cobrar, salir a mitad de día y cargar da la plata, el stock y el libro de caja de la apertura |
+| D-0252 | Stock sin lugares en curso al guardar: manos, piso, cajas y paquetes al bulto de devolución con posición ([guardado.md](diseno/guardado.md) §3) | constructor-progresion | medium | test: después de cargar, toda unidad está en un lugar con estación y el bulto se puede tomar |
+| D-0253 | Cerrar el día antes: el host lo pide desde la pausa y se guarda como un cierre; las salidas avisan que cortar pierde el día ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_day_cycle` ampliado; botón y aviso en el menú de pausa |
 
 ## Ampliación
 
