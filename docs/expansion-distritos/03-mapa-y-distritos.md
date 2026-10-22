@@ -14,7 +14,7 @@
 | D-0304 | Generación de ruta por distrito: `RouteStreamer` con conjunto de tramos y decorado del distrito | constructor-tramos | xhigh | Barrio Centro y Campo generan rutas distintas con la misma semilla; `route_golden` por distrito |
 | ✅ D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
 | D-0306 | ✅ Orden de paradas: el jugador elige o lo sugiere el GPS | constructor-camion | high | GPS muestra la próxima parada; test cambia el orden |
-| D-0307 | Regreso al galpón: viaje de vuelta corto o salto con pantalla de resumen (según D-0104) | constructor-mundo | high | regreso sin cargar la escena entera dos veces (medido) |
+| D-0307 | ◐ (falta D-0307.1: la grúa en el mundo; ver detalle) Regreso al galpón: viaje de vuelta corto o salto con pantalla de resumen (según D-0104) | constructor-mundo | high | regreso sin cargar la escena entera dos veces (medido) |
 | D-0308 | ◐ (falta D-0308.1, ver detalle: es el GPS por el grafo) Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
 | D-0309 | ✅ Requisito de vehículo por distrito (la lancha solo sale al agua, etc.) | constructor-progresion | medium | test: combinación inválida rechazada |
 | D-0310 | ◐ (falta D-0310.b) Mapa del mundo 2D (tablero en el galpón) con distritos, estado y pedidos (incluye D-0327, fusión de D-0112) | constructor-ui | high | captura de `revisor-visual` legible a 1080p y Steam Deck |

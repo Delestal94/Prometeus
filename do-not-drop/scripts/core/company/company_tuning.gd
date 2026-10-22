@@ -58,6 +58,15 @@ const SURFACE_SPEED: Dictionary = {&"asphalt": 14.0, &"cobble": 10.0, &"gravel":
 ## How far ahead along the route the GPS arrow points, in meters.
 const GPS_LOOKAHEAD: float = 30.0
 
+# --- Tow home (D-0307) ---
+## "Volver con grua": a vehicle left stuck or broken on a trip is towed back to the shed's yard for this
+## much money (spent from the company wallet, ledger reason `tow`). The undelivered orders fail, as in any
+## trip that comes back with them. Low enough to be a way out, high enough that nobody wrecks a van to skip
+## the drive (a failed order already costs more than it pays, docs/economia-y-contramedidas.md).
+const TOW_COST: int = 50
+## Real seconds of black screen while the vehicle is carried to the yard.
+const TOW_BLACK_SCREEN_SECONDS: float = 3.0
+
 # --- Crew split between the shed and the street (D-0316) ---
 ## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
 ## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
@@ -81,6 +90,9 @@ const SHED_POSE_RATE_HZ: int = 15
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
+## Money the suggested supplier order leaves untouched besides the rent (D-0151,
+## roles-tripulacion.md §6.3): the reserve of the economy curve.
+const SOLO_ORDER_CASH_RESERVE: int = 100
 
 # --- Bankruptcy (D-0510) ---
 ## A company that closes the day in the red opens the next one with this share of its orders
@@ -204,6 +216,10 @@ const ORDERS_MAX_PER_DAY: int = 16
 const ORDER_HOUR_WEIGHTS: Array[float] = [1.0, 2.0, 3.0, 3.0, 2.5, 1.0, 1.0, 2.0, 2.5, 2.0, 0.5]
 ## Orders do not arrive in the last hour of the day: the crew would have no time to ship them.
 const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
+## With a crew of one the day's arrival hours are squeezed so the last order comes in by 15:00 of the
+## shed (D-0151, roles-tripulacion.md §6.2): the shed stands still while the only player drives (S4),
+## and with three trips the afternoon orders would never come in. The count does not change.
+const SOLO_ORDER_LAST_ARRIVAL_MIN: int = 15 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3

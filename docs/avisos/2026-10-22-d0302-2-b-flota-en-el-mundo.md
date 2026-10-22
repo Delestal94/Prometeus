@@ -1,14 +1,12 @@
-# Protocolo 47: la camioneta de la empresa existe en el mundo de la empresa (D-0302.2.b)
+# Protocolo 48: la camioneta de la empresa existe en el mundo de la empresa (D-0302.2.b)
 
 **Fecha:** 2026-10-22 · **De:** Nacho (red) · **Para:** Slatex
 
 ## Qué cambió
 
-- **`PROTOCOL_VERSION` 47** (`scripts/core/network_manager.gd`, zona compartida): solo la constante y su línea del
-  historial. `main` ya tiene el 46 (D-0618.b, PR #630) y esta rama copia esa línea tal cual, así que al mezclar
-  `main` el conflicto se resuelve quedándose con las dos líneas (46 y 47). El PR abierto #646 (D-0518) también
-  pedía 46: el que se mezcle después sube al siguiente libre (`docs/convenciones-godot.md` §6). Ninguna firma ni RPC
-  de `NetworkManager`, `NetSession` o `EventBus` cambió y `modules/` no se tocó.
+- **`PROTOCOL_VERSION` 48** (`scripts/core/network_manager.gd`, zona compartida): solo la constante y su línea del
+  historial (46 es D-0618.b, 47 D-0517, ya en `main`). Ninguna firma ni RPC de `NetworkManager`, `NetSession` o
+  `EventBus` cambió y `modules/` no se tocó.
   **Cambió el protocolo** aunque no hay RPC nuevo: el mundo de la empresa tiene un nodo replicado nuevo en cada peer,
   `World/Vehicles/van_classic` (la `vehicle.tscn` con su `MultiplayerSynchronizer` de siempre). Un cliente viejo no
   tiene ese nodo (no resuelve el sincronizador del host) y no esconde la copia lejana que el host deja de mandar.
@@ -29,4 +27,4 @@
 Nada obligatorio. Para saber: en el mundo de la empresa ahora hay un nodo en el grupo `vehicle`, así que lo que en
 `player/` y `package/` busca la camioneta con `get_first_node_in_group(&"vehicle")` (ir a bordo, `net_in_vehicle`,
 la tasa de pose, el asiento) la encuentra como en la ruta. Con más de un vehículo en la flota solo cuenta el primero:
-queda para cuando la flota tenga dos (D-0302.2.b.2). Si una rama tuya sube `PROTOCOL_VERSION`, la próxima libre es 48.
+queda para cuando la flota tenga dos (D-0302.2.b.2). Si una rama tuya sube `PROTOCOL_VERSION`, la próxima libre es 49.

@@ -119,8 +119,11 @@ const MAX_PLAYERS: int = 8
 ## _remote_consume only after it lets the box go (company mode, D-0316.3);
 ## 46: CompanyNet's _apply_event takes a fifth jack event, jack_departed {day, lines}
 ## (the supplier truck drove off with what was left on its bed), and the "pallets"
-## snapshot part carries departed_day and the delivery note (company mode, D-0618.b);
-## 47: the company world has its vehicles on every peer, World/Vehicles/<vehicle
+## snapshot part carries departed_day and the delivery note (company mode, D-0618.b).
+## 47: CompanyNet's _apply_event carries a new host kind, wallet_moved {amount,
+## reason, money, minute}: the company's money moved by the host with no request,
+## set on every peer from the host's balance (company mode, D-0517);
+## 48: the company world has its vehicles on every peer, World/Vehicles/<vehicle
 ## id> (vehicle.tscn and its synchronizer, sent only to the players near it): the
 ## host opens each one's synchronizer to a peer only after its snapshot, from which
 ## the client builds them; an older client has no such node and would not hide a
@@ -128,7 +131,7 @@ const MAX_PLAYERS: int = 8
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 47
+const PROTOCOL_VERSION: int = 48
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

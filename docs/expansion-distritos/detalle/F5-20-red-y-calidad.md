@@ -46,15 +46,15 @@ comprueba que los hashes coinciden y que el script falla si uno no coincide (un 
 y los KB/s por cliente dentro del presupuesto de D-2002 (≤ 24 KB/s en el galpón).
 
 ### D-2024 · Bot de jugador solo, 20 días — A · Opus 5.5 · high · Aviso: no · F5
-**Depende de:** D-0126, D-2016, D-0510 (quiebra), D-1001 (empleados, si el modo solo los usa)
+**Depende de:** D-0126, D-0151, D-2016, D-0510 (quiebra), D-1001 (empleados, si el modo solo los usa)
 **Qué:** `tests/bot_company_solo.gd`: las etapas de `bot_company_day` con **un** jugador, 20 días seguidos
 con el reloj acelerado (`GameClock` a ×20) y el save cargado entre día y día (como se jugaría). Juega con
 la política del modo solo de [roles-tripulacion.md](../diseno/roles-tripulacion.md) (sale solo cuando
 hay 3-4 cajas listas o un pedido por vencer; el galpón se pausa mientras maneja).
 - [ ] **D-2024.1** Bucle de días sobre `bot_company_day` (la lista de etapas se reusa, no se copia): sale
   con `BOT_FAIL day=<n> <etapa>:<motivo>` en el primer error.
-- [ ] **D-2024.2** Política simple de compras (reponer el producto con menos stock que pedidos abiertos) y
-  de salidas (la regla de arriba). Los números van en `CompanyTuning` si son de diseño; los del bot, en el
+- [ ] **D-2024.2** Sin compras a mano: el bot vive del pedido automático al proveedor (D-0151,
+  roles-tripulacion.md §6.2); solo decide las salidas (la regla de arriba). Los números van en `CompanyTuning` si son de diseño; los del bot, en el
   bot.
 - [ ] **D-2024.3** Resumen por día: plata, entregas, vencidos, roturas, minutos de galpón y de ruta. Una
   línea `SOLO day=<n> money=<> delivered=<> expired=<>`.
