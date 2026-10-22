@@ -6,17 +6,14 @@ tocó nada de tu dominio: ni `package.gd`, ni `package.tscn`, ni sus ayudantes.
 
 ## Zona compartida: `do-not-drop/scripts/core/network_manager.gd`
 
-- `PROTOCOL_VERSION` 38 → **41** (líneas "39", "40" y "41" en el historial). Ninguna firma, RPC ni señal
+- `PROTOCOL_VERSION` 40 → **41** (línea "41" en el historial). Ninguna firma, RPC ni señal
   de `NetworkManager` / `NetSession` cambia; `modules/net_session/` no se tocó.
 - **El protocolo cambia:** el evento `box_sealed` viaja igual, pero ahora cada peer crea un nodo con
   `MultiplayerSynchronizer` que el host sincroniza. Un cliente viejo (38) con un host nuevo no tendría el
   nodo (errores "Node not found" del sincronizador); un cliente nuevo con un host viejo tendría una caja
   quieta que nadie mueve. Con el número nuevo, el handshake los separa con el error de versión.
-- **Por qué 41 y no 39:** el 39 lo tiene el PR #602 (D-0610.b, carritos) y el 40 la rama
-  `exp/D-0302.2-company-van` (salidas en red), los dos en vuelo; `test_protocol_version` exige historial
-  consecutivo, así que sus líneas 39 y 40 van **copiadas tal cual** de esas dos ramas (como hizo D-0302.2
-  con la del 39). **Quien mezcle después de otra de las tres toma los números libres siguientes** y corrige
-  su línea del historial (convenciones §6, paso 3); las líneas copiadas no reservan nada.
+- **Por qué 41:** el 39 (PR #602, D-0610.b) y el 40 (PR #606, D-0302.2.a) ya están en `main`; este PR
+  se mezcló sobre ellos y toma el siguiente.
 - El 41 también cubre un `kind` nuevo de `CompanyNet._request`, `package_ack` (ver abajo): un host viejo lo
   descartaría y nunca abriría el sincronizador.
 

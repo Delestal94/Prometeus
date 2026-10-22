@@ -442,9 +442,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Test: `test_company_sealed_package` (solo, campos malos, `no_trap`, id salteado, host + cliente ENet, el
   cliente que espera un snapshot mientras se encinta, y un tercero que entra tarde) y `test_company_root`
   (celdas).
-- **Protocolo:** las líneas 39 y 40 del historial de `PROTOCOL_VERSION` están copiadas de PR #602 (D-0610.b)
-  y de la rama `exp/D-0302.2-company-van` para que el historial siga consecutivo; el que mezcle después
-  toma los números libres siguientes (`docs/convenciones-godot.md` §6, paso 3).
+- **Protocolo:** 41 (sobre el 39 de D-0610.b y el 40 de D-0302.2.a).
 - **Pendiente:**
   - las cajas vivas en el snapshot (hasta entonces el que entra tarde, o un cliente cuyo snapshot cubrió el
     `box_sealed`, no ve las cajas ya encintadas; con el acuse no recibe errores, solo no las tiene);
