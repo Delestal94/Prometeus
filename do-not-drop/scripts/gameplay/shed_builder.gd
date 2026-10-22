@@ -266,9 +266,15 @@ func _on_request_rejected(rid: int, reason: StringName) -> void:
 	_refresh()
 
 
-## A layout event arrived (ours or anyone's): the ghost and hint follow the new layout.
+## A layout event arrived (ours or anyone's): the ghost and hint follow the new layout. When the shed
+## grew (shed_expanded, D-0910.2; or an expansion bought in the shop), the cursor's grid and checks take
+## the new stage first.
 func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
-	if mode.active and CompanyLayoutNet.EVENT_KINDS.has(kind):
+	if not mode.active or cursor == null:
+		return
+	if kind == CompanyLayoutNet.EXPANDED or kind == CompanyShopNet.BOUGHT:
+		WarehouseStages.apply_to(int(net.company.get(&"warehouse_stage")), cursor.placement, mode)
+	if CompanyLayoutNet.EVENT_KINDS.has(kind) or kind == CompanyShopNet.BOUGHT:
 		_refresh()
 
 
@@ -305,6 +311,9 @@ func _make_view() -> void:
 	_ghost = MeshInstance3D.new()
 	_ghost.name = "BuildGhost"
 	shed.add_child(_ghost)
+	# Under the shed, but not its drawing: every layout event redraws the shed and must keep them.
+	for node: Node in [camera, _grid, _ghost]:
+		node.add_to_group(CompanyShed.OVERLAY_GROUP)
 	var layer := CanvasLayer.new()
 	layer.name = "BuildHud"
 	add_child(layer)

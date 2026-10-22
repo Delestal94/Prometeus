@@ -91,6 +91,9 @@ const ZONE_COLORS: Dictionary = {
 }
 ## The zone name's size on the floor (DepotLabels.floor_text: 0.012 m per pixel, so 0.24 m tall).
 const ZONE_LABEL_SIZE: int = 20
+## Nodes another adapter hangs under the shed (the build mode's camera, grid and ghost, ShedBuilder) join
+## this group: a redraw keeps them, since they are not the shed's drawing and their owner frees them.
+const OVERLAY_GROUP: StringName = &"company_shed_overlay"
 
 ## Station state of every packing table, by piece uid (D-0701), kept across redraws: the table node
 ## is drawn here, the box in its hollow is PackingStation's. Shelf labels by uid (D-0608) too.
@@ -129,8 +132,9 @@ func _init() -> void:
 
 
 ## Redraws from `company_net` from now on, the same on every peer: the whole shed when a layout event
-## is applied (layout_placed / moved / sold) or a snapshot replaced the state
-## (company_state_restored), the labels and pallets when units move. It only draws.
+## is applied (layout_placed / moved / sold, and shed_expanded: floor, walls, gates and zones of the new
+## stage, D-0910.2) or a snapshot replaced the state (company_state_restored), the labels and pallets when
+## units move. It only draws.
 func follow(company_net: CompanyNet) -> void:
 	_net = company_net
 	if yard != null:
@@ -199,6 +203,8 @@ func holds(world_point: Vector3) -> bool:
 ## Draws the shed of `state` (a CompanyState: layout and warehouse_stage) with the units of `stock`.
 func rebuild(state: Object, stock: Inventory) -> void:
 	for child: Node in get_children():
+		if child.is_in_group(OVERLAY_GROUP):
+			continue
 		remove_child(child)
 		child.queue_free()
 	pieces.clear()
@@ -379,11 +385,18 @@ func _paint_fixed_zones(kit: DepotKit) -> void:
 
 
 func _paint_default_zones(kit: DepotKit) -> void:
-	if _default == null or _default.stage != stage:
+	if not _default_fits():
 		return
 	for zone: Dictionary in _default.zones:
 		_paint_zone(kit, StringName(str(zone.get("role", ""))), zone.get("rect", Rect2i()),
 			zone.get("label_at", Vector2.ZERO))
+
+
+## The default shed's cells (painted zones, cart and pallet spots) are on the floor drawn: its own stage or a
+## bigger one, since every stage grows from the corner (0, 0) (D-0905). Growing the shed (D-0910.2) keeps
+## the carts and the zones where they were instead of dropping them.
+func _default_fits() -> bool:
+	return _default != null and _default.stage <= stage
 
 
 ## A flat patch of colour over the rect and its name written on the floor, readable from the south.
@@ -554,7 +567,7 @@ func station_for(id: StringName) -> Dictionary:
 ## One cart per DefaultShed.cart_spots entry ("cart_1", "cart_2"...), where the host's pushes left it.
 func _build_carts() -> void:
 	var spots: Array[Vector2] = []
-	if _default != null and _default.stage == stage:
+	if _default_fits():
 		spots = _default.cart_spots
 	for index: int in spots.size():
 		var id := StringName("cart_%d" % (index + 1))
@@ -780,7 +793,7 @@ func _draw_pallets(stock: Inventory) -> void:
 		child.queue_free()
 	pallet_nodes.clear()
 	var spots: Array[Vector2] = []
-	if _default != null and _default.stage == stage:
+	if _default_fits():
 		spots.assign(_default.pallet_spots)
 	for index: int in waiting.size():
 		var spot: Vector2 = spots[index % spots.size()] if not spots.is_empty() else Vector2(grid) * 0.5
