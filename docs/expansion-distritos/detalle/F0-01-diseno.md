@@ -375,7 +375,7 @@ Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
 **Hecho cuando:** la nota existe y la rutina de lanzamiento puede pasar la página a la versión B sin preguntar qué prometer.
 
 ### D-0140 · La contra al diseño completo — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/revision-diseno.md`: F1 no está cerrado (la puerta no cobra, las trampas no leen la intensidad, el bot simula etapas); compuerta F1 → F2 atada a D-2016, Campo fuera del corte, D-2016.4, D-0710.b, D-0509.b, D-0254 y D-0551; los recortes quedan para PRs propios.
+**[x] Hecho (2026-10-22, PR #737)** — `diseno/revision-diseno.md`: F1 no está cerrado (la puerta no cobra, las trampas no leen la intensidad, el bot simula etapas); compuerta F1 → F2 atada a D-2016, Campo fuera del corte, D-2016.4, D-0710.b, D-0509.b, D-0254 y D-0551; los recortes quedan para PRs propios.
 **Depende de:** D-0101 a D-0139 (todo el diseño escrito), D-0112 (los recortes de alcance ya aplicados no se repiten)
 **Qué:** pasada de `abogado-del-diablo` a `diseno/*.md`, las decisiones de la expansión y lo que ya está construido.
 Informe `diseno/revision-diseno.md`:
