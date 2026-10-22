@@ -44,7 +44,8 @@ func _run() -> void:
 	var widths: Array[float] = []
 	var depths: Array[float] = []
 	for stage: int in ShedExteriorPlan.variant_count():
-		var exterior: ShedExterior = ShedExterior.build(stage, WarehouseStages.floor_size_m(stage), CompanyShed.WALL_HEIGHT)
+		var exterior: ShedExterior = ShedExterior.build(
+			stage, WarehouseStages.floor_size_m(stage), CompanyShed.WALL_HEIGHT)
 		var board: MeshInstance3D = exterior.get_node_or_null(^"Sign")
 		var yard: MeshInstance3D = exterior.get_node_or_null(^"Yard")
 		_expect(board != null and yard != null, "stage %d draws a sign and a yard" % stage)
@@ -54,7 +55,8 @@ func _run() -> void:
 			widths.append((board.mesh as BoxMesh).size.x)
 			depths.append((yard.mesh as BoxMesh).size.z)
 			_expect(board.position.y > CompanyShed.WALL_HEIGHT, "stage %d: the sign is above the wall" % stage)
-			_expect(yard.position.z - (yard.mesh as BoxMesh).size.z * 0.5 >= WarehouseStages.floor_size_m(stage).y * 0.5,
+			var yard_start: float = yard.position.z - (yard.mesh as BoxMesh).size.z * 0.5
+			_expect(yard_start >= WarehouseStages.floor_size_m(stage).y * 0.5,
 				"stage %d: the yard starts at the dock wall" % stage)
 		exterior.free()
 	for i: int in range(1, widths.size()):
@@ -72,18 +74,22 @@ func _run() -> void:
 	shed.rebuild(state, stock)
 	var first: Node = shed.get_node_or_null(^"Exterior")
 	_expect(first != null, "the shed hangs an exterior")
-	var first_width: float = ((first.get_node(^"Sign") as MeshInstance3D).mesh as BoxMesh).size.x if first != null else 0.0
+	var first_width: float = _sign_width(first)
 	state.warehouse_stage = 2
 	shed.rebuild(state, stock)
 	await process_frame
 	var second: Node = shed.get_node_or_null(^"Exterior")
-	_expect(second != null and shed.get_children().filter(func(n: Node) -> bool: return n.name == &"Exterior").size() == 1,
-		"a redraw keeps exactly one exterior")
-	if second != null:
-		_expect(((second.get_node(^"Sign") as MeshInstance3D).mesh as BoxMesh).size.x > first_width,
-			"the exterior follows the stage after a redraw")
+	var exteriors: Array = shed.get_children().filter(func(n: Node) -> bool: return n.name == &"Exterior")
+	_expect(second != null and exteriors.size() == 1, "a redraw keeps exactly one exterior")
+	_expect(_sign_width(second) > first_width, "the exterior follows the stage after a redraw")
 	shed.free()
 	quit(_failures)
+
+
+func _sign_width(exterior: Node) -> float:
+	if exterior == null:
+		return 0.0
+	return ((exterior.get_node(^"Sign") as MeshInstance3D).mesh as BoxMesh).size.x
 
 
 func _bodies_in(node: Node) -> int:
