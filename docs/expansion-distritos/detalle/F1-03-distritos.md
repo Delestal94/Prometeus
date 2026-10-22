@@ -179,6 +179,10 @@ frame es < 50 ms.
 **Hecho cuando:** los dos pasan.
 
 ### D-0314 · Barrio Centro jugable en gris — A · Opus 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-22, PR pendiente)** — `CentroDecor` (`scripts/gameplay/districts/centro_decor.gd`) lo da cada celda `Cell_<x>_<z>` en un nodo `Centro` (`EdgeCellContent` + `CompanyCells.use_graph`): veredas de 2 m a los dos lados de las 17 calles de Centro (cortadas donde cruza otra calzada o hay una casa), las 30 casas de `houses.tres` con `HouseMap.instance()` en la celda donde caen (entran al árbol de a una por cuadro), 4 esquinas con semáforo apagado (poste y cabeza grises por esquina), 88 faroles y 47 bancos; una malla por color y un cuerpo de colisión por celda. `test_company_centro`. Ver [`revisar/D-0314.md`](../revisar/D-0314.md) y [`arte-pendiente/D-0314.md`](../arte-pendiente/D-0314.md).
+**Subtareas abiertas:**
+- **D-0314.a** Nadie llama a `CompanyCells.use_graph()` en el juego (solo los tests): `CompanyRoot._add_cells()` arma celdas vacías. Conectarlo (con la malla de calles de D-0304.1, que hoy tampoco se ve en el juego) y comprobar que el galpón y las losas de zona (`_add_zone_slab`) conviven con la calzada y las veredas.
+- **D-0314.b** `bot_company_day` entrega en Centro (depende de D-0304.3, D-0801 y D-0314.a) y `revisor-visual` manda las 3 capturas (esquina con semáforo, cuadra con casas, vereda de cerca) sin agujeros en el piso ni casas flotando.
 **Depende de:** D-0304, D-0311
 **Qué:** la parte mínima de D-1501 que necesita el corte vertical:
 - cuadras con veredas, 30 casas y 4 esquinas con semáforo apagado (sin tránsito en F1);
