@@ -1468,6 +1468,60 @@ UI_COMPANY_NOTE_3,Cuidado con el perro (es amistoso).,Careful with the dog (he's
 UI_COMPANY_NOTE_4,Ojalá llegue antes de la cena.,Hope it gets here before dinner.
 UI_COMPANY_NOTE_GIFT_1,¡No lo abras! Es sorpresa.,Don't open it! It's a surprise.
 UI_COMPANY_NOTE_GIFT_2,Para mi abuela. Con cariño.,For my grandma. With love.
+UI_COMPANY_NOTE_5,"Si no hay nadie, probá con el vecino de la reja verde.","If nobody answers, try the neighbor with the green gate."
+UI_COMPANY_NOTE_6,El timbre no anda: golpeá fuerte.,The doorbell is broken: knock hard.
+UI_COMPANY_NOTE_7,"Por favor, no lo tires. Gracias.",Please don't throw it. Thanks.
+UI_COMPANY_NOTE_8,"Estoy en una reunión, pero escucho todo.","I'm in a meeting, but I can hear everything."
+UI_COMPANY_NOTE_9,Ojo con el escalón de la entrada.,Watch the step at the entrance.
+UI_COMPANY_NOTE_10,El gato va a querer ayudarte. No lo dejes.,The cat will want to help. Don't let it.
+UI_COMPANY_NOTE_11,"Si llueve, dejalo bajo el techito.","If it rains, leave it under the little roof."
+UI_COMPANY_NOTE_12,Lo necesito antes de que se enfríe el mate.,I need it before the tea gets cold.
+UI_COMPANY_NOTE_13,"No toques la bocina, el bebé duerme.","Don't honk, the baby is asleep."
+UI_COMPANY_NOTE_14,La casa es la de las macetas. Todas son macetas.,It's the house with the plant pots. They all are.
+UI_COMPANY_NOTE_15,"Gracias por venir hasta acá, de verdad.","Thanks for coming all the way out here, really."
+UI_COMPANY_NOTE_16,"Si es muy pesado, pedile ayuda a alguien.","If it's too heavy, ask someone for a hand."
+UI_COMPANY_NOTE_17,"Hay un perro atado, pero se suelta.","There's a dog on a leash, but he gets loose."
+UI_COMPANY_NOTE_18,"No sé qué pedí, pero ya lo quiero.","I don't remember what I ordered, but I already want it."
+UI_COMPANY_NOTE_19,Firmo con una cruz si hace falta.,I'll sign with an X if needed.
+UI_COMPANY_NOTE_20,"Entrá por el costado, el portón de adelante está trabado.","Come in by the side, the front gate is stuck."
+UI_COMPANY_NOTE_21,Cuidá la caja como si fuera tuya.,Treat the box like it's yours.
+UI_COMPANY_NOTE_22,Llevo tres días esperando esto.,I've been waiting for this for three days.
+UI_COMPANY_NOTE_23,"Si llegás tarde, no pasa nada. Bueno, un poco sí.","If you're late, it's fine. Well, a little bit not."
+UI_COMPANY_NOTE_24,Mi puerta es azul. O verde. Depende de la luz.,My door is blue. Or green. Depends on the light.
+UI_COMPANY_NOTE_25,"No lo apoyes de costado, por favor.",Please don't lay it on its side.
+UI_COMPANY_NOTE_26,Hay una gallina suelta. No es mía.,There's a loose hen. It isn't mine.
+UI_COMPANY_NOTE_27,Te dejé agua fresca en el cantero.,I left some fresh water by the flower bed.
+UI_COMPANY_NOTE_28,"Si ves una bicicleta roja, ya llegaste.","If you see a red bike, you've arrived."
+UI_COMPANY_NOTE_29,"Que no se moje, que es de cartón.","Keep it dry, it's cardboard."
+UI_COMPANY_NOTE_30,Tocá el timbre una vez. Dos asusta al loro.,Ring once. Twice scares the parrot.
+UI_COMPANY_NOTE_31,Mi suegra va a atenderte. Suerte.,My mother-in-law will answer. Good luck.
+UI_COMPANY_NOTE_32,No es una bomba. Es una tostadora.,It's not a bomb. It's a toaster.
+UI_COMPANY_NOTE_33,"Gracias, sos mi repartidor favorito.","Thanks, you're my favorite courier."
+UI_COMPANY_NOTE_34,"Si me ves en la ventana, saludá.","If you see me at the window, wave."
+UI_COMPANY_NOTE_35,"El pasto está alto, perdón por el camino.","The grass is tall, sorry about the path."
+UI_COMPANY_NOTE_36,Dejalo en el buzón. Si entra.,Leave it in the mailbox. If it fits.
+UI_COMPANY_NOTE_37,La puerta se abre sola si la empujás con ganas.,The door opens by itself if you push with feeling.
+UI_COMPANY_NOTE_38,"Es para un cumpleaños, no llegues tarde.","It's for a birthday, don't be late."
+UI_COMPANY_NOTE_39,Mejor que no lo vea el vecino de enfrente.,Better the neighbor across the street doesn't see it.
+UI_COMPANY_NOTE_40,"Voy a estar en la huerta, gritá fuerte.","I'll be in the garden, shout loud."
+UI_COMPANY_NOTE_41,"Si el perro te mira feo, no lo mires.","If the dog gives you a look, don't look back."
+UI_COMPANY_NOTE_42,Prometo una propina. Algún día.,I promise a tip. Someday.
+UI_COMPANY_NOTE_43,"Cualquier cosa, estoy en el fondo.","If anything, I'm out back."
+UI_COMPANY_NOTE_44,Espero que el camino no esté muy roto.,I hope the road isn't too bad.
+UI_COMPANY_NOTE_45,Hoy es el día más importante de mi semana.,Today is the most important day of my week.
+UI_COMPANY_NOTE_46,"Gracias por todo, y perdón por todo.","Thanks for everything, and sorry for everything."
+UI_COMPANY_NOTE_47,No lo agites. Ni lo mires mucho.,Don't shake it. Or stare at it.
+UI_COMPANY_NOTE_48,Llevá el paquete con cuidado. Adentro hay un tesoro.,Carry the package with care. There's a treasure inside.
+UI_COMPANY_NOTE_GIFT_3,Feliz cumpleaños. Que no se note la caja.,Happy birthday. Don't let the box show.
+UI_COMPANY_NOTE_GIFT_4,Es para mi mejor amigo. No le digas nada.,It's for my best friend. Don't tell him anything.
+UI_COMPANY_NOTE_GIFT_5,Con moño y todo. Cuidá el moño.,Bow and all. Mind the bow.
+UI_COMPANY_NOTE_GIFT_6,Que lo abra recién a la noche.,Have them open it only tonight.
+UI_COMPANY_NOTE_GIFT_7,"Un regalo chiquito, pero con mucho amor.","A small gift, but with a lot of love."
+UI_COMPANY_NOTE_GIFT_8,"Si preguntan, vos no sabés nada.","If anyone asks, you know nothing."
+UI_COMPANY_NOTE_GIFT_9,Es para mi mamá. Se va a emocionar.,It's for my mom. She'll get emotional.
+UI_COMPANY_NOTE_GIFT_10,Sorpresa de aniversario. Shhh.,Anniversary surprise. Shhh.
+UI_COMPANY_NOTE_GIFT_11,"Que no lo agiten, adentro hay algo frágil.","Don't shake it, there's something fragile inside."
+UI_COMPANY_NOTE_GIFT_12,Tocá el timbre y escondete.,Ring the bell and hide.
 UI_COMPANY_DISTRICT_PARQUE_INDUSTRIAL,Parque industrial,Industrial park
 UI_COMPANY_DISTRICT_CENTRO,Centro,Downtown
 UI_COMPANY_DISTRICT_SUBURBIO,Suburbio,Suburbs
