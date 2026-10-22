@@ -454,7 +454,7 @@ voto es D-0518.b).
   entero (380 a 550 bytes, medido) y no la semilla: así ningún cliente necesita los mismos catálogos, zonas abiertas,
   tripulación y plata que el host para llegar al mismo pedido, y uno que entra tarde lo recibe igual en el snapshot.
 - **Validación (regla 5)**, `CompanyOrdersNet.order_ok()`: exactamente las claves de `Order.normalize()` (más las que
-  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact`, solo en el snapshot), id y
+  suma el libro al moverse, `box_id`, `trip_id`, `late_from`, `quality`, `paid`, `intact` y, en un pedido entregado, `stars` 1-5 (D-0816.b), solo en el snapshot), id y
   cliente de texto de hasta 64, una zona de `data/zones/` y una casa del mapa (`HouseAddresses`) o `<zona>_house_<n>`
   de esa zona con `n` de 1 a 12, de 1 a 3 productos del catálogo distintos con `qty` entera 1..24, requisitos de
   `data/order_requirements/` sin repetir, `created_min < due_min` enteros, paga entera 0..10⁹ y estado conocido (`open`

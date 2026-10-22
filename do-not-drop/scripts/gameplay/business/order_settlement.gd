@@ -16,7 +16,8 @@ const REASON_PAID: StringName = &"order_paid"
 ## arrived broken (one entry per unit). Returns {ok, paid, tip, reputation, kinds, lost, stars}: ok is
 ## false, and nothing changes, when the order is not deliverable now (not out on the road or late from
 ## there). reputation is the net change applied, including the tip's. stars is the customer's rating
-## 1-5 (OrderRating, D-0816; 0 when not ok): it is reported, not stored in the book nor paid.
+## 1-5 (OrderRating, D-0816; 0 when not ok): it is kept with the closed order in the book
+## (OrderBook.mark_delivered(), D-0816.b), not paid.
 static func settle(
 	book: OrderBook,
 	company: Object,
@@ -41,7 +42,13 @@ static func settle(
 	var verdict: Dictionary = OrderPenalties.assess(order, box, now_min, broken, products)
 	var base: int = maxi(int(verdict["base"]), 1)
 	var quality: int = clampi(roundi(100.0 * float(verdict["pay"]) / base), 0, 100)
-	var paid: int = book.mark_delivered(order_id, quality, broken.is_empty(), now_min, int(verdict["pay"]))
+	var tip_result: Dictionary = OrderTips.assess(order, verdict, now_min)
+	var stars: int = OrderRating.stars(
+		{"ok": true, "kinds": verdict["kinds"], "tip": int(tip_result.get("tip", 0))}
+	)
+	var paid: int = book.mark_delivered(
+		order_id, quality, broken.is_empty(), now_min, int(verdict["pay"]), stars
+	)
 	if paid < 0:
 		return failed
 	company.earn(paid, REASON_PAID)
@@ -50,7 +57,6 @@ static func settle(
 	if verdict["kinds"].is_empty():
 		reputation += CompanyTuning.CLEAN_DELIVERY_REPUTATION
 		company.add_reputation(CompanyTuning.CLEAN_DELIVERY_REPUTATION)
-	var tip_result: Dictionary = OrderTips.assess(order, verdict, now_min)
 	var tip: int = OrderTips.apply(company, tip_result)
 	if tip > 0:
 		reputation += float(tip_result["reputation"])
@@ -61,6 +67,6 @@ static func settle(
 		"reputation": reputation,
 		"kinds": verdict["kinds"],
 		"lost": int(verdict["lost"]),
+		"stars": stars,
 	}
-	result["stars"] = OrderRating.stars(result)
 	return result
