@@ -15,12 +15,12 @@
 | D-0806 | ✅ Requisitos: frágil, frío, regalo, urgente, pesado, "no doblar" | constructor-progresion | medium | 6 requisitos en `.tres` con test |
 | ✅ D-0807 | Vencimiento del pedido y penalidad por tardanza | constructor-progresion | medium | test |
 | ✅ D-0808 | Asignar pedido a una caja (la hoja va con la caja) | constructor-negocio | medium | test |
-| D-0809 | Asignar caja a salida/vehículo | constructor-negocio | medium | test |
+| ✅ D-0809 | ~~Asignar caja a salida/vehículo~~ **Fusionada en D-0716 y D-0717 (revisión 2026-10-19)** | constructor-negocio | medium | test |
 | ~~D-0810~~ | ~~Cancelación del cliente (evento raro)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | ✅ D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
 | ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
 | D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
-| D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
+| ✅ D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
 | D-0815 | Pedido completado → cobro y reputación | constructor-progresion | medium | test |
 | D-0816 | Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
 | D-0817 | Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |

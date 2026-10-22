@@ -129,6 +129,14 @@ Decisión: tres días de rampa (coincide con la primera semana de aprendizaje de
 **Test** `test_order_generator`: topes por día, días 1-3 nunca superan 2 productos y llegan a 2, un `max_items` explícito pisa el tope del día.
 **Hecho cuando:** el test pasa. La sim de balance con 1-8 jugadores es D-0844.
 
+### D-0809 · Asignar caja a salida/vehículo — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — fusionada en D-0716 (`DispatchZone`) y D-0717 (`DispatchLoading`); sin código nuevo.
+**Depende de:** D-0716, D-0717
+**Qué:** el vínculo pedido-caja es D-0808 (`OrderBoxLink`); la caja sellada y quieta en la zona de salida queda asociada a esa salida (`DispatchZone.update_box`) y se le asigna vehículo al cargarla (`DispatchLoading.load_vehicle` → `CompanyTrips.stage_cargo`, que pasa el pedido a `OUT` al cruzar el portón). Una tarea aparte repetiría esa lógica.
+Decisión: fundirla, como recomendó la revisión del 2026-10-19 (`docs/auditorias/2026-10-19-revision.md`, punto 4 de lo urgente), en vez de crear otro objeto que asigne cajas a salidas.
+**Test:** `test_dispatch_zone` y `test_dispatch_loading` (ya existen).
+**Hecho cuando:** esos tests pasan.
+
 ### D-0811 · Pedidos imposibles hoy quedan en espera — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-21, PR #580)** — `OrderWaiting` (`scripts/gameplay/business/order_waiting.gd`); `test_order_waiting`. Falta mostrar "en espera" en el tablero y la hoja (D-0811.b, con D-0612).
 **Depende de:** D-0210, D-0211, D-0613
@@ -138,3 +146,10 @@ Decisión: tres días de rampa (coincide con la primera semana de aprendizaje de
 - `unblocked_by(inventory, orders, incoming)`: los que esperan y el camión en camino desbloquea.
 **Test:** listo vs. en espera con lo que falta; el más urgente se queda con la última unidad; lo sellado, lo armado y lo cerrado no cuentan; líneas repetidas suman; `unblocked_by` no toca el inventario real.
 **Hecho cuando:** el test pasa.
+
+### D-0814 · Notificación de pedido nuevo en el celular — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — `OrderNotice` (`scripts/gameplay/business/order_notice.gd`) + `OrderNoticeFeed` (`order_notice_feed.gd`); `test_order_notice`. Falta enchufar el feed al `OrderBook` de `CompanyRoot` y a `HudNotices.toast` (D-0814.b, junto con la replicación de D-0813).
+**Depende de:** D-0210, D-0802
+**Qué:** el aviso que le llega al jugador cuando entra un pedido. `OrderNotice.message(orders)` (estático, sin nodos) devuelve `{text, priority}`: un pedido dice cliente y dirección (`OrderLabel`), varios juntos se funden en "N pedidos nuevos" (el día abre con varios a la vez). Prioridad 30 si alguno es `urgent`, 20 si no. `OrderNoticeFeed.watch(book)` escucha `order_added` y junta lo que llegue en el mismo frame en **un** aviso (`notice(text, priority)`); la HUD lo muestra como toast. Funciona igual en el anfitrión y en el espejo del cliente.
+**Test** `test_order_notice`: texto de uno, de varios y sin dirección, prioridad urgente, entrada sin id, inglés, ráfaga en un frame = un aviso, `watch(null)` calla, claves en los dos idiomas.
+**Hecho cuando:** el test pasa. El toast en pantalla se ve con `revisor-visual` cuando esté enchufado (D-0814.b).

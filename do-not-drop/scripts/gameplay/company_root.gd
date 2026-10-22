@@ -61,6 +61,11 @@ extends Node3D
 ## around its own player on a client (CompanyInterest.cell_anchors()). Every peer's player is a node
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
+##
+## Trips (D-0302, D-0302.2.a): the host's "CompanyTrips" child watches the shed's gate and decides
+## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
+## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
+## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -139,6 +144,9 @@ var summary_panel: DaySummaryPanel
 var business_tick: BusinessTick
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
 var trips: CompanyTrips
+## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
+## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
+var trips_view: CompanyTripsView
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
 var cells: CompanyCells
@@ -726,10 +734,20 @@ func _process(_delta: float) -> void:
 	cells.anchors = CompanyInterest.cell_anchors(self, CREW_GROUP, CompanyTrips.VEHICLE_GROUP, as_host)
 
 
-## Host: the gate across the shed's exit (north wall, centered) and the trips that cross it; the
-## day waits for a trip still out (DayCycle.trips_out). A client sees the vehicle, nothing more.
+## Every peer: the view of the trips out (CompanyTripsView, attached to CompanyNet in the frame the
+## world comes up, like the day's clock, so its snapshot part goes in the first snapshot). Host: the
+## gate across the shed's exit (north wall, centered) and the trips that cross it, which the view
+## publishes; the day waits for a trip still out (DayCycle.trips_out: CompanyTrips, the authority, on
+## the host; the view on a client, where the cycle never polls).
 func _add_trips() -> void:
-	if net == null or not net.is_host():
+	if net == null:
+		return
+	trips_view = CompanyTripsView.new()
+	trips_view.name = "TripsView"
+	add_child(trips_view)
+	trips_view.attach(net)
+	if not net.is_host():
+		day_cycle.trips_out = trips_view.trips_out
 		return
 	var stage: int = net.company.warehouse_stage if net.company != null else 0
 	var half_depth: float = WarehouseStages.floor_size_m(stage).y * 0.5
@@ -739,6 +757,7 @@ func _add_trips() -> void:
 	add_child(trips)
 	trips.setup(shed.to_global(Vector3(0.0, 0.0, -half_depth)), width)
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
 
 

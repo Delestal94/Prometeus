@@ -41,8 +41,9 @@ extends Node
 ## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
 ##
 ## Events nobody asks for (the contract's "without a client request") are the host's own rules: they go out
-## through publish(), the same path. Today: clock_anchor (D-0219, GameClock, `clock`), day_phase (D-0203, DayCycle,
-## `day_cycle`) and jack_loaded, the pallets of the day's truck (D-0605.b, CompanyRoot).
+## through publish(), the same path: clock_anchor (D-0219, GameClock, `clock`), day_phase (D-0203, DayCycle,
+## `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`) and jack_loaded, the pallets of the day's
+## truck (D-0605.b, CompanyRoot).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -89,9 +90,12 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
 	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED,
+	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
 ]
-## Kinds the host may publish() with no request, its own rules (clock, phases, the truck's pallets); units_moved never.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED]
+## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, the truck's pallets);
+## units_moved never.
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED,
+	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -145,6 +149,8 @@ var clock: GameClock = null
 ## The day's phases (D-0203), or null: day_phase events land in its apply_phase(). Set on every peer
 ## by DayCycle.attach(), which also adds the phase to the snapshot.
 var day_cycle: DayCycle = null
+## The trips out (D-0302.2.a) or null, trip_* events land in its apply_trip(); set by its attach().
+var trips_view: CompanyTripsView = null
 ## The shed layout's build requests (host) and events (every peer) on `company`'s layout (D-0910).
 var build: CompanyLayoutNet = CompanyLayoutNet.new()
 ## The shared packing tables' requests (host) and events (every peer), and their state (D-0715). Its
@@ -337,7 +343,7 @@ func grant_snapshot(peer: int, now_msec: int) -> bool:
 
 ## Adds a part to the snapshot under `key`: state an event of section 2 changes that lives
 ## outside CompanyNet's stock and `company` (the order book, the day phase and clock anchor,
-## pallets, packing tables, live boxes, units on the floor). `take` (host) is
+## the trips out, pallets, packing tables, live boxes, units on the floor). `take` (host) is
 ## Callable() -> Variant and returns that part as plain data var_to_bytes keeps (no Object,
 ## no Callable); `put` (client) is Callable(value: Variant) -> bool, puts the host's value in
 ## place of what is there without firing fact signals, checks it like any data from the
@@ -809,6 +815,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
 			else:
 				applied = day_cycle.apply_phase(data)
+		CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED:
+			applied = is_instance_valid(trips_view) and trips_view.apply_trip(kind, data)
 		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD:
 			applied = build.apply(company, kind, data)
 			if applied and kind == CompanyLayoutNet.SOLD:

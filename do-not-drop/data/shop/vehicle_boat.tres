@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ShopItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/shop_item.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"vehicle_boat"
+display_key = "WORLD_SHOP_VEHICLE_BOAT"
+kind = &"vehicle"
+price = 5000
+grant_key = &"boat"
+enabled = false
