@@ -25,7 +25,7 @@
 | ✅ D-0515 | Sueldos de empleados por rol y nivel | constructor-progresion | low | tabla en `.tres` |
 | D-0516 | Cobro al cierre del día o al entregar (según D-0105) | constructor-progresion | medium | test |
 | D-0517 | Plata replicada: todos los clientes ven el mismo saldo | auditor-red | high | test de red |
-| D-0518 | Solo el host (o un voto) puede gastar en compras grandes (incluye D-0428, fusión de D-0112) | constructor-red | high | test: cliente no puede comprar solo |
+| ✅ D-0518 | Solo el host (o un voto) puede gastar en compras grandes (incluye D-0428, fusión de D-0112) | constructor-red | high | test: cliente no puede comprar solo |
 | ~~D-0519~~ | ~~Número de plata en el HUD durante el día~~ **Fusionada en D-1903 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | captura |
 | D-0520 | Integrar puntaje de corrida actual (`run_scoring`) como parte del cobro de la salida | constructor-progresion | xhigh | tests de puntaje actuales verdes |
 

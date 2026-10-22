@@ -138,6 +138,16 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 | 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
 | 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
 
+### Comprar en la tienda (D-0518, fuera del corte)
+
+La valida y aplica `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, §13) con `CompanyShop` (D-0511).
+**Solo el host gasta:** la petición de cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el
+voto es D-0518.b).
+
+| # | Acción (tarea) | Inicia | Petición: `kind` y `data` | El host valida | Evento: `kind` y `data` | Cambia en cada peer |
+|---|---|---|---|---|---|---|
+| 25 | Comprar una máquina, un vehículo o una ampliación (D-0511, D-0518) | host, en la tienda del cierre (D-0511.2) | `shop_buy` `{item, rid}` | que lo pida el host; `item` texto corto e id exacto de un ítem habilitado de `data/shop/` (si no, `bad_data`); `CompanyShop.check` (ya lo tiene, lo que requiere, la etapa siguiente, la plata): su clave `WORLD_SHOP_*` es el motivo | `shop_bought` `{item, money, minute}` | `CompanyShop.buy` desde el saldo del host antes de la compra (`money + price`), así la plata y el `balance` del libro quedan en `money`; libro `shop` con el `minute` del host; máquina → `equipment`, vehículo → `fleet`, ampliación → `warehouse_stage` |
+
 ## 3. Secuencia, huecos y snapshot
 
 - El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. Se guarda en el slot
@@ -335,7 +345,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - **Pendiente:**
   - el voto de la tripulación para que un cliente construya (D-0910.1);
   - ampliar la etapa por red (D-0910.2): `WarehouseStages.expand` hoy es local; quien lo cablee en el host
-    sin un evento deja a los clientes con otra grilla hasta el próximo snapshot;
+    sin un evento deja a los clientes con otra grilla hasta el próximo snapshot (la ampliación comprada en la
+    tienda ya viaja como `shop_bought`, §13);
   - `CompanyLayoutNet.navigation` (D-0908) lo da el mundo cuando existan empleados (D-1011), y ese dueño
     llama a `rebake()` también en `company_state_restored`;
   - ~~`not_empty` mira `shelf:<uid>_<hueco>` y `table:<uid>`; cuando la caja en armado viaje por red
@@ -537,3 +548,50 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Guardado de antes de D-0246: semilla sacada del nombre (`CompanySeed.from_name`), estable entre cargas.
 - "Mismo día" es con la misma semilla, día, tripulación y plata (`OrderRhythm`, `Bankruptcy`). `test_company_seed` fija
   `for_day(1234, 3, "orders")` = 550168617 (Godot 4.7.2): si un motor nuevo hashea distinto, el test avisa.
+
+## 13. Lo construido (D-0518): la tienda, solo el host gasta
+
+- **Petición** `shop_buy` y **evento** `shop_bought` (fila 25, protocolo 46), por el `_request` / `_apply_event` de
+  siempre: ningún RPC nuevo. `CompanyNet` los suma a `REQUEST_KINDS` / `EVENT_KINDS` y los pasa a `CompanyNet.shop`
+  (`CompanyShopNet`, `scripts/core/company/company_shop_net.gd`): `ask()` / `check()` en el host, `apply()` en cada
+  peer (una rama de `_apply_state()`, sin `_:`). No es crítica (regla 8): si se pierde, el jugador vuelve a apretar.
+- **Decisión: solo el host gasta** (D-0518 incluye D-0428, el voto de la tienda; "el host o un voto" se resuelve como
+  "el host" en esta tarea). El que pide es `RpcGuard.sender` (regla 3): un `peer: 1` en `data` no cambia nada.
+  Cualquier otro peer oye `host_only` antes de que se mire nada más, nada cambia y no se gasta `seq`; así la
+  pantalla de la tienda del cliente (D-0511.2) puede decir por qué. Jugando solo, el host es el peer 1 y compra por
+  el mismo camino. El voto de la tripulación queda en D-0518.b, en el mismo lugar que D-0910.1 (`check()` recibe
+  `by_host`).
+- **Motivos de `_rejected`:** `host_only`; `bad_data` (el ítem no es texto, es largo, no es el id exacto de un ítem
+  habilitado del catálogo, o no hay empresa); y las claves de `CompanyShop.check` tal cual
+  (`WORLD_SHOP_ALREADY_OWNED`, `WORLD_SHOP_NEEDS_ITEM`, `WORLD_SHOP_WRONG_STAGE`, `WORLD_SHOP_CANNOT_AFFORD`): son
+  claves de traducción y la pantalla las muestra sin mapear. Un campo anidado en `data` no pasa `dict_ok` y se
+  descarta sin aviso (regla 5).
+- **Decisión: el día no lo frena**, como construir (§8): ni la fase ni el galpón congelado. La tienda es la
+  pantalla del cierre (D-0511.2, `hitos.md`: "se compra en la tienda del cierre"), justo en SUMMARY, donde el pedido
+  al proveedor sí se niega (`day_closed`: su calendario es el del día cerrado). Una compra hecha en SUMMARY queda
+  en `CompanyState` del host y entra al guardado cuando el host sale del mundo (`save_closed_day()` desde
+  `_exit_tree`) o en el guardado siguiente; si el juego se cae antes, se pierden juntas la compra y la plata.
+- **Plata absoluta** (como D-0910 y D-0715): `money` es el saldo del host después de la compra y `minute` su
+  `clock_minutes` (solo para la entrada del libro: el `clock_minutes` del cliente no se toca). Cada peer arranca
+  desde `money + price` con el mismo `CompanyShop.buy`; si su saldo era otro lo corrige, avisa y `CompanyNet` pide
+  un snapshot (`CompanyShopNet.take_drift()`, junto a las de `build` y `table` en `_receive`).
+- **Validación del evento (regla 6), todo antes del primer cambio:** exactamente `item`, `money` y `minute`; un
+  ítem habilitado del catálogo de ese peer; `money` entero 0..`MAX_MONEY`; `minute` entero del día; y que la copia
+  lo pueda tomar (`CompanyShop.check` salvo la plata: no lo tiene, tiene lo que requiere, es la etapa siguiente).
+  Si no, no cambia nada y el peer espera un snapshot (§3).
+- **Join tardío:** sin parte propia del snapshot: plata, libro, `equipment`, `fleet` y `warehouse_stage` ya viajan
+  en `company` (`CompanyState.to_dict()`).
+- **Líneas:** para sumar la tienda, los chequeos de un trozo de snapshot y su unión salieron de
+  `CompanyNet._take_chunk` a `CompanySnapshot.chunk_ok()` / `join()` (mismo comportamiento); `company_net.gd` queda
+  en 996 de las 1000 de gdlint.
+- Test: `test_company_shop_net` (el ayudante solo, solo con el catálogo real, y host + cliente ENet + uno que entra
+  tarde, con un catálogo de test que habilita un vehículo).
+- **Pendiente:**
+  - D-0518.b: el voto de la tripulación para que un cliente compre (`modules/coop_vote`; `ShopVoteManager` es la
+    votación de la tienda del depósito de Entrega, de Slatex, y no se usa acá);
+  - la pantalla de la tienda (D-0511.2) pide con `CompanyNet.request(CompanyShopNet.BUY, {"item": id})` y muestra
+    el motivo de `request_rejected` (`tr()` para las claves `WORLD_SHOP_*`, un texto propio para `host_only`);
+  - una ampliación comprada cambia `warehouse_stage` en todos por evento (lo que D-0910.2 pedía para la grilla),
+    pero `CompanyShed.follow` no redibuja con `shop_bought`: el galpón grande se dibuja con el próximo evento de
+    layout o snapshot. Va con D-0910.2 o con D-0511.2;
+  - un vehículo comprado entra a `fleet` como dato; que aparezca en el mundo es de cada vehículo (D-1207, D-1221…).

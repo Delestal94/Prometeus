@@ -28,10 +28,11 @@ extends Node
 ## snapshot_request, the shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`), the
 ## packing tables' box_* (rows 9 to 15, D-0715: CompanyTableNet, `table`), package_ack (a client has a sealed
 ## box's package, D-0715.b: CompanyPackages, `table.packages`), cart_push / cart_moved (D-0610.b: CompanyCarts,
-## `carts`; their units move with units_take / units_store at the station cart:<id>) and the pallet jack's
-## jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`; the station `jack`). A task that adds
-## an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule
-## 8), checks it in _handle_request() and applies its event in _apply_state().
+## `carts`; their units move with units_take / units_store at the station cart:<id>), the pallet jack's
+## jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`; the station `jack`), supplier_order
+## (D-0603.b.2: CompanySupplierNet, `supplier`) and shop_buy (D-0518: CompanyShopNet, `shop`, the host's only).
+## A task that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a
+## player stuck, rule 8), checks it in _handle_request() and applies its event in _apply_state().
 ##
 ## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its `pos` (a drop, or
 ## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
@@ -72,7 +73,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
 	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
 	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
-	CompanyPallets.PUT, CompanyPallets.PUSH,
+	CompanyPallets.PUT, CompanyPallets.PUSH, CompanyShopNet.BUY,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
@@ -89,7 +90,7 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
 	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED,
 	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
-	CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED,
+	CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED, CompanyShopNet.BOUGHT,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, the truck's pallets,
 ## its orders); units_moved never.
@@ -160,6 +161,8 @@ var pallets: CompanyPallets = CompanyPallets.new()
 var orders: CompanyOrdersNet = CompanyOrdersNet.new()
 ## The supplier orders (D-0603.b.2) on the calendar `supplier.schedule` (the truck's); a snapshot part.
 var supplier: CompanySupplierNet = CompanySupplierNet.new()
+## The shop's purchases (D-0518): only the host's go through; what they change is in `company`'s snapshot part.
+var shop: CompanyShopNet = CompanyShopNet.new()
 ## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (tests force small ones).
 var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
 ## Host: a station id -> what the host needs to check a request at it (rule 4), as Callable(station) -> Dictionary:
@@ -589,8 +592,8 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 		return _pack(peer, kind, data)
 	if CompanyCarts.REQUEST_KINDS.has(kind) or CompanyPallets.REQUEST_KINDS.has(kind):
 		return _on_object(peer, kind, data)
-	if CompanySupplierNet.REQUEST_KINDS.has(kind):
-		return _grant(supplier.ask(self, peer, data))
+	if CompanySupplierNet.REQUEST_KINDS.has(kind) or kind == CompanyShopNet.BUY:
+		return _grant(shop.ask(self, peer, data) if kind == CompanyShopNet.BUY else supplier.ask(self, peer, data))
 	match kind:
 		&"units_take":
 			return _take_units(peer, data)
@@ -792,9 +795,7 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 		poll_snapshot(Time.get_ticks_msec())
 		return
 	event_applied.emit(seq, kind, data)
-	var layout_drift: bool = build.take_drift()
-	var table_drift: bool = table.take_drift()
-	if layout_drift or table_drift:
+	if [build.take_drift(), table.take_drift(), shop.take_drift()].has(true):
 		# Its wallet was off the host's (set right now, D-0910): the history it missed comes by snapshot.
 		_start_waiting()
 		poll_snapshot(Time.get_ticks_msec())
@@ -841,6 +842,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = orders.apply(kind, data)
 		CompanySupplierNet.ORDERED:
 			applied = supplier.apply(data)
+		CompanyShopNet.BOUGHT:
+			applied = shop.apply(company, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
@@ -866,11 +869,7 @@ func _start_waiting() -> void:
 ## and restarts the wait before asking again. A repeated chunk, or one of an older or finished snapshot, changes
 ## nothing. A snapshot that doesn't unpack or apply leaves this peer waiting: it asks again (poll_snapshot()).
 func _take_chunk(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
-	if id < 1 or total < 1 or total > SNAPSHOT_MAX_CHUNKS or chunk < 0 or chunk >= total:
-		return
-	if size < 1 or size > SNAPSHOT_MAX_BYTES:
-		return
-	if bytes.is_empty() or bytes.size() > SNAPSHOT_CHUNK_BYTES or id < _rx_id:
+	if not CompanySnapshot.chunk_ok(id, chunk, total, size, bytes) or id < _rx_id:
 		return
 	if id > _rx_id:
 		_rx_id = id
@@ -884,9 +883,7 @@ func _take_chunk(id: int, chunk: int, total: int, size: int, bytes: PackedByteAr
 	_rx_chunks[chunk] = bytes
 	if _rx_chunks.size() < _rx_total:
 		return
-	var joined := PackedByteArray()
-	for index: int in range(_rx_total):
-		joined.append_array(_rx_chunks[index])
+	var joined: PackedByteArray = CompanySnapshot.join(_rx_chunks, _rx_total)
 	_rx_total = 0
 	_rx_chunks = {}
 	var data: Dictionary = unpack_snapshot(joined, _rx_size)
