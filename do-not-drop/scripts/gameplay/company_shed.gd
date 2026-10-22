@@ -755,7 +755,9 @@ func _draw_pallets(stock: Inventory) -> void:
 		_pallet_root.remove_child(child)
 		child.queue_free()
 	pallet_nodes.clear()
-	var spots: Array[Vector2] = _default.pallet_spots if _default != null and _default.stage == stage else []
+	var spots: Array[Vector2] = []
+	if _default != null and _default.stage == stage:
+		spots.assign(_default.pallet_spots)
 	for index: int in waiting.size():
 		var spot: Vector2 = spots[index % spots.size()] if not spots.is_empty() else Vector2(grid) * 0.5
 		var lift: float = floorf(index / float(maxi(spots.size(), 1))) * 1.25
