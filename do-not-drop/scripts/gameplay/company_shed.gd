@@ -493,7 +493,9 @@ func station_for(id: StringName) -> Dictionary:
 
 ## One cart per DefaultShed.cart_spots entry ("cart_1", "cart_2"...), where the host's pushes left it.
 func _build_carts() -> void:
-	var spots: Array[Vector2] = _default.cart_spots if _default != null and _default.stage == stage else []
+	var spots: Array[Vector2] = []
+	if _default != null and _default.stage == stage:
+		spots = _default.cart_spots
 	for index: int in spots.size():
 		var id := StringName("cart_%d" % (index + 1))
 		var local: Vector3 = cell_to_local(spots[index])
