@@ -84,7 +84,7 @@ func transfer_target() -> Node:
 	var best_score: float = 0.7
 	for node: Node in player.get_tree().get_nodes_in_group(&"player"):
 		var teammate := node as Player
-		if teammate == null or teammate == player or teammate.carried_package != null:
+		if teammate == null or teammate == player or teammate.carried_package != null or teammate.has_meta(&"driving"):
 			continue
 		var to_teammate: Vector3 = teammate.global_position - eye
 		var distance: float = to_teammate.length()

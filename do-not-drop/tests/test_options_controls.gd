@@ -53,6 +53,8 @@ const EXPECTED: Array[StringName] = [
 const NOT_OFFERED: Array[StringName] = [
 	&"look_left", &"look_right", &"look_up", &"look_down", &"look_center", &"ui_pause", &"run_restart",
 	&"dev_camera_toggle", &"toggle_net_stats",
+	# The shed forklift's mast (D-0606.b): fixed keys for now; rebinding them is D-0606.c.
+	&"forklift_mast_up", &"forklift_mast_down",
 ]
 
 var _failures: int = 0
