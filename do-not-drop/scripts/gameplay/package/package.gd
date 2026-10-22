@@ -34,6 +34,9 @@ const ASSIST_REACH: float = 1.5
 ## An impact at least this hard (m/s) briefly interrupts tool work.
 const HARD_HIT_SPEED: float = 6.0
 const CareModel = preload("res://scripts/gameplay/package/package_care.gd")
+## The shelf or bay slot a box sits in (no class name; package_rescue.gd preloads it too): current_mount_path's setter
+## reads whose it is before letting it go.
+const MountPoint = preload("res://scripts/gameplay/interaction/package_mount_point.gd")
 var care = CareModel.new()
 var care_state: Dictionary = {}:
 	set(value):
@@ -72,9 +75,9 @@ var current_mount: Node = null
 ## then emptied a slot that box sits in.
 var current_mount_path: NodePath = NodePath():
 	set(value):
-		if is_instance_valid(current_mount) and &"occupied_by" in current_mount \
-				and current_mount.get(&"occupied_by") == self:
-			current_mount.set(&"occupied_by", null)
+		var left: MountPoint = current_mount as MountPoint if is_instance_valid(current_mount) else null
+		if left != null and left.occupied_by == self:
+			left.occupied_by = null
 		current_mount_path = value
 		current_mount = get_node_or_null(value) if not value.is_empty() and is_inside_tree() else null
 		if current_mount != null and &"occupied_by" in current_mount:

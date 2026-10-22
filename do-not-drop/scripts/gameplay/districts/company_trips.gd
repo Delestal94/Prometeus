@@ -233,14 +233,28 @@ static func put_back(body: Node3D, inside: Vector3) -> void:
 
 ## Stops `body`'s horizontal motion where it is (put_back() does it after moving it); falling and turning go on.
 static func stop(body: Node3D) -> void:
+	var state: PhysicsDirectBodyState3D = _live_state(body)
+	if state != null:
+		state.linear_velocity = Vector3(0.0, state.linear_velocity.y, 0.0)
+
+
+## Takes away the part of `body`'s motion that goes `out` (flat, length 1: TripGate.outward_at()), only when it goes
+## that way; back, along the line and falling it keeps. A client's brake on a copy already past the gate when told
+## (CompanyGateBrake, D-0316.4): it backs up and steers, and follows the host's if the host let it go meanwhile.
+static func stop_outward(body: Node3D, out: Vector3) -> void:
+	var state: PhysicsDirectBodyState3D = _live_state(body)
+	if state != null:
+		state.linear_velocity -= out * maxf(state.linear_velocity.dot(out), 0.0)
+
+
+## `body`'s live physics state while it is simulated (a RigidBody3D not frozen), else null. Its velocity is written
+## there: RigidBody3D.linear_velocity is the copy from before a VehicleBody3D's suspension impulses of this step, and
+## writing it undid them (the van sank onto its chassis, as vehicle_prediction.gd notes).
+static func _live_state(body: Node3D) -> PhysicsDirectBodyState3D:
 	var rigid := body as RigidBody3D
-	if rigid != null and not rigid.freeze:
-		# On the body's live state: RigidBody3D.linear_velocity is the copy from before a VehicleBody3D's
-		# suspension impulses of this step, and writing it undid them (the van sank onto its chassis, as
-		# vehicle_prediction.gd notes).
-		var state: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(rigid.get_rid())
-		if state != null:
-			state.linear_velocity = Vector3(0.0, state.linear_velocity.y, 0.0)
+	if rigid == null or rigid.freeze:
+		return null
+	return PhysicsServer3D.body_get_direct_state(rigid.get_rid())
 
 
 func _on_departed(vehicle_id: StringName) -> void:

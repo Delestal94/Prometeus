@@ -12,29 +12,34 @@ extends Node
 ## Child "GateBrake" of CompanyRoot on a client (add_to(); the host's hold is CompanyTrips'), after World, so like
 ## CompanyTrips it runs once the vehicles' tick recorded what their last step left and set this tick's forces. It
 ## watches the company vehicles this peer predicts (CompanyTrips.VEHICLE_GROUP, is_predicted()) and keeps where each
-## last stood inside the gate. When the view says one was held (CompanyTripsView.held_at_gate, from the host's
-## _held_here) it builds the gate the host watches anew (`gate_source`: CompanyFleet.trip_gate(), all of it the shed
-## and the company the snapshot brought) and, for CompanyTuning.GATE_BRAKE_REAL_SECONDS after each notice, does to
-## that copy what the host does: every tick it would cross, back where it last stood inside, horizontal motion
-## stopped, heading its own (CompanyTrips.put_back()). The host tells the driver again every held_notice_msec while
-## it pushes, which keeps the brake on. It lets go sooner when the view says the host lets the vehicle go too: fewer
-## than the cap out (a vehicle came back), or this one out.
+## last stood inside the gate, on the gate the host watches (`gate_source`: CompanyFleet.trip_gate(), all of it the
+## shed and the company the snapshot brought). Like the host's, it is built once, the first time a copy is predicted,
+## and again only after a snapshot (follow(): company_state_restored). When the view says one was held
+## (CompanyTripsView.held_at_gate, from the host's _held_here), for CompanyTuning.GATE_BRAKE_REAL_SECONDS after each
+## notice it does to that copy what the host does: every tick it would cross, back where it last stood inside,
+## horizontal motion stopped, heading its own (CompanyTrips.put_back()). The host tells the driver again every
+## held_notice_msec while it pushes, which keeps the brake on. It lets go sooner when the host lets the vehicle go
+## too, as far as this peer can tell: the view has fewer than the cap out (a vehicle came back) or this one out, or
+## the host's own pose of it (the newest its prediction compared with, vehicle.gd predicted_host_pose) is past the
+## compound by more than HOST_OUT_M, which a held one never is: the host let it go for something this peer can't see
+## (its cargo unloaded while it pushes).
 ##
 ## Nothing is sent and nothing here decides: the host's hold stays the truth and whatever still differs is eased by
 ## the prediction's reconciler like any other difference. The first notice comes late: by then the copy is past the
-## line by its speed times the input's way up, the host's input cushion and the notice's way back. That copy is only
-## stopped where it is (CompanyTrips.stop()) and the reconciler slides it back to where the host holds it: put back
-## too, the stretch it ran on would be taken off twice (by the brake, then by the reconciler, which compares the
-## host's stop with the states it recorded out there) and the first time in one jump. Measured in test_company_fleet
-## at 12 m/s over 150 ms + 20 ms: no snap, at most 0.23 m a tick, the copy 1.8-2.1 m from the host's van (2.7-3.1 m
-## with the notice 85 ms late, as a real link brings it). Not covered: the host letting go for a reason this peer
-## can't see (the cargo unloaded while it pushes) keeps the copy braked until the time is up, and the reconciler
-## then catches it up.
+## line by its speed times the input's way up, the host's input cushion and the notice's way back. That copy only
+## loses the part of its motion that goes on out (CompanyTrips.stop_outward(), across the edge it left by,
+## TripGate.outward_at()) and the reconciler slides it back to where the host holds it: put back too, the stretch it
+## ran on would be taken off twice (by the brake, then by the reconciler, which compares the host's stop with the
+## states it recorded out there) and the first time in one jump. Backing up and steering along the line go on.
+
+## How far past the compound (m) the host's pose of a braked vehicle tells that the host let it go: it puts a held
+## one back every tick, so its centre is never more than a tick's travel past (under 0.4 m in test_company_fleet).
+const HOST_OUT_M: float = 1.0
 
 ## The view whose held_at_gate this follows (attach()). Null: only the time lets a brake go.
 var view: CompanyTripsView = null
-## Callable() -> TripGate, the gate the host watches (CompanyFleet.trip_gate()): built on each notice, and the first
-## time a copy is predicted. Unset or returning null: nothing is braked.
+## Callable() -> TripGate, the gate the host watches (CompanyFleet.trip_gate()): built the first time a copy is
+## predicted, and again after a snapshot (forget_gate()). Unset or returning null: nothing is braked.
 var gate_source: Callable = Callable()
 ## Real milliseconds one notice keeps the brake on.
 var brake_msec: int = roundi(CompanyTuning.GATE_BRAKE_REAL_SECONDS * 1000.0)
@@ -61,6 +66,7 @@ static func add_to(
 		return CompanyFleet.trip_gate(shed, company_net.company) if placed else null
 	parent.add_child(brake)
 	brake.attach(trips_view)
+	brake.follow(company_net)
 	return brake
 
 
@@ -73,11 +79,22 @@ func attach(trips_view: CompanyTripsView) -> void:
 		view.held_at_gate.connect(hold)
 
 
+## A snapshot from `company_net` may bring another company (its stage, the shed's size): the gate is built again
+## (forget_gate()), as the host's would be for that company.
+func follow(company_net: CompanyNet) -> void:
+	if company_net != null and not company_net.company_state_restored.is_connected(_on_restored):
+		company_net.company_state_restored.connect(_on_restored)
+
+
 ## The host held `vehicle_id`, which this peer drives, with `cap` vehicles out: the copy it predicts is braked at the
-## gate for brake_msec from now (again from now if it already was), on the gate as it stands now.
+## gate for brake_msec from now (again from now if it already was).
 func hold(vehicle_id: StringName, cap: int) -> void:
 	_braking[vehicle_id] = [Time.get_ticks_msec() + brake_msec, cap]
-	_gate = _built_gate()
+
+
+## The gate is built again from gate_source the next time a copy is predicted (the shed or the company changed).
+func forget_gate() -> void:
+	_gate = null
 
 
 ## Whether this peer brakes its copy of `vehicle_id` at the gate now.
@@ -100,9 +117,9 @@ func _physics_process(_delta: float) -> void:
 
 
 ## One vehicle's tick: only a copy this peer predicts. Inside the gate its pose is kept. Braked, one crossing now (it
-## stood inside last tick) is put back there, as the host does; one already past the line when the notice came is
-## stopped where it is instead, and the reconciler brings it back to where the host holds it (put back here too, the
-## round trip it ran on past the line would be taken off twice, and in one jump).
+## stood inside last tick) is put back there, as the host does; one already past the line when the notice came only
+## loses the motion that takes it further out, and the reconciler brings it back to where the host holds it (put
+## back here too, the round trip it ran on past the line would be taken off twice, and in one jump).
 func _watch(body: Node3D) -> void:
 	var id := StringName(body.name)
 	if not body.has_method(&"is_predicted") or not bool(body.call(&"is_predicted")):
@@ -113,6 +130,8 @@ func _watch(body: Node3D) -> void:
 		_gate = _built_gate()
 		if _gate == null:
 			return
+	if _braking.has(id) and _host_let_go(body):
+		_braking.erase(id)
 	var at: Vector3 = body.global_position
 	var inside: bool = _gate.side_of(at) == TripGate.INSIDE
 	var was_inside: bool = _was_inside.get(id, false)
@@ -125,7 +144,7 @@ func _watch(body: Node3D) -> void:
 		CompanyTrips.put_back(body, _inside_pose[id])
 		_was_inside[id] = true
 	else:
-		CompanyTrips.stop(body)
+		CompanyTrips.stop_outward(body, _gate.outward_at(at))
 
 
 ## Lets a brake go when the host lets the vehicle go too, as far as this peer knows: its time is up, fewer than its
@@ -136,6 +155,17 @@ func _let_go(now: int) -> void:
 		var brake: Array = _braking[id]
 		if now >= int(brake[0]) or (watching and (view.is_out(id) or view.trips_out() < int(brake[1]))):
 			_braking.erase(id)
+
+
+## Whether the host's own pose of `body` (its predicted_host_pose) is past the compound by more than HOST_OUT_M.
+func _host_let_go(body: Node3D) -> bool:
+	var pose: Variant = body.get(&"predicted_host_pose")
+	return pose is Transform3D and pose != Transform3D.IDENTITY and _gate.outside_by((pose as Transform3D).origin) \
+		> HOST_OUT_M
+
+
+func _on_restored(_snapshot_seq: int) -> void:
+	forget_gate()
 
 
 func _built_gate() -> TripGate:

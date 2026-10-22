@@ -63,6 +63,36 @@ func side_of(pos: Vector3) -> int:
 	return OUTSIDE if along > 0.0 else INSIDE
 
 
+## The way out of the inside at `pos`, flat and of length 1: without a yard, the gate's outward; with one, away from
+## the yard across the edge `pos` is furthest past (the side it left by: the far edge, a side or the back; inside it,
+## across the edge nearest to it). CompanyGateBrake takes off the motion this way of a copy past the gate (D-0316.4).
+func outward_at(pos: Vector3) -> Vector3:
+	var normal: Vector2 = _furthest_edge(pos)[1]
+	return Vector3(normal.x, 0.0, normal.y)
+
+
+## How far `pos` is out of the inside, in metres (0 or less: inside): past the line without a yard, past the edge it
+## is furthest past with one (outward_at()).
+func outside_by(pos: Vector3) -> float:
+	return float(_furthest_edge(pos)[0])
+
+
+## [how far `pos` is past the edge it is furthest past (0 or less: inside), that edge's outward normal, flat].
+func _furthest_edge(pos: Vector3) -> Array:
+	var along: float = distance(pos)
+	if not has_yard():
+		return [along, _outward]
+	var lateral := Vector2(-_outward.y, _outward.x)
+	var across: float = (Vector2(pos.x, pos.z) - _origin).dot(lateral)
+	var past_back: float = -_yard_back - along
+	var past_side: float = absf(across) - _yard_half_width
+	if past_back > along and past_back >= past_side:
+		return [past_back, -_outward]
+	if past_side > along:
+		return [past_side, lateral if across >= 0.0 else -lateral]
+	return [along, _outward]
+
+
 ## Updates a vehicle position. Emits departed / returned when it crossed the
 ## line through the opening since the last call, and returns which one
 ## (&"departed", &"returned" or &"" when nothing happened). The first position

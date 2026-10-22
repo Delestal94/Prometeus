@@ -48,7 +48,9 @@ extends SceneTree
 ##   the client brakes its copy (over 60 ticks), with no snap during the hold and no jump (under 0.5 m a tick), and
 ##   the copy stays within 2.5 m of the host's van (before D-0316.4: one snap of ~3.1 m and a 5 m gap). Again with
 ##   the notice held back 85 ms on its way to the brake (a real link's half lag): no snap and no jump either; the
-##   gap, the round trip it runs on before it is told, is only printed.
+##   gap, the round trip it runs on before it is told, is only printed. In between, the host lets the held van go
+##   for something the client can't see (its cargo forgotten) while the client pushes: the client's brake lets go
+##   once the host's pose is past the compound and the copy follows it out, with no snap, no jump and within 3 m.
 ## - The van driven 1.1 km north in 200 m steps with the client's player in the shed: the client's copy ends up
 ##   hidden and out of physics (layer and mask 0); back at 600 m (2 cells) it shows, solid again, on the frame it
 ##   shows within 0.5 m of the host's van (drawn from the new pose, not slid from the old one).
@@ -712,12 +714,48 @@ func _check_held_lagged(host_van: VehicleBody3D, copy: VehicleBody3D, seat: Seat
 	# The notice late, the copy runs on that much longer before it brakes: the gap is the round trip's, only printed.
 	_expect(notice_late_ms > 0 or worst_gap < 2.5,
 		"...and the copy within 2.5 m of the host's van (worst %.2f m)" % worst_gap)
+	if notice_late_ms == 0:
+		await _check_unseen_release(host_van, copy, reconciler, brake)
 	copy.call(&"configure_net_sim", {"lag_ms": 0, "jitter_ms": 0, "loss_pct": 0.0})
 	var own: Player = _client_root.get_node_or_null(NodePath("World/Player_%d" % driver.get_multiplayer_authority())) \
 		as Player
 	if own != null:
 		own.leave_seat()
 	_expect(await _wait_for(func() -> bool: return seat.occupant == null), "The client gets out of the held van")
+
+
+## The host lets the held van go for something the client can't see (its cargo forgotten) while the client still
+## pushes: the client's brake lets go once the host's pose of it is past the compound (CompanyGateBrake.HOST_OUT_M),
+## and the copy follows the host's out with no snap and no jump. The cargo is staged again after.
+func _check_unseen_release(host_van: VehicleBody3D, copy: VehicleBody3D, reconciler: NetPredictionReconciler,
+		brake: CompanyGateBrake) -> void:
+	var trips: CompanyTrips = _host_root.trips
+	var braking: bool = brake.is_braking(&"van_classic")
+	trips.forget(&"van_classic")
+	var snaps_before: int = reconciler.snaps
+	var worst_gap: float = 0.0
+	var worst_jump: float = 0.0
+	var let_go_at: int = -1
+	var was_at: Vector3 = copy.global_position
+	for tick: int in range(150):
+		copy.call(&"set_controls", 1.0, 0.0, false)
+		await physics_frame
+		worst_jump = maxf(worst_jump, copy.global_position.distance_to(was_at))
+		was_at = copy.global_position
+		worst_gap = maxf(worst_gap, copy.global_position.distance_to(host_van.global_position))
+		if let_go_at < 0 and not brake.is_braking(&"van_classic"):
+			let_go_at = tick
+	var out: float = _out_of_compound(copy.global_position)
+	print("test_company_fleet: the host let the held van go unseen: the brake let go after %d ticks; worst gap %.2f m,"
+		% [let_go_at, worst_gap] + " %.2f m a tick, %d snaps; the copy %.1f m out"
+		% [worst_jump, reconciler.snaps - snaps_before, out])
+	_expect(braking and let_go_at > 0 and let_go_at < 90 and out > 5.0,
+		"The host lets the held van go unseen (its cargo forgotten): the client's brake lets go by the host's pose"
+		+ " (after %d ticks) and the copy follows it out (%.1f m)" % [let_go_at, out])
+	_expect(reconciler.snaps == snaps_before and worst_jump < 0.5 and worst_gap < 3.0,
+		"...with no snap (%d), no jump (%.2f m a tick) and within 3 m of the host's van (worst %.2f m)"
+		% [reconciler.snaps - snaps_before, worst_jump, worst_gap])
+	trips.stage_cargo(&"van_classic", [&"o_held"], [&"box_held"])
 
 
 ## How far `at` is out of the compound (the host's gate yard: past the playon's far edge or a side), 0 inside it.

@@ -12,6 +12,10 @@ el portón del modo Empresa). Lo había marcado `auditor-red` en D-0316.2 (`revi
   soporte. Cuando llegaba la actualización del host que sacaba la primera caja del soporte
   (`current_mount_path` vacío), el setter vaciaba el soporte aunque ahora fuera de la otra caja, y ese cliente
   creía que el lugar estaba libre (carteles, subir, cuidar carga).
+- **Cómo:** el soporte que deja se lee tipado, con una constante nueva `MountPoint = preload(
+  "res://scripts/gameplay/interaction/package_mount_point.gd")` (la misma que ya usa `package_rescue.gd`, así que no
+  suma ninguna dependencia de carga). Así `package.gd` sigue en su presupuesto de accesos por nombre
+  (`test_dynamic_dispatch_budget`: un `.get`). El soporte nuevo se sigue tomando como antes, por nombre.
 - **Firmas:** ninguna cambia. Ni señales, ni RPC, ni lo que se replica.
 - **Protocolo:** no cambia (`PROTOCOL_VERSION` sigue en 52). Es solo cómo cada peer aplica lo que ya llega.
 - **En el host no cambia nada en la práctica:** `PackageHandling.release_mount()` sigue vaciando `occupied_by`
@@ -22,6 +26,7 @@ el portón del modo Empresa). Lo había marcado `auditor-red` en D-0316.2 (`revi
 
 ## Qué tenés que hacer
 
-Nada, salvo que en tu rama tengas código que contaba con que el setter vaciara un soporte ajeno (no encontré
-ninguno: los que escriben `occupied_by` son `package_mount_point.gd`, `package_handling.gd` y
-`company_interest.gd`). Si tocás ese setter, mantené la condición `occupied_by == self`.
+Nada, salvo que en tu rama tengas código que contaba con que el setter vaciara un soporte ajeno, o un soporte con
+`occupied_by` que no sea `package_mount_point.gd` (no encontré ninguno: los que escriben `occupied_by` son
+`package_mount_point.gd`, `package_handling.gd` y `company_interest.gd`). Si tocás ese setter, mantené la condición
+`occupied_by == self`.
