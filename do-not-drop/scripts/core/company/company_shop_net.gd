@@ -40,7 +40,7 @@ const REASON_BAD_DATA: StringName = &"bad_data"
 ## A shop_bought carries exactly these.
 const EVENT_KEYS: Array[String] = ["item", "money", "minute"]
 ## Largest balance a shop_bought may carry (no overflow adding a price back).
-const MAX_MONEY: int = CompanyLayoutNet.MAX_MONEY
+const MAX_MONEY: int = CompanyWalletNet.MAX_MONEY
 
 ## The shop's catalog on this peer (CompanyShop.items()): every peer reads the same one. Tests point it
 ## at their own.
