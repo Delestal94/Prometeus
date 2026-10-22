@@ -128,3 +128,11 @@ camino, no repite, sobrevive a guardar/cargar; veredicto de `abandoned`.
 Decisión: tres días de rampa (coincide con la primera semana de aprendizaje del galpón) y tope 2, no 1, para que armar una caja con dos productos se vea desde el día 1. Cantidad por producto sin cambios (15 % de pedir 2 unidades).
 **Test** `test_order_generator`: topes por día, días 1-3 nunca superan 2 productos y llegan a 2, un `max_items` explícito pisa el tope del día.
 **Hecho cuando:** el test pasa. La sim de balance con 1-8 jugadores es D-0844.
+
+### D-0809 · Asignar caja a salida/vehículo — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — fusionada en D-0716 (`DispatchZone`) y D-0717 (`DispatchLoading`); sin código nuevo.
+**Depende de:** D-0716, D-0717
+**Qué:** el vínculo pedido-caja es D-0808 (`OrderBoxLink`); la caja sellada y quieta en la zona de salida queda asociada a esa salida (`DispatchZone.update_box`) y se le asigna vehículo al cargarla (`DispatchLoading.load_vehicle` → `CompanyTrips.stage_cargo`, que pasa el pedido a `OUT` al cruzar el portón). Una tarea aparte repetiría esa lógica.
+Decisión: fundirla, como recomendó la revisión del 2026-10-19 (`docs/auditorias/2026-10-19-revision.md`, punto 4 de lo urgente), en vez de crear otro objeto que asigne cajas a salidas.
+**Test:** `test_dispatch_zone` y `test_dispatch_loading` (ya existen).
+**Hecho cuando:** esos tests pasan.
