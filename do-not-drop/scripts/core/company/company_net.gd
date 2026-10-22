@@ -825,10 +825,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = build.apply(company, kind, data)
 			if applied and kind == CompanyLayoutNet.SOLD:
 				table.forget(CompanyAsk.as_id(data.get("uid")))
-		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED:
-			applied = table.apply(company, inventory, kind, data)
-		CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED:
-			applied = table.apply(company, inventory, kind, data)
+		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED, \
+		CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, \
 		CompanyTableNet.RESTOCKED, CompanyTableNet.DISCARDED:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
