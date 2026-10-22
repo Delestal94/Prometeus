@@ -14,7 +14,7 @@ extends SceneTree
 ##   waypoint is ahead of it on the route, and it is done at the end;
 ## - on the real map (data/world/road_graph.tres) the shed reaches a Centro house at once, a Campo
 ##   house is refused with gate_campo_obra while it is closed, and with it open the route passes it
-##   and its meters are no shorter than the straight line.
+##   and its meters are no shorter than the straight line between the snapped points.
 
 const STEP_MAX: float = 8.5
 
@@ -173,7 +173,10 @@ func _test_real_map() -> void:
 	_expect(allowed.ok and allowed.locks.has(&"gate_campo_obra"),
 			"With the works gate open the route to %s passes it" % far.id)
 	if allowed.ok:
-		_expect(allowed.length >= shed.distance_to(far.position), "The route is no shorter than the straight line")
+		# The route runs between the points snapped to the streets, not to the house itself.
+		var snapped_end: Vector2 = graph.nearest_point(far.position).point
+		_expect(allowed.length >= shed.distance_to(snapped_end) - 0.01,
+				"The route is no shorter than the straight line between the snapped points")
 
 
 func _expect(condition: bool, message: String) -> void:
