@@ -14,6 +14,15 @@ extends Control
 ## block fits on screen, and the reading pause is shared out so the scene
 ## lasts `length_seconds`.
 ##
+## Sound (N-606.4a) is data too: a shot lists its `sounds` ({at, sound, when?},
+## seconds into the shot; `when` "news" or "clean" keeps a cue for that kind of
+## paper only) and `story.sounds` says which cue each close-up opens with (by
+## block id, else "default"). The rooster and the little birds open the scene,
+## paper rustles as he unfolds and lowers it, the front page gets its "extra!"
+## hit, every other page a page turn, and with bad news the Boss spits his
+## mate (a cheer instead if the run was clean). Plain 2D players on the SFX bus:
+## the scene has no place in the run's world and nothing here touches it.
+##
 ## It only draws: what the paper says is the host's (NewsDesk), what comes
 ## after is whoever listens to `finished` (HudNewspaper -> HudResults).
 
@@ -23,6 +32,7 @@ const SHOTS_PATH: String = "res://data/newspaper/shots.json"
 const NEWS_DESK = preload("res://scripts/presentation/newspaper/news_desk.gd")
 const SPREAD = preload("res://scripts/presentation/newspaper/newspaper_spread.gd")
 const SET = preload("res://scripts/presentation/newspaper/newspaper_set.gd")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## Held for skip_hold_seconds, any of these skips; pressed before the scene
 ## began, it doesn't count until let go.
 const SKIP_ACTIONS: Array[StringName] = [&"interact", &"jump", &"ui_accept", &"ui_cancel", &"ui_pause"]
@@ -39,12 +49,16 @@ var viewport: SubViewport
 var camera: Camera3D
 ## [{id, start, seconds, rail, ease, title, bands, lower, react_at, handheld}], in order.
 var timeline: Array[Dictionary] = []
+## The cues that have played, in order (for the tests: headless plays nothing).
+var played: Array[StringName] = []
 var duration: float = 0.0
 var time: float = 0.0
 var skip_held: float = 0.0
 var done: bool = false
 var _held: Dictionary = {}
 var _reacted: bool = false
+var _fired: Dictionary = {}
+var _sound_players: Dictionary = {}
 var _band_amount: float = 0.0
 var _shot_index: int = 0
 var _container: SubViewportContainer
@@ -122,6 +136,9 @@ func play(new_paper: Dictionary) -> bool:
 	camera.make_current()
 	_build_overlay()
 	build_timeline()
+	for shot: Dictionary in timeline:
+		for cue: Dictionary in shot["sounds"]:
+			_sound_player(StringName(cue.get("sound", "")))
 	_apply(0.0, 0.0)
 	_bake_prints.call_deferred()
 	for action: StringName in SKIP_ACTIONS:
@@ -168,6 +185,7 @@ func build_timeline() -> void:
 			"lower": shot.get("lower", []),
 			"react_at": float(shot.get("react_at", -1.0)),
 			"handheld": float(shot.get("handheld", 0.0)),
+			"sounds": shot.get("sounds", []),
 		}
 		timeline.append(entry)
 		start += float(entry["seconds"])
@@ -189,6 +207,8 @@ func finish() -> void:
 	if done:
 		return
 	done = true
+	for player: AudioStreamPlayer in _sound_players.values():
+		player.stop()
 	set_process(false)
 	finished.emit()
 
@@ -212,6 +232,7 @@ func _apply(at: float, delta: float) -> void:
 		_shot_index += 1
 	var shot: Dictionary = timeline[_shot_index]
 	var local: float = at - float(shot["start"])
+	_fire_sounds(shot, local)
 	var pose: Dictionary = CameraRail.pose_at(shot["rail"], local, shot["ease"])
 	var position_now: Vector3 = pose["at"]
 	var amplitude: float = float(shot["handheld"])
@@ -229,8 +250,7 @@ func _apply(at: float, delta: float) -> void:
 	if float(shot["react_at"]) >= 0.0 and local >= float(shot["react_at"]) and not _reacted:
 		_reacted = true
 		var reactions: Dictionary = shots().get("reactions", {})
-		var clean: bool = String((paper.get("front", {}) as Dictionary).get("id", "")) == "clean_run"
-		var face: Array = reactions.get("clean" if clean else "news", ["worried", "surprised"])
+		var face: Array = reactions.get("clean" if _is_clean() else "news", ["worried", "surprised"])
 		stage.set_reaction(StringName(face[0]), StringName(face[1]))
 	var title: String = String(shot["title"])
 	_title.visible = not title.is_empty()
@@ -243,6 +263,74 @@ func _apply(at: float, delta: float) -> void:
 	_band_amount = bands_target if delta <= 0.0 else move_toward(_band_amount, bands_target, delta * BAND_SPEED)
 	_layout_bands()
 	_fade.modulate.a = 1.0 - clampf(at / FADE_IN_SECONDS, 0.0, 1.0)
+
+
+## The "everything arrived" scandal: the one paper the Boss is pleased with.
+func _is_clean() -> bool:
+	return String((paper.get("front", {}) as Dictionary).get("id", "")) == "clean_run"
+
+
+## Plays the cues of this shot whose time has come, once each.
+func _fire_sounds(shot: Dictionary, local: float) -> void:
+	var cues: Array = shot["sounds"]
+	for index: int in cues.size():
+		var cue: Dictionary = cues[index]
+		var token: String = "%d:%d" % [_shot_index, index]
+		if _fired.has(token) or local < float(cue.get("at", 0.0)):
+			continue
+		_fired[token] = true
+		var only: String = String(cue.get("when", ""))
+		if (only == "news" and _is_clean()) or (only == "clean" and not _is_clean()):
+			continue
+		play_sound(StringName(cue.get("sound", "")))
+
+
+## One cue of this scene by name (rooster, chirps, paper, page, extra, spit,
+## cheer); an unknown name plays nothing.
+func play_sound(key: StringName) -> void:
+	var player: AudioStreamPlayer = _sound_player(key)
+	if player == null:
+		return
+	played.append(key)
+	player.pitch_scale = 1.0 + randf_range(-0.04, 0.04) * float(player.get_meta(&"variation", 0.0))
+	player.play()
+
+
+## The player of a cue, made on first use: [stream, WorldMix level, how much its pitch may vary].
+func _sound_player(key: StringName) -> AudioStreamPlayer:
+	if _sound_players.has(key):
+		return _sound_players[key]
+	var spec: Array = _sound_spec(key)
+	if spec.is_empty():
+		return null
+	var player := AudioStreamPlayer.new()
+	player.name = "Sound_%s" % key
+	player.stream = spec[0]
+	player.volume_db = float(spec[1])
+	player.bus = &"SFX"
+	player.set_meta(&"variation", float(spec[2]))
+	add_child(player)
+	_sound_players[key] = player
+	return player
+
+
+static func _sound_spec(key: StringName) -> Array:
+	match key:
+		&"rooster":
+			return [SynthAudio.rooster_crow(), WorldMix.NEWSPAPER_ROOSTER_DB, 0.0]
+		&"chirps":
+			return [SynthAudio.morning_chirps(), WorldMix.NEWSPAPER_CHIRPS_DB, 0.0]
+		&"extra":
+			return [SynthAudio.extra_stinger(), WorldMix.NEWSPAPER_EXTRA_DB, 0.0]
+		&"paper":
+			return [SynthAudio.paper_rustle(), WorldMix.NEWSPAPER_PAPER_DB, 1.0]
+		&"page":
+			return [SynthAudio.page_turn(), WorldMix.NEWSPAPER_PAGE_DB, 1.0]
+		&"spit":
+			return [SynthAudio.mate_spit(), WorldMix.NEWSPAPER_SPIT_DB, 0.5]
+		&"cheer":
+			return [SynthAudio.neighbor_cheer(), WorldMix.RESIDENT_CHEER_DB, 0.0]
+	return []
 
 
 func _update_skip(delta: float) -> void:
@@ -319,9 +407,10 @@ func _story_shot(block: Dictionary, current: Dictionary, story: Dictionary, move
 			"fov": rad_to_deg(2.0 * atan(half / distance)), "t": move}
 	var from: Dictionary = current.duplicate()
 	from["t"] = 0.0
+	var cues: Dictionary = story.get("sounds", {})
 	return {"id": String(block["id"]), "seconds": move + hold, "rail": [from, close],
 			"ease": String(story.get("ease", "smooth")), "title": "", "bands": false, "lower": [], "react_at": -1.0,
-			"handheld": 0.0}
+			"handheld": 0.0, "sounds": cues.get(String(block["id"]), cues.get("default", []))}
 
 
 ## Mipmapped prints once the pages have been drawn (sharper small type).

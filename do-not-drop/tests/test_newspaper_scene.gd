@@ -15,6 +15,18 @@ extends SceneTree
 ##   framing its whole block, its text at 24 px or more at 720p), the spread
 ##   again and the reaction; ~30 s, the Boss lowers the paper and reacts by the
 ##   run (happy for the "everything arrived" scandal);
+## - its sound (N-606.4a, shots.json "sounds", SynthAudioNewspaper): the rooster
+##   and the little birds in the first shot, paper as he unfolds it, the "extra!"
+##   hit on the front story, a page turn on each other close-up (none on the
+##   photo), paper as he lowers it and the spit-take of bad news (a cheer for
+##   the clean run); every cue is a real, non-silent stream on the SFX bus at
+##   the level WorldMix gives it; skipping stops them;
+## - its sound (N-606.4a, shots.json "sounds", SynthAudioNewspaper): the rooster
+##   and the little birds in the first shot, paper as he unfolds it, the "extra!"
+##   hit on the front story, a page turn on each other close-up (none on the
+##   photo), paper as he lowers it and the spit-take of bad news (a cheer for
+##   the clean run); every cue is a real, non-silent stream on the SFX bus at
+##   the level WorldMix gives it; skipping stops them;
 ## - holding Interact skips it after 0.6 s (hint and ring on screen); a button
 ##   already held when it began doesn't count; a short tap doesn't skip;
 ## - Opciones > Diario al final: never, or only with news, keeps it off;
@@ -33,6 +45,7 @@ extends SceneTree
 
 const DESK: GDScript = preload("res://scripts/presentation/newspaper/news_desk.gd")
 const SPREAD: GDScript = preload("res://scripts/presentation/newspaper/newspaper_spread.gd")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const STEP: float = 1.0 / 30.0
 
 var _failures: int = 0
@@ -121,15 +134,26 @@ func _run() -> void:
 		var block: Dictionary = blocks[blocks.find_custom(func(b: Dictionary) -> bool: return b["id"] == shot["id"])]
 		_check_close_up(stage, camera, viewport, block)
 
+	_check_sound_setup(director, timeline)
+
 	# Played to the end: the Boss lowers the paper and reacts, then the results.
 	director.set(&"time", 0.0)
 	director.set(&"_shot_index", 0)
+	(director.get("_fired") as Dictionary).clear()
+	(director.get("played") as Array).clear()
 	var saw_reaction: bool = false
 	while hud.newspaper.is_open() and float(director.get("time")) < duration + 1.0:
 		director.call(&"_process", 0.25)
 		if director.call(&"shot_id") == "reaction" and float(stage.get("lowered")) >= 1.0:
 			saw_reaction = true
 	_expect(saw_reaction, "The Boss lowers the paper in the reaction shot")
+	var heard: Array = (director.get("played") as Array).map(func(cue: StringName) -> String: return String(cue))
+	var wanted_cues: Array = ["rooster", "chirps", "paper", "extra"]
+	for index: int in blocks.size() - 1:
+		wanted_cues.append("page")
+	wanted_cues.append_array(["paper", "spit"])
+	_expect(heard == wanted_cues,
+			"Bad news sounds: rooster, birds, paper, extra, a page per story, paper, spit (%s)" % str(heard))
 	var face: Node = stage.get("face")
 	_expect(face == null or face.get("mouth_id") == &"surprised",
 			"With bad news he is shocked (%s)" % (face.get("mouth_id") if face else ""))
@@ -152,6 +176,9 @@ func _run() -> void:
 			"In English the paper is English")
 	while hud.newspaper.is_open():
 		director.call(&"_process", 0.5)
+	var clean_heard: Array = (director.get("played") as Array).map(func(cue: StringName) -> String: return String(cue))
+	_expect(clean_heard.size() >= 2 and clean_heard.slice(-2) == ["paper", "cheer"] and not clean_heard.has("spit"),
+			"A clean run ends with paper and a cheer, no spit (%s)" % str(clean_heard))
 	face = stage.get("face")
 	_expect(face == null or face.get("mouth_id") == &"grin", "With nothing to tell he is pleased")
 	settings.call(&"set_language", "es")
@@ -174,6 +201,9 @@ func _run() -> void:
 	_expect(hud.newspaper.is_open(), "Not before the hold is full")
 	_advance(director, 0.3)
 	_expect(not hud.newspaper.is_open() and hud.overlay_mode == "results", "Holding Interact skips to the results")
+	var sound_players: Array = (director.get("_sound_players") as Dictionary).values()
+	_expect(not sound_players.is_empty() and sound_players.all(func(player: AudioStreamPlayer) -> bool:
+			return not player.playing), "Skipping stops the scene's sounds")
 	_close_results(hud)
 	Input.action_press(&"jump")
 	bus.newspaper_ready.emit(paper)
@@ -250,6 +280,51 @@ func _run() -> void:
 		print("PASS: the next-day scene plays the run's paper, frames every story, skips on a hold",
 				" and hands over to the results")
 	quit(_failures)
+
+
+## The scene's cues are in the data and each one is a real sound: every shot
+## lists its own, the front story opens with "extra" and the photo with none,
+## each player is on the SFX bus at its WorldMix level with a stream that is not silence.
+func _check_sound_setup(director: Control, timeline: Array) -> void:
+	var cues: Dictionary = {}
+	for shot: Dictionary in timeline:
+		var names: Array = (shot["sounds"] as Array).map(func(cue: Dictionary) -> String: return cue["sound"])
+		cues[shot["id"]] = names
+		for cue: Dictionary in shot["sounds"]:
+			_expect(float(cue["at"]) < float(shot["seconds"]) - 0.3,
+					"The %s cue of %s starts well inside the shot (%s of %.1f s)"
+					% [cue["sound"], shot["id"], cue["at"], shot["seconds"]])
+	_expect(cues["office"] == ["rooster", "chirps"],
+			"The first shot opens with the rooster and the little birds (%s)" % str(cues["office"]))
+	_expect(cues["approach"] == ["paper"], "He unfolds the paper in the approach (%s)" % str(cues["approach"]))
+	_expect(cues["front"] == ["extra"], "The front story opens with the hit (%s)" % str(cues["front"]))
+	_expect(not cues.has("photo") or cues["photo"].is_empty(), "The photo, on the same page, has no page turn")
+	for id: String in cues:
+		if id.begins_with("story_") or id == "filler":
+			_expect(cues[id] == ["page"], "%s opens with a page turn (%s)" % [id, str(cues[id])])
+	_expect(cues["reaction"] == ["paper", "spit", "cheer"],
+			"The reaction lowers the paper and spits or cheers (%s)" % str(cues["reaction"]))
+	var levels: Dictionary = (WorldMix as Script).get_script_constant_map()
+	var wanted: Dictionary = {&"rooster": &"NEWSPAPER_ROOSTER_DB", &"chirps": &"NEWSPAPER_CHIRPS_DB",
+			&"extra": &"NEWSPAPER_EXTRA_DB", &"paper": &"NEWSPAPER_PAPER_DB", &"page": &"NEWSPAPER_PAGE_DB",
+			&"spit": &"NEWSPAPER_SPIT_DB", &"cheer": &"RESIDENT_CHEER_DB"}
+	var players: Dictionary = director.get("_sound_players")
+	for key: StringName in wanted:
+		director.call(&"_sound_player", key)
+		var player: AudioStreamPlayer = players.get(key)
+		_expect(player != null, "The scene has a player for %s" % key)
+		if player == null:
+			continue
+		_expect(player.bus == &"SFX", "%s plays on the SFX bus (%s)" % [key, player.bus])
+		_expect(is_equal_approx(player.volume_db, float(levels[wanted[key]])),
+				"%s sits at its WorldMix level (%.1f)" % [key, player.volume_db])
+		var wav := player.stream as AudioStreamWAV
+		var peak: int = 0
+		if wav != null:
+			for index: int in range(0, wav.data.size() - 1, 2):
+				peak = maxi(peak, absi(wav.data.decode_s16(index)))
+		_expect(peak > 1000, "%s is not silence (peak %d)" % [key, peak])
+	_expect(director.call(&"_sound_player", &"nothing") == null, "A cue nobody wrote down plays nothing")
 
 
 ## Every story's whole block on screen in its close-up, its text big enough.

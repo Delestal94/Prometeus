@@ -77,6 +77,7 @@ desbalances. La elección de timbres y su comodidad se valida además escuchando
 | música | RMS del loop | −24 dBFS | la radio del depósito (bus Music) |
 | máquina | RMS del loop | −40 dBFS | el motor del autoelevador que va y viene |
 | repetido | 100 ms más fuertes | −30 dBFS | el beep de marcha atrás del autoelevador, una y otra vez |
+| foley | 100 ms más fuertes | −24 dBFS | papel y manipulación cercana y seca: el diario del día siguiente (hojas, páginas) |
 
 Las dos últimas empezaron en "fondo" y "señal", y el depósito quedó molesto (reporte del usuario,
 2026-09-24): un sonido que no para tiene que quedar bien por debajo de uno que llama una vez. Lo
