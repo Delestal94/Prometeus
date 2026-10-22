@@ -142,6 +142,10 @@ const ICE_PACK_COST: int = 2
 const GIFT_WRAP_BONUS: float = 0.15
 const GIFT_WRAP_COST: int = 3
 
+## Products that must not share a box (D-0726, ProductCompatibility): assembly quality points lost
+## per incompatible pair found in one box (a pair is two different groups, counted once per kind).
+const INCOMPATIBLE_QUALITY_PENALTY: int = 30
+
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
 const WAREHOUSE_GRID_M: float = 1.0

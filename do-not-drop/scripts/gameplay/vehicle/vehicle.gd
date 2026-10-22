@@ -199,6 +199,8 @@ var _handbrake: bool = false
 var _previous_velocity: Vector3 = Vector3.ZERO
 var _impact_cooldown: float = 0.0
 var _telemetry_time: float = 0.0
+## The last telemetry sent was during a run (one more goes out the tick a run ends).
+var _telemetry_running: bool = false
 var _settling_time: float = 1.0
 var _grounded_once: bool = false
 ## Nobody at the wheel and stopped: the truck is held still (see
@@ -700,9 +702,13 @@ func _physics_process(delta: float) -> void:
 	presentation_engine_running = running
 	_drive(delta, running)
 
+	# The HUD's speed, only during a run: parked out of one (the depot before it, the company's yard, D-0302.2.b)
+	# the van told every peer, reliably and however far, its 0 km/h ten times a second. The tick a run ends sends
+	# the last speed once more, so the HUD doesn't keep a stale one.
 	_telemetry_time += delta
-	if _telemetry_time >= 0.1:
+	if _telemetry_time >= 0.1 and (running or _telemetry_running):
 		_telemetry_time = 0.0
+		_telemetry_running = running
 		EventBus.relay(&"vehicle_telemetry", [speed_kmh])
 
 	# Velocity discontinuities give the package system a tunable shake signal.

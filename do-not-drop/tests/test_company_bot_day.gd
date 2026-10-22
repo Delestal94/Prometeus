@@ -11,13 +11,15 @@ extends SceneTree
 ## - integration: the bot's own open_world/wait_opening open the company world (company_root.tscn)
 ##   and the day reaches OPENING within the bounded wait; closing leaves no error behind;
 ## - the stages, run in order on that one world (run_stage): receive_pallet, shelve_stock,
-##   take_orders, pack_boxes, dispatch and close_day return ok, and what each leaves is checked
+##   take_orders, pack_boxes, dispatch, deliver, return and close_day return ok, and what each leaves is checked
 ##   in the world (the pallets open and the stock on the labelled shelf slots, the day's whole plan
 ##   brought by the world into the shared book, CompanyNet.orders.book, and copied OPEN into
 ##   CompanyTrips' own book, D-0813.1; one order PACKED by a sealed box with no assembly error and
-##   its packaging in the ledger, the cargo loaded with the trip not started, the day in SUMMARY with the
-##   costs of the packing in its summary and saved); drive, deliver and return stay
-##   not_implemented naming the task they wait for (D-0302.2/D-1501, D-0311, D-0307); a stage
+##   its packaging in the ledger, the cargo loaded with the trip not started, D-2016.2: the van out
+##   through the gate with its order OUT, then DELIVERED at a house of the fixed map with the pay in
+##   the wallet and the ledger as order_paid, back in with the trip closed and nothing failed or
+##   out, the day in SUMMARY with the costs of the packing in its summary and saved); drive stays
+##   not_implemented naming the task it waits for (D-0302.2/D-1501); a stage
 ##   run out of order fails with a reason, and so do a stage name that does not exist and a
 ##   world that is not the company's.
 
@@ -25,7 +27,7 @@ const BOT: String = "res://tests/bot_company_day.gd"
 const DAY_CYCLE := preload("res://scripts/core/company/day_cycle.gd")
 ## The stages that run, and the ones that wait for a task: stage -> the reason they return.
 const PENDING: Dictionary = {
-	"drive": "D-0302.2/D-1501", "deliver": "D-0311", "return": "D-0307",
+	"drive": "D-0302.2/D-1501",
 }
 
 var _failures: int = 0
@@ -117,7 +119,8 @@ func _check_out_of_order(bot: GDScript, level: Node3D) -> void:
 	var money: int = _money(level)
 	var cases: Dictionary = {
 		"shelve_stock": "nothing_in_hands", "pack_boxes": "no_packable_order",
-		"dispatch": "nothing_packed", "no_such_stage": "unknown_stage",
+		"dispatch": "nothing_packed", "deliver": "nothing_loaded", "return": "no_trip_out",
+		"no_such_stage": "unknown_stage",
 	}
 	for stage: String in cases:
 		var result: Dictionary = await bot.call(&"run_stage", self, level, stage, ctx)
@@ -157,6 +160,11 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 				_check_packed(root_level, ctx, money)
 			"dispatch":
 				_check_dispatched(root_level, ctx)
+				money = _money(level)
+			"deliver":
+				_check_delivered(root_level, ctx, money)
+			"return":
+				_check_returned(root_level, ctx)
 			"close_day":
 				_check_closed(root_level)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
@@ -225,6 +233,31 @@ func _check_dispatched(level: CompanyRoot, ctx: Dictionary) -> void:
 	_expect(level.trips.book.state_of(order["id"]) == Order.STATE_PACKED,
 		"The loaded order is still PACKED: it goes OUT when the vehicle leaves")
 	_expect(level.trips.trips_out() == 0, "No trip started without a vehicle")
+
+
+func _check_delivered(level: CompanyRoot, ctx: Dictionary, money: int) -> void:
+	var order_id: StringName = ctx["order"]["id"]
+	var trip: Trip = ctx["trip"]
+	_expect(trip != null and trip.is_out() and level.trips.trips_out() == 1,
+		"The van is out on its trip")
+	_expect(level.trips.book.state_of(order_id) == Order.STATE_DELIVERED, "The order is DELIVERED")
+	_expect(trip != null and order_id in trip.delivered_ids and trip.next_stop() == &"",
+		"The trip recorded the delivery and has no stop left")
+	var house: StringName = StringName(ctx["order"]["house_id"])
+	_expect(HouseMap.load_default().spot(house) != null, "The order's house is on the fixed map")
+	_expect(int(ctx["deliveries"]) >= 1, "The delivery is counted (got %d)" % int(ctx["deliveries"]))
+	_expect(_money(level) > money, "The customer paid into the wallet")
+	var state: Node = level.net.company as Node
+	_expect(int(state.call(&"ledger_total", OrderSettlement.REASON_PAID)) > 0,
+		"The pay is in the ledger as order_paid")
+
+
+func _check_returned(level: CompanyRoot, ctx: Dictionary) -> void:
+	var trip: Trip = ctx["trip"]
+	_expect(trip != null and not trip.is_out() and trip.failed_ids.is_empty(),
+		"The trip closed on return with nothing failed")
+	_expect(level.trips.trips_out() == 0, "No vehicle is out: the day may close")
+	_expect(level.trips.closed_trips().size() == 1, "One closed trip")
 
 
 func _check_closed(level: CompanyRoot) -> void:
