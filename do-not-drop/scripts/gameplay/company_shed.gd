@@ -130,6 +130,8 @@ func _init() -> void:
 ## (company_state_restored), the labels and pallets when units move. It only draws.
 func follow(company_net: CompanyNet) -> void:
 	_net = company_net
+	if yard != null:
+		yard.forklift.net = company_net
 	if not company_net.event_applied.is_connected(_on_event_applied):
 		company_net.event_applied.connect(_on_event_applied)
 	if not company_net.company_state_restored.is_connected(_on_state_restored):
@@ -145,6 +147,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		refresh_stock(_net.inventory)
 	elif kind == CompanyCarts.MOVED:
 		_on_cart_moved(data)
+	elif kind == CompanyPallets.FORK and yard != null:
+		yard.refresh(_net.pallets)
 	elif CompanyPallets.EVENT_KINDS.has(kind) and _pallet_root != null:
 		if kind == CompanyPallets.MOVED and yard != null:
 			yard.refresh(_net.pallets, true)
@@ -498,6 +502,8 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 func station_for(id: StringName) -> Dictionary:
 	if id == CompanyPallets.STATION:
 		return _jack_station()
+	if id == CompanyPallets.FORK_STATION:
+		return _fork_station()
 	var cart_id: StringName = PickingCart.parse_location(id)
 	if cart_id != &"":
 		return _cart_station(cart_id)
@@ -593,6 +599,8 @@ func cart_can_stand(local: Vector3, cart: StringName = &"") -> bool:
 ## The jack and the floor pallets, one yard per drawing; its jack's points forward who used it.
 func _build_yard() -> void:
 	yard = PalletYardView.make(stage)
+	yard.racks = rack_slots()
+	yard.forklift.net = _net
 	yard.jack_used.connect(func(action: StringName, peer_id: int, from: Vector3) -> void:
 		jack_used.emit(action, peer_id, from))
 	add_child(yard)
@@ -611,6 +619,40 @@ func _jack_station() -> Dictionary:
 		"stand_ok": jack_can_stand, "free_ok": pallet_spot_free, "bed_at": rear,
 		"bed_open": truck != null and is_instance_valid(truck) and truck.bed_open(),
 	}
+
+
+## The pallet slots of the racks (D-0606.b): every shelf has one per level (SHELF_DECKS), id "<shelf uid>-<level>",
+## at the middle of the shelf, the pallet's long side along the shelf's. Slot id -> {pos: Vector2 (shed frame, m),
+## level: float (m, the deck), yaw: float (the PalletBox's turn)}.
+func rack_slots() -> Dictionary:
+	var found: Dictionary = {}
+	for piece: Dictionary in pieces:
+		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))
+		if def == null or def.id != &"shelf":
+			continue
+		var rect: Rect2i = piece["rect"]
+		var middle: Vector3 = cell_to_local(Vector2(rect.position) + Vector2(rect.size) * 0.5)
+		for level: int in SHELF_LEVELS:
+			found[StringName("%s-%d" % [piece["uid"], level])] = {"pos": Vector2(middle.x, middle.z),
+				"level": SHELF_DECKS[level], "yaw": 0.0 if rect.size.x >= rect.size.y else PI * 0.5}
+	return found
+
+
+## The forklift as CompanyNet's `stations` resolver wants it (D-0606.b, see CompanyForklift): the jack's station
+## (floor, the checks only a shed can make, the truck's bed) with a spot at the forklift, where it stands and faces
+## now (the driver's player while somebody drives), and the rack slots with their level. {} for a shed with no yard.
+func _fork_station() -> Dictionary:
+	var base: Dictionary = _jack_station()
+	if base.is_empty() or yard.forklift == null:
+		return {}
+	var pose: Dictionary = yard.forklift.pose()
+	var body: Vector2 = pose["body"]
+	var racks: Array = []
+	for slot: Variant in yard.racks:
+		racks.append({"slot": slot, "pos": yard.racks[slot]["pos"], "level": yard.racks[slot]["level"]})
+	base.merge({"location": &"forklift:yard", "spot": yard.to_global(Vector3(body.x, 0.5, body.y)), "body": body,
+		"yaw": pose["yaw"], "racks": racks}, true)
+	return base
 
 
 ## Whether the jack may stand at `at` (metres, shed frame): as a picking cart (cart_can_stand).

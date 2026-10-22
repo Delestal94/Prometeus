@@ -243,12 +243,32 @@ Decisión: `docs/decisiones/2026-10-22-licencias.md`.
 Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 **Hecho cuando:** `diseno/roles-tripulacion.md` dice qué automatiza el modo solo y cómo lo mide el bot de D-2024.
 
+### D-0127 · Dificultad y modificadores — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #654)** — `diseno/dificultad.md`: una sola dificultad; dos modificadores de la empresa (armado asistido con absorción mínima 0,75, días tranquilos), elegidos por el host fuera de la partida, en `CompanyState.options` sin RPC; lo construye D-1919.
+**Depende de:** D-0112, D-0123, D-0126
+**Qué:** `diseno/dificultad.md` (máx. 120 líneas), dentro del recorte de D-0112 (una sola dificultad con armado
+asistido, `critica-alcance.md` §4.5):
+- [x] D-0127.1 Por qué una sola dificultad: qué ya ajusta el esfuerzo (tripulación, día de campaña, empresa en
+  rojo) y por qué no hay tamaños de empresa.
+- [x] D-0127.2 Los modificadores, con qué hacen y qué no tocan: armado asistido (`assisted_packing`) y días
+  tranquilos (`calm_days`); los descartados con su motivo.
+- [x] D-0127.3 Armado asistido: orden de la cinta (relleno sin dejar la caja sin cerrar), caja `assisted` con
+  absorción mínima 0,75 para que lo hecho a mano valga más, aviso de relleno insuficiente.
+- [x] D-0127.4 Quién los elige y cuándo (host, solo fuera de la partida: empresa nueva y lista de guardados),
+  cómo se guardan (`CompanyState.options`, sin subir la versión del save), red (sin RPC), dónde se ven, y que no
+  bloquean hitos ni logros.
+- [x] D-0127.5 Qué construye D-1919, con sus tests. Revisado por `critico-diseno`.
+Decisión: `docs/decisiones/2026-10-22-dificultad.md`.
+**Hecho cuando:** `diseno/dificultad.md` existe y D-1919 lo puede construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
-- [ ] D-0151.1 Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
+- [x] D-0151.1 (2026-10-22) Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
   despausar reanuda el reloj solo si lo pausó el menú (no en SUMMARY); un peer que entra despausa antes del
-  snapshot. Online con alguien más, la pausa de hoy.
+  snapshot. Online con alguien más, la pausa de hoy. Quedó en `CompanySoloPause`
+  (`scripts/gameplay/company_solo_pause.gd`, hijo de `CompanyRoot`, test `test_company_solo_pause`): Esc y
+  `EventBus.pause_requested` la activan, `NetworkManager.roster_changed` (antes del snapshot) la desactiva.
 - [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
 - [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el

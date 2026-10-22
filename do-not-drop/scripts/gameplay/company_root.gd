@@ -21,7 +21,7 @@ extends Node3D
 ## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
 ## one: the same player at SPAWN it always was.
 ##
-## The company's vehicles park outside the shed's exit on every peer (CompanyFleet, World/Vehicles, D-0302.2.b);
+## The company's vehicles (`fleet`) park outside the shed's exit on every peer (CompanyFleet, D-0302.2.b);
 ## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
@@ -153,7 +153,6 @@ var trips: CompanyTrips
 ## The company vehicles out as every peer sees them (D-0302.2.a): on the host it publishes what
 ## `trips` decides, on every peer it follows CompanyNet's trip events and the snapshot.
 var trips_view: CompanyTripsView
-## The company's vehicles, World/Vehicles on every peer (D-0302.2.b): the host's fleet, a client's from its snapshot.
 var fleet: CompanyFleet
 ## The map's streamed cells (D-0313): loaded in slices around the crew and the company's vehicles,
 ## so leaving the shed never loads the world again (the loading screen shows once, on entering).
@@ -279,6 +278,7 @@ func _add_net(state: COMPANY_STATE) -> void:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
 	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
+	net.pallets.load_save(state.pallets)
 	_hosted_state = state
 
 
@@ -296,6 +296,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.attach(net, clock, state)
 	day_cycle.opening_notice = _opening_notice
 	day_cycle.crew_in_shed = _crew_in_shed
+	add_child(CompanySoloPause.create(clock, day_cycle))
 	_add_business_tick()
 
 
@@ -392,6 +393,7 @@ func save_interrupted_day() -> bool:
 		return false
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
+		_hosted_state.pallets = net.pallets.to_save()
 	var saved: bool = CompanySave.save(_hosted_state, save_slot, save_dir, true)
 	if not saved:
 		push_warning("CompanyRoot: the interrupted day %d could not be saved to %s"
@@ -413,6 +415,7 @@ func save_closed_day() -> bool:
 		return false
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
+		_hosted_state.pallets = net.pallets.to_save()
 	var next_opening := COMPANY_STATE.new()
 	next_opening.from_dict(_hosted_state.to_dict())
 	next_opening.day = _hosted_state.day + 1
