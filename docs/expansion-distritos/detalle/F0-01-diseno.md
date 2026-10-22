@@ -243,6 +243,21 @@ Decisión: `docs/decisiones/2026-10-22-licencias.md`.
 Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 **Hecho cuando:** `diseno/roles-tripulacion.md` dice qué automatiza el modo solo y cómo lo mide el bot de D-2024.
 
+### D-0127 · Dificultad y modificadores — B · Opus 5.5 · medium · Aviso: no · F0
+**Depende de:** D-0112, D-0123, D-0126
+**Qué:** `diseno/dificultad.md` (máx. 120 líneas), dentro del recorte de D-0112 (una sola dificultad con armado
+asistido, `critica-alcance.md` §4.5):
+- [x] D-0127.1 Por qué una sola dificultad: qué ya ajusta el esfuerzo (tripulación, día de campaña, empresa en
+  rojo) y por qué no hay tamaños de empresa.
+- [x] D-0127.2 Los modificadores, con qué hacen y qué no tocan: armado asistido (`assisted_packing`) y días
+  tranquilos (`calm_days`); los descartados con su motivo.
+- [x] D-0127.3 Quién los elige y cuándo (host, empresa nueva y resumen del día), cómo se guardan
+  (`CompanyState.options`, sin subir la versión del save), red (sin RPC), dónde se ven, y que no bloquean hitos
+  ni logros.
+- [x] D-0127.4 Qué construye D-1919, con sus tests.
+Decisión: `docs/decisiones/2026-10-22-dificultad.md`.
+**Hecho cuando:** `diseno/dificultad.md` existe y D-1919 lo puede construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
