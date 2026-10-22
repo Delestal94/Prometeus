@@ -244,6 +244,7 @@ Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 **Hecho cuando:** `diseno/roles-tripulacion.md` dice qué automatiza el modo solo y cómo lo mide el bot de D-2024.
 
 ### D-0127 · Dificultad y modificadores — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/dificultad.md`: una sola dificultad; dos modificadores de la empresa (armado asistido con absorción mínima 0,75, días tranquilos), elegidos por el host fuera de la partida, en `CompanyState.options` sin RPC; lo construye D-1919.
 **Depende de:** D-0112, D-0123, D-0126
 **Qué:** `diseno/dificultad.md` (máx. 120 líneas), dentro del recorte de D-0112 (una sola dificultad con armado
 asistido, `critica-alcance.md` §4.5):
@@ -251,10 +252,12 @@ asistido, `critica-alcance.md` §4.5):
   rojo) y por qué no hay tamaños de empresa.
 - [x] D-0127.2 Los modificadores, con qué hacen y qué no tocan: armado asistido (`assisted_packing`) y días
   tranquilos (`calm_days`); los descartados con su motivo.
-- [x] D-0127.3 Quién los elige y cuándo (host, empresa nueva y resumen del día), cómo se guardan
-  (`CompanyState.options`, sin subir la versión del save), red (sin RPC), dónde se ven, y que no bloquean hitos
-  ni logros.
-- [x] D-0127.4 Qué construye D-1919, con sus tests.
+- [x] D-0127.3 Armado asistido: orden de la cinta (relleno sin dejar la caja sin cerrar), caja `assisted` con
+  absorción mínima 0,75 para que lo hecho a mano valga más, aviso de relleno insuficiente.
+- [x] D-0127.4 Quién los elige y cuándo (host, solo fuera de la partida: empresa nueva y lista de guardados),
+  cómo se guardan (`CompanyState.options`, sin subir la versión del save), red (sin RPC), dónde se ven, y que no
+  bloquean hitos ni logros.
+- [x] D-0127.5 Qué construye D-1919, con sus tests. Revisado por `critico-diseno`.
 Decisión: `docs/decisiones/2026-10-22-dificultad.md`.
 **Hecho cuando:** `diseno/dificultad.md` existe y D-1919 lo puede construir sin preguntar.
 

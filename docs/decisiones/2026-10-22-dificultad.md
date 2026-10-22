@@ -3,10 +3,12 @@
 ## Decisión
 Diseño en `docs/expansion-distritos/diseno/dificultad.md`:
 - **Una sola dificultad.** Sin tamaños de empresa (chica, mediana, grande) ni niveles fácil / normal / difícil.
-- **Dos modificadores** de la empresa, apagados al crearla, que elige el host al crearla o desde el resumen del
-  día (valen desde el día siguiente):
+- **Dos modificadores** de la empresa, apagados al crearla, que elige el host **solo fuera de la partida** (al
+  crearla o desde la lista de guardados):
   - **Armado asistido** (`assisted_packing`): al sellar con cinta, la mesa rellena sola los huecos libres,
-    cobrando el relleno como siempre. El resto del armado sigue siendo del jugador.
+    cobrando el relleno como siempre, sin que el relleno deje la caja sin cerrar. La caja queda `assisted` y
+    amortigua como mínimo 0,75 (el relleno de la partida rápida), así lo armado a mano (0,6) sigue valiendo más
+    en la ruta. `Q` y la paga no cambian.
   - **Días tranquilos** (`calm_days`): sin eventos del día.
 - Se guardan en `CompanyState.options` con valores por defecto, sin subir la versión del save y sin RPC: las dos
   reglas corren en el host. No bloquean hitos, logros ni récords. Lo construye D-1919.
@@ -25,4 +27,7 @@ Diseño en `docs/expansion-distritos/diseno/dificultad.md`:
   chocan con `roles-tripulacion.md` §6.5.
 - Marcar las partidas con modificadores o bloquear logros: castiga al que lo necesita en un coop sin tabla de
   posiciones.
-- Cambiar los modificadores en cualquier momento desde la pausa: cambiaría la regla de una caja a medio armar.
+- Cambiar los modificadores con la empresa abierta (pausa o resumen del día): cambia la regla de una caja a medio
+  armar, necesita un hecho de red para los clientes y choca con el sorteo de eventos, que se hace al cerrar el día
+  anterior en la misma pantalla del resumen.
+- Caja asistida con la absorción máxima (0,6): más simple, pero el relleno a mano dejaría de tener sentido.
