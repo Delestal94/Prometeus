@@ -398,6 +398,7 @@ WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
 WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
 WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
+WORLD_SHED_TAKE_FROM_CART,Tomar %s del carrito,Take %s from the cart
 WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
 WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
 WORLD_SHED_BOARD_FORKLIFT,Subir al autoelevador,Get on the forklift
@@ -443,3 +444,8 @@ WORLD_SHOP_ALREADY_OWNED,Ya lo tenés,Already owned
 WORLD_SHOP_NEEDS_ITEM,Primero hace falta %s,Needs %s first
 WORLD_SHOP_WRONG_STAGE,Falta la ampliación anterior (etapa %s),The previous expansion is missing (stage %s)
 WORLD_SHOP_CANNOT_AFFORD,Faltan monedas: cuesta %s y hay %s,Not enough money: costs %s and you have %s
+WORLD_DOOR_CHEER_1,¡Justo lo que pedí! Gracias,Just what I ordered! Thanks
+WORLD_DOOR_CHEER_2,¡Qué rápido! Muy bien,That was quick! Well done
+WORLD_DOOR_CHEER_3,Todo en orden. ¡Gracias!,All in order. Thank you!
+WORLD_DOOR_SHRUG_1,Bueno... llegó,Well... it arrived
+WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better

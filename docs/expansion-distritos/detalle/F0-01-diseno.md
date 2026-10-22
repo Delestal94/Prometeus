@@ -203,3 +203,58 @@ Cada riesgo con su mitigación y la tarea que la hace.
 Decisión: `docs/decisiones/2026-10-22-narrativa-empresa.md`. Los textos fuera de tono se reescriben en
 las tareas de pedidos y cierre (D-0822 mensajes con humor).
 **Hecho cuando:** `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md`.
+
+### D-0123 · Diseño de eventos del día — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/eventos-del-dia.md`: 15 eventos (6 Núcleo F1, 5 Ampliación F1, 4 Ampliación F2; 4 positivos, 3 negativos, 8 mixtos), reglas de frecuencia y anuncio, sorteo con la corriente `events` de la semilla del día, techo diario de 150 / 300, red por `CompanyNet` y tareas nuevas a crear en el grupo 05.
+**Depende de:** D-0101, D-0110, D-0117, D-0121, D-0246, D-2001
+**Qué:** `diseno/eventos-del-dia.md`, que no resucita nada de P14 ni de R4:
+- [x] **D-0123.1** Propósito, qué no son (ni peligros de zona ni contratos de varios días) y cómo conviven con `RouteEventManager` (ids distintos: `shed_inspection` ≠ `inspection`).
+- [x] **D-0123.2** Reglas generales: cuántos por día según el día de campaña y la tripulación, cuándo se anuncian (víspera, apertura, a una hora, al llegar), sorteo en el host con `CompanySeed.for_day(…, "events")` al cerrar el día anterior, sin repetir dos días seguidos, techo de castigo y premio por día, escalado de 1 a 8 jugadores y modo solo, constantes en `CompanyTuning` y `.tres` en `data/day_events/`.
+- [x] **D-0123.3** Los 15 eventos (incluye inspección, proveedor tarde, pedido gigante, huelga de transporte y ola de calor), cada uno con anuncio en el tono de narrativa-empresa.md, sistema que toca, números, decisión, resultado, día mínimo, fase y requisitos; tabla resumen con costo.
+- [x] **D-0123.4** Red y guardado (`day_event_announced/started/progress/ended`, petición `day_event_answer`, parte de snapshot `day_events`, `CompanyState.day_events` en el save), tareas que lo construyen, riesgos y "Decidir al final".
+Decisión: `docs/decisiones/2026-10-22-eventos-del-dia.md`. Lo que se construye son tareas nuevas a crear
+en el grupo 05, después de cerrar el corte vertical.
+**Hecho cuando:** `diseno/eventos-del-dia.md` tiene los 15 eventos y su tabla resumen.
+
+### D-0124 · Diseño de las licencias — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #640)** — sección "Las licencias" de `diseno/hitos.md`: 5 licencias con precio (650 / 600 / 1 000 / 1 000 / 1 000), qué abren, compra única de la empresa en la tienda, nunca se pierden, claves de `equipment` con tipo de tienda `license` y `requires` para vehículos.
+**Depende de:** D-0115, D-0117, D-0118
+**Qué:** completar la sección "Las licencias" de `diseno/hitos.md` (D-0118 fijó cuándo se ofrecen):
+- [x] D-0124.1 Precio y qué abre (y qué no) cada una de las cinco, sin mover los días de apertura de la tabla
+  de distritos.
+- [x] D-0124.2 Cómo se obtienen: hito → tienda → compra única de la empresa; sin examen, sin vencimiento, no se
+  pierden con la quiebra; qué se ve en el bloqueo y en la tienda; primer vuelo guiado (D-1418).
+- [x] D-0124.3 Cómo se guardan y se piden, para D-0407: claves `license_*` en `CompanyState.equipment`, tipo
+  `license` en `ShopItem`, `requires` también para vehículos, `GateRequirement.equipment` en los bloqueos (`gate_puerto` cambia el hito por la licencia).
+Decisión: `docs/decisiones/2026-10-22-licencias.md`.
+**Hecho cuando:** `diseno/hitos.md` dice cómo se obtiene cada licencia, cuánto cuesta y qué abre.
+
+### D-0126 · Modo solo — B · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #645)** — sección "Modo solo" de `diseno/roles-tripulacion.md` (§6): sin modo aparte; tres ayudas nuevas (pausa de verdad sin peers, pedidos que entran hasta las 15:00 del galpón con 1 jugador, pedido automático al proveedor al cierre para todos) y cinco que ya existen; lo construye D-0151.
+**Depende de:** D-0110, D-0117, D-0123
+**Qué:** escribir qué automatiza el juego para una persona sola, con la crítica de `critico-diseno`:
+- [x] D-0126.1 Regla: `crew_size` al abrir el día para lo del día, en vivo para la pausa y el asistente de
+  estante; se automatiza lo que hace "el que se queda" cuando el solitario está en la ruta, nunca el núcleo.
+- [x] D-0126.2 Las ayudas nuevas con sus constantes (`SOLO_ORDER_LAST_ARRIVAL_MIN`, `SOLO_ORDER_CASH_RESERVE`)
+  y la fórmula del pedido sugerido; las que ya existen, en una tabla aparte.
+- [x] D-0126.3 Lo que no se automatiza (mesa llena al abrir, compañero IA, ventana más larga), con empleados y
+  cómo se mide (D-2016, D-2024).
+- [x] D-0126.4 §1 alineado con el código: los pedidos entran y vencen con la hora del galpón (D-0813.1).
+Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
+**Hecho cuando:** `diseno/roles-tripulacion.md` dice qué automatiza el modo solo y cómo lo mide el bot de D-2024.
+
+### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
+**Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
+**Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
+- [ ] D-0151.1 Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
+  despausar reanuda el reloj solo si lo pausó el menú (no en SUMMARY); un peer que entra despausa antes del
+  snapshot. Online con alguien más, la pausa de hoy.
+- [ ] D-0151.2 `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
+  (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
+- [ ] D-0151.3 Pedido sugerido (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
+  producto, recortado desde el de menos unidades hasta `plata − RENT_PER_DAY − SOLO_ORDER_CASH_RESERVE`; el carrito
+  se abre precargado; al pasar a CLOSING, si no hay pedido para mañana, el host lo manda y lo anota el resumen.
+**Test** `test_company_solo_assists`: la pausa sin peers frena `minute_now()` y no la despausa el menú en SUMMARY;
+con 1 jugador ningún pedido llega después de las 15:00 y con 2 sí puede; el sugerido de un día conocido da las
+unidades esperadas y respeta la reserva; un cierre sin pedido deja uno en `SupplierSchedule` para mañana.
+**Hecho cuando:** el test pasa y el bot de 1 jugador (D-2016) cierra el día 2 con stock comprado sin tocar el tablero.

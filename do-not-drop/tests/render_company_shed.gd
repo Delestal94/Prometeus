@@ -5,7 +5,9 @@ extends SceneTree
 ##       --resolution 1280x720 --script res://tests/render_company_shed.gd
 ## The Modo Empresa root (company_root.tscn: the default CompanyShed, the game's sun and sky) seen
 ## from a player's eye (1.7 m) from the dock and from the exit, a low view of the floor joints and
-## a high diagonal one, to judge the concrete floor and plaster walls (D-0911).
+## a high diagonal one, to judge the concrete floor and plaster walls (D-0911). The last view opens
+## the stock list (StockBoard, D-0612.b) over the shed: on top of the default stock it seeds units
+## on shelves, at the dock and in a hand, and one order short of 3 hens, so the "missing" mark shows.
 ## It takes the Modo Empresa dev flags from its own command line (D-0238, CompanyDevFlags), e.g.
 ##   ... --script res://tests/render_company_shed.gd -- --company-day=5 --money=9000 --district=suburbio
 
@@ -48,7 +50,27 @@ func _run() -> void:
 	await _view("floor_low", Vector3(-3.0, 0.9, 2.0), Vector3(3.0, 0.0, -2.0))
 	await _view("high_diagonal", Vector3(-8.0, 9.0, 9.0), Vector3(0.0, 0.0, 0.0))
 	await _view("top_down", Vector3(0.0, 14.0, 0.01), Vector3(0.0, 0.0, 0.0))
+	await _stock_list(level)
 	quit(0)
+
+
+func _stock_list(level: Node) -> void:
+	var board: StockBoard = level.get(&"stock_board") as StockBoard
+	if board == null or board.net == null or board.net.inventory == null:
+		push_error("render_company_shed: no stock board in the company root")
+		return
+	var inv: Inventory = board.net.inventory
+	inv.receive(&"hen", 2, &"shelf:a")
+	inv.receive(&"sourdough", 6, &"shelf:b")
+	inv.receive(&"milk_canister", 4, &"dock")
+	inv.receive(&"antique_lamp", 1, &"hands:1")
+	var book: OrderBook = board.book_of.call() as OrderBook if board.book_of.is_valid() else null
+	if book != null:
+		var items: Array = [{"product": &"hen", "qty": 11}]
+		book.add(Order.make(&"render_o1", "Ana", &"centro", &"h1", items, 0, {}))
+	board.open()
+	await _view("stock_list", Vector3(0.0, 1.7, 3.6), Vector3(0.0, 1.2, -4.0))
+	board.close()
 
 
 func _view(view_name: String, from: Vector3, to: Vector3) -> void:

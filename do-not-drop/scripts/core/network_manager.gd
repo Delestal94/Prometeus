@@ -108,19 +108,26 @@ const MAX_PLAYERS: int = 8
 ## 43: CompanyNet's _request takes three new kinds, jack_pick, jack_put and jack_push,
 ## _apply_event four, jack_picked, jack_placed, jack_moved and jack_loaded, and its
 ## snapshot a "pallets" part: the supplier pallets and the pallet jack (company
-## mode, D-0605.b).
+## mode, D-0605.b);
 ## 44: CompanyNet's _request takes a new kind, supplier_order, _apply_event a new
 ## one, supplier_ordered, and its snapshot a "supplier" part: the supplier
 ## calendar; the shed's SupplierBoardPoint has a new RPC, _open_here (company
 ## mode, D-0603.b.2);
-## 45: CompanyNet's _request takes a new kind, fork_act (get on, mast with the stop's `at_height`,
+## 45: the company's loose boxes (World/Packages) are sent only to the players
+## near them and hidden on a far client: an older client keeps a stale copy of a
+## box the host stops sending, and the host's consume() of a far box broadcasts
+## _remote_consume only after it lets the box go (company mode, D-0316.3);
+## 46: CompanyNet's _apply_event takes a fifth jack event, jack_departed {day, lines}
+## (the supplier truck drove off with what was left on its bed), and the "pallets"
+## snapshot part carries departed_day and the delivery note (company mode, D-0618.b);
+## 47: CompanyNet's _request takes a new kind, fork_act (get on, mast with the stop's `at_height`,
 ## take or leave a pallet, get off: the forklift a player drives), jack_picked takes `by`, jack_placed takes
 ## `slot`, _apply_event a new kind, fork_state, and the "pallets" snapshot part a
 ## "forklift" entry (company mode, D-0606.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 45
+const PROTOCOL_VERSION: int = 47
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

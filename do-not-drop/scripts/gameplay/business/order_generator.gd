@@ -56,7 +56,7 @@ static func generate_day(
 		var zone: ZoneDefinition = open_zones[rng.randi_range(0, open_zones.size() - 1)]
 		var items: Array[Dictionary] = _pick_items(rng, zone.id, ids, products, max_items)
 		var reqs: Array[StringName] = _pick_requirements(rng, items, products, requirements)
-		var order_id := StringName("d%d_o%02d" % [day, index + 1])
+		var order_id := StringName("%so%02d" % [id_prefix(day), index + 1])
 		var order: Dictionary = Order.make(
 			order_id,
 			CUSTOMER_NAMES[rng.randi_range(0, CUSTOMER_NAMES.size() - 1)],
@@ -69,6 +69,17 @@ static func generate_day(
 		)
 		out.append(_apply_requirements(order, reqs, requirements))
 	return out
+
+
+## How the ids of `day`'s orders start ("d<day>_"): an order carries no day of its own, so this is how
+## one is told from another day's (is_of_day()).
+static func id_prefix(day: int) -> String:
+	return "d%d_" % day
+
+
+## True when `order_id` is one of `day`'s orders (generate_day() named it).
+static func is_of_day(order_id: Variant, day: int) -> bool:
+	return String(order_id).begins_with(id_prefix(day))
 
 
 ## Most distinct products an order may ask for on this day (D-0812): 2 in the first

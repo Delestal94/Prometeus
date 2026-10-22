@@ -168,3 +168,14 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Decisión:** el sueldo depende del **nivel**, no del rol: los cinco roles (descargador, repositor, armador, controlador, despachante) cobran igual en cada nivel, porque `economia.md` §4 da una sola tabla. Si D-1002 necesita un plus por rol, se suma ahí. Sin costo de alta (`referencia-schedule-1.md`). El recurso no es un `ShopItem`: contratar no es comprar (D-1001).
 **Test** `test_employee_wages`: sueldo y rendimiento de cada nivel, orden de menor a mayor, nombre en los dos idiomas, un nivel mejor cuesta y rinde más, el novato cuesta menos que el margen de un pedido (102) y un nivel desconocido no tiene sueldo.
 **Hecho cuando:** tabla en `.tres` (cumplido).
+
+### D-0516 · Cobro al entregar — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — el cobro es **al entregar**, no al cierre del día: ya era así desde D-0815 (`OrderSettlement.settle()` suma la paga a la billetera con motivo `order_paid` en el momento de la puerta). Se fija con test y decisión; no hubo cambio de código.
+**Depende de:** D-0501, D-0815
+**Qué:** decidir cuándo entra la plata de un pedido (D-0105 deja el reloj de 08:00 a 20:00).
+- La paga (y la propina) entra a `CompanyState.money` en el minuto de la entrega, con el día y la hora del reloj en el historial.
+- El cierre del día no cobra nada: solo suma el alquiler, los sueldos y el resumen (D-0508), que lee el historial del día.
+- Lo que sigue afuera al cierre no cobra: vuelve `FAILED` (D-0302.1).
+**Decisión:** al entregar, porque da el feedback inmediato que el coop necesita ("tengo 230 más") y permite comprar a media jornada; cobrar al cierre agregaría un estado "por cobrar" para replicar y guardar sin cambiar el balance (`diseno/economia.md` ya cuenta la paga el día en que se entrega). Archivo: `docs/decisiones/2026-10-22-cobro-al-entregar.md`.
+**Test** `test_order_settlement` (`_test_cashed_at_the_door`): el movimiento `order_paid` lleva el día y el minuto de la entrega y `DaySummary` de ese día lo cuenta.
+**Hecho cuando:** test y decisión (cumplido).

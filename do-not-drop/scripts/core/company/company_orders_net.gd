@@ -21,17 +21,24 @@ extends RefCounted
 ##   order_expired  {order: id, minute: the host's minute}: OrderBook.expire_one(), the order goes LATE
 ##                  (D-0807: still deliverable, the late penalty comes with the payout; nothing is
 ##                  reserved for an order until order_claim, row 8, so there is no reservation to free)
-## Who calls plan_day() and poll() in the company world (the business tick, the shed's minute, the
-## day's seed) is D-0813.1.
+## In the company world (D-0813.1) the host's CompanyRoot plans each new day at its OPENING and polls on
+## its business tick while the day is open (CompanyDayOrders), and every peer's tells EventBus.order_added
+## from CompanyNet.event_applied. Each new day's opening drops the closed orders on every peer, inside
+## its day_phase event (prune_closed(), from DayCycle.apply_phase()). CompanyTrips and OrderBoxLink keep
+## a book of their own until packing, dispatch and delivery are events (rows 15, 17, 19 and 20).
 
 const ADDED: StringName = &"order_added"
 const EXPIRED: StringName = &"order_expired"
 const EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED]
 ## Key of the book in CompanyNet's snapshot (CompanyNet adds the part itself).
 const SNAPSHOT_KEY: String = "orders"
-## Most orders a book holds: an order_added past it is not applied, a snapshot over it is refused. 256
-## days of the busiest crew (CompanyTuning.ORDERS_MAX_PER_DAY), the bound of CompanyNet's held events.
-const MAX_ORDERS: int = 4096
+## Most orders a book holds: an order_added past it is not applied, a snapshot over it is refused; while
+## the book is full poll() brings no order in (expiries still go out). Each new day drops the closed orders
+## (prune_closed()), but nothing closes an order of this book yet (D-0815.b, D-0302), so for now prune frees
+## nothing and the busiest crew (CompanyTuning.ORDERS_MAX_PER_DAY) fills it at about day 16 of one session:
+## after that no new orders come in until the session ends (the book isn't saved). About 150 KB of the
+## snapshot when full (4096 were 2.4 MB and 230 ms to check on a client; revisar/D-0813.md).
+const MAX_ORDERS: int = 256
 ## Longest id or name an order may carry.
 const MAX_TEXT: int = RpcGuard.MAX_TEXT_LENGTH
 ## Latest minute an order or an expiry may name: GameClock.MAX_MINUTE (a year of game time), as an int.
@@ -55,8 +62,12 @@ const BOOK_KEYS: Array[String] = ["box_id", "trip_id", "late_from", "quality", "
 ## reads this one).
 var book: OrderBook = OrderBook.new()
 
+## Host: the day plan_day() planned last (CompanyDayOrders.plan() plans each day once).
+var planned_day: int = 0
 ## Host: the day's orders still to come in, oldest first (plan()).
 var _planned: Array[Dictionary] = []
+## Host: poll() already warned that the book is full (again once it had room and filled up).
+var _full_warned: bool = false
 ## Ids of each catalog folder, read once ({dir: {StringName: true}}).
 static var _catalog_ids: Dictionary = {}
 
@@ -73,6 +84,7 @@ func _notification(what: int) -> void:
 ## orders. Returns how many are planned (plan()).
 func plan_day(day_seed: int, day: int, players: int, zones: Array[ZoneDefinition], products: Dictionary,
 		requirements: Dictionary, company: Object = null) -> int:
+	planned_day = day
 	return plan(OrderGenerator.generate_day(day_seed, day, players, zones, products, requirements, 0, company))
 
 
@@ -107,22 +119,29 @@ func planned() -> Array[Dictionary]:
 ## Returns how many events went out. Nothing at all on a client, while `net` applies an event, without
 ## its inventory or for a minute out of 0..MAX_MINUTE. A planned order leaves the plan only once its event
 ## went out, or when it can never go (order_ok() refuses it or its id is in the book: dropped with a
-## warning); with the book full (MAX_ORDERS) or an event refused for any other reason it stops there and
-## the next poll tries again.
+## warning). With the book full (MAX_ORDERS, one warning each time it fills) or an order_added refused,
+## the orders stop there for the next poll, but the expiries still go out (they don't depend on what
+## is still to come in); a refused order_expired stops the poll there.
 func poll(net: CompanyNet, now_min: int) -> int:
 	if net == null or net.orders != self or not net.is_host() or not _minute_ok(now_min):
 		return 0
 	if net.is_applying() or net.inventory == null:
 		return 0
 	var sent: int = 0
+	_full_warned = _full_warned and book.size() >= MAX_ORDERS
 	while not _planned.is_empty() and int(_planned[0]["created_min"]) <= now_min:
 		var next: Dictionary = _planned[0]
 		if not order_ok(next, false) or book.has(StringName(next["id"])):
 			push_warning("CompanyOrdersNet: planned order %s never fits; dropped" % next.get("id"))
 			_planned.pop_front()
 			continue
-		if book.size() >= MAX_ORDERS or not net.publish(ADDED, {"order": next}):
-			return sent
+		if book.size() >= MAX_ORDERS:
+			if not _full_warned:
+				push_warning("CompanyOrdersNet: the order book is full (%d); no order comes in" % MAX_ORDERS)
+				_full_warned = true
+			break
+		if not net.publish(ADDED, {"order": next}):
+			break
 		_planned.pop_front()
 		sent += 1
 	for id: StringName in book.overdue(now_min):
@@ -150,6 +169,14 @@ func apply(kind: StringName, data: Dictionary) -> bool:
 				return false
 			return book.expire_one(StringName(id), int(minute))
 	return false
+
+
+## Every peer, the host too, inside the day_phase event that opens a new day (DayCycle.apply_phase(),
+## the same seq everywhere, so every book drops the same orders): the closed orders (delivered, failed,
+## cancelled) leave the book, all of them from days gone by; open, packed, out and late ones stay,
+## whatever their day (OrderBook.prune_closed(), no signal). Returns how many went.
+func prune_closed() -> int:
+	return book.prune_closed().size()
 
 
 ## Host: the book as CompanyNet's snapshot carries it (OrderBook.to_dict(): {orders, now_min}).

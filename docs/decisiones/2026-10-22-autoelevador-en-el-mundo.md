@@ -8,7 +8,7 @@ Decidido por la sesión que hizo D-0606.b. Detalle en [detalle/F1-06-stock.md](.
   conductor usa el movimiento normal. El host juzga por dónde está el conductor. Costo: sin física de vehículo (velocidad, giro, colisión de las
   horquillas); queda en D-0606.c.
 - **Decisión: el estado discreto va por los eventos de `CompanyNet`, sin RPC nuevo.** Una petición (`fork_act {act}`) y un evento
-  (`fork_state`); tomar y dejar reusan `jack_picked` / `jack_placed` con `by` y `slot`. `PROTOCOL_VERSION` 45 por las listas de `CompanyNet`
+  (`fork_state`); tomar y dejar reusan `jack_picked` / `jack_placed` con `by` y `slot`. `PROTOCOL_VERSION` 47 por las listas de `CompanyNet`
   y la parte `pallets` del snapshot.
 - **Decisión: el mástil se integra por tiempo, con ráfagas de 0,5 s.** El host dice "sube / para / baja" y cada peer integra con su reloj; cada
   evento lleva la altura del host. El conductor repite el pedido mientras sostiene la tecla: un "parar" perdido no manda las horquillas al tope.

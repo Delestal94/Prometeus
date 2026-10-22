@@ -58,7 +58,8 @@ extends Node3D
 ## The crew split between the shed and the street (D-0316): the "Interest" child (CompanyInterest,
 ## every peer) sends each company vehicle and loose box only to the players near it (the host still
 ## simulates all of them), and the cells load around every player and vehicle on the host but only
-## around its own player on a client (CompanyInterest.cell_anchors()). Every peer's player is a node
+## around its own player on a client (CompanyInterest.cell_anchors()); a seated player counts at its
+## seat, Player.reach_origin() (CompanyInterest.anchor_point()). Every peer's player is a node
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
@@ -167,6 +168,8 @@ var save_dir: String = CompanySave.SAVE_DIR
 ## The arguments CompanyDevFlags reads on the host when the world comes up (--company-day=, --district=,
 ## --money=, D-0238): the command line's, unless a test hands its own before adding the root.
 var dev_args: PackedStringArray = OS.get_cmdline_user_args()
+## Host: the crew the day's orders are planned for; 0, the session's (the day bot's --players sets it).
+var order_crew: int = 0
 ## The session and the CompanyState this world plays with. Unset, the NetworkManager and the
 ## CompanyState autoloads, found by path when the world comes up (N-919). Two peers in one process
 ## (a test) hand each root its own before adding it, as they do save_dir.
@@ -294,8 +297,8 @@ func _add_day(state: COMPANY_STATE) -> void:
 
 
 ## Host (solo too): the business tick (D-0232) runs the host's rules at CompanyTuning.BUSINESS_TICK_HZ,
-## DayCycle.poll first; the cycle's own poll in _process goes off on every peer (a client's poll does
-## nothing anyway).
+## DayCycle.poll first, then the day's orders (D-0813.1); the cycle's own poll in _process goes off on
+## every peer (a client's poll does nothing anyway).
 func _add_business_tick() -> void:
 	day_cycle.set_process(false)
 	if not net.is_host():
@@ -304,6 +307,7 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
+	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -483,12 +487,19 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 ## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
 ## units and layout events itself (CompanyShed.follow(), D-0910).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
-## the summary takes no other day_phase until next_day().
+## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind == CompanyNet.DAY_PHASE:
 		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.SUMMARY]:
 			save_closed_day()
+		if net.is_host() and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
+			CompanyDayOrders.plan(net, _hosted_state, day_cycle.current_day(),
+				order_crew if order_crew > 0 else _crew_ids().size())
 		_publish_presence()
+	elif kind == CompanyOrdersNet.ADDED:
+		var bus: Node = _event_bus()
+		if bus != null:
+			bus.emit_signal(&"order_added", StringName((data["order"] as Dictionary)["id"]))
 
 
 ## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
@@ -640,12 +651,12 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		_pick_after[key] = plan["slot"]
 
 
-## Host: a crew member worked a picking cart (D-0610.b): load or unload it, or push it. PickingCartUse asks
-## the host's own CompanyNet on their behalf, which checks reach, hands and room.
-func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3) -> void:
+## Host: a crew member worked a picking cart (D-0610.b, take D-0610.c2). PickingCartUse asks the host's own
+## CompanyNet on their behalf, which checks reach, hands and room.
+func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, what: StringName) -> void:
 	if net == null or not net.is_host():
 		return
-	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from)
+	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from, what)
 
 
 ## Host: a crew member worked the pallet jack (D-0605.b): pick a pallet up or put it down, or push the jack.
@@ -658,17 +669,17 @@ func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
 
 ## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
 ## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
-## (CompanyPallets.loaded_event: not the ones the shed started with, not the ones already loaded). Once per day,
-## even when nothing loads; never after the truck left.
+## (CompanyPallets.loaded_event), once per day; and when it drove off, jack_departed (D-0618.b, send_truck_off).
 func _load_truck_pallets() -> void:
 	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
 		return
 	var day: int = _hosted_state.day
 	var minute: int = floori(clock.minute_now())
-	if _pallets_day == day or _pallets_checked == Vector2i(day, minute):
+	if _pallets_checked == Vector2i(day, minute):
 		return
 	_pallets_checked = Vector2i(day, minute)
-	if not CompanyPallets.load_due(supplier_schedule, day, minute):
+	CompanyPallets.send_truck_off(net.pallets, supplier_schedule, day, minute, net.publish)
+	if _pallets_day == day or not CompanyPallets.load_due(supplier_schedule, day, minute):
 		return
 	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
 	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):
@@ -739,9 +750,8 @@ func _add_cells() -> void:
 	add_child(cells)
 
 
-## The packages the sealed boxes become (D-0715.b), on every peer under World/Packages: the same path
-## everywhere, so each one's synchronizer pairs up with the host's. CompanyNet's tables build them
-## there (CompanyPackages); the host's are watched by the cells (_on_package_added()).
+## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages
+## builds them), so each synchronizer pairs up with the host's; see _on_package_added().
 func _add_packages() -> void:
 	if net == null:
 		return
@@ -752,17 +762,17 @@ func _add_packages() -> void:
 	net.table.packages.added.connect(_on_package_added)
 
 
-## Host (D-0318.1): a package freezes while its cell isn't loaded (no floor under it) and thaws when it
-## is back (WorldCellStreamer.track_body); it is let go as it leaves the tree. A client's copy follows
-## the host's and is never tracked. Called while box_sealed is applied: no CompanyNet request here.
+## Every peer: a loose box of the interest, let go before consume() broadcasts (D-0316.3). Host: frozen
+## while its cell isn't loaded (cells.track_body, D-0318.1). No CompanyNet request here (box_sealed).
 func _on_package_added(package: DeliveryPackage) -> void:
+	if interest != null and is_instance_valid(interest):
+		interest.add_loose_box(package, package.consuming)
 	if cells == null or not is_instance_valid(cells) or net == null or not net.is_host():
 		return
 	cells.track_body(package)
 	package.tree_exiting.connect(cells.untrack_body.bind(package), CONNECT_ONE_SHOT)
 
 
-## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
 func _add_interest() -> void:
 	interest = CompanyInterest.new()
 	interest.name = "Interest"
@@ -815,27 +825,13 @@ func _add_builder() -> void:
 	builder.busy = func() -> bool: return supplier_board != null and supplier_board.is_open()
 
 
-## The stock list (D-0612.b): I / d-pad right opens it on any peer. The order book is the host's
-## (trips.book until D-0813.1), so only the host marks what the pending orders are missing; the
-## supplier calendar holds only real orders (D-0603.b.2), so what is ordered counts as on the way.
+## The stock list (D-0612.b): I / d-pad right opens it on any peer (StockBoard.for_company(), D-0813.1).
 func _add_stock_board() -> void:
 	if net == null:
 		return
-	stock_board = StockBoard.new()
-	stock_board.name = "StockBoard"
+	stock_board = StockBoard.for_company(net, supplier_schedule, func() -> Node: return player,
+		func() -> bool: return builder != null and builder.is_building())
 	add_child(stock_board)
-	stock_board.setup(net)
-	stock_board.schedule = supplier_schedule
-	stock_board.real_calendar = true
-	stock_board.book_of = func() -> OrderBook:
-		return trips.book if trips != null else null
-	stock_board.player_of = func() -> Node:
-		return player
-	stock_board.busy = func() -> bool:
-		return builder != null and builder.is_building()
-	var catalog: CompanyCatalog = CompanyCatalog.load_all()
-	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
-		stock_board.products[id] = catalog.product(id)
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,

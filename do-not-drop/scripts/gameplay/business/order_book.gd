@@ -169,6 +169,23 @@ func abandon(now_min: int) -> Array[StringName]:
 	return gone
 
 
+## Drops every closed order (DELIVERED, FAILED or CANCELLED) from the book and
+## returns their ids, in book order; the rest keep their order. No signal, like
+## from_dict(): whoever shows the book redraws on what pruned it (a new day's
+## opening, D-0813.1).
+func prune_closed() -> Array[StringName]:
+	var gone: Array[StringName] = []
+	var kept: Array[StringName] = []
+	for id: StringName in _order_ids:
+		if TRANSITIONS.has(_orders[id]["state"]):
+			kept.append(id)
+		else:
+			gone.append(id)
+			_orders.erase(id)
+	_order_ids = kept
+	return gone
+
+
 ## Orders still to be delivered (not DELIVERED, FAILED or CANCELLED), oldest
 ## first; zone filters by district when given.
 func open_orders(zone: StringName = &"") -> Array[Dictionary]:

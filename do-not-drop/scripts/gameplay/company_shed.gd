@@ -29,7 +29,7 @@ extends Node3D
 
 signal piece_used(uid: StringName, role: StringName, peer_id: int)
 ## A player worked a picking cart (PickingCartPoint): which cart, how (load or push), who, where they stood.
-signal cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3)
+signal cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, product: StringName)
 ## A player worked the pallet jack (PalletJackPoint): how (work or push), who, where they stood.
 signal jack_used(action: StringName, peer_id: int, from: Vector3)
 ## The supplier board was used and its screen opens on this peer (SupplierBoardPoint, D-0603.b.2).
@@ -538,8 +538,9 @@ func _build_carts() -> void:
 			if pushed is Vector3:
 				local = pushed
 		var view: PickingCartView = PickingCartView.make(id, local)
-		view.used.connect(func(cart_id: StringName, action: StringName, peer_id: int, from: Vector3) -> void:
-			cart_used.emit(cart_id, action, peer_id, from))
+		view.used.connect(func(cart_id: StringName, action: StringName, peer_id: int, from: Vector3,
+				product: StringName) -> void:
+			cart_used.emit(cart_id, action, peer_id, from, product))
 		add_child(view)
 		cart_views[id] = view
 

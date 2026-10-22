@@ -7,6 +7,8 @@ extends SceneTree
 ## - a perfect slow one pays in full with only the clean reputation, no tip;
 ## - late, wrong box, broken unit and mislabeled box pay less and cost reputation, never tip;
 ## - the wallet gets the pay with reason order_paid and the order closes with that pay;
+## - the pay is cashed at the door (D-0516): it lands in the ledger stamped with the delivery's day and
+##   clock, DaySummary counts it that same day;
 ## - an order that is not out on the road (or unknown, or settled twice) changes nothing;
 ## - the result carries the customer's stars (D-0816): 5 for the quick perfect one, 4 for the slow
 ##   one, fewer for each failure, 0 when nothing was settled (test_order_rating covers the rules).
@@ -31,6 +33,7 @@ func _run() -> void:
 		quit(1)
 		return
 	_test_perfect(state)
+	_test_cashed_at_the_door(state)
 	_test_penalties(state)
 	_test_not_deliverable(state)
 	state.reset()
@@ -138,6 +141,26 @@ func _test_not_deliverable(state: Node) -> void:
 	_expect(not OrderSettlement.settle(book, null, &"o1", _box(2), 70, [], _products)["ok"], "no company")
 	_expect(state.money == money and state.reputation == rep, "nothing was paid or moved")
 	book.free()
+
+
+func _test_cashed_at_the_door(state: Node) -> void:
+	state.new_company("Door Co")
+	state.clock_minutes = 600
+	var book := _book_out()
+	var result: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 70, [], _products)
+	var paid_entry: Dictionary = {}
+	for entry: Dictionary in state.ledger:
+		if entry.get("reason") == "order_paid":
+			paid_entry = entry
+	_expect(
+		not paid_entry.is_empty() and paid_entry["day"] == state.day and paid_entry["minute"] == 600,
+		"the pay is in the ledger at the day and clock of the delivery"
+	)
+	var summary: Dictionary = DaySummary.build(state, state.day)
+	_expect(
+		summary["income_by_reason"].get("order_paid", 0) == result["paid"],
+		"the day summary counts the pay of a delivery made that day"
+	)
 
 
 func _expect(condition: bool, message: String) -> void:

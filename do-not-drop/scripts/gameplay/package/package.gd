@@ -10,6 +10,10 @@ extends RigidBody3D
 ## This script keeps the RPCs (each one checks the request and resolves the sender before delegating; the
 ## helpers check the sender against the carrier) and thin wrappers.
 
+## Emitted by consume() before the removal is broadcast, so whatever hides this box from some peers
+## (CompanyInterest.release(), D-0316.3) can stop first: an RPC on a box hidden from a peer skips it.
+signal consuming
+
 @export var package_id: StringName = &"fragile_01"
 @export var trap_definition: TrapDefinition = preload("res://data/traps/fragile.tres")
 @export_range(0.0, 5.0, 0.05) var spawn_grace_time: float = 1.25
@@ -150,6 +154,10 @@ const TENDER_INPUT_TIMEOUT: float = 0.25
 ## Handed over at a door: on a client the network stops placing it, the
 ## hand-over plays out and it goes.
 var _consumed: bool = false
+## Read-only view of _consumed for code outside the package (CompanyInterest, D-0316.3).
+var consumed: bool:
+	get:
+		return _consumed
 ## How far past the cargo bay's edge a box already aboard still counts as
 ## aboard (see Vehicle.carries()).
 const RIDE_MARGIN: float = 0.4
