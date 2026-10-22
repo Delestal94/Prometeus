@@ -22,8 +22,7 @@ extends Node3D
 ## one: the same player at SPAWN it always was.
 ##
 ## The company's vehicles (`fleet`) park in the playon outside the shed's exit on every peer and can be driven
-## (CompanyFleet, D-0302.2.b);
-## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
+## (CompanyFleet, D-0302.2.b); no route and no run: Delivery and Endless ignore all of this.
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
 ## starts from the company's stock and, until stations exist, refuses every units
