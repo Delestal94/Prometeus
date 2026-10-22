@@ -76,7 +76,11 @@ func poll_interact() -> void:
 	player._interact_was_down = is_down
 
 
+## A vehicle the player drives on foot (the shed's forklift, D-0606.b) takes the interact key and the prompt: it
+## sets the player's meta `interact_override` = {use: Callable(), prompt: Callable() -> String}, and takes it off.
 func publish_prompt(value: String) -> void:
+	if player.has_meta(&"interact_override"):
+		value = String((player.get_meta(&"interact_override") as Dictionary)["prompt"].call())
 	if value == player._last_prompt:
 		return
 	player._last_prompt = value
@@ -123,6 +127,9 @@ func use_card() -> void:
 
 
 func try_interact() -> void:
+	if player.has_meta(&"interact_override"):
+		(player.get_meta(&"interact_override") as Dictionary)["use"].call()
+		return
 	if player.carried_package != null:
 		var teammate: Player = player._transfer_target()
 		if teammate != null:

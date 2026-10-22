@@ -72,7 +72,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
 	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
 	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
-	CompanyPallets.PUT, CompanyPallets.PUSH,
+	CompanyPallets.PUT, CompanyPallets.PUSH, CompanyPallets.FORK_ACT,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
@@ -87,13 +87,13 @@ const EVENT_KINDS: Array[StringName] = [
 	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
 	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
-	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED,
+	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, CompanyPallets.FORK,
 	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
 	CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips out, the truck's pallets,
 ## its orders); units_moved never.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED,
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.FORK,
 	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED,
 	CompanyOrdersNet.EXPIRED]
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
@@ -630,8 +630,8 @@ func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
 ## within the sender's reach (as for units), then the object's own check gives the refusal or the one event.
 func _on_object(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	var push: Dictionary = CompanyCarts.push_ask(data)
-	var ask: Dictionary = {"station": CompanyPallets.STATION}
-	var check: Callable = func(station: Dictionary) -> Dictionary: return pallets.check(kind, data, station)
+	var ask: Dictionary = {"station": CompanyPallets.station_for(kind)}
+	var check: Callable = func(s: Dictionary) -> Dictionary: return pallets.check(kind, data, s.merged({"peer": peer}))
 	if kind == CompanyCarts.PUSH:
 		ask = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
 		check = func(station: Dictionary) -> Dictionary: return carts.check(push, station)
@@ -835,7 +835,7 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
 			applied = carts.apply(data)
-		CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED:
+		CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, CompanyPallets.FORK:
 			applied = pallets.apply(inventory, kind, data)
 		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED:
 			applied = orders.apply(kind, data)

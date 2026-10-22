@@ -16,6 +16,11 @@ extends RefCounted
 ##   jack_loaded {day, pallets}  the pallets on the truck's bed (what stayed on the bed of an older truck left
 ##   with it: PalletJack.left_on_bed). `pos` is in the shed's own frame (X east, Z south), in metres.
 ##
+## The forklift (D-0606.b, CompanyForklift) takes the same book and the same two pallet events (`by` and `slot` say
+## it was the forklift and which rack slot): its one request, fork_act {act}, is checked at the station `forklift`,
+## and its state travels as the event fork_state, also in the snapshot. A pallet is carried by the jack or by the
+## forklift (`forklift.holds`), never both: the jack's requests are refused while the forklift holds it.
+##
 ## What only the shed knows, the station gives: "at" (Vector2, where the jack stands now), "floor" (Rect2, the
 ## floor in metres), "stand_ok" and "free_ok" (Callable(Vector2) -> bool: the jack may stand there / a pallet may
 ## lie there), "bed_open" (the truck is parked) and "bed_at" (Vector2, the bed's rear). The book travels in every
@@ -28,8 +33,12 @@ const PICKED: StringName = &"jack_picked"
 const PLACED: StringName = &"jack_placed"
 const MOVED: StringName = &"jack_moved"
 const LOADED: StringName = &"jack_loaded"
-const REQUEST_KINDS: Array[StringName] = [PICK, PUT, PUSH]
-const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED]
+## The forklift: its request, the station it names and the event of its state (CompanyForklift).
+const FORK_ACT: StringName = &"fork_act"
+const FORK_STATION: StringName = &"forklift"
+const FORK: StringName = &"fork_state"
+const REQUEST_KINDS: Array[StringName] = [PICK, PUT, PUSH, FORK_ACT]
+const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED, FORK]
 ## The station every request of the jack names: CompanyNet resolves it through its `stations`.
 const STATION: StringName = &"jack"
 const SNAPSHOT_KEY: String = "pallets"
@@ -59,6 +68,8 @@ var book: PalletJack = PalletJack.new()
 var jack_at: Variant = null
 ## The last day whose truck brought its pallets (jack_loaded), 0 for none.
 var loaded_day: int = 0
+## The forklift a player drives (D-0606.b).
+var forklift: CompanyForklift = CompanyForklift.new()
 
 
 ## A pallet or jack id that came over the network: letters, digits, '_' and '-', at most MAX_ID_LENGTH long.
@@ -77,7 +88,21 @@ static func id_ok(value: Variant) -> bool:
 
 
 static func _point_ok(value: Variant) -> bool:
+	return point_ok(value)
+
+
+## A finite Vector2 (a point of the shed, metres).
+static func point_ok(value: Variant) -> bool:
 	return value is Vector2 and RpcGuard.finite_vec3(Vector3((value as Vector2).x, 0.0, (value as Vector2).y))
+
+
+static func is_number(value: Variant) -> bool:
+	return typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT
+
+
+## The station a request of `kind` names: the forklift's for fork_act, the jack's for the rest.
+static func station_for(kind: StringName) -> StringName:
+	return FORK_STATION if kind == FORK_ACT else STATION
 
 
 ## {pallet} of a jack_pick request, the id of one pallet; {} otherwise.
@@ -126,7 +151,10 @@ func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dic
 
 
 ## Host: the event a request asks for at `station`, or its refusal: {reason: &"", kind, data} or {reason}.
+## `station` has "peer" (the requester) when CompanyNet asks.
 func check(kind: StringName, data: Dictionary, station: Dictionary) -> Dictionary:
+	if kind == FORK_ACT:
+		return forklift.check(data, station, book, Time.get_ticks_msec())
 	var at: Variant = station.get("at")
 	if not _point_ok(at):
 		return {"reason": REASON_NO_STATION}
@@ -164,7 +192,7 @@ func _check_pick(ask: Dictionary, at: Vector2, station: Dictionary) -> Dictionar
 
 
 func _check_put(at: Vector2, station: Dictionary) -> Dictionary:
-	if book.carrying == &"":
+	if book.carrying == &"" or forklift.holds:
 		return {"reason": REASON_JACK_EMPTY}
 	var floor_rect: Variant = station.get("floor")
 	var free: Variant = station.get("free_ok")
@@ -191,16 +219,11 @@ func _check_push(ask: Dictionary, at: Vector2, station: Dictionary) -> Dictionar
 func apply(inventory: Inventory, kind: StringName, data: Dictionary) -> bool:
 	match kind:
 		PICKED:
-			var id: Variant = data.get("pallet")
-			if not id_ok(id) or not book.places.has(StringName(id)):
-				return false
-			# Reach was the host's check: the holder is taken to stand at the pallet.
-			return book.pick_up(StringName(id), (book.places[StringName(id)] as Dictionary).get("pos", Vector2.ZERO))
+			return _apply_picked(data)
 		PLACED:
-			var pallet: Variant = data.get("pallet")
-			if not (id_ok(pallet) and _point_ok(data.get("pos")) and StringName(pallet) == book.carrying):
-				return false
-			return book.put_down(data["pos"], _ANYWHERE, inventory)
+			return _apply_placed(inventory, data)
+		FORK:
+			return forklift.apply(data, Time.get_ticks_msec())
 		MOVED:
 			if not _point_ok(data.get("pos")):
 				return false
@@ -209,6 +232,33 @@ func apply(inventory: Inventory, kind: StringName, data: Dictionary) -> bool:
 		LOADED:
 			return _apply_loaded(data)
 	return false
+
+
+## jack_picked: the pallet goes on the jack, or on the forklift's forks when `by` says so.
+func _apply_picked(data: Dictionary) -> bool:
+	var id: Variant = data.get("pallet")
+	if not id_ok(id) or not book.places.has(StringName(id)):
+		return false
+	# Reach was the host's check: the holder is taken to stand at the pallet.
+	var held_at: Variant = (book.places[StringName(id)] as Dictionary).get("pos", Vector2.ZERO)
+	var taken: bool = book.pick_up(StringName(id), held_at)
+	var by: Variant = data.get("by")
+	forklift.holds = taken and CompanyAsk.is_id(by) and StringName(by) == CompanyForklift.BY
+	return taken
+
+
+## jack_placed: the carried pallet stands on the floor, or on rack slot `slot`.
+func _apply_placed(inventory: Inventory, data: Dictionary) -> bool:
+	var pallet: Variant = data.get("pallet")
+	var slot: Variant = data.get("slot")
+	if not (id_ok(pallet) and _point_ok(data.get("pos")) and StringName(pallet) == book.carrying):
+		return false
+	if slot != null and not id_ok(slot):
+		return false
+	var left: bool = book.put_down(data["pos"], _ANYWHERE, inventory) if slot == null \
+		else book.put_on_rack(StringName(slot), data["pos"], inventory)
+	forklift.holds = forklift.holds and not left
+	return left
 
 
 func _apply_loaded(data: Dictionary) -> bool:
@@ -251,9 +301,10 @@ static func _pallet_of(entry: Variant) -> Dictionary:
 	return made
 
 
-## The snapshot part: {book: PalletJack.to_dict(), jack_at, loaded_day}.
+## The snapshot part: {book: PalletJack.to_dict(), jack_at, loaded_day, forklift: CompanyForklift.to_dict()}.
 func to_dict() -> Dictionary:
-	return {"book": book.to_dict(), "jack_at": jack_at, "loaded_day": loaded_day}
+	return {"book": book.to_dict(), "jack_at": jack_at, "loaded_day": loaded_day,
+		"forklift": forklift.to_dict(Time.get_ticks_msec())}
 
 
 ## Client: the host's part in place of what is here. False, changing nothing, when it does not fit.
@@ -265,6 +316,11 @@ func put_snapshot(value: Variant) -> bool:
 	var day: Variant = plain.get("loaded_day")
 	var parsed: Variant = _parse_book(plain.get("book"))
 	if parsed == null or typeof(day) != TYPE_INT or not (at == null or _point_ok(at)):
+		return false
+	var fork_part: Variant = plain.get("forklift", {"driver": 0, "at": null, "yaw": 0.0, "dir": 0, "height": 0.0})
+	var held: Variant = (fork_part as Dictionary).get("holds") if fork_part is Dictionary else false
+	var holds: bool = held is bool and held
+	if (holds and String(parsed["carrying"]).is_empty()) or not forklift.put_snapshot(fork_part, Time.get_ticks_msec()):
 		return false
 	book.from_dict(parsed)
 	jack_at = at
@@ -302,7 +358,7 @@ static func _parse_book(raw: Variant) -> Variant:
 
 
 static func _is_number(value: Variant) -> bool:
-	return typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT
+	return is_number(value)
 
 
 ## One place of a book as a snapshot carries it, in PalletJack.to_dict() form; {} when it does not fit.

@@ -400,6 +400,14 @@ WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
 WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
 WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
 WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
+WORLD_SHED_BOARD_FORKLIFT,Subir al autoelevador,Get on the forklift
+WORLD_FORKLIFT_DRIVING,"E: tomar o dejar el palet · Flecha arriba/abajo o gatillos: mástil · Q: bajar","E: take or leave the pallet · Up/Down arrow or triggers: mast · Q: get off"
+WORLD_FORKLIFT_REFUSED,No se puede hacer eso acá,Can't do that here
+WORLD_FORKLIFT_NO_PALLET,No hay un palet a esa altura,There is no pallet at this height
+WORLD_FORKLIFT_NO_ROOM,No hay lugar para apoyar el palet acá,No room to set the pallet down here
+WORLD_FORKLIFT_NO_RACK,Ningún hueco de estante a esta altura,No rack slot at this height
+WORLD_FORKLIFT_HANDS_FULL,La zorra ya lleva el palet,The pallet jack already carries the pallet
+WORLD_FORKLIFT_TRUCK_AWAY,El camión no está en el portón,The truck is not at the gate
 WORLD_SHED_USE_SUPPLIER,Pedir al proveedor,Order from the supplier
 WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf

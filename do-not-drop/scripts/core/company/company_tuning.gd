@@ -299,6 +299,11 @@ const JACK_PUSH_STEP_M: float = 1.3
 const FORKLIFT_MAX_LIFT_M: float = 2.4
 const FORKLIFT_LIFT_SPEED: float = 0.55
 const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
+## The forklift in the world (D-0606.b): how far ahead of its driver the middle of a pallet on the forks lies
+## (m), and how long one mast request moves the forks at most (s: the driver asks again while the key is held,
+## so a lost "stop" cannot send the forks to the top).
+const FORKLIFT_TIP_M: float = 1.2
+const FORKLIFT_MAST_BURST_S: float = 0.5
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0
