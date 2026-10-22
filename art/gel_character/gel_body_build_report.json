@@ -10,10 +10,17 @@
       "PickUpPackage": 1.6,
       "PickUpHigh": 1.6,
       "Sit": 4.0,
-      "TurnInPlace": 0.8
+      "TurnInPlace": 0.8,
+      "CarryWalk": 0.3333333333333333,
+      "ThrowPackage": 1.0,
+      "DropPackage": 0.9,
+      "Drive": 2.0,
+      "EnterTruck": 1.2,
+      "ExitTruck": 1.2,
+      "RingDoorbell": 1.1
     },
     "maximum_rotation_error_radians": 0.0,
-    "maximum_bone_length_error_m": 3.4480758515087473e-07,
+    "maximum_bone_length_error_m": 3.8222786719055435e-07,
     "maximum_unreachable_endpoint_m": 0.0,
     "maximum_unreachable_endpoint_by_clip": {
       "Idle": {
@@ -49,6 +56,34 @@
         "time_s": 0.0
       },
       "TurnInPlace": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "CarryWalk": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ThrowPackage": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "DropPackage": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Drive": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "EnterTruck": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ExitTruck": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "RingDoorbell": {
         "distance_m": 0.0,
         "time_s": 0.0
       }
@@ -94,6 +129,34 @@
       "TurnInPlace": [
         0.15999817848205566,
         0.24696144461631775
+      ],
+      "CarryWalk": [
+        0.15996965765953064,
+        0.30476877093315125
+      ],
+      "ThrowPackage": [
+        0.15999482572078705,
+        0.17593780159950256
+      ],
+      "DropPackage": [
+        0.15999425947666168,
+        0.15999923646450043
+      ],
+      "Drive": [
+        -0.05749921873211861,
+        0.006886477582156658
+      ],
+      "EnterTruck": [
+        -0.05749913305044174,
+        0.1599990278482437
+      ],
+      "ExitTruck": [
+        -0.05749913305044174,
+        0.1599990278482437
+      ],
+      "RingDoorbell": [
+        0.1599988341331482,
+        0.15999926626682281
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -401,8 +464,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "ccb0e83198d30287b642af72564174a3cdc1d03ca26ecf62b65d1f2d47b988f9",
-      "morph_sha256": "7d2df0e9a1aa3af307ae1f7a400285e7c203ef5f5255a763781cfec034400f66",
+      "geometry_sha256": "c8106da89167a7976c5e5cba9bc1f0648468f97a08319046d204b05865ac52dc",
+      "morph_sha256": "b2bfb30cdc9b6c75337395476cc5f0b28ca75f8904974df3f03fc49ccbb571b0",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -455,14 +518,14 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 50.57495966881852,
+            "adjacent_face_angle_p95_degrees": 53.823270874719086,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
-            "sampled_edges": 239
+            "sampled_edges": 238
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 51.69898796088563,
+            "adjacent_face_angle_p95_degrees": 52.02870742494424,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
-            "sampled_edges": 169
+            "sampled_edges": 167
           }
         }
       }
