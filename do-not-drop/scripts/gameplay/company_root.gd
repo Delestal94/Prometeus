@@ -749,6 +749,8 @@ func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
+	# The map's streets (D-0304.1) and Centro's decor (D-0314), laid as the cells load; events off (D-0315.b).
+	cells.use_graph(RoadGraph.load_default(), CompanyCells.seed_of(session), false, CompanyCells.shed_ground(shed))
 
 
 ## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages
