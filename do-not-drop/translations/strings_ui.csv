@@ -1139,7 +1139,7 @@ HUD_NEWS_DOG_CHASE_2_B,"'Ladraba en tres idiomas', declaró {neighbor}, testigo 
 HUD_NEWS_DOG_CHASE_3_H,Perro vigila la ruta y no deja pasar a nadie sin ladrarle,Dog patrols the road and lets nobody by without a bark
 HUD_NEWS_DOG_CHASE_3_B,"El camión pasó, pero el perro dejó constancia de su disconformidad.","The truck got through, but the dog put its disapproval on record."
 HUD_NEWS_DOG_CHASE_4_H,"Bocinazo espanta a un perro: 'Fue un malentendido', dicen ambas partes","Honk scares off a dog: 'It was a misunderstanding,' say both parties"
-HUD_NEWS_DOG_CHASE_4_B,{player} tocó la bocina y el perro volvió a casa con la cola baja y el orgullo herido.,{player} honked and the dog went home with its tail down and its pride hurt.
+HUD_NEWS_DOG_CHASE_4_B,Un bocinazo desde el camión y el perro volvió a casa con la cola baja y el orgullo herido.,One honk from the truck and the dog went home with its tail down and its pride hurt.
 HUD_NEWS_TRAIN_STOP_1_H,El tren pasó y el camión esperó: milagro de civismo en {town},The train passed and the truck waited: a miracle of civic duty in {town}
 HUD_NEWS_TRAIN_STOP_1_B,"{player} frenó a tiempo. Las cajas, por una vez, no tuvieron nada que decir.","{player} stopped in time. For once, the crates had nothing to say."
 HUD_NEWS_TRAIN_STOP_2_H,"Barrera baja, camión frena: el tren cruzó sin novedad","Barrier down, truck brakes: the train crossed without incident"

@@ -226,14 +226,14 @@ func compose(results: Dictionary, crew: Array = [], seed_value: int = 0) -> Dict
 	var all: Array = facts.duplicate(true)
 	var endless: bool = results.has("distance_traveled")
 	var kilometres: float = float(results.get("distance_traveled", RunManager.current_distance)) / 1000.0
-	# A rollover is the front page of a failed run (it replaces "run_failed",
-	# which would tell the same news twice) and goes beside an Endless run's end.
-	var tipped: bool = String(results.get("reason", "")) == TIPPED_REASON
-	if tipped:
+	# A rollover is how the run ended: it replaces "run_failed" (the same news
+	# twice) and, in Endless, "endless_end" too -- both are police stories, so
+	# the desk would print only one of them anyway.
+	if String(results.get("reason", "")) == TIPPED_REASON:
 		all.append(_stamp({"kind": "rollover", "house": -1, "tags": [], "peer": _driver()}))
-	if endless:
+	elif endless:
 		all.append(_stamp({"kind": "endless_end", "house": -1, "tags": [], "peer": _driver()}))
-	elif not tipped and not bool(results.get("delivered", false)):
+	elif not bool(results.get("delivered", false)):
 		all.append(_stamp({"kind": "run_failed", "house": -1, "tags": [], "peer": _driver()}))
 	all.append_array(_facts_from_results(results, all))
 	var context: Dictionary = {

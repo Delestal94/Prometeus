@@ -9,7 +9,7 @@ solo el `RunChronicle` del host escribe el diario.
 - `kind = &"train_stop"`: lo emite `RailCrossingSegment` en el host cuando el tren termina de pasar con el
   camión esperando del lado de llegada, a ≤ 35 m de las vías (`WAIT_RANGE`).
 - El vuelco no usa la señal: `RunChronicle.compose` lo saca del `reason` de los resultados (`HUD_RUN_TIPPED`)
-  y reemplaza a `run_failed` en una entrega (en Endless va al lado de `endless_end`).
+  y reemplaza a `run_failed` en una entrega y a `endless_end` en Endless (las dos son de policiales: el diario imprimiría una sola).
 
 Slatex: si un sistema tuyo quiere salir en el diario, emití `roadside_moment` con un `kind` nuevo y sumalo a
 `RunChronicle.ROADSIDE_KINDS` y a `data/newspaper/stories.json` (con sus claves en `strings_ui.csv`).

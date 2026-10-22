@@ -12,7 +12,7 @@ extends SceneTree
 ## - the results add what only they know (a door the run never reached, the
 ##   complaints, how a failed or Endless run ended); a van on its side
 ##   (reason HUD_RUN_TIPPED) leads the paper as a rollover instead of a plain
-##   failed run (beside the Endless ending in Endless);
+##   failed run (and instead of the Endless ending in Endless);
 ## - a dog that chased the van (once per run, tagged if the horn sent it home)
 ##   and a train the van waited for come as EventBus roadside_moment (N-606.4b);
 ## - the host writes the paper from the decided results and relays it as
@@ -158,8 +158,8 @@ func _run() -> void:
 	var tipped_endless: Dictionary = chronicle.compose({"distance_traveled": 3200.0, "reason": "HUD_RUN_TIPPED",
 			"elapsed_seconds": 240.0}, crew, 4)
 	var endless_ids: Array = DESK.entries(tipped_endless).map(func(entry: Dictionary) -> String: return entry["id"])
-	_expect(tipped_endless["front"]["id"] == "rollover" and "endless_end" in endless_ids,
-			"In Endless the rollover leads and the truck's last km still runs (got %s)" % str(endless_ids))
+	_expect(tipped_endless["front"]["id"] == "rollover" and "endless_end" not in endless_ids,
+			"In Endless the rollover replaces the run's end, both police stories (got %s)" % str(endless_ids))
 
 	bus.roadside_moment.emit(&"dog_chase", [])
 	_expect(_kinds(chronicle).count("dog_chase") == 1, "A dog that chased the van is noted")
