@@ -146,6 +146,8 @@ var day_cycle: DayCycle
 ## The closing screen of the day (D-0508.3): every peer shows what the host closed, only the host's
 ## "continue" moves the day on.
 var summary_panel: DaySummaryPanel
+## The company's shop over the closing screen (D-0511.2): its Shop button opens it, the host buys.
+var shop_screen: CompanyShopScreen
 ## Host only (null on a client): the host's rules at a fixed rate (D-0232).
 var business_tick: BusinessTick
 ## Host: the shed gate and the trips out (D-0302.1). Null on a client.
@@ -332,6 +334,7 @@ func _add_summary_panel() -> void:
 	summary_panel.name = "DaySummaryPanel"
 	layer.add_child(summary_panel)
 	summary_panel.continued.connect(_on_summary_continued)
+	shop_screen = CompanyShopScreen.attach(self, net, summary_panel)
 	var bus: Node = _event_bus()
 	if bus != null:
 		bus.connect(&"company_day_summary", _on_day_summary)

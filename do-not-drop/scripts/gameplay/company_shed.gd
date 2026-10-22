@@ -143,6 +143,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		return
 	if CompanyLayoutNet.EVENT_KINDS.has(kind):
 		rebuild(_net.company, _net.inventory)
+	elif kind == CompanyShopNet.BOUGHT and int(_net.company.get(&"warehouse_stage")) != stage:
+		rebuild(_net.company, _net.inventory)
 	elif kind == &"units_moved" and _pallet_root != null:
 		refresh_stock(_net.inventory)
 	elif kind == CompanyCarts.MOVED:

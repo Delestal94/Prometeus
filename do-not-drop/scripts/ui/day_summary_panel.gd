@@ -11,8 +11,13 @@ class_name DaySummaryPanel
 ## Below the money, the supplier's delivery note of the day (D-0614.c): one row per product the truck
 ## left short or brought extra (DeliveryNote.discrepancies(), which every peer keeps through
 ## CompanyPallets), hidden when the delivery came out even.
+##
+## The company's shop (D-0511.2) opens from here: a "Shop" button beside Continue, off until the world that
+## hosts the screen turns it on (set_shop_available()); it only emits `shop_requested`, CompanyShopScreen opens
+## the shop over this panel.
 
 signal continued
+signal shop_requested
 
 ## Rows shown in each list; the rest is folded into one "other" row so the panel keeps its size.
 const MAX_ROWS: int = 8
@@ -41,6 +46,7 @@ var _truncated_label: Label
 var _note_box: VBoxContainer
 var _note_list: VBoxContainer
 var _continue_button: Button
+var _shop_button: Button
 
 
 func _ready() -> void:
@@ -64,6 +70,23 @@ func close() -> void:
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	continued.emit()
+
+
+## Shows or hides the Shop button (the shop is a screen of the Company world, not of this panel).
+func set_shop_available(available: bool) -> void:
+	if _shop_button == null:
+		return
+	_shop_button.visible = available
+	# Side moves only when the button is there; alone, Continue keeps the focus.
+	var other: Button = _shop_button if available else _continue_button
+	_continue_button.focus_neighbor_right = _continue_button.get_path_to(other)
+	_shop_button.focus_neighbor_left = _shop_button.get_path_to(_continue_button)
+
+
+## Puts the focus back where open() left it (after the shop closes).
+func focus_default() -> void:
+	if _continue_button != null and visible:
+		_continue_button.grab_focus()
 
 
 ## Redraws the panel from `summary` and `note_lines`. A missing key counts as zero / empty.
@@ -177,8 +200,17 @@ func _build() -> void:
 	_note_list.add_theme_constant_override("separation", 3)
 	_note_box.add_child(_note_list)
 	_note_box.hide()
-	_continue_button = UiTheme.button(column, tr("UI_FINANCE_CONTINUE"), true)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 12)
+	column.add_child(buttons)
+	_continue_button = UiTheme.button(buttons, tr("UI_FINANCE_CONTINUE"), true)
+	_continue_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_continue_button.pressed.connect(close)
+	_shop_button = UiTheme.button(buttons, tr("UI_FINANCE_SHOP"))
+	_shop_button.name = "Shop"
+	_shop_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shop_button.pressed.connect(shop_requested.emit)
+	_shop_button.hide()
 
 
 func _list(parent: Control, heading: String, color: Color) -> VBoxContainer:
