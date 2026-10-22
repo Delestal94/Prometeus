@@ -464,15 +464,33 @@ func _care_and_pulse() -> Dictionary:
 	root.add_child(still)
 	var throttle := still.get_node(^"NetRestThrottle") as NetRestThrottle
 	var sync := still.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	# As CompanyInterest leaves a body it tracks: shown to each peer by its flag.
+	sync.public_visibility = false
 	for show: bool in [true, false]:
-		while not throttle.is_resting():
-			await physics_frame
+		if not await _wait_rest(throttle):
+			break
 		_pulse(sync, show)
 		if not throttle.is_resting():
 			found.pulse_wakes = int(found.pulse_wakes) + 1
 			found.pulse_wake_on = bool(found.pulse_wake_on) or show
+	# The control: shown to a peer for real (no pulse), the same box wakes, so 0 wakes above is a reading.
+	if await _wait_rest(throttle):
+		Engine.print_error_messages = false
+		sync.set_visibility_for(PULSE_PEER + 1, true)
+		Engine.print_error_messages = true
+		_expect(not throttle.is_resting(), "A box riding still wakes when shown to a peer for real (no pulse)")
 	still.free()
 	return found
+
+
+## Physics frames until `throttle` rests, at most PARK_FRAMES (a failure, not a hang); whether it did.
+func _wait_rest(throttle: NetRestThrottle) -> bool:
+	for _frame: int in range(PARK_FRAMES):
+		if throttle.is_resting():
+			return true
+		await physics_frame
+	_expect(throttle.is_resting(), "A box left still rests within %d frames" % PARK_FRAMES)
+	return throttle.is_resting()
 
 
 ## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to PULSE_PEER, on or off.

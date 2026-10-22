@@ -44,7 +44,7 @@ extends Node
 ## with the synchronizer's meta QUIET_META set (pulse_visibility()): a sender that
 ## would speed up for a peer it is shown to (net_pose_smoother's NetRestThrottle
 ## reads the same meta) leaves its rate alone; the pulse already lasts two of its
-## intervals.
+## intervals. A peer that comes near during a pulse is told again without it.
 ##
 ## On a client (`hide_far_copies`), the copy of a tracked body the host owns is hidden
 ## and taken out of physics (visible = false, and the collision layer and mask of
@@ -285,7 +285,12 @@ func _decide(sync: MultiplayerSynchronizer, entry: _Entry, peers: Array, anchors
 		entry.near[peer] = near
 		if near:
 			entry.hidden_at.erase(peer)
-			entry.pulse_until.erase(peer)
+			if entry.pulse_until.has(peer):
+				entry.pulse_until.erase(peer)
+				# Shown by a quiet pulse and near now: told again, without the meta, so a sender that speeds up
+				# for a peer it is shown to (NetRestThrottle) does it for this one.
+				if sync.get_visibility_for(peer):
+					sync.update_visibility(peer)
 		elif not entry.hidden_at.has(peer):
 			entry.hidden_at[peer] = now
 		elif now - float(entry.hidden_at[peer]) >= keepalive_sec:
