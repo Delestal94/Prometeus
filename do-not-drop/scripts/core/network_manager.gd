@@ -146,10 +146,13 @@ const MAX_PLAYERS: int = 8
 ## RPC it doesn't have (company mode, D-0316.2).
 ## 53: the "orders" snapshot part carries `stars` (1-5, the customer's rating) on a
 ## delivered order; an older client refuses that book (company mode, D-0816.b).
+## 54: CompanyNet's supplier_ordered may come from the host with no request and peer 0
+## (AUTO_PEER): the host's automatic supplier order at the day's close; an older client applies
+## it but shows no summary line (company mode, D-0151.3b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 53
+const PROTOCOL_VERSION: int = 54
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
