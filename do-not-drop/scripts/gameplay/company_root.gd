@@ -325,7 +325,9 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
-	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle))
+	business_tick.add_step(&"orders", func() -> void:
+		var carried := func(id: StringName) -> bool: return trips != null and trips.carries(id)
+		CompanyDayOrders.poll(net, day_cycle, carried))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -809,6 +811,9 @@ func _add_trips() -> void:
 	trips.setup(CompanyFleet.gate_of(shed, net.company), CompanyFleet.PLAYON_WIDTH_M, -shed.global_basis.z)
 	trips.set_yard(CompanyFleet.yard_back_m(net.company), CompanyFleet.yard_half_width_m(net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	trips.day_open = func() -> bool: return not day_cycle.is_day_closed()
+	trips.trip_closed.connect(func(_trip: Trip, failed: Array[StringName]) -> void:
+		net.orders.fail_returned(net, failed))
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
 

@@ -40,9 +40,9 @@ extends Node
 ## Events nobody asks for (the contract's "without a client request") are the host's own rules: they go out
 ## through publish(), the same path: clock_anchor (D-0219, GameClock, `clock`), day_phase (D-0203, DayCycle,
 ## `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`), jack_loaded and jack_departed, the pallets of
-## the day's truck and its leaving (D-0605.b, D-0618.b, CompanyRoot), order_added / order_expired, the day's
-## orders (D-0813, CompanyOrdersNet, `orders`) and wallet_moved, money in or out that no request led to (D-0517,
-## CompanyWalletNet, publish_wallet()).
+## the day's truck and its leaving (D-0605.b, D-0618.b, CompanyRoot), order_added / order_expired /
+## order_closed (the day's orders, D-0813 and D-0851, CompanyOrdersNet, `orders`) and wallet_moved, money in or out
+## that no request led to (D-0517, CompanyWalletNet, publish_wallet()).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -93,13 +93,14 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
 	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, CompanyPallets.FORK,
 	CompanyPallets.DEPARTED, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
-	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED, WALLET, CompanyShopNet.BOUGHT,
+	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED, CompanySupplierNet.ORDERED, WALLET,
+	CompanyShopNet.BOUGHT,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
 ## publish_wallet()); never units_moved.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.DEPARTED,
 	CompanyPallets.FORK, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
-	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, WALLET]
+	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED, WALLET]
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a later snapshot covers them anyway.
@@ -832,7 +833,7 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = pallets.apply(inventory, kind, data)
 		CompanyPallets.DEPARTED:
 			applied = pallets.apply(inventory, kind, data)
-		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED:
+		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED:
 			applied = orders.apply(kind, data)
 		CompanySupplierNet.ORDERED:
 			applied = supplier.apply(data)

@@ -136,11 +136,15 @@ const MAX_PLAYERS: int = 8
 ## D-0302.2.b).
 ## 50: CompanyNet's _request takes a new kind, shop_buy, and _apply_event a new
 ## one, shop_bought {item, money, minute}: the company shop's purchases, only the
-## host's go through and a client's is refused with host_only (company mode, D-0518).
+## host's go through and a client's is refused with host_only (company mode, D-0518);
+## 52: CompanyNet's _apply_event takes a new host kind, order_closed {order, state}: an order
+## that ends without a delivery (the customer gave up, the vehicle came back with it, or the
+## day ended) fails or is cancelled on every peer's book, and the reputation it costs is the
+## host's alone (company mode, D-0851).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 50
+const PROTOCOL_VERSION: int = 52
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

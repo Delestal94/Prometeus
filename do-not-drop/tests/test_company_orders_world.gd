@@ -16,16 +16,18 @@ extends SceneTree
 ##   brings nothing in;
 ## - a host and a client world as ENet peers in one process, the host's day fast-forwarded an hour at a
 ##   time on the test's own ticks: after every hour the client has the host's book, and at 19:50 the
-##   whole plan is in both books, the orders past due late; each world tells its own EventBus (a stand-in
+##   whole plan is in both books, the orders past due late (or already given up on by the customer,
+##   failed: D-0851); each world tells its own EventBus (a stand-in
 ##   per peer) order_added once per order, in the host's order, and nothing for an expiry or for a
 ##   snapshot sent again;
 ## - poll() with the book full (MAX_ORDERS) keeps the order that came in planned and still sends the
 ##   expiries (a due order goes LATE);
-## - the next day's OPENING drops the closed orders on both peers alike (three closed by hand on both
-##   books, as the events of D-0815.b and D-0302 will) and keeps every other order of the day before; a
-##   third peer that joined during the summary (its snapshot with the closed orders) drops the same ones
-##   and ends with the same book; the new day's orders come in on top, the same on every peer, each told
-##   once on each, none of the late peer's snapshot.
+## - the day's end closes every order left (D-0851: the host's close_day() in CLOSING, tested on its own in
+##   test_company_day_close_orders), so the next day's OPENING drops them all on both peers alike (three were
+##   closed by hand on both books before, as the events of D-0815.b and D-0302 will); a third peer that
+##   joined during the summary (its snapshot with the closed orders) drops the same ones and ends with the
+##   same book; the new day's orders come in on top, the same on every peer, each told once on each, none
+##   of the late peer's snapshot.
 ## Expected in the log: CompanyOrdersNet's warning for the full book ("is full").
 
 const PORT: int = 24683
@@ -303,7 +305,8 @@ func _play_day_one(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, clien
 	var late: int = plan.filter(func(o: Dictionary) -> bool: return int(o["due_min"]) < last).size()
 	var late_in_book: int = 0
 	for order: Dictionary in book.to_dict()["orders"]:
-		late_in_book += 1 if order["state"] == Order.STATE_LATE else 0
+		# Late, or the customer already gave up on it (D-0851): failed.
+		late_in_book += 1 if order["state"] == Order.STATE_LATE or order["state"] == Order.STATE_FAILED else 0
 	_expect(host.net.orders.planned().is_empty() and book.size() == plan.size() and late_in_book == late,
 		"At %d the whole plan is in the host's book, the %d past due late (%d orders, %d late)"
 		% [last, late, book.size(), late_in_book])
@@ -322,31 +325,35 @@ func _play_day_one(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, clien
 
 
 func _play_day_two(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, client_bus: PeerBus) -> void:
-	# Two late orders and an open one (a third late one if none is open) close, as D-0815.b and D-0302
-	# will by events: done by hand here, on both books alike.
-	var late: Array[StringName] = []
-	var open: Array[StringName] = []
+	# Three orders still to be delivered close, as D-0815.b and D-0302 will by events: done by hand here, on both
+	# books alike. The day's end (D-0851) closes the rest.
+	var live: Array[StringName] = []
 	for order: Dictionary in host.net.orders.book.to_dict()["orders"]:
-		(late if order["state"] == Order.STATE_LATE else open).append(order["id"])
-	_expect(late.size() >= 3, "Day 1 left at least three late orders (%d)" % late.size())
-	if late.size() < 3:
+		if OrderBook.TRANSITIONS.has(order["state"]):
+			live.append(order["id"])
+	_expect(live.size() >= 3, "Day 1 left at least three orders to deliver (%d)" % live.size())
+	if live.size() < 3:
 		return
-	var closed: Array[StringName] = [late[0], late[1], open[0] if not open.is_empty() else late[2]]
+	var closed: Array[StringName] = [live[0], live[1], live[2]]
 	var kept: Array[StringName] = []
-	for order: Dictionary in host.net.orders.book.to_dict()["orders"]:
-		if not closed.has(order["id"]):
-			kept.append(order["id"])
 	for peer: OrdersRoot in [host, guest]:
 		var book: OrderBook = peer.net.orders.book
 		book.mark_delivered(closed[0], 100, true)
 		book.mark_failed(closed[1])
 		if not book.cancel(closed[2]):
 			book.mark_failed(closed[2])
+	var host_reputation: float = float(host.company_state.get(&"reputation"))
 	_expect_books(host, guest, "with three orders closed by hand")
 	_skip_msec += HOUR_MSEC / 4
 	var summed: bool = await _wait_for(func() -> bool:
 		return host.day_cycle.phase() == DayCycle.Phase.SUMMARY and guest.net.seq == host.net.seq)
 	_expect(summed, "Past 20:00 the day closes on both peers (host %s)" % host.day_cycle.phase_name())
+	_expect_books(host, guest, "at the summary")
+	_expect(host.net.orders.book.open_orders().is_empty() and guest.net.orders.book.open_orders().is_empty(),
+		"The day's end closed every order left, on both peers")
+	_expect(float(host.company_state.get(&"reputation")) <= host_reputation,
+		"...at a reputation cost on the host, never a gain (%.1f to %.1f)"
+		% [host_reputation, float(host.company_state.get(&"reputation"))])
 	var late_guest: OrdersRoot = await _join_late(host)
 	_expect(late_guest != null and late_guest.day_cycle.phase() == DayCycle.Phase.SUMMARY
 		and late_guest.net.orders.book.has(closed[0]),
@@ -354,8 +361,7 @@ func _play_day_two(host: OrdersRoot, guest: OrdersRoot, host_bus: PeerBus, clien
 	_expect(host.day_cycle.next_day() and await _synced(host, guest), "The host opens day 2")
 	var left: Array = (host.net.orders.book.to_dict()["orders"] as Array).map(
 		func(o: Dictionary) -> StringName: return o["id"])
-	_expect(left == kept, "Day 2's opening drops the three closed orders and keeps the rest of day 1 (%d of %d)"
-		% [left.size(), kept.size() + 3])
+	_expect(left == kept, "Day 2's opening drops every order of day 1, all closed by now (%d left)" % left.size())
 	_expect_books(host, guest, "after day 2's opening")
 	if late_guest != null:
 		_expect(await _synced(host, late_guest), "The late guest follows day 2's opening")

@@ -204,9 +204,11 @@ func _check_orders(level: CompanyRoot, ctx: Dictionary) -> void:
 	var book: OrderBook = level.trips.book
 	var shared: OrderBook = level.net.orders.book
 	var orders: Array = ctx["orders"]
-	_expect(orders.size() >= 1 and level.net.orders.planned().is_empty() and shared.size() == orders.size(),
-		"The world brought the whole day's plan into the shared book (got %d of %d, %d still planned)"
-		% [shared.size(), orders.size(), level.net.orders.planned().size()])
+	# The bot waited a day in a jump: the customers gave up on the ones a window past due (failed, D-0851).
+	var live: int = shared.open_orders().size()
+	_expect(orders.size() >= 1 and level.net.orders.planned().is_empty() and live == orders.size(),
+		"The world brought the plan into the shared book, its live orders are the bot's (got %d of %d, %d planned)"
+		% [live, orders.size(), level.net.orders.planned().size()])
 	_expect(book != shared and book.size() == orders.size(),
 		"The day's orders are copied into CompanyTrips' own book (got %d of %d)" % [book.size(), orders.size()])
 	for order: Dictionary in orders:
