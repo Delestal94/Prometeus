@@ -57,8 +57,9 @@ jugador con alcance puede tomar una unidad de `floor:0` (la petición la acepta 
 si con 8 jugadores hay que partirlo por producto).
 
 ### D-0253 · Cerrar el día antes — A · Opus 5.5 · medium · Aviso: no · F1
-**Parcial (2026-10-22):** `DayCycle.close_early()` y `DayClose` (botón, confirmación y aviso de las salidas,
-con sus textos) hechos y probados. Falta D-0253.a: el modo Empresa todavía no tiene menú de pausa (D-1909).
+**[x] Hecho (2026-10-22, PR #684, f6152778)** — `DayCycle.close_early()` y `DayClose` (botón, confirmación y aviso
+de las salidas, con sus textos) hechos y probados. Dibujarlos (D-0253.a) pasa a D-1909, que ya lo incluye: el modo
+Empresa no tiene menú de pausa y D-1909 es de F5. Decisión: no se espera una tarea de F5 para cerrar la de F1.
 **Depende de:** D-0134 (diseño), D-0203, D-0236
 **Qué:** [guardado.md](../diseno/guardado.md), regla 2: la forma de cortar sin perder lo hecho.
 - [x] D-0253.1 `DayCycle.close_early()` (solo en el host, en `OPERATING`): pasa a `CLOSING` en ese momento por el
@@ -74,7 +75,7 @@ con sus textos) hechos y probados. Falta D-0253.a: el modo Empresa todavía no t
   Hecho del lado de la lógica: `scripts/gameplay/business/day_close.gd` (`DayClose.button()` da texto, habilitado,
   pista del cliente y confirmación; `DayClose.exit_warning()` da el aviso solo en el host con el día en `OPERATING`
   o `CLOSING`) y las claves `UI_COMPANY_CLOSE_DAY*` / `UI_COMPANY_EXIT_LOSES_DAY`.
-- [ ] D-0253.a Dibujar el botón y el aviso en el menú de pausa del modo Empresa con `DayClose`, cuando exista
+- [→ D-1909] D-0253.a Dibujar el botón y el aviso en el menú de pausa del modo Empresa con `DayClose`, cuando exista
   (D-1909; [decisión](../../decisiones/2026-10-22-cerrar-el-dia-antes.md)). Captura con `revisor-visual`.
 **Test** `test_day_cycle` (ampliado): `close_early()` a las 12:00 pasa a `CLOSING`, no deja entrar pedidos, espera
 una salida afuera y llega a `SUMMARY`; en `OPENING` o `SUMMARY` devuelve false; en un cliente no hace nada.

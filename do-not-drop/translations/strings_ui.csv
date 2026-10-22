@@ -1315,6 +1315,7 @@ UI_FINANCE_NOTE,Remito del proveedor,Supplier delivery note
 UI_FINANCE_NOTE_SHORT,"%s: llegaron %d de %d (faltan %d)","%s: %d of %d arrived (%d short)"
 UI_FINANCE_NOTE_EXTRA,"%s: llegaron %d de %d (sobran %d)","%s: %d of %d arrived (%d extra)"
 UI_FINANCE_NOTE_MORE,y %d productos más,and %d more products
+UI_FINANCE_AUTO_ORDER,Pedido automático al proveedor: %d unidades,Automatic supplier order: %d units
 UI_FINANCE_REASON_ORDER_PAID,Pedidos cobrados,Orders paid
 UI_FINANCE_REASON_TIP,Propinas,Tips
 UI_FINANCE_REASON_PLACEABLE_SELL,Venta de piezas del galpón,Shed pieces sold
