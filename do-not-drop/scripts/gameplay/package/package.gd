@@ -108,14 +108,14 @@ var net_transform: Transform3D = Transform3D.IDENTITY:
 		_has_net_state = true
 var net_in_vehicle: bool = false
 ## N-217 (PackageNetPose): the host's clock for this pose (NetPoseSmoother.clock_ms()); and, while a player on
-## foot holds the box, who (carrier_peer_id, 0 otherwise) and where in their body's space (hold_offset), so every
-## other peer draws it in the hands of the body it draws. carrier_peer_id goes on change, with is_held (the same
-## reliable delta); hold_offset with every pose (it moves with the camera), IDENTITY while nobody holds it.
+## foot holds the box, who (carrier_peer_id, 0 otherwise), so every other peer draws it in the hands of the body it
+## draws (where that player's PlayerCarry holds it). carrier_peer_id goes on change, with is_held (the same reliable
+## delta). Held that way the pose goes only every NetRestThrottle.muted_interval (D-2002.5, _publish_net_state()).
 var net_time: int = 0
 var carrier_peer_id: int = 0
-var hold_offset: Transform3D = Transform3D.IDENTITY
 var _has_net_state: bool = false
 var _net_view := PackageNetPose.new()
+var _rest_throttle: NetRestThrottle = null
 var _vehicle: Node3D = null
 ## Host: the carrier's latest hold pose, in the truck's space when aboard. Re-applied every tick against the
 ## host's own truck, so a box carried in the moving bay rides with it between the carrier's updates.
@@ -218,6 +218,7 @@ func _ready() -> void:
 		# physics ticks on top of that only made it trail behind.
 		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
 		$MultiplayerSynchronizer.synchronized.connect(func() -> void: _net_view.push(self))
+	_rest_throttle = get_node_or_null(^"NetRestThrottle") as NetRestThrottle
 	initialize_trap()
 	_salvage_view = preload("res://scripts/gameplay/package/package_salvage.gd").new()
 	_salvage_view.name = "PackageSalvage"
@@ -284,6 +285,9 @@ func _publish_net_state() -> void:
 	net_in_vehicle = riding
 	net_transform = vehicle.global_transform.affine_inverse() * global_transform if riding else global_transform
 	net_time = NetPoseSmoother.clock_ms()
+	# In the hands of a player on foot every other peer draws it on them: its pose is muted until let go (D-2002.5).
+	if is_instance_valid(_rest_throttle):
+		_rest_throttle.set_muted(PackageNetPose.muted(self))
 
 
 func _find_vehicle() -> Node3D:
@@ -521,12 +525,10 @@ func _player_for_peer(peer_id: int) -> Node:
 ## setting global_transform directly -- the package is host-authoritative, so only the host's copy moving is
 ## real; everyone else, carrier included, sees it through the MultiplayerSynchronizer. `in_vehicle`: the pose
 ## is in the truck's space (see PackageHandling.accept_carry()).
-## `in_hands`: the same pose in the carrier's body space (hold_offset, N-217).
 @rpc("any_peer", "call_local", "unreliable_ordered")
-func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false, in_hands := Transform3D()) -> void:
-	if is_multiplayer_authority() and RpcGuard.finite_transform(carry_transform) \
-			and RpcGuard.finite_transform(in_hands):
-		PackageHandling.accept_carry(self, multiplayer.get_remote_sender_id(), carry_transform, in_vehicle, in_hands)
+func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
+	if is_multiplayer_authority() and RpcGuard.finite_transform(carry_transform):
+		PackageHandling.accept_carry(self, multiplayer.get_remote_sender_id(), carry_transform, in_vehicle)
 
 
 func set_held(held: bool) -> void:

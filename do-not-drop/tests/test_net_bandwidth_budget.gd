@@ -17,7 +17,10 @@ extends SceneTree
 ## tended), the rest of a full depot at rest (NetRestThrottle in
 ## package.tscn), the truck driving. Pile-up: every box moving at once. Steady
 ## fits the budget, the pile-up Steam's send rate itself, and the host's
-## upload in the steady case a modest home uplink.
+## upload in the steady case a modest home uplink. A box carried on foot sends
+## its pose only every NetRestThrottle.muted_interval since D-2002.5 (every
+## peer draws it in its carrier's hands) and no box sends hold_offset any more:
+## counting each player's box moving is a ceiling.
 ##
 ## Voice (N-212) on top of the steady case, with VOICE_CREW players all
 ## talking at SteamVoice's send cap (VOICE_SEND_PACKETS_PER_SECOND packets
@@ -29,7 +32,9 @@ extends SceneTree
 ## largest crew that fits), not failed.
 ##
 ## The throttle itself, wired into a real box: one left alone drops to its
-## rest interval, and moving it puts the full rate back the same tick.
+## rest interval, and moving it puts the full rate back the same tick; one
+## carried on foot by a player goes to the muted interval, and set down it's
+## back to every tick on the next one (D-2002.5).
 
 const MODEL := preload("res://tests/bandwidth_model.gd")
 ## Steam's default send rate per connection (SendRateMax).
@@ -132,6 +137,7 @@ func _initialize() -> void:
 	_check_voice(steady_for, crew)
 
 	await _check_throttle(box)
+	await _check_carried_muted(box, player)
 	if _failures == 0:
 		print("PASS: with %d players the host fits Steam's send rate and a modest uplink" % crew)
 	quit(_failures)
@@ -203,6 +209,26 @@ func _check_throttle(box: Node) -> void:
 	await physics_frame
 	_expect(is_equal_approx(sync.replication_interval, active),
 		"Moved, it's back to every tick at once (got %.4f)" % sync.replication_interval)
+
+
+## Carried on foot (the local player, as its own carry pose says), the box's pose is muted; set down, every
+## tick is back on the next tick (package.gd _publish_net_state(), D-2002.5).
+func _check_carried_muted(box: Node, player: Node) -> void:
+	var throttle: Node = box.get_node(^"NetRestThrottle")
+	var sync := box.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var active: float = sync.replication_interval  # _check_throttle() left it moving: every tick.
+	box.call(&"take_by", player)
+	box.call(&"submit_carry_transform", Transform3D(Basis(), (player as Node3D).global_position + Vector3(0, 1, -0.6)))
+	for tick: int in range(2):
+		await physics_frame
+	var muted: float = float(throttle.get(&"muted_interval"))
+	_expect(is_equal_approx(sync.replication_interval, muted),
+		"Carried on foot, a box sends its pose every %.1f s (got %.4f)" % [muted, sync.replication_interval])
+	box.call(&"request_drop", Transform3D(Basis(), (player as Node3D).global_position + Vector3(0, 0.4, -0.8)), false)
+	for tick: int in range(2):
+		await physics_frame
+	_expect(is_equal_approx(sync.replication_interval, active),
+		"Set down, it's back to every %.4f s (got %.4f)" % [active, sync.replication_interval])
 
 
 ## Bytes one send of this node's synchronizer carries, always-sent
