@@ -41,10 +41,9 @@ extends Node
 ## `pos` (a drop, or what a peer that left held), kept on every peer (floor_bundles) and taken
 ## back with units_take (a bundle is its own station).
 ##
-## Events nobody asks for (the contract's "without a client request": the day's clock and phases,
-## later orders) are the host's own rules: they go out through publish(), the same path.
-## Today: clock_anchor, the pace of the day's clock (D-0219, GameClock, given as `clock`), and
-## day_phase, the day's phase and the frozen shed (D-0203, DayCycle, given as `day_cycle`).
+## Events nobody asks for (the contract's "without a client request"; later, orders) are the host's
+## own rules, sent with publish() by the same path: clock_anchor (D-0219, GameClock, given as `clock`),
+## day_phase (D-0203, DayCycle, `day_cycle`) and trip_* (D-0302.2.a, CompanyTripsView, `trips_view`).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -87,15 +86,14 @@ const CLOCK_ANCHOR: StringName = &"clock_anchor"
 const DAY_PHASE: StringName = &"day_phase"
 ## Event kinds every peer applies.
 const EVENT_KINDS: Array[StringName] = [
-	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED,
-	CompanyLayoutNet.SOLD, CompanyTableNet.STARTED, CompanyTableNet.PLACED,
-	CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED, CompanyTableNet.LABELED,
-	CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
+	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
+	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
+	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
+	CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
 ]
-## Event kinds the host may send with publish(), without a request: its own rules (the day's
-## clock and phases). An event a request leads to (units_moved) only comes from
-## _handle_request()'s checks.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE]
+## Kinds the host may publish() with no request, its own rules (clock, phases, trips out); units_moved never.
+const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyTripsView.STARTED,
+	CompanyTripsView.REFUSED, CompanyTripsView.CLOSED]
 ## Host: one snapshot request per peer in this long (a broken client would ask once per
 ## event). The client waits as long before asking again.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
@@ -151,6 +149,8 @@ var clock: GameClock = null
 ## The day's phases (D-0203), or null: day_phase events land in its apply_phase(). Set on every peer
 ## by DayCycle.attach(), which also adds the phase to the snapshot.
 var day_cycle: DayCycle = null
+## The trips out (D-0302.2.a) or null, trip_* events land in its apply_trip(); set by its attach().
+var trips_view: CompanyTripsView = null
 ## The shed layout's build requests (host) and events (every peer) on `company`'s layout (D-0910).
 var build: CompanyLayoutNet = CompanyLayoutNet.new()
 ## The shared packing tables' requests (host) and events (every peer), and their state (D-0715). Its
@@ -345,7 +345,7 @@ func grant_snapshot(peer: int, now_msec: int) -> bool:
 
 ## Adds a part to the snapshot under `key`: state an event of section 2 changes that lives
 ## outside CompanyNet's stock and `company` (the order book, the day phase and clock anchor,
-## pallets, packing tables, live boxes, units on the floor). `take` (host) is
+## the trips out, pallets, packing tables, live boxes, units on the floor). `take` (host) is
 ## Callable() -> Variant and returns that part as plain data var_to_bytes keeps (no Object,
 ## no Callable); `put` (client) is Callable(value: Variant) -> bool, puts the host's value in
 ## place of what is there without firing fact signals, checks it like any data from the
@@ -811,15 +811,15 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
 			else:
 				applied = day_cycle.apply_phase(data)
+		CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED:
+			applied = is_instance_valid(trips_view) and trips_view.apply_trip(kind, data)
 		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD:
 			applied = build.apply(company, kind, data)
 			if applied and kind == CompanyLayoutNet.SOLD:
 				table.forget(CompanyAsk.as_id(data.get("uid")))
-		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT:
+		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED:
 			applied = table.apply(company, inventory, kind, data)
-		CompanyTableNet.FILLED, CompanyTableNet.LABELED, CompanyTableNet.STAMPED:
-			applied = table.apply(company, inventory, kind, data)
-		CompanyTableNet.SEALED:
+		CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED:
 			applied = table.apply(company, inventory, kind, data)
 		CompanyCarts.MOVED:
 			applied = carts.apply(data)

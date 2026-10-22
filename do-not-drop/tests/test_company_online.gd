@@ -15,6 +15,10 @@ extends SceneTree
 ##   peers end with the same two players in company_crew (join_crew() on both copies), each driven
 ##   by its own peer, CREW_SPACING apart around SPAWN (crew_spawn()); the client's own one is its
 ##   `player`, and its CompanyNet stops waiting with the host's seq, stock and company.
+## - Trips out (D-0302.2.a): only the host's world has a CompanyTrips, both have a TripsView on their
+##   CompanyNet, and each DayCycle reads its own (CompanyTrips on the host, the view on the client);
+##   a van the host's gate sees leave with a packed order shows in the client's view with that
+##   order, and is gone from it once the van is back.
 ## - The client takes 2 units into its hands (a stand-in station where its player stands) and
 ##   leaves the session: on the host what it held lies in one new floor:<n> bundle where its player
 ##   stood, in one units_moved (CompanyNet, D-2006: peer_removed comes before its player goes), the
@@ -91,6 +95,7 @@ func _run() -> void:
 	if hosted:
 		await _check_host_alone()
 		if await _check_join():
+			await _check_trips()
 			await _check_leave()
 	var errors: Array[String] = _catcher.take()
 	OS.remove_logger(_catcher)
@@ -169,6 +174,39 @@ func _check_join() -> bool:
 	_expect(_client_state.call(&"is_active") and _company(_client_state) == _company(host_net.company),
 		"...and the host's company in the client's own CompanyState")
 	return true
+
+
+## The trips out reach the client's world (D-0302.2.a): the host's gate decides, its TripsView
+## publishes, the client's view follows and its DayCycle reads it.
+func _check_trips() -> void:
+	var trips: CompanyTrips = _host_root.trips
+	var view: CompanyTripsView = _client_root.trips_view
+	_expect(trips != null and _client_root.trips == null and view != null
+		and view.net == _client_root.net and _host_root.trips_view.net == _host_root.net,
+		"Only the host's world has CompanyTrips; both have a TripsView on their CompanyNet")
+	if trips == null or view == null:
+		return
+	_expect(_host_root.day_cycle.trips_out == trips.trips_out
+		and _client_root.day_cycle.trips_out == view.trips_out,
+		"Each DayCycle reads its own trips out: CompanyTrips on the host, the view on the client")
+	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
+	trips.book.add(Order.make(&"o_online", "Ana", &"centro", &"house_1",
+		[{"product": &"hen", "qty": 1}], 0, products))
+	trips.book.mark_packed(&"o_online", &"box_online")
+	trips.stage_cargo(&"van_online", [&"o_online"], [&"box_online"])
+	var stage: int = int(_host_root.net.company.get(&"warehouse_stage"))
+	var exit: Vector3 = _host_root.shed.to_global(
+		Vector3(0.0, 0.0, -WarehouseStages.floor_size_m(stage).y * 0.5))
+	trips.track(&"van_online", exit + Vector3(0.0, 0.0, 1.0))
+	trips.track(&"van_online", exit + Vector3(0.0, 0.0, -2.0))
+	var seen: bool = await _wait_for(func() -> bool: return view.is_out(&"van_online"))
+	_expect(seen and view.trip_of(&"van_online").get("orders") == [&"o_online"]
+		and int(_client_root.day_cycle.trips_out.call()) == 1,
+		"The van the host's gate saw leave is out in the client's view, with its order (got %s)"
+		% [view.trip_of(&"van_online")])
+	trips.track(&"van_online", exit + Vector3(0.0, 0.0, 1.0))
+	var back: bool = await _wait_for(func() -> bool: return view.trips_out() == 0)
+	_expect(back and trips.trips_out() == 0, "...and gone from it once the van is back")
 
 
 ## Both copies of the crew on one peer: Player_1 (the host's) at SPAWN and the client's
