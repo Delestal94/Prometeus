@@ -357,3 +357,26 @@ un test pase los suyos.
 afuera, sin flags no cambia nada); un `CompanyRoot` host con `dev_args` abre el día 4 con 12345 y las
 compuertas de `campo`, y sin flags arranca en el día 1 con `STARTING_MONEY`.
 **Hecho cuando:** el test pasa; documentados en el README; `render_company_shed.gd` los toma de su línea de comandos.
+
+### D-0239 · Registro local del día de la empresa — B · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR pendiente)** — `RunTelemetry` guarda un JSON por día (`<fecha_hora>_day<N>.json`, `"kind": "company_day"`) con los eventos de negocio; `run_telemetry_format.describe_day()` lo lee; `tools/telemetry-summary.py` suma una tabla "Dias de empresa"; `test_company_day_telemetry`.
+**Depende de:** D-0203, D-0215
+**Qué:** en `scripts/core/run_telemetry.gd` (el autoload del registro de partidas, S-805), con la misma opción
+"Guardar registro de partidas" y la misma carpeta `user://telemetry/`, solo escuchando `EventBus` (sin RPC ni
+estado):
+- `company_day_started` abre el día y vacía el buffer; desde ahí anota `order_added`, `order_packed`,
+  `order_delivered`, `supply_arrived`, `box_sealed`, `gate_opened`, `milestone_reached`, `money_changed` y
+  `company_day_closing` como `{"t": segundos desde la apertura, "event": <señal>, ...}`; la lista corta en
+  `MAX_DAY_EVENTS` (2000) pero los conteos siguen (`events_dropped`);
+- `company_day_summary` escribe el archivo: día, rol, tripulación, duración, el resumen del día (valores
+  planos), los eventos y los conteos por tipo. Un día abandonado antes del resumen no escribe nada;
+- los registros de entrega llevan `"kind": "run"` (un archivo sin `kind` es una entrega; `FORMAT_VERSION`
+  sigue en 1 porque el campo es aditivo).
+En `run_telemetry_format.gd`: `record_kind`, `day_event_counts`, `day_file_stem`, `plain` y
+`describe_day(record)`, que da líneas legibles (día, ingresos/costos/ganancia, billetera, pedidos,
+proveedores y cajas, plata por motivo).
+**Test** `test_company_day_telemetry`: opción apagada no escribe; prendida, un día simulado deja un solo
+`*_day2.json` con los eventos en orden y los conteos; `describe_day` sobre el archivo leído da las líneas
+esperadas; un día abandonado no escribe ni contamina el siguiente; el tope de eventos se respeta; una
+entrega sigue escribiendo, con `kind: "run"`.
+**Hecho cuando:** el test pasa y el log del día se lee con `run_telemetry_format`.
