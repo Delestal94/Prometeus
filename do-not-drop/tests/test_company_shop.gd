@@ -86,8 +86,9 @@ func _run() -> void:
 	while state.fleet.size() < CompanyFleet.PLAYON_SLOTS:
 		CompanyShop.buy(state, van)
 	var full: Dictionary = CompanyShop.buy(state, van)
-	_expect(not full["ok"] and full["key"] == CompanyShop.FLEET_FULL and state.fleet.size() == CompanyFleet.PLAYON_SLOTS,
-		"a vehicle beyond the playon's slots is refused (WORLD_SHOP_FLEET_FULL), nothing granted")
+	_expect(not full["ok"] and full["key"] == CompanyShop.FLEET_FULL
+		and state.fleet.size() == CompanyFleet.PLAYON_SLOTS,
+		"a vehicle past the playon's slots is refused (FLEET_FULL), nothing granted")
 
 	_expect(CompanyShop.check(null, upgrade)["key"] == CompanyShop.NO_COMPANY, "no company, no purchase")
 	state.reset()

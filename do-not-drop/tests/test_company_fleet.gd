@@ -267,20 +267,26 @@ func _check_second_van(level: CompanyRoot, fleet: CompanyFleet) -> void:
 func _check_purchase(level: CompanyRoot, fleet: CompanyFleet) -> void:
 	var company: Object = level.net.company
 	company.set(&"money", 20000)
+	# The real catalog switches vehicles off until they exist: an enabled copy of the van, in a catalog of its own.
+	var shop_dir: String = DIR.path_join("shop")
+	DirAccess.make_dir_recursive_absolute(shop_dir)
+	var van_item: ShopItem = (load("res://data/shop/vehicle_van.tres") as ShopItem).duplicate()
+	van_item.enabled = true
+	_expect(ResourceSaver.save(van_item, shop_dir.path_join("vehicle_van.tres")) == OK, "An enabled van item is saved")
+	level.net.shop.dir = shop_dir
+	var refusals: Array = []
+	level.net.request_rejected.connect(func(_rid: int, reason: StringName) -> void: refusals.append(reason))
 	level.net.request(CompanyShopNet.BUY, {"item": &"vehicle_van"})
 	for _tick: int in range(5):
 		await physics_frame
 	var bought: Node3D = fleet.vehicle("van_classic_2")
 	_expect(fleet.vehicles().size() == 2 and bought != null and fleet.vehicle("van_classic") != null,
-		"A bought van joins the starting one at once (vehicles %d)" % fleet.vehicles().size())
+		"A bought van joins the starting one at once (vehicles %d, refused %s, fleet %s)"
+		% [fleet.vehicles().size(), refusals, company.get(&"fleet")])
 	if bought != null:
 		_expect(bool(bought.get(&"drivable_outside_run")) and bought.is_in_group(CompanyTrips.VEHICLE_GROUP)
 			and level.trips.gate.side_of(bought.global_position) == TripGate.INSIDE,
 			"...drivable, in the vehicle group, parked inside the gate's line")
-	var before: int = fleet.vehicles().size()
-	level.net.request(CompanyShopNet.BUY, {"item": &"vehicle_bike"})
-	await physics_frame
-	_expect(fleet.vehicles().size() >= before, "A bought vehicle never takes one away")
 	if bought != null:
 		bought.free()
 	await physics_frame

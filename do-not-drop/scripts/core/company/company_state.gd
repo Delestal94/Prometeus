@@ -230,7 +230,7 @@ func gate_owned() -> Dictionary:
 	var vehicles: Array[StringName] = []
 	for entry: Dictionary in fleet:
 		var key: Variant = entry.get("vehicle", entry.get("key", ""))
-		if typeof(key) == TYPE_STRING or typeof(key) == TYPE_STRING_NAME:
+		if (typeof(key) == TYPE_STRING or typeof(key) == TYPE_STRING_NAME) and not String(key).is_empty():
 			vehicles.append(StringName(key))
 	return {"milestones": milestones_done, "equipment": equipment, "vehicles": vehicles}
 
