@@ -206,3 +206,24 @@ Decisión: fundirla, como recomendó la revisión del 2026-10-19 (`docs/auditori
 - [x] **D-0820.b** (hecho 2026-10-22, PR pendiente) `OrderGenerator.generate_day` recibe `templates` (zona → `OrderTemplateSet`) y las zonas con set toman productos y requisitos de una plantilla que entre en `items_cap_for_day`; sin set (o sin plantilla que entre) sigue el sorteo anterior. `CompanyOrdersNet.plan_day` carga los sets de `data/order_templates/`. Ampliado `test_order_generator`; el golden de D-0848 aún no existe.
 **Test** `test_order_templates`: datos sin problemas, 40 por zona con tarifa, mezcla de tamaños y caprichos, `to_order` válido, y el validador atrapa 9 clases de error.
 **Hecho cuando:** `.tres` validados.
+
+### D-0851 · Cierre del día para los pedidos — A · Opus 5.5 · medium · Aviso: no · F1
+**Depende de:** D-0136 (diseño), D-0807, D-0813.1, D-0253, D-0302
+**Qué:** las reglas 2, 4, 6, 7, 8 y 10 de [clientes.md](../diseno/clientes.md), en el host y con un evento de pedido nuevo.
+- [ ] D-0851.1 `CompanyTrips.day_open` (`Callable`, como `minute_now`): en `CLOSING` `departure_verdict` niega con
+  `DAY_CLOSED` y el texto `UI_COMPANY_GATE_DAY_CLOSED`; un vehículo que cruza rechazado en `CLOSING` no cuenta
+  para que el día pase a `SUMMARY`.
+- [ ] D-0851.2 `CompanyDayOrders.poll` sigue en `CLOSING` sin sumar pedidos: publica `order_expired` y el abandono
+  (D-0807) con `shed_minute()`.
+- [ ] D-0851.3 `OrderBook.close_day(early: bool)`: lo `late` → `failed` (`OrderPenalties.abandoned`), lo que está en
+  ventana → `cancelled` sin costo (con `early`, también `failed`). Evento de cierre en `CompanyOrdersNet`
+  (validado como los demás, regla 5); la reputación la aplica solo el host. `DayCycle.poll` lo llama en `CLOSING`
+  cuando `trips_out() == 0`, y pasa a `SUMMARY` en el poll siguiente.
+- [ ] D-0851.4 Al entregar, `mark_delivered` recibe `floori(shed_minute())` (con D-0815.b, que engancha la puerta);
+  el aviso de las 20:00 suma `UI_COMPANY_DAY_CLOSING_ROAD` ("Los clientes reciben solo lo que ya está en camino").
+**Test** `test_company_day_close_orders`: un día que cierra a las 20:00 con un pedido vencido, uno en ventana, uno
+que vence durante `CLOSING` y uno que volvió sin entregarse da `failed` −3, `cancelled` 0, `failed` −3 y −3; el
+mismo día cerrado antes da todo `failed`; un vehículo que sale después de las 20:00 es rechazado y el resumen no
+lo espera; el día siguiente abre con el libro vacío; host y cliente por ENet terminan con el mismo libro y la
+reputación solo cambia en el host. `auditor-red` antes del PR.
+**Hecho cuando:** el test pasa.
