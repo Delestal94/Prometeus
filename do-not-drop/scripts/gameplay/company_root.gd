@@ -127,6 +127,8 @@ var player: Node3D
 var shed: CompanyShed
 ## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
 var builder: ShedBuilder
+## The stock list over the clipboard's key (D-0612.b): every peer, read only.
+var stock_board: StockBoard
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
 var supplier_truck: SupplierTruckView
 ## The supplier calendar the truck follows. Stand-in until the order screen (D-0603) feeds it: see
@@ -210,6 +212,7 @@ func _ready() -> void:
 	_add_trips()
 	_add_crew()
 	_add_builder()
+	_add_stock_board()
 	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()
@@ -727,6 +730,29 @@ func _add_builder() -> void:
 	builder.name = "ShedBuilder"
 	add_child(builder)
 	builder.setup(shed, net, player)
+
+
+## The stock list (D-0612.b): I / d-pad right opens it on any peer. The order book is the host's
+## (trips.book until D-0813.1), so only the host marks what the pending orders are missing; the
+## calendar is the stand-in until D-0603 feeds it, so nothing counts as on the way yet.
+func _add_stock_board() -> void:
+	if net == null:
+		return
+	stock_board = StockBoard.new()
+	stock_board.name = "StockBoard"
+	add_child(stock_board)
+	stock_board.setup(net)
+	stock_board.schedule = supplier_schedule
+	stock_board.real_calendar = false
+	stock_board.book_of = func() -> OrderBook:
+		return trips.book if trips != null else null
+	stock_board.player_of = func() -> Node:
+		return player
+	stock_board.busy = func() -> bool:
+		return builder != null and builder.is_building()
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		stock_board.products[id] = catalog.product(id)
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,
