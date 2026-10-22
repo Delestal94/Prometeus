@@ -382,7 +382,7 @@ entrega sigue escribiendo, con `kind: "run"`.
 **Hecho cuando:** el test pasa y el log del día se lee con `run_telemetry_format`.
 
 ### D-0243 · Los `--script` no pierden autoloads al nombrar clases de la expansión — B · Opus 5.5 · medium · Aviso: no · F0 (Pulido)
-**[x] Hecho (2026-10-22, PR #PRNUM)** — `test_hud_script_loads` nombra `CompanyRoot` estáticamente y comprueba que todos los autoloads de `project.godot` conservan su script y que compila cada script de `core/company/`, `business/`, `districts/` y `fleet/`.
+**[x] Hecho (2026-10-22, PR #603)** — `test_hud_script_loads` nombra `CompanyRoot` estáticamente y comprueba que todos los autoloads de `project.godot` conservan su script y que compila cada script de `core/company/`, `business/`, `districts/` y `fleet/`.
 **Depende de:** D-0202, D-0214
 **Qué:** la lección de N-919: un `--script` compila el árbol estático del test antes de que existan los
 autoloads, así que una clase nueva que arrastra (por `preload`, tipo o `class_name`) un script que nombra un
