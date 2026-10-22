@@ -365,6 +365,7 @@ WORLD_GATE_NEEDS_EQUIPMENT,NO PASA SIN EQUIPO: %s,NO ENTRY WITHOUT GEAR: %s
 WORLD_DISPATCH_NEEDS_VEHICLE,No entra: necesita %s,Can't load: needs %s
 WORLD_DISPATCH_NEEDS_MILESTONE,No entra: falta el hito %s,Can't load: milestone %s missing
 WORLD_DISPATCH_NEEDS_EQUIPMENT,No entra: falta el equipo %s,Can't load: gear %s missing
+WORLD_DISPATCH_FAR_LIMIT,No sale: ya hay %d vehículos en la calle,Can't leave: %d vehicles are already out
 WORLD_LOAD_NO_SLOTS,No entra: el vehículo lleva %s cajas,Can't load: vehicle holds %s boxes
 WORLD_LOAD_NO_WEIGHT,No entra: pasa los %s kg del vehículo,Can't load: over the vehicle's %s kg
 WORLD_STREET_CENTRO,Calle Central,Central Street
