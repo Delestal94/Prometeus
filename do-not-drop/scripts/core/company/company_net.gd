@@ -788,7 +788,7 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 		build.take_drift(), table.take_drift(), wallet.take_drift(), shop.take_drift(),
 	]
 	if drifts.has(true):
-		# Its wallet was off the host's (set right now, D-0910, D-0517, D-0518): the history it missed comes by snapshot.
+		# Its wallet was off the host's (set right now, D-0910, D-0517, D-0518): the missed history comes by snapshot.
 		_start_waiting()
 		poll_snapshot(Time.get_ticks_msec())
 
