@@ -108,7 +108,9 @@ func _test_time_weight() -> void:
 		expected += RoadNavigator.seconds_for(net.edge_by_id(edge_id), net.edge_length(edge_id))
 	_expect(is_equal_approx(planned.seconds, expected), "The seconds are meters over speeds (%.2f vs %.2f)" % [
 			planned.seconds, expected])
-	_expect(RoadNavigator.seconds_for(net.edge_by_id(&"ab"), 70.0) > RoadNavigator.seconds_for(net.edge_by_id(&"ac"), 70.0),
+	var dirt_s: float = RoadNavigator.seconds_for(net.edge_by_id(&"ab"), 70.0)
+	var asphalt_s: float = RoadNavigator.seconds_for(net.edge_by_id(&"ac"), 70.0)
+	_expect(dirt_s > asphalt_s,
 			"Dirt is slower than asphalt")
 
 
@@ -129,7 +131,8 @@ func _test_polyline() -> void:
 	_expect(same.ok and is_equal_approx(same.length, 30.0) and same.nodes.is_empty(),
 			"Two points on one street: straight along it (%s m)" % same.get("length"))
 	var back: Dictionary = RoadNavigator.route(net, Vector2(40, 0), Vector2(10, 0))
-	_expect(back.ok and back.polyline[0].distance_to(Vector2(40, 0)) < 0.5, "Going back along a street starts at the vehicle")
+	_expect(back.ok and back.polyline[0].distance_to(Vector2(40, 0)) < 0.5,
+			"Going back along a street starts at the vehicle")
 
 
 func _test_guidance() -> void:
@@ -163,7 +166,8 @@ func _test_real_map() -> void:
 		_expect(planned.ok and planned.locks.is_empty(), "The shed reaches %s with every gate closed" % house.id)
 	var far: HouseSpot = campo[0]
 	var refused: Dictionary = RoadNavigator.route(graph, shed, far.position)
-	_expect(not refused.ok and refused.reason == RoadNavigator.REASON_GATE_CLOSED and refused.locks.has(&"gate_campo_obra"),
+	_expect(not refused.ok and refused.reason == RoadNavigator.REASON_GATE_CLOSED
+			and refused.locks.has(&"gate_campo_obra"),
 			"%s in Campo is refused behind gate_campo_obra: %s" % [far.id, refused])
 	var allowed: Dictionary = RoadNavigator.route(graph, shed, far.position, [&"gate_campo_obra"])
 	_expect(allowed.ok and allowed.locks.has(&"gate_campo_obra"),
