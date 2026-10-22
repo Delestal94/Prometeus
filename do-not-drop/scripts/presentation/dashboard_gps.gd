@@ -41,6 +41,8 @@ var detail_label: Label3D
 ## The bomb code line, over the whole screen while there is one.
 var code_label: Label3D
 var arrow: MeshInstance3D
+## The planned path around the vehicle, behind the text (D-0308.1c).
+var route_map: DashboardRouteMap
 ## Which house the screen points at (-1 once it points at the goal, or in
 ## Endless).
 var target_house: int = 0
@@ -87,11 +89,15 @@ func refresh() -> void:
 		target_house = int(guidance.get("house", -1))
 		distance_label.text = _metres(float(guidance.distance)) if not guidance.is_empty() else "—"
 		detail_label.text = String(guidance.get("label", ""))
+		if guidance.has("game_minutes"):
+			detail_label.text += " · " + tr("WORLD_GPS_ETA") % ceili(float(guidance.game_minutes))
 		arrow.visible = not guidance.is_empty()
 		if not guidance.is_empty():
 			_point_arrow(truck, guidance.waypoint)
+		_draw_route(truck, guidance.get("polyline", PackedVector2Array()))
 		_show_bomb_code()
 		return
+	route_map.visible = false
 	if route == null:
 		_show_endless()
 		_show_bomb_code()
@@ -119,6 +125,13 @@ func refresh() -> void:
 	_show_bomb_code()
 
 
+## The planned path as a faint line behind the text, the truck's heading up.
+func _draw_route(truck: Node3D, polyline: PackedVector2Array) -> void:
+	var right := Vector2(truck.global_basis.x.x, truck.global_basis.x.z).normalized()
+	var forward := Vector2(-truck.global_basis.z.x, -truck.global_basis.z.z).normalized()
+	route_map.show_route(polyline, Vector2(truck.global_position.x, truck.global_position.z), right, forward)
+
+
 ## The code of the box about to go off (and a "+N" for the rest) fills the
 ## screen, big, in the alert colour when it is close; the distance, the detail
 ## and the arrow step aside while it shows.
@@ -131,6 +144,7 @@ func _show_bomb_code() -> void:
 	if not shown:
 		return
 	arrow.visible = false
+	route_map.visible = false
 	code_label.text = ", ".join(code_lines(codes, MAX_CODE_LINES, tr("WORLD_GPS_CODE"), tr("WORLD_GPS_CODE_MORE")))
 	code_label.modulate = ALERT if float(codes[0]["seconds"]) <= 6.0 else WARN
 
@@ -247,6 +261,8 @@ func _build_screen() -> void:
 	# QuadMesh faces +Z; the driver is on -Z.
 	screen.rotation.y = PI
 	add_child(screen)
+	route_map = DashboardRouteMap.new()
+	add_child(route_map)
 	arrow = MeshInstance3D.new()
 	arrow.name = "Arrow"
 	var prism := PrismMesh.new()

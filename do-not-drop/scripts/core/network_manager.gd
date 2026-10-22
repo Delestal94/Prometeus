@@ -137,14 +137,17 @@ const MAX_PLAYERS: int = 8
 ## 50: CompanyNet's _request takes a new kind, shop_buy, and _apply_event a new
 ## one, shop_bought {item, money, minute}: the company shop's purchases, only the
 ## host's go through and a client's is refused with host_only (company mode, D-0518).
-## 51: CompanyNet's _request takes two new kinds, box_restock {station, supply} and
+## 51: CompanyNet's _apply_event takes a new host kind, units_spoiled {product, qty,
+## location}: cold products left outside a fridge rotted, and every peer discards them
+## from its stock (company mode, D-0616.b).
+## 52: CompanyNet's _request takes two new kinds, box_restock {station, supply} and
 ## box_discard {station}, and _apply_event two, box_restocked {table, supply, count} and
 ## box_discarded {table, box, contents, to[, pos]}: a packing table restocked and its open
 ## box thrown away, the units back in the hands or in a floor bundle (company mode, D-0715.c).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 51
+const PROTOCOL_VERSION: int = 52
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

@@ -264,6 +264,11 @@ static func forklift_motor_loop() -> AudioStreamWAV:
 	return _cached(&"forklift_motor_loop", _scene_builder(&"make_forklift_motor_loop"))
 
 
+## The shed forklift's hydraulics while its forks move (forklift_cues.gd).
+static func forklift_hydraulic_loop() -> AudioStreamWAV:
+	return _cached(&"forklift_hydraulic_loop", _scene_builder(&"make_forklift_hydraulic_loop"))
+
+
 static func river_flow_loop() -> AudioStreamWAV:
 	return _cached(&"river_flow_loop", _scene_builder(&"make_river_flow_loop"))
 

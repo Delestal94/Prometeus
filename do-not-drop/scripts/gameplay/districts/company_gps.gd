@@ -40,7 +40,12 @@ static func build(road_net: RoadNetwork, map: HouseMap, address_book: HouseAddre
 
 ## Where the screen points now, for a vehicle at `position` (x, z of the map).
 func guidance(position: Vector2) -> Dictionary:
-	var stop: StringName = trip.next_stop() if trip != null else &""
+	return guidance_to(position, trip.next_stop() if trip != null else &"")
+
+
+## The same for a vehicle whose next stop is already known (a peer that holds the trip's entry and the order
+## book, not the host's Trip): `stop` is a HouseMap id, or empty to point at the shed.
+func guidance_to(position: Vector2, stop: StringName) -> Dictionary:
 	var spot: HouseSpot = houses.spot(stop) if stop != &"" and houses != null else null
 	var target: Vector2
 	if spot != null:

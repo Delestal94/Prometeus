@@ -42,7 +42,7 @@ extends Node
 ## `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`), jack_loaded and jack_departed, the pallets of
 ## the day's truck and its leaving (D-0605.b, D-0618.b, CompanyRoot), order_added / order_expired, the day's
 ## orders (D-0813, CompanyOrdersNet, `orders`) and wallet_moved, money in or out that no request led to (D-0517,
-## CompanyWalletNet, publish_wallet()).
+## CompanyWalletNet, publish_wallet()) and units_spoiled, cold products that rotted (D-0616.b, CompanyColdNet).
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to
 ## Inventory.stock_changed: that one fires in the middle of applying an event, and a request
@@ -96,12 +96,13 @@ const EVENT_KINDS: Array[StringName] = [
 	CompanyPallets.DEPARTED, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
 	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanySupplierNet.ORDERED, WALLET, CompanyShopNet.BOUGHT,
 	CompanyTableNet.RESTOCKED, CompanyTableNet.DISCARDED,
+	CompanyColdNet.SPOILED,
 ]
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
 ## publish_wallet()); never units_moved.
 const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.DEPARTED,
 	CompanyPallets.FORK, CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED,
-	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, WALLET]
+	CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, WALLET, CompanyColdNet.SPOILED]
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a later snapshot covers them anyway.
@@ -402,6 +403,7 @@ func snapshot() -> Dictionary:
 			stored.erase("inventory")
 			stored.erase("supplier_calendar")
 			stored.erase("pallets")
+			stored.erase("cold_clocks")
 			data["company"] = stored
 	for key: String in _parts:
 		var take: Callable = _parts[key][0]
@@ -843,6 +845,8 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 			applied = wallet.apply(company, data)
 		CompanyShopNet.BOUGHT:
 			applied = shop.apply(company, data)
+		CompanyColdNet.SPOILED:
+			applied = CompanyColdNet.apply(inventory, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false

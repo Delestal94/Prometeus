@@ -610,10 +610,24 @@ voto es D-0518.b).
     layout o snapshot. Va con D-0910.2 o con D-0511.2;
   - un vehículo comprado entra a `fleet` como dato; que aparezca en el mundo es de cada vehículo (D-1207, D-1221…).
 
-## 14. Lo construido (D-0715.c): reponer la mesa y tirar la caja
+## 14. Lo construido (D-0616.b): la leche que se echa a perder
+
+- **Evento** `units_spoiled` `{product, qty, location}` (protocolo 51): lo publica solo el host (`HOST_EVENT_KINDS`, ningún
+  pedido lo origina) cuando `ColdChainTick` ve que las unidades de un producto frío llevan `COLD_SPOIL_MINUTES` fuera
+  de una heladera; cada peer, el host también, lo aplica con `Inventory.discard` (`CompanyColdNet.apply`, una rama de
+  `_apply_state()`). Es el stock del lugar entero. No dice qué pedidos pierden reserva: `discard` recorta las
+  reservas más nuevas hasta que entren y todos los peers tienen las mismas reservas (viajan en el snapshot), así que
+  todos recortan las mismas. Si el lugar no tiene esas unidades, el evento no entra y el cliente pide snapshot.
+- **Los relojes son solo del host** (`ColdChain`): el cliente ve la pérdida como stock y nada más. Van a
+  `CompanyState.cold_clocks` solo para el guardado (`ColdChainTick.write_clocks` antes de cada `CompanySave.save`) y
+  `CompanyNet.snapshot()` los saca de la parte `company`. Un guardado viejo sin esa clave carga con relojes en cero
+  (no hace falta subir `CompanySave.VERSION`).
+- `company_net.gd` queda en 996 de las 1000 líneas de gdlint: lo que siga va en archivos nuevos.
+
+## 15. Lo construido (D-0715.c): reponer la mesa y tirar la caja
 
 - **Peticiones** `box_restock` y `box_discard`, **eventos** `box_restocked` y `box_discarded` (filas 15a y 15b,
-  protocolo 51), por el `_request` / `_apply_event` de siempre: ningún RPC nuevo. Van con los otros pasos de la
+  protocolo 52), por el `_request` / `_apply_event` de siempre: ningún RPC nuevo. Van con los otros pasos de la
   mesa en `CompanyTableNet` (`check()` en el host después del alcance de `CompanyNet._pack`, `apply()` en cada
   peer, una rama de `_apply_state()` sin `_:`). Ninguna es crítica (regla 8): si se pierde, el jugador vuelve a
   apretar. Sin ellas una mesa sin cinta quedaba trabada con su caja en una sesión.
@@ -644,7 +658,7 @@ voto es D-0518.b).
   espera un snapshot (§3).
 - **Join tardío:** sin parte nueva del snapshot: los insumos van en `packing`, las unidades en `inventory` y la
   posición del bulto en `floor`.
-- **Líneas:** `company_net.gd` queda en 997 de las 1000 de gdlint: la próxima acción tiene que sacar algo antes
+- **Líneas:** `company_net.gd` queda en 999 de las 1000 de gdlint: la próxima acción tiene que sacar algo antes
   (p. ej. el armado de trozos `_take_chunk`).
 - Test: `test_company_table_restock_discard` (solo con los rechazos y los destinos de las unidades, eventos que
   no encajan, y host + cliente ENet + uno que entra tarde).

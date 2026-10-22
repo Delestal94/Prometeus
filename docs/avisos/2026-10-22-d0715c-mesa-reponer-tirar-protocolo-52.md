@@ -1,8 +1,8 @@
 # Aviso 2026-10-22 · reponer la mesa y tirar la caja abierta por red (D-0715.c)
 
-**Cambia el protocolo:** `PROTOCOL_VERSION` 50 -> 51 (`scripts/core/network_manager.gd`, zona compartida; solo la
+**Cambia el protocolo:** `PROTOCOL_VERSION` 50 -> 52 (`scripts/core/network_manager.gd`, zona compartida; solo la
 constante y su línea del historial). Ningún RPC nuevo ni firma distinta, pero `CompanyNet._request` acepta dos tipos
-nuevos y `_apply_event` dos más: un cliente con 50 y un host con 51 no se conectan (error de versión en el menú); con
+nuevos y `_apply_event` dos más: un cliente con 50 y un host con 52 no se conectan (error de versión en el menú); con
 el mismo número viejo el cliente descartaría esos eventos y quedaría desfasado. Al elegirlo no había PR abierto ni
 rama de `origin` por encima de 50 (`docs/convenciones-godot.md` §6).
 
