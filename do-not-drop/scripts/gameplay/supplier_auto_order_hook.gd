@@ -13,8 +13,8 @@ extends Node
 var net: CompanyNet = null
 ## The last day this hook ran for.
 var _done_day: int = 0
-## Ids of the orders that came in today (order_added since the last OPENING). The book keeps the whole session's
-## orders (nothing closes them yet, and Order has no day), so "today's orders" are the ones seen arriving today.
+## Ids of the orders that came in today (order_added since the last OPENING). The book is emptied at each day's end
+## (D-0851) and Order has no day, so "today's orders" are the ones seen arriving today.
 var _today: Dictionary = {}
 
 

@@ -292,6 +292,10 @@ func _test_auto_order_close_early() -> void:
 		"a repeated CLOSING does not double the order")
 	_now += 1000
 	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.CLOSING and net.orders.book.open_orders().is_empty()
+		and net.supplier.schedule.ordered_for(2) == want,
+		"the poll with no trips out closes the day's orders (D-0851) and the day stays CLOSING")
+	cycle.poll()
 	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and net.supplier.schedule.ordered_for(2) == want
 		and not cycle.close_early(), "...nor does the summary, and a second close_early is refused")
 	_free(parts)
@@ -365,12 +369,13 @@ func _test_auto_order_two_days() -> void:
 	_expect(net.supplier.schedule.ordered_for(2) == {&"antique_lamp": 5, &"porcelain_vase": 4},
 		"two days: day 1 orders for day 2")
 	_now += 1000
+	cycle.poll()  # D-0851: this poll closes day 1's orders; SUMMARY comes with the next one.
 	cycle.poll()
 	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and cycle.next_day(), "two days: day 2 opens")
 	_now += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0) + 1000
 	cycle.poll()
 	_expect(cycle.phase() == DayCycle.Phase.OPERATING and cycle.current_day() == 2, "two days: day 2 is OPERATING")
-	_expect(net.orders.book.size() == 2, "two days: the book still holds day 1's open orders (closed ones are pruned)")
+	_expect(net.orders.book.size() == 0, "two days: day 1's orders closed at its end and pruned at day 2's opening")
 	net.inventory.receive(&"antique_lamp", 3, &"shelf_a")
 	_add_orders(net, "d2", {&"antique_lamp": 6}, 15)
 	cycle.close_early()
