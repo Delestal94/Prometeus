@@ -41,6 +41,10 @@ var ledger: Array[Dictionary] = []
 ## The supplier calendar (D-0603.b.2), in the SupplierSchedule.to_dict() form: what was ordered and the
 ## day its truck comes. The live one is CompanyNet's; the host writes it here after every order.
 var supplier_calendar: Dictionary = {"deliveries": {}}
+## The supplier pallets and the pallet jack (D-0605.c), in the CompanyPallets.to_save() form: the book, where the
+## jack stands and the delivery note. The live one is CompanyNet's; the host writes it here before every save.
+## {} for none (a company before D-0605.c, or a broken save): the shed starts with an empty book.
+var pallets: Dictionary = {}
 
 var _active: bool = false
 
@@ -91,6 +95,7 @@ func to_dict() -> Dictionary:
 		"inventory": inventory.duplicate(true),
 		"ledger": ledger.duplicate(true),
 		"supplier_calendar": supplier_calendar.duplicate(true),
+		"pallets": pallets.duplicate(true),
 	}
 
 
@@ -138,6 +143,9 @@ func from_dict(data: Dictionary) -> bool:
 	var calendar: Variant = data.get("supplier_calendar", {})
 	if calendar is Dictionary:
 		supplier_calendar = SupplierSchedule.from_dict(calendar).to_dict()
+	var saved_pallets := CompanyPallets.new()
+	if saved_pallets.load_save(data.get("pallets")):
+		pallets = saved_pallets.to_save()
 	_active = true
 	return true
 
@@ -272,6 +280,7 @@ func _set_defaults() -> void:
 	inventory = Inventory.new().to_dict()
 	ledger = []
 	supplier_calendar = SupplierSchedule.new().to_dict()
+	pallets = {}
 	company_name = ""
 	company_seed = 0
 

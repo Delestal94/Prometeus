@@ -130,6 +130,18 @@ const SUPPLY_CAPACITY: Dictionary = {
 ## A supply counts as low at or under this share of its capacity.
 const SUPPLY_LOW_RATIO: float = 0.25
 
+## Cooler with ice (D-0721, ColdPack): a cold product lasts COLD_BASE_MINUTES in a box without ice
+## and COLD_PER_ICE_MINUTES more per ice pack (up to ICE_PACKS_MAX); an ice pack costs ICE_PACK_COST.
+const COLD_BASE_MINUTES: float = 15.0
+const COLD_PER_ICE_MINUTES: float = 25.0
+const ICE_PACKS_MAX: int = 2
+const ICE_PACK_COST: int = 2
+
+## Gift wrap (D-0723, GiftWrap): a gift order delivered in a wrapped box pays GIFT_WRAP_BONUS of its
+## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
+const GIFT_WRAP_BONUS: float = 0.15
+const GIFT_WRAP_COST: int = 3
+
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
 const WAREHOUSE_GRID_M: float = 1.0
@@ -336,6 +348,11 @@ const JACK_PUSH_STEP_M: float = 1.3
 const FORKLIFT_MAX_LIFT_M: float = 2.4
 const FORKLIFT_LIFT_SPEED: float = 0.55
 const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
+## The forklift in the world (D-0606.b): how far ahead of its driver the middle of a pallet on the forks lies
+## (m), and how long one mast request moves the forks at most (s: the driver asks again while the key is held,
+## so a lost "stop" cannot send the forks to the top).
+const FORKLIFT_TIP_M: float = 1.2
+const FORKLIFT_MAST_BURST_S: float = 0.5
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0

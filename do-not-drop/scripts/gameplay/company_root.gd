@@ -277,6 +277,7 @@ func _add_net(state: COMPANY_STATE) -> void:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
 	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
+	net.pallets.load_save(state.pallets)
 	_hosted_state = state
 
 
@@ -294,6 +295,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.attach(net, clock, state)
 	day_cycle.opening_notice = _opening_notice
 	day_cycle.crew_in_shed = _crew_in_shed
+	add_child(CompanySoloPause.create(clock, day_cycle))
 	_add_business_tick()
 
 
@@ -340,9 +342,9 @@ func _event_bus() -> Node:
 	return get_node_or_null(^"/root/EventBus")
 
 
-func _on_day_summary(_day: int, summary: Dictionary) -> void:
+func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
-		summary_panel.open(summary)
+		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [])
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.
@@ -390,6 +392,7 @@ func save_interrupted_day() -> bool:
 		return false
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
+		_hosted_state.pallets = net.pallets.to_save()
 	var saved: bool = CompanySave.save(_hosted_state, save_slot, save_dir, true)
 	if not saved:
 		push_warning("CompanyRoot: the interrupted day %d could not be saved to %s"
@@ -411,6 +414,7 @@ func save_closed_day() -> bool:
 		return false
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
+		_hosted_state.pallets = net.pallets.to_save()
 	var next_opening := COMPANY_STATE.new()
 	next_opening.from_dict(_hosted_state.to_dict())
 	next_opening.day = _hosted_state.day + 1
