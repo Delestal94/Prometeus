@@ -97,12 +97,16 @@ func mark_out(id: StringName, trip_id: StringName) -> bool:
 ## Closes the order and returns what it pays (late penalty included, now_min
 ## defaults to the last expire() time), or -1 if it cannot be delivered now. A pay_override of 0 or
 ## more is what the customer pays instead (OrderSettlement, D-0815: wrong box, broken units...).
+## stars, the customer's rating (OrderRating, D-0816.b), is kept as "stars" when it is
+## CompanyTuning.STARS_MIN to STARS_MAX; any other value leaves the order unrated.
 func mark_delivered(
-	id: StringName, quality: int, intact: bool, now_min: int = -1, pay_override: int = -1
+	id: StringName, quality: int, intact: bool, now_min: int = -1, pay_override: int = -1, stars: int = 0
 ) -> int:
 	if not _move(id, Order.STATE_DELIVERED):
 		return -1
 	var order: Dictionary = _orders[id]
+	if stars >= CompanyTuning.STARS_MIN and stars <= CompanyTuning.STARS_MAX:
+		order["stars"] = stars
 	order["quality"] = clampi(quality, 0, 100)
 	order["intact"] = intact
 	var when: int = now_min if now_min >= 0 else _now_min
@@ -215,7 +219,7 @@ func from_dict(data: Dictionary) -> void:
 		for key: String in ["box_id", "trip_id", "late_from"]:
 			if raw.has(key):
 				order[key] = StringName(raw[key])
-		for key: String in ["quality", "paid"]:
+		for key: String in ["quality", "paid", "stars"]:
 			if raw.has(key):
 				order[key] = int(raw[key])
 		if raw.has("intact"):

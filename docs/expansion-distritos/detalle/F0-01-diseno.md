@@ -385,7 +385,11 @@ Decisión: `docs/decisiones/2026-10-22-expansion-en-steam.md`.
 - [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
 - [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el
-  2026-10-22; falta D-0151.3b: el carrito precargado, **menos lo ya pedido para mañana** con la línea "ya pedido: X"
+  2026-10-22). **D-0151.3b hecha (2026-10-22):** al pasar a CLOSING (20:00 o cierre anticipado), si no hay camión
+  para mañana, el host manda el sugerido una vez por día (`SupplierAutoOrder` puro + `SupplierAutoOrderHook`, que
+  sigue `event_applied`), por el mismo `ask()` que un pedido de jugador y como evento `ORDERED` con `peer` 0
+  (`CompanySupplierNet.AUTO_PEER`); el resumen del día dice "Pedido automático al proveedor: N unidades". Falta
+  **D-0151.3c**: el carrito que se abre precargado con el sugerido menos lo ya pedido. Lo que decía D-0151.3b: el carrito precargado, **menos lo ya pedido para mañana** con la línea "ya pedido: X"
   ([portapapeles.md](../diseno/portapapeles.md) §3), y el envío del host al pasar a CLOSING con su línea en el
   resumen) (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
   producto, recortado desde el de menos unidades hasta `plata − RENT_PER_DAY − SOLO_ORDER_CASH_RESERVE`; el carrito

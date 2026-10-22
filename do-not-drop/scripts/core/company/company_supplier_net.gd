@@ -22,6 +22,10 @@ extends RefCounted
 ## asked (the order screen of that peer waits for it). Every peer, the host first, applies it with
 ## SupplierSchedule.place() after dropping the days before `order_day` (they are past), checking only
 ## that the data fits (rule 6). Refusals: bad_data, no_funds, day_closed, too_much.
+##
+## The automatic order of the day's close (D-0151.3b, SupplierAutoOrderHook) is the same event with `peer`
+## AUTO_PEER (0, nobody's id): every peer notes its units in auto_units() as it applies it, so the day's summary
+## tells it; the host checks it with ask() like a request and publishes it itself (HOST_EVENT_KINDS).
 
 const ORDER: StringName = &"supplier_order"
 const ORDERED: StringName = &"supplier_ordered"
@@ -38,6 +42,8 @@ const MAX_DAYS: int = 32
 ## Products of one day's truck a snapshot may carry.
 const MAX_DAY_PRODUCTS: int = 64
 const MAX_ID_LENGTH: int = 64
+## The `peer` of the order the host sends by itself at the day's close.
+const AUTO_PEER: int = 0
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 ## The wallet does not cover the order's total.
@@ -52,6 +58,10 @@ var schedule: SupplierSchedule = SupplierSchedule.new()
 ## Host: who sells (null: any product of `products`) and the catalog, product id -> ProductDefinition.
 var supplier: SupplierDefinition
 var products: Dictionary = {}
+
+## Order day -> units of the automatic order of that day's close (AUTO_PEER), on every peer. Not part of
+## the snapshot: a peer that joins after the order only misses the summary's line about it.
+var _auto_units: Dictionary = {}
 
 
 ## The request data of an order: the lines ([{product, qty}], SupplierOrderCart.to_array()) as one key
@@ -128,7 +138,28 @@ func apply(data: Dictionary) -> bool:
 		if int(already.get(StringName(line["product"]), 0)) + int(line["qty"]) > MAX_DAY_QTY:
 			return false
 	schedule.forget_before(order_day)
-	return schedule.place(order_day, lines)
+	if not schedule.place(order_day, lines):
+		return false
+	_note_auto(data, order_day, lines)
+	return true
+
+
+## Units the automatic order of `order_day`'s close put in the calendar (0: none, or a peer that joined later).
+func auto_units(order_day: int) -> int:
+	return int(_auto_units.get(order_day, 0))
+
+
+## Keeps the units of an order that came from AUTO_PEER; the days before it are past.
+func _note_auto(data: Dictionary, order_day: int, lines: Array) -> void:
+	for day: int in _auto_units.keys():
+		if day < order_day:
+			_auto_units.erase(day)
+	if int(data["peer"]) != AUTO_PEER:
+		return
+	var units: int = 0
+	for line: Dictionary in lines:
+		units += int(line["qty"])
+	_auto_units[order_day] = int(_auto_units.get(order_day, 0)) + units
 
 
 ## The lines of a supplier_ordered as they go into place(), or [] when the event does not fit.

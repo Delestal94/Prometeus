@@ -22,8 +22,7 @@ extends Node3D
 ## one: the same player at SPAWN it always was.
 ##
 ## The company's vehicles (`fleet`) park in the playon outside the shed's exit on every peer and can be driven
-## (CompanyFleet, D-0302.2.b);
-## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
+## (CompanyFleet, D-0302.2.b); no route and no run: Delivery and Endless ignore all of this.
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
 ## starts from the company's stock and, until stations exist, refuses every units
@@ -361,7 +360,8 @@ func _event_bus() -> Node:
 
 func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
-		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [])
+		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [],
+			net.supplier.auto_units(day) if net != null else 0)
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.
@@ -493,8 +493,7 @@ func _on_host_day_restored(_snapshot_seq: int) -> void:
 	_publish_presence()
 
 
-## A new day (or phase) of the company: Steam shows the new day (D-2009). The shed follows the
-## units and layout events itself (CompanyShed.follow(), D-0910).
+## A new day (or phase): Steam shows it (D-2009); the shed follows units and layout itself (CompanyShed.follow()).
 ## A day_phase that closes the day (SUMMARY) saves it on the host (save_closed_day(), D-0236): once,
 ## the summary takes no other day_phase until next_day(). OPENING plans the orders (host); order_added (D-0813.1).
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
@@ -509,6 +508,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		var bus: Node = _event_bus()
 		if bus != null:
 			bus.emit_signal(&"order_added", StringName((data["order"] as Dictionary)["id"]))
+	elif kind == CompanyColdNet.SPOILED:
+		SpoilNotice.announce(_event_bus(), data)
 
 
 ## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
@@ -720,6 +721,7 @@ func _add_supplier_orders() -> void:
 	if net.is_host() and _hosted_state != null:
 		_hosted_state.supplier_calendar = CompanySupplierNet.load_saved(supplier_schedule, _hosted_state)
 		net.event_applied.connect(_on_supplier_ordered)
+		SupplierAutoOrderHook.attach(self, net)
 	supplier_board = SupplierBoard.new()
 	supplier_board.name = "SupplierBoard"
 	add_child(supplier_board)
@@ -848,9 +850,9 @@ func _add_crew() -> void:
 	_world.add_child(_spawner)
 	_spawner.spawned.connect(_on_crew_spawned)
 	_spawns_crew = net != null and net.is_host()
-	if session != null and not session.peer_level_ready.is_connected(_on_peer_level_ready):
-		session.peer_level_ready.connect(_on_peer_level_ready)
-		session.roster_changed.connect(_on_roster_changed)
+	if session != null and not session.peer_level_ready.is_connected(_on_crew_changed):
+		session.peer_level_ready.connect(_on_crew_changed)
+		session.roster_changed.connect(_on_crew_changed)
 	_sync_crew()
 
 
@@ -937,11 +939,8 @@ func _crew_ids() -> Array[int]:
 	return ids
 
 
-func _on_peer_level_ready(_peer_id: int) -> void:
-	_sync_crew()
-
-
-func _on_roster_changed(_peer_ids: Array) -> void:
+## A peer's world is up (peer_level_ready: its id) or the roster changed (roster_changed: the ids).
+func _on_crew_changed(_why: Variant) -> void:
 	_sync_crew()
 
 

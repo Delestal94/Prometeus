@@ -50,3 +50,11 @@ Decisión: la partición se calcula de los ítems del pedido, no se guarda: todo
 Decisión: la nota sale del id del pedido (`String.hash`), no de un azar: todos los peers obtienen la misma sin red y no cambia `Order` ni el protocolo. Decisión: son claves de `strings_ui.csv` y no texto libre del cliente, para que se traduzca; la lista crece con D-0822 (60 textos).
 **Test** `test_customer_note`: nota repetible, pedido sin id sin nota, pool de regalo vs. común, las 4 comunes se usan, todas las claves están en el CSV, se escribe una vez, ida y vuelta por JSON, clave falsa y snapshot viejo.
 **Hecho cuando:** la caja lleva la nota de su pedido (el test pasa).
+
+### D-0732 · Etiquetas de colores por distrito — B · Sonnet 5.5 · low · Aviso: no · F2
+**[x] Hecho (2026-10-22, PR pendiente)** — `DistrictLabel` (`scripts/gameplay/business/district_label.gd`) + 9 claves `UI_COMPANY_DISTRICT_*` en `strings_ui.csv`; `test_district_label`. Pintar la franja en `package_shipping_label.gd` y agrupar cajas por color en despacho quedan para D-0732.b (ver `revisar/D-0732.md`).
+**Depende de:** D-0707 (`OrderLabel`), D-0114 (tabla de zonas)
+**Qué:** `class_name DistrictLabel`, estático. Un color de franja (`COLORS`) y una clave de nombre (`NAME_KEYS`) por distrito (los 9 ids de `CompanyRoot.ZONE_COLORS`). `color_for(zone)`, `color_for_order(order)`, `name_key`, `district_name`, `same_district(a, b)`. Una zona desconocida usa `FALLBACK_COLOR` (gris): una etiqueta nunca queda sin color.
+Decisión: los colores no son los del terreno (`ZONE_COLORS`, apagados): son saturados y distintos entre sí para leerse en un papel chico. Decisión: la franja sale de `order.zone`, no se guarda en `PackedBox`: no cambia el protocolo ni los snapshots.
+**Test** `test_district_label`: cada distrito tiene color y nombre y no se repiten; las zonas con tarifa de envío tienen color; zona desconocida y pedido sin zona usan el gris; las claves de nombre están en el CSV; `same_district`.
+**Hecho cuando:** la etiqueta de cada distrito tiene su color (el test pasa).

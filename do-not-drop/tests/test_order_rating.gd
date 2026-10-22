@@ -9,7 +9,8 @@ extends SceneTree
 ## - a result that is not ok (open order, unknown order, settled twice) rates 0;
 ## - rating changes no state: not the wallet, the reputation, the ledger nor the book, and the
 ##   result passed in stays as it was;
-## - settle() reports the same stars, and the numbers come from CompanyTuning;
+## - settle() reports the same stars and keeps them in the book (D-0816.b); the numbers come from
+##   CompanyTuning;
 ## - the labels exist in both languages for 1 to 5, and none for 0 or 6.
 
 const KEYS: Array[String] = [
@@ -153,7 +154,7 @@ func _test_no_side_effects(state: Node) -> void:
 	_expect(state.ledger.size() == ledger, "rating writes no ledger line")
 	_expect(book.to_dict() == snapshot, "rating leaves the book as it was")
 	_expect(result == before, "rating leaves the result as it was")
-	_expect(not book.get_order(&"o1").has("stars"), "the book keeps no stars yet (D-0816.b)")
+	_expect(book.get_order(&"o1").get("stars") == result["stars"], "settle() left those stars in the book (D-0816.b)")
 	book.free()
 
 

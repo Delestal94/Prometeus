@@ -136,7 +136,7 @@ const MAX_PLAYERS: int = 8
 ## D-0302.2.b).
 ## 50: CompanyNet's _request takes a new kind, shop_buy, and _apply_event a new
 ## one, shop_bought {item, money, minute}: the company shop's purchases, only the
-## host's go through and a client's is refused with host_only (company mode, D-0518);
+## host's go through and a client's is refused with host_only (company mode, D-0518).
 ## 51: CompanyNet's _apply_event takes a new host kind, units_spoiled {product, qty,
 ## location}: cold products left outside a fridge rotted, and every peer discards them
 ## from its stock (company mode, D-0616.b).
@@ -144,10 +144,19 @@ const MAX_PLAYERS: int = 8
 ## host tells the driver of a company vehicle it holds at the gate why (one with cargo that may not
 ## leave with VEHICLES_FAR_MAX out: before, it crossed and counted as out); an older client gets an
 ## RPC it doesn't have (company mode, D-0316.2).
+## 53: the "orders" snapshot part carries `stars` (1-5, the customer's rating) on a
+## delivered order; an older client refuses that book (company mode, D-0816.b).
+## 54: CompanyNet's _request takes two new kinds, box_restock {station, supply} and
+## box_discard {station}, and _apply_event two, box_restocked {table, supply, count} and
+## box_discarded {table, box, contents, to[, pos]}: a packing table restocked and its open
+## box thrown away, the units back in the hands or in a floor bundle (company mode, D-0715.c).
+## 55: CompanyNet's supplier_ordered may come from the host with no request and peer 0
+## (AUTO_PEER): the host's automatic supplier order at the day's close; an older client applies
+## it but shows no summary line (company mode, D-0151.3b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 52
+const PROTOCOL_VERSION: int = 55
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

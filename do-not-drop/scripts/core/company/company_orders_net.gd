@@ -56,7 +56,7 @@ const HOUSE_INFIX: String = "_house_"
 const ORDER_KEYS: Array[String] = [
 	"id", "customer", "zone", "house_id", "items", "requirements", "created_min", "due_min", "pay", "state",
 ]
-const BOOK_KEYS: Array[String] = ["box_id", "trip_id", "late_from", "quality", "paid", "intact"]
+const BOOK_KEYS: Array[String] = ["box_id", "trip_id", "late_from", "quality", "paid", "intact", "stars"]
 
 ## The shared book. Read it, never write it or replace it: only events change it (and the snapshot part
 ## reads this one).
@@ -297,7 +297,8 @@ static func _requirements_ok(value: Variant) -> bool:
 
 
 ## What OrderBook adds to an order as it moves on, when present: box_id and trip_id short text, late_from
-## a known state, quality 0..100, paid 0..MAX_PAY, intact a bool.
+## a known state, quality 0..100, paid 0..MAX_PAY, intact a bool, stars (the customer's rating,
+## OrderBook.mark_delivered()) CompanyTuning.STARS_MIN..STARS_MAX and only on a delivered order.
 static func _book_fields_ok(order: Dictionary) -> bool:
 	for key: String in ["box_id", "trip_id"]:
 		if order.has(key) and not _text_ok(order[key], true):
@@ -311,7 +312,16 @@ static func _book_fields_ok(order: Dictionary) -> bool:
 		return false
 	if typeof(paid) != TYPE_INT or int(paid) < 0 or int(paid) > MAX_PAY:
 		return false
+	if order.has("stars") and not _stars_ok(order["stars"], order["state"]):
+		return false
 	return typeof(order.get("intact", true)) == TYPE_BOOL
+
+
+## A rating as OrderBook.mark_delivered() keeps it: an int from STARS_MIN to STARS_MAX on a delivered order.
+static func _stars_ok(stars: Variant, state: Variant) -> bool:
+	if typeof(stars) != TYPE_INT or StringName(state) != Order.STATE_DELIVERED:
+		return false
+	return int(stars) >= CompanyTuning.STARS_MIN and int(stars) <= CompanyTuning.STARS_MAX
 
 
 ## A house the order of `zone` may name: one of the map's delivery houses (HouseAddresses, D-0312) or
