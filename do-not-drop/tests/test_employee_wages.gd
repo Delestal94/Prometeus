@@ -31,7 +31,7 @@ func _run() -> void:
 		_expect(is_equal_approx(level.output, OUTPUT.get(level.id, -1.0)), "%s output" % level.id)
 		var key: String = EmployeeLevels.name_key(level)
 		_expect(tr(key) != key, "%s has a name" % level.id)
-	_expect(ids == [&"novice", &"regular", &"expert"] as Array[StringName], "cheapest first: %s" % [ids])
+	_expect(ids == [&"novice", &"regular", &"expert"], "cheapest first: %s" % [ids])
 	for i: int in range(1, levels.size()):
 		_expect(levels[i].wage > levels[i - 1].wage, "%s costs more than %s" % [levels[i].id, levels[i - 1].id])
 		_expect(levels[i].output > levels[i - 1].output, "%s does more than %s" % [levels[i].id, levels[i - 1].id])
