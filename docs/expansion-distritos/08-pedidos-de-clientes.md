@@ -20,7 +20,7 @@
 | ✅ D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
 | ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
 | D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
-| D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
+| ✅ D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
 | D-0815 | Pedido completado → cobro y reputación | constructor-progresion | medium | test |
 | D-0816 | Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
 | D-0817 | Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
