@@ -450,3 +450,7 @@ WORLD_DOOR_CHEER_2,¡Qué rápido! Muy bien,That was quick! Well done
 WORLD_DOOR_CHEER_3,Todo en orden. ¡Gracias!,All in order. Thank you!
 WORLD_DOOR_SHRUG_1,Bueno... llegó,Well... it arrived
 WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better
+WORLD_TOW_DONE,La grúa te llevó al playón (-$%d),The tow truck took you to the yard (-$%d)
+WORLD_TOW_NO_TRIP,No hay salida abierta para este vehículo,No open trip for this vehicle
+WORLD_TOW_NOT_STUCK,El vehículo todavía anda: volvé manejando,The vehicle still runs: drive back
+WORLD_TOW_NO_MONEY,No alcanza para la grúa: hacen falta $%d,Not enough money for the tow: it costs $%d
