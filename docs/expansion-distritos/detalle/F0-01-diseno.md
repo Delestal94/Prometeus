@@ -217,7 +217,7 @@ en el grupo 05, después de cerrar el corte vertical.
 **Hecho cuando:** `diseno/eventos-del-dia.md` tiene los 15 eventos y su tabla resumen.
 
 ### D-0124 · Diseño de las licencias — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — sección "Las licencias" de `diseno/hitos.md`: 5 licencias con precio (650 / 600 / 1 000 / 1 000 / 1 000), qué abren, compra única de la empresa en la tienda, nunca se pierden, claves de `equipment` con tipo de tienda `license` y `requires` para vehículos.
+**[x] Hecho (2026-10-22, PR #640)** — sección "Las licencias" de `diseno/hitos.md`: 5 licencias con precio (650 / 600 / 1 000 / 1 000 / 1 000), qué abren, compra única de la empresa en la tienda, nunca se pierden, claves de `equipment` con tipo de tienda `license` y `requires` para vehículos.
 **Depende de:** D-0115, D-0117, D-0118
 **Qué:** completar la sección "Las licencias" de `diseno/hitos.md` (D-0118 fijó cuándo se ofrecen):
 - [x] D-0124.1 Precio y qué abre (y qué no) cada una de las cinco, sin mover los días de apertura de la tabla
