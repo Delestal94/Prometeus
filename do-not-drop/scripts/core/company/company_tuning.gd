@@ -212,6 +212,23 @@ const CART_MAX_UNITS: int = 6
 const CART_PUSH_STEP_M: float = 1.2
 ## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
 const CART_CLEARANCE_M: float = 0.7
+## Holding the cart's handle (D-0610.c2.b, PickingCartGrip): the cart keeps at least CART_GRIP_DISTANCE_M from
+## whoever holds it (centre of the cart to their feet, m, on the floor), pushed ahead at most once every
+## CART_GRIP_INTERVAL_S, plus a lead: how far they walk towards it in CART_GRIP_LEAD_S (the interval and the
+## cushion a remote player is drawn with on the host) plus their round trip, at most CART_GRIP_MAX_LEAD_M. So
+## the step their peer sees late is already ahead of where they walk by then, and the next one comes in time.
+## The deck is solid: a player (radius 0.35) touches it at most 0.93 m from the centre (towards a corner), so
+## (CART_GRIP_DISTANCE_M - 0.93) / CART_GRIP_INTERVAL_S stays over Player.WALK_SPEED: even with no lead a
+## holder pressed against the deck gets room faster than they walk and is never held back.
+## The shortest step worth a request; who is CART_GRIP_RELEASE_M away lets go (past DISTANCE + MAX_LEAD, where
+## a cart that ran ahead stops, and within reach of it); after a `blocked` the grip waits CART_GRIP_BLOCKED_PAUSE_S.
+const CART_GRIP_DISTANCE_M: float = 1.5
+const CART_GRIP_LEAD_S: float = 0.25
+const CART_GRIP_MAX_LEAD_M: float = 1.5
+const CART_GRIP_RELEASE_M: float = 3.6
+const CART_GRIP_MIN_STEP_M: float = 0.1
+const CART_GRIP_INTERVAL_S: float = 0.15
+const CART_GRIP_BLOCKED_PAUSE_S: float = 0.6
 ## How close two picking carts may stand, centre to centre on the floor (m, D-0610.c): past the diagonal of the
 ## 1.0 x 0.6 m platform, so two carts never overlap whichever way they face.
 const CART_SPACING_M: float = 1.2
