@@ -18,3 +18,10 @@ y su carga), con 2 a bordo y 7 cajas; los 2 vehículos lejos van juntos y cada u
 **Otras salidas estimadas (no aplicadas):** filtrar jugadores por distancia (2 lejos 58,7), pasajeros a 15/s
 (salida 41,6, no alcanza sola), keepalive que no despierte las cajas (−2,5), caja sin `hold_offset` si nadie
 la tiene (−2,1).
+
+**Salvedad (`auditor-red`, mismo día):** los números de las salidas suponen que cada caja y cada jugador encuentran
+*su* camioneta (hoy `get_first_node_in_group(&"vehicle")` da la primera: una caja en la segunda mandaría a 30/s,
+~+25 KB/s en "2 lejos") y no cuentan el delta de `care_state` de la caja cuidada (~6-7 KB/s cada una) ni las cajas
+que se cargan en el galpón (~4,4). Con eso la salida con 4 queda en ~42 de 40. No se cambia el test hoy porque
+esas piezas no existen todavía en el mundo de la empresa; D-2002.4 las cuenta (después de D-0302.2.b.2) y ahí se
+decide la palanca. Hasta entonces los presupuestos de las salidas **no** están cerrados.

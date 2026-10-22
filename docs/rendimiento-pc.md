@@ -266,7 +266,30 @@ el host en el galpón o a bordo de cada vehículo, y cada cliente. Cada caso da 
   resto 12,8: probablemente el freno de paquetes no confiables de ENet, con un solo proceso atendiendo a todos); el
   test compara cada cliente con el techo del modelo y el peor con el presupuesto.
 - **Lo que ninguno de los dos cuenta:** los deltas `ON_CHANGE` (anim_state, face_*, puertas, `driver_peer_id`,
-  visible); el margen los cubre. Los eventos de salida y el keepalive de `CompanyInterest` están solo en el modelo.
+  visible, marcha y freno de la camioneta). Los eventos de salida y el keepalive de `CompanyInterest` están solo en
+  el modelo. **No** es cierto que el margen cubra todo con vehículos afuera (`auditor-red`, 2026-10-22): ver
+  "Salvedades de D-2002.2" abajo.
+
+**Salvedades de D-2002.2 (`auditor-red`, 2026-10-22): los números de las salidas suponen cosas que todavía no
+existen y dejan afuera costos reales. Con el código de hoy, "con 4 jugadores entra" no está probado.**
+
+1. **Qué camioneta lleva cada cuerpo** (premisa, la resuelve D-0302.2.b.2): caja y jugador buscan su vehículo con
+   `get_first_node_in_group(&"vehicle")` (`package.gd` `_find_vehicle`, `player_ride.gd`), siempre la primera de
+   la flota. Una caja en la segunda camioneta queda en coordenadas del mundo, su `NetRestThrottle` nunca descansa
+   y manda a 30/s: en "2 lejos" son unos +25 KB/s para el de a bordo (~75 de 64 con 4). También se supone que la
+   caja en el rack viaja con la camioneta en el modo Empresa (hoy queda congelada sin ronda activa,
+   `package_handling.gd`) y que la camioneta se maneja.
+2. **`care_state` de la caja cuidada** (`package.tscn`, `ON_CHANGE`, republicado cada 0,1 s por
+   `package_rescue.gd`): ~520-620 B por envío, ~6-7 KB/s por caja cuidada para cada cliente que la ve. Salida con 4:
+   ~42 de 40; "2 lejos" con 4: ~63 de 64.
+3. **Cajas que se cargan en el galpón durante una salida** (30/s mientras se mueven): una por jugador que se queda
+   suma ~4,4 KB/s; salida con 4, ~40,0.
+4. **Pulsos de keepalive desfasados** (clientes con distinto `hidden_at`): el techo es 2,5 KB/s por cliente del
+   galpón, no 2,5 en total.
+5. **Al reaparecer la visibilidad** puede reenviarse cada `ON_CHANGE` (NodePaths y diccionarios de la caja): falta
+   verificarlo en el código de Godot 4.7.
+
+Todo eso entra en D-2002.4: el test tiene que contarlo antes de dar por buenos los presupuestos de las salidas.
 
 Carga de "galpón a full": cada jugador hace una acción de negocio por segundo (tomar, guardar, poner en la grilla,
 encintar; a bordo, entregar: una petición que el host convierte en un evento para todos) más una por segundo de
