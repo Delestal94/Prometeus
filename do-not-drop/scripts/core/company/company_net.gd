@@ -29,12 +29,12 @@ extends Node
 ## (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
 ## path, only to know which peers have their world up and when one comes up.
 ##
-## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section
-## 2; units_drop is critical), snapshot_request, the shed layout's place, move, rotate and sell
-## (D-0910: checked and applied by CompanyLayoutNet, `build`) and the shared packing tables' box_*
-## (rows 9 to 15, D-0715: CompanyTableNet, `table`). A task that adds an action appends its kind
-## to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule 8),
-## checks it in _handle_request() and applies its event in _apply_state().
+## Kinds today: units_take, units_store and units_drop (rows 5 to 7 of the contract's section 2; units_drop is
+## critical), snapshot_request, the shed layout's place, move, rotate and sell (D-0910: CompanyLayoutNet, `build`),
+## the shared packing tables' box_* (rows 9 to 15, D-0715: CompanyTableNet, `table`) and package_ack (a client has
+## a sealed box's package, D-0715.b: CompanyPackages, `table.packages`). A task that adds an action appends its
+## kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a player stuck, rule 8), checks it in
+## _handle_request() and applies its event in _apply_state().
 ##
 ## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its
 ## `pos` (a drop, or what a peer that left held), kept on every peer (floor_bundles) and taken
@@ -74,7 +74,7 @@ const REQUEST_KINDS: Array[StringName] = [
 	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE,
 	CompanyLayoutNet.MOVE, CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START,
 	CompanyTableNet.PLACE, CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL,
-	CompanyTableNet.STAMP, CompanyTableNet.TAPE,
+	CompanyTableNet.STAMP, CompanyTableNet.TAPE, CompanyPackages.ACK,
 ]
 ## Requests whose loss leaves a player stuck (rule 8: letting go of something). They spend
 ## RpcGuard's critical reserve once the sender's budget is gone.
@@ -208,6 +208,7 @@ var _rx_chunks: Dictionary = {}
 func _init() -> void:
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
+	table.packages.ask = request
 
 
 func _ready() -> void:
@@ -235,13 +236,12 @@ func _process(_delta: float) -> void:
 	poll_snapshot(Time.get_ticks_msec())
 
 
-## Asks the host for `kind` with `data` and returns the request id a refusal will carry
-## (request_rejected), 0 when there is nobody to ask (no tree, or a connection not up). On the
-## host, and playing solo, it goes through the same checks at once, as this peer's own
-## request (also when called while handling another peer's RPC). Nothing changes here until
-## the host's event comes back (rule 1: no prediction). The actor is whoever sends it: a peer
-## field in `data` means nothing. Called while an event is being applied (a stock_changed
-## listener), it is refused with an error and returns 0.
+## Asks the host for `kind` with `data` and returns the request id a refusal will carry (request_rejected), 0
+## when there is nobody to ask (no tree, or a connection not up). On the host, and playing solo, it goes through
+## the same checks at once, as this peer's own request (also when called while handling another peer's RPC).
+## Nothing changes here until the host's event comes back (rule 1: no prediction). The actor is whoever sends
+## it: a peer field in `data` means nothing. Called while an event is being applied (a stock_changed listener),
+## it is refused with an error and returns 0.
 func request(kind: StringName, data: Dictionary = {}) -> int:
 	if not is_inside_tree():
 		return 0
@@ -592,6 +592,8 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 		SNAPSHOT_REQUEST:
 			# Over the limit it is dropped, not refused: the client asks again on its own.
 			grant_snapshot(peer, Time.get_ticks_msec())
+		CompanyPackages.ACK:
+			return table.packages.ack(peer, data)
 	return &""
 
 
@@ -827,13 +829,11 @@ func _start_waiting() -> void:
 	set_process(true)
 
 
-## Client: keeps one chunk (checked first, rule 5: ids and counts in range, at most
-## SNAPSHOT_CHUNK_BYTES, the same total and size as the rest of its snapshot) and, with the
-## last one in, joins them and applies the snapshot. The first chunk of a newer snapshot drops
-## what was kept of the one before, starts holding events and restarts the wait before asking
-## again. A repeated chunk, or one of an older or finished snapshot, changes nothing. A
-## snapshot that doesn't unpack or apply leaves this peer waiting: it asks again
-## (poll_snapshot()).
+## Client: keeps one chunk (checked first, rule 5: ids and counts in range, at most SNAPSHOT_CHUNK_BYTES, the
+## same total and size as the rest of its snapshot) and, with the last one in, joins them and applies the
+## snapshot. The first chunk of a newer snapshot drops what was kept of the one before, starts holding events
+## and restarts the wait before asking again. A repeated chunk, or one of an older or finished snapshot, changes
+## nothing. A snapshot that doesn't unpack or apply leaves this peer waiting: it asks again (poll_snapshot()).
 func _take_chunk(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
 	if id < 1 or total < 1 or total > SNAPSHOT_MAX_CHUNKS or chunk < 0 or chunk >= total:
 		return

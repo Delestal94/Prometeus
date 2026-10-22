@@ -16,21 +16,26 @@ extends RefCounted
 ## pairs up with the host's. Unset (the tables alone in a test, a world not up yet) nothing is built
 ## and box_sealed applies all the same.
 ##
-## Rule 10, on the host: the synchronizer starts invisible to every peer and opens only after the
-## event went out (deferred: CompanyNet sends it right after applying it), and only to the peers it
-## went to (connected and with their world up, as CompanyNet's event targets). A peer that comes up
-## later has no such node (live boxes aren't in the snapshot yet) and never gets its updates, nor
-## does one that left or whose world came up again: a synchronizer that reaches a peer before its
-## node is never resolved there (package.gd's _enter_tree note).
+## Rule 10, on the host: the synchronizer starts invisible to every peer and reaches one only once
+## that peer said it has the package: put() on a client asks the host package_ack {package} (a
+## CompanyNet request, through `ask`), and the host's ack() opens the synchronizer to it. A
+## synchronizer that reaches a peer before its node exists is never resolved there (package.gd's
+## _enter_tree note), and an event may land late (held while a client waits for a snapshot) or not
+## at all (a copy that refuses it, a peer that joined after it: live boxes aren't in the snapshot
+## yet), so the node's own word is the only safe one. A peer that leaves, or whose world comes up
+## again, is dropped until it acks again.
 ##
 ## `added` tells the world each package that went in (CompanyRoot freezes the host's in a cell
-## that isn't loaded, D-0318.1). Nothing here sends anything or names an autoload: NetworkManager is
-## reached by path, as CompanyNet does.
+## that isn't loaded, D-0318.1). Nothing here names an autoload: NetworkManager is reached by path,
+## as CompanyNet does.
 
 ## Every peer, right after `package` went under `parent`, while box_sealed is being applied (no
 ## CompanyNet request may be made here).
 signal added(package: DeliveryPackage)
 
+## Request kind a client sends the host once it has a package: {package: package id, rid}.
+const ACK: StringName = &"package_ack"
+const REASON_BAD_DATA: StringName = &"bad_data"
 const NODE_PREFIX: String = "Package_"
 const TRAPS_DIR: String = "res://data/traps/"
 const SYNC_PATH: NodePath = ^"MultiplayerSynchronizer"
@@ -38,9 +43,12 @@ const SYNC_PATH: NodePath = ^"MultiplayerSynchronizer"
 ## Where the packages go, the same path on every peer (CompanyRoot: World/Packages). Null: none is
 ## built.
 var parent: Node = null
+## Client: how it tells the host it has a package, Callable(kind, data) -> int (CompanyNet sets its
+## request()). Unset, no package_ack goes out and the host's synchronizer never reaches this peer.
+var ask: Callable = Callable()
 
-## Host: {package: {open: bool, peers: {peer: true}}} of every package whose synchronizer this
-## filters (rule 10), until it leaves the tree.
+## Host: {package: {peer: true}}, the peers each gated synchronizer reaches (rule 10: those that
+## acked), until the package leaves the tree.
 var _gates: Dictionary = {}
 ## The MultiplayerAPI and session whose peers are watched (_watch()).
 var _watched_api: MultiplayerAPI = null
@@ -55,7 +63,7 @@ static func node_name_of(package_id: StringName) -> String:
 
 
 ## A trap id that came over the network names a trap: exactly the name of one of data/traps/'s
-## files (case included), never a path.
+## .tres files (case included, the ones make() loads), never a path.
 static func trap_known(trap: Variant) -> bool:
 	if not CompanyAsk.is_id(trap):
 		return false
@@ -63,7 +71,7 @@ static func trap_known(trap: Variant) -> bool:
 		_traps_read = true
 		# ResourceLoader lists exported files by their original names (no .remap).
 		for file: String in ResourceLoader.list_directory(TRAPS_DIR):
-			if file.ends_with(".tres") or file.ends_with(".res"):
+			if file.ends_with(".tres"):
 				_known_traps[StringName(file.get_basename())] = true
 	return _known_traps.has(StringName(trap))
 
@@ -130,73 +138,70 @@ func make(box: PackedBox, data: Dictionary) -> DeliveryPackage:
 	return package
 
 
-## Puts a package make() built under the parent and tells `added`. On the host its synchronizer is
-## held back from every peer until the event went out (rule 10).
+## Puts a package make() built under the parent and tells `added`. On the host its synchronizer
+## reaches no peer until that peer acks (rule 10); on a client it acks, after this event is applied
+## (a request can't be made while an event is).
 func put(package: DeliveryPackage) -> void:
 	if package == null or not active():
 		return
-	if parent.multiplayer.is_server():
+	var host: bool = parent.multiplayer.is_server()
+	if host:
 		_gate(package)
 	parent.add_child(package)
+	if not host and ask.is_valid():
+		ask.call_deferred(ACK, {"package": package.package_id})
 	added.emit(package)
 
 
-## Host: true when rule 10 lets the synchronizer of `package` reach `peer`: the event that made it
-## went out, and to that peer (the filter it carries says so). False for a package not built here
-## on the host. The package's other filters (package.gd: the peer's world is up) still apply.
+## Host, package_ack from `peer`: it has the package `data.package`, so that package's synchronizer
+## reaches it from now on. &"" also when there is nothing to open (a package gone, or not gated
+## here); bad_data for a package id that isn't one.
+func ack(peer: int, data: Dictionary) -> StringName:
+	var id: Variant = data.get("package")
+	if not CompanyAsk.is_id(id) or String(id).is_empty():
+		return REASON_BAD_DATA
+	var node_name: String = node_name_of(StringName(id))
+	if node_name.validate_node_name() != node_name:
+		return REASON_BAD_DATA
+	if not active() or peer == parent.multiplayer.get_unique_id():
+		return &""
+	var package: Node = parent.get_node_or_null(NodePath(node_name))
+	if package == null or not _gates.has(package):
+		return &""
+	(_gates[package] as Dictionary)[peer] = true
+	var sync := package.get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
+	if sync != null and sync.is_inside_tree() and parent.multiplayer.get_peers().has(peer):
+		sync.update_visibility(peer)
+	return &""
+
+
+## Host: true when rule 10 lets the synchronizer of `package` reach `peer` (that peer acked it). False
+## for a package not built here on the host. The package's other filters (package.gd: the peer's
+## world is up) still apply.
 func sends_to(package: Node, peer: int) -> bool:
 	return _gates.has(package) and bool(_filter(_gates[package]).call(peer))
 
 
-## Host: the synchronizer of `package` hidden from every peer but those the event goes to, and from
-## those too until it went out (_open(), deferred).
+## Host: the synchronizer of `package` hidden from every peer until each one acks (ack()).
 func _gate(package: DeliveryPackage) -> void:
 	var sync := package.get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
 	if sync == null:
 		return
 	_watch()
-	var gate: Dictionary = {"open": false, "peers": _event_peers()}
-	sync.add_visibility_filter(_filter(gate))
-	_gates[package] = gate
+	var peers: Dictionary = {}
+	sync.add_visibility_filter(_filter(peers))
+	_gates[package] = peers
 	package.tree_exited.connect(_drop_gate.bind(package), CONNECT_ONE_SHOT)
-	_open.call_deferred(package)
 
 
-## The visibility filter of a gated synchronizer: open, and to a peer the event went to. Built in a
-## static function, so it holds no reference to this object (a package may outlive it a frame).
-static func _filter(gate: Dictionary) -> Callable:
-	return func(peer: int) -> bool:
-		return bool(gate["open"]) and (gate["peers"] as Dictionary).has(peer)
+## The visibility filter of a gated synchronizer: a peer that acked. Built in a static function, so
+## it holds no reference to this object (a package may outlive it a frame).
+static func _filter(peers: Dictionary) -> Callable:
+	return func(peer: int) -> bool: return peers.has(peer)
 
 
 func _drop_gate(package: Node) -> void:
 	_gates.erase(package)
-
-
-## Host: the event that made `package` went out; its synchronizer opens to the peers it went to.
-## Untyped: the package may be gone by now (a freed object doesn't convert to DeliveryPackage).
-func _open(package: Variant) -> void:
-	if not is_instance_valid(package) or not _gates.has(package):
-		return
-	_gates[package]["open"] = true
-	var sync := (package as Node).get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
-	if sync != null and sync.is_inside_tree():
-		sync.update_visibility()
-
-
-## Host: the peers an event goes to now, as CompanyNet's targets: connected and, with a session,
-## with their world up (is_peer_ready()).
-func _event_peers() -> Dictionary:
-	var peers: Dictionary = {}
-	var peer: MultiplayerPeer = parent.multiplayer.multiplayer_peer
-	if peer == null or peer is OfflineMultiplayerPeer:
-		return peers
-	var network: Node = parent.get_node_or_null(^"/root/NetworkManager")
-	var ready_check: bool = network != null and network.has_method(&"is_peer_ready")
-	for id: int in parent.multiplayer.get_peers():
-		if not ready_check or bool(network.call(&"is_peer_ready", id)):
-			peers[id] = true
-	return peers
 
 
 ## Host: hears peers leave (their copies are gone) and worlds come up (a fresh world has none of
@@ -214,16 +219,16 @@ func _watch() -> void:
 		network.connect(&"peer_level_ready", _forget_peer)
 
 
-## Host: `peer` no longer holds any package made so far: none of their synchronizers reaches it. One
-## still connected (its world came up again) is re-checked at once; one that left is already dropped
-## by the replication (it has no visibility left to update).
+## Host: `peer` no longer holds any package made so far: none of their synchronizers reaches it
+## until it acks again. One still connected (its world came up again) is re-checked at once; one
+## that left is already dropped by the replication (it has no visibility left to update).
 func _forget_peer(peer: int) -> void:
 	var connected: bool = active() and parent.multiplayer.get_peers().has(peer)
 	for package: Variant in _gates.keys():
 		if not is_instance_valid(package):
 			_gates.erase(package)
 			continue
-		(_gates[package]["peers"] as Dictionary).erase(peer)
+		(_gates[package] as Dictionary).erase(peer)
 		var sync := (package as Node).get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
 		if connected and sync != null and sync.is_inside_tree():
 			sync.update_visibility(peer)

@@ -97,9 +97,11 @@ const MAX_PLAYERS: int = 8
 ## vehicles out of the shed, as the host's CompanyTrips decides them (company
 ## mode, D-0302.2);
 ## 41: box_sealed makes a DeliveryPackage on every peer, World/Packages/
-## Package_<box id>, whose MultiplayerSynchronizer the host opens to the peers
-## the event went to, and a peer checks the event's node_name, pos, basis, trap,
-## trap_intensity, absorption and quality first (company mode, D-0715.b).
+## Package_<box id>; a client tells the host it has it with a new CompanyNet
+## _request kind, package_ack, and only then does the host open that package's
+## MultiplayerSynchronizer to it; a peer checks the event's node_name, pos, basis,
+## trap, trap_intensity, absorption and quality first, and box_tape may be refused
+## with no_trap (company mode, D-0715.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.

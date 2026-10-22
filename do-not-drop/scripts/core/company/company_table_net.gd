@@ -97,6 +97,9 @@ const REASON_NO_ORDER: StringName = &"no_order"
 const REASON_STAMPED: StringName = &"already_stamped"
 ## box_tape of a box with no product.
 const REASON_EMPTY_BOX: StringName = &"empty_box"
+## box_tape of a box whose ruling product names no trap of data/traps/ (a catalog error): its package
+## couldn't be built on any peer (D-0715.b).
+const REASON_NO_TRAP: StringName = &"no_trap"
 
 ## Cells a request may name on each axis, from 0: past the biggest box (XL has 4).
 const MAX_CELL: int = 15
@@ -399,12 +402,14 @@ func _check_tape(state: Object, desk: PackingStation, table: StringName,
 	for product: StringName in shut.contents():
 		products[product] = _product(product)
 	var main: ProductDefinition = BoxToPackage.ruling_product(shut, products)
+	if main == null or not CompanyPackages.trap_known(main.trap_id):
+		return _refused(REASON_NO_TRAP)
 	var quality: float = AssemblyQuality.score(shut, order, products)
 	var id: StringName = box_of(table)
 	return _granted(SEALED, _paid(state, CompanyTuning.TAPE_COST, {
 		"table": table, "order": box.label_order_id, "package_id": id,
 		"node_name": StringName("Package_%s" % id),
-		"trap": main.trap_id if main != null else &"", "trap_intensity": BoxTrap.intensity(quality),
+		"trap": main.trap_id, "trap_intensity": BoxTrap.intensity(quality),
 		"contents": box.contents(), "absorption": BoxToPackage.absorption(shut), "quality": quality,
 		"pos": station.get("spot"), "basis": Basis.IDENTITY,
 	}))
@@ -439,7 +444,8 @@ func _may_take(stock: Inventory, table: StringName, product: StringName) -> bool
 
 
 ## Host: the next box id nobody uses, box_<n> past the last one handed out, skipping any whose units
-## still lie somewhere (box:<id>, package:<id>: a loaded day keeps them, D-0206).
+## still lie somewhere (box:<id>, package:<id>: a loaded day keeps them, D-0206) or whose package
+## node is still in the world (its box_sealed couldn't name another one the same: D-0715.b).
 func _new_box_id(stock: Inventory) -> StringName:
 	var used: Dictionary = {}
 	var by_product: Dictionary = stock.to_dict()["stock"]
@@ -448,7 +454,8 @@ func _new_box_id(stock: Inventory) -> StringName:
 			used[StringName(location)] = true
 	var n: int = _serial + 1
 	var id := StringName(BOX_ID_PREFIX + str(n))
-	while _box_ids.values().has(id) or used.has(box_location(id)) or used.has(package_location(id)):
+	while _box_ids.values().has(id) or used.has(box_location(id)) or used.has(package_location(id)) \
+			or not packages.can_add(CompanyPackages.node_name_of(id)):
 		n += 1
 		id = StringName(BOX_ID_PREFIX + str(n))
 	return id

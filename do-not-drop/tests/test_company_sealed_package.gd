@@ -14,15 +14,23 @@ extends SceneTree
 ##   none; trap_intensity 1.5; absorption -0.1 or NaN; node_name of another box, without its
 ##   prefix, missing; a name already taken under the parent. The same event with good fields
 ##   applies, and the event's trap (fragile) wins over the box's own (the hen's noisy);
+## - solo, the host refuses to tape a box whose ruling product names no trap of data/traps/ with its
+##   own reason (no_trap: no seq, no package, not bad_data from a failed apply), and a box id whose
+##   Package_<id> node is still in the world is skipped (box_4 after a surviving Package_box_3);
 ## - host and an ENet client in one process, each with its Packages node at the same path: the
 ##   client opens a box and puts a hen in, the host labels and tapes it; both get Package_box_1 with
 ##   the same transform, trap, absorption, quality and intensity. On the host its synchronizer
-##   reaches nobody while the event is being sent (rule 10) and the client once it went out; the
-##   client's copy then gets the host's updates (its synchronizer resolved);
+##   reaches nobody while the event is being sent (rule 10) and the client only once the client
+##   acked it (package_ack); the client's copy then gets the host's updates (synchronizer resolved);
+## - auditor-red B1: the client waits for a snapshot while the host tapes box_2; it holds the event,
+##   has no node and the host's synchronizer doesn't reach it (20 frames); the snapshot from before
+##   the seal goes in, the held event makes Package_box_2, the client acks and its copy follows the
+##   host's, moving away from where it was made (before the ack-based gate it stayed frozen forever:
+##   the synchronizer's path was sent before the node existed);
 ## - a third peer joining late gets no Package_box_1 and the host's synchronizer never reaches it
-##   (its world coming up doesn't open it); a box it seals itself afterwards (Package_box_2) is on
-##   the three peers, equal, and reaches the client and it; once the client leaves neither package
-##   reaches it any more.
+##   (its world coming up doesn't open it); a box it seals itself afterwards (Package_box_3) is on
+##   the three peers, equal, and reaches the client and it; once the client leaves none of the
+##   host's packages reaches it any more.
 ## D-0318.1 (the host's package frozen in a cell that isn't loaded) is test_company_root's.
 
 const PORT: int = 24675
@@ -65,7 +73,7 @@ func _run() -> void:
 	RpcGuard.reset()
 	if _failures == 0:
 		print("PASS: a sealed box becomes the same package on every peer, checked first, its"
-			+ " synchronizer held back until the event went out and only to the peers it went to")
+			+ " synchronizer held back from each peer until that peer acked it")
 	quit(_failures)
 
 
@@ -94,7 +102,7 @@ func _check_solo() -> void:
 	net.table.packages.parent = holder
 	var added: Array = []
 	net.table.packages.added.connect(func(package: DeliveryPackage) -> void: added.append(package))
-	net.inventory.receive(&"hen", 2, CompanyNet.hands_location(1))
+	net.inventory.receive(&"hen", 3, CompanyNet.hands_location(1))
 	var order: Dictionary = Order.make(&"o1", "Ana", &"centro", &"centro_house_12",
 		[{"product": &"hen", "qty": 1}], 0, {})
 	net.table.order_of = func(_table: StringName) -> Dictionary: return order
@@ -124,12 +132,44 @@ func _check_solo() -> void:
 			and package.get_meta(BoxToPackage.META_ORDER_ID, &"") == &"o1",
 			"...with the event's trap %s, absorption %.2f, quality %.1f and intensity %.2f (plan %s)"
 			% [data["trap"], data["absorption"], data["quality"], data["trap_intensity"], plan])
+	_check_solo_refusals(net, heard, holder)
 	var plain := CompanyTableNet.new()
 	_expect(not plain.packages.active() and plain.packages.make(PackedBox.new(&"S"), {}) == null,
 		"Without a parent nothing is built (the tables alone, as test_company_shared_table)")
 	net.free()
 	holder.free()
 	state.free()
+
+
+## The host refuses to tape what couldn't become a package, with its own reason (no push_error, no seq),
+## and never hands out a box id whose package node is still in the world.
+func _check_solo_refusals(net: CompanyNet, heard: Array, holder: Node3D) -> void:
+	var hen: ProductDefinition = load(HEN)
+	var trapless: ProductDefinition = hen.duplicate()
+	trapless.trap_id = &"unicorn"
+	_expect(_ask(net, heard, T.START, {"station": &"table_1", "size": &"S"}) == &""
+		and _ask(net, heard, T.PLACE, _cell(0, 0, 0, &"hen")) == &"", "box_2 opens with a hen")
+	# The catalog says the hen rides a trap data/traps/ doesn't have (CompanyTableNet's own cache).
+	CompanyTableNet._defs[&"hen"] = trapless
+	var seq: int = net.seq
+	var got: StringName = _ask(net, heard, T.TAPE, {"station": &"table_1"})
+	CompanyTableNet._defs.erase(&"hen")
+	_expect(got == T.REASON_NO_TRAP and net.seq == seq and net.table.box_of(&"table_1") == &"box_2"
+		and not holder.has_node(^"Package_box_2"),
+		"A box whose ruling product names no known trap is refused with no_trap, not bad_data (got %s):"
+		% got + " no seq, the box stays, no package")
+	_expect(_ask(net, heard, T.TAPE, {"station": &"table_1"}) == &"" and holder.has_node(^"Package_box_2"),
+		"With the hen's real trap it tapes into Package_box_2")
+	var survivor := Node3D.new()
+	survivor.name = "Package_box_3"
+	holder.add_child(survivor)
+	_expect(_ask(net, heard, T.START, {"station": &"table_1", "size": &"S"}) == &""
+		and net.table.box_of(&"table_1") == &"box_4",
+		"With a Package_box_3 still in the world the next box is box_4 (got %s)" % net.table.box_of(&"table_1"))
+	_expect(_ask(net, heard, T.PLACE, _cell(0, 0, 0, &"hen")) == &""
+		and _ask(net, heard, T.TAPE, {"station": &"table_1"}) == &"" and holder.has_node(^"Package_box_4"),
+		"...and it tapes into Package_box_4: a surviving package doesn't wedge the table")
+	survivor.free()
 
 
 ## A table with box_4 (one hen) loaded from a snapshot part; every bad box_sealed changes nothing.
@@ -258,15 +298,9 @@ func _check_network() -> void:
 
 func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 	_expect(await _join(_client), "The client gets the host's snapshot")
-	var steps: Array = [
-		[_client, T.START, {"station": &"table_1", "size": &"S"}, "the client opens a box"],
-		[_client, TAKE, _take(), "takes a hen"],
-		[_client, T.PLACE, _cell(0, 0, 0, &"hen"), "puts it in"],
-		[_host, T.LABEL, {"station": &"table_1"}, "the host labels it for o1"],
-	]
-	for step: Array in steps:
-		_expect(await _do(step[0], step[1], step[2], [_client]) == &"",
-			"On the shared table %s" % step[3])
+	await _pack_hen(_client, &"table_1", [_client])
+	_expect(await _do(_host, T.LABEL, {"station": &"table_1"}, [_client]) == &"",
+		"The host labels the client's box for o1")
 	var client_id: int = _client.side.multiplayer.get_unique_id()
 	_expect(_ask(_host.net, _host.refusals, T.TAPE, {"station": &"table_1"}) == &"",
 		"The host tapes it")
@@ -276,25 +310,62 @@ func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 		"The host's Package_box_1 is there and its synchronizer reaches nobody yet (rule 10)")
 	var arrived: bool = await _wait_for(func() -> bool:
 		return _client.packages.has_node(^"Package_box_1") and gates.sends_to(mine, client_id))
-	_expect(arrived, "The client builds Package_box_1 from the event and the host's synchronizer"
-		+ " reaches it once the event went out")
+	_expect(arrived, "The client builds Package_box_1 from the event, acks it, and only then the"
+		+ " host's synchronizer reaches it")
 	_expect_same(&"Package_box_1", [_host, _client])
 	_expect(await _wait_for(func() -> bool: return int(_client.synced.get(&"Package_box_1", 0)) > 0),
 		"The client's copy gets the host's updates (its synchronizer resolved: %d)"
 		% int(_client.synced.get(&"Package_box_1", 0)))
+	await _check_held_seal(client_id)
 	await _check_late_join(late, mine, client_id)
 	_drop_world(_client)
 	client.close()
 	_expect(await _wait_for(func() -> bool:
 		return not _host.side.multiplayer.get_peers().has(client_id)), "The client leaves")
-	var second := _host.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
-	_expect(not gates.sends_to(mine, client_id)
-		and (second == null or not gates.sends_to(second, client_id)),
-		"Once the client left neither package reaches it")
+	var reached: Array = []
+	for package: Node in _host.packages.get_children():
+		if gates.sends_to(package, client_id):
+			reached.append(package.name)
+	_expect(_host.packages.get_child_count() == 3 and reached.is_empty(),
+		"Once the client left none of the host's packages reaches it (still: %s)" % [reached])
 
 
-## A third peer comes up after Package_box_1 was made: it never gets that one; one it seals itself
-## afterwards is on every peer.
+## The auditor's case (B1): a client waiting for a snapshot holds the box_sealed that reaches it; the
+## host's synchronizer must not reach it before its node exists. Once the snapshot (taken before the
+## seal) is in, the held event makes the package, the client acks and its copy follows the host's.
+func _check_held_seal(client_id: int) -> void:
+	await _pack_hen(_client, &"table_1", [_client])
+	var before: Dictionary = bytes_to_var(var_to_bytes(_host.net.snapshot()))
+	_client.net.wait_for_snapshot()
+	_expect(_ask(_host.net, _host.refusals, T.TAPE, {"station": &"table_1"}) == &"",
+		"The host tapes box_2 while the client waits for a snapshot")
+	var held: bool = await _wait_for(func() -> bool: return _client.net._held.size() == 1)
+	for _i: int in range(20):
+		await process_frame
+	var gates: CompanyPackages = _host.net.table.packages
+	var sealed := _host.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
+	_expect(held and sealed != null and not _client.packages.has_node(^"Package_box_2")
+		and not gates.sends_to(sealed, client_id),
+		"The client holds the event and has no Package_box_2; the host's synchronizer doesn't reach it")
+	_expect(_client.net.apply_snapshot(before) and _client.packages.has_node(^"Package_box_2")
+		and not _client.net.awaiting_snapshot(),
+		"The snapshot from before the seal goes in and the held box_sealed makes Package_box_2")
+	_expect(await _wait_for(func() -> bool: return gates.sends_to(sealed, client_id)),
+		"The client acks it and the host's synchronizer reaches it")
+	# A client's copy is frozen (package.gd): it only moves where the host's updates put it. All the
+	# sides share one physics space here, so the host's body may be knocked about by the copies.
+	var copy := _client.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
+	var made_at: Vector3 = copy.global_position if copy != null else Vector3.ZERO
+	_expect(copy != null and await _wait_for(func() -> bool:
+		return int(_client.synced.get(&"Package_box_2", 0)) > 0 and copy.global_position.distance_to(made_at) > 0.5),
+		"...and its copy follows the host's (synced %d, %.2f m from where it was made)"
+		% [int(_client.synced.get(&"Package_box_2", 0)),
+		copy.global_position.distance_to(made_at) if copy != null else 0.0])
+	_expect_same(&"Package_box_2", [_host, _client])
+
+
+## A third peer comes up after Package_box_1 and _2 were made: it never gets those; one it seals
+## itself afterwards is on every peer.
 func _check_late_join(late: ENetMultiplayerPeer, first: DeliveryPackage, client_id: int) -> void:
 	var up: bool = late.create_client("127.0.0.1", PORT) == OK
 	_late.side.multiplayer.multiplayer_peer = late
@@ -307,24 +378,33 @@ func _check_late_join(late: ENetMultiplayerPeer, first: DeliveryPackage, client_
 	_expect(await _join(_late), "...and gets the snapshot")
 	var late_id: int = _late.side.multiplayer.get_unique_id()
 	var gates: CompanyPackages = _host.net.table.packages
+	for _i: int in range(10):
+		await process_frame
 	_expect(not _late.packages.has_node(^"Package_box_1") and not gates.sends_to(first, late_id)
 		and gates.sends_to(first, client_id),
 		"The late peer has no Package_box_1 and the host's synchronizer doesn't reach it (its world"
 		+ " coming up doesn't open it); it still reaches the client")
 	var everyone: Array = [_client, _late]
+	await _pack_hen(_late, &"table_2", everyone)
+	_expect(await _do(_late, T.TAPE, {"station": &"table_2"}, everyone) == &"",
+		"With three peers, the late peer tapes its box")
+	var third := _host.packages.get_node_or_null(^"Package_box_3") as DeliveryPackage
+	_expect(third != null and await _wait_for(func() -> bool:
+		return gates.sends_to(third, late_id) and gates.sends_to(third, client_id)),
+		"Package_box_3 reaches the client and the late peer once both acked")
+	_expect_same(&"Package_box_3", [_host, _client, _late])
+
+
+## `peer` opens an S box on `table`, takes a hen and puts it in; every step reaches `followers`.
+func _pack_hen(peer: Peer, table: StringName, followers: Array) -> void:
 	var steps: Array = [
-		[_late, T.START, {"station": &"table_2", "size": &"S"}, "the late peer opens a box"],
-		[_late, TAKE, _take(), "takes a hen"],
-		[_late, T.PLACE, _cell(0, 0, 0, &"hen", &"table_2"), "puts it in"],
-		[_late, T.TAPE, {"station": &"table_2"}, "and tapes it"],
+		[T.START, {"station": table, "size": &"S"}, "opens a box"],
+		[TAKE, _take(), "takes a hen"],
+		[T.PLACE, _cell(0, 0, 0, &"hen", table), "puts it in"],
 	]
 	for step: Array in steps:
-		_expect(await _do(step[0], step[1], step[2], everyone) == &"", "With three peers, %s" % step[3])
-	var second := _host.packages.get_node_or_null(^"Package_box_2") as DeliveryPackage
-	_expect(second != null and await _wait_for(func() -> bool:
-		return gates.sends_to(second, late_id) and gates.sends_to(second, client_id)),
-		"Package_box_2 reaches the client and the late peer")
-	_expect_same(&"Package_box_2", [_host, _client, _late])
+		_expect(await _do(peer, step[0], step[1], followers) == &"",
+			"On %s %s %s" % [table, peer.side.name, step[2]])
 
 
 # --- Helpers ---
