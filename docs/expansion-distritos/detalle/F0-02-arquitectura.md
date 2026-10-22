@@ -419,3 +419,27 @@ problemas legibles) para que un mod o una herramienta lo reuse; CI lo corre por 
 con un producto de id repetido, un proveedor que vende un producto inexistente y una caja fuera de rango
 da un problema por cada uno, con el archivo y el id.
 **Hecho cuando:** `test_expansion_resources` falla con un id repetido.
+
+### D-0246 · Semilla de la empresa para pedidos y proveedores — B · Opus 5.5 · high · Aviso: no · F0 (Pulido)
+**[x] Hecho (2026-10-22, PR pendiente)** — `CompanySeed` (`scripts/core/company/company_seed.gd`) y `CompanyState.company_seed` / `day_seed(stream, day)`: una semilla por empresa, guardada y en el snapshot, de la que sale la de cada día y cada corriente (`ORDERS`, `SUPPLIERS`); `test_company_seed`. Auditoría de `auditor-red` en el PR.
+**Depende de:** D-0202 (`CompanyState`), D-0206 (guardado), D-0801 / D-0803 (generador y ritmo), D-0813 (pedidos por red)
+**Qué:** que todos vean el mismo día. El contrato (`diseno/red-autoridad.md` §10) ya decidió que los pedidos viajan
+enteros y los clientes nunca sortean, así que lo que faltaba era **de dónde sale "la semilla del día"** que el host le
+pasa a `CompanyOrdersNet.plan_day()` (D-0813.1):
+- `CompanyState.company_seed` (1 a 2³¹−1, entra exacta en el JSON del guardado): `new_company(nombre, semilla = 0)` la
+  sortea o toma la dada; `to_dict()` / `from_dict()` la guardan y viaja sola en el snapshot del host.
+- `CompanySeed.for_day(semilla, día, corriente)` = `hash([semilla, día, corriente])`; `CompanyState.day_seed(corriente)`
+  da la de hoy. Una corriente por sistema: un pedido más no corre lo que sortea un proveedor.
+- Guardado viejo sin semilla: `CompanySeed.from_name(nombre)`, la misma en cada carga hasta que el próximo guardado
+  escribe una de verdad. Una semilla mal formada (texto, fracción, 0, negativa, de más de 31 bits) nunca se toma.
+- Los proveedores hoy no sortean nada (`SupplierSchedule` es fijo); `SUPPLIERS` queda reservada para el mercado de D-0133.
+- Decisión: la semilla es de la empresa y no `NetworkManager.world_seed` (que es de la sesión y cambia en cada partida):
+  la misma empresa juega el mismo día 3 la cargue quien la cargue.
+- Decisión: no hay `PROTOCOL_VERSION` nuevo: el snapshot ya lleva `CompanyState.to_dict()` entero y un cliente viejo
+  ignora la clave.
+**Test** `test_company_seed`: semilla sorteada en rango y la dada se respeta; ida y vuelta por `to_dict()` y por JSON;
+guardado sin semilla da la misma por el nombre en cada carga y ocho valores mal formados caen a esa; `for_day` cambia
+con el día, la corriente y la empresa; el host y un espejo cargado de su `to_dict()` arman los mismos pedidos del día y
+otra semilla da otros; ningún script de `scripts/gameplay/business/` ni `scripts/core/company/` sortea con el generador
+global (`randi()`, `randf()`, `randomize()`, `shuffle()`, `pick_random()`…).
+**Hecho cuando:** el test pasa y la auditoría de red no encuentra desincronías.
