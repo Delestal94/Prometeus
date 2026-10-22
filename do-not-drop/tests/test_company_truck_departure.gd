@@ -13,7 +13,7 @@ extends SceneTree
 ##   changing nothing;
 ## - the real company world (company_root.tscn, solo): on day 2 the truck drives off at its departure minute, once,
 ##   its pallets leave the bed and its drawing, the note says what was missing, and the calendar loses the day.
-## Not covered: the note on screen (a UI task) and the save of the book (D-0605.c).
+## Not covered: the note on screen (a UI task); the save of the book is test_company_pallets_save (D-0605.c).
 
 const HEN: StringName = &"hen"
 const LAMP: StringName = &"antique_lamp"

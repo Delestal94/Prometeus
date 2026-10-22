@@ -22,7 +22,8 @@ extends RefCounted
 ## What only the shed knows, the station gives: "at" (Vector2, where the jack stands now), "floor" (Rect2, the
 ## floor in metres), "stand_ok" and "free_ok" (Callable(Vector2) -> bool: the jack may stand there / a pallet may
 ## lie there), "bed_open" (the truck is parked) and "bed_at" (Vector2, the bed's rear). The book travels in every
-## snapshot under SNAPSHOT_KEY. No node and no autoload here.
+## snapshot under SNAPSHOT_KEY and in the company's save (D-0605.c: to_save() / load_save(), through
+## CompanyState.pallets). No node and no autoload here.
 
 const PICK: StringName = &"jack_pick"
 const PUT: StringName = &"jack_put"
@@ -117,6 +118,9 @@ static func load_due(schedule: SupplierSchedule, day: int, minute: int) -> bool:
 ## (_pallet_of), not in the book already, whose units are not in `stock` yet (the first truck's pallets start in the
 ## shed, DefaultShed), as many as the book has room for (a warning for the rest). {} when nothing would load.
 func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dictionary:
+	# A truck that already drove off brings nothing again (an interrupted day loaded back at its opening).
+	if day <= departed_day:
+		return {}
 	var room: int = MAX_PALLETS - book.places.size() + book.ids_at(PalletJack.AT_BED).size()
 	var found: Array = []
 	var left_out: int = 0
@@ -355,6 +359,45 @@ func put_snapshot(value: Variant) -> bool:
 	departed_day = int(left_on)
 	note = DeliveryNote.from_dict(kept)
 	return true
+
+
+## The book as the company's save keeps it (D-0605.c): to_dict() in plain JSON values, `jack_at` as [x, z].
+func to_save() -> Dictionary:
+	var data: Dictionary = to_dict()
+	if jack_at is Vector2:
+		data["jack_at"] = [(jack_at as Vector2).x, (jack_at as Vector2).y]
+	return data
+
+
+## Loads what to_save() wrote, also after a JSON round trip (whole numbers come back as float), with the checks of
+## put_snapshot(). False, changing nothing, when it does not fit.
+func load_save(value: Variant) -> bool:
+	if not value is Dictionary:
+		return false
+	var plain: Dictionary = _whole_numbers(value)
+	var at: Variant = plain.get("jack_at")
+	if at is Array and (at as Array).size() == 2 and _is_number(at[0]) and _is_number(at[1]):
+		plain["jack_at"] = Vector2(float(at[0]), float(at[1]))
+	elif at != null:
+		return false
+	return put_snapshot(plain)
+
+
+## A deep copy of `value` with every float that holds a whole number turned into an int (JSON has no ints).
+static func _whole_numbers(value: Variant) -> Variant:
+	if value is Dictionary:
+		var out: Dictionary = {}
+		for key: Variant in value:
+			out[key] = _whole_numbers((value as Dictionary)[key])
+		return out
+	if value is Array:
+		var items: Array = []
+		for item: Variant in value:
+			items.append(_whole_numbers(item))
+		return items
+	if typeof(value) == TYPE_FLOAT and is_finite(value) and absf(value) < 1e15 and float(int(value)) == value:
+		return int(value)
+	return value
 
 
 ## `raw` (PalletJack.to_dict() form) with every field checked and rebuilt from plain values, or null.
