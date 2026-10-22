@@ -23,7 +23,8 @@ extends Node3D
 ## Grid to world: the floor is centred on this node; cell (cx, cz) of the stage's grid, one
 ## CompanyTuning.WAREHOUSE_GRID_M each, is at ((cx - w/2) m, (cz - d/2) m). +Z is the south: the dock
 ## is on that wall, the customer exit on the north one (WarehouseStages). A piece turned
-## `turns` quarter turns faces local +Z, which turns with it.
+## `turns` quarter turns faces local +Z, which turns with it. holds() says whether a world point is in
+## the shed (the walls' line, and so the gates, included): CompanyRoot asks it who is in, for DayCycle.
 
 signal piece_used(uid: StringName, role: StringName, peer_id: int)
 
@@ -145,6 +146,17 @@ func piece_at(cell: Vector2i) -> StringName:
 		if (piece["rect"] as Rect2i).has_point(cell):
 			return piece["uid"]
 	return &""
+
+
+## True when `world_point` stands in this shed (who is in it, D-0316.1: DayCycle.crew_in_shed): over
+## the floor of the stage drawn, grown by WALL_THICKNESS on every side so whoever stands in the dock's
+## or the exit's gate is in. The height is not looked at. Out of the tree it holds nothing.
+func holds(world_point: Vector3) -> bool:
+	if not is_inside_tree():
+		return false
+	var local: Vector3 = to_local(world_point)
+	var half: Vector2 = WarehouseStages.floor_size_m(stage) * 0.5 + Vector2(WALL_THICKNESS, WALL_THICKNESS)
+	return absf(local.x) <= half.x and absf(local.z) <= half.y
 
 
 ## Draws the shed of `state` (a CompanyState: layout and warehouse_stage) with the units of `stock`.
