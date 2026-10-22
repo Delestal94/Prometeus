@@ -76,6 +76,11 @@
     del sincronizador, como evento de `CompanyNet` (un nodo que no se sigue) o después de `untrack()`; si no, el peer
     lejano se queda con una copia vieja para siempre. Nada que cree un `MultiplayerSpawner` entra a esos grupos (no
     verlo lo despawnea). Decisión `docs/decisiones/2026-10-21-visibilidad-por-distancia.md`.
+    **Soltar antes del broadcast (D-0316.3):** la caja de `box_sealed` entra a `company_loose_box` en cada peer
+    (`CompanyInterest.add_loose_box()`) y, en el host, `consume()` emite `DeliveryPackage.consuming` antes de mandar
+    `_remote_consume`: `WorldCellInterest.release()` la saca del seguimiento y de los grupos (pública otra vez, con
+    los filtros de la regla 10) y la baja llega a todos. El ancla de cada jugador es su `reach_origin()` (sentado, el
+    asiento), así quien viaja con la caja la sigue recibiendo.
 
 ## 2. Las 20 acciones del corte vertical (y las de construir el galpón, 21 a 24)
 
@@ -511,8 +516,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   - las cajas vivas en el snapshot (hasta entonces el que entra tarde, o un cliente cuyo snapshot cubrió el
     `box_sealed`, no ve las cajas ya encintadas; con el acuse no recibe errores, solo no las tiene);
   - **ancho de banda por paquete:** cada `DeliveryPackage` manda su pose a 30 Hz a cada peer que acusó,
-    ~3 KB/s por peer aunque esté quieto; antes de una prueba con muchas cajas tienen que entrar a
-    `company_loose_box` (D-0316.3, regla 11: solo a los peers cerca) o bajar su frecuencia en reposo;
+    ~3 KB/s por peer aunque esté quieto; ~~entrar a `company_loose_box`~~ (hecho en D-0316.3, regla 11: solo
+    a los peers cerca); queda bajar su frecuencia en reposo para los que están cerca;
   - **dónde aparece:** en el `spot` de la estación (el hueco de la caja) con base identidad; un cubo de
     0,65 m centrado ahí puede quedar metido en la tabla; revisarlo con `probador-qa` cuando exista la mesa
     visible (D-0701.b);

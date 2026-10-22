@@ -58,7 +58,8 @@ extends Node3D
 ## The crew split between the shed and the street (D-0316): the "Interest" child (CompanyInterest,
 ## every peer) sends each company vehicle and loose box only to the players near it (the host still
 ## simulates all of them), and the cells load around every player and vehicle on the host but only
-## around its own player on a client (CompanyInterest.cell_anchors()). Every peer's player is a node
+## around its own player on a client (CompanyInterest.cell_anchors()); a seated player counts at its
+## seat, Player.reach_origin() (CompanyInterest.anchor_point()). Every peer's player is a node
 ## of the crew here (the host's spawns, _add_crew()), so the host has an anchor for each one and
 ## knows who is in the shed and who is out on the street (_crew_in_shed(), D-0316.1).
 ##
@@ -749,9 +750,8 @@ func _add_cells() -> void:
 	add_child(cells)
 
 
-## The packages the sealed boxes become (D-0715.b), on every peer under World/Packages: the same path
-## everywhere, so each one's synchronizer pairs up with the host's. CompanyNet's tables build them
-## there (CompanyPackages); the host's are watched by the cells (_on_package_added()).
+## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages
+## builds them), so each synchronizer pairs up with the host's; see _on_package_added().
 func _add_packages() -> void:
 	if net == null:
 		return
@@ -762,17 +762,17 @@ func _add_packages() -> void:
 	net.table.packages.added.connect(_on_package_added)
 
 
-## Host (D-0318.1): a package freezes while its cell isn't loaded (no floor under it) and thaws when it
-## is back (WorldCellStreamer.track_body); it is let go as it leaves the tree. A client's copy follows
-## the host's and is never tracked. Called while box_sealed is applied: no CompanyNet request here.
+## Every peer: a loose box of the interest, let go before consume() broadcasts (D-0316.3). Host: frozen
+## while its cell isn't loaded (cells.track_body, D-0318.1). No CompanyNet request here (box_sealed).
 func _on_package_added(package: DeliveryPackage) -> void:
+	if interest != null and is_instance_valid(interest):
+		interest.add_loose_box(package, package.consuming)
 	if cells == null or not is_instance_valid(cells) or net == null or not net.is_host():
 		return
 	cells.track_body(package)
 	package.tree_exiting.connect(cells.untrack_body.bind(package), CONNECT_ONE_SHOT)
 
 
-## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
 func _add_interest() -> void:
 	interest = CompanyInterest.new()
 	interest.name = "Interest"
