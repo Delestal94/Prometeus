@@ -12,6 +12,7 @@ extends SceneTree
 ## - A DeliveryPackage in the second one does the same.
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
+const RIDE = preload("res://scripts/gameplay/player/player_ride.gd")
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 
 var _failures: int = 0
@@ -23,6 +24,9 @@ class Bay extends Node3D:
 	func carries(world_point: Vector3, margin: float = 0.0) -> bool:
 		var local: Vector3 = to_local(world_point).abs()
 		return local.x <= half.x + margin and local.y <= half.y + margin and local.z <= half.z + margin
+
+	func needs_sweep(_body: RigidBody3D, _margin: float = 0.0) -> bool:
+		return false
 
 
 func _initialize() -> void:
@@ -51,7 +55,8 @@ func _bay(at: Vector3) -> Bay:
 func _check_pick(first: Bay, second: Bay) -> void:
 	_expect(VehiclePick.pick(self, null, Vector3(20, 0, 0)) == second, "the point in the second bay picks the second")
 	_expect(VehiclePick.pick(self, second, Vector3(0, 0, 0)) == first, "a point left behind moves to the first")
-	_expect(VehiclePick.pick(self, first, Vector3(20, 0, 0)) == second, "the current one is dropped once it no longer carries")
+	_expect(VehiclePick.pick(self, first, Vector3(20, 0, 0)) == second,
+		"the current one is dropped once it no longer carries")
 	_expect(VehiclePick.pick(self, second, Vector3(100, 0, 0)) == second, "nothing carries: the current one stays")
 	_expect(VehiclePick.pick(self, null, Vector3(100, 0, 0)) == first, "nothing carries and no current: the first")
 	second.global_position = Vector3(1, 0, 0)
@@ -66,7 +71,7 @@ func _check_player(first: Bay, second: Bay) -> void:
 	await physics_frame
 	player.global_position = Vector3(21, 0.5, 0)
 	_expect(player.call(&"_find_vehicle") == second, "a player in the second bay is aboard the second")
-	player.call(&"_publish_net_state")
+	RIDE.publish_net_state(player)
 	_expect(player.net_in_vehicle and player.net_position.distance_to(Vector3(1, 0.5, 0)) < 0.01,
 		"it publishes its position in the second bay's space (%s)" % player.net_position)
 	player.global_position = Vector3(0.5, 0.5, 0)
