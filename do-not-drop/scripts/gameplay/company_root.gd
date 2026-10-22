@@ -658,8 +658,7 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, what: StringName) -> void:
 	if net == null or not net.is_host():
 		return
-	if cart_grip != null and cart_grip.handled(cart_id, action, peer_id):
-		return
+	if cart_grip != null and cart_grip.handled(cart_id, action, peer_id): return
 	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from, what)
 
 
