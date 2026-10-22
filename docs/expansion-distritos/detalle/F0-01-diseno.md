@@ -362,7 +362,7 @@ Decisión: `docs/decisiones/2026-10-22-logros-expansion.md`.
 **Hecho cuando:** `docs/marketing/logros-expansion.md` existe y D-0440 lo puede construir sin preguntar.
 
 ### D-0139 · Encaje de la expansión en la página de Steam y el tráiler — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — `docs/marketing/expansion-pagina-y-trailer.md`: solo se promete lo que tiene su fase cerrada y una captura real sin gris; página en versión A (sin Empresa) hasta que F1 cierre con arte final, después versión B; tráiler actual sin cambios y un segundo video de la Empresa (8 planos con condición); F3-F4 fuera de la página.
+**[x] Hecho (2026-10-22, PR #709)** — `docs/marketing/expansion-pagina-y-trailer.md`: solo se promete lo que tiene su fase cerrada y una captura real sin gris; página en versión A (sin Empresa) hasta que F1 cierre con arte final, después versión B; tráiler actual sin cambios y un segundo video de la Empresa (8 planos con condición); F3-F4 fuera de la página.
 **Depende de:** D-0101 (`diseno/vision.md`), D-0111 (`diseno/corte-vertical.md`), D-0112 (lo recortado no se promete), D-0138
 **Qué:** nota en `docs/marketing/` con qué promete la página con la expansión y qué no, para que la rutina de
 lanzamiento la aplique cuando haya con qué mostrarla.
