@@ -5,7 +5,8 @@ extends RefCounted
 ##
 ## - **Loose or shelved, on a client:** the host's poses (net_transform, in the truck's space while aboard) go into
 ##   a NetPoseSmoother on every synced packet (the synchronizer's `synchronized`) and the box is drawn a touch in
-##   the past, interpolated, on this peer's truck if it rides.
+##   the past, interpolated, on this peer's truck if it rides: with several, the one the host names (net_vehicle,
+##   D-0302.2.b.4.b, DeliveryPackage._find_vehicle()).
 ## - **In a remote carrier's hands, on every peer but the carrier's:** drawn on the carrier's body as this peer
 ##   draws it (`carrier_peer_id`, `hold_offset` in the body's space, sent by the carrier with each carry pose). The
 ##   carrier's body is drawn from its own buffer, 50-200 ms in the past; the box drawn from its newest carry pose,
@@ -88,13 +89,15 @@ func draw(p: DeliveryPackage, delta: float, now: float = NetPoseSmoother.local_n
 	if not predicted and not p._has_net_state:
 		return
 	var vehicle: Node3D = p._find_vehicle()
-	var vehicle_pose: Transform3D = _drawn(vehicle) if vehicle != null else Transform3D.IDENTITY
 	if predicted:
+		# In the space of the carrier's own vehicle (D-0302.2.b.4.b): the host may not have the box in it yet.
+		var hands_on: Node3D = p._predicted_vehicle if is_instance_valid(p._predicted_vehicle) else vehicle
 		var hands: Transform3D = p._predicted_pose
-		p.global_transform = vehicle_pose * hands if p._predicted_in_vehicle and vehicle != null else hands
+		p.global_transform = _drawn(hands_on) * hands if p._predicted_in_vehicle and hands_on != null else hands
 		_was_predicted = true
 		_error_left = 0.0
 		return
+	var vehicle_pose: Transform3D = _drawn(vehicle) if vehicle != null else Transform3D.IDENTITY
 	var pose: Transform3D = Transform3D.IDENTITY
 	if smoother != null and not smoother.is_empty():
 		pose = smoother.sample(now, vehicle_pose)

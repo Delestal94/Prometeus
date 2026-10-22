@@ -157,10 +157,14 @@ const MAX_PLAYERS: int = 8
 ## default one), supplier_ordered carries it, and the "supplier" snapshot part a
 ## `suppliers` entry with the other suppliers' trucks; an older client refuses the
 ## event and that part (company mode, D-0621.b).
+## 57: player.tscn and package.tscn replicate `net_vehicle` (which vehicle the pose's
+## space is, VehiclePick.index_of(), -1 none) after their other properties, and the box's
+## submit_carry_transform and request_drop take a trailing `vehicle` index: with several
+## vehicles every copy goes on the one its owner rides (D-0302.2.b.4.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 56
+const PROTOCOL_VERSION: int = 57
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

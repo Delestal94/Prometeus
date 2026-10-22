@@ -59,7 +59,7 @@ const STATIC_METHODS: Array[String] = ["pickup_high_weight_for", "_drawn_transfo
 ## Variables other scripts read or write on a player.
 const VARS: Array[String] = [
 	"carried_package", "tended_package", "assisted_package", "seat_node_path", "net_position", "net_in_vehicle",
-	"anim_state", "locomotion_speed", "turn_rate", "jump_anim_time", "pickup_high_weight", "cosmetic_id",
+	"net_vehicle", "anim_state", "locomotion_speed", "turn_rate", "jump_anim_time", "pickup_high_weight", "cosmetic_id",
 	"face_eyes", "face_mouth", "animator", "stick_sensitivity", "_seated", "_camera", "_head", "_pitch",
 	"_riding", "_ride_last_transform", "_vehicle", "_has_net_state", "_bob_time", "_bob_amount",
 	"_highlighted", "_carry_pose", "_pickup_elapsed", "_flinch_time", "_ragdolled", "_body_visual", "_nearby",
