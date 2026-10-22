@@ -33,10 +33,9 @@ extends Node3D
 ## The host leaving mid-day (D-2005, like N-222): a client keeps what it saw of the
 ## host's day for the menu (CompanyInterruptedDay), gets its own company back, stops
 ## the world and loads the main menu. The host (solo too) loads its slot when it comes
-## up without a company (CompanySave), saves a slot that holds none at once as that day's opening
-## (D-0251: a new company's day 1) and, whenever its world closes before the day does (its session
-## ended and it went back to the menu, or the game closed), writes nothing of that day: it marks the
-## opening in the slot interrupted and its company goes back to it. A day DayCycle (D-0203) closes is saved
+## up without a company (CompanySave), saves a slot with none as that day's opening (D-0251) and,
+## whenever its world closes before the day does (session ended, back to the menu, or the game
+## closed), writes nothing of that day: it marks the opening interrupted. A day DayCycle (D-0203) closes is saved
 ## as soon as its SUMMARY applies, and again if the world closes during the summary, as the next
 ## day's opening (save_closed_day(), D-0236): a game killed mid-day comes back at its last close.
 ##
@@ -268,8 +267,8 @@ func _add_net(state: COMPANY_STATE) -> void:
 	if state == null:
 		return
 	if not state.is_active():
-		# The slot first: a new company here would erase it with its opening save below.
-		# CORRUPT already starts a new company (the bad file is kept as
+		# The slot first: a new company here would erase it with its opening save below. CORRUPT
+		# already starts a new company (the bad file is kept as
 		# .bad); MISSING and TOO_NEW leave it off. A newer build's file is never overwritten
 		# (CompanySave.save()), so a new company played over one is not saved.
 		CompanySave.load_into(state, save_slot, save_dir)
@@ -283,13 +282,11 @@ func _add_net(state: COMPANY_STATE) -> void:
 		var report: Dictionary = DefaultShed.load_default().apply_to(state)
 		for refusal: Dictionary in report["refused"]:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
-	# The slot always holds an opening (D-0251): one without a save gets this day's, before the
-	# development flags, so a day cut short has something to go back to and the flags never reach the
-	# disk. A newer build's file counts as a save: it is never written over.
+	# The slot always holds an opening (D-0251): one without a save gets this day's, before the dev
+	# flags (they never reach the disk). A newer build's file counts as a save: never written over.
 	if not CompanySave.exists(save_slot, save_dir):
 		if not CompanySave.save(state, save_slot, save_dir):
-			push_warning("CompanyRoot: the opening of day %d could not be saved to %s"
-				% [state.day, CompanySave.path_for(save_slot, save_dir)])
+			push_warning("CompanyRoot: opening of day %d not saved to %s" % [state.day, save_dir])
 	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
 	net.pallets.load_save(state.pallets)
@@ -396,12 +393,9 @@ func _start_company(state: COMPANY_STATE) -> void:
 		session.session_failed.connect(_on_session_failed)
 
 
-## Host (solo too): the day cut short (D-0251, guardado.md rule 2). Nothing of it is written: the
-## slot already holds this day's opening (the last close, or the one saved when the world came up)
-## and is only marked interrupted (CompanySave.mark_interrupted()), so loading it plays the same day
-## again from that opening. The company in play is left as it is. False on a client, without a
-## company on, without a save in the slot, over a newer build's save or when the file could not be
-## written.
+## Host (solo too): the day cut short (D-0251). Nothing of it is written: the slot's opening is only
+## marked interrupted (CompanySave.mark_interrupted()), so loading it plays the day again. False on
+## a client, without a company on or a save in the slot, over a newer build's save or on a write error.
 func save_interrupted_day() -> bool:
 	if _hosted_state == null or not is_instance_valid(_hosted_state):
 		return false
@@ -409,8 +403,7 @@ func save_interrupted_day() -> bool:
 		return false
 	var marked: bool = CompanySave.mark_interrupted(save_slot, save_dir)
 	if not marked:
-		push_warning("CompanyRoot: the interrupted day %d could not be marked in %s"
-			% [_hosted_state.day, CompanySave.path_for(save_slot, save_dir)])
+		push_warning("CompanyRoot: interrupted day %d not marked in %s" % [_hosted_state.day, save_dir])
 	return marked
 
 
@@ -470,9 +463,8 @@ func host_day_seen() -> Dictionary:
 	return CompanyInterruptedDay.summary(_mirrored_state, stock, minute)
 
 
-## The host's world closing mid-day marks the day interrupted (D-2005); closing in the summary saves
-## the next day's opening. Either way its company is then loaded from the slot (D-0251): a world that
-## comes up again in this session opens that opening, as a new session would. A client leaves the
+## The host's world closing mid-day marks the day interrupted (D-2005); in the summary it saves the
+## next day's opening. Either way its company is then loaded from the slot (D-0251). A client leaves the
 ## host's company behind: its CompanyState goes back to what it had before the snapshot
 ## (switched off when it had none), so solo play or a save never takes the host's.
 func _exit_tree() -> void:
