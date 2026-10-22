@@ -26,7 +26,8 @@ extends SceneTree
 ##   scales only the subtitle plate, clamps, and shows up in the options panel;
 ## - N-983.4: a faint text backdrop (under 0.5) thickens the text outline by 1 px;
 ## - N-983.5: the top-right card's "CARTA: <name> • G usar" stays on one line,
-##   cutting a long name with "…";
+##   cutting a long name with "…", and still fits the top bar on a 4:3 window
+##   with the largest HUD size;
 ## - arrow(): ahead, behind, left, right, and none when it is on top of you.
 
 var _failures: int = 0
@@ -332,11 +333,50 @@ func _check_card_line(hud: CanvasLayer) -> void:
 	_expect(cut.contains("…") and cut.ends_with("G  usar"), "A long card name is cut with … (got '%s')" % cut)
 	var short: String = hud.notices.fit_card_line("Re", "G  usar")
 	_expect(short.contains("Re") and not short.contains("…"), "A short name is left whole (got '%s')" % short)
+	await _check_card_room(hud, progression, me)
 	if had_card:
 		progression.cards[me] = original_card
 	else:
 		progression.cards.erase(me)
 	hud.notices.refresh_card()
+
+
+## N-983 (closing check): the 320-wide card line still fits the top bar on a 4:3
+## window with the largest HUD size, the narrowest the HUD's own space gets
+## (Hud.layout_scale grows with the window's height): the right column stays on
+## screen and clear of the objective card on the left.
+func _check_card_room(hud: CanvasLayer, progression: Node, me: int) -> void:
+	var settings: Node = root.get_node("GameSettings")
+	var original_size: Vector2i = root.size
+	var original_scale: float = settings.hud_scale
+	progression.cards[me] = progression.CARD_NAMES.keys()[0]
+	hud.notices.refresh_card()
+	for shape: Vector2i in [Vector2i(1280, 720), Vector2i(1280, 960)]:
+		root.size = shape
+		settings.hud_scale = settings.HUD_SCALE_MAX
+		hud.apply_hud_scale()
+		await process_frame
+		await process_frame
+		var layer: Control = hud.hud_layer
+		var expected_scale: float = settings.HUD_SCALE_MAX * float(shape.y) / 720.0
+		_expect(is_equal_approx(layer.scale.x, expected_scale),
+			"At %s the HUD lays out at %.2f (got %.2f): the window shape took" % [shape, expected_scale, layer.scale.x])
+		var to_layer: Transform2D = layer.get_global_transform().affine_inverse()
+		var column: Control = hud.get(&"_right_column")
+		var objective: Control = column.get_parent().get_child(0)
+		var column_left: float = (to_layer * column.get_global_transform() * Vector2.ZERO).x
+		var column_right: float = (to_layer * column.get_global_transform() * Vector2(column.size.x, 0)).x
+		var objective_right: float = (to_layer * objective.get_global_transform() * Vector2(objective.size.x, 0)).x
+		_expect(column_right <= layer.size.x + 0.5,
+			"At %s and the largest HUD the card column ends on screen (%d of %d)" % [shape, column_right, layer.size.x])
+		_expect(objective_right <= column_left,
+			"At %s and the largest HUD the card column clears the objective card (%d vs %d)" % [
+				shape, objective_right, column_left])
+		_expect(hud.card_label.get_line_count() == 1,
+			"At %s and the largest HUD the card line stays on one line" % shape)
+	root.size = original_size
+	settings.hud_scale = original_scale
+	hud.apply_hud_scale()
 
 
 ## N-983.3: the options panel offers the size with the other accessibility
