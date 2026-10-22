@@ -30,6 +30,7 @@ const SOUND_NAMES: Dictionary = {
 	&"doorbell_ding_dong": "Timbre", &"neighbor_cheer": "Alegría del vecino",
 	&"comic_ruin_stinger": "Caja arruinada", &"comic_boom": "Explosión",
 	&"forklift_motor_loop": "Motor eléctrico", &"river_flow_loop": "Río",
+	&"forklift_hydraulic_loop": "Hidráulico del autoelevador",
 	&"train_horn": "Silbato del tren", &"train_chug_loop": "Traqueteo del tren",
 	&"care_step": "Toque correcto", &"care_error": "Tecla equivocada", &"care_success": "Arreglo listo",
 	&"care_whoosh": "Giro de la flecha", &"care_tick": "Avance de la herramienta",
@@ -43,6 +44,7 @@ const SOUND_NAMES: Dictionary = {
 const SOURCE_NAMES: Dictionary = {
 	"vehicle": "Camión", "vehicle_presentation": "Camión", "reference_truck": "Puertas del camión",
 	"cargo_clutter": "Objetos sueltos del camión", "depot": "Depósito", "depot_forklift": "Autoelevador",
+	"forklift_cues": "Autoelevador del galpón",
 	"depot_roller_door": "Portón del depósito", "route": "Ruta", "route_sky": "Ambiente",
 	"ingame_music": "Música", "package_feedback": "Caja (trampa)", "package_contents_view": "Caja (contenido)",
 	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",

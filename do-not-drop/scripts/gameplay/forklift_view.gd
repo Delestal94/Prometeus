@@ -11,7 +11,8 @@ extends Node3D
 ##
 ## Grey-box stand-in made of boxes (docs/expansion-distritos/arte-pendiente/D-0606.md), built facing -Z with its
 ## origin on the floor under the driver: chassis, wheels, a mast and a carriage with two forks that rides up it. A
-## pallet on the forks (PalletBox) lies CompanyTuning.FORKLIFT_TIP_M ahead of the origin.
+## pallet on the forks (PalletBox) lies CompanyTuning.FORKLIFT_TIP_M ahead of the origin. Its engine, hydraulics and
+## amber beacon are ForkliftCues (a child), fed from refresh() and _process().
 ##
 ## Controls of the local driver: the interact key takes / leaves a pallet (PlayerInteraction's
 ## `interact_override`), forklift_mast_up / forklift_mast_down raise and lower the forks, package_drop gets off.
@@ -60,6 +61,7 @@ var net: CompanyNet:
 var _pallets: CompanyPallets
 var _home: Vector2 = Vector2.ZERO
 var _carriage: Node3D
+var _cues: ForkliftCues
 var _carried: Node3D
 var _carried_id: StringName = &""
 var _driver_node: Node3D
@@ -114,6 +116,7 @@ func refresh(pallets: CompanyPallets) -> void:
 		rotation.y = state.yaw if state.at is Vector2 else rotation.y
 	_carriage.position.y = state.height_at(Time.get_ticks_msec())
 	_sync_local_driving()
+	_cue(state, Time.get_ticks_msec())
 	set_process(state.driver != 0 or state.moving_at(Time.get_ticks_msec()))
 
 
@@ -155,8 +158,14 @@ func _process(_delta: float) -> void:
 		if _local_driving:
 			_steer_mast(now)
 	_carriage.position.y = state.height_at(now)
+	_cue(state, now)
 	if state.driver == 0 and not state.moving_at(now):
 		set_process(false)
+
+
+## The sounds and the beacon (ForkliftCues): somebody drives, and which way the forks go.
+func _cue(state: CompanyForklift, now: int) -> void:
+	_cues.update(state.driver != 0, state.mast_dir if state.moving_at(now) else 0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -377,6 +386,8 @@ func _build() -> void:
 	seat_point.used.connect(func(how: StringName, peer_id: int, origin: Vector3) -> void:
 		used.emit(how, peer_id, origin))
 	add_child(seat_point)
+	_cues = ForkliftCues.make()
+	add_child(_cues)
 
 
 func _part(parent: Node3D, part_name: String, size: Vector3, at: Vector3, material: Material) -> void:

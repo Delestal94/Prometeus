@@ -141,6 +141,9 @@ const MAX_PLAYERS: int = 8
 ## that ends without a delivery (the customer gave up, the vehicle came back with it, or the
 ## day ended) fails or is cancelled on every peer's book, and the reputation it costs is the
 ## host's alone (company mode, D-0851).
+## 51: CompanyNet's _apply_event takes a new host kind, units_spoiled {product, qty,
+## location}: cold products left outside a fridge rotted, and every peer discards them
+## from its stock (company mode, D-0616.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
