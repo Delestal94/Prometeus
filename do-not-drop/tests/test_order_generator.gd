@@ -8,7 +8,10 @@ extends SceneTree
 ## - fragile and cold products bring their requirement; "urgent" halves the window
 ##   and every requirement raises the pay over the plain sum;
 ## - the first days (D-0812) cap orders at 2 products, later days at 3;
-## - max_items caps the distinct products; every product and zone exists.
+## - max_items caps the distinct products; every product and zone exists;
+## - with order templates (D-0820.b) each order of a zone with a set matches one of its templates
+##   (products, quantities, requirements), within the day's item cap, deterministically; a zone
+##   without a set still draws at random.
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -29,6 +32,7 @@ func _run() -> void:
 	_test_max_items()
 	_test_early_days()
 	_test_empty_inputs()
+	_test_templates()
 	quit(_failures)
 
 
@@ -159,6 +163,32 @@ func _test_empty_inputs() -> void:
 	_expect(OrderGenerator.generate_day(1, 1, 3, _open(), {}, _reqs).is_empty(), "no products, no orders")
 	var none: Array[ZoneDefinition] = []
 	_expect(OrderGenerator.generate_day(1, 1, 3, none, _products, _reqs).is_empty(), "no zones, no orders")
+
+
+func _test_templates() -> void:
+	var templates: Dictionary = {}
+	for set_res in OrderTemplateCheck.load_sets():
+		templates[set_res.zone] = set_res
+	_expect(templates.has(&"centro") and templates.has(&"campo"), "sets for centro and campo load")
+	var from_templates := 0
+	for seed_value in 20:
+		for day in [1, 4]:
+			var cap: int = OrderGenerator.items_cap_for_day(day)
+			var orders := OrderGenerator.generate_day(seed_value, day, 3, _open(), _products, _reqs, 0, null, templates)
+			var again := OrderGenerator.generate_day(seed_value, day, 3, _open(), _products, _reqs, 0, null, templates)
+			_expect(orders == again, "templates: same seed, same orders")
+			for order in orders:
+				var set_res: OrderTemplateSet = templates[order["zone"]]
+				var found := false
+				for template in set_res.templates:
+					if template.items == order["items"] and template.requirements == order["requirements"]:
+						found = true
+				_expect(found, "order matches a template of its zone")
+				from_templates += 1
+				_expect((order["items"] as Array).size() <= cap, "template within the day's item cap")
+	_expect(from_templates > 0, "orders were drawn from templates")
+	var plain := OrderGenerator.generate_day(3, 4, 3, _open(), _products, _reqs)
+	_expect(plain == _day(3), "no templates keeps the random draw")
 
 
 func _expect(condition: bool, label: String) -> void:

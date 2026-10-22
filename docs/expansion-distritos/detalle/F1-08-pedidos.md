@@ -203,6 +203,6 @@ Decisión: fundirla, como recomendó la revisión del 2026-10-19 (`docs/auditori
 - Decisión: solo las zonas que hoy reparten (`shipping_fee > 0`: Barrio Centro y Campo). Las demás zonas reciben su archivo cuando tengan productos y tarifa (grupos 13 a 17); el test exige un set por cada zona con tarifa, así que no se pueden olvidar.
 - Decisión: mezcla 14 de 1 producto, 16 de 2 y 10 de 3 por zona, para que los primeros días (tope de 2) tengan de dónde elegir.
 - Decisión: los `.tres` salieron de un generador con semilla fija, pero son datos a mano de ahí en adelante (se editan directo).
-- [ ] **D-0820.b** (`constructor-progresion`, medium) `OrderGenerator.generate_day` elige plantillas de la zona (respetando `items_cap_for_day`) en vez de armar productos al azar. Cambia las semillas actuales: regenerar `test_order_generator` y el golden de D-0848 en el mismo PR.
+- [x] **D-0820.b** (hecho 2026-10-22, PR pendiente) `OrderGenerator.generate_day` recibe `templates` (zona → `OrderTemplateSet`) y las zonas con set toman productos y requisitos de una plantilla que entre en `items_cap_for_day`; sin set (o sin plantilla que entre) sigue el sorteo anterior. `CompanyOrdersNet.plan_day` carga los sets de `data/order_templates/`. Ampliado `test_order_generator`; el golden de D-0848 aún no existe.
 **Test** `test_order_templates`: datos sin problemas, 40 por zona con tarifa, mezcla de tamaños y caprichos, `to_order` válido, y el validador atrapa 9 clases de error.
 **Hecho cuando:** `.tres` validados.

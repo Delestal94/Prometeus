@@ -30,7 +30,9 @@ const CUSTOMER_NAMES: Array[String] = [
 ## max_items caps the distinct products of an order; 0 (the default) takes items_cap_for_day(day). company, when
 ## given (a node with money), sets how many orders the day opens with: a company in the red gets
 ## BANKRUPT_ORDER_SHARE of the usual count (Bankruptcy.orders_for_day, D-0510); null keeps the usual
-## count. The host's seed and money are all it takes: every peer gets the same orders.
+## count. templates maps zone id -> OrderTemplateSet (D-0820.b): a zone with a set draws its products and
+## requirements from one of its templates (the ones within max_items); a zone without one, or with no template
+## that fits, draws them at random as before. The host's seed and money are all it takes: every peer gets the same orders.
 static func generate_day(
 	day_seed: int,
 	day: int,
@@ -40,6 +42,7 @@ static func generate_day(
 	requirements: Dictionary,
 	max_items: int = 0,
 	company: Object = null,
+	templates: Dictionary = {},
 ) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var open_zones: Array[ZoneDefinition] = _delivery_zones(zones)
@@ -54,8 +57,15 @@ static func generate_day(
 	var minutes: Array[int] = OrderRhythm.arrival_minutes(day_seed, players, count)
 	for index in minutes.size():
 		var zone: ZoneDefinition = open_zones[rng.randi_range(0, open_zones.size() - 1)]
-		var items: Array[Dictionary] = _pick_items(rng, zone.id, ids, products, max_items)
-		var reqs: Array[StringName] = _pick_requirements(rng, items, products, requirements)
+		var template: OrderTemplate = _pick_template(rng, templates.get(zone.id), max_items)
+		var items: Array[Dictionary] = []
+		var reqs: Array[StringName] = []
+		if template != null:
+			items = template.items.duplicate(true)
+			reqs = template.requirements.duplicate()
+		else:
+			items = _pick_items(rng, zone.id, ids, products, max_items)
+			reqs = _pick_requirements(rng, items, products, requirements)
 		var order_id := StringName("%so%02d" % [id_prefix(day), index + 1])
 		var order: Dictionary = Order.make(
 			order_id,
@@ -88,6 +98,18 @@ static func items_cap_for_day(day: int) -> int:
 	if day <= CompanyTuning.ORDER_EARLY_DAYS:
 		return CompanyTuning.ORDER_ITEMS_EARLY_MAX
 	return CompanyTuning.ORDER_ITEMS_MAX
+
+
+## One template of the set with at most max_items distinct products, or null when there is no set or none fits.
+static func _pick_template(rng: RandomNumberGenerator, set_res: Variant, max_items: int) -> OrderTemplate:
+	var fitting: Array[OrderTemplate] = []
+	if set_res is OrderTemplateSet:
+		for template in (set_res as OrderTemplateSet).templates:
+			if template.items.size() <= max_items:
+				fitting.append(template)
+	if fitting.is_empty():
+		return null
+	return fitting[rng.randi_range(0, fitting.size() - 1)]
 
 
 static func _delivery_zones(zones: Array[ZoneDefinition]) -> Array[ZoneDefinition]:
