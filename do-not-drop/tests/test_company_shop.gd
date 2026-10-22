@@ -79,7 +79,16 @@ func _run() -> void:
 	CompanyShop.buy(state, van)
 	CompanyShop.buy(state, van)
 	var owned: Array = state.gate_owned()["vehicles"]
-	_expect(state.fleet.size() == 2 and owned == [&"van", &"van"], "vehicles can be bought again")
+	_expect(state.fleet.size() == 3 and owned == [&"van", &"van"],
+		"vehicles can be bought again, the first keeping the starting fleet (%s)" % [state.fleet])
+	_expect(state.fleet[0].get("id") == CompanyTuning.STARTING_FLEET[0], "...the starting fleet's van ahead of them")
+	state.money = 100000
+	while state.fleet.size() < CompanyFleet.PLAYON_SLOTS:
+		CompanyShop.buy(state, van)
+	var full: Dictionary = CompanyShop.buy(state, van)
+	_expect(not full["ok"] and full["key"] == CompanyShop.FLEET_FULL
+		and state.fleet.size() == CompanyFleet.PLAYON_SLOTS,
+		"a vehicle past the playon's slots is refused (FLEET_FULL), nothing granted")
 
 	_expect(CompanyShop.check(null, upgrade)["key"] == CompanyShop.NO_COMPANY, "no company, no purchase")
 	state.reset()

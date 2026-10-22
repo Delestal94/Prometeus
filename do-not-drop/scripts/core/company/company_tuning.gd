@@ -94,6 +94,18 @@ const INTEREST_PULSE_REAL_SECONDS: float = 0.1
 ## of a full crew 37 KB/s, over the shed's 24 (docs/rendimiento-pc.md). Riding a vehicle a player
 ## sends at the game's rate again (player_ride.gd set_on_foot_pose_rate(), CompanyRoot.join_crew()).
 const SHED_POSE_RATE_HZ: int = 15
+## ... and seated in a company vehicle (D-2002.4): a driver's or a passenger's pose is in its seat's space
+## and hardly moves. Standing in a vehicle's cargo bay a player still sends at the game's 30.
+const SEATED_POSE_RATE_HZ: int = 15
+## Seconds between two poses of a company vehicle on the move (D-2002.4, CompanyFleet._make()): about 30 a
+## second instead of vehicle.tscn's ~60 (0.0167, the delivery truck's, untouched). 0.03 and not 1/30: at 60
+## fps SceneMultiplayer sends once two frames have passed, and 0.0333 (two frames to a hundredth of a ms)
+## measured 25 a second there, 0.03 a clean 30 (29 at 144 fps). Parked, NetRestThrottle's rest still rules.
+const FLEET_POSE_INTERVAL_SEC: float = 0.03
+## Seconds between two care_state publishes of a company box under care (D-2002.4, BoxToPackage.tune()):
+## twice the delivery's 0.1 s. A tended box's state is up to ~900 B (the bomb's, docs/rendimiento-pc.md),
+## and at 10 a second it cost each client who sees it ~10 KB/s. A bump warning still goes out at once.
+const CARE_PUBLISH_SEC: float = 0.2
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100

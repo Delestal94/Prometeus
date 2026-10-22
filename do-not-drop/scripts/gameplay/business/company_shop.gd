@@ -36,6 +36,7 @@ const ALREADY_OWNED: StringName = &"WORLD_SHOP_ALREADY_OWNED"
 const NEEDS_ITEM: StringName = &"WORLD_SHOP_NEEDS_ITEM"
 const WRONG_STAGE: StringName = &"WORLD_SHOP_WRONG_STAGE"
 const CANNOT_AFFORD: StringName = &"WORLD_SHOP_CANNOT_AFFORD"
+const FLEET_FULL: StringName = &"WORLD_SHOP_FLEET_FULL"
 
 
 ## Every enabled valid item of data/shop/, in file name order (the same on every peer).
@@ -75,6 +76,11 @@ static func owns(company: Object, item: ShopItem) -> bool:
 	return false
 
 
+## How many vehicles the company has: its fleet's entries, or the starting fleet while it holds none.
+static func fleet_size(company: Object) -> int:
+	return maxi((company.get("fleet") as Array).size(), CompanyTuning.STARTING_FLEET.size())
+
+
 ## Whether the company could buy `item` right now.
 static func check(company: Object, item: ShopItem) -> Dictionary:
 	if company == null or not company.has_method("can_afford"):
@@ -88,6 +94,8 @@ static func check(company: Object, item: ShopItem) -> Dictionary:
 			return _no(NEEDS_ITEM, [item.requires])
 	if item.kind == &"expansion" and item.stage != int(company.get("warehouse_stage")) + 1:
 		return _no(WRONG_STAGE, [item.stage])
+	if item.kind == &"vehicle" and fleet_size(company) >= CompanyFleet.PLAYON_SLOTS:
+		return _no(FLEET_FULL, [CompanyFleet.PLAYON_SLOTS])
 	if not company.can_afford(item.price):
 		return _no(CANNOT_AFFORD, [item.price, int(company.get("money"))])
 	return {"ok": true, "key": &"", "args": []}
@@ -103,7 +111,12 @@ static func buy(company: Object, item: ShopItem) -> Dictionary:
 		return _no(CANNOT_AFFORD, [item.price, int(company.get("money"))])
 	match item.kind:
 		&"vehicle":
-			(company.get("fleet") as Array).append({"vehicle": item.grant_key})
+			var fleet: Array = company.get("fleet")
+			if fleet.is_empty():
+				# An empty fleet is the starting one in the world (CompanyFleet.vehicle_ids()): keep it.
+				for id: StringName in CompanyTuning.STARTING_FLEET:
+					fleet.append({"id": id})
+			fleet.append({"vehicle": item.grant_key})
 		&"machine":
 			(company.get("equipment") as Array).append(item.grant_key)
 		&"expansion":

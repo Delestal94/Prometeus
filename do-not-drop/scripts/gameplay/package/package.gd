@@ -151,9 +151,9 @@ var _milestone_counts: Dictionary = {}
 ## Host: the last announced bump this box already felt (RoadImpacts id, -1
 ## none), so crossing one counts once.
 var _road_jolted: int = -1
-## Host: what the last published cushion state looked like (bump announced,
-## tap shielding, hits saved, taps), so a change goes out at once instead of
-## waiting for the next 0.1 s publish.
+## Host: what the last published care looked like where the hands answer to it (the cushion, a
+## sequence's step, a gesture's side: PackageRescue.care_signature()), so a change goes out at once
+## instead of waiting for the next care publish (`PackageRescue.care_publish_interval()`).
 var _cushion_signature: int = 0
 ## Stale trap input is dropped after this long: a passenger who paused, or
 ## tabbed out, holding "steady" would otherwise keep the trap calm forever.

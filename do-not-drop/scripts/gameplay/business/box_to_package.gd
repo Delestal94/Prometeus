@@ -42,6 +42,7 @@ static func build(
 	package.trap_definition = trap
 	package.content = main.content
 	package.impact_absorption = absorption(box)
+	tune(package)
 	if box.label_order_id != &"":
 		package.package_id = StringName("box_%s" % box.label_order_id)
 		package.name = "Package_box_%s" % box.label_order_id
@@ -52,6 +53,12 @@ static func build(
 	if not order.is_empty():
 		package.set_meta(META_TRAP_PLAN, BoxTrap.plan(box, order, products))
 	return package
+
+
+## What the company's world changes in a box it builds (D-2002.4, the bandwidth of a trip out): its
+## care_state goes out every CompanyTuning.CARE_PUBLISH_SEC instead of the delivery's 0.1 s.
+static func tune(package: DeliveryPackage) -> void:
+	package.set_meta(PackageRescue.CARE_PUBLISH_META, CompanyTuning.CARE_PUBLISH_SEC)
 
 
 ## The product whose trap rides: the hardest one in the box, or null if none is known.

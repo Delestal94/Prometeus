@@ -22,8 +22,7 @@ extends Node3D
 ## one: the same player at SPAWN it always was.
 ##
 ## The company's vehicles (`fleet`) park in the playon outside the shed's exit on every peer and can be driven
-## (CompanyFleet, D-0302.2.b);
-## no route and no run: Delivery and Endless ignore all of this (level_base.gd / level_endless.gd are untouched).
+## (CompanyFleet, D-0302.2.b); no route and no run: Delivery and Endless ignore all of this.
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
 ## starts from the company's stock and, until stations exist, refuses every units
@@ -512,6 +511,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		var bus: Node = _event_bus()
 		if bus != null:
 			bus.emit_signal(&"order_added", StringName((data["order"] as Dictionary)["id"]))
+	elif kind == CompanyColdNet.SPOILED:
+		SpoilNotice.announce(_event_bus(), data)
 
 
 ## What the day's opening tells this peer (DayCycle.opening_notice, sent as EventBus.depot_notice):
@@ -752,6 +753,8 @@ func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
+	# The map's streets (D-0304.1) and Centro's decor (D-0314), laid as the cells load; events off (D-0315.b).
+	cells.use_graph(RoadGraph.load_default(), CompanyCells.seed_of(session), false, CompanyCells.shed_ground(shed))
 
 
 ## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages
@@ -849,9 +852,9 @@ func _add_crew() -> void:
 	_world.add_child(_spawner)
 	_spawner.spawned.connect(_on_crew_spawned)
 	_spawns_crew = net != null and net.is_host()
-	if session != null and not session.peer_level_ready.is_connected(_on_peer_level_ready):
-		session.peer_level_ready.connect(_on_peer_level_ready)
-		session.roster_changed.connect(_on_roster_changed)
+	if session != null and not session.peer_level_ready.is_connected(_on_crew_changed):
+		session.peer_level_ready.connect(_on_crew_changed)
+		session.roster_changed.connect(_on_crew_changed)
 	_sync_crew()
 
 
@@ -938,11 +941,8 @@ func _crew_ids() -> Array[int]:
 	return ids
 
 
-func _on_peer_level_ready(_peer_id: int) -> void:
-	_sync_crew()
-
-
-func _on_roster_changed(_peer_ids: Array) -> void:
+## A peer's world is up (peer_level_ready: its id) or the roster changed (roster_changed: the ids).
+func _on_crew_changed(_why: Variant) -> void:
 	_sync_crew()
 
 
@@ -991,9 +991,10 @@ static func _player_name(id: int) -> String:
 
 
 ## Every player of the company's world, before it enters the tree: one of the crew (CREW_GROUP),
-## sending its pose at the shed's rate while on foot (D-2002.3, CompanyTuning.SHED_POSE_RATE_HZ;
-## riding a vehicle, the game's again). Only the owner's copy sends: a remote copy may come
-## through here too, nothing changes for it.
+## sending its pose at the shed's rate while on foot (D-2002.3, CompanyTuning.SHED_POSE_RATE_HZ),
+## at SEATED_POSE_RATE_HZ seated in a vehicle (D-2002.4) and at the game's standing in its bay. Only
+## the owner's copy sends: a remote copy may come through here too, nothing changes for it.
 static func join_crew(crew_member: Player) -> void:
 	crew_member.add_to_group(CREW_GROUP)
 	Ride.set_on_foot_pose_rate(crew_member, CompanyTuning.SHED_POSE_RATE_HZ)
+	Ride.set_seated_pose_rate(crew_member, CompanyTuning.SEATED_POSE_RATE_HZ)

@@ -41,9 +41,13 @@ extends Node3D
 ## peer acks it. A peer that leaves, or whose world comes up again, is closed until it acks again, and the host
 ## takes it off any wheel it held (release_peer()): a dropped driver doesn't keep the van, nor its input.
 ##
-## Not here yet (D-0302.2.b.2, rest): a vehicle bought or sold mid-day (an event every peer builds it from, then
-## tell_host()) and CompanyTrips.forget() for one that leaves mid-day. Closing the world frees them all, which is
-## no vehicle leaving: the day is saved as it stood (D-2005). Nothing here names an autoload (lesson N-919).
+## Bought mid-day (D-0302.2.b.5): a shop_bought of a vehicle (CompanyShopNet) is applied to every peer's company, and
+## the fleet then builds the new one on each (_on_event(), build() adds only the missing), a client telling the host
+## it has it (tell_host()) so its synchronizer opens. The shop refuses the vehicle past PLAYON_SLOTS (CompanyShop).
+##
+## Not here yet: selling one (D-0528 is postponed) and CompanyTrips.forget() for one that leaves mid-day. Closing
+## the world frees them all, which is no vehicle leaving: the day is saved as it stood (D-2005). Nothing here names
+## an autoload (lesson N-919).
 
 const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
 
@@ -355,6 +359,7 @@ func _hook(session: Node) -> void:
 	_host = net.is_host()
 	_session = session
 	set_physics_process(_host)
+	net.event_applied.connect(_on_event)
 	if not _host:
 		net.company_state_restored.connect(_on_snapshot)
 		return
@@ -388,6 +393,8 @@ func _make(definition: VehicleDefinition, node_name: String) -> Node3D:
 	var sync := body.get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
 	if sync == null:
 		return body
+	# About 30 poses a second on the move (D-2002.4), set before the throttle's _ready keeps it as its full rate.
+	sync.replication_interval = CompanyTuning.FLEET_POSE_INTERVAL_SEC
 	var throttle := NetRestThrottle.new()
 	throttle.name = "NetRestThrottle"
 	throttle.watched.assign(REST_WATCHED.filter(func(property: StringName) -> bool: return property in body))
@@ -408,6 +415,18 @@ func _refresh(peer: int) -> void:
 		var sync := body.get_node_or_null(SYNC_PATH) as MultiplayerSynchronizer
 		if sync != null and sync.is_inside_tree():
 			sync.update_visibility(peer)
+
+
+## Every peer: a shop_bought of a vehicle has changed the company's fleet, so the vehicle it adds is built here too
+## (build() makes only the missing ones); a client then tells the host which it has.
+func _on_event(_seq: int, kind: StringName, data: Dictionary) -> void:
+	if kind != CompanyShopNet.BOUGHT:
+		return
+	var item: ShopItem = net.shop.find(data.get("item"))
+	if item == null or item.kind != &"vehicle":
+		return
+	if build(net.company) > 0 and not _host:
+		tell_host()
 
 
 ## Client: the host's snapshot is in, its company in this peer's CompanyState: the vehicles it lacks, then the
