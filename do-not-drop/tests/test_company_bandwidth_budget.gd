@@ -83,6 +83,8 @@ const UNITS: int = 3
 ## The host's port of the first measured case; the next ones take the next ports (none of them
 ## used by another test: the suite runs in parallel).
 const PORT: int = 24701
+## How many ports from PORT the measured cases may take (test_unique_test_ports.gd reserves them).
+const PORT_SPAN: int = 6
 const CONNECT_SECONDS: float = 10.0
 ## Path caches confirmed and the player's appearance sent before the count starts.
 const WARMUP_SECONDS: float = 1.0
@@ -134,6 +136,8 @@ func _run() -> void:
 		for crew: int in crews:
 			_report_crowded(world, CASES.case_layout(kind, crew, CASES.CROWDED_RIDERS,
 				CASES.CROWDED_STAYS))
+	_expect(cases.size() <= PORT_SPAN, "The measured cases fit the %d reserved ports (got %d)"
+		% [PORT_SPAN, cases.size()])
 	for index: int in range(cases.size()):
 		var layout: Dictionary = cases[index]
 		layout.measured = await _measure_enet(world, layout, PORT + index)

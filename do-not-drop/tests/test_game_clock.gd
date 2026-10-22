@@ -31,7 +31,7 @@ extends SceneTree
 ##   client applies it (no waiting for another), keeping the anchor it had.
 ## Expected in the log: CompanyNet's warning for the clock_anchor applied with no clock.
 
-const PORT: int = 24641
+const PORT: int = 24717
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 ## Where the simulated tick starts (any value: a tick is local to its machine).
 const START_TICK: int = 5_000_000
