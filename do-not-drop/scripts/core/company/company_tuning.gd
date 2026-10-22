@@ -81,6 +81,9 @@ const SHED_POSE_RATE_HZ: int = 15
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
+## Money the suggested supplier order leaves untouched besides the rent (D-0151,
+## roles-tripulacion.md §6.3): the reserve of the economy curve.
+const SOLO_ORDER_CASH_RESERVE: int = 100
 
 # --- Bankruptcy (D-0510) ---
 ## A company that closes the day in the red opens the next one with this share of its orders
@@ -204,6 +207,10 @@ const ORDERS_MAX_PER_DAY: int = 16
 const ORDER_HOUR_WEIGHTS: Array[float] = [1.0, 2.0, 3.0, 3.0, 2.5, 1.0, 1.0, 2.0, 2.5, 2.0, 0.5]
 ## Orders do not arrive in the last hour of the day: the crew would have no time to ship them.
 const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
+## With a crew of one the day's arrival hours are squeezed so the last order comes in by 15:00 of the
+## shed (D-0151, roles-tripulacion.md §6.2): the shed stands still while the only player drives (S4),
+## and with three trips the afternoon orders would never come in. The count does not change.
+const SOLO_ORDER_LAST_ARRIVAL_MIN: int = 15 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3

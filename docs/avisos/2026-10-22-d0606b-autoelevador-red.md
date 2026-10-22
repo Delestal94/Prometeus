@@ -7,12 +7,12 @@ Arreglos que pidió `auditor-red` sobre el autoelevador del galpón (mismo PR qu
 
 ## Qué cambió
 
-- **Protocolo:** sigue en **47** (lo subió este mismo PR, todavía sin mezclar; 45 y 46 son de main: cajas sueltas D-0316.3 y
+- **Protocolo:** sigue en **48** (lo subió este mismo PR, todavía sin mezclar; 45 y 46 son de main: cajas sueltas D-0316.3 y
   `jack_departed` D-0618.b). La petición `fork_act` con
   `act: mast, dir: 0` acepta ahora `at_height` (float, opcional: la altura que dibuja el conductor al soltar la
   tecla) y el host puede rechazar un `mast` que no cambia nada (`no_change`), `board` con las manos ocupadas
   (`hands_busy`) y `leave` fuera de lugar (`no_room`). Ningún RPC ni sincronizador nuevo; solo cambió el texto de la
-  línea 47 del historial en `scripts/core/network_manager.gd`.
+  línea 48 del historial en `scripts/core/network_manager.gd`.
 - **`scripts/core/company/company_net.gd`** (zona compartida, sin firmas cambiadas, queda en 1000 líneas):
   `_on_object` pasa por `CompanyPallets.check_for(net, peer, kind, data, station)`, que pone el `peer` del que pide
   por encima de lo que diga la estación y, para `fork_act`, `hands_free` y `lag` (ida y vuelta, `NetStats`);

@@ -43,6 +43,8 @@ var cart: PickingCart = PickingCart.new()
 ## The point of the platform and the point of the handle.
 var load_point: PickingCartPoint
 var push_point: PickingCartPoint
+## Puts the first product on the cart back on its shelf (D-0610.c2.c).
+var restock_point: PickingCartPoint
 ## One take point per product on the cart (at most one per slot), in the order of slot_products().
 var take_points: Array[PickingCartPoint] = []
 
@@ -154,11 +156,13 @@ func _build() -> void:
 	load_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_LOAD, Vector3(0.1, 0.7, 0.0), 0.45)
 	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_PUSH,
 		Vector3(HANDLE_X - 0.14, 0.9, 0.0), 0.3)
+	restock_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_RESTOCK,
+		Vector3(-LENGTH * 0.5 + 0.2, 0.7, 0.0), 0.3)
 	for slot: int in CompanyTuning.CART_MAX_UNITS:
 		var take := PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_TAKE, slot_centre(slot), TAKE_RADIUS)
 		take.name = "Take_%s_%d" % [cart.id, slot]
 		take_points.append(take)
-	var points: Array[PickingCartPoint] = [load_point, push_point]
+	var points: Array[PickingCartPoint] = [load_point, push_point, restock_point]
 	points.append_array(take_points)
 	for point: PickingCartPoint in points:
 		point.used.connect(func(id: StringName, how: StringName, peer_id: int, origin: Vector3,
