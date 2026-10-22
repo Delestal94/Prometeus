@@ -158,14 +158,17 @@ Bot `tests/bot_company_day.gd` (headless, termina solo):
   rotulados; un hueco de otro producto rechaza `wrong_product`), `take_orders` (el generador por
   semilla llena el `OrderBook`), `pack_boxes` (en una mesa: unidades del estante, caja, relleno,
   etiqueta, sellos y cinta; el pedido queda `PACKED`), `dispatch` (la zona de despacho ata la caja a
-  su pedido, `DispatchRules` habilita la van y la carga queda en `CompanyTrips`), `deliver` (la van
-  cruza el portón hacia afuera, el viaje arranca y el pedido queda `OUT`; en cada parada la casa es una
-  del mapa fijo de su zona y la puerta cobra con `OrderSettlement`), `return` (la van vuelve a cruzar
-  el portón, el viaje se cierra sin fallados y no queda vehículo afuera) y `close_day` (el
+  su pedido, `DispatchRules` habilita la van y la carga queda en `CompanyTrips`), `drive` (el jugador
+  abre la puerta de la cabina, toma el volante de la van de la flota estacionada en el playón y la
+  saca con el acelerador por su propia física; el portón ve cruzar el nodo, el viaje arranca y el
+  pedido queda `OUT`), `deliver` (en cada parada la casa es una del mapa fijo de su zona y la puerta
+  cobra con `OrderSettlement`), `return` (el conductor vuelve marcha atrás hasta adentro del playón,
+  el viaje se cierra sin fallados, no queda vehículo afuera y el jugador se baja) y `close_day` (el
   reloj salta a las 20:00, `DayCycle` pasa por `CLOSING` a `SUMMARY`, el resumen trae los costos del
   armado y el día cerrado se guarda y se lee de vuelta).
-- Sigue `not_implemented`, con el motivo que nombra la tarea que falta: `drive` (`D-0302.2/D-1501`).
-  Hasta que exista, la línea final es `BOT_FAIL stages_missing=1` y la salida 1; es lo esperado.
+- Ninguna etapa queda `not_implemented`: la línea final esperada es `BOT_OK` (salida 0). `drive` todavía
+  no lleva la van por el grafo de calles hasta las casas (D-2016.3, cuando el grafo esté en el mundo de
+  la empresa, D-0314.a): sale del playón y frena afuera.
 - Lo que todavía no es un pedido de `CompanyNet` (abrir el palet, la mesa, mover unidades mano a
   caja, el libro de pedidos, la zona de despacho) lo hace el bot sobre los objetos del host, y las
   estaciones (`CompanyNet.stations`) las instala el bot porque `CompanyRoot` aún no las pone
@@ -174,9 +177,8 @@ Bot `tests/bot_company_day.gd` (headless, termina solo):
   ms por etapa) y al final `BOT_OK` (salida 0) o `BOT_FAIL stages_missing=<n>` (salida 1);
   `BOT_TIMEOUT` (salida 3) si se colgó. `deliveries` cuenta los pedidos cobrados en la puerta (1);
   `breaks` vale 0 hasta que el manejo pueda romper cajas; `assembly_errors` cuenta lo que falta o sobra en la caja armada (el bot arma bien: 0).
-- Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa real (las ocho de arriba) que pasa de `ok` a
-  falla, una etapa pendiente que cambia de motivo sin que se cierre su tarea, y todo
-  `ERROR`/`SCRIPT ERROR` del log. Los tres `not_implemented` de arriba y los avisos de fin de
+- Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa (las nueve de arriba) que pasa de `ok` a
+  falla, y todo `ERROR`/`SCRIPT ERROR` del log. Los avisos de fin de
   proceso (`ObjectDB instances were leaked`, `resources still in use`, de todo `--script`) no lo son.
 
 ## Hallazgos
