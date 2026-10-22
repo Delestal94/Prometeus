@@ -349,6 +349,18 @@ Decisión: `docs/decisiones/2026-10-22-horario-clientes.md`.
 Decisión: `docs/decisiones/2026-10-22-cosmeticos-empresa.md`.
 **Hecho cuando:** `diseno/cosmeticos-empresa.md` existe y D-0437 y D-1234 se pueden construir sin preguntar.
 
+### D-0138 · Logros de Steam de la expansión — A · Opus 5.5 · low · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #705)** — `docs/marketing/logros-expansion.md`: 30 logros `EXP_` (13 de progreso, 9 de habilidad coop, 8 graciosos; 5 ocultos), todos alcanzables con 1 y con 8 jugadores, decididos en el host y recibidos por los presentes, con condición medible, fase, 2 stats y pedido de ícono por logro. Lo construye D-0440.
+**Depende de:** D-0118 (`diseno/hitos.md`), D-0127 (los modificadores no bloquean), D-0112 (lo recortado no tiene logro)
+**Qué:** lista de 30 logros del modo Empresa en `docs/marketing/`, contrastada con las señales que ya existen
+(`EventBus`, `CompanyNet`, `OrderBook`, `CompanyFleet`) y separada de los 15 del juego actual (S-907, prefijo `BASE_`).
+- [x] D-0138.1 Reglas: 1 a 8 jugadores, ninguno perdible, sin grindeo (techo 100 entregas), banderas de desarrollo
+  bloquean, logros de equipo para los presentes, el que entra tarde no recibe lo anterior.
+- [x] D-0138.2 Tabla de 30 con API name, nombre y descripción es/en, condición, fase F1-F4, oculto y stat.
+- [x] D-0138.3 Pedido de ícono por logro para `artista-conceptual` y la lista de lo que construye D-0440.
+Decisión: `docs/decisiones/2026-10-22-logros-expansion.md`.
+**Hecho cuando:** `docs/marketing/logros-expansion.md` existe y D-0440 lo puede construir sin preguntar.
+
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.

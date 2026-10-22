@@ -50,7 +50,7 @@
 | D-0135 | ✅ Definir reglas de clima por distrito y su efecto en la carga y el vehículo | constructor-mundo | medium | tabla en `diseno/distritos.md` |
 | D-0136 | ✅ Definir reglas de horario de clientes (no reciben de noche, ventanas de entrega) | constructor-progresion | low | sección en `diseno/clientes.md` |
 | D-0137 | ✅ Diseño de cosméticos de la empresa (logo, colores de la flota, uniforme) | critico-diseno | low | `diseno/cosmeticos-empresa.md` |
-| D-0138 | Ideas de logros de Steam de la expansión (30) | estratega-steam | low | lista en `docs/marketing/` |
+| D-0138 | ✅ Ideas de logros de Steam de la expansión (30) | estratega-steam | low | lista en `docs/marketing/` |
 | D-0139 | Encaje de la expansión en la página de Steam y el tráiler (qué promete y qué no) | estratega-steam | medium | nota en `docs/marketing/` |
 | D-0140 | Revisión de `abogado-del-diablo` del diseño completo una vez escrito D-0101 a D-0139 | abogado-del-diablo | high | informe con lista SIMPLIFICAR/REHACER y tareas ajustadas |
 | D-0151 | Ayudas del modo solo de `diseno/roles-tripulacion.md` §6.2: pausa de verdad sin peers, pedidos que entran antes con 1 jugador, pedido automático al proveedor al cierre | constructor-progresion | high | `test_company_solo_assists` verde; el bot de D-2024 vive del pedido automático |
