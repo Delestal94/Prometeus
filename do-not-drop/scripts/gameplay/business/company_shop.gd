@@ -16,6 +16,12 @@ const NAME_KEYS: Dictionary = {
 	&"upgrade_1": "WORLD_SHOP_UPGRADE_1",
 	&"label_reader": "WORLD_SHOP_LABEL_READER",
 	&"expansion_1": "WORLD_SHOP_EXPANSION_1",
+	&"vehicle_van": "WORLD_SHOP_VEHICLE_VAN",
+	&"vehicle_bike": "WORLD_SHOP_VEHICLE_BIKE",
+	&"vehicle_cart": "WORLD_SHOP_VEHICLE_CART",
+	&"vehicle_offroad": "WORLD_SHOP_VEHICLE_OFFROAD",
+	&"vehicle_boat": "WORLD_SHOP_VEHICLE_BOAT",
+	&"vehicle_plane": "WORLD_SHOP_VEHICLE_PLANE",
 }
 
 const NO_COMPANY: StringName = &"WORLD_SHOP_NO_COMPANY"
