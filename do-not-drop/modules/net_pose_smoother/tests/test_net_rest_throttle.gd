@@ -78,11 +78,12 @@ func _initialize() -> void:
 	sync.public_visibility = false
 	sync.visibility_changed.emit(6)
 	_expect(throttle.is_resting(), "Hiding it from a peer (flag off, not public) doesn't wake it")
+	# Visible again, so only the meta can keep this change from waking it.
+	sync.public_visibility = true
 	sync.set_meta(NetRestThrottle.QUIET_META, true)
 	sync.visibility_changed.emit(5)
 	sync.remove_meta(NetRestThrottle.QUIET_META)
 	_expect(throttle.is_resting(), "A change made with QUIET_META set (a keepalive pulse) doesn't wake it")
-	sync.public_visibility = true
 
 	var typo := NetRestThrottle.new()
 	typo.watched = [&"net_transfrom"]
