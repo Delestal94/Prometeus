@@ -448,7 +448,7 @@ func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 	# Solid as one block: nobody walks through the rack.
 	kit.collider(Vector3(width, def.height_m, depth), at * Transform3D(Basis.IDENTITY,
 		Vector3(0.0, def.height_m * 0.5, 0.0)))
-	var shelf: Shelf = Shelf.make(uid, def.slots)
+	var shelf: Shelf = Shelf.make(uid, def.slots, def.cold)
 	var node := Node3D.new()
 	node.name = "Shelf_%s" % uid
 	node.transform = at
@@ -464,7 +464,10 @@ func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 ## the count under the name. refresh_stock() rewrites them from the Inventory.
 func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int, product: StringName,
 		width: float, depth: float) -> void:
-	if slot < 0 or slot >= def.slots or not shelf.set_label(Inventory.new(), slot, product):
+	var definition := load("res://data/products/%s.tres" % product) as ProductDefinition
+	if slot < 0 or slot >= def.slots or definition == null:
+		return
+	if not shelf.set_label(Inventory.new(), slot, product, definition.temperature):
 		return
 	var level: int = floori(slot / float(SHELF_COLUMNS))
 	var column: int = slot % SHELF_COLUMNS
@@ -487,12 +490,18 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.position = Vector3(x, SHELF_LABELS[level], depth * 0.5 + 0.01)
 	node.add_child(label)
-	var content: PackageContent = null
-	var definition := load("res://data/products/%s.tres" % product) as ProductDefinition
-	if definition != null:
-		content = definition.content
+	var content: PackageContent = definition.content
 	_slot_views.append({"label": label, "crate": crate, "product": product,
 		"location": shelf.location(slot), "name": content.localized_name() if content != null else String(product)})
+
+
+## The fridges of the shed (shelf uid -> true): ColdChain.advance's `cold_shelves` (D-0616.b).
+func cold_shelves() -> Dictionary:
+	var found: Dictionary = {}
+	for uid: StringName in shelves:
+		if (shelves[uid] as Shelf).cold:
+			found[uid] = true
+	return found
 
 
 ## The shelf slot a units request names (ShelfPicking.station_id) as CompanyNet's `stations` resolver
