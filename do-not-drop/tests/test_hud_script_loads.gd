@@ -20,10 +20,21 @@ extends SceneTree
 ## - It reaches CompanyState statically too (the _COMPANY const, D-0202.3): the
 ##   company autoload sits after UnlockManager and must not drag a UI class or
 ##   another autoload into a --script tree, so the autoloads survive it.
+## - It reaches CompanyRoot statically as well (the _COMPANY_ROOT const, D-0243): the
+##   expansion's entry point names most of its new classes (business/, districts/, fleet/,
+##   core/company/). Every autoload of project.godot must keep its script with that tree
+##   compiled first, and every script under those folders must still compile.
 
 const _HOUSE := preload("res://scripts/gameplay/route/delivery_house.gd")
 const _DEPOT := preload("res://scripts/gameplay/depot/depot.gd")
 const _COMPANY := preload("res://scripts/core/company/company_state.gd")
+const _COMPANY_ROOT := preload("res://scripts/gameplay/company_root.gd")
+const EXPANSION_DIRS: Array[String] = [
+	"res://scripts/core/company",
+	"res://scripts/gameplay/business",
+	"res://scripts/gameplay/districts",
+	"res://scripts/gameplay/fleet",
+]
 const EVENT_BUS_USERS: Array[String] = [
 	"res://scripts/core/run_manager.gd",
 	"res://scripts/core/crew_progression.gd",
@@ -92,9 +103,35 @@ func _run() -> void:
 	_expect(company != null and not company.is_active(),
 		"CompanyState is inactive in a plain --script run")
 
+	# --- the expansion's classes leave every autoload with its script (D-0243) ---
+	var root_script: Script = _COMPANY_ROOT
+	_expect(root_script != null and root_script.can_instantiate(),
+		"company_root.gd compiles in a --script run that names it")
+	var autoload_count: int = 0
+	for property: Dictionary in ProjectSettings.get_property_list():
+		var key: String = property.name
+		if not key.begins_with("autoload/"):
+			continue
+		autoload_count += 1
+		var autoload_name: String = key.trim_prefix("autoload/")
+		var autoload: Node = root.get_node_or_null(NodePath(autoload_name))
+		_expect(autoload != null and autoload.get_script() != null,
+			"The %s autoload keeps its script when CompanyRoot is named" % autoload_name)
+	_expect(autoload_count >= 11, "project.godot lists the autoloads (got %d)" % autoload_count)
+	var script_count: int = 0
+	for dir_path: String in EXPANSION_DIRS:
+		for file: String in DirAccess.get_files_at(dir_path):
+			if not file.ends_with(".gd"):
+				continue
+			script_count += 1
+			var script: Script = load(dir_path.path_join(file))
+			_expect(script != null and script.can_instantiate(),
+				"%s compiles in a --script run that names CompanyRoot" % file)
+	_expect(script_count >= 40, "The expansion folders hold its scripts (got %d)" % script_count)
+
 	if _failures == 0:
-		print("PASS: HUD, RunManager and CompanyState keep their scripts in a --script run; "
-			+ "care card EDGE_MARGIN matches the HUD's")
+		print("PASS: HUD, RunManager, CompanyState and every autoload keep their scripts in a "
+			+ "--script run that names CompanyRoot; care card EDGE_MARGIN matches the HUD's")
 	quit(_failures)
 
 

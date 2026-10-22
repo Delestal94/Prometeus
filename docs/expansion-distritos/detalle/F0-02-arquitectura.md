@@ -380,3 +380,17 @@ proveedores y cajas, plata por motivo).
 esperadas; un día abandonado no escribe ni contamina el siguiente; el tope de eventos se respeta; una
 entrega sigue escribiendo, con `kind: "run"`.
 **Hecho cuando:** el test pasa y el log del día se lee con `run_telemetry_format`.
+
+### D-0243 · Los `--script` no pierden autoloads al nombrar clases de la expansión — B · Opus 5.5 · medium · Aviso: no · F0 (Pulido)
+**[x] Hecho (2026-10-22, PR #PRNUM)** — `test_hud_script_loads` nombra `CompanyRoot` estáticamente y comprueba que todos los autoloads de `project.godot` conservan su script y que compila cada script de `core/company/`, `business/`, `districts/` y `fleet/`.
+**Depende de:** D-0202, D-0214
+**Qué:** la lección de N-919: un `--script` compila el árbol estático del test antes de que existan los
+autoloads, así que una clase nueva que arrastra (por `preload`, tipo o `class_name`) un script que nombra un
+autoload o una clase de UI deja ese autoload o nodo sin script. `CompanyState` ya estaba cubierto
+(D-0202.3); esto lo amplía a la entrada de la expansión, `CompanyRoot`, que alcanza la mayoría de las
+clases nuevas, y a todos los autoloads leídos de `ProjectSettings` (no una lista a mano).
+**Test** `test_hud_script_loads` (ampliado): `_COMPANY_ROOT` es un `preload` de `company_root.gd`;
+compila; cada `autoload/*` de `project.godot` tiene nodo con script; cada `.gd` de las cuatro carpetas de
+la expansión carga y `can_instantiate()`; hay al menos 11 autoloads y 40 scripts (que la búsqueda no
+quede vacía en silencio).
+**Hecho cuando:** el test pasa con `CompanyState` y `CompanyRoot` nombrados.
