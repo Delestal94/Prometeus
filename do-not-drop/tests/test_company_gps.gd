@@ -39,7 +39,8 @@ func _run() -> void:
 func _trip_to(houses: Array[StringName]) -> Trip:
 	var trip := Trip.new()
 	for house_id: StringName in houses:
-		trip.stops.append({"house_id": house_id, "order_ids": [StringName("o_" + String(house_id))] as Array[StringName]})
+		var orders: Array[StringName] = [StringName("o_" + String(house_id))]
+		trip.stops.append({"house_id": house_id, "order_ids": orders})
 	return trip
 
 
@@ -48,12 +49,15 @@ func _test_next_stop(gps: CompanyGps, shed: Vector2, centro: Array[HouseSpot], a
 	var first: Dictionary = gps.guidance(shed)
 	_expect(not first.is_empty(), "A Centro stop is reachable from the shed")
 	var address: Dictionary = addresses.of_house(centro[0].id)
-	_expect(String(first.label) == "%s %d" % [tr(address.street_key), address.number], "The label is the house's address: %s" % [first.get("label")])
+	var expected: String = "%s %d" % [tr(address.street_key), address.number]
+	_expect(String(first.label) == expected, "The label is the house's address: %s" % [first.get("label")])
 	_expect(int(first.house) == gps.houses.index_of(centro[0].id), "It names the next stop's house index")
 	var ahead := Vector2(first.waypoint.x, first.waypoint.z)
 	_expect(ahead.distance_to(shed) > 1.0, "The arrow's waypoint is ahead of the vehicle")
-	_expect(float(first.distance) >= shed.distance_to(centro[0].position) * 0.9, "The distance is no shorter than the straight line")
-	_expect(is_equal_approx(float(first.game_minutes), float(first.seconds) * 60.0 / CompanyTuning.SECONDS_PER_GAME_HOUR), "Game minutes = seconds x 60 / seconds per game hour")
+	var straight: float = shed.distance_to(centro[0].position)
+	_expect(float(first.distance) >= straight * 0.9, "The distance is no shorter than the straight line")
+	var minutes: float = float(first.seconds) * 60.0 / CompanyTuning.SECONDS_PER_GAME_HOUR
+	_expect(is_equal_approx(float(first.game_minutes), minutes), "Game minutes = seconds x 60 / seconds per game hour")
 	_expect(float(first.game_minutes) > 0.0, "The arrival estimate is above zero")
 	_expect((first.polyline as PackedVector2Array).size() >= 2, "It carries the path to draw")
 	# The first stop is delivered: the screen moves on to the second one.
