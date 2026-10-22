@@ -135,7 +135,7 @@ var stock_board: StockBoard
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
 var supplier_truck: SupplierTruckView
 ## The supplier calendar the truck follows, on every peer: CompanyNet's (net.supplier.schedule), fed by the
-## orders of the supplier board (D-0603.b.2, _add_supplier_orders()).
+## orders of the supplier board (D-0603.b.2, CompanySupplierLink).
 var supplier_schedule: SupplierSchedule = SupplierSchedule.new()
 var supplier_board: SupplierBoard
 ## Requests and events of the company's business (D-2003, CompanyNet).
@@ -202,9 +202,8 @@ var _saw_host_day: bool = false
 var _host_gone: bool = false
 ## What was last handed to Steam (_publish_presence()): [lobby data, rich presence].
 var _presence_shown: Array = []
-## Host: the day whose truck pallets are on the bed (_load_truck_pallets()), and the (day, minute) last looked at.
-var _pallets_day: int = 0
-var _pallets_checked: Vector2i = Vector2i.ZERO
+## The supplier's truck, board and pallets (CompanySupplierLink); the host's poll of the pallets runs in _process().
+var _supplier: CompanySupplierLink
 
 
 func _ready() -> void:
@@ -672,72 +671,14 @@ func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
 	PalletJackUse.use(net, shed.yard, action, peer_id, from)
 
 
-## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
-## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
-## (CompanyPallets.loaded_event), once per day; and when it drove off, jack_departed (D-0618.b, send_truck_off).
-func _load_truck_pallets() -> void:
-	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
-		return
-	var day: int = _hosted_state.day
-	var minute: int = floori(clock.minute_now())
-	if _pallets_checked == Vector2i(day, minute):
-		return
-	_pallets_checked = Vector2i(day, minute)
-	CompanyPallets.send_truck_off(net.pallets, supplier_schedule, day, minute, net.publish)
-	if _pallets_day == day or not CompanyPallets.load_due(supplier_schedule, day, minute):
-		return
-	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
-	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):
-		_pallets_day = day
-
-
-## The supplier's truck beside the shed (D-0601). It reads the day and the minute from the same
-## GameClock and CompanyState as every other peer, so there is nothing to send.
+## The supplier's side (truck, order board, pallets on the bed) is CompanySupplierLink's (N-985).
 func _add_supplier_truck() -> void:
-	_add_supplier_orders()
-	supplier_truck = SupplierTruckView.new()
-	supplier_truck.schedule = supplier_schedule
-	supplier_truck.origin = shed.position
-	supplier_truck.company = net.company if net != null else null
-	supplier_truck.minute_now = func() -> float:
-		return clock.minute_now() if clock != null and is_instance_valid(clock) else float(CompanyTuning.DAY_START_MIN)
-	_world.add_child(supplier_truck)
-	shed.truck = supplier_truck
-	if net != null:
-		# The pallets on the bed are the book's (CompanyPallets), the same on every peer (D-0605.b).
-		supplier_truck.pallets = net.pallets.book
-		net.event_applied.connect(func(_seq: int, kind: StringName, _data: Dictionary) -> void:
-			if CompanyPallets.EVENT_KINDS.has(kind):
-				supplier_truck.refresh_bed())
-		net.company_state_restored.connect(func(_snapshot_seq: int) -> void: supplier_truck.refresh_bed())
-		supplier_truck.refresh_bed()
-
-
-## The supplier orders (D-0603.b.2), on every peer: the truck reads CompanyNet's calendar (the host checks an
-## order, every peer applies it) and the shed's board opens the order screen on the peer that used it. The
-## host's calendar comes from its save and goes back to it after every order (CompanySupplierNet.load_saved).
-func _add_supplier_orders() -> void:
-	if net == null:
-		return
-	net.supplier.schedule = supplier_schedule
-	var defs: Dictionary = net.supplier.load_catalog(CompanyCatalog.load_all())
-	if net.is_host() and _hosted_state != null:
-		_hosted_state.supplier_calendar = CompanySupplierNet.load_saved(supplier_schedule, _hosted_state)
-		net.event_applied.connect(_on_supplier_ordered)
-		SupplierAutoOrderHook.attach(self, net)
-	supplier_board = SupplierBoard.new()
-	supplier_board.name = "SupplierBoard"
-	add_child(supplier_board)
-	supplier_board.setup(net, net.supplier.supplier, defs)
-	supplier_board.player_of = func() -> Node: return player
-	supplier_board.busy = func() -> bool: return builder != null and builder.is_building()
-	shed.supplier_board_opened.connect(func() -> void: supplier_board.open())
-
-
-## Host: an order went into the calendar; the company keeps it for the save (CompanyState.supplier_calendar).
-func _on_supplier_ordered(_seq: int, kind: StringName, _data: Dictionary) -> void:
-	if kind == CompanySupplierNet.ORDERED and _hosted_state != null and is_instance_valid(_hosted_state):
-		_hosted_state.supplier_calendar = supplier_schedule.to_dict()
+	_supplier = CompanySupplierLink.attach(self, _world, net, supplier_schedule, shed,
+		func() -> GameClock: return clock, func() -> Node: return player,
+		func() -> bool: return builder != null and builder.is_building(),
+		func() -> COMPANY_STATE: return _hosted_state)
+	supplier_truck = _supplier.truck
+	supplier_board = _supplier.board
 
 
 ## The shed from the company as this peer holds it: on the host what it started with; on a client
@@ -789,7 +730,8 @@ func _add_interest() -> void:
 
 
 func _process(_delta: float) -> void:
-	_load_truck_pallets()
+	if _supplier != null:
+		_supplier.poll_pallets(clock)
 	if cells == null:
 		return
 	var as_host: bool = net == null or net.is_host()
