@@ -18,10 +18,6 @@ const HOME_ZONE_WEIGHT: int = 3
 const DOUBLE_QTY_CHANCE: float = 0.15
 ## Houses per zone an order can name (house_id = "<zone>_house_<n>") in a zone with no house on the map.
 const HOUSES_PER_ZONE: int = 12
-const CUSTOMER_NAMES: Array[String] = [
-	"Marta", "Gustavo", "Lucia", "Bruno", "Elena", "Tomas", "Rosa", "Hugo",
-	"Irene", "Julian", "Paula", "Ramiro", "Silvia", "Dario", "Nora", "Felix",
-]
 
 
 ## The day's orders sorted by arrival. zones are the ZoneDefinitions open today
@@ -72,7 +68,7 @@ static func generate_day(
 		var order_id := StringName("%so%02d" % [id_prefix(day), index + 1])
 		var order: Dictionary = Order.make(
 			order_id,
-			CUSTOMER_NAMES[rng.randi_range(0, CUSTOMER_NAMES.size() - 1)],
+			CustomerNames.pick(rng),
 			zone.id,
 			_pick_house(rng, zone.id, houses, day_seed, index),
 			items,
