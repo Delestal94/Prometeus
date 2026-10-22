@@ -89,11 +89,17 @@ func _refresh_seating(tree: SceneTree, force: bool) -> void:
 	_local_seat_path = NodePath()
 	var found_local: bool = false
 	for player: Node in tree.get_nodes_in_group(player_group):
-		var seat: NodePath = NodePath(player.get(&"seat_node_path"))
+		var seat: NodePath = _seat_of(player)
 		_seated_paths[seat] = true
 		if not found_local and player.has_method(&"is_local") and bool(player.call(&"is_local")):
 			found_local = true
 			_local_seat_path = seat
+
+
+## The seat a player sits in; empty for a node that has no `seat_node_path` (a stand-in, a prop in the group).
+static func _seat_of(player: Node) -> NodePath:
+	var raw: Variant = player.get(&"seat_node_path")
+	return NodePath(raw) if raw != null else NodePath()
 
 
 ## `force` looks at the players again even if this frame already did.
@@ -116,7 +122,7 @@ func _update_indicator(force: bool = true) -> void:
 ## Whether any player's replicated seat is this one (true on every peer).
 func is_occupied() -> bool:
 	for player: Node in get_tree().get_nodes_in_group(player_group):
-		if NodePath(player.get(&"seat_node_path")) == _own_seat_path:
+		if _seat_of(player) == _own_seat_path:
 			return true
 	return false
 
