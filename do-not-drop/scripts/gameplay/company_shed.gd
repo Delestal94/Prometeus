@@ -546,17 +546,25 @@ func _cart_station(cart_id: StringName) -> Dictionary:
 	return {
 		"location": cart_view.cart.location(), "spot": cart_view.global_position + Vector3.UP * 0.5,
 		"capacity": CompanyTuning.CART_MAX_UNITS, "at": cart_view.position,
-		"stand_ok": cart_can_stand,
+		"stand_ok": cart_can_stand.bind(cart_id),
 	}
 
 
 ## Whether a cart may be left at `local` (shed frame): inside the floor with CompanyTuning.CART_CLEARANCE_M
-## to the walls, and that far from every piece of furniture (the dispatch zone is only painted).
-func cart_can_stand(local: Vector3) -> bool:
+## to the walls, that far from every piece of furniture (the dispatch zone is only painted) and
+## CompanyTuning.CART_SPACING_M from every other cart (D-0610.c); `cart` is the one that would stand there.
+func cart_can_stand(local: Vector3, cart: StringName = &"") -> bool:
 	var clearance: float = CompanyTuning.CART_CLEARANCE_M
 	var half: Vector2 = WarehouseStages.floor_size_m(stage) * 0.5
 	if absf(local.x) > half.x - clearance or absf(local.z) > half.y - clearance:
 		return false
+	for other: StringName in cart_views:
+		var view: Variant = cart_views[other]
+		if other == cart or not is_instance_valid(view):
+			continue
+		var at: Vector3 = (view as PickingCartView).position
+		if Vector2(at.x - local.x, at.z - local.z).length() < CompanyTuning.CART_SPACING_M:
+			return false
 	var cell: Vector2 = local_to_cell(local)
 	for piece: Dictionary in pieces:
 		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))

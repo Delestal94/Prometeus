@@ -218,7 +218,7 @@ const BUDGETS: Dictionary = {
 	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 5, "root": 4},
 	# The level crossing (N-224.4) reaches the session through NETWORK_MANAGER (world_seed, is_online,
 	# is_host; below). The one /root/ lookup is that null-safe accessor (_network()).
-	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# The delivery level is typed: the route and the truck through their scripts
 	# (route.gd and vehicle.gd by preload, no class name), the houses as
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
@@ -379,7 +379,7 @@ const BUDGETS: Dictionary = {
 	"res://scripts/presentation/sound_audit.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The village dog (N-224.4) drives its model as the wildlife_animal.gd type (run, idle, steered,
 	# ground_speed). Only the /root/ lookup of EventBus is left, by name because a test may swap it for a Node.
-	"res://scripts/gameplay/route/chasing_dog.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	"res://scripts/gameplay/route/chasing_dog.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# The endless road (N-224.4): the station as ServiceStop / ServiceStopSegment (warm_models, stop, in_bay)
 	# and the seed through NETWORK_MANAGER. The one /root/ is the null-safe NetworkManager lookup.
 	"res://scripts/gameplay/route/route_streamer.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},

@@ -103,6 +103,13 @@ signal delivery_photo_taken(house_index: int, accepted: bool)
 signal route_event_started(event_id: StringName, event: Dictionary)
 signal route_event_updated(event_id: StringName, event: Dictionary)
 signal route_event_resolved(event_id: StringName, success: bool, peer_id: int)
+## Local-only, never relayed: something happened on the roadside that the
+## next-day newspaper may tell (N-606.4b). `kind` is &"dog_chase" (a village
+## dog ran after the truck: sent when it starts, and again with the tag
+## &"honked" if the horn sends it home) or &"train_stop" (the truck waited out
+## a train at a level crossing; host only). Each peer's RunChronicle hears its
+## own copy; only the host's writes the paper.
+signal roadside_moment(kind: StringName, tags: Array)
 signal unlock_earned(unlock_id: StringName, title: String)
 ## Which box each house waits for, decided by the host when the run starts:
 ## [[package_id, trap_key, code, content_id], ...] in house order (route.assign_packages()).
