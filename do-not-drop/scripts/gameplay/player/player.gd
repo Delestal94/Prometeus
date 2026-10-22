@@ -179,16 +179,16 @@ var cosmetic_id: StringName = &"team_color":
 	set(value):
 		cosmetic_id = value
 		_apply_cosmetic()
-## Replicated in place of position (see player.tscn), written by the owning
-## peer. Standing in the truck's cargo bay it's in the truck's own space, so
-## everyone else puts this player back inside *their* copy of the truck
-## instead of where a world position from a moment ago left them (a metre
-## behind at speed: through the rear doors, or out of the truck).
+## Replicated in place of position (see player.tscn), written by the owning peer. Standing in the truck's cargo bay
+## it's in the truck's own space, so everyone else puts this player back inside *their* copy of the truck instead
+## of where a world position from a moment ago left them (a metre behind at speed: through the rear doors, or out).
 var net_position: Vector3 = Vector3.ZERO:
 	set(value):
 		net_position = value
 		_has_net_state = true
 var net_in_vehicle: bool = false
+## Which vehicle that space is (D-0302.2.b.4.b: VehiclePick.index_of(), -1 on foot), replicated with the pose.
+var net_vehicle: int = -1
 ## N-217: the facing (relative to the truck's heading while net_in_vehicle, replicated instead of `rotation`) and
 ## the owner's clock (ms); each synced packet goes into everyone else's _net_smoother (Ride.push_net_pose).
 var net_yaw: float = 0.0

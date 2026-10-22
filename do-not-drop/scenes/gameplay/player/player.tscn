@@ -74,6 +74,9 @@ properties/13/replication_mode = 1
 properties/14/path = NodePath("GelFaceReactions:base_face_id")
 properties/14/spawn = true
 properties/14/replication_mode = 2
+properties/15/path = NodePath(".:net_vehicle")
+properties/15/spawn = true
+properties/15/replication_mode = 1
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8
