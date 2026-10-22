@@ -338,3 +338,22 @@ la plata y el stock; matar el proceso a mitad del día 2 (sin el guardado de `_e
 último cierre; salir en el resumen no lo pisa con el día 1 interrumpido; salir a mitad de día sigue guardando
 interrumpido.
 **Hecho cuando:** el test pasa.
+
+### D-0238 · Flags de desarrollo del modo Empresa — B · Opus 5.5 · low · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #594)** — `CompanyDevFlags` (`scripts/core/company/company_dev_flags.gd`): `--company-day=N`, `--district=<zona>` y `--money=N`, aplicados por el host de `CompanyRoot` al levantar el mundo; README y `render_company_shed.gd`; `test_company_dev_flags`.
+**Depende de:** D-0202, D-0205, D-0214
+**Qué:** en `scripts/core/company/company_dev_flags.gd` (puro, sin autoloads) y un llamado en
+`CompanyRoot._add_net()` (solo el host, también solo), después de cargar el slot o arrancar una empresa nueva
+y antes de que `CompanyNet` copie el stock (así el snapshot de los clientes los lleva):
+- `--company-day=N` (N ≥ 1): la empresa juega el día N desde su apertura (`DAY_START_MIN`);
+- `--district=<id>`: abre todas las compuertas de la zona `data/zones/<id>.tres` (una zona abierta no abre
+  nada; una que no existe se avisa y se ignora). No mueve al jugador: las capturas ponen su cámara;
+- `--money=N` (cualquier entero, deuda incluida): la plata de la empresa, sin asiento en el libro.
+Un valor que no se lee se avisa (`push_warning`) y se ignora. Lo que cambian queda en la empresa y se guarda
+con ella, como cualquier cambio. `CompanyRoot.dev_args` (por defecto `OS.get_cmdline_user_args()`) deja que
+un test pase los suyos.
+**Test** `test_company_dev_flags`: `parse()` con flags repetidos y valores malos; `apply()` sobre una empresa
+(día y reloj, plata negativa, `suburbio` abre `gate_suburbio`, `centro` no abre nada, zona desconocida
+afuera, sin flags no cambia nada); un `CompanyRoot` host con `dev_args` abre el día 4 con 12345 y las
+compuertas de `campo`, y sin flags arranca en el día 1 con `STARTING_MONEY`.
+**Hecho cuando:** el test pasa; documentados en el README; `render_company_shed.gd` los toma de su línea de comandos.
