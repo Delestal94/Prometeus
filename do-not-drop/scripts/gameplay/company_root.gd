@@ -326,9 +326,8 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
-	business_tick.add_step(&"orders", func() -> void:
-		var carried := func(id: StringName) -> bool: return trips != null and trips.carries(id)
-		CompanyDayOrders.poll(net, day_cycle, carried))
+	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(
+		net, day_cycle, func(id: StringName) -> bool: return trips != null and trips.carries(id)))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
