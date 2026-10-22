@@ -96,7 +96,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 
 | # | Acción (tarea) | Inicia | Petición: `kind` y `data` | El host valida | Evento: `kind` y `data` | Cambia en cada peer |
 |---|---|---|---|---|---|---|
-| 1 | Pedir mercadería para mañana (D-0602, D-0503) | jugador, en el tablero del proveedor | `supplier_order` `{station, product, qty, rid}` | alcance; fase `OPERATING`; producto del catálogo; `qty` en rango; plata ≥ costo | `supplier_ordered` `{product, qty, cost}` | `CompanyState`: pedido al proveedor de mañana y `money −= cost`; señal `money_changed` |
+| 1 | Pedir mercadería para mañana (D-0602, D-0503) | jugador, en el tablero del proveedor o el portapapeles | `supplier_order` `{station, product, qty, rid}` | sin alcance (se pide desde cualquier lado, [portapapeles](portapapeles.md) §3); fase `OPERATING`; producto del catálogo; `qty` en rango; plata ≥ costo | `supplier_ordered` `{product, qty, cost}` | `CompanyState`: pedido al proveedor de mañana y `money −= cost`; señal `money_changed` |
 | 2 | Llega el camión del proveedor (D-0601) | host (08:30 de juego) | — | hay pedido de ayer | `supply_arrived` `{pallets: [{id, product, qty}]}` | `Inventory.receive` en `pallet:<id>` (una vez por palet); palets `sealed` |
 | 3 | Bajar el palet a recepción (D-0605, zorra / autoelevador) | jugador, moviendo el cuerpo físico | — (es física: zorra o autoelevador, host como hoy) | el palet entró al área de recepción (señal del área en el host) | `pallet_placed` `{pallet, zone}` | el palet queda en `zone`; sus unidades no se mueven |
 | 4 | Abrir el palet (D-0607) | jugador, en el palet | `pallet_open` `{station, rid}` | alcance; palet recibido, `sealed`, con unidades | `pallet_opened` `{pallet}` | `Pallet.open`: `sealed` → `open` |
@@ -146,10 +146,20 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 | 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
 | 25 | Movimiento de plata del host sin pedido propio (cobro al entregar, propina, alquiler, proveedor, tienda; D-0517) | solo el host (`CompanyNet.publish_wallet`) | — (no hay pedido: lo decide el host) | quien cobra comprueba `can_afford` antes; `amount` ≠ 0, `reason` id corto, `money` y `minute` en rango | `wallet_moved` `{amount, reason, money, minute}` (plata absoluta como D-0910) | cada peer parte de `money − amount` y hace un solo `earn` / `charge`; libro con el `minute` del host; deriva → `take_drift()` y snapshot |
 
+### Comprar en la tienda (D-0518, fuera del corte)
+
+La valida y aplica `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, §13) con `CompanyShop` (D-0511).
+**Solo el host gasta:** la petición de cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el
+voto es D-0518.b).
+
+| # | Acción (tarea) | Inicia | Petición: `kind` y `data` | El host valida | Evento: `kind` y `data` | Cambia en cada peer |
+|---|---|---|---|---|---|---|
+| 25 | Comprar una máquina, un vehículo o una ampliación (D-0511, D-0518) | host, en la tienda del cierre (D-0511.2) | `shop_buy` `{item, rid}` | que lo pida el host; `item` texto corto e id exacto de un ítem habilitado de `data/shop/` (si no, `bad_data`); `CompanyShop.check` (ya lo tiene, lo que requiere, la etapa siguiente, la plata): su clave `WORLD_SHOP_*` es el motivo | `shop_bought` `{item, money, minute}` | `CompanyShop.buy` desde el saldo del host antes de la compra (`money + price`), así la plata y el `balance` del libro quedan en `money`; libro `shop` con el `minute` del host; máquina → `equipment`, vehículo → `fleet`, ampliación → `warehouse_stage` |
+
 ## 3. Secuencia, huecos y snapshot
 
-- El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. Se guarda en el slot
-  para que un día cargado siga numerando.
+- El `seq` lo lleva el host, empieza en 0 al abrir `CompanyWorld` y sube 1 por evento. No se guarda: un día
+  cargado abre desde la apertura y todo cliente que entra lo hace por snapshot ([guardado.md](guardado.md) §4).
 - `reliable` no pierde mensajes, así que el único hueco real es **el evento que llega antes que el mundo**
   (el peer todavía no tiene `CompanyWorld`). Por eso el host manda eventos solo a peers con
   `is_peer_ready()` y, al quedar listo un peer, le manda el snapshot con el `seq` actual; el peer descarta
@@ -203,7 +213,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   cada 5 s mientras espera). En el host (y solo) arranca la empresa y le pasa `CompanyState.stock()`.
 - **Pendiente:**
   - ~~el snapshot y la llamada a `resume_after_snapshot()` del lado que lo recibe~~ (hecho en D-2004, §6);
-    guardar `seq` en el slot (D-0206);
+    ~~guardar `seq` en el slot (D-0206)~~ (no hace falta: un mundo cargado arranca en `seq` 0 y todo cliente
+    entra por snapshot, [guardado.md](guardado.md) §4);
   - el modo Empresa todavía no es una sesión: `company_root.tscn` no está en `NetworkManager.LEVEL_SCENES` y
     `company_root.gd` no llama a `NetworkManager.level_ready()`. Lo cablea la tarea que lo ponga en línea
     (la continuación de D-0214; D-2004 dejó el gancho listo, §6);
@@ -294,8 +305,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - **Pendiente:**
   - dibujar los bultos (nodos estáticos, regla 10) leyendo `floor_bundles` en `event_applied` y
     `company_state_restored` (D-0611);
-  - guardar las posiciones con el día (D-0206): un día cargado trae los `floor:<n>` sin posición y no se
-    pueden tomar hasta que el guardado las lleve (lo mismo vale para las manos que D-2005 deja en `floor:0`);
+  - ~~guardar las posiciones con el día (D-0206)~~: no se guardan; al guardar, todo bulto del piso y las manos
+    pasan al bulto de devolución `floor:0`, que sí lleva posición (D-0252, [guardado.md](guardado.md) §3);
   - `company_net.gd` quedó en 967 de las 1000 líneas que permite gdlint (ya salieron `FloorBundles` y
     `CompanyAsk`): la próxima acción grande tiene que sacar algo más a otra clase;
   - el margen de `reach_slack()` en `DROP_REACH` depende del RTT y no tiene test propio.
@@ -343,7 +354,8 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - **Pendiente:**
   - el voto de la tripulación para que un cliente construya (D-0910.1);
   - ampliar la etapa por red (D-0910.2): `WarehouseStages.expand` hoy es local; quien lo cablee en el host
-    sin un evento deja a los clientes con otra grilla hasta el próximo snapshot;
+    sin un evento deja a los clientes con otra grilla hasta el próximo snapshot (la ampliación comprada en la
+    tienda ya viaja como `shop_bought`, §13);
   - `CompanyLayoutNet.navigation` (D-0908) lo da el mundo cuando existan empleados (D-1011), y ese dueño
     llama a `rebake()` también en `company_state_restored`;
   - ~~`not_empty` mira `shelf:<uid>_<hueco>` y `table:<uid>`; cuando la caja en armado viaje por red
@@ -414,12 +426,13 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   - ~~**D-0715.b**: cada peer crea el mismo `DeliveryPackage` con lo de `box_sealed` (regla 10), validando
     antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §11); de D-0715.b quedan las cajas vivas
     en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
-    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) y `CompanyTableNet._serial` guardado con el día (D-0206);
+    ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) (`_serial` no se guarda: [guardado.md](guardado.md) §4);
   - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
     `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
-  - guardar las mesas con el día (D-0206): hoy un día cargado trae unidades en `box:<id>` sin mesa.
+  - ~~guardar las mesas con el día (D-0206)~~: no se guardan; lo de `box:<id>` va al bulto de devolución al
+    guardar (D-0252, [guardado.md](guardado.md) §3).
 
 ## 10. Lo construido (D-0813): los pedidos del día
 
@@ -481,7 +494,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
-  - guardar el libro con el día (D-0206). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
+ - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
     poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
     sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
 
@@ -545,3 +558,50 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 - Guardado de antes de D-0246: semilla sacada del nombre (`CompanySeed.from_name`), estable entre cargas.
 - "Mismo día" es con la misma semilla, día, tripulación y plata (`OrderRhythm`, `Bankruptcy`). `test_company_seed` fija
   `for_day(1234, 3, "orders")` = 550168617 (Godot 4.7.2): si un motor nuevo hashea distinto, el test avisa.
+
+## 13. Lo construido (D-0518): la tienda, solo el host gasta
+
+- **Petición** `shop_buy` y **evento** `shop_bought` (fila 25, protocolo 50), por el `_request` / `_apply_event` de
+  siempre: ningún RPC nuevo. `CompanyNet` los suma a `REQUEST_KINDS` / `EVENT_KINDS` y los pasa a `CompanyNet.shop`
+  (`CompanyShopNet`, `scripts/core/company/company_shop_net.gd`): `ask()` / `check()` en el host, `apply()` en cada
+  peer (una rama de `_apply_state()`, sin `_:`). No es crítica (regla 8): si se pierde, el jugador vuelve a apretar.
+- **Decisión: solo el host gasta** (D-0518 incluye D-0428, el voto de la tienda; "el host o un voto" se resuelve como
+  "el host" en esta tarea). El que pide es `RpcGuard.sender` (regla 3): un `peer: 1` en `data` no cambia nada.
+  Cualquier otro peer oye `host_only` antes de que se mire nada más, nada cambia y no se gasta `seq`; así la
+  pantalla de la tienda del cliente (D-0511.2) puede decir por qué. Jugando solo, el host es el peer 1 y compra por
+  el mismo camino. El voto de la tripulación queda en D-0518.b, en el mismo lugar que D-0910.1 (`check()` recibe
+  `by_host`).
+- **Motivos de `_rejected`:** `host_only`; `bad_data` (el ítem no es texto, es largo, no es el id exacto de un ítem
+  habilitado del catálogo, o no hay empresa); y las claves de `CompanyShop.check` tal cual
+  (`WORLD_SHOP_ALREADY_OWNED`, `WORLD_SHOP_NEEDS_ITEM`, `WORLD_SHOP_WRONG_STAGE`, `WORLD_SHOP_CANNOT_AFFORD`): son
+  claves de traducción y la pantalla las muestra sin mapear. Un campo anidado en `data` no pasa `dict_ok` y se
+  descarta sin aviso (regla 5).
+- **Decisión: el día no lo frena**, como construir (§8): ni la fase ni el galpón congelado. La tienda es la
+  pantalla del cierre (D-0511.2, `hitos.md`: "se compra en la tienda del cierre"), justo en SUMMARY, donde el pedido
+  al proveedor sí se niega (`day_closed`: su calendario es el del día cerrado). Una compra hecha en SUMMARY queda
+  en `CompanyState` del host y entra al guardado cuando el host sale del mundo (`save_closed_day()` desde
+  `_exit_tree`) o en el guardado siguiente; si el juego se cae antes, se pierden juntas la compra y la plata.
+- **Plata absoluta** (como D-0910 y D-0715): `money` es el saldo del host después de la compra y `minute` su
+  `clock_minutes` (solo para la entrada del libro: el `clock_minutes` del cliente no se toca). Cada peer arranca
+  desde `money + price` con el mismo `CompanyShop.buy`; si su saldo era otro lo corrige, avisa y `CompanyNet` pide
+  un snapshot (`CompanyShopNet.take_drift()`, junto a las de `build` y `table` en `_receive`).
+- **Validación del evento (regla 6), todo antes del primer cambio:** exactamente `item`, `money` y `minute`; un
+  ítem habilitado del catálogo de ese peer; `money` entero 0..`MAX_MONEY`; `minute` entero del día; y que la copia
+  lo pueda tomar (`CompanyShop.check` salvo la plata: no lo tiene, tiene lo que requiere, es la etapa siguiente).
+  Si no, no cambia nada y el peer espera un snapshot (§3).
+- **Join tardío:** sin parte propia del snapshot: plata, libro, `equipment`, `fleet` y `warehouse_stage` ya viajan
+  en `company` (`CompanyState.to_dict()`).
+- **Líneas:** para sumar la tienda, los chequeos de un trozo de snapshot y su unión salieron de
+  `CompanyNet._take_chunk` a `CompanySnapshot.chunk_ok()` / `join()` (mismo comportamiento); `company_net.gd` queda
+  en 996 de las 1000 de gdlint.
+- Test: `test_company_shop_net` (el ayudante solo, solo con el catálogo real, y host + cliente ENet + uno que entra
+  tarde, con un catálogo de test que habilita un vehículo).
+- **Pendiente:**
+  - D-0518.b: el voto de la tripulación para que un cliente compre (`modules/coop_vote`; `ShopVoteManager` es la
+    votación de la tienda del depósito de Entrega, de Slatex, y no se usa acá);
+  - la pantalla de la tienda (D-0511.2) pide con `CompanyNet.request(CompanyShopNet.BUY, {"item": id})` y muestra
+    el motivo de `request_rejected` (`tr()` para las claves `WORLD_SHOP_*`, un texto propio para `host_only`);
+  - una ampliación comprada cambia `warehouse_stage` en todos por evento (lo que D-0910.2 pedía para la grilla),
+    pero `CompanyShed.follow` no redibuja con `shop_bought`: el galpón grande se dibuja con el próximo evento de
+    layout o snapshot. Va con D-0910.2 o con D-0511.2;
+  - un vehículo comprado entra a `fleet` como dato; que aparezca en el mundo es de cada vehículo (D-1207, D-1221…).

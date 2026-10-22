@@ -49,7 +49,7 @@
 | ~~D-0835~~ | ~~Pedido de emergencia (medicamento) con bonus alto~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | ~~D-0836~~ | ~~Pedidos que eligen vehículo (solo bici por zona peatonal)~~ **Fusionada en D-1202 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | ~~D-0837~~ | ~~Filtros y orden en el tablero de pedidos~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | test de UI |
-| D-0838 | Prioridad marcada por el jugador | constructor-ui | low | test |
+| D-0838 | Prioridad marcada por el jugador en el tablero de pedidos de la pared, compartida, con petición al host ([portapapeles](diseno/portapapeles.md) §1) | constructor-ui | low | test |
 | ~~D-0839~~ | ~~Estadística de satisfacción por cliente~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | dato guardado |
 | D-0840 | Generador de nombres de clientes localizado | constructor-progresion | low | lista |
 

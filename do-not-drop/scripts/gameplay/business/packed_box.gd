@@ -23,6 +23,8 @@ var stamps: Array[StringName] = []
 var ice_packs: int = 0
 ## Wrapped in gift paper (D-0723, GiftWrap): a gift order delivered wrapped pays a little more.
 var gift_wrapped: bool = false
+## Laid on its side (D-0727, ProductOrientation): upright-only products inside get damaged.
+var on_side: bool = false
 ## Placed products, in order: {"product": StringName, "origin": Vector3i, "cells": Vector3i}.
 var items: Array[Dictionary] = []
 
@@ -155,6 +157,7 @@ func to_dict() -> Dictionary:
 		"stamps": stamp_list,
 		"ice_packs": ice_packs,
 		"gift_wrapped": gift_wrapped,
+		"on_side": on_side,
 	}
 
 
@@ -180,6 +183,7 @@ static func from_dict(d: Dictionary) -> PackedBox:
 		box.stamps.append(StringName(str(stamp)))
 	box.ice_packs = clampi(int(d.get("ice_packs", 0)), 0, CompanyTuning.ICE_PACKS_MAX)
 	box.gift_wrapped = bool(d.get("gift_wrapped", false))
+	box.on_side = bool(d.get("on_side", false))
 	return box
 
 

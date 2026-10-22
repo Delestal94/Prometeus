@@ -17,6 +17,8 @@ const MIN_FILL: float = 2.0
 const CURVE_SPAN: float = 50.0
 ## Kinds that bend the road on their own: they take the street's turn over their span.
 const BENDING: Array[StringName] = [&"curve"]
+## Passes to settle a bend's turn and its built length on each other.
+const BEND_PASSES: int = 4
 const FILL_KIND: StringName = &"straight"
 
 static var _lengths: Dictionary = {}
@@ -94,8 +96,17 @@ static func _piece(graph: RoadGraph, edge_id: StringName, kind: StringName, at: 
 		"position": start, "yaw": atan2(-facing.x, -facing.y), "turn_deg": 0.0,
 	}
 	if BENDING.has(kind):
-		# Same sign as CurveSegment.turn_deg: the change of yaw (Basis(UP, yaw)) over the span.
-		var leaving: Vector2 = graph.tangent_at(edge_id, maxf(at, at + span - 0.5))
-		piece.turn_deg = rad_to_deg(wrapf(atan2(-leaving.x, -leaving.y) - float(piece.yaw), -PI, PI))
-		piece.length = CurveSegment.length_for_turn(piece.turn_deg)
+		# The piece advances by the length it is built with, and the turn is the one the street
+		# makes over that length: a few passes settle the two on each other (a chord is 10 m).
+		var length: float = span
+		for _pass in BEND_PASSES:
+			var leaving: Vector2 = graph.tangent_at(edge_id, maxf(at, at + length - 0.5))
+			# Same sign as CurveSegment.turn_deg: the change of yaw (Basis(UP, yaw)) over the span.
+			piece.turn_deg = rad_to_deg(wrapf(atan2(-leaving.x, -leaving.y) - float(piece.yaw), -PI, PI))
+			var built: float = CurveSegment.length_for_turn(piece.turn_deg)
+			if is_equal_approx(built, length):
+				break
+			length = built
+		piece.length = length
+		piece.advance = length
 	return piece

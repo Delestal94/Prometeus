@@ -41,7 +41,7 @@
 | D-0724 | Caja impermeable para Islas (agua salpica) | constructor-negocio | medium | test |
 | D-0725 | Paracaídas acoplado para lanzamientos desde la avioneta | constructor-negocio | high | ver D-1420 |
 | ✅ D-0726 | Productos que no se pueden juntar (químicos con comida) | constructor-negocio | medium | regla con test |
-| D-0727 | Productos con orientación (líquidos de pie) | constructor-negocio | medium | test |
+| ✅ D-0727 | Productos con orientación (líquidos de pie) | constructor-negocio | medium | test |
 | ~~D-0728~~ | ~~Caja a medida (más cara, encaje perfecto)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-0729 | Pedidos multi-caja (un pedido en 2-3 cajas) | constructor-negocio | high | test |
 | ~~D-0730~~ | ~~Paquetes sin caja (bici, colchón) con film y esquineros~~ **Fusionada en D-0626 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |

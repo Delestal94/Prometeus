@@ -449,11 +449,21 @@ func put_snapshot(value: Variant) -> bool:
 	return true
 
 
-## The book as the company's save keeps it (D-0605.c): to_dict() in plain JSON values, `jack_at` as [x, z].
+## The book as the company's save keeps it (D-0605.c): to_dict() in plain JSON values, `jack_at` and the
+## forklift's `at` as [x, z] (JSON writes a Vector2 as text), the forklift's driver as nobody (the peer that drove
+## it is gone when the save loads).
 func to_save() -> Dictionary:
 	var data: Dictionary = to_dict()
 	if jack_at is Vector2:
 		data["jack_at"] = [(jack_at as Vector2).x, (jack_at as Vector2).y]
+	var fork: Variant = data.get("forklift")
+	if fork is Dictionary:
+		var part: Dictionary = (fork as Dictionary).duplicate()
+		var fork_at: Variant = part.get("at")
+		if fork_at is Vector2:
+			part["at"] = [(fork_at as Vector2).x, (fork_at as Vector2).y]
+		part["driver"] = 0
+		data["forklift"] = part
 	return data
 
 
@@ -468,6 +478,11 @@ func load_save(value: Variant) -> bool:
 		plain["jack_at"] = Vector2(float(at[0]), float(at[1]))
 	elif at != null:
 		return false
+	var fork: Variant = plain.get("forklift")
+	if fork is Dictionary:
+		var fork_at: Variant = (fork as Dictionary).get("at")
+		if fork_at is Array and (fork_at as Array).size() == 2 and _is_number(fork_at[0]) and _is_number(fork_at[1]):
+			(fork as Dictionary)["at"] = Vector2(float(fork_at[0]), float(fork_at[1]))
 	return put_snapshot(plain)
 
 

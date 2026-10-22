@@ -8,7 +8,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-1901 | Tutorial de la primera semana (D-0130): un objetivo por vez | constructor-ui | high | bot completa el tutorial sin errores |
-| D-1902 | Portapapeles: objeto en la mano con pestañas (pedidos, stock, empleados, flota, plata) | constructor-ui | xhigh | test de navegación con mando y teclado |
+| D-1902 | Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8), [diseno/portapapeles.md](diseno/portapapeles.md) | constructor-ui | xhigh | test de navegación con mando y teclado |
 | D-1903 | HUD del día: hora, plata, pedidos pendientes (incluye D-0519, fusión de D-0112) | constructor-ui | medium | captura |
 | D-1904 | Menú principal con modo Empresa y slots de guardado | constructor-ui | high | test de flujo |
 | D-1905 | Pantalla de cierre del día (resumen, hitos, sueldos) | constructor-ui | high | captura |
