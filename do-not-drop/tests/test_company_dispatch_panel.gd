@@ -16,6 +16,9 @@ extends SceneTree
 ## - with CompanyTuning.VEHICLES_FAR_MAX (2) vehicles out (CompanyTrips.departure_verdict(), D-0316)
 ##   a box can still be picked but Load is off, the status says why and nothing loads; once one is
 ##   back, Load works again;
+## - with two vehicles in the bay (ctx "bay", D-0931.b) a "Load all" button shows: it hands the oldest boxes to
+##   the first vehicle and the overflow to the second, emits `loaded` once per vehicle, is hidden with one
+##   vehicle and off on a client;
 ## - both languages have every key the board uses (strings_ui.csv, and strings_world.csv for the
 ##   reasons that come from the world, like WORLD_DISPATCH_FAR_LIMIT).
 
@@ -26,7 +29,7 @@ const KEYS: Array[String] = [
 	"UI_DISPATCH_TITLE", "UI_DISPATCH_HINT", "UI_DISPATCH_VEHICLE", "UI_DISPATCH_NO_VEHICLE",
 	"UI_DISPATCH_CAPACITY", "UI_DISPATCH_EMPTY", "UI_DISPATCH_ROW", "UI_DISPATCH_PICK",
 	"UI_DISPATCH_LOAD", "UI_DISPATCH_LOAD_N", "UI_DISPATCH_CLOSE", "UI_DISPATCH_LOADED",
-	"UI_DISPATCH_HOST_ONLY", "WORLD_DISPATCH_FAR_LIMIT",
+	"UI_DISPATCH_HOST_ONLY", "UI_DISPATCH_LOAD_ALL", "WORLD_DISPATCH_FAR_LIMIT",
 ]
 const CSVS: Array[String] = ["res://translations/strings_ui.csv", "res://translations/strings_world.csv"]
 
@@ -48,6 +51,7 @@ func _run() -> void:
 	await _test_limits_and_rules()
 	await _test_client_and_empty()
 	await _test_far_cap()
+	await _test_bay()
 	if _failures == 0:
 		print("PASS: dispatch board loads the 2 picked boxes on the vehicle and the third waits")
 	quit(_failures)
@@ -172,6 +176,34 @@ func _test_pick_and_load() -> void:
 	await _press(&"ui_cancel")
 	_expect(not panel.visible, "ui_cancel closes the board")
 	panel.queue_free()
+	await process_frame
+
+
+func _test_bay() -> void:
+	var ctx: Dictionary = _ctx({&"o1": &"centro", &"o2": &"centro", &"o3": &"centro"}, _van(2, 100.0))
+	var solo: DispatchBoardPanel = await _panel(ctx)
+	_expect(not solo.load_all_button().visible, "no Load all button without a bay")
+	solo.queue_free()
+	ctx["bay"] = [{"id": &"van_1", "def": _van(2, 100.0)}, {"id": &"van_2", "def": _van(2, 100.0)}]
+	var panel: DispatchBoardPanel = await _panel(ctx)
+	var trips: CompanyTrips = ctx["trips"]
+	var all_on: bool = panel.load_all_button().visible and not panel.load_all_button().disabled
+	_expect(all_on, "Load all is on with two vehicles")
+	_expect(panel.load_all_button().text == tr_es("UI_DISPATCH_LOAD_ALL") % 2, "Load all shows the vehicle count")
+	var loaded: Dictionary = {}
+	panel.loaded.connect(func(vehicle_id: StringName, boxes: Array[StringName]) -> void: loaded[vehicle_id] = boxes)
+	_expect(panel.confirm_bay() == 3, "all three boxes go")
+	_expect(loaded.get(&"van_1", []) == [&"box_o1", &"box_o2"], "first vehicle takes the oldest two (%s)" % [loaded])
+	_expect(loaded.get(&"van_2", []) == [&"box_o3"], "second vehicle takes the overflow (got %s)" % [loaded])
+	_expect(trips._staged.get(&"van_2", {}).get("orders", []) == [&"o3"], "and its order is staged")
+	_expect((ctx["zone"] as DispatchZone).boxes().is_empty(), "the zone is empty")
+	_expect(panel.load_all_button().disabled, "Load all is off with nothing waiting")
+	panel.queue_free()
+	var client: Dictionary = _ctx({&"o1": &"centro"}, _van(2, 100.0), false)
+	client["bay"] = ctx["bay"]
+	var client_panel: DispatchBoardPanel = await _panel(client)
+	_expect(client_panel.load_all_button().disabled and client_panel.confirm_bay() == 0, "a client cannot load all")
+	client_panel.queue_free()
 	await process_frame
 
 

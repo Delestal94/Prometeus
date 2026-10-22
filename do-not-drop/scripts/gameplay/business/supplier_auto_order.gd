@@ -30,6 +30,33 @@ static func lines(money: int, schedule: SupplierSchedule, orders: Array, stock: 
 	return cart.to_array()
 
 
+## What the order screen's cart opens with (D-0151.3c, portapapeles.md §3): the suggested order less what is
+## already ordered for tomorrow, product -> units. Units on tomorrow's truck count as stock and their cost comes
+## off `money` before the trim, so ordering the suggested on top never asks for more than the rule would.
+## Same rule and values as lines() (SupplierOrderCart.suggested); {} when nothing is missing.
+static func cart_preload(money: int, schedule: SupplierSchedule, orders: Array, stock: Dictionary, products: Dictionary,
+		supplier: SupplierDefinition, day: int, truck: StringName = SupplierSchedule.DEFAULT_SUPPLIER) -> Dictionary:
+	var have: Dictionary = stock.duplicate()
+	var budget: int = money
+	if schedule != null:
+		var already: Dictionary = schedule.ordered_for(SupplierSchedule.arrival_day(day), truck)
+		for id: Variant in already:
+			have[id] = int(have.get(id, 0)) + int(already[id])
+			budget -= SupplierPurchase.cost(StringName(id), int(already[id]), products)
+	return SupplierOrderCart.suggested(SupplierOrderCart.ordered_units(orders), have, budget, products, supplier)
+
+
+## Notes in `today_ids` the orders that come in today: an order_added adds its id, the day's OPENING clears them.
+## Every CompanyNet event goes through here (SupplierAutoOrderHook on the host, SupplierBoard on every peer).
+static func note_today(today_ids: Dictionary, kind: StringName, data: Dictionary) -> void:
+	if kind == CompanyOrdersNet.ADDED:
+		var order: Variant = data.get("order")
+		if order is Dictionary:
+			today_ids[StringName((order as Dictionary).get("id", &""))] = true
+	elif kind == CompanyNet.DAY_PHASE and data.get("phase") == DayCycle.PHASE_NAMES[DayCycle.Phase.OPENING]:
+		today_ids.clear()
+
+
 ## The day's orders out of the book's (OrderBook.to_dict()["orders"]): the ones whose id is a key of `today_ids`
 ## (the hook notes them as they come in: the book keeps the whole session and an Order has no day), open or
 ## closed, less the ones the customer cancelled: those asked for nothing.

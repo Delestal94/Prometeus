@@ -19,6 +19,8 @@ extends SceneTree
 ## - D-0253: the host closes day 1 early from OPERATING (DayClose.close()): with no trip out the next
 ##   poll is SUMMARY, the clock still before 20:00, and the slot is day 2's opening, not interrupted,
 ##   with the day's money; leaving afterwards keeps that close.
+## - N-989: a shop purchase made in SUMMARY (shop_bought) saves the close again, so the slot keeps the
+##   purchase and the money it cost.
 
 const DIR: String = "user://test_company_autosave"
 const SLOT: String = "auto"
@@ -48,6 +50,7 @@ func _run() -> void:
 	await _check_leave_in_summary()
 	await _check_leave_mid_day()
 	await _check_close_early()
+	await _check_buy_in_summary()
 	RpcGuard.reset()
 	_clean()
 	if _failures == 0:
@@ -193,6 +196,27 @@ func _check_close_early() -> void:
 
 ## OPENING, OPERATING, CLOSING and SUMMARY of the open day: the OPENING's seconds pass on the
 ## DayCycle's ticks, the clock jumps to 20:00, no trip is out.
+func _check_buy_in_summary() -> void:
+	var state: Node = _new_state()
+	state.call(&"new_company", "Shop SRL")
+	var host: LiveDayRoot = await _enter(state)
+	_close_day(host)
+	var price: int = CompanyShopNet.new().find(&"upgrade_1").price
+	host.net.request(CompanyShopNet.BUY, {"item": &"upgrade_1"})
+	var company: Dictionary = _raw().get("company", {})
+	_expect(int(company.get("money", 0)) == CompanyTuning.STARTING_MONEY - price,
+		"A purchase in SUMMARY is in the saved close, money %d (got %s)"
+		% [CompanyTuning.STARTING_MONEY - price, company.get("money")])
+	var loaded: Node = _new_state()
+	var result: CompanySave.LoadResult = CompanySave.load_into(loaded, SLOT, DIR)
+	_expect(result == CompanySave.LoadResult.LOADED and (loaded.get(&"equipment") as Array).has(&"upgrade_1"),
+		"...and reloading it keeps the upgrade")
+	loaded.free()
+	await _leave(host)
+	state.free()
+	_clean()
+
+
 func _close_day(host: LiveDayRoot) -> void:
 	host.day_cycle.ticks = func() -> int: return Time.get_ticks_msec() + LATER_MSEC
 	host.day_cycle.poll()
