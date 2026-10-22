@@ -425,12 +425,14 @@ func _opening_notice() -> String:
 	return Bankruptcy.opening_text(_shown_company())
 
 
-## Host (DayCycle.crew_in_shed, S4): someone of this world's crew stands in the shed
-## (CompanyShed.holds()), so the shed's minute runs. Only the players of this root's multiplayer
-## count, as in CompanyInterest; one whose peer left is out of the tree, or on its way out, and
-## doesn't. With no shed, or nobody spawned yet (the world just up), it is yes: nothing freezes
-## before there is someone to leave. Read when called, so it doesn't matter that the shed and the
-## crew are added after the day.
+## Host (DayCycle.crew_in_shed, S4): someone of this world's crew is in the shed (CompanyShed.holds()),
+## so the shed's minute runs. A player is where its reach starts (Player.reach_origin(), as
+## CompanyNet's rule 4): its seat while seated, since the body stays where it sat down and only its
+## visual rides along, and on the host a remote one's newest pose. Only the players of this root's
+## multiplayer count, as in CompanyInterest; one whose peer left is out of the tree, or on its way
+## out, and doesn't. With no shed, or nobody spawned yet (the world just up), it is yes: nothing
+## freezes before there is someone to leave. Read when called, so it doesn't matter that the shed and
+## the crew are added after the day.
 func _crew_in_shed() -> bool:
 	if not is_inside_tree() or shed == null or not is_instance_valid(shed) or not shed.is_inside_tree():
 		return true
@@ -441,7 +443,8 @@ func _crew_in_shed() -> bool:
 			continue
 		if member.multiplayer != multiplayer:
 			continue
-		if shed.holds(member.global_position):
+		var at: Vector3 = (member as Player).reach_origin() if member is Player else member.global_position
+		if shed.holds(at):
 			return true
 		anyone = true
 	return not anyone

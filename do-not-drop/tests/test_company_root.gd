@@ -26,7 +26,10 @@ extends SceneTree
 ##   shed not frozen with its player in it;
 ## - D-0316.1: the shed holds (CompanyShed.holds()) the spawn, at any height, and whoever stands in the
 ##   dock's or the exit's gate, not a point 20 m out of it; the root wires DayCycle.crew_in_shed: yes
-##   with the player where it spawned, no with it 20 m out, yes again back in; with the player out
+##   with the player where it spawned, no with it 20 m out, yes again back in; no with it seated on a
+##   seat 20 m out while its body is still in (Player.reach_origin()); yes with another crew member of
+##   the session in and the player out, no with both out; a crew member of another session (its own
+##   SceneMultiplayer) standing in the shed doesn't count; with the player out
 ##   during OPERATING the shed freezes (one event; shed_minute() stands still while the world clock
 ##   runs) and thaws when it is back (on the test's own ticks, no frame in between);
 ## - on a client (a session that isn't the host) it waits for the snapshot without touching
@@ -262,7 +265,53 @@ func _check_crew_in_shed(level: CompanyRoot) -> void:
 		"With its player %.0f m out (%s) nobody is in the shed" % [OUT_M, street])
 	player.global_position = home
 	_expect(bool(cycle.crew_in_shed.call()), "...and back in, the crew is in again")
+	_check_seated_and_others(level, player as Player, street)
 	_check_frozen_shed(level, street)
+
+
+## A seated player is where its seat is (Player.reach_origin()), not where its body stayed; another
+## crew member of the same session keeps the shed in; one of another session (its own multiplayer)
+## counts for nothing here. Every node added is freed before returning, with no frame in between.
+func _check_seated_and_others(level: CompanyRoot, player: Player, street: Vector3) -> void:
+	var inside: Callable = level.day_cycle.crew_in_shed
+	var home: Vector3 = player.global_position
+	var seat := Node3D.new()
+	seat.name = "StreetSeat"
+	level.get_node(^"World").add_child(seat)
+	seat.global_position = street
+	player.seat_node_path = player.get_path_to(seat)
+	_expect(not bool(inside.call()) and level.shed.holds(player.global_position),
+		"Seated %.0f m out, with its body still in the shed (%s), nobody is in it" % [OUT_M, player.global_position])
+	player.seat_node_path = NodePath()
+	seat.free()
+	_expect(bool(inside.call()), "...and off the seat, its body in the shed, the crew is in again")
+	var mate := Node3D.new()
+	mate.name = "CrewMate"
+	mate.add_to_group(CompanyRoot.CREW_GROUP)
+	level.get_node(^"World").add_child(mate)
+	mate.global_position = CompanyRoot.SPAWN
+	player.global_position = street
+	_expect(bool(inside.call()), "With the player out and another of the crew in, the crew is in the shed")
+	mate.global_position = street
+	_expect(not bool(inside.call()), "...and with both out, nobody is")
+	mate.free()
+	# Another session in this process: its own SceneMultiplayer, a crew member standing in the shed.
+	var side := Node.new()
+	side.name = "OtherSession"
+	root.add_child(side)
+	set_multiplayer(SceneMultiplayer.new(), side.get_path())
+	var stranger := Node3D.new()
+	stranger.name = "Stranger"
+	stranger.add_to_group(CompanyRoot.CREW_GROUP)
+	stranger.position = CompanyRoot.SPAWN
+	side.add_child(stranger)
+	_expect(stranger.multiplayer != level.multiplayer and level.shed.holds(stranger.global_position)
+		and not bool(inside.call()),
+		"A crew member of another session standing in the shed doesn't count: with the player out nobody is in")
+	set_multiplayer(null, side.get_path())
+	side.free()
+	player.global_position = home
+	_expect(bool(inside.call()), "...and the player back in, the crew is in again")
 
 
 ## The shed freezes with the player out during OPERATING and thaws once it is back, as the day's own
