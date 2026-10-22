@@ -149,6 +149,7 @@ do-not-drop/tests/test_stuck_detection.gd|max-line-length 2
 do-not-drop/tests/test_supply_vote.gd|max-line-length 2
 do-not-drop/tests/test_tension_music.gd|max-line-length 1
 do-not-drop/tests/test_town_signs.gd|duplicated-load 1
+do-not-drop/tests/test_trailer_shots.gd|max-line-length 20
 do-not-drop/tests/test_trap_audio.gd|duplicated-load 2
 do-not-drop/tests/test_trap_audio.gd|max-line-length 1
 do-not-drop/tests/test_trap_visual_feedback.gd|duplicated-load 1
