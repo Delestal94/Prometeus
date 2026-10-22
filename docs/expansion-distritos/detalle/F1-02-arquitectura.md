@@ -24,7 +24,7 @@ el día siguiente sin `interrupted`. `test_company_host_leaves` y `test_company_
 mundo lleva `Depende de: D-0251` y no se mezcla antes ([guardado.md](../diseno/guardado.md) §5).
 
 ### D-0252 · Stock sin lugares en curso al guardar — A · Opus 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `ReturnBundle` (`scripts/core/company/return_bundle.gd`): `for_save()` junta
+**[x] Hecho (2026-10-22, PR #686, 1481f6bd)** — `ReturnBundle` (`scripts/core/company/return_bundle.gd`): `for_save()` junta
 manos, bultos, cajas y paquetes en `floor:0` sin reservas (`CompanyRoot.stock_for_save()` la usa) y, al cargar en el
 host, `place()` pone el bulto en `RETURN_BUNDLE_SPOT` o en la celda libre más cercana (`spot()`); `test_company_save_stock`.
 **Depende de:** D-0134 (diseño), D-0236, D-0715 (cajas), D-2006 (bultos del piso)
