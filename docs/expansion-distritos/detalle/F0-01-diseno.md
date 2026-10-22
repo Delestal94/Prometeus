@@ -362,7 +362,7 @@ Decisión: `docs/decisiones/2026-10-22-logros-expansion.md`.
 **Hecho cuando:** `docs/marketing/logros-expansion.md` existe y D-0440 lo puede construir sin preguntar.
 
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
-**[x] Hecho (2026-10-22, PR #PRNUM)** — pausa sin peers, pedidos antes de las 15:00 solo, pedido automático al cierre y carrito precargado; falta ver al bot de D-2016 cerrar el día 2 ([revisar](../revisar/D-0151.3c.md)).
+**[x] Hecho (2026-10-22, PR pendiente)** — pausa sin peers, pedidos antes de las 15:00 solo, pedido automático al cierre y carrito precargado; falta ver al bot de D-2016 cerrar el día 2 ([revisar](../revisar/D-0151.3c.md)).
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
 - [x] D-0151.1 (2026-10-22) Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;

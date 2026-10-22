@@ -21,8 +21,9 @@ extends SceneTree
 ## - the day summary's line "automatic supplier order: N units" (DaySummaryPanel) shows with N > 0, hides at 0;
 ## - the preloaded cart (D-0151.3c, SupplierAutoOrder.cart_preload + SupplierBoard): the suggested order less what is
 ##   already on tomorrow's truck, whose units count as stock and whose cost comes off the budget; the board's first
-##   opening of the day fills the empty cart with it and the screen says "already ordered: N"; a cart the player
-##   emptied stays empty for the rest of the day, one with lines is not overwritten, and the next day preloads again.
+##   opening of the day that has something to suggest (one before the orders does not use it up) fills the empty
+##   cart with it and the screen says "already ordered: N"; a cart the player emptied stays empty for the rest of
+##   the day, one with lines is not overwritten, and the next day preloads again.
 
 const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 
@@ -438,6 +439,8 @@ func _test_board_preload() -> void:
 	board.name = "SupplierBoard"
 	side.add_child(board)
 	board.setup(net, null, net.supplier.products)
+	_expect(board.open() and board.cart.is_empty(), "board: opened before today's orders, the cart is empty")
+	board.close()
 	# The board notes the orders that come in after it hooks up: the second batch of day 1.
 	_add_orders(net, "b1", {&"antique_lamp": 6, &"porcelain_vase": 4}, 5)
 	_expect(net.supplier.apply({"order_day": 1, "lines": [{"product": "porcelain_vase", "qty": 3}], "peer": 1}),

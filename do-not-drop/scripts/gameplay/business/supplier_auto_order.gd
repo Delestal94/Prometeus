@@ -33,7 +33,7 @@ static func lines(money: int, schedule: SupplierSchedule, orders: Array, stock: 
 ## What the order screen's cart opens with (D-0151.3c, portapapeles.md §3): the suggested order less what is
 ## already ordered for tomorrow, product -> units. Units on tomorrow's truck count as stock and their cost comes
 ## off `money` before the trim, so ordering the suggested on top never asks for more than the rule would.
-## Same values as lines(); {} when nothing is missing.
+## Same rule and values as lines() (SupplierOrderCart.suggested); {} when nothing is missing.
 static func cart_preload(money: int, schedule: SupplierSchedule, orders: Array, stock: Dictionary, products: Dictionary,
 		supplier: SupplierDefinition, day: int) -> Dictionary:
 	var have: Dictionary = stock.duplicate()

@@ -137,19 +137,21 @@ func context() -> Dictionary:
 
 
 ## Fills the empty cart with the suggested order less what is already ordered for tomorrow, once per day: a cart
-## the player emptied, or one that was ordered, stays empty for the rest of the day. True when it put units in.
+## the player emptied, or one that was ordered, stays empty for the rest of the day. An opening that found nothing
+## to suggest (no orders in yet) does not use the day's preload up. True when it put units in.
 func preload_cart() -> bool:
 	var company: Object = net.company if net != null else null
 	var day: int = _day()
 	if company == null or not cart.is_empty() or day == _preloaded_day:
 		return false
-	_preloaded_day = day
 	var book_orders: Array = net.orders.book.to_dict().get("orders", [])
 	var wanted: Dictionary = SupplierAutoOrder.cart_preload(
 		int(company.get(&"money")), net.supplier.schedule, SupplierAutoOrder.todays_orders(book_orders, _today),
 		SupplierAutoOrder.stock_units(net.inventory, cart.products), cart.products, cart.supplier, day)
 	for id: StringName in wanted:
 		cart.set_qty(id, int(wanted[id]))
+	if not cart.is_empty():
+		_preloaded_day = day
 	return not cart.is_empty()
 
 
