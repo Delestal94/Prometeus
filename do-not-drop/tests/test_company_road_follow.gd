@@ -43,8 +43,8 @@ func _check_pure(graph: RoadGraph) -> void:
 	var small: float = BOT.steer_toward(at, Vector3(2.0, 0.0, -20.0))
 	_expect(small > 0.0 and small < 0.5, "A small angle is a small steering (%.2f)" % small)
 	_expect(is_zero_approx(BOT.steer_toward(at, at.origin)), "A target under the nose gives 0")
-	_expect(is_equal_approx(BOT.steer_toward(at, Vector3(3.0, 0.0, -9.0)), -BOT.steer_toward(at, Vector3(-3.0, 0.0, -9.0))),
-		"The steering is symmetric")
+	var right: float = BOT.steer_toward(at, Vector3(3.0, 0.0, -9.0))
+	_expect(is_equal_approx(right, -BOT.steer_toward(at, Vector3(-3.0, 0.0, -9.0))), "The steering is symmetric")
 	var shed := Vector3(5.0, 1.0, -7.0)
 	var map := Vector2(40.0, -12.0)
 	_expect(BOT.map_point(BOT.world_point(map, shed), shed).is_equal_approx(map), "map_point() undoes world_point()")
