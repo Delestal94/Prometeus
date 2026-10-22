@@ -51,8 +51,9 @@ Fuente: `docs/expansion-distritos/detalle/*.md` (tareas con detalle) y las tabla
    - no tiene PR abierto ni rama `origin/exp/<ID>-*`;
    - todas sus `Depende de` están `[x]`. Las decididas cuentan como hechas, y una dependencia de otro
      carril sin hacer **no** se espera: se elige otra;
-   - es de la fase en curso. F0 y F1 hasta que D-0111 esté `[x]`; después F2, F3, F4 y F5 en orden
-     (README de la expansión). Los bloques Núcleo van antes que Ampliación y Pulido.
+   - es de la fase en curso. F0 y F1 hasta que D-2016 esté `[x]` (con D-2016.3 y D-2016.4: es el criterio de cierre de
+     D-0111, revisión D-0140); antes, las tareas de `detalle/F2-*` no se toman. Después F2, F3, F4 y F5 en
+     orden (README de la expansión). Los bloques Núcleo van antes que Ampliación y Pulido.
 2. **Tu carril no tiene nada tomable** → tomá la primera tomable de cualquier carril, siguiendo
    "Orden recomendado" de `detalle/README.md`.
 3. **No hay nada tomable en ningún carril** → detallá. Tomá las 5 tareas siguientes de tu carril que
