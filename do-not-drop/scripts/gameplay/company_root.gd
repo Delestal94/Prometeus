@@ -136,7 +136,6 @@ var supplier_truck: SupplierTruckView
 ## The supplier calendar the truck follows, on every peer: CompanyNet's (net.supplier.schedule), fed by the
 ## orders of the supplier board (D-0603.b.2, _add_supplier_orders()).
 var supplier_schedule: SupplierSchedule = SupplierSchedule.new()
-## The supplier order screen, opened from the shed's board on the peer that used it (D-0603.b.2).
 var supplier_board: SupplierBoard
 ## Requests and events of the company's business (D-2003, CompanyNet).
 var net: CompanyNet
@@ -698,32 +697,16 @@ func _add_supplier_truck() -> void:
 		supplier_truck.refresh_bed()
 
 
-## The supplier orders (D-0603.b.2), on every peer: the calendar the truck reads is CompanyNet's (an order
-## is a supplier_order request the host checks and a supplier_ordered event every peer applies; a late
-## joiner gets it in the snapshot) and the shed's board opens the order screen on the peer that used it.
-## Host (solo too): the calendar comes from the company's save (days before today dropped, the rest cut to
-## what a client takes, CompanySupplierNet.fit(), so a broken save cannot keep anyone out) and is written
-## back to it after every order, so a closed or interrupted day keeps what was ordered. It holds only real
-## orders: the first delivery (DefaultShed.first_order) is not in it, its pallets already wait in reception
-## (DefaultShed.first_pallets()), so a new company's truck comes the day after its first order.
+## The supplier orders (D-0603.b.2), on every peer: the truck reads CompanyNet's calendar (the host checks an
+## order, every peer applies it) and the shed's board opens the order screen on the peer that used it. The
+## host's calendar comes from its save and goes back to it after every order (CompanySupplierNet.load_saved).
 func _add_supplier_orders() -> void:
 	if net == null:
 		return
 	net.supplier.schedule = supplier_schedule
-	var catalog: CompanyCatalog = CompanyCatalog.load_all()
-	var defs: Dictionary = {}
-	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
-		defs[id] = catalog.product(id)
-	var sellers: Array[StringName] = catalog.ids(CompanyCatalog.SUPPLIERS)
-	net.supplier.products = defs
-	net.supplier.supplier = catalog.supplier(sellers[0]) if not sellers.is_empty() else null
+	var defs: Dictionary = net.supplier.load_catalog(CompanyCatalog.load_all())
 	if net.is_host() and _hosted_state != null:
-		supplier_schedule.copy_from(SupplierSchedule.from_dict(_hosted_state.supplier_calendar))
-		supplier_schedule.forget_before(_hosted_state.day)
-		var cut: int = CompanySupplierNet.fit(supplier_schedule)
-		if cut > 0:
-			push_warning("CompanyRoot: the saved supplier calendar was cut to what a snapshot carries (%d cut)" % cut)
-		_hosted_state.supplier_calendar = supplier_schedule.to_dict()
+		_hosted_state.supplier_calendar = CompanySupplierNet.load_saved(supplier_schedule, _hosted_state)
 		net.event_applied.connect(_on_supplier_ordered)
 	supplier_board = SupplierBoard.new()
 	supplier_board.name = "SupplierBoard"

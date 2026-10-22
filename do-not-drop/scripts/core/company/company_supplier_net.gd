@@ -222,3 +222,25 @@ static func fit(schedule: SupplierSchedule) -> int:
 
 static func _id_ok(value: Variant) -> bool:
 	return CompanyAsk.is_id(value) and not String(value).is_empty() and String(value).length() <= MAX_ID_LENGTH
+
+
+## Fills `products` and `supplier` (the first of the catalog) from `catalog`; returns the product definitions.
+func load_catalog(catalog: CompanyCatalog) -> Dictionary:
+	var defs: Dictionary = {}
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		defs[id] = catalog.product(id)
+	var sellers: Array[StringName] = catalog.ids(CompanyCatalog.SUPPLIERS)
+	products = defs
+	supplier = catalog.supplier(sellers[0]) if not sellers.is_empty() else null
+	return defs
+
+
+## Host: puts the company's saved calendar in `schedule` (days before today dropped, the rest cut to what a
+## client takes, so a broken save cannot keep anyone out); returns the calendar to write back to the save.
+static func load_saved(schedule: SupplierSchedule, state: Object) -> Dictionary:
+	schedule.copy_from(SupplierSchedule.from_dict(state.supplier_calendar))
+	schedule.forget_before(state.day)
+	var cut: int = fit(schedule)
+	if cut > 0:
+		push_warning("CompanyRoot: the saved supplier calendar was cut to what a snapshot carries (%d cut)" % cut)
+	return schedule.to_dict()
