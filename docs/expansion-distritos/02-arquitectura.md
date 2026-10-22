@@ -51,7 +51,7 @@
 | D-0236 | ✅ Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
 | ~~D-0237~~ | ~~Rutas de guardado compatibles con Steam Auto-Cloud (ver N-914)~~ **Fusionada en D-2010 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | rutas bajo `user://saves/company/`; documentado |
 | D-0238 | ✅ Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
-| D-0239 | Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |
+| D-0239 | ✅ Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |
 | ~~D-0240~~ | ~~Separación simulación/presentación en todo lo nuevo (convención §)~~ **Fusionada en D-2041 (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-gdscript | medium | revisión sin hallazgos de mezcla en `business/` |
 
 ## Pulido
