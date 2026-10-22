@@ -17,10 +17,12 @@ extends SceneTree
 ##   CompanyTrips' own book, D-0813.1; one order PACKED by a sealed box with no assembly error and
 ##   its packaging in the ledger, the cargo loaded with the trip not started, D-2016.2: the fleet's
 ##   van, the real node, driven by the player out of the yard under its own physics, so the gate
-##   started its trip with the order OUT, the van outside and moved, the player at the wheel, then
-##   DELIVERED at a house of the fixed map with the pay in the wallet and the ledger as order_paid,
-##   reversed back into the yard with the trip closed, nothing failed or out and the player off the
-##   wheel, the day in SUMMARY with the costs of the packing in its summary and saved); no stage is
+##   started its trip with the order OUT, the van outside and moved, the player at the wheel, the
+##   autopilot (D-2016.3) on the avenue 20 m past the yard's leg with the van in the street (off_road_max
+##   in the stage's report), then DELIVERED at a house of the fixed map with the pay in the wallet and the
+##   ledger as order_paid, taken back by the autopilot (K-turn, avenue, the yard's leg) into the yard
+##   with the trip closed, nothing failed or out and the player off the wheel, the day in SUMMARY with
+##   the costs of the packing in its summary and saved); no stage is
 ##   pending any more (PENDING stays for the next one that is); a stage run out of order fails
 ##   with a reason, and so do a stage name that does not exist and a world that is not the
 ##   company's.
@@ -29,6 +31,8 @@ const BOT: String = "res://tests/bot_company_day.gd"
 const DAY_CYCLE := preload("res://scripts/core/company/day_cycle.gd")
 ## The stages that run, and the ones that wait for a task: stage -> the reason they return.
 const PENDING: Dictionary = {}
+## Metres of street the autopilot drives out in this test (the bot by hand drives the whole way).
+const DRIVE_CAP_M: float = 20.0
 
 var _failures: int = 0
 
@@ -138,7 +142,9 @@ func _check_out_of_order(bot: GDScript, level: Node3D) -> void:
 
 func _check_stages(bot: GDScript, level: Node3D) -> void:
 	var root_level := level as CompanyRoot
-	var ctx: Dictionary = bot.call(&"new_context", 2)
+	# The autopilot drives only DRIVE_CAP_M of the street (the whole way to Centro is about 85 s each way;
+	# the bot run by hand does it all): the way back is the whole one from where the van stood.
+	var ctx: Dictionary = bot.call(&"new_context", 2, DRIVE_CAP_M)
 	var money: int = _money(level)
 	var start: int = Time.get_ticks_msec()
 	for stage: String in bot.call(&"stage_names"):
@@ -172,8 +178,9 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 			"close_day":
 				_check_closed(root_level, ctx)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
-	# drive and return move the real van in real-time physics (about 2 s each).
-	_expect(seconds < 15.0, "The stages run in a bounded time (took %.1f s)" % seconds)
+	# drive and return move the real van in real-time physics: the autopilot's leg out of the yard and 20 m of
+	# street, a K-turn there and the way back.
+	_expect(seconds < 45.0, "The stages run in a bounded time (took %.1f s)" % seconds)
 
 
 func _check_received(level: CompanyRoot, ctx: Dictionary) -> void:
@@ -251,6 +258,11 @@ func _check_driven(level: CompanyRoot, ctx: Dictionary) -> void:
 		"The van stands outside the yard, driven there (%.1f m)" % float(ctx["drive_m"]))
 	_expect(van != null and int(van.get(&"driver_peer_id")) == level.player.get_multiplayer_authority(),
 		"The player is at the wheel")
+	var piloted: Dictionary = (ctx["autopilot"] as Dictionary).get("drive", {})
+	_expect(not piloted.is_empty() and piloted["reason"] == "" and piloted["metres"] > 60.0,
+		"The autopilot drove the leg and the street (%s)" % [piloted])
+	_expect(not piloted.is_empty() and piloted["off_road_max"] <= 1.0,
+		"... without leaving the roadway (off_road_max %s m)" % piloted.get("off_road_max"))
 
 
 func _check_delivered(level: CompanyRoot, ctx: Dictionary, money: int) -> void:
@@ -280,6 +292,9 @@ func _check_returned(level: CompanyRoot, ctx: Dictionary) -> void:
 	_expect(van != null and level.trips.gate.side_of(van.global_position) == TripGate.INSIDE,
 		"The van was driven back into the yard")
 	_expect(van != null and int(van.get(&"driver_peer_id")) == 0, "Nobody is left at the wheel")
+	var back: Dictionary = (ctx["autopilot"] as Dictionary).get("return", {})
+	_expect(not back.is_empty() and back["reason"] == "" and back["off_road_max"] <= 1.0,
+		"The autopilot brought it back in the street (%s)" % [back])
 
 
 func _check_closed(level: CompanyRoot, ctx: Dictionary) -> void:
