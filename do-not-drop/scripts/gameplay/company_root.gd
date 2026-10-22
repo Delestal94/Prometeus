@@ -293,6 +293,7 @@ func _add_day(state: COMPANY_STATE) -> void:
 	day_cycle.attach(net, clock, state)
 	day_cycle.opening_notice = _opening_notice
 	day_cycle.crew_in_shed = _crew_in_shed
+	add_child(CompanySoloPause.create(clock, day_cycle))
 	_add_business_tick()
 
 

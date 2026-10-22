@@ -246,9 +246,11 @@ Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 ### D-0151 · Ayudas del modo solo — A · Opus 5.5 · high · Aviso: no · F1 (Ampliación)
 **Depende de:** D-0126, D-0603 (pedido al proveedor), D-0813.1 (pedidos del día), D-0219 (reloj)
 **Qué:** las tres ayudas de `diseno/roles-tripulacion.md` §6.2, en el host y sin RPC nuevo.
-- [ ] D-0151.1 Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
+- [x] D-0151.1 (2026-10-22) Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
   despausar reanuda el reloj solo si lo pausó el menú (no en SUMMARY); un peer que entra despausa antes del
-  snapshot. Online con alguien más, la pausa de hoy.
+  snapshot. Online con alguien más, la pausa de hoy. Quedó en `CompanySoloPause`
+  (`scripts/gameplay/company_solo_pause.gd`, hijo de `CompanyRoot`, test `test_company_solo_pause`): Esc y
+  `EventBus.pause_requested` la activan, `NetworkManager.roster_changed` (antes del snapshot) la desactiva.
 - [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
 - [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el
