@@ -411,7 +411,7 @@ func _refresh(peer: int) -> void:
 func _on_event(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if kind != CompanyShopNet.BOUGHT:
 		return
-	var item: ShopItem = CompanyShop.find(StringName(data.get("item", "")))
+	var item: ShopItem = net.shop.find(data.get("item"))
 	if item == null or item.kind != &"vehicle":
 		return
 	if build(net.company) > 0 and not _host:
