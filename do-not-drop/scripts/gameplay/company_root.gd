@@ -13,22 +13,20 @@ extends Node3D
 ## player stands in the shed.
 ##
 ## Online (the D-0214 follow-up): it is one of NetworkManager.LEVEL_SCENES, so a host here (the
-## menu's --host-company) sends every joiner to it. Each peer tells the
-## session its world is up (level_ready(), as level_common.gd does), which on a client is what has
-## the host send CompanyNet's snapshot and spawn its player. The crew is spawned by the host alone,
-## through World/PlayerSpawner (the path LoadingScreen waits on): one player per peer whose world
-## is up, at the first spot around SPAWN nobody stands on (free_spawn()), freed when its peer leaves
-## the roster, after CompanyNet let go of what it held (D-2006). Solo, and a host alone, is a crew of
-## one: the same player at SPAWN it always was.
+## menu's --host-company) sends every joiner to it. Each peer tells the session its world is up
+## (level_ready(), as level_common.gd does), which on a client is what has the host send CompanyNet's
+## snapshot and spawn its player. The crew is spawned by the host alone, through World/PlayerSpawner
+## (the path LoadingScreen waits on): one player per peer whose world is up, at the first spot around
+## SPAWN nobody stands on (free_spawn()), freed when its peer leaves the roster, after CompanyNet let
+## go of what it held (D-2006). Solo, and a host alone, is a crew of one: the same player at SPAWN.
 ##
 ## The company's vehicles (`fleet`) park in the playon outside the shed's exit on every peer and can be driven
 ## (CompanyFleet, D-0302.2.b); no route and no run: Delivery and Endless ignore all of this.
 ##
-## Its "CompanyNet" child carries the business events (D-2003): on the host it
-## starts from the company's stock and, until stations exist, refuses every units
-## request; on a client it holds the events until the host's snapshot (D-2004), which
-## also loads the host's company into this peer's CompanyState.
-##
+## Its "CompanyNet" child carries the business events (D-2003): on the host it starts from the
+## company's stock and, until stations exist, refuses every units request; on a client it holds the
+## events until the host's snapshot (D-2004), which also loads the host's company into this peer's
+## CompanyState.
 ## The host leaving mid-day (D-2005, like N-222): a client keeps what it saw of the
 ## host's day for the menu (CompanyInterruptedDay), gets its own company back, stops
 ## the world and loads the main menu. The host (solo too) loads its slot when it comes
@@ -328,7 +326,7 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
-	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle))
+	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle, OrderDayClose.out(trips)))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -818,6 +816,7 @@ func _add_trips() -> void:
 	add_child(trips)
 	trips.use_gate(CompanyFleet.trip_gate(shed, net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	OrderDayClose.wire(trips, net, day_cycle)
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
 

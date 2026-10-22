@@ -125,6 +125,7 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 |---|---|---|
 | Entra un pedido nuevo (D-0803, D-0813) | host, con el ritmo del día (`CompanyOrdersNet.poll`: el plan de `OrderGenerator` con la semilla del día) | evento `order_added` `{order}`: el pedido entero como lo escribe `Order.normalize()` (un pedido ya es un diccionario; no hay `Order.to_dict()`), estado `open`; cada peer lo suma a su `OrderBook` (§10) |
 | Vence un pedido (D-0807, D-0813) | host (`CompanyOrdersNet.poll`, `OrderBook.overdue()`) | evento `order_expired` `{order, minute}`: el pedido pasa a LATE en cada peer (`OrderBook.expire_one()`, con `late_from`) y se sigue pudiendo entregar con −25 % (D-0807). **Decisión (D-0813):** sin `penalty` (vencer no cobra nada en el momento) y sin reserva que liberar (todavía nada reserva antes de `order_claim`, fila 8); `minute` deja el `now_min` del libro igual en todos. Lo que decía esta fila para un pedido que se pierde (se libera la reserva; la caja a medio armar queda en la mesa sin pedido; una caja sellada sigue siendo una caja sin pedido, D-0719) pasa al abandono (`abandon()`, FAILED y reputación), que es otro evento: D-0807.b |
+| Un pedido termina sin entrega (D-0851, D-0807) | host (`CompanyOrdersNet.abandon()`, `close_day()`, `fail_returned()`) | evento `order_closed` `{order, state}` con `state` `failed` o `cancelled` (protocolo 57): cada peer mueve su libro con `OrderBook.mark_failed()` / `cancel()`; la reputación de un `failed` (`OrderPenalties.abandoned()`, −3) la escribe solo el host al publicar. Lo publican el cliente que se cansó (una ventana después de vencer, `OrderDayClose.abandoned()`), la salida que volvió sin entregarlo y el cierre del día en `CLOSING` (§14) |
 | Fases del día (D-0203) | host (`DayCycle`) | evento `day_phase` `{day, phase, frozen, lag, frozen_at[, summary]}` (`phase` es OPENING, OPERATING, CLOSING o SUMMARY; `summary` solo en SUMMARY, `DaySummary.build()`); el mismo evento lleva el congelado del galpón (S4: `frozen`, `lag`, `frozen_at` en minutos). El cliente es pasivo: valida y aplica, y emite `company_day_*` en el EventBus local |
 | Reloj (D-0219) | host | evento `clock_anchor` `{minute, speed, paused}` solo al cambiar (apertura, pausa, salida que cierra tarde); cada peer toma como origen **su propio** tick al recibirlo (o al aplicar el snapshot), menos medio RTT de `NetStats`, y calcula la hora local desde ahí (el tick del host no vale en otra máquina). **Decisión:** ancla y no envío cada 2 s (lo que decía D-0219): no gasta ancho de banda quieto y no hay que interpolar; D-0219 lo construye así |
 | Cierre: cobro, alquiler, penalidades (D-0320, D-0509) | host | evento `day_closed` `{day, summary}`; después el host guarda (solo el host guarda) |
@@ -496,8 +497,8 @@ voto es D-0518.b).
     vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro. **El PR que traiga
     esos eventos sube `PROTOCOL_VERSION`**: con pedidos que se cierran, la poda del `OPENING` cambia lo que hace un
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
-  - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
-    plata (D-0910), junto con el reloj de D-0807.b;
+  - ~~el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio~~: hecho en D-0851 (§14), `order_closed`; la
+    reputación la escribe solo el host (no viaja absoluta como la plata);
  - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
     poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
     sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
@@ -669,3 +670,31 @@ voto es D-0518.b).
   - dibujar el bulto que deja `box_discarded` (D-0611): está en el `spot` de la mesa, a la altura de la tabla, y
     puede quedar debajo de la caja nueva que se abra ahí;
   - textos de UI para `supply_full` (y los demás motivos de la mesa).
+
+## 14. Lo construido (D-0851): el cierre del día para los pedidos
+
+- **Evento** `order_closed {order, state}` (`CompanyOrdersNet.CLOSED`, `HOST_EVENT_KINDS`, protocolo 57): exactamente esas dos
+  claves, el id de un pedido del libro y `state` `failed` o `cancelled`. Cada peer, el host también, lo aplica en
+  `CompanyOrdersNet.apply()` con `OrderBook.mark_failed()` / `cancel()`: una transición que el libro no permite (cancelar un
+  atrasado, cerrar uno ya cerrado) no se aplica, así que el host no lo publica y un cliente pide snapshot. Sin `minute`: no
+  lo usa nadie.
+- **La reputación es del host.** `_close()` publica y, solo si salió, suma `OrderPenalties.abandoned(order)` (−3, tope por pedido
+  −10) a `net.company`; el aplicar del evento no toca `CompanyState`. Un cliente ve su reputación nueva con el próximo
+  snapshot (no hay evento de reputación): lo mismo que antes con la reputación de cualquier otra fuente. **Decisión:** no se
+  agregó la reputación absoluta al evento (como la plata de D-0517) porque el test de la tarea pide que solo cambie en el
+  host; si el HUD del cliente la muestra, sale una tarea para replicarla.
+- **Quién lo publica.** `CompanyOrdersNet.abandon(net, minuto, on_road)` (el cliente se cansó: tarde, fuera de la ruta, una
+  ventana después de `due_min`) desde `CompanyDayOrders.poll()` en `OPENING`, `OPERATING` y `CLOSING`;
+  `fail_returned(net, ids)` desde `CompanyRoot` cuando `CompanyTrips.trip_closed` trae pedidos sin entregar;
+  `close_day(net, minuto, early)` desde `DayCycle.poll()` en `CLOSING` cuando `trips_out() == 0`, con el minuto del galpón y
+  `early` si el día lo cerró `close_early()`. `OrderDayClose` (`scripts/gameplay/business/`) decide los ids sin tocar el libro
+  (`OrderBook` está en el límite de métodos públicos de gdlint). `DayCycle` espera un `poll` más antes de `SUMMARY` solo si cerró
+  algo; con el libro sin pedidos pasa directo.
+- **Vehículo que sale de noche.** `CompanyTrips.day_open` (`DayCycle.is_day_closed()` negado): la salida se niega con
+  `DAY_CLOSED` (`UI_COMPANY_GATE_DAY_CLOSED`) y el que cruza igual queda en `_night_out`: está afuera (no se le vuelve a
+  negar, `refused_returned` al volver) pero no cuenta en `trips_out()`, así que no traba el resumen. La vista de salidas
+  (`CompanyTripsView`) no cambia: ve un `trip_refused` y un `trip_closed` sin viaje como con el tope de vehículos.
+- **Pendiente:** el libro compartido no se entera aún de que un pedido salió o se entregó (filas 15, 17, 19 y 20 de este
+  documento, D-0815.b, D-0302): `abandon()` consulta a `CompanyTrips.carries()` para no abandonar lo que va en camino, y
+  `fail_returned()` cubre el que vuelve sin entregar; **cuando la puerta entregue (D-0815.b) tiene que publicar la entrega
+  como evento del libro compartido**, o el cierre del día lo va a dar por no entregado. Test: `test_company_day_close_orders`.

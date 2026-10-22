@@ -35,7 +35,11 @@ extends Node
 ##   CLOSING    from 20:00 on, or earlier when the host closes the day (close_early(), D-0253).
 ##              S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0. It lasts at
 ##              least one poll, so what listens to company_day_closing (rent, D-0320) lands in the
-##              summary.
+##              summary. Nobody leaves any more (CompanyTrips.day_open, is_day_closed()) and no order
+##              comes in; with the last vehicle back the host closes every order left (D-0851,
+##              CompanyOrdersNet.close_day(): the late ones fail, those in their window are cancelled, all
+##              fail after close_early()) and SUMMARY follows in the next poll, so the summary sees it all.
+##              The 20:00 notice (UI_COMPANY_DAY_CLOSING_ROAD) goes out as depot_notice on every peer.
 ##   SUMMARY    the closing screen: DaySummary.build() of the day goes out inside the event and the
 ##              world clock stops. Only the host's next_day() moves on (a client can't hurry the day).
 ##
@@ -72,6 +76,9 @@ const OTHER_REASON: String = "other"
 ## After an event the host could not publish, poll() waits this long (msec) before trying again, so
 ## a stuck phase logs one error every few seconds, not four times a second.
 const RETRY_MSEC: int = 5000
+## The host tries to close the day's orders this many times before it goes on to SUMMARY with what is left (a stuck
+## book must not hold the whole day; it logs an error).
+const MAX_CLOSE_TRIES: int = 3
 
 ## The CompanyNet the phases travel through (attach()), or null: this peer's day alone.
 var net: CompanyNet = null
@@ -105,6 +112,10 @@ var _frozen_at: float = 0.0
 var _phase_msec: int = 0
 var _toggle_msec: int = -1
 var _since_poll: float = 0.0
+## Host: close_early() closed this day (every order left fails, not only the late ones), and how many times the
+## orders' closing was tried (MAX_CLOSE_TRIES). Both restart with each day.
+var _closed_early: bool = false
+var _close_tries: int = 0
 ## Host: no poll() tries a phase before this tick (a failed publish), and EventBus facts this
 ## peer applied and has not emitted yet ([fact, args]), flushed on event_applied.
 var _retry_at_msec: int = 0
@@ -174,7 +185,9 @@ func next_day() -> bool:
 func close_early() -> bool:
 	if not is_host() or _phase != Phase.OPERATING:
 		return false
-	return _transition(Phase.CLOSING)
+	var closed: bool = _transition(Phase.CLOSING)
+	_closed_early = _closed_early or closed
+	return closed
 
 
 ## Host: moves the day on if it is time, once per call: OPENING to OPERATING after
@@ -195,7 +208,8 @@ func poll() -> void:
 				return
 		Phase.CLOSING:
 			if _trips() == 0:
-				_transition(Phase.SUMMARY)
+				if not _close_orders():
+					_transition(Phase.SUMMARY)
 				return
 		_:
 			return
@@ -230,6 +244,7 @@ func apply_phase(data: Dictionary) -> bool:
 					_pending_facts.append([&"depot_notice", [notice]])
 			Phase.CLOSING:
 				_pending_facts.append([&"company_day_closing", [day]])
+				_pending_facts.append([&"depot_notice", [tr("UI_COMPANY_DAY_CLOSING_ROAD")]])
 			Phase.SUMMARY:
 				_pending_facts.append([&"company_day_summary", [day, summary.duplicate(true)]])
 	if not _has_net():
@@ -254,6 +269,12 @@ func is_frozen() -> bool:
 	return _frozen
 
 
+## The day is over for leaving and for new orders: CLOSING (20:00, or the host closed it early) or SUMMARY. Nobody
+## starts a trip then (CompanyTrips.day_open, D-0851).
+func is_day_closed() -> bool:
+	return _phase == Phase.CLOSING or _phase == Phase.SUMMARY
+
+
 ## The shed's own minute (minutes since midnight, with their fraction): the world clock's, held
 ## back by the time the shed spent frozen, and still while it is frozen (S4).
 func shed_minute() -> float:
@@ -269,6 +290,8 @@ func _open(day: int) -> bool:
 	# still reads the old time; the clock runs from 08:00 before the next frame.
 	if not _publish(_event(day, Phase.OPENING, false, 0.0, 0.0)):
 		return false
+	_closed_early = false
+	_close_tries = 0
 	if clock != null and is_instance_valid(clock):
 		clock.start(float(CompanyTuning.DAY_START_MIN))
 	return true
@@ -284,6 +307,22 @@ func _transition(next: Phase) -> bool:
 		return false
 	if next == Phase.SUMMARY and clock != null and is_instance_valid(clock):
 		clock.pause()
+	return true
+
+
+## Host, with the last vehicle back (D-0851): every order still to be delivered closes at the shed's minute
+## (CompanyOrdersNet.close_day()), so the summary and the next day find none. True when the orders were worked on and
+## SUMMARY waits for the next poll; false when there is nothing to close (or the book would not close after
+## MAX_CLOSE_TRIES tries: an error, and the day goes on with what is left).
+func _close_orders() -> bool:
+	if not _has_net() or net.orders.book.open_orders().is_empty():
+		return false
+	if _close_tries >= MAX_CLOSE_TRIES:
+		push_error("DayCycle: day %d's orders would not close after %d tries; the summary goes on without it"
+			% [_day, MAX_CLOSE_TRIES])
+		return false
+	_close_tries += 1
+	net.orders.close_day(net, floori(shed_minute()), _closed_early)
 	return true
 
 

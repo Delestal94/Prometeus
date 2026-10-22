@@ -405,9 +405,10 @@ static func _shelve_stock(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) 
 ## The day's orders as the world brings them in (D-0813.1): the host's world planned them at the OPENING
 ## from the company's seed, and its business tick publishes each one into the book every peer shares
 ## (CompanyNet.orders.book) once the shed's minute reaches it. The bot moves the clock so the shed's minute
-## is the last arrival and waits for the tick (the ones already past due are LATE there by then). Then it
-## copies them into CompanyTrips' own book, OPEN as OrderBook.add() leaves them: the book packing and
-## dispatch work on, which doesn't become the shared one until marking packed, out and delivered are events.
+## is the last arrival and waits for the tick (the ones already past due are LATE there by then, and the ones
+## a window past due failed: the customer gave up, D-0851). Then it copies the live ones into CompanyTrips' own
+## book, OPEN as OrderBook.add() leaves them: the book packing and dispatch work on, which doesn't become the
+## shared one until marking packed, out and delivered are events.
 static func _take_orders(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	if level.trips == null:
 		return _fail("no_trips")
@@ -425,7 +426,11 @@ static func _take_orders(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -
 	if not level.net.orders.planned().is_empty():
 		return _fail("orders_not_in")
 	var orders: Array[Dictionary] = shared.open_orders()
-	if orders.is_empty() or orders.size() != shared.size():
+	# The jump to 19:00 is a day of waiting: the customers gave up on the ones a window past due (D-0851), failed.
+	var gone: int = 0
+	for order: Dictionary in shared.to_dict()["orders"]:
+		gone += 1 if order["state"] == Order.STATE_FAILED else 0
+	if orders.is_empty() or orders.size() + gone != shared.size():
 		return _fail("shared_book_size")
 	var book: OrderBook = level.trips.book
 	for order: Dictionary in orders:
