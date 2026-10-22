@@ -67,9 +67,13 @@ var is_loaded: bool = false
 var current_mount: Node = null
 ## Replicate shelf occupancy as well as the box transform: clients use it
 ## to decide whether they may board, tend cargo or place another box.
+## The mount it leaves is freed only while it is still this box's: on a client another box may have taken it
+## meanwhile (this one's copy hidden far away and the slot let go, CompanyInterest, D-0316.2), and its update
+## then emptied a slot that box sits in.
 var current_mount_path: NodePath = NodePath():
 	set(value):
-		if is_instance_valid(current_mount) and &"occupied_by" in current_mount:
+		if is_instance_valid(current_mount) and &"occupied_by" in current_mount \
+				and current_mount.get(&"occupied_by") == self:
 			current_mount.set(&"occupied_by", null)
 		current_mount_path = value
 		current_mount = get_node_or_null(value) if not value.is_empty() and is_inside_tree() else null

@@ -286,6 +286,17 @@ static func gate_of(at_shed: Node3D, company: Object) -> Vector3:
 	return exit_of(at_shed, company) + facing * Vector3(0.0, 0.0, -(CompanyShed.WALL_THICKNESS + PLAYON_DEPTH_M))
 
 
+## CompanyTrips' gate for the shed `at_shed` of `company`: across the playon's far edge (gate_of()), PLAYON_WIDTH_M
+## wide, outward the shed's north, the whole compound inside (yard_back_m() / yard_half_width_m()). The host's
+## CompanyTrips watches it and a client's CompanyGateBrake builds the same one (D-0316.4): it is all the shed's
+## transform and the company's stage, which the snapshot brings.
+static func trip_gate(at_shed: Node3D, company: Object) -> TripGate:
+	var north: Vector3 = -at_shed.global_basis.z if at_shed != null and at_shed.is_inside_tree() else Vector3.FORWARD
+	var gate := TripGate.new(gate_of(at_shed, company), north, PLAYON_WIDTH_M)
+	gate.set_yard(yard_back_m(company), yard_half_width_m(company))
+	return gate
+
+
 ## How far behind the gate's line the compound reaches (the shed's floor and its two walls, then the playon), in
 ## metres: the TripGate yard's back edge.
 static func yard_back_m(company: Object) -> float:
