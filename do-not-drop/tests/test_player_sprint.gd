@@ -136,6 +136,16 @@ func _test_no_running_seated_or_on_a_moving_truck(level: Node) -> void:
 	vehicle.call(&"set_door_open", &"cab_left", true)
 	driver_seat.interact(player)
 	_expect(not player.seat_node_path.is_empty() and not sprint.wants_run(forward), "Nobody runs while driving")
+	# The pace cap a forklift sets on its driver (D-0606.c2): no run and walking slowed to the cap, gone with the meta.
+	player.seat_node_path = NodePath()
+	player._seated = false
+	_expect(sprint.wants_run(forward), "Without the cap the sprint is a run again")
+	player.set_meta(Sprint.PACE_CAP_META, 2.2)
+	_expect(not sprint.wants_run(forward) and not sprint.can_run(), "With a pace cap nobody runs")
+	var capped: float = sprint.ground_speed(forward)
+	_expect(is_equal_approx(capped, 2.2), "The capped ground speed is the cap, not 6 or 3.6 (got %s)" % capped)
+	player.remove_meta(Sprint.PACE_CAP_META)
+	_expect(is_equal_approx(sprint.ground_speed(forward), 6.0), "Taking the cap off gives the run back")
 
 
 # --- Steps shake the box -----------------------------------------------------------------------
