@@ -7,6 +7,10 @@ extends RefCounted
 ## markings, so a cell's street is those pieces placed in world space (a cell
 ## node sits at the origin). index() is pure data; build_cell() makes the nodes.
 ##
+## With a CentroDecor (D-0314) the cell also holds what the gray Barrio Centro has
+## around its streets: sidewalks, houses, traffic lights, lamps and benches, in a
+## `Centro` child after the pieces.
+
 ## The Campo's animals and events (EdgeEvents, D-0315) are dealt the same way: each
 ## goes to the cell its point lies in (events_in()). build_cell() builds the nodes of
 ## the deer, the flock and the dog only with `spawn_events` on (off by default: they
@@ -17,6 +21,8 @@ var cell_size: float
 var session_seed: int
 ## Whether build_cell() also builds the nodes of the events it holds.
 var spawn_events: bool = false
+## What Centro holds besides its streets; null: the cells hold the streets only.
+var decor: CentroDecor
 
 ## { Vector2i cell: Array[{ edge: StringName, piece: int }] }, built once.
 var _by_cell: Dictionary = {}
@@ -25,20 +31,27 @@ var _plans: Dictionary = {}
 var _events_by_cell: Dictionary = {}
 
 
-func _init(road_graph: RoadGraph, size: float, world_seed: int = 0, with_events: bool = false) -> void:
+func _init(
+		road_graph: RoadGraph, size: float, world_seed: int = 0, with_events: bool = false,
+		centro_decor: CentroDecor = null) -> void:
 	graph = road_graph
 	cell_size = size
 	session_seed = world_seed
 	spawn_events = with_events
+	decor = centro_decor
 	_index()
 	_index_events()
 
 
-## Cells that hold at least one piece.
+## Cells that hold at least one piece, or something of the decor.
 func cells() -> Array[Vector2i]:
 	var found: Array[Vector2i] = []
 	for cell: Vector2i in _by_cell:
 		found.append(cell)
+	if decor != null:
+		for cell: Vector2i in decor.cells():
+			if not _by_cell.has(cell):
+				found.append(cell)
 	return found
 
 
@@ -67,7 +80,8 @@ func cell_of(position: Vector3) -> Vector2i:
 	return Vector2i(floori(position.x / cell_size), floori(position.z / cell_size))
 
 
-## The cell node: `Cell_<x>_<z>` with a RouteSegment per piece of the cell.
+## The cell node: `Cell_<x>_<z>` with a RouteSegment per piece of the cell and, with a decor, the
+## `Centro` node of what it holds.
 func build_cell(cell: Vector2i) -> Node3D:
 	var node := Node3D.new()
 	node.name = "Cell_%d_%d" % [cell.x, cell.y]
@@ -76,6 +90,10 @@ func build_cell(cell: Vector2i) -> Node3D:
 		var segment: RouteSegment = EdgePieces.build_piece(piece)
 		segment.name = "%s_%d" % [entry.edge, entry.piece]
 		node.add_child(segment)
+	if decor != null:
+		var around: Node3D = decor.build_cell(cell)
+		if around != null:
+			node.add_child(around)
 	if spawn_events:
 		for event: Dictionary in events_in(cell):
 			var holder: Node3D = _event_node(event)

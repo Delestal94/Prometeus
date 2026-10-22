@@ -4,7 +4,8 @@ extends SceneTree
 ## The streets inside the company map's cells (expansion D-0304.1,
 ## scripts/gameplay/districts/edge_cell_content.gd on data/world/road_graph.tres):
 ## - every piece of every street lands in exactly one cell: the one its start lies in;
-## - a cell's node is named Cell_<x>_<z> and holds a RouteSegment per piece, in world space;
+## - a cell's node is named Cell_<x>_<z> and holds a RouteSegment per piece, in world space (and, from
+##   D-0314, a `Centro` node with the zone's decor, which test_company_centro checks);
 ## - CompanyCells.use_graph() makes the streamer deliver those nodes and pins the main streets;
 ## - a cell with no street is an empty node.
 
@@ -37,11 +38,13 @@ func _run() -> void:
 	var node: Node3D = content.build_cell(street_cell)
 	root.add_child(node)
 	_expect(node.name == "Cell_%d_%d" % [street_cell.x, street_cell.y], "The cell node is named for its cell")
-	_expect(node.get_child_count() == content.piece_count(street_cell), "One segment per piece")
+	var segments: Array[Node] = node.get_children().filter(func(child: Node) -> bool: return child is RouteSegment)
+	_expect(segments.size() == content.piece_count(street_cell), "One segment per piece")
+	_expect(node.get_child_count() - segments.size() <= 1, "Nothing but the pieces and the Centro node")
 	var inside := true
-	for child in node.get_children():
+	for child in segments:
 		var at: Vector3 = (child as Node3D).position
-		inside = inside and child is RouteSegment and content.cell_of(at) == street_cell
+		inside = inside and content.cell_of(at) == street_cell
 	_expect(inside, "Each piece is a RouteSegment that starts in its own cell")
 	node.queue_free()
 

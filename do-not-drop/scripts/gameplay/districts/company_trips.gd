@@ -13,8 +13,9 @@ extends Node
 ## reads, so the day waits for a vehicle still out (S3); this node stays the authority there, the
 ## views only follow it. Nothing here sends anything: the host's view publishes (its follow()).
 ##
-## No company vehicle exists yet (D-0207 and later put it in the world), so nothing joins the group
-## and the gate stays idle; the OrderBook is this node's own, not the one every peer shares
+## The company's vehicles join the group in CompanyFleet (World/Vehicles, D-0302.2.b), parked past the
+## gate's line; only those of this node's own multiplayer count (a test holds several sessions in one
+## tree). The OrderBook is this node's own, not the one every peer shares
 ## (CompanyNet.orders.book, D-0813), until what it does to it (mark_out, close) goes out as events
 ## (rows 17, 19 and 20 of red-autoridad.md). Boxes are only ids here; where they ride is the
 ## vehicle's business.
@@ -131,17 +132,22 @@ func closed_trips() -> Array[Trip]:
 	return _closed.duplicate()
 
 
-## A vehicle left the world: it is not tracked any more and a trip it had stays out.
+## A vehicle left the world mid-day (sold, towed, freed): the gate forgets it, its staged cargo is dropped and
+## it no longer counts as out: a trip it had closes as if it came back (what wasn't delivered fails,
+## trip_closed) and one out refused is back (refused_returned), so the day never waits for a vehicle that
+## isn't there. Nothing calls it yet (CompanyFleet frees none mid-day); the world closing is no vehicle leaving.
 func forget(vehicle_id: StringName) -> void:
 	if gate != null:
 		gate.forget(vehicle_id)
+	_staged.erase(vehicle_id)
+	_on_returned(vehicle_id)
 
 
 func _physics_process(_delta: float) -> void:
 	if gate == null or not is_inside_tree():
 		return
 	for vehicle: Node in get_tree().get_nodes_in_group(VEHICLE_GROUP):
-		if vehicle is Node3D:
+		if vehicle is Node3D and vehicle.multiplayer == multiplayer:
 			gate.track(StringName(vehicle.name), (vehicle as Node3D).global_position)
 
 

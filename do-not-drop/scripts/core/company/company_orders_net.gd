@@ -80,7 +80,8 @@ func _notification(what: int) -> void:
 
 ## Host: the orders of `day` as OrderGenerator.generate_day() draws them from `day_seed` (arrival minutes
 ## from OrderRhythm, the zones open today that take deliveries, the catalogs; a company in the red gets
-## fewer, D-0510), to come in through poll(). The same seed, day, crew, zones and money give the same
+## fewer, D-0510; each names a house of the fixed map, HouseMap, where its zone has them), to come in
+## through poll(). The same seed, day, crew, zones and money give the same
 ## orders. Returns how many are planned (plan()).
 func plan_day(day_seed: int, day: int, players: int, zones: Array[ZoneDefinition], products: Dictionary,
 		requirements: Dictionary, company: Object = null) -> int:
@@ -89,7 +90,7 @@ func plan_day(day_seed: int, day: int, players: int, zones: Array[ZoneDefinition
 	for set_res in OrderTemplateCheck.load_sets():
 		templates[set_res.zone] = set_res
 	return plan(OrderGenerator.generate_day(
-		day_seed, day, players, zones, products, requirements, 0, company, templates
+		day_seed, day, players, zones, products, requirements, 0, company, templates, HouseMap.load_default()
 	))
 
 

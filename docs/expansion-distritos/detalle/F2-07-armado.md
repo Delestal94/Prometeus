@@ -18,3 +18,11 @@ Decisión: el hielo es un contador de la caja, no un insumo de la mesa: `SUPPLY_
 Decisión: el bono es aparte del sello `gift` (que la puerta ya valida): el sello es obligatorio, el papel es opcional y premia el esmero. Decisión: `GIFT_WRAP_COST` (3) lo cobra quien llama, como el hielo.
 **Test** `test_gift_wrap`: caja abierta o nula no se envuelve; no hay doble capa; bono solo en pedido de regalo con caja envuelta; ida y vuelta por JSON y cajas viejas sin papel.
 **Hecho cuando:** un pedido de regalo paga más con envoltorio (el test pasa).
+
+### D-0726 · Productos que no se pueden juntar — B · Sonnet 5.5 · medium · Aviso: no · F2
+**[x] Hecho (2026-10-22, PR pendiente)** — `ProductCompatibility` (`scripts/gameplay/business/product_compatibility.gd`) + `CompanyTuning.INCOMPATIBLE_QUALITY_PENALTY`; `test_product_compatibility`. Avisar en la mesa y restar el castigo en `AssemblyQuality` quedan para D-0726.b (ver `revisar/D-0726.md`).
+**Depende de:** D-0703 (`PackedBox`), D-0116 (catálogo)
+**Qué:** `class_name ProductCompatibility`, estático. Tres grupos por id de producto (peligroso: petardos; comida: leche, masa madre, torta; vivo: gallina, cachorro, mapache) y dos reglas: peligroso con comida y peligroso con vivo. Lo demás (vidrio, lámpara) se mezcla con todo. `clash(a, b)`, `conflicts(caja)` (pares de grupos en choque, una vez cada uno), `is_safe`, `penalty` (30 puntos por par).
+Decisión: la tabla vive en el script y no en un campo nuevo de los `.tres`: son 7 ids y así no se toca el recurso de Slatex/trampas ni el protocolo; al crecer el catálogo pasa a `ProductDefinition.group`. Decisión: no hay químicos en el catálogo, así que "químicos con comida" se lee como los petardos (lo único peligroso de hoy).
+**Test** `test_product_compatibility`: choques en ambos órdenes, grupos que se mezclan, ids sin grupo, cajas reales con uno y dos pares, castigo, caja nula y que todo id agrupado exista en el catálogo.
+**Hecho cuando:** la regla tiene su test (pasa).

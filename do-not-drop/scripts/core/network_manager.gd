@@ -126,11 +126,18 @@ const MAX_PLAYERS: int = 8
 ## 48: CompanyNet's _request takes a new kind, fork_act (get on, mast with the stop's `at_height`,
 ## take or leave a pallet, get off: the forklift a player drives), jack_picked takes `by`, jack_placed takes
 ## `slot`, _apply_event a new kind, fork_state, and the "pallets" snapshot part a
-## "forklift" entry (company mode, D-0606.b).
+## "forklift" entry (company mode, D-0606.b);
+## 49: the company world has its vehicles on every peer, World/Vehicles/<vehicle
+## id> (vehicle.tscn and its synchronizer, sent only to the players near it): the
+## client builds them from the host's snapshot and acks them with a new RPC on
+## World/Vehicles, CompanyFleet._have_fleet, and only then does the host open each
+## one's synchronizer to it; an older client has no such node and would not hide a
+## far copy; the van relays vehicle_telemetry only during a run (company mode,
+## D-0302.2.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 48
+const PROTOCOL_VERSION: int = 49
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

@@ -136,11 +136,18 @@ const COLD_BASE_MINUTES: float = 15.0
 const COLD_PER_ICE_MINUTES: float = 25.0
 const ICE_PACKS_MAX: int = 2
 const ICE_PACK_COST: int = 2
+## Cold stock outside a fridge (D-0616, ColdChain): a cold product rots after this many game minutes
+## out of cold storage (2 h), counted per product and place; in a fridge the clock stops.
+const COLD_SPOIL_MINUTES: float = 120.0
 
 ## Gift wrap (D-0723, GiftWrap): a gift order delivered in a wrapped box pays GIFT_WRAP_BONUS of its
 ## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
 const GIFT_WRAP_BONUS: float = 0.15
 const GIFT_WRAP_COST: int = 3
+
+## Products that must not share a box (D-0726, ProductCompatibility): assembly quality points lost
+## per incompatible pair found in one box (a pair is two different groups, counted once per kind).
+const INCOMPATIBLE_QUALITY_PENALTY: int = 30
 
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).

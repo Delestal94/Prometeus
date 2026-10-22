@@ -7,6 +7,8 @@ extends RefCounted
 ## what was paid, the penalty and the reputation change) and the totals. The carrier of an intact
 ## delivery earns merit (apply()); add_to_day() folds trips into the day's DaySummary dictionary.
 ## Money and reputation were already settled at the door (OrderPenalties, OrderTips): this only reports.
+## The trip's score and the merit of each carrier come from the delivery run's scoring (TripScoring,
+## D-0520): the score is a report, not money.
 
 const BOX_INTACT: StringName = &"intact"
 const BOX_AT_RISK: StringName = &"at_risk"
@@ -25,7 +27,8 @@ const OUTCOME_FAILED: StringName = &"failed"
 ## {trip_id, vehicle_id, depart_min, return_min, depart_clock, return_clock, duration_min,
 ## orders, delivered, failed, intact,
 ## at_risk, broken, base_total, pay_total, penalty_total, reputation, returned_units, lost_units,
-## merit_by_peer}.
+## merit_by_peer, score, score_points, score_breakdown}. score is never below 0, score_points is
+## the raw sum (TripScoring).
 static func build(
 	trip: Trip, book: OrderBook, verdicts: Dictionary = {}, carriers: Dictionary = {}
 ) -> Dictionary:
@@ -50,6 +53,9 @@ static func build(
 		"returned_units": trip.returned_units if trip != null else 0,
 		"lost_units": trip.lost_units if trip != null else 0,
 		"merit_by_peer": {},
+		"score": 0,
+		"score_points": 0,
+		"score_breakdown": [] as Array,
 	}
 	if trip == null or trip.is_out():
 		return result
@@ -67,36 +73,43 @@ static func build(
 		match line["box"]:
 			BOX_INTACT:
 				result["intact"] += 1
-				var peer: int = int(line["peer"])
-				if peer > 0:
-					var by_peer: Dictionary = result["merit_by_peer"]
-					by_peer[peer] = int(by_peer.get(peer, 0)) + CompanyTuning.TRIP_MERIT_INTACT
 			BOX_AT_RISK:
 				result["at_risk"] += 1
 			BOX_BROKEN:
 				result["broken"] += 1
+		var merit: int = TripScoring.merit_for(line)
+		var peer: int = int(line["peer"])
+		if merit > 0 and peer > 0:
+			var by_peer: Dictionary = result["merit_by_peer"]
+			by_peer[peer] = int(by_peer.get(peer, 0)) + merit
+	var scored: Dictionary = TripScoring.score(result["orders"])
+	result["score"] = scored["score"]
+	result["score_points"] = scored["delivery_points"]
+	result["score_breakdown"] = scored["breakdown"]
 	return result
 
 
 ## Gives each carrier the merit of the summary once (CrewProgression.award_action dedupes by
-## action id, so applying the same summary twice pays nothing the second time). Returns the
-## total points awarded.
+## action id, so applying the same summary twice pays nothing the second time). Intact boxes pay
+## CompanyTuning.TRIP_MERIT_INTACT, dented ones half, ruined or undelivered ones nothing
+## (TripScoring.merit_for). Returns the total points awarded.
 static func apply(result: Dictionary, crew: Object) -> int:
 	if crew == null:
 		return 0
 	var total: int = 0
 	for line: Dictionary in result.get("orders", []):
-		if line["outcome"] != OUTCOME_DELIVERED or line["box"] != BOX_INTACT:
-			continue
+		var merit: int = TripScoring.merit_for(line)
 		var peer: int = int(line["peer"])
+		if merit <= 0 or peer <= 0:
+			continue
 		var action := StringName("trip:%s:%s" % [result["trip_id"], line["order_id"]])
-		if peer > 0 and crew.award_action(peer, action, CompanyTuning.TRIP_MERIT_INTACT):
-			total += CompanyTuning.TRIP_MERIT_INTACT
+		if crew.award_action(peer, action, merit):
+			total += merit
 	return total
 
 
 ## Adds the trips of a day to its DaySummary dictionary (keys trips, trip_deliveries, trip_failed,
-## trip_penalties and trip_pay) and returns it. The financial keys are left as they are.
+## trip_penalties, trip_pay and trip_score) and returns it. The financial keys are left as they are.
 static func add_to_day(summary: Dictionary, results: Array) -> Dictionary:
 	var out: Dictionary = summary
 	out["trips"] = results.size()
@@ -104,11 +117,13 @@ static func add_to_day(summary: Dictionary, results: Array) -> Dictionary:
 	out["trip_failed"] = 0
 	out["trip_penalties"] = 0
 	out["trip_pay"] = 0
+	out["trip_score"] = 0
 	for result: Dictionary in results:
 		out["trip_deliveries"] += int(result.get("delivered", 0))
 		out["trip_failed"] += int(result.get("failed", 0))
 		out["trip_penalties"] += int(result.get("penalty_total", 0))
 		out["trip_pay"] += int(result.get("pay_total", 0))
+		out["trip_score"] += int(result.get("score", 0))
 	return out
 
 

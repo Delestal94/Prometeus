@@ -11,7 +11,10 @@ extends SceneTree
 ## - max_items caps the distinct products; every product and zone exists;
 ## - with order templates (D-0820.b) each order of a zone with a set matches one of its templates
 ##   (products, quantities, requirements), within the day's item cap, deterministically; a zone
-##   without a set still draws at random.
+##   without a set still draws at random;
+## - with the fixed map (HouseMap, D-2016.2) every order names a house of its own zone on the map, the
+##   same ones on every run, and the rest of each order (id, zone, products, minute) is the same as
+##   without the map; a zone with no house on it keeps "<zone>_house_<n>".
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -33,6 +36,7 @@ func _run() -> void:
 	_test_early_days()
 	_test_empty_inputs()
 	_test_templates()
+	_test_map_houses()
 	quit(_failures)
 
 
@@ -189,6 +193,27 @@ func _test_templates() -> void:
 	_expect(from_templates > 0, "orders were drawn from templates")
 	var plain := OrderGenerator.generate_day(3, 4, 3, _open(), _products, _reqs)
 	_expect(plain == _day(3), "no templates keeps the random draw")
+
+
+func _test_map_houses() -> void:
+	var houses: HouseMap = HouseMap.load_default()
+	_expect(houses != null and not houses.in_zone(&"centro").is_empty(), "the fixed map has houses in Centro")
+	for seed_value in [1, 7, 42]:
+		var plain := OrderGenerator.generate_day(seed_value, 4, 4, _open(), _products, _reqs)
+		var mapped := OrderGenerator.generate_day(seed_value, 4, 4, _open(), _products, _reqs, 0, null, {}, houses)
+		var again := OrderGenerator.generate_day(seed_value, 4, 4, _open(), _products, _reqs, 0, null, {}, houses)
+		_expect(mapped == again, "map houses are deterministic (seed %d)" % seed_value)
+		_expect(mapped.size() == plain.size(), "the map changes no order count (seed %d)" % seed_value)
+		for i in mapped.size():
+			var house: HouseSpot = houses.spot(mapped[i]["house_id"])
+			_expect(house != null and house.zone == mapped[i]["zone"],
+				"%s names a map house of its zone (got %s)" % [mapped[i]["id"], mapped[i]["house_id"]])
+			for key in ["id", "zone", "items", "created_min", "requirements"]:
+				_expect(mapped[i][key] == plain[i][key], "%s keeps its %s with the map" % [mapped[i]["id"], key])
+	var empty := HouseMap.new()
+	for order in OrderGenerator.generate_day(3, 4, 3, _open(), _products, _reqs, 0, null, {}, empty):
+		_expect(String(order["house_id"]).begins_with(String(order["zone"]) + "_house_"),
+			"a zone with no map house keeps <zone>_house_<n> (got %s)" % order["house_id"])
 
 
 func _expect(condition: bool, label: String) -> void:

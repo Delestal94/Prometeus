@@ -5,7 +5,9 @@ extends SceneTree
 ## ENet peers in one process, the host on the NetworkManager autoload and the client on a second
 ## copy of network_manager.gd under its own SceneMultiplayer, each in the real company_root.tscn
 ## (the client's handed its session and a CompanyState of its own: CompanyRoot.session and
-## company_state, set before it enters the tree; a stand-in takes the host's CrewProgression RPC).
+## company_state, set before it enters the tree; a stand-in takes the host's CrewProgression RPC, and
+## the client side has an EventBus of its own, as every process does: the host's company van relays its
+## telemetry through it, D-0302.2.b).
 ## - Alone, the host's world is a crew of one: its player at SPAWN, nothing else spawned.
 ## - The handshake sends the joiner to company_root.tscn (it is in LEVEL_SCENES), and the host has
 ##   no player for it while its world isn't up.
@@ -34,6 +36,7 @@ const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const CREW_PROGRESSION: String = "res://scripts/core/crew_progression.gd"
+const EVENT_BUS: String = "res://scripts/core/event_bus.gd"
 ## The host's world saves here (it saves on leaving), never in the game's slot.
 const DIR: String = "user://test_company_online"
 const PORT: int = 24662
@@ -137,6 +140,9 @@ func _check_join() -> bool:
 	_client_session.name = "NetworkManager"
 	_client_side.add_child(_client_session)
 	_client_side.add_child(_client_crew_progression())
+	var bus: Node = (load(EVENT_BUS) as GDScript).new()
+	bus.name = "EventBus"
+	_client_side.add_child(bus)
 	_client_state = (load(STATE_SCRIPT) as GDScript).new()
 	_client_state.name = "CompanyState"
 	_client_side.add_child(_client_state)
