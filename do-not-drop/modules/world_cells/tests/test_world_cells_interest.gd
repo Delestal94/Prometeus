@@ -19,6 +19,8 @@ extends SceneTree
 ##   it; the far copy stays hidden; after the pulse, nothing more arrives;
 ## - a far copy shows again (solid again, its area's layers back) only after an update put it back
 ##   within the load radius: walking up to the stale copy while the body is far keeps it hidden; a
+##   copy keep_shown names (D-0316.2: one this peer predicts) shows at the next look however far and
+##   stale, and once let go hides as any copy (copy_hidden tells the game, once); a
 ##   copy no update ever reached (a late joiner's, where the scene put it, next to its player) stays
 ##   shown during the grace (copy_stale_sec) and hides after it;
 ## - a client that leaves is forgotten; a body that leaves the group is untracked: public again,
@@ -267,6 +269,11 @@ func _test_keepalive(host_sync: MultiplayerSynchronizer, far_id: int) -> void:
 
 
 func _test_stale_copy(host_sync: MultiplayerSynchronizer, far_id: int) -> void:
+	var hidden_told: Array[int] = [0]
+	var on_hidden: Callable = func(body: Node3D) -> void:
+		if body == _body(2):
+			hidden_told[0] += 1
+	_interest(2).copy_hidden.connect(on_hidden)
 	# The body goes far from everyone; the far client walks up to where its copy stands.
 	_body(0).position = Vector3(10.0 * CELL + 5.0, 0.0, 5.0)
 	_anchors[far_id] = Vector3(6.0, 0.0, 6.0)
@@ -276,6 +283,23 @@ func _test_stale_copy(host_sync: MultiplayerSynchronizer, far_id: int) -> void:
 	_expect(not host_sync.get_visibility_for(far_id), "the body 10 cells away isn't sent to the far client")
 	_expect(_interest(2).is_hidden_here(_sync(2)) and not _body(2).visible,
 		"walking up to the stale copy doesn't show it (no update put it there)")
+	# A copy keep_shown names (one this peer predicts) is shown at the next look however far and stale, and
+	# hidden again once it no longer is.
+	_interest(2).keep_shown = func(body: Node3D) -> bool: return body == _body(2)
+	_step_all()
+	_expect(_body(2).visible and not _interest(2).is_hidden_here(_sync(2)) and _solid_hit(2, _body(2).position),
+		"a copy keep_shown names shows, solid, however far and stale")
+	# Let go, it follows the rules again: past the unload radius it hides, and walking back up to it, stale, it
+	# stays hidden.
+	_interest(2).keep_shown = Callable()
+	_anchors[far_id] = Vector3(4.0 * CELL + 10.0, 0.0, 10.0)
+	_step_all()
+	_anchors[far_id] = Vector3(6.0, 0.0, 6.0)
+	_step_all()
+	_expect(_interest(2).is_hidden_here(_sync(2)) and not _body(2).visible,
+		"...and once keep_shown lets it go it hides as any copy (past the unload radius, then stale)")
+	_expect(hidden_told[0] == 1, "copy_hidden told the game it hid the copy, once (%d)" % hidden_told[0])
+	_interest(2).copy_hidden.disconnect(on_hidden)
 	_expect(not _solid_hit(2, _body(2).position), "...nor makes it solid")
 	# The body comes back next to that client: an update arrives and the copy shows where it is.
 	_body(0).position = Vector3(8.0, 0.0, 8.0)
