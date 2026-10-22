@@ -28,6 +28,8 @@ var _colorblind_check: CheckBox
 var _opaque_gel_check: CheckBox
 var _menu_text_option: OptionButton
 var _sound_subtitles_check: CheckBox
+## Subtitle panel size: normal / large / very large (N-983.3).
+var _subtitle_size_option: OptionButton
 var _text_backdrop_slider: HSlider
 var _run_log_check: CheckBox
 ## Diario al final: siempre / solo si pasó algo / nunca (N-606.3).
@@ -166,6 +168,22 @@ func _build() -> void:
 
 	_sound_subtitles_check = UiTheme.check_box(column, tr("UI_OPT_SOUND_SUBTITLES"), GameSettings.sound_subtitles)
 	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
+	var subtitle_row := HBoxContainer.new()
+	subtitle_row.add_theme_constant_override("separation", 12)
+	column.add_child(subtitle_row)
+	var subtitle_caption := UiTheme.label(subtitle_row, tr("UI_OPT_SUBTITLE_SIZE"), 16, UiTheme.PAPER)
+	subtitle_caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_subtitle_size_option = OptionButton.new()
+	_subtitle_size_option.name = "SubtitleSizeOption"
+	_subtitle_size_option.add_item(tr("UI_OPT_SUBTITLE_SIZE_NORMAL"), 100)
+	_subtitle_size_option.add_item(tr("UI_OPT_SUBTITLE_SIZE_LARGE"), 125)
+	_subtitle_size_option.add_item(tr("UI_OPT_SUBTITLE_SIZE_XLARGE"), 150)
+	_subtitle_size_option.select(_subtitle_scale_index())
+	_subtitle_size_option.custom_minimum_size = Vector2(170, 40)
+	subtitle_row.add_child(_subtitle_size_option)
+	UiTheme.register_font_size(_subtitle_size_option, 16)
+	_subtitle_size_option.item_selected.connect(func(index: int) -> void:
+		GameSettings.subtitle_scale = float(_subtitle_size_option.get_item_id(index)) / 100.0)
 	# Live, like the HUD size: the prompt plate behind the dim follows the slider.
 	_text_backdrop_slider = UiTheme.slider_row(column, tr("UI_OPT_TEXT_BACKDROP"),
 		GameSettings.TEXT_BACKDROP_MIN, 1.0, 0.05, GameSettings.text_backdrop_opacity, true)
@@ -325,6 +343,7 @@ func _sync_from_settings() -> void:
 	_opaque_gel_check.set_pressed_no_signal(GameSettings.opaque_gel)
 	_menu_text_option.select(_menu_text_scale_index())
 	_sound_subtitles_check.set_pressed_no_signal(GameSettings.sound_subtitles)
+	_subtitle_size_option.select(_subtitle_scale_index())
 	_text_backdrop_slider.set_value_no_signal(GameSettings.text_backdrop_opacity)
 	_text_backdrop_slider.value_changed.emit(GameSettings.text_backdrop_opacity)
 	_run_log_check.set_pressed_no_signal(GameSettings.save_run_log)
@@ -335,6 +354,10 @@ func _sync_from_settings() -> void:
 	_quality_slider.value_changed.emit(GameSettings.graphics_quality)
 	_language_option.select(GameSettings.SUPPORTED_LANGUAGES.find(GameSettings.language))
 	_controls_section.stop_listening()
+
+
+func _subtitle_scale_index() -> int:
+	return GameSettings.SUBTITLE_SCALES.find(GameSettings.subtitle_scale)
 
 
 func _menu_text_scale_index() -> int:
