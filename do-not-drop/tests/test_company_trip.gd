@@ -113,9 +113,12 @@ func _test_trip_spends_day_hours() -> void:
 	ticks[0] = 270000  # 270 real s = 3 game hours at 90 s per hour
 	trip.close(book, roundi(clock.minute_now()))
 	var expected: float = 270.0 * 60.0 / CompanyTuning.SECONDS_PER_GAME_HOUR
-	_expect(absf(float(trip.duration_min()) - expected) <= 1.0, "180 game min for 270 real s, got %d" % trip.duration_min())
+	var got: int = trip.duration_min()
+	_expect(absf(float(got) - expected) <= 1.0, "180 game min for 270 real s, got %d" % got)
 	var result: Dictionary = TripResult.build(trip, book)
 	_expect(result["depart_clock"] == TripResult.clock_text(depart), "summary has the leaving time")
-	_expect(result["return_clock"] == TripResult.clock_text(depart + trip.duration_min()), "summary has the return time")
-	_expect(TripResult.clock_text(1450) == "00:10" and TripResult.clock_text(-1) == "", "clock text wraps past midnight")
+	var back: String = TripResult.clock_text(depart + trip.duration_min())
+	_expect(result["return_clock"] == back, "summary has the return time")
+	_expect(TripResult.clock_text(1450) == "00:10", "clock text wraps past midnight")
+	_expect(TripResult.clock_text(-1) == "", "no time for an unset minute")
 	clock.free()

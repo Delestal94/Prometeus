@@ -22,7 +22,8 @@ const OUTCOME_FAILED: StringName = &"failed"
 ## OrderPenalties.assess returned for its delivery (pay, kinds, reputation); an order without
 ## one is read from the book (its paid amount, intact flag and quality). carriers maps order id
 ## -> peer id of whoever carried that box to the door.
-## {trip_id, vehicle_id, depart_min, return_min, depart_clock, return_clock, duration_min, orders, delivered, failed, intact,
+## {trip_id, vehicle_id, depart_min, return_min, depart_clock, return_clock, duration_min,
+## orders, delivered, failed, intact,
 ## at_risk, broken, base_total, pay_total, penalty_total, reputation, returned_units, lost_units,
 ## merit_by_peer}.
 static func build(
@@ -154,4 +155,4 @@ static func clock_text(minute: int) -> String:
 	if minute < 0:
 		return ""
 	var of_day: int = minute % CompanyTuning.MINUTES_PER_DAY
-	return "%02d:%02d" % [of_day / 60, of_day % 60]
+	return "%02d:%02d" % [floori(of_day / 60.0), of_day % 60]
