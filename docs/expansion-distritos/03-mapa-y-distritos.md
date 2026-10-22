@@ -9,13 +9,13 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-0301 | ✅ Flujo galpón → distrito → galpón según D-0104 (carga, viaje, regreso con resultados) | constructor-mundo | xhigh | bot sale con la camioneta, entrega en Barrio Centro y vuelve al galpón sin errores |
-| D-0302 | ◐ (falta D-0302.2, vehículo y despacho) Portón de salida del galpón como punto de partida (reemplaza el arranque de la entrega actual) | constructor-mundo | high | la camioneta cargada sale por el portón y dispara la carga del distrito |
+| D-0302 | ◐ (falta D-0302.2.b, vehículo y despacho) Portón de salida del galpón como punto de partida (reemplaza el arranque de la entrega actual) | constructor-mundo | high | la camioneta cargada sale por el portón y dispara la carga del distrito |
 | D-0303 | Pantalla/tablero de despacho: elegir distrito, vehículo y pedidos que salen | constructor-ui | high | test de UI: elegir y confirmar con mando y teclado |
 | D-0304 | Generación de ruta por distrito: `RouteStreamer` con conjunto de tramos y decorado del distrito | constructor-tramos | xhigh | Barrio Centro y Campo generan rutas distintas con la misma semilla; `route_golden` por distrito |
 | ✅ D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
 | D-0306 | ✅ Orden de paradas: el jugador elige o lo sugiere el GPS | constructor-camion | high | GPS muestra la próxima parada; test cambia el orden |
 | D-0307 | Regreso al galpón: viaje de vuelta corto o salto con pantalla de resumen (según D-0104) | constructor-mundo | high | regreso sin cargar la escena entera dos veces (medido) |
-| D-0308 | Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
+| D-0308 | ◐ (falta D-0308.1, ver detalle: es el GPS por el grafo) Bloqueo de distrito: no se puede despachar a un distrito bloqueado y se explica por qué | constructor-progresion | medium | test: despacho rechazado con motivo |
 | D-0309 | ✅ Requisito de vehículo por distrito (la lancha solo sale al agua, etc.) | constructor-progresion | medium | test: combinación inválida rechazada |
 | D-0310 | ◐ (falta D-0310.b) Mapa del mundo 2D (tablero en el galpón) con distritos, estado y pedidos (incluye D-0327, fusión de D-0112) | constructor-ui | high | captura de `revisor-visual` legible a 1080p y Steam Deck |
 | D-0311 | ✅ Casas de entrega por distrito con `DeliveryHouse` y variantes (puerta, buzón, muelle, porche) (incluye D-0247, fusión de D-0112) | constructor-mundo | high | 4 variantes funcionan con el flujo de puerta actual |
@@ -23,11 +23,11 @@
 | D-0313 | ✅ Cargar el distrito con la pantalla de carga existente sin congelar (N-408) | constructor-mundo | high | `test_loading_no_freeze` pasa con el distrito |
 | D-0314 | Unificar Barrio Centro como primer distrito jugable del corte vertical | constructor-mundo | high | ver D-1501; `--district=centro` arranca |
 | D-0315 | Adaptar la ruta actual (Campo) como distrito con la misma calidad de hoy | constructor-tramos | high | tests de ruta actuales verdes en modo Empresa |
-| D-0316 | Seguro contra jugadores perdidos: quien se queda en el galpón no se carga ni sufre la ruta | constructor-red | xhigh | test de red: 2 en ruta, 1 en galpón, nadie se teletransporta |
+| D-0316 | ◐ (falta D-0316.2-3: vehículo real y cajas sueltas) Seguro contra jugadores perdidos: quien se queda en el galpón no se carga ni sufre la ruta | constructor-red | xhigh | test de red: 2 en ruta, 1 en galpón, nadie se teletransporta |
 | ~~D-0317~~ | ~~Jugadores en distintos distritos a la vez (dos vehículos fuera) — sí/no por rendimiento~~ **Fusionada en D-2002 (D-0112, [crítica](diseno/critica-alcance.md))** | Plan | high | decisión con medición de costo; si sí, D-0318 |
-| D-0318 | ◐ (falta D-0318.1) (Si D-0317 sí) varias instancias de distrito cargadas a la vez con capas de física separadas | constructor-red | xhigh | test de red con 2 vehículos en 2 distritos |
+| ✅ D-0318 | (Si D-0317 sí) varias instancias de distrito cargadas a la vez con capas de física separadas | constructor-red | xhigh | test de red con 2 vehículos en 2 distritos |
 | D-0319 | Tiempo del viaje cuenta en el reloj del día | constructor-progresion | medium | test: ruta de 5 min avanza 1 h de juego (según D-0105) |
-| D-0320 | Recompensa y resultado por salida (lo que se cobró, lo que se rompió) entra al cierre del día | constructor-progresion | high | resultados de la salida en `CompanyState` (test) |
+| ✅ D-0320 | Recompensa y resultado por salida (lo que se cobró, lo que se rompió) entra al cierre del día | constructor-progresion | high | resultados de la salida en `CompanyState` (test) |
 
 ## Ampliación
 

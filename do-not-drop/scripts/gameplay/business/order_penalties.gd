@@ -13,6 +13,7 @@ const KIND_WRONG: StringName = &"wrong"
 const KIND_BROKEN: StringName = &"broken"
 const KIND_LATE: StringName = &"late"
 const KIND_MISLABELED: StringName = &"mislabeled"
+const KIND_ABANDONED: StringName = &"abandoned"
 
 
 ## True when the box holds exactly the products and quantities the order asks for.
@@ -64,6 +65,18 @@ static func assess(
 		"lost": base - final_pay,
 		"kinds": kinds,
 		"reputation": maxf(reputation, CompanyTuning.PENALTY_REPUTATION_CAP),
+	}
+
+
+## Verdict for an order the customer gave up on (OrderBook.abandon): pays 0 and costs reputation.
+static func abandoned(order: Dictionary) -> Dictionary:
+	var base: int = int(order.get("pay", 0))
+	return {
+		"pay": 0,
+		"base": base,
+		"lost": base,
+		"kinds": [KIND_ABANDONED] as Array[StringName],
+		"reputation": maxf(CompanyTuning.ABANDONED_REPUTATION, CompanyTuning.PENALTY_REPUTATION_CAP),
 	}
 
 

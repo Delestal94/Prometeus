@@ -29,6 +29,13 @@ Atajos de línea de comandos para probar rápido sin clickear:
 LAN, sin depender de que Steam esté corriendo) y `-- --join=<ip>` (se une
 por LAN a esa dirección).
 
+Modo Empresa (la expansión): `-- --autostart-company [--slot=<n>]` entra solo y
+`-- --host-company` abre una sala. Para tests y capturas (D-0238), el host
+también toma `--company-day=<n>` (la empresa arranca el día n desde la
+apertura), `--district=<zona>` (abre las compuertas de `data/zones/<zona>.tres`)
+y `--money=<n>` (la plata de la empresa). Lo que cambian se guarda con la empresa,
+así que conviene un slot aparte (`--slot=prueba`).
+
 **Modo Endless**: genera tramos
 indefinidamente en vez de la ruta curada de 220 m, y el run termina
 perdiendo (carga perdida, vuelco o salir de la ruta), nunca entregando —

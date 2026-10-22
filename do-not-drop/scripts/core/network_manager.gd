@@ -85,11 +85,30 @@ const MAX_PLAYERS: int = 8
 ## 37: CompanyNet's _request takes seven new kinds (box_start, box_place,
 ## box_take_out, box_fill, box_label, box_stamp, box_tape), _apply_event seven
 ## (box_started ... box_sealed) and its snapshot a "packing" part: the shared
-## packing tables (company mode, D-0715).
+## packing tables (company mode, D-0715);
+## 38: the company world (company_root.tscn) is in LEVEL_SCENES, so a joiner may
+## be sent to it, and its World/PlayerSpawner spawns the crew (company mode
+## online, D-0214);
+## 39: CompanyNet's _request takes a new kind, cart_push, _apply_event a new one,
+## cart_moved, and its snapshot a "carts" part: where the picking carts stand
+## (company mode, D-0610.b);
+## 40: CompanyNet's _apply_event carries three new kinds, trip_started,
+## trip_refused and trip_closed, and its snapshot a "trips" part: the company
+## vehicles out of the shed, as the host's CompanyTrips decides them (company
+## mode, D-0302.2);
+## 41: CompanyNet's _apply_event carries two new kinds, order_added and
+## order_expired, and its snapshot an "orders" part: the day's order book from
+## the host (company mode, D-0813);
+## 42: box_sealed makes a DeliveryPackage on every peer, World/Packages/
+## Package_<box id>; a client tells the host it has it with a new CompanyNet
+## _request kind, package_ack, and only then does the host open that package's
+## MultiplayerSynchronizer to it; a peer checks the event's node_name, pos, basis,
+## trap, trap_intensity, absorption and quality first, and box_tape may be refused
+## with no_trap (company mode, D-0715.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 37
+const PROTOCOL_VERSION: int = 42
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -162,7 +181,13 @@ var _fresh_slots: Dictionary = {}
 var _borrowed_reservations: Dictionary = {}
 
 const DEFAULT_LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
-const LEVEL_SCENES: Array[String] = ["res://scenes/gameplay/level_base.tscn", "res://scenes/gameplay/level_endless.tscn"]
+## The scenes a room plays in (NetSession.level_scenes): the handshake sends a joiner to the
+## host's and refuses any other. The company world (D-0214) is a room of its own (--host-company).
+const LEVEL_SCENES: Array[String] = [
+	"res://scenes/gameplay/level_base.tscn",
+	"res://scenes/gameplay/level_endless.tscn",
+	"res://scenes/gameplay/company_root.tscn",
+]
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 ## Loaded in _ready, not preloaded: it builds on UiTheme, which an autoload
 ## this early shouldn't compile along with itself.

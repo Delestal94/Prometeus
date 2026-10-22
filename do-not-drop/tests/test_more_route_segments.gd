@@ -20,7 +20,8 @@ extends SceneTree
 ##     truck comes up to it -- warning, arms down (solid; one over a truck
 ##     rests on it, never inside it), train across
 ##     (with its own horn and chugging, playtest polish 2026-09-27), arms up --
-##     and one that isn't due never moves.
+##     and one that isn't due never moves; on the host, a truck that waited the
+##     train out tells the newspaper once (roadside_moment train_stop, N-606.4b).
 
 const ROUTE_TERRAIN = preload("res://scripts/gameplay/route/route_terrain.gd")
 
@@ -178,6 +179,9 @@ func _run() -> void:
 	var mouths: Array[Dictionary] = crossing.tunnel_mouths()
 	_expect(mouths.size() == 2 and (mouths[0].dir as Vector2).dot(mouths[1].dir as Vector2) < -0.99,
 		"Two tunnel mouths, one at each end, both leading away from the road")
+	var stops: Array = []
+	var hear_stop := func(kind: StringName, _tags: Array) -> void: stops.append(kind)
+	root.get_node(^"/root/EventBus").connect(&"roadside_moment", hear_stop)
 	var first_train_x: float = INF
 	var last_train_x: float = -INF
 	var hidden_in_bore: bool = false
@@ -208,6 +212,14 @@ func _run() -> void:
 	_expect(chug_seen_playing, "The chugging loop actually plays while the train is on the tracks")
 	_expect(chug_seen_stopped_after and not train_chug.playing,
 			"...and stops once the cars have cleared, not left running forever")
+	_expect(stops == [&"train_stop"],
+			"The host's crossing tells the newspaper once that the truck waited (%s)" % str(stops))
+	root.get_node(^"/root/EventBus").disconnect(&"roadside_moment", hear_stop)
+	_expect(crossing.call(&"_truck_waited"), "A truck near the barrier on the near side waited for the train")
+	truck.global_position = crossing.global_transform * Vector3(0.0, 0.0, crossing.track_z + 80.0)
+	_expect(not crossing.call(&"_truck_waited"), "...one still far up the road didn't")
+	truck.global_position = crossing.global_transform * Vector3(0.0, 0.0, crossing.track_z - 20.0)
+	_expect(not crossing.call(&"_truck_waited"), "...nor one that already crossed")
 	crossing.free()
 
 	# A client loading in while the host's train is passing: it jumps

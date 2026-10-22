@@ -36,6 +36,9 @@ const OPENING_REAL_SECONDS: float = 5.0
 ## a player standing on the shed's door line can't send an event per frame. Shorter than a walk
 ## through the door; long enough that nobody gains by dancing on the line.
 const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
+## Host rules of the company (DayCycle's poll, and what joins it: orders, suppliers, employees) run
+## this many times a real second on BusinessTick (D-0232), not once per frame.
+const BUSINESS_TICK_HZ: float = 4.0
 
 # --- World cells (D-0303) ---
 ## The continuous map is cut in squares of this side, in meters (diseno/mapa.md).
@@ -47,6 +50,27 @@ const CELL_UNLOAD_RADIUS: int = 3
 const CELL_IMPOSTOR_RADIUS: int = 5
 ## Instancing budget per frame, in real milliseconds (the N-917 lesson: never a big frame).
 const CELL_SLICE_MSEC: float = 4.0
+
+# --- GPS (D-0308) ---
+## Typical speed on each street surface, in m/s: the GPS weighs a street by length / speed (time),
+## so it prefers a longer asphalt road to a short mud track. Unknown surface: 10.
+const SURFACE_SPEED: Dictionary = {&"asphalt": 14.0, &"cobble": 10.0, &"gravel": 9.0, &"dirt": 7.0}
+## How far ahead along the route the GPS arrow points, in meters.
+const GPS_LOOKAHEAD: float = 30.0
+
+# --- Crew split between the shed and the street (D-0316) ---
+## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
+## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
+## D-0317 confirms or raises it with D-2002's measurements.
+const VEHICLES_FAR_MAX: int = 2
+## Who gets a company vehicle's or loose box's updates (CompanyInterest): the peers whose player is
+## within CELL_LOAD_RADIUS cells of it, until it is past CELL_UNLOAD_RADIUS. They look again this often,
+## in real seconds: a vehicle at 100 km/h covers 7 m, far under a cell.
+const INTEREST_UPDATE_REAL_SECONDS: float = 0.25
+## A body hidden from a peer is still sent to it for INTEREST_PULSE_REAL_SECONDS this often, so
+## SceneMultiplayer's 16-bit sync clock never falls half a turn behind (WorldCellInterest).
+const INTEREST_KEEPALIVE_REAL_SECONDS: float = 20.0
+const INTEREST_PULSE_REAL_SECONDS: float = 0.1
 
 # --- Network (D-2002) ---
 ## Poses a second each player sends on foot in the company's world (D-2002.3): half the game's 30
@@ -106,7 +130,7 @@ const PLACEABLE_REFUND_RATIO: float = 0.5
 const WAREHOUSE_STAGE_IDS: Array[StringName] = [&"small", &"medium", &"large", &"logistics_center"]
 const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
 	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
-const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
+const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 800, 2000, 5000]
 ## Most pieces (shelves, tables, zones...) a stage can hold, so the built shed stays inside the
 ## performance budget (D-0915): about one piece per six floor cells. Same index as the arrays above.
 const WAREHOUSE_STAGE_MAX_PIECES: Array[int] = [16, 36, 64, 100]
@@ -157,6 +181,16 @@ const SHELF_SLOT_CAPACITY: int = 24
 ## Units a player carries in their hands, all of one product (red-autoridad.md section 2,
 ## row 5; CompanyNet checks it on units_take, D-2003). Picking (D-0609) and D-0117 tune it.
 const HAND_MAX_UNITS: int = 4
+## Units a picking cart carries in total, products mixed (D-0610, the "carries 6" of its table row). More than
+## the hands (HAND_MAX_UNITS) so the cart is worth the trip; PickingCart refuses the unit that would pass it.
+const CART_MAX_UNITS: int = 6
+## One push of a picking cart (D-0610.b): how far it rolls, in metres, away from whoever pushes it.
+const CART_PUSH_STEP_M: float = 1.2
+## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
+const CART_CLEARANCE_M: float = 0.7
+## How close two picking carts may stand, centre to centre on the floor (m, D-0610.c): past the diagonal of the
+## 1.0 x 0.6 m platform, so two carts never overlap whichever way they face.
+const CART_SPACING_M: float = 1.2
 
 # --- Orders ---
 ## Shipping fee added to an order's pay, by zone id (unknown zones pay 0).
@@ -173,10 +207,18 @@ const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3
+## The first days ask for fewer distinct products (D-0812): up to ORDER_ITEMS_EARLY_MAX on days
+## 1 to ORDER_EARLY_DAYS, so a crew still learning the shed packs one or two products per box.
+const ORDER_EARLY_DAYS: int = 3
+const ORDER_ITEMS_EARLY_MAX: int = 2
 ## Delivery window from the moment the order comes in: 4 game hours.
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
 const LATE_PENALTY: float = 0.25
+## A late order nobody has put on the road is dropped by the customer this many minutes after its
+## due time (D-0807): one more window. Costs ABANDONED_REPUTATION and pays nothing.
+const ORDER_ABANDON_MIN: int = 240
+const ABANDONED_REPUTATION: float = -3.0
 ## Packing quality 0-100 (D-0709, AssemblyQuality): starts at QUALITY_MAX and loses these.
 const QUALITY_MAX: float = 100.0
 ## Contents that do not match the order.
@@ -210,6 +252,11 @@ const PENALTY_REPUTATION_CAP: float = -10.0
 const TIP_FAST_WINDOW_SHARE: float = 0.5
 const TIP_RATE: float = 0.15
 const TIP_REPUTATION: float = 1.0
+## Reputation a delivery with nothing wrong with it earns on top of its pay (D-0815); the tip adds
+## its own TIP_REPUTATION when it was also quick.
+const CLEAN_DELIVERY_REPUTATION: float = 0.5
+## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
+const TRIP_MERIT_INTACT: int = 10
 
 # --- Supplier ---
 ## One truck a day, at 08:30, with what was ordered the day before.
@@ -233,6 +280,11 @@ const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
 ## and how close the jack's holder must stand to pick one up.
 const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
 const PALLET_JACK_REACH_M: float = 1.6
+## The forklift (D-0606, PalletForklift): how high the forks go (m), how fast they rise (m/s, the
+## depot's staff forklift speed) and how close to a level they must be to take or leave a pallet.
+const FORKLIFT_MAX_LIFT_M: float = 2.4
+const FORKLIFT_LIFT_SPEED: float = 0.55
+const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0

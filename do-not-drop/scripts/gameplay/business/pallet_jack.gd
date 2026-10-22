@@ -3,7 +3,8 @@ extends RefCounted
 ## Where each supplier pallet physically is, and the manual pallet jack that moves it (expansion D-0605).
 ##
 ## Pure data, no node, no autoload: a pallet is on the truck's bed, carried by the jack or standing on
-## the shed floor at a point in meters. The jack takes one pallet at a time. Units reach the Inventory
+## the shed floor at a point in meters, or on a rack slot (D-0606).
+## The jack takes one pallet at a time. Units reach the Inventory
 ## (Pallet.receive) once, when a pallet from the bed is put down on the floor, so a pallet that never
 ## leaves the bed is never counted and leaves with the truck. The nodes that draw and drive it come
 ## with D-0605.b. Host authority: peers apply the same calls in the same order.
@@ -11,6 +12,8 @@ extends RefCounted
 const AT_BED: StringName = &"bed"
 const AT_JACK: StringName = &"jack"
 const AT_FLOOR: StringName = &"floor"
+## On a rack slot (D-0606): only the forklift reaches that high (PalletForklift).
+const AT_RACK: StringName = &"rack"
 
 ## Pallet id -> {pallet (the Pallet dictionary), at (AT_*), pos (Vector2, only on the floor)}.
 var places: Dictionary = {}
@@ -50,10 +53,11 @@ func pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
 	var place: Dictionary = places[id]
 	if place["at"] == AT_JACK:
 		return false
-	if place["at"] == AT_FLOOR:
+	if place["at"] == AT_FLOOR or place["at"] == AT_RACK:
 		if holder.distance_to(place["pos"]) > CompanyTuning.PALLET_JACK_REACH_M:
 			return false
 		place.erase("pos")
+		place.erase("slot")
 	place["at"] = AT_JACK
 	carrying = id
 	return true
@@ -79,6 +83,32 @@ func put_down(pos: Vector2, floor_rect: Rect2, inventory: Inventory) -> bool:
 	return true
 
 
+## Puts the carried pallet on rack slot `slot`, whose front is at `pos` (meters), if no other pallet
+## holds it. Like put_down, a pallet from the bed is received into `inventory` here, once. False,
+## changing nothing, when the jack is empty or the slot is taken. Height and reach are PalletForklift's.
+func put_on_rack(slot: StringName, pos: Vector2, inventory: Inventory) -> bool:
+	if carrying == &"" or slot == &"" or rack_pallet(slot) != &"":
+		return false
+	var place: Dictionary = places[carrying]
+	var pallet: Dictionary = place["pallet"]
+	if inventory.contents_at(Pallet.location(carrying)).is_empty():
+		if not Pallet.receive(inventory, pallet):
+			return false
+	place["at"] = AT_RACK
+	place["pos"] = pos
+	place["slot"] = slot
+	carrying = &""
+	return true
+
+
+## Id of the pallet on rack slot `slot`, &"" when it is free.
+func rack_pallet(slot: StringName) -> StringName:
+	for id: StringName in ids_at(AT_RACK):
+		if places[id]["slot"] == slot:
+			return id
+	return &""
+
+
 ## What still sits on the bed (the truck takes it away when it leaves).
 func left_on_bed() -> Array[Dictionary]:
 	var left: Array[Dictionary] = []
@@ -101,6 +131,8 @@ func to_dict() -> Dictionary:
 		var place: Dictionary = places[id].duplicate()
 		if place.has("pos"):
 			place["pos"] = [place["pos"].x, place["pos"].y]
+		if place.has("slot"):
+			place["slot"] = String(place["slot"])
 		out[String(id)] = place
 	return {"places": out, "carrying": String(carrying)}
 
@@ -114,6 +146,8 @@ func from_dict(data: Dictionary) -> void:
 			var xy: Array = place["pos"]
 			place["pos"] = Vector2(float(xy[0]), float(xy[1]))
 		place["at"] = StringName(place["at"])
+		if place.has("slot"):
+			place["slot"] = StringName(place["slot"])
 		places[StringName(key)] = place
 	carrying = StringName(data.get("carrying", ""))
 

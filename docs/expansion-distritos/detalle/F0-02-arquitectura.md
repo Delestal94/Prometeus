@@ -196,6 +196,7 @@ Agregar antes que cambiar: ninguna firma existente cambia.
 **Hecho cuando:** el test pasa y el aviso está en `docs/avisos/`.
 
 ### D-0214 · Escena del mundo de la empresa — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` `LEVEL_SCENES`, `main_menu.gd`) · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — la raíz es `company_root.tscn` (`CompanyRoot`, PR #324); la continuación la pone en línea: en `LEVEL_SCENES` (`PROTOCOL_VERSION` 38), llama a `level_ready()`, el host spawnea un jugador por peer por `World/PlayerSpawner` (`join_crew()`, `crew_spawn()`) y lo saca cuando se va; `--autostart-company [--slot=<n>]` (alias `--mode=company`) y `--host-company` (sin botón: uno más en la página Jugar empuja "Volver" fuera de una pantalla de 720 px; queda para quien reacomode esa página); `test_company_world_boot`, `test_company_online` y `tools/run-net-pair.sh --company`. Aviso `docs/avisos/2026-10-21-d0214-empresa-en-linea.md`.
 **Depende de:** D-0202, D-0301
 **Qué:** `scenes/company/company_world.tscn` con raíz `CompanyWorld` (`scripts/gameplay/districts/company_world.gd`).
 - **Hijos:** `WorldCells` (D-0303), `DayCycle`, `OrderBook`, `Inventory`, el galpón (D-0620), el
@@ -281,3 +282,140 @@ Además: decidir y escribir qué va a `modules/` (`day_clock`, `world_cells`, `i
 (D-0144).
 **Hecho cuando:** las carpetas existen, `python tools/check_modules.py` pasa y `file_domain` clasifica un
 archivo de cada carpeta como Nacho.
+
+### D-0232 · Tick de negocio a 4 Hz — B · Opus 5.5 · medium · Aviso: sí (`modules/`, `docs/modulos.md`) · F0 (Ampliación)
+**[x] Hecho (2026-10-21, PR #578)** — módulo `modules/fixed_tick/` (`FixedTick`) + adaptador `scripts/core/company/business_tick.gd` (`BusinessTick`, solo en el host); `DayCycle.poll` es su primer paso y el `_process` propio del ciclo queda apagado en el mundo Empresa.
+**Depende de:** D-0203, D-0214
+**Qué:** las reglas del host que solo necesitan mirar el mundo unas veces por segundo (fases del día,
+y después pedidos, proveedor, empleados, máquinas) corren en un tick fijo, aparte de la física y del
+frame dibujado.
+- **Módulo `fixed_tick`** (`FixedTick`, puro, sin nodos): pasos con nombre que corren en el orden en que
+  se agregaron; `advance(delta)` acumula y corre un tick por período entero; tras un tirón corre a lo
+  sumo `max_catch_up` (4) ticks y tira el resto (`dropped_ticks`); un paso cuyo objeto se liberó se cae;
+  `last_run_usec` mide lo que costó el último tick, para el perfilador.
+- **Adaptador `BusinessTick`** (nodo, hijo de `CompanyRoot`, solo en el host): ritmo
+  `CompanyTuning.BUSINESS_TICK_HZ = 4.0`, sin recuperación (`max_catch_up` 1): sus pasos miran el mundo,
+  no integran tiempo, y el `DayCycle` no debe cruzar dos fases en un frame. Los pasos son reglas del host que publican por `CompanyNet`;
+  un cliente cambia solo por los eventos del host.
+- `DayCycle` conserva su `_process` (cada `POLL_SECONDS` = 0,25 s) para cuando nadie lo maneja (tests,
+  sin mundo); `CompanyRoot` lo apaga en todos los peers y en el host lo suma como paso `day_cycle`.
+**Test** `modules/fixed_tick/tests/test_fixed_tick.gd`: a 4 Hz, 10 s a 60, 144 y 20 fps corren 40 ticks
+(±1); orden de los pasos, nombres repetidos y Callables inválidos rechazados, paso de objeto liberado
+descartado; un frame de 3 s corre el tope y descarta el resto; deltas negativos, NaN e infinitos no corren
+nada; 10 000 frames cuestan menos de 100 µs por frame en promedio. `test_company_world_boot`: el host
+tiene `BusinessTick` con el paso `day_cycle` y el `_process` del `DayCycle` apagado.
+**Hecho cuando:** los dos tests pasan y `check_modules` / `portability-check` están verdes.
+
+### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**Depende de:** D-0206
+**Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
+es de la UI del menú (Jugar → Empresa) y no entra acá.
+- `list_slots(dir)`: una entrada por slot de `user://saves/company/` con `slot`, `name` (el `company_name`,
+  o el slot si está vacío), `day`, `money`, `saved_at`, `interrupted` y `version`, del último jugado al
+  primero. Lee sin mover archivos: cuenta un slot que solo tiene `.bak` (escritura cortada) y deja afuera
+  `.tmp`, `.bad` y JSON que no son saves. Un save de un build más nuevo aparece con su `version` para que la
+  UI lo muestre deshabilitado.
+- `delete(slot, dir)`: borra el `.json` del slot y sus `.bak`, `.tmp` y `.bad`.
+- `new_slot_id(dir)`: `company` si está libre, si no `company_2`, `company_3`…
+**Test** `test_company_slots`: crea 3 slots con nombre, día y plata distintos, los lista en orden de
+`saved_at`, borra uno (con su `.bak`) y después los otros; `.bak` solo cuenta, `.tmp`/`.bad`/no-save no;
+`new_slot_id` y carpeta inexistente.
+**Hecho cuando:** el test pasa.
+
+### D-0236 · Guardado automático al cerrar el día y al salir — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-21, PR pendiente)** — `CompanyRoot.save_closed_day()`: el host guarda el slot en cuanto se aplica el SUMMARY, como la apertura del día siguiente (día + 1 a las 08:00, sin `interrupted`, stock con las manos en el piso); al salir durante el resumen guarda eso mismo en vez del día interrumpido; a mitad de día sigue el guardado interrumpido de D-2005; `test_company_autosave`.
+**Depende de:** D-0203, D-0206, D-2005
+**Qué:** en `scripts/gameplay/company_root.gd`, solo el host (también solo):
+- al aplicarse el `day_phase` SUMMARY (`CompanyNet.event_applied`), guardar el slot como **la apertura del
+  día siguiente**: una copia de la empresa con `day + 1` y `clock_minutes = DAY_START_MIN`, sin
+  `interrupted`; la empresa en juego conserva su día hasta `next_day()`. Cargarlo abre ese día, igual que
+  `next_day()`;
+- al cerrarse el mundo (`_exit_tree`, también al cerrar el juego) durante el SUMMARY, ese mismo guardado; en
+  cualquier otra fase, el día interrumpido de D-2005.
+**Test** `test_company_autosave`: un día completo (OPENING → SUMMARY) guarda el día 2 desde la apertura con
+la plata y el stock; matar el proceso a mitad del día 2 (sin el guardado de `_exit_tree`) y cargar da el
+último cierre; salir en el resumen no lo pisa con el día 1 interrumpido; salir a mitad de día sigue guardando
+interrumpido.
+**Hecho cuando:** el test pasa.
+
+### D-0238 · Flags de desarrollo del modo Empresa — B · Opus 5.5 · low · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #594)** — `CompanyDevFlags` (`scripts/core/company/company_dev_flags.gd`): `--company-day=N`, `--district=<zona>` y `--money=N`, aplicados por el host de `CompanyRoot` al levantar el mundo; README y `render_company_shed.gd`; `test_company_dev_flags`.
+**Depende de:** D-0202, D-0205, D-0214
+**Qué:** en `scripts/core/company/company_dev_flags.gd` (puro, sin autoloads) y un llamado en
+`CompanyRoot._add_net()` (solo el host, también solo), después de cargar el slot o arrancar una empresa nueva
+y antes de que `CompanyNet` copie el stock (así el snapshot de los clientes los lleva):
+- `--company-day=N` (N ≥ 1): la empresa juega el día N desde su apertura (`DAY_START_MIN`);
+- `--district=<id>`: abre todas las compuertas de la zona `data/zones/<id>.tres` (una zona abierta no abre
+  nada; una que no existe se avisa y se ignora). No mueve al jugador: las capturas ponen su cámara;
+- `--money=N` (cualquier entero, deuda incluida): la plata de la empresa, sin asiento en el libro.
+Un valor que no se lee se avisa (`push_warning`) y se ignora. Lo que cambian queda en la empresa y se guarda
+con ella, como cualquier cambio. `CompanyRoot.dev_args` (por defecto `OS.get_cmdline_user_args()`) deja que
+un test pase los suyos.
+**Test** `test_company_dev_flags`: `parse()` con flags repetidos y valores malos; `apply()` sobre una empresa
+(día y reloj, plata negativa, `suburbio` abre `gate_suburbio`, `centro` no abre nada, zona desconocida
+afuera, sin flags no cambia nada); un `CompanyRoot` host con `dev_args` abre el día 4 con 12345 y las
+compuertas de `campo`, y sin flags arranca en el día 1 con `STARTING_MONEY`.
+**Hecho cuando:** el test pasa; documentados en el README; `render_company_shed.gd` los toma de su línea de comandos.
+
+### D-0239 · Registro local del día de la empresa — B · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
+**[x] Hecho (2026-10-22, PR #598)** — `RunTelemetry` guarda un JSON por día (`<fecha_hora>_day<N>.json`, `"kind": "company_day"`) con los eventos de negocio; `run_telemetry_format.describe_day()` lo lee; `tools/telemetry-summary.py` suma una tabla "Dias de empresa"; `test_company_day_telemetry`.
+**Depende de:** D-0203, D-0215
+**Qué:** en `scripts/core/run_telemetry.gd` (el autoload del registro de partidas, S-805), con la misma opción
+"Guardar registro de partidas" y la misma carpeta `user://telemetry/`, solo escuchando `EventBus` (sin RPC ni
+estado):
+- `company_day_started` abre el día y vacía el buffer; desde ahí anota `order_added`, `order_packed`,
+  `order_delivered`, `supply_arrived`, `box_sealed`, `gate_opened`, `milestone_reached`, `money_changed` y
+  `company_day_closing` como `{"t": segundos desde la apertura, "event": <señal>, ...}`; la lista corta en
+  `MAX_DAY_EVENTS` (2000) pero los conteos siguen (`events_dropped`);
+- `company_day_summary` escribe el archivo: día, rol, tripulación, duración, el resumen del día (valores
+  planos), los eventos y los conteos por tipo. Un día abandonado antes del resumen no escribe nada;
+- los registros de entrega llevan `"kind": "run"` (un archivo sin `kind` es una entrega; `FORMAT_VERSION`
+  sigue en 1 porque el campo es aditivo).
+En `run_telemetry_format.gd`: `record_kind`, `day_event_counts`, `day_file_stem`, `plain` y
+`describe_day(record)`, que da líneas legibles (día, ingresos/costos/ganancia, billetera, pedidos,
+proveedores y cajas, plata por motivo).
+**Test** `test_company_day_telemetry`: opción apagada no escribe; prendida, un día simulado deja un solo
+`*_day2.json` con los eventos en orden y los conteos; `describe_day` sobre el archivo leído da las líneas
+esperadas; un día abandonado no escribe ni contamina el siguiente; el tope de eventos se respeta; una
+entrega sigue escribiendo, con `kind: "run"`.
+**Hecho cuando:** el test pasa y el log del día se lee con `run_telemetry_format`.
+
+### D-0243 · Los `--script` no pierden autoloads al nombrar clases de la expansión — B · Opus 5.5 · medium · Aviso: no · F0 (Pulido)
+**[x] Hecho (2026-10-22, PR #603)** — `test_hud_script_loads` nombra `CompanyRoot` estáticamente y comprueba que todos los autoloads de `project.godot` conservan su script y que compila cada script de `core/company/`, `business/`, `districts/` y `fleet/`.
+**Depende de:** D-0202, D-0214
+**Qué:** la lección de N-919: un `--script` compila el árbol estático del test antes de que existan los
+autoloads, así que una clase nueva que arrastra (por `preload`, tipo o `class_name`) un script que nombra un
+autoload o una clase de UI deja ese autoload o nodo sin script. `CompanyState` ya estaba cubierto
+(D-0202.3); esto lo amplía a la entrada de la expansión, `CompanyRoot`, que alcanza la mayoría de las
+clases nuevas, y a todos los autoloads leídos de `ProjectSettings` (no una lista a mano).
+**Test** `test_hud_script_loads` (ampliado): `_COMPANY_ROOT` es un `preload` de `company_root.gd`;
+compila; cada `autoload/*` de `project.godot` tiene nodo con script; cada `.gd` de las cuatro carpetas de
+la expansión carga y `can_instantiate()`; hay al menos 11 autoloads y 40 scripts (que la búsqueda no
+quede vacía en silencio).
+**Hecho cuando:** el test pasa con `CompanyState` y `CompanyRoot` nombrados.
+
+### D-0244 · Guía para agregar contenido de la expansión — B · Opus 5.5 · low · Aviso: no · F0 (Pulido)
+**[x] Hecho (2026-10-22, PR #608)** — `docs/agregar-contenido-expansion.md`, una sola guía (producto, caja, proveedor, vehículo de la flota, requisito de pedido, colocable, zona y mapa, ítem de tienda; roles y máquinas remiten a sus tareas), y `agregar-vehiculo.md` remite a ella.
+**Depende de:** D-0202, D-0207
+**Qué:** absorbe D-0850, D-0950, D-1050, D-1150 y D-1250. La crítica de alcance (`diseno/critica-alcance.md`)
+decidió una sola guía en vez de seis, así que no hay `agregar-producto.md` ni `agregar-distrito.md`: cada
+sección dice qué `.tres` crear (campos y rangos leídos de su clase), cómo lo encuentra el juego
+(`CompanyCatalog` o carga por ruta), qué test lo valida y el README de su carpeta de `data/`.
+**Test:** no lleva (solo docs); las rutas citadas se comprobaron contra el árbol.
+**Hecho cuando:** la guía existe, está enlazada desde el README de la expansión y `agregar-vehiculo.md`.
+
+### D-0245 · Validador de los `.tres` de la expansión en CI — B · Opus 5.5 · medium · Aviso: no · F0 (Pulido)
+**[x] Hecho (2026-10-22, PR pendiente)** — `ExpansionResourceCheck.run()` (`scripts/core/company/expansion_resource_check.gd`): ids únicos e iguales al archivo en las diez carpetas, referencias (proveedor → productos, producto → zonas y trampa, zona → gates, gate y tienda → flota), escenas existentes y rangos; `test_expansion_resources`.
+**Depende de:** D-0216, D-0217, D-0218
+**Qué:** un chequeo transversal de todo `data/` de la expansión, que los tests por clase no ven: ids
+únicos por carpeta (lo que `CompanyCatalog` ya junta en `errors`, más `placeables/`, `order_requirements/`,
+`shop/` y `shed/`, que el catálogo no lee), referencias que existen (los productos de un proveedor, las
+zonas de un producto, los gates de una zona, la trampa de un producto, escenas y rutas `res://`) y rangos
+(precios ≥ 0, celdas y huellas ≥ 1, peso > 0, enums dentro de sus listas). Vive en
+`scripts/core/company/expansion_resource_check.gd` (`ExpansionResourceCheck.run(extra_roots)`, lista de
+problemas legibles) para que un mod o una herramienta lo reuse; CI lo corre por el test.
+**Test** `test_expansion_resources`: los datos reales dan cero problemas; un `extra_root` en `user://`
+con un producto de id repetido, un proveedor que vende un producto inexistente y una caja fuera de rango
+da un problema por cada uno, con el archivo y el id.
+**Hecho cuando:** `test_expansion_resources` falla con un id repetido.

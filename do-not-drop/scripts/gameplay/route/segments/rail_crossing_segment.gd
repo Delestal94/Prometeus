@@ -45,6 +45,8 @@ const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_thro
 ## lives there, not in NetSession, so a rename fails to compile here.
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const APPROACH_TRIGGER: float = 55.0
+## A truck this close to the tracks as the train clears waited for it.
+const WAIT_RANGE: float = 35.0
 const CLOSE_CHANCE: float = 0.6
 const ARM_SECONDS: float = 1.3
 const WARNING_SECONDS: float = 1.2
@@ -393,6 +395,8 @@ func _physics_process(delta: float) -> void:
 				_train_chug.stop()
 				state = State.OPENING
 				_timer = 0.0
+				if _is_host() and _truck_waited():
+					_tell_newspaper()
 		State.OPENING:
 			_timer += delta
 			var rise: float = 1.0 - clampf(_timer / ARM_SECONDS, 0.0, 1.0)
@@ -494,6 +498,24 @@ func _is_host() -> bool:
 ## space: on a continuous-terrain route the whole segment sits on it.
 func _ground_offset(_at: Vector3) -> float:
 	return float(get_meta(&"track_height", 0.0))
+
+
+## The truck is still on the near side, close to the barrier, as the train
+## clears: it stood there for it (N-606.4b), not just had its barrier come down.
+func _truck_waited() -> bool:
+	var truck := get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	if truck == null:
+		return false
+	var local: Vector3 = to_local(truck.global_position)
+	return local.z > track_z and local.z - track_z < WAIT_RANGE and absf(local.x) < 12.0
+
+
+## Once per crossing that closed (the train clears once). By name and has_signal:
+## a test may swap the EventBus for a plain Node.
+func _tell_newspaper() -> void:
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and bus.has_signal(&"roadside_moment"):
+		bus.emit_signal(&"roadside_moment", &"train_stop", [])
 
 
 func _truck_approaching() -> bool:

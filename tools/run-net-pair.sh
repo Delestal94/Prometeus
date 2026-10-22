@@ -3,7 +3,14 @@
 # their exit codes and compact PAIR result lines. Intended for local use and CI.
 # Prints a WARNING line when the joiner's level load came within 10 s of the
 # 45 s network load budget (N-235.2): still a pass, but close to flaking.
+#
+#   tools/run-net-pair.sh            # the delivery level (tests/net_pair.tscn)
+#   tools/run-net-pair.sh --company  # the company world (tests/net_pair_company.gd, D-0214):
+#                                    # the real menu's --host-company and --join=127.0.0.1
 set -u
+
+MODE=delivery
+[ "${1:-}" = "--company" ] && MODE=company
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="$ROOT/do-not-drop"
@@ -28,13 +35,26 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 # Three level loads on the client (join, rejoin, rejoin over a ghost): 18-34 s each on CI.
 run() {
-	timeout 240 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
+	if [ "$MODE" = company ]; then
+		# Over the menu's own room: ENet on its default port (7777).
+		timeout 150 "$GODOT_BIN" --headless --path "$PROJECT" --script res://tests/net_pair_company.gd -- "$@"
+	else
+		timeout 240 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
+	fi
 }
 
-run --host >"$WORK/host.log" 2>&1 &
+if [ "$MODE" = company ]; then
+	run --host-company --slot=net_pair >"$WORK/host.log" 2>&1 &
+else
+	run --host >"$WORK/host.log" 2>&1 &
+fi
 HOST_PID=$!
 sleep 2
-run --client >"$WORK/client.log" 2>&1 &
+if [ "$MODE" = company ]; then
+	run --join=127.0.0.1 >"$WORK/client.log" 2>&1 &
+else
+	run --client >"$WORK/client.log" 2>&1 &
+fi
 CLIENT_PID=$!
 
 wait "$HOST_PID"; HOST_CODE=$?
@@ -85,4 +105,8 @@ if [ "$status" -ne 0 ]; then
 	echo "FAIL: net pair"
 	exit 1
 fi
-echo "PASS: two-process cosmetics/proportions, gameplay races, rejoin and rejoin over a ghost"
+if [ "$MODE" = company ]; then
+	echo "PASS: two-process company world: --host-company room, --join= client spawned and snapshotted, gone on leaving"
+else
+	echo "PASS: two-process cosmetics/proportions, gameplay races, rejoin and rejoin over a ghost"
+fi

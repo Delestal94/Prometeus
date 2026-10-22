@@ -7,6 +7,7 @@ extends SceneTree
 ## - only the unlocked zones appear, and a zone without deliveries never does;
 ## - fragile and cold products bring their requirement; "urgent" halves the window
 ##   and every requirement raises the pay over the plain sum;
+## - the first days (D-0812) cap orders at 2 products, later days at 3;
 ## - max_items caps the distinct products; every product and zone exists.
 
 var _failures: int = 0
@@ -26,6 +27,7 @@ func _run() -> void:
 	_test_zones()
 	_test_requirements()
 	_test_max_items()
+	_test_early_days()
 	_test_empty_inputs()
 	quit(_failures)
 
@@ -53,7 +55,7 @@ func _open() -> Array[ZoneDefinition]:
 
 
 func _day(day_seed: int, players: int = 3) -> Array[Dictionary]:
-	return OrderGenerator.generate_day(day_seed, 1, players, _open(), _products, _reqs)
+	return OrderGenerator.generate_day(day_seed, 4, players, _open(), _products, _reqs)
 
 
 func _test_determinism() -> void:
@@ -132,6 +134,25 @@ func _test_max_items() -> void:
 		for order in _day(seed_value):
 			widest = maxi(widest, order["items"].size())
 	_expect(widest == CompanyTuning.ORDER_ITEMS_MAX, "orders reach 3 distinct products")
+
+
+func _test_early_days() -> void:
+	_expect(OrderGenerator.items_cap_for_day(1) == CompanyTuning.ORDER_ITEMS_EARLY_MAX, "day 1 cap is 2")
+	_expect(OrderGenerator.items_cap_for_day(CompanyTuning.ORDER_EARLY_DAYS) == 2, "last early day cap is 2")
+	_expect(OrderGenerator.items_cap_for_day(CompanyTuning.ORDER_EARLY_DAYS + 1) == 3, "later days cap is 3")
+	var widest_early := 0
+	for day in range(1, CompanyTuning.ORDER_EARLY_DAYS + 1):
+		for seed_value in 30:
+			for order in OrderGenerator.generate_day(seed_value, day, 4, _open(), _products, _reqs):
+				widest_early = maxi(widest_early, order["items"].size())
+				_expect(order["items"].size() >= 1, "early orders still have a product")
+	_expect(widest_early == 2, "early days reach 2 products and never 3")
+	var forced := OrderGenerator.generate_day(5, 1, 4, _open(), _products, _reqs, 3)
+	var widest_forced := 0
+	for seed_value in 30:
+		for order in OrderGenerator.generate_day(seed_value, 1, 4, _open(), _products, _reqs, 3):
+			widest_forced = maxi(widest_forced, order["items"].size())
+	_expect(forced.size() > 0 and widest_forced == 3, "an explicit max_items overrides the day")
 
 
 func _test_empty_inputs() -> void:

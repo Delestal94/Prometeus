@@ -11,6 +11,9 @@ Uso:
     python tools/telemetry-summary.py CARPETA         # otra carpeta (p. ej. la de un amigo)
     python tools/telemetry-summary.py CARPETA --roles host,solo
 
+Los dias del modo empresa (D-0239, `"kind": "company_day"`) se resumen aparte,
+en una tabla propia, y no entran en las tablas de partidas de entrega.
+
 Con varias personas jugando juntas, cada PC guarda su propio registro de la
 misma partida. Para no contar una partida dos veces, junta solo los archivos del
 anfitrion (`--roles host,solo`) o resume la carpeta de cada uno por separado.
@@ -42,8 +45,12 @@ def default_folder() -> Path:
 
 
 def load_records(folder: Path):
-    """Devuelve (registros, archivos_ilegibles). Un archivo roto no frena el resto."""
-    records, broken = [], []
+    """Devuelve (partidas, dias_de_empresa, archivos_ilegibles). Un archivo roto no frena el resto.
+
+    Los archivos con "kind": "company_day" son dias del modo empresa (D-0239) y se
+    resumen aparte; un archivo sin "kind" es una partida de entrega.
+    """
+    records, days, broken = [], [], []
     for path in sorted(folder.glob("*.json")):
         try:
             with path.open(encoding="utf-8") as handle:
@@ -51,11 +58,13 @@ def load_records(folder: Path):
         except (OSError, ValueError):
             broken.append(path.name)
             continue
-        if isinstance(data, dict) and isinstance(data.get("boxes"), list):
+        if isinstance(data, dict) and data.get("kind") == "company_day":
+            days.append(data)
+        elif isinstance(data, dict) and isinstance(data.get("boxes"), list):
             records.append(data)
         else:
             broken.append(path.name)
-    return records, broken
+    return records, days, broken
 
 
 def number(value, default=0.0) -> float:
@@ -161,6 +170,25 @@ def events_table(records) -> str:
     return table(("evento de ruta", "veces", "resuelto", "seg hasta resolver (prom.)"), rows)
 
 
+def days_table(days) -> str:
+    """Un renglon por dia de empresa: plata del cierre y pedidos del dia."""
+    rows = []
+    for day in days:
+        summary = day.get("summary") if isinstance(day.get("summary"), dict) else {}
+        counts = day.get("counts") if isinstance(day.get("counts"), dict) else {}
+        rows.append((
+            int(number(day.get("day"))),
+            "%d" % number(summary.get("income")),
+            "%d" % number(summary.get("costs")),
+            "%d" % number(summary.get("profit")),
+            "%d" % number(counts.get("order_added")),
+            "%d" % number(counts.get("order_packed")),
+            "%d" % number(counts.get("order_delivered")),
+            fmt_seconds(number(day.get("duration_seconds"))),
+        ))
+    return table(("dia", "ingresos", "costos", "ganancia", "pedidos", "armados", "entregados", "duracion"), rows)
+
+
 def main(argv=None) -> int:
     # Un texto con tildes no debe romper la tabla en una consola que no sea UTF-8.
     for stream in (sys.stdout, sys.stderr):
@@ -177,25 +205,32 @@ def main(argv=None) -> int:
         print("Prende 'Guardar registro de partidas' en Opciones y juega una partida.", file=sys.stderr)
         return 1
 
-    records, broken = load_records(folder)
+    records, days, broken = load_records(folder)
     if args.roles:
         wanted = {r.strip() for r in args.roles.split(",") if r.strip()}
         records = [r for r in records if str(r.get("role", "solo")) in wanted]
+        days = [d for d in days if str(d.get("role", "solo")) in wanted]
     print("Carpeta: %s" % folder)
     if broken:
         print("Archivos ilegibles (se saltaron): %s" % ", ".join(broken))
-    if not records:
+    if not records and not days:
         print("No hay partidas para resumir.")
         return 0
 
-    print("\nGeneral")
-    print(overview(records))
-    print("\nPor trampa")
-    print(traps_table(records))
-    print("\nQue rompio las cajas")
-    print(causes_table(records))
-    print("\nEventos de ruta")
-    print(events_table(records))
+    if records:
+        print("\nGeneral")
+        print(overview(records))
+        print("\nPor trampa")
+        print(traps_table(records))
+        print("\nQue rompio las cajas")
+        print(causes_table(records))
+        print("\nEventos de ruta")
+        print(events_table(records))
+    else:
+        print("No hay partidas de entrega para resumir.")
+    if days:
+        print("\nDias de empresa")
+        print(days_table(days))
     return 0
 
 

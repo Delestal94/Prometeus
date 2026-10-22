@@ -277,7 +277,7 @@ HUD_PREP_LOAD_AND_DRIVE,Cargá paquetes y tomá el volante,Load packages and tak
 HUD_PREP_MISSING,(falta),(missing)
 HUD_PREP_ORDER,Casa %d: %s %s,House %d: %s %s
 HUD_PROGRESS_REMAINING_ONE,Te falta %s para %s,You need %s to unlock %s
-HUD_PROMPT_DROP,[ %s ]  Soltar paquete,[ %s ]  Drop package
+HUD_PROMPT_DROP,%s  Soltar paquete,%s  Drop package
 HUD_PROMPT_INSIDE,Adentro:  %s,Inside:  %s
 HUD_RESCUED,¡%s a salvo!,%s is safe!
 HUD_RESTART,Reiniciar,Restart
@@ -365,6 +365,14 @@ UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved 
 UI_COSM_GEL_SKIN,Skin de gelatina,Gel skin
 UI_COSM_GEL_SKIN_HINT,El color y el interior se ven igual para todos.,Everyone sees the same color and interior.
 UI_COSM_BODY,Cuerpo,Body
+UI_COSM_STYLE,Estilo,Style
+UI_COSM_STYLE_HINT,Se aplica en vivo al maniquí de gelatina.,Applied live to the gel mannequin.
+UI_COSM_HAIR,Pelo,Hair
+UI_COSM_EYEBROWS,Cejas,Eyebrows
+UI_COSM_MOUSTACHES,Bigotes,Moustaches
+UI_COSM_COSTUMES,Disfraces,Costumes
+UI_COSM_ACCESSORIES,Accesorios,Accessories
+UI_COSM_UNLOCK_HINT,Avanzá en las entregas para ampliar el vestuario.,Keep delivering to expand the wardrobe.
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face
 UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.
@@ -421,6 +429,7 @@ UI_HOW_TO_PLAY,Cómo jugar,How to play
 UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
 UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
+UI_COMPANY_BANKRUPT_WARNING,Cerraste en rojo: hoy llegan menos pedidos (%d %%).,You closed in the red: fewer orders today (%d%%).
 UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d, balance $%d, %d units in stock."
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
@@ -436,6 +445,7 @@ UI_MENU_GARAGE,Garaje,Garage
 UI_MENU_GARAGE_HINT,"Apariencia, progreso y récords","Appearance, progress and records"
 UI_MENU_HOST,Crear sala,Host a room
 UI_MENU_HOST_ENDLESS,Crear sala Endless,Host an Endless room
+UI_MENU_HOST_COMPANY,Crear sala Empresa,Host a Company room
 UI_MENU_HOST_IP,Código o IP del anfitrión,Host's code or IP
 UI_MENU_JOIN,Unirse a una sala,Join a room
 UI_MENU_JOIN_BUTTON,Unirse,Join
@@ -553,6 +563,10 @@ UI_OPT_SENSITIVITY,Sensibilidad de la mirada,Look sensitivity
 UI_OPT_SHAKE,Sacudida de cámara,Camera shake
 UI_OPT_SOUND_CHECK,Sonidos del juego (uno por uno)…,Game sounds (one by one)…
 UI_OPT_SOUND_SUBTITLES,Subtítulos de sonidos,Sound subtitles
+UI_OPT_SUBTITLE_SIZE,Tamaño de subtítulos,Subtitle size
+UI_OPT_SUBTITLE_SIZE_NORMAL,Normal,Normal
+UI_OPT_SUBTITLE_SIZE_LARGE,Grande,Large
+UI_OPT_SUBTITLE_SIZE_XLARGE,Muy grande,Extra large
 UI_OPT_TEXT_BACKDROP,Fondo del texto,Text backdrop
 UI_OPT_VOICE_CHAT,Chat de voz,Voice chat
 UI_OPT_VOICE_CREW,Voces de la tripulación,Crew voices
@@ -1110,6 +1124,28 @@ HUD_NEWS_ENDLESS_END_2_H,Ruta sin fin: el camión que no sabía dónde parar,End
 HUD_NEWS_ENDLESS_END_2_B,{player} juró que 'la próxima curva es la última'. No lo era.,{player} swore 'the next curve is the last one'. It was not.
 HUD_NEWS_ENDLESS_END_3_H,{town} despide al camión: {km} km y todavía quedan cajas,{town} bids farewell to the truck: {km} km and there are still crates
 HUD_NEWS_ENDLESS_END_3_B,El depósito solo pide que alguien avise cuando frene.,The depot only asks that someone call when it stops.
+HUD_NEWS_ROLLOVER_1_H,Camión de reparto vuelca y se queda mirando las estrellas,Delivery truck tips over and lies there looking at the stars
+HUD_NEWS_ROLLOVER_1_B,{player} aseguró que 'así se ve mejor el paisaje'. Las cajas no opinaron.,{player} insisted that 'the view is better this way'. The crates had no comment.
+HUD_NEWS_ROLLOVER_2_H,Vuelco en la ruta de {town}: el camión pide que lo den vuelta,Rollover on the {town} road: the truck asks to be turned back over
+HUD_NEWS_ROLLOVER_2_B,"Testigos vieron cuatro ruedas girando en el aire, 'todavía con ganas', dicen.","Witnesses saw four wheels spinning in the air, 'still full of enthusiasm', they say."
+HUD_NEWS_ROLLOVER_3_H,Camión patas para arriba: el repartidor juró que 'ya venía torcido',Truck upside down: the driver swore it 'was already crooked'
+HUD_NEWS_ROLLOVER_3_B,"{player} salió caminando y pidió un mate. De la carga, mejor no hablar.",{player} walked out and asked for a mate. Best not to speak of the cargo.
+HUD_NEWS_ROLLOVER_4_H,Entrega patas para arriba: {km} km de viaje y la última curva la hizo de costado,Delivery upside down: {km} km of road and the last curve was taken sideways
+HUD_NEWS_ROLLOVER_4_B,"{neighbor} fue el primero en llegar y le dio una palmada al camión: 'Ánimo, hermano'.","{neighbor} was first on the scene and patted the truck: 'Chin up, buddy.'"
+HUD_NEWS_DOG_CHASE_1_H,Perro de {town} corre al camión de reparto: 'Cobro peaje',{town} dog chases delivery truck: 'I collect the toll'
+HUD_NEWS_DOG_CHASE_1_B,{player} lo vio por el espejo. El perro no aflojó hasta quedarse sin aire.,{player} saw it in the mirror. The dog did not let up until it ran out of breath.
+HUD_NEWS_DOG_CHASE_2_H,Carrera pareja en la banquina: un perro le ganó a un camión (por un rato),Neck and neck on the shoulder: a dog beat a truck (for a while)
+HUD_NEWS_DOG_CHASE_2_B,"'Ladraba en tres idiomas', declaró {neighbor}, testigo del hecho.","'It was barking in three languages,' said {neighbor}, a witness."
+HUD_NEWS_DOG_CHASE_3_H,Perro vigila la ruta y no deja pasar a nadie sin ladrarle,Dog patrols the road and lets nobody by without a bark
+HUD_NEWS_DOG_CHASE_3_B,"El camión pasó, pero el perro dejó constancia de su disconformidad.","The truck got through, but the dog put its disapproval on record."
+HUD_NEWS_DOG_CHASE_4_H,"Bocinazo espanta a un perro: 'Fue un malentendido', dicen ambas partes","Honk scares off a dog: 'It was a misunderstanding,' say both parties"
+HUD_NEWS_DOG_CHASE_4_B,Un bocinazo desde el camión y el perro volvió a casa con la cola baja y el orgullo herido.,One honk from the truck and the dog went home with its tail down and its pride hurt.
+HUD_NEWS_TRAIN_STOP_1_H,El tren pasó y el camión esperó: milagro de civismo en {town},The train passed and the truck waited: a miracle of civic duty in {town}
+HUD_NEWS_TRAIN_STOP_1_B,"{player} frenó a tiempo. Las cajas, por una vez, no tuvieron nada que decir.","{player} stopped in time. For once, the crates had nothing to say."
+HUD_NEWS_TRAIN_STOP_2_H,"Barrera baja, camión frena: el tren cruzó sin novedad","Barrier down, truck brakes: the train crossed without incident"
+HUD_NEWS_TRAIN_STOP_2_B,"'Pensé que no llegaba', admitió {player}, con el corazón en la boca.","'I thought I would not make it,' admitted {player}, heart in mouth."
+HUD_NEWS_TRAIN_STOP_3_H,Un tren detuvo al camión más apurado de {town},A train stops the most hurried truck in {town}
+HUD_NEWS_TRAIN_STOP_3_B,"{neighbor}, que lo vio todo desde la banquina, aplaudió. El tren no saludó.","{neighbor}, who saw it all from the shoulder, applauded. The train did not wave."
 HUD_NEWS_FILLER_CLASSIFIED_1_H,SE BUSCA gallina,WANTED: hen
 HUD_NEWS_FILLER_CLASSIFIED_1_B,Responde al nombre de 'Cacarea'. Se ofrece un mate de recompensa. Preguntar por {neighbor}.,Answers to the name 'Cluckers'. A mate is offered as reward. Ask for {neighbor}.
 HUD_NEWS_FILLER_CLASSIFIED_2_H,"VENDO camioncito, poco uso","FOR SALE: little truck, barely used"
@@ -1363,3 +1399,31 @@ UI_DISPATCH_LOAD_N,Cargar %d,Load %d
 UI_DISPATCH_CLOSE,Cerrar,Close
 UI_DISPATCH_LOADED,Cargadas %d cajas,%d boxes loaded
 UI_DISPATCH_HOST_ONLY,Solo el anfitrión carga el vehículo,Only the host loads the vehicle
+UI_STOCK_TITLE,Stock,Stock
+UI_STOCK_HINT,Unidades por producto,Units per product
+UI_STOCK_EMPTY,Todavía no hay stock,No stock yet
+UI_STOCK_ROW,%s  ·  Estante %d  ·  Recepción %d  ·  Total %d,%s  ·  Shelves %d  ·  Reception %d  ·  Total %d
+UI_STOCK_ROW_MORE,En manos %d  ·  En cajas %d  ·  Otros %d,In hands %d  ·  In boxes %d  ·  Other %d
+UI_STOCK_SHORT,⚠ Faltan %d,⚠ %d missing
+UI_STOCK_SHORT_COMING,⚠ Faltan %d (vienen %d),⚠ %d missing (%d coming)
+UI_STOCK_COVERED,⟳ Viene en camino (%d),⟳ On the way (%d)
+UI_STOCK_TOTALS,%d unidades en %d productos,%d units in %d products
+UI_STOCK_CLOSE,Cerrar,Close
+UI_SUPPLIER_TITLE,Pedido al proveedor,Supplier order
+UI_SUPPLIER_FROM,Proveedor: %s,Supplier: %s
+UI_SUPPLIER_HINT,Sumá unidades de cada producto y después Pedir,Add units of each product and then Order
+UI_SUPPLIER_ROW,%s · $%d c/u,%s · $%d each
+UI_SUPPLIER_TOTAL,Total: $%d,Total: $%d
+UI_SUPPLIER_PALLETS,Palets: %d (el cobro es al recibir cada uno),Pallets: %d (you pay when each one is received)
+UI_SUPPLIER_ARRIVAL,Llega el día %d,Arrives on day %d
+UI_SUPPLIER_PICK,Elegí al menos un producto,Pick at least one product
+UI_SUPPLIER_NO_FUNDS,La plata no alcanza para $%d,Not enough money for $%d
+UI_SUPPLIER_LINE_MAX,Máximo %d unidades por producto,At most %d units per product
+UI_SUPPLIER_REFUSED,No se pudo hacer el pedido,The order could not be placed
+UI_SUPPLIER_ORDERED,"Pedido hecho: %d palets, llegan el día %d","Order placed: %d pallets, arriving on day %d"
+UI_SUPPLIER_HOST_ONLY,Solo el anfitrión hace el pedido,Only the host places the order
+UI_SUPPLIER_ORDER,Pedir,Order
+UI_SUPPLIER_CLOSE,Cerrar,Close
+UI_ORDER_NOTICE_ONE,Pedido nuevo: %s — %s %d,New order: %s — %s %d
+UI_ORDER_NOTICE_ONE_NO_ADDRESS,Pedido nuevo: %s,New order: %s
+UI_ORDER_NOTICE_MANY,%d pedidos nuevos,%d new orders
