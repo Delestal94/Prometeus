@@ -41,18 +41,25 @@ jugador con alcance puede tomar una unidad de `floor:0` (la petición la acepta 
 si con 8 jugadores hay que partirlo por producto).
 
 ### D-0253 · Cerrar el día antes — A · Opus 5.5 · medium · Aviso: no · F1
+**Parcial (2026-10-22):** `DayCycle.close_early()` y `DayClose` (botón, confirmación y aviso de las salidas,
+con sus textos) hechos y probados. Falta D-0253.a: el modo Empresa todavía no tiene menú de pausa (D-1909).
 **Depende de:** D-0134 (diseño), D-0203, D-0236
 **Qué:** [guardado.md](../diseno/guardado.md), regla 2: la forma de cortar sin perder lo hecho.
-- [ ] D-0253.1 `DayCycle.close_early()` (solo en el host, en `OPERATING`): pasa a `CLOSING` en ese momento por el
+- [x] D-0253.1 `DayCycle.close_early()` (solo en el host, en `OPERATING`): pasa a `CLOSING` en ese momento por el
   mismo camino que las 20:00. No entran pedidos nuevos (`CompanyDayOrders` ya no agrega en `CLOSING`), se espera a
   `trips_out() == 0` y viene `SUMMARY`, que guarda como siempre. Las penalidades de lo no entregado se cobran igual
   que a las 20:00. En otra fase no hace nada (devuelve false).
-- [ ] D-0253.2 **Decisión: lo pide solo el host, sin voto.** El host ya es el que abre el día siguiente, y un voto es
+- [x] D-0253.2 **Decisión: lo pide solo el host, sin voto.** El host ya es el que abre el día siguiente, y un voto es
   una pantalla más para 1 de cada 18 minutos. Va en el menú de pausa del modo Empresa (D-1909) como "Cerrar el día",
   con confirmación. Un cliente lo ve deshabilitado, con el texto "Lo cierra el host".
-- [ ] D-0253.3 El aviso en las dos salidas (menú de pausa → Salir al menú y Salir del juego) con un día en
+- [x] D-0253.3 El aviso en las dos salidas (menú de pausa → Salir al menú y Salir del juego) con un día en
   `OPERATING` o `CLOSING`: "Salir ahora pierde lo hecho desde las 08:00. Para guardarlo, cerrá el día." Las claves
   van a `strings_ui.csv` (es y en).
+  Hecho del lado de la lógica: `scripts/gameplay/business/day_close.gd` (`DayClose.button()` da texto, habilitado,
+  pista del cliente y confirmación; `DayClose.exit_warning()` da el aviso solo en el host con el día en `OPERATING`
+  o `CLOSING`) y las claves `UI_COMPANY_CLOSE_DAY*` / `UI_COMPANY_EXIT_LOSES_DAY`.
+- [ ] D-0253.a Dibujar el botón y el aviso en el menú de pausa del modo Empresa con `DayClose`, cuando exista
+  (D-1909; [decisión](../../decisiones/2026-10-22-cerrar-el-dia-antes.md)). Captura con `revisor-visual`.
 **Test** `test_day_cycle` (ampliado): `close_early()` a las 12:00 pasa a `CLOSING`, no deja entrar pedidos, espera
 una salida afuera y llega a `SUMMARY`; en `OPENING` o `SUMMARY` devuelve false; en un cliente no hace nada.
 `test_company_autosave`: después de cerrar antes, el slot queda en el día siguiente sin `interrupted`.
