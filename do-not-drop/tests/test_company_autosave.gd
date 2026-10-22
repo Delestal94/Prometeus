@@ -16,6 +16,9 @@ extends SceneTree
 ##   held, the slot is that opening (day 1, STARTING_MONEY, an empty ledger, the stock as it opened)
 ##   marked interrupted (D-2005); loading it gives the same, and so does the company in play once its
 ##   world is gone; save_closed_day() outside SUMMARY saves nothing.
+## - D-0253: the host closes day 1 early from OPERATING (DayClose.close()): with no trip out the next
+##   poll is SUMMARY, the clock still before 20:00, and the slot is day 2's opening, not interrupted,
+##   with the day's money; leaving afterwards keeps that close.
 
 const DIR: String = "user://test_company_autosave"
 const SLOT: String = "auto"
@@ -44,11 +47,13 @@ func _run() -> void:
 	await _check_close_and_kill()
 	await _check_leave_in_summary()
 	await _check_leave_mid_day()
+	await _check_close_early()
 	RpcGuard.reset()
 	_clean()
 	if _failures == 0:
 		print("PASS: the closed day is saved as the next day's opening, a killed game comes back at"
-			+ " its last close, leaving in the summary keeps it and leaving mid-day saves interrupted")
+			+ " its last close, leaving in the summary keeps it, leaving mid-day saves interrupted and closing"
+			+ " early saves like a close")
 	quit(_failures)
 
 
@@ -159,6 +164,32 @@ func _check_leave_mid_day() -> void:
 	state.free()
 	_clean()
 
+
+func _check_close_early() -> void:
+	var state: Node = _new_state()
+	state.call(&"new_company", "Early SRL")
+	var host: LiveDayRoot = await _enter(state)
+	host.day_cycle.ticks = func() -> int: return Time.get_ticks_msec() + LATER_MSEC
+	host.day_cycle.poll()
+	state.call(&"earn", 120, &"order_paid")
+	_expect(DayClose.close(host.day_cycle) and host.day_cycle.phase() == DayCycle.Phase.CLOSING,
+		"The host closes day 1 early from OPERATING (got %s)" % host.day_cycle.phase_name())
+	host.day_cycle.poll()
+	_expect(host.day_cycle.phase() == DayCycle.Phase.SUMMARY
+		and host.clock.minute_now() < float(CompanyTuning.DAY_END_MIN),
+		"...and with no trip out the summary comes before 20:00 (got %s at %.0f min)"
+		% [host.day_cycle.phase_name(), host.clock.minute_now()])
+	var company: Dictionary = _raw().get("company", {})
+	_expect(CompanySave.exists(SLOT, DIR) and not CompanySave.was_interrupted(SLOT, DIR)
+		and int(company.get("day", 0)) == 2
+		and int(company.get("money", 0)) == CompanyTuning.STARTING_MONEY + 120,
+		"Closing early saves day 2's opening, not interrupted, with the day's money (got day %s, %s)"
+		% [company.get("day"), company.get("money")])
+	await _leave(host)
+	_expect(not CompanySave.was_interrupted(SLOT, DIR) and int(_raw().get("company", {}).get("day", 0)) == 2,
+		"...and leaving afterwards keeps that close")
+	state.free()
+	_clean()
 
 ## OPENING, OPERATING, CLOSING and SUMMARY of the open day: the OPENING's seconds pass on the
 ## DayCycle's ticks, the clock jumps to 20:00, no trip is out.

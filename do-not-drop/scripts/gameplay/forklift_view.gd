@@ -32,6 +32,7 @@ const REFUSAL_SECONDS: float = 3.0
 const GONE_SECONDS: float = 1.5
 ## How often the driver's player is looked for among the players while it is not found (ms).
 const LOOKUP_MSEC: int = 500
+const PlayerSprint = preload("res://scripts/gameplay/player/player_sprint.gd")
 ## The meta the driver's player carries while it drives (PackageHandling.transfer(), PlayerCarry.transfer_target()).
 const DRIVING_META: StringName = &"driving"
 ## The text a refusal of work shows (default: WORLD_FORKLIFT_REFUSED).
@@ -194,9 +195,11 @@ func _set_driver_node(node: Node3D) -> void:
 		return
 	if is_instance_valid(_driver_node) and _driver_node.has_meta(DRIVING_META):
 		_driver_node.remove_meta(DRIVING_META)
+		_driver_node.remove_meta(PlayerSprint.PACE_CAP_META)
 	_driver_node = node
 	if node != null:
 		node.set_meta(DRIVING_META, true)
+		node.set_meta(PlayerSprint.PACE_CAP_META, CompanyTuning.FORKLIFT_DRIVE_SPEED_MPS)
 
 
 ## Puts the forklift under the driver's player, facing where it faces. False while that player is not here.

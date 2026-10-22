@@ -21,7 +21,8 @@ extends SceneTree
 ##   build's file it plays a new company that is never saved, not even when it comes up again with
 ##   that company still on;
 ## - CompanyRoot.stock_for_save() puts what every hands:<peer> held in SAVED_HANDS_LOCATION, totals and
-##   reservations unchanged, without touching the stock it copies;
+##   reservations as a save keeps them (the same totals, nothing reserved: D-0252; the floor, boxes and
+##   packages are test_company_save_stock's), without touching the stock it copies;
 ## - two ENet peers in one process, each with a CompanyRoot (its world left out): the host plays day 2
 ##   (11:15, money and stock moved by events), the client mirrors it (snapshot, then events) and takes
 ##   3 hens in its hands. The host leaves (its session closes, its world goes): the host's world marks
@@ -353,9 +354,12 @@ func _check_stock_for_save() -> void:
 		and kept.count(&"puppy", CompanyRoot.SAVED_HANDS_LOCATION) == 3
 		and kept.contents_at(&"hands:1").is_empty() and kept.contents_at(&"hands:7").is_empty(),
 		"Every hand's units lie in %s (got %s)" % [CompanyRoot.SAVED_HANDS_LOCATION, kept.to_dict()])
-	_expect(kept.total_units() == live.total_units() and kept.count(&"hen", &"dock") == 4
-		and kept.reserved_by(&"order_9") == {&"hen": 2},
-		"...the rest, the totals and the reservations unchanged")
+	_expect(kept.total_units() == live.total_units() and kept.count(&"hen", &"dock") == 4,
+		"...the rest and the totals unchanged")
+	_expect(kept.reserved_by(&"order_9").is_empty() and (kept.to_dict()["reserved"] as Dictionary).is_empty()
+		and live.reserved_by(&"order_9") == {&"hen": 2},
+		"...and nothing reserved in the copy (D-0252), the live reservation kept (got %s)"
+		% [kept.to_dict()["reserved"]])
 
 
 func _check_host_leaves() -> void:

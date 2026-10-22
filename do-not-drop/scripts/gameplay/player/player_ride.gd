@@ -10,6 +10,12 @@ extends RefCounted
 
 
 static func find_vehicle(p: Player) -> Node3D:
+	# The owner of a player picks the vehicle it is aboard among several (a fleet, D-0302.2.b.4); the copies
+	# on other peers keep the group's first until the vehicle is replicated with the pose.
+	if p.is_inside_tree() and p.is_local() and p.get_tree().get_node_count_in_group(&"vehicle") > 1:
+		p._vehicle = VehiclePick.pick(p.get_tree(), p._vehicle, p.global_position,
+				Player.RIDE_MARGIN if p._riding or p.net_in_vehicle else 0.0)
+		return p._vehicle
 	if not is_instance_valid(p._vehicle) and p.is_inside_tree():
 		var found: Node = p.get_tree().get_first_node_in_group(&"vehicle")
 		p._vehicle = found as Node3D if found != null and found.has_method(&"carries") else null

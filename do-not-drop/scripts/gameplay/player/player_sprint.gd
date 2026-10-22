@@ -23,6 +23,9 @@ const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd"
 ## What the NetworkManager autoload runs (world_seed is not on NetSession).
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
+## A vehicle-like thing (the depot forklift) sets this meta on the player it carries: the pace cap in m/s. While
+## it is there nobody runs, and walking is slowed to the cap.
+const PACE_CAP_META: StringName = &"pace_cap"
 ## Ground speeds, m/s. Walking is Player.WALK_SPEED (3.6).
 const RUN_SPEED: float = 6.0
 ## With a box in the arms; Growing weight's box (heavier by the second) only lets you jog.
@@ -129,6 +132,8 @@ static func is_heavy(package: DeliveryPackage) -> bool:
 func can_run() -> bool:
 	if player == null or player._seated or not player.seat_node_path.is_empty():
 		return false
+	if player.has_meta(PACE_CAP_META):
+		return false
 	return not on_moving_truck()
 
 
@@ -155,6 +160,8 @@ func ground_speed(input_vector: Vector2) -> float:
 	var speed: float = speed_for(running, player.carried_package)
 	if _stagger > 0.0:
 		speed *= STAGGER_SPEED_SCALE
+	if player.has_meta(PACE_CAP_META):
+		speed = minf(speed, float(player.get_meta(PACE_CAP_META)))
 	var running_with_box: bool = running and player.carried_package != null
 	if running_with_box and not _was_running_with_box:
 		_show_first_run_tip()

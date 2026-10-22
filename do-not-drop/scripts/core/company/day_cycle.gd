@@ -32,9 +32,10 @@ extends Node
 ##              closed orders (CompanyOrdersNet.prune_closed(), D-0813.1). Lasts OPENING_REAL_SECONDS
 ##              real seconds (the supplier shows up); the clock already runs.
 ##   OPERATING  until the world clock reads DAY_END_MIN (20:00).
-##   CLOSING    from 20:00 on. S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0.
-##              It lasts at least one poll, so what listens to company_day_closing (rent, D-0320)
-##              lands in the summary.
+##   CLOSING    from 20:00 on, or earlier when the host closes the day (close_early(), D-0253).
+##              S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0. It lasts at
+##              least one poll, so what listens to company_day_closing (rent, D-0320) lands in the
+##              summary.
 ##   SUMMARY    the closing screen: DaySummary.build() of the day goes out inside the event and the
 ##              world clock stops. Only the host's next_day() moves on (a client can't hurry the day).
 ##
@@ -165,6 +166,15 @@ func next_day() -> bool:
 	if not is_host() or _phase != Phase.SUMMARY:
 		return false
 	return _open(_day + 1)
+
+
+## Host, from the pause's "close the day" (D-0253, guardado.md rule 2): the day goes to CLOSING
+## now, by the same transition as 20:00, so no new orders come in, SUMMARY waits for the trips out
+## and saves like any close. False, sending nothing, on a client or outside OPERATING.
+func close_early() -> bool:
+	if not is_host() or _phase != Phase.OPERATING:
+		return false
+	return _transition(Phase.CLOSING)
 
 
 ## Host: moves the day on if it is time, once per call: OPENING to OPERATING after
