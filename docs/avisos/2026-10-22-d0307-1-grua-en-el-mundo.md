@@ -1,6 +1,6 @@
 # D-0307.1: la grúa en el mundo de la empresa
 
-Tocado en la zona compartida: `scripts/core/network_manager.gd` (`PROTOCOL_VERSION` 57: `CompanyNet` toma el
+Tocado en la zona compartida: `scripts/core/network_manager.gd` (`PROTOCOL_VERSION` 58: `CompanyNet` toma el
 pedido `trip_tow {vehicle, rid}`; no hay RPC nuevo, pero la lista de pedidos válidos cambia) y
 `scripts/core/company/company_net.gd` (`REQUEST_KINDS`, `CompanyNet.tow`, una rama en `_take_request`; el
 archivo está en su tope de 1000 líneas: sale de comprimir comentarios). Fila 19a nueva en

@@ -127,6 +127,13 @@ func content_errors(order: Dictionary) -> Dictionary:
 	return BoxContentCheck.diff(order, box)
 
 
+## A second player checks the open box on the table against `order` (D-0734, BoxReview.review): the
+## fault report, and the box is marked reviewed when it has none. The host passes who packed and who
+## checks; the same person, a taped box or no box counts for nothing. Nothing is charged.
+func review(order: Dictionary, packer: StringName, reviewer: StringName) -> Dictionary:
+	return BoxReview.review(box, order, packer, reviewer)
+
+
 ## The order sheet for this table (D-0714): OrderSheet.build() with the box on the table.
 func sheet_for(order: Dictionary, now_min: int, products: Dictionary = {}) -> Dictionary:
 	return OrderSheet.build(order, box, now_min, products)

@@ -2,19 +2,28 @@ extends RefCounted
 ## Riding in the truck and where the other peers see a player (N-225.5), split out of player.gd: finding the
 ## truck, being carried along by it, publishing the owner's pose (in the truck's space while aboard) and putting
 ## everyone else's copy of the player where the owner says. The state (`_riding`, `_ride_last_transform`,
-## `_vehicle`, `net_position`, `net_in_vehicle`) and the masks stay on the Player, which keeps thin wrappers for
-## what tests and the other player components call.
+## `_vehicle`, `net_position`, `net_in_vehicle`, `net_vehicle`) and the masks stay on the Player, which keeps thin
+## wrappers for what tests and the other player components call.
+##
+## With several vehicles (a fleet, D-0302.2.b.4) the owner picks the one it is aboard (VehiclePick.pick) and says
+## which with the pose (`net_vehicle`, D-0302.2.b.4.b); everyone else's copy goes on that one (VehiclePick.told).
+## Its buffered poses are all drawn on the newest one named: stepping from one bay to another passes through the
+## world's space for longer than the buffer's cushion, so only a jump straight between two overlapping bays would
+## draw up to that cushion (NetPoseSmoother.MAX_DELAY) of the old bay's poses on the new one.
 ##
 ## The truck's `carries` is asked by name on purpose (vehicle.gd has no class name and tests put plain-Node
 ## fakes with `carries` in the "vehicle" group). The session is typed (NetSession: pose_net_sim()).
 
 
 static func find_vehicle(p: Player) -> Node3D:
-	# The owner of a player picks the vehicle it is aboard among several (a fleet, D-0302.2.b.4); the copies
-	# on other peers keep the group's first until the vehicle is replicated with the pose.
-	if p.is_inside_tree() and p.is_local() and p.get_tree().get_node_count_in_group(&"vehicle") > 1:
-		p._vehicle = VehiclePick.pick(p.get_tree(), p._vehicle, p.global_position,
-				Player.RIDE_MARGIN if p._riding or p.net_in_vehicle else 0.0)
+	# Among several vehicles (a fleet) the owner picks the one it is aboard; the copies on other peers take the
+	# one the owner names with its pose (net_vehicle). One vehicle: the group's first, as always.
+	if p.is_inside_tree() and p.get_tree().get_node_count_in_group(&"vehicle") > 1:
+		if p.is_local():
+			p._vehicle = VehiclePick.pick(p.get_tree(), p._vehicle, p.global_position,
+					Player.RIDE_MARGIN if p._riding or p.net_in_vehicle else 0.0)
+		else:
+			p._vehicle = VehiclePick.told(p.get_tree(), p._vehicle, p.net_vehicle)
 		return p._vehicle
 	if not is_instance_valid(p._vehicle) and p.is_inside_tree():
 		var found: Node = p.get_tree().get_first_node_in_group(&"vehicle")
@@ -166,6 +175,7 @@ static func publish_net_state(p: Player) -> void:
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", p.global_position,
 			Player.RIDE_MARGIN if p.net_in_vehicle else 0.0))
 	p.net_in_vehicle = riding
+	p.net_vehicle = VehiclePick.index_of(p.get_tree(), vehicle) if riding else -1
 	p.net_position = vehicle.to_local(p.global_position) if riding else p.global_position
 	p.net_yaw = angle_difference(yaw_of(vehicle.global_basis), yaw_of(p.global_basis)) if riding \
 			else yaw_of(p.global_basis)

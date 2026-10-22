@@ -153,6 +153,11 @@ func is_out(vehicle_id: StringName) -> bool:
 	return _active.has(vehicle_id) or _refused_out.has(vehicle_id)
 
 
+## Whether the dispatch zone staged cargo on `vehicle_id` that has not left yet (stage_cargo() would replace it).
+func has_cargo(vehicle_id: StringName) -> bool:
+	return _staged.has(vehicle_id)
+
+
 ## May `vehicle_id` leave now? {ok, key, args} as DispatchRules answers: not ok, with FAR_LIMIT and
 ## [far_max], while `far_max` other vehicles are out. A vehicle already out is never refused.
 func departure_verdict(vehicle_id: StringName) -> Dictionary:

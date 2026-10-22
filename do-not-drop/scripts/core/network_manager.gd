@@ -157,13 +157,17 @@ const MAX_PLAYERS: int = 8
 ## default one), supplier_ordered carries it, and the "supplier" snapshot part a
 ## `suppliers` entry with the other suppliers' trucks; an older client refuses the
 ## event and that part (company mode, D-0621.b).
-## 57: CompanyNet's _request takes a new kind, trip_tow {vehicle, rid}: any peer asks the host to tow a
+## 57: player.tscn and package.tscn replicate `net_vehicle` (which vehicle the pose's
+## space is, VehiclePick.index_of(), -1 none) after their other properties, and the box's
+## submit_carry_transform and request_drop take a trailing `vehicle` index: with several
+## vehicles every copy goes on the one its owner rides (D-0302.2.b.4.b).
+## 58: CompanyNet's _request takes a new kind, trip_tow {vehicle, rid}: any peer asks the host to tow a
 ## stuck or broken company vehicle home; it goes out as the wallet_moved (reason tow) and trip_closed events
 ## that already exist, and a refusal comes back with a WORLD_TOW_* key (company mode, D-0307.1).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 57
+const PROTOCOL_VERSION: int = 58
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

@@ -37,8 +37,10 @@ func update_carried_package() -> void:
 	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", carry_transform.origin, player.RIDE_MARGIN))
 	if aboard:
 		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
-	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard, in_hands)
-	player.carried_package.predict_carry(carry_transform, aboard)
+	# Which vehicle's space, among several (D-0302.2.b.4.b): the host and the prediction put it on that one.
+	var index: int = VehiclePick.index_of(player.get_tree(), vehicle) if aboard else -1
+	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard, in_hands, index)
+	player.carried_package.predict_carry(carry_transform, aboard, vehicle if aboard else null)
 	if player._package_focus != null:
 		player._package_focus.dof_blur_far_enabled = true
 		player._package_focus.dof_blur_far_distance = 1.45
@@ -105,7 +107,8 @@ func drop_carried() -> void:
 	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", drop_transform.origin, player.RIDE_MARGIN))
 	if aboard:
 		drop_transform = vehicle.global_transform.affine_inverse() * drop_transform
-	player.carried_package.rpc_id(1, &"request_drop", drop_transform, aboard)
+	player.carried_package.rpc_id(1, &"request_drop", drop_transform, aboard,
+			VehiclePick.index_of(player.get_tree(), vehicle) if aboard else -1)
 	# The host confirms this on every peer; clear locally now for responsive hands.
 	player.carried_package = null
 

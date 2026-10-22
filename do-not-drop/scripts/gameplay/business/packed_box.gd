@@ -27,6 +27,10 @@ var gift_wrapped: bool = false
 var on_side: bool = false
 ## Translation key of the customer's handwritten note on the box (D-0731, CustomerNote); "" = none.
 var note_key: StringName = &""
+## Who checked the open box (D-0734, BoxReview); "" = nobody. review_seal is the box's content signature at
+## that moment: BoxReview only trusts the review while the signature still matches.
+var reviewed_by: StringName = &""
+var review_seal: int = 0
 ## Placed products, in order: {"product": StringName, "origin": Vector3i, "cells": Vector3i}.
 var items: Array[Dictionary] = []
 
@@ -161,6 +165,8 @@ func to_dict() -> Dictionary:
 		"gift_wrapped": gift_wrapped,
 		"on_side": on_side,
 		"note_key": String(note_key),
+		"reviewed_by": String(reviewed_by),
+		"review_seal": review_seal,
 	}
 
 
@@ -189,6 +195,8 @@ static func from_dict(d: Dictionary) -> PackedBox:
 	box.on_side = bool(d.get("on_side", false))
 	var note: StringName = StringName(str(d.get("note_key", "")))
 	box.note_key = note if note in CustomerNote.KEYS else &""
+	box.reviewed_by = StringName(str(d.get("reviewed_by", "")))
+	box.review_seal = int(d.get("review_seal", 0)) if box.reviewed_by != &"" else 0
 	return box
 
 

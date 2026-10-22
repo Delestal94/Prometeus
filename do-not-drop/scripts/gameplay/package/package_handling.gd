@@ -20,14 +20,14 @@ const TAKE_IN_SECONDS: float = 0.3
 ## copy of the truck is a little behind the host's, and a world pose put the box a metre behind the hands at
 ## speed). `sender` is the remote sender (0: a genuine local call). `in_hands`: the same pose in the carrier's
 ## body space; on foot the other peers draw the box there on the carrier's body as they draw it (N-217,
-## PackageNetPose), seated it rides on the truck as before.
+## PackageNetPose), seated it rides on the truck as before. `vehicle`: which truck (space_of()).
 static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Transform3D, in_vehicle: bool,
-		in_hands: Transform3D = Transform3D.IDENTITY) -> void:
+		in_hands: Transform3D = Transform3D.IDENTITY, vehicle_index: int = -1) -> void:
 	if sender != 0 and (not is_instance_valid(p.carrier) or sender != p.carrier.get_multiplayer_authority()):
 		return
 	if not p.is_held:
 		return
-	var vehicle: Node3D = p._find_vehicle()
+	var vehicle: Node3D = space_of(p, in_vehicle, vehicle_index)
 	p._carry_in_vehicle = in_vehicle and vehicle != null
 	p._carry_pose = carry_transform
 	p.global_transform = vehicle.global_transform * carry_transform if p._carry_in_vehicle else carry_transform
@@ -36,6 +36,17 @@ static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Trans
 	var follows: bool = on_foot and in_hands != Transform3D.IDENTITY
 	p.carrier_peer_id = int(p.carrier.get_multiplayer_authority()) if follows else 0
 	p.hold_offset = in_hands if p.carrier_peer_id > 0 else Transform3D.IDENTITY
+
+
+## The truck a carrier's pose `in_vehicle` is in (D-0302.2.b.4.b): the one it names, `vehicle_index` (its
+## VehiclePick.index_of(), with several vehicles), which becomes the box's own so the next ticks place it there too;
+## with none named (one truck, an index this peer lacks), the box's (_find_vehicle()).
+static func space_of(p: DeliveryPackage, in_vehicle: bool, vehicle_index: int) -> Node3D:
+	var named: Node3D = VehiclePick.at(p.get_tree(), vehicle_index) if in_vehicle and p.is_inside_tree() else null
+	if named != null:
+		p._vehicle = named
+		return named
+	return p._find_vehicle()
 
 
 static func set_held(p: DeliveryPackage, held: bool) -> void:
@@ -112,11 +123,12 @@ static func transfer(p: DeliveryPackage, sender_id: int, recipient_path: NodePat
 ## `in_vehicle` as in accept_carry(): set down in the truck, it's placed on
 ## the host's truck and starts out moving with it.
 ## `sender_id`: the remote sender (0: a genuine local call), checked against the carrier here.
-static func drop(p: DeliveryPackage, sender_id: int, drop_transform: Transform3D, in_vehicle: bool) -> void:
+static func drop(p: DeliveryPackage, sender_id: int, drop_transform: Transform3D, in_vehicle: bool,
+		vehicle_index: int = -1) -> void:
 	if sender_id != 0 and p.carrier != null and int(p.carrier.get_multiplayer_authority()) != sender_id:
 		return
 	release_carrier(p)
-	var vehicle: Node3D = p._find_vehicle()
+	var vehicle: Node3D = space_of(p, in_vehicle, vehicle_index)
 	p.global_transform = vehicle.global_transform * drop_transform if in_vehicle and vehicle != null \
 			else drop_transform
 	p.reset_physics_interpolation()
