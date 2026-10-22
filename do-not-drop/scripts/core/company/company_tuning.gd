@@ -177,6 +177,10 @@ const HAND_MAX_UNITS: int = 4
 ## Units a picking cart carries in total, products mixed (D-0610, the "carries 6" of its table row). More than
 ## the hands (HAND_MAX_UNITS) so the cart is worth the trip; PickingCart refuses the unit that would pass it.
 const CART_MAX_UNITS: int = 6
+## One push of a picking cart (D-0610.b): how far it rolls, in metres, away from whoever pushes it.
+const CART_PUSH_STEP_M: float = 1.2
+## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
+const CART_CLEARANCE_M: float = 0.7
 
 # --- Orders ---
 ## Shipping fee added to an order's pay, by zone id (unknown zones pay 0).
