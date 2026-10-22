@@ -20,8 +20,15 @@ class_name NetRestThrottle
 ##
 ## A peer the synchronizer was just made visible to (update_visibility(peer),
 ## how a game lets a late joiner in) wakes it, so that peer gets the pose at
-## full rate at once. Only the multiplayer authority throttles; on the others
-## the node does nothing.
+## full rate at once. Hiding it from a peer (its visibility flag off, the
+## synchronizer not public) doesn't: nobody new gets anything. Nor does a
+## change made while the synchronizer has the meta QUIET_META set to true (a
+## keepalive pulse: it lasts two of its intervals at whatever rate it is on,
+## and waking it would send every peer that sees it the full rate for nothing).
+## Only the multiplayer authority throttles; on the others the node does nothing.
+
+## A synchronizer whose visibility changes while it has this meta set to true doesn't wake its throttle.
+const QUIET_META: StringName = &"net_rest_quiet"
 
 @export var synchronizer_path: NodePath = ^"../MultiplayerSynchronizer"
 ## Properties of the synchronizer's root that make up the pose.
@@ -122,5 +129,8 @@ func _moved() -> bool:
 ## The game calls update_visibility(peer) when that peer can start receiving
 ## (0 is the synchronizer's own per-frame refresh, not someone new).
 func _on_visibility_changed(for_peer: int) -> void:
-	if for_peer != 0:
-		wake()
+	if for_peer == 0 or bool(_sync.get_meta(QUIET_META, false)):
+		return
+	if not _sync.public_visibility and not _sync.get_visibility_for(for_peer):
+		return
+	wake()

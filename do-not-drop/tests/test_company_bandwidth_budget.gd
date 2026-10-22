@@ -17,36 +17,43 @@ extends SceneTree
 ## 1-2"; a lone driver tends his own) and a full load (its definition's cargo_slots). A case's
 ## number is its worst client: the host in the shed or aboard any vehicle, every client
 ## (CASES.worst()). Every case must fit its budget with 4 players (MEASURED_CREW); the full crew
-## where FULL_CREW_FITS says it does (the shed), else its over_budget line and culprits are printed,
+## where FULL_CREW_FITS says it does (the shed, far), else its over_budget line and culprits are printed,
 ## not failed. The crowded trips (CROWDED_RIDERS aboard, the design's ceiling, one player left in
 ## the shed) are printed only.
 ## - Model (tests/bandwidth_model.gd, the framing test_net_bandwidth_budget counts with): the real
 ##   company world (company_root.tscn, solo) is opened and every MultiplayerSynchronizer in it
 ##   counted at the interval the world leaves it on: the shed's own once (the host's), a parked
-##   vehicle at its NetRestThrottle's rest, and the player's once per crew member (the host's own,
-##   the other clients' relayed by the host): on foot at the shed's pose rate
-##   (CompanyRoot.join_crew(), CompanyTuning.SHED_POSE_RATE_HZ: player_pose_rate), aboard
-##   (Player.net_in_vehicle) at the rate the world gives a rider (player_ride.gd apply_pose_rate():
-##   rider_pose_rate). The fleet's vehicle (CompanyFleet, World/Vehicles) is driven across the
-##   shed's gate and back by code with a full load staged: its synchronizer at the rate it sends
-##   while it moves, and the real trip_started and trip_closed the host's CompanyTripsView
-##   publishes. The load is package.tscn's synchronizer (BoxToPackage.PACKAGE_SCENE): the tended
-##   boxes moving, the rest riding still at the rest interval. Floats as 64-bit and ints as 32-bit
+##   vehicle at its NetRestThrottle's rest (waited for: is_resting()), and the player's once per
+##   crew member (the host's own, the other clients' relayed by the host): on foot at the shed's
+##   pose rate (CompanyRoot.join_crew(), CompanyTuning.SHED_POSE_RATE_HZ: player_pose_rate), seated
+##   aboard (Player.net_in_vehicle, a seat: the driver and the passenger with the box on the lap) at
+##   the rate the world gives a seated rider (player_ride.gd apply_pose_rate(), SEATED_POSE_RATE_HZ:
+##   rider_pose_rate; standing in a bay, the game's). The fleet's vehicle (CompanyFleet,
+##   World/Vehicles) is driven across the shed's gate and back by code with a full load staged: its
+##   synchronizer at the rate it sends while it moves (CompanyTuning.FLEET_POSE_INTERVAL_SEC, not
+##   its scene's), and the real trip_started and trip_closed the host's CompanyTripsView publishes.
+##   The load is package.tscn's synchronizer (BoxToPackage.PACKAGE_SCENE): the tended boxes moving,
+##   each publishing its care_state (the largest real one publish_care() leaves, of any trap) at the
+##   company's rate (BoxToPackage.tune()), an ON_CHANGE delta; the rest riding still at the rest
+##   interval. While vehicles are out, each player in the shed carries a box loading the next one,
+##   moving (D-2002.4, the caveats of auditor-red on D-2002.2). Floats as 64-bit and ints as 32-bit
 ##   (a pose in motion, a clock past 33 s) and a datagram at Steam's ceiling around every packet. On
 ##   top, the business events (CompanyNet's _apply_event, reliable, sized the same way) of a busy
 ##   line: every player does a business action a second (aboard, a delivery) plus the host's own
 ##   rules, each the size of the largest real units_moved the root publishes (a drop and a take
 ##   through CompanyNet), in a datagram of its own; and a trip event a second per vehicle out (the
 ##   larger real one: a ceiling, a trip sends two). Far, CompanyInterest's keepalive: a client in
-##   the shed gets every hidden body for its pulse, and every pulse (on and off) wakes a box riding
-##   still (NetRestThrottle on visibility_changed) for the riders who see it. Nothing in the world
+##   the shed gets every hidden body for its pulse, each client in the shed on its own clock, and a
+##   pulse wakes a box riding still for the riders as many times as a real box's NetRestThrottle
+##   wakes for WorldCellInterest.pulse_visibility() (none since D-2002.4). Nothing in the world
 ##   sends a property of more than 64 bytes every tick.
 ## - Measured, every case: that many ENet peers on localhost in this process (a SceneMultiplayer
 ##   each), a real player per peer on every side (player.tscn, joined to the crew as the company
 ##   world does it, standing still; a rider's owner sends as one, net_in_vehicle) and a CompanyNet;
-##   out of the shed, the vehicles out (their definition's scene) and their loads (package.tscn) on
-##   every side, the host's reaching the clients that see them as CompanyInterest decides. The host
-##   publishes real units_moved at the busy rate; read as the network overlay reads LAN (NetStats,
+##   out of the shed, the vehicles out (their definition's scene at the fleet's interval), their
+##   loads (package.tscn; the tended ones publish the measured care_state) and the boxes carried in
+##   the shed on every side, the host's reaching the clients that see them as CompanyInterest
+##   decides. The host publishes real units_moved at the busy rate; read as the network overlay reads LAN (NetStats,
 ##   N-216). Every client stays under its own model's ceiling and, where held, the worst under the
 ##   budget; the worst got over half of its model's data (it did flow; skipped under two frames of
 ##   the fastest pose), and every client applies every event. Trip events and the keepalive are only
@@ -59,6 +66,9 @@ const MODEL := preload("res://tests/bandwidth_model.gd")
 const CASES := preload("res://tests/company_bandwidth_cases.gd")
 const RIDE := preload("res://scripts/gameplay/player/player_ride.gd")
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
+const TRAPS_DIR: String = "res://data/traps"
+## A seat a rider's owner says it sits on (Player.seat_node_path): only whether it is empty counts.
+const SEAT_PATH: NodePath = ^"Seat"
 ## The company saves here (the root saves on leaving), never in the game's slot.
 const SAVE_DIR: String = "user://test_company_bandwidth_budget"
 const PREFIX: String = "COMPANY_BW"
@@ -77,8 +87,14 @@ const CONNECT_SECONDS: float = 10.0
 ## Path caches confirmed and the player's appearance sent before the count starts.
 const WARMUP_SECONDS: float = 1.0
 const MEASURE_SECONDS: float = 3.0
+## Most physics frames the parked fleet takes to rest (its settle_seconds is half a second).
+const PARK_FRAMES: int = 300
+## A peer id the keepalive's pulse is shown to (_pulse_wakes()): nobody's, the box only counts wakes.
+const PULSE_PEER: int = 77
 
 var _failures: int = 0
+## The host's tended boxes of the case being measured (_add_trip_bodies()), which publish care_state.
+var _tended: Array[DeliveryPackage] = []
 var _sync_mtu: int = 1350
 var _product: StringName = &""
 
@@ -155,8 +171,7 @@ func _open_world() -> Dictionary:
 		opened.append([seq, kind, data]))
 	current_scene = level
 	await process_frame
-	for _tick: int in range(30):
-		await physics_frame
+	await _wait_parked(level)
 	var found: Dictionary = {
 		"syncs": _synchronizers(level),
 		"events": _event_sizes(level.net, level.player.global_position, opened),
@@ -173,6 +188,24 @@ func _open_world() -> Dictionary:
 	await process_frame
 	state.call(&"reset")
 	return found
+
+
+## Physics frames until every vehicle of the fleet rests (its NetRestThrottle.is_resting(): parked, it
+## sends at its rest interval; D-2002.4, instead of a fixed count of ticks), at most PARK_FRAMES.
+func _wait_parked(level: CompanyRoot) -> void:
+	var throttles: Array[NetRestThrottle] = []
+	if level.fleet != null:
+		for van: Node3D in level.fleet.vehicles():
+			var throttle := van.get_node_or_null(^"NetRestThrottle") as NetRestThrottle
+			if throttle != null:
+				throttles.append(throttle)
+	var frames: int = 0
+	while frames < PARK_FRAMES and throttles.any(func(t: NetRestThrottle) -> bool: return not t.is_resting()):
+		await physics_frame
+		frames += 1
+	_expect(not throttles.is_empty() and throttles.all(func(t: NetRestThrottle) -> bool: return t.is_resting()),
+		"The fleet's parked vehicles rest (NetRestThrottle.is_resting()) within %d frames" % PARK_FRAMES)
+	_line("parked_rest", "after %d physics frames" % frames)
 
 
 ## Prints what the world gave the model and checks it is all there; false when the cases can't be
@@ -199,8 +232,10 @@ func _print_world(world: Dictionary) -> bool:
 	var aboard: float = CASES.fastest(ride.player)
 	_line("player_pose_rate", "%.1f/s (every %.4f s; CompanyTuning.SHED_POSE_RATE_HZ %d)" % [
 		1.0 / on_foot, on_foot, CompanyTuning.SHED_POSE_RATE_HZ])
-	_line("rider_pose_rate", "%.1f/s (every %.4f s, aboard: player.tscn's own)"
-		% [1.0 / aboard, aboard])
+	var standing: float = CASES.fastest(ride.standing)
+	_line("rider_pose_rate", ("%.1f/s seated (every %.4f s; CompanyTuning.SEATED_POSE_RATE_HZ %d), %.1f/s"
+		+ " standing in a bay (player.tscn's own)") % [1.0 / aboard, aboard,
+			CompanyTuning.SEATED_POSE_RATE_HZ, 1.0 / standing])
 	_line("vehicle_synchronizer", "%s %d B every %.4f s moving (parked: every %.3f s)" % [
 		ride.vehicle[2], ride.vehicle[1], ride.vehicle[0], ride.parked_interval])
 	_line("box_synchronizer", ("Package/MultiplayerSynchronizer %d B every %.4f s moving, every"
@@ -208,10 +243,23 @@ func _print_world(world: Dictionary) -> bool:
 			ride.box_entry, ride.box_interval, ride.box_rest, ride.box_settle, ride.cargo])
 	_line("trip_event_bytes", "%d, the larger of %s (%d orders and boxes)" % [
 		ride.trip_bytes, ", ".join(PackedStringArray(ride.trip_kinds)), ride.cargo])
-	_line("keepalive", "a hidden body every %.0f s for %.2f s or two of its intervals"
-		% [ride.keepalive, ride.pulse] + " (CompanyInterest)")
-	_expect(aboard < on_foot, "Aboard, a player sends its pose more often than on foot"
-		+ " (%.4f < %.4f s)" % [aboard, on_foot])
+	_line("keepalive", ("a hidden body every %.0f s for %.2f s or two of its intervals"
+		+ " (CompanyInterest); a pulse wakes a box riding still %d times (on: %s)")
+		% [ride.keepalive, ride.pulse, ride.pulse_wakes, ride.pulse_wake_on])
+	_line("care_state", ("%d B a tended box (%s), %.0f deltas/s each (ON_CHANGE, reliable; %.0f/s in a"
+		+ " delivery)") % [ride.care_bytes, ride.care_kind, ride.care_hz, CASES.CARE_PUBLISH_HZ])
+	_expect(int(ride.care_bytes) > 0, "A tended box publishes a care_state (got %d B)" % ride.care_bytes)
+	_expect(standing < on_foot, "Standing in a vehicle's bay, a player sends its pose more often than on"
+		+ " foot (%.4f < %.4f s)" % [standing, on_foot])
+	_expect(is_equal_approx(aboard, RIDE.pose_interval(CompanyTuning.SEATED_POSE_RATE_HZ)),
+		"Seated, a player sends at CompanyTuning.SEATED_POSE_RATE_HZ (every %.4f s)" % aboard)
+	var delivery_van: Node = (load(String(ride.scene)) as PackedScene).instantiate()
+	var own: float = (delivery_van.get_node(CompanyFleet.SYNC_PATH) as MultiplayerSynchronizer).replication_interval
+	delivery_van.free()
+	var driven: float = ride.vehicle[0]
+	_expect(is_equal_approx(driven, CompanyTuning.FLEET_POSE_INTERVAL_SEC) and own < driven,
+		("Driven, the fleet's vehicle sends every CompanyTuning.FLEET_POSE_INTERVAL_SEC (%.4f s); its scene"
+		+ " keeps its own for a delivery (%.4f s)") % [ride.vehicle[0], own])
 	_expect(float(ride.vehicle[0]) < float(ride.parked_interval),
 		"Driven, the fleet's vehicle sends at its full rate, not its rest's (%.4f < %.3f s)"
 		% [ride.vehicle[0], ride.parked_interval])
@@ -270,7 +318,12 @@ func _ride(level: CompanyRoot) -> Dictionary:
 	var player := level.player as Player
 	player.net_in_vehicle = true
 	RIDE.apply_pose_rate(player)
+	var standing: Array = _synchronizers(level).player
+	# The riders of the cases sit (a driver, a passenger with the box on the lap): D-2002.4's rate.
+	player.seat_node_path = SEAT_PATH
+	RIDE.apply_pose_rate(player)
 	var aboard: Array = _synchronizers(level).player
+	player.seat_node_path = NodePath()
 	player.net_in_vehicle = false
 	RIDE.apply_pose_rate(player)
 	var vans: Array[Node3D] = []
@@ -288,7 +341,9 @@ func _ride(level: CompanyRoot) -> Dictionary:
 		return {}
 	var ride: Dictionary = await _drive_out(level, van, definition.cargo_slots)
 	ride.merge(_box())
+	ride.merge(await _care_and_pulse())
 	ride.player = aboard
+	ride.standing = standing
 	ride.scene = van.scene_file_path
 	ride.cargo = definition.cargo_slots
 	ride.keepalive = level.interest.keepalive_sec
@@ -370,6 +425,98 @@ func _box() -> Dictionary:
 	}
 	box.free()
 	return found
+
+
+## A tended box's care_state and what a keepalive pulse does to a box riding still, from real boxes
+## (package.tscn in the tree, each trap of TRAPS_DIR): {care_bytes: the largest state
+## PackageRescue.publish_care() leaves as a tended box has it (a crisis prompt, a tool at work),
+## floats as 64-bit; care_kind: its trap; care_sample: that state; care_hz: how often a company box
+## publishes it (BoxToPackage.tune()); pulse_wakes: how many times a pulse to one peer, on and off,
+## wakes its resting NetRestThrottle; pulse_wake_on: whether showing it does}.
+func _care_and_pulse() -> Dictionary:
+	var found: Dictionary = {"care_bytes": 0, "care_kind": "", "care_sample": {}, "care_hz": 0.0,
+		"pulse_wakes": 0, "pulse_wake_on": false}
+	var files: PackedStringArray = DirAccess.get_files_at(TRAPS_DIR)
+	for file: String in files:
+		if not file.ends_with(".tres"):
+			continue
+		var box := BoxToPackage.PACKAGE_SCENE.instantiate() as DeliveryPackage
+		box.trap_definition = load(TRAPS_DIR.path_join(file)) as TrapDefinition
+		box.freeze = true
+		root.add_child(box)
+		var kind: StringName = box.trap_definition.id
+		box.care.message = box.care.crisis_prompt(kind)
+		box.care.work_tool = &"tape"
+		box.care.work = 0.37
+		PackageRescue.publish_care(box)
+		var state: Variant = _worst_floats(box.care_state)
+		var bytes: int = MODEL.encoded_size(state)
+		if bytes > int(found.care_bytes):
+			found.care_bytes = bytes
+			found.care_kind = String(kind)
+			found.care_sample = state
+		# A company box publishes it as BoxToPackage builds it.
+		BoxToPackage.tune(box)
+		found.care_hz = 1.0 / PackageRescue.care_publish_interval(box)
+		box.free()
+	var still := BoxToPackage.PACKAGE_SCENE.instantiate() as RigidBody3D
+	still.freeze = true
+	root.add_child(still)
+	var throttle := still.get_node(^"NetRestThrottle") as NetRestThrottle
+	var sync := still.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	# As CompanyInterest leaves a body it tracks: shown to each peer by its flag.
+	sync.public_visibility = false
+	for show: bool in [true, false]:
+		if not await _wait_rest(throttle):
+			break
+		_pulse(sync, show)
+		if not throttle.is_resting():
+			found.pulse_wakes = int(found.pulse_wakes) + 1
+			found.pulse_wake_on = bool(found.pulse_wake_on) or show
+	# The control: shown to a peer for real (no pulse), the same box wakes, so 0 wakes above is a reading.
+	if await _wait_rest(throttle):
+		Engine.print_error_messages = false
+		sync.set_visibility_for(PULSE_PEER + 1, true)
+		Engine.print_error_messages = true
+		_expect(not throttle.is_resting(), "A box riding still wakes when shown to a peer for real (no pulse)")
+	still.free()
+	return found
+
+
+## Physics frames until `throttle` rests, at most PARK_FRAMES (a failure, not a hang); whether it did.
+func _wait_rest(throttle: NetRestThrottle) -> bool:
+	for _frame: int in range(PARK_FRAMES):
+		if throttle.is_resting():
+			return true
+		await physics_frame
+	_expect(throttle.is_resting(), "A box left still rests within %d frames" % PARK_FRAMES)
+	return throttle.is_resting()
+
+
+## What WorldCellInterest (CompanyInterest) does to `sync` for a keepalive pulse to PULSE_PEER, on or off.
+func _pulse(sync: MultiplayerSynchronizer, show: bool) -> void:
+	# Solo, SceneMultiplayer has no such peer to update and says so: only the throttle's answer counts here.
+	Engine.print_error_messages = false
+	WorldCellInterest.pulse_visibility(sync, PULSE_PEER, show)
+	Engine.print_error_messages = true
+
+
+## `value` with every float as one that needs 64 bits (MODEL.encoded_size()'s worst case), nested.
+static func _worst_floats(value: Variant) -> Variant:
+	match typeof(value):
+		TYPE_FLOAT:
+			return 0.1
+		TYPE_DICTIONARY:
+			var out: Dictionary = {}
+			for key: Variant in value:
+				out[key] = _worst_floats(value[key])
+			return out
+		TYPE_ARRAY:
+			var items: Array = []
+			for item: Variant in value:
+				items.append(_worst_floats(item))
+			return items
+	return value
 
 
 # --- Reports ------------------------------------------------------------------
@@ -579,6 +726,7 @@ func _count_traffic(
 			# As the company world takes every player in: the shed's pose rate (D-2002.3).
 			CompanyRoot.join_crew(player)
 			world_node.add_child(player)
+	_tended.clear()
 	var gated: Array[MultiplayerSynchronizer] = _add_trip_bodies(world, layout, sides, ids)
 	var host_net := sides[0].get_node(^"CompanyNet") as CompanyNet
 	var hands: StringName = CompanyNet.hands_location(CompanyNet.HOST_ID)
@@ -601,6 +749,7 @@ func _count_traffic(
 		if int(places[index]) >= 0:
 			var rider := sides[index].get_node(NodePath("World/Player_%d" % ids[index])) as Player
 			rider.net_in_vehicle = true
+			rider.seat_node_path = SEAT_PATH
 			RIDE.apply_pose_rate(rider)
 	var feet: Vector3 = (sides[0].get_node(NodePath("World/Player_%d" % ids[0])) as Node3D).global_position
 	var rate: float = crew * CASES.ACTIONS_PER_PLAYER_PER_SECOND + CASES.HOST_EVENTS_PER_SECOND
@@ -621,6 +770,7 @@ func _count_traffic(
 			# A drop, then the take back: both units_moved, as _event_sizes() sized them.
 			_busy_step(host_net, hands, feet, sent % 2 == 0)
 			sent += 1
+		_publish_care(world, Time.get_ticks_usec() - start)
 		await process_frame
 	var now: int = Time.get_ticks_usec()
 	var seconds: float = (now - start) / 1e6
@@ -671,6 +821,9 @@ func _add_trip_bodies(
 			van.position = Vector3(10.0 * vehicle, 0.7, 12.0)
 			if van is RigidBody3D:
 				(van as RigidBody3D).freeze = true
+			# As CompanyFleet._make() sets it (the scene's own is a delivery truck's).
+			(van.get_node(CompanyFleet.SYNC_PATH) as MultiplayerSynchronizer).replication_interval = float(
+				ride.vehicle[0])
 			bodies.append(van)
 			var tended: int = CASES.cargo(ride, riders.slice(vehicle, vehicle + 1), 1).x
 			for slot: int in range(int(ride.cargo)):
@@ -687,13 +840,46 @@ func _add_trip_bodies(
 				world_node.add_child(body)
 				if side_index > 0:
 					continue
+				var slot_index: int = bodies.find(body)
+				if slot_index >= 1 and slot_index <= tended:
+					_tended.append(body as DeliveryPackage)
 				var sync := body.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 				sync.public_visibility = false
 				for client: int in range(1, sides.size()):
 					var sees: bool = int(places[client]) >= 0 or bool(layout.near)
 					sync.set_visibility_for(ids[client], sees)
 				gated.append(sync)
+		# A box in the hands of each player in the shed, loading (CASES.loading()), moving.
+		for index: int in range(CASES.loading(layout, places)):
+			var carried := BoxToPackage.PACKAGE_SCENE.instantiate() as RigidBody3D
+			carried.name = "Loading_%d" % index
+			carried.freeze = true
+			carried.position = Vector3(index - 4.0, 0.4, -6.0)
+			carried.get_node(^"NetRestThrottle").free()
+			var carried_sync := carried.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+			carried_sync.replication_interval = float(ride.box_interval)
+			world_node.add_child(carried)
+			if side_index > 0:
+				continue
+			carried_sync.public_visibility = false
+			for client: int in range(1, sides.size()):
+				carried_sync.set_visibility_for(ids[client], int(places[client]) < 0 or bool(layout.near))
+			gated.append(carried_sync)
 	return gated
+
+
+## The host's tended boxes publish the measured care_state (world.ride.care_sample, something in it
+## changed) at world.ride.care_hz each, each on its own phase, `elapsed` µs into the count.
+func _publish_care(world: Dictionary, elapsed: int) -> void:
+	var every: float = 1.0 / maxf(float(world.ride.care_hz), 0.001)
+	for index: int in range(_tended.size()):
+		var box: DeliveryPackage = _tended[index]
+		var due: int = floori((elapsed / 1e6 + index * every / maxf(_tended.size(), 1.0)) / every)
+		if int(box.get_meta(&"care_published", -1)) != due:
+			box.set_meta(&"care_published", due)
+			var state: Dictionary = (world.ride.care_sample as Dictionary).duplicate(true)
+			state["work"] = 0.1 + due * 1e-3
+			box.care_state = state
 
 
 func _report_measured(layout: Dictionary) -> void:

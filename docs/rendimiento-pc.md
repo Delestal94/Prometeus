@@ -226,8 +226,9 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 
 ## Ancho de banda del modo Empresa (D-2002)
 
-**Fecha:** 2026-10-22 (D-2002.2: una salida afuera y 2 vehículos lejos). **Commit:** base `origin/main` `a7405f5`
-(rama `exp/D-2002.2-exit-bandwidth`). Antes: D-2002.3 el 2026-10-19 sobre `425041a` (`exp/D-2002-shed-pose-rate`) y
+**Fecha:** 2026-10-22 (D-2002.4: lo que D-2002.2 dejaba afuera y las palancas de las salidas). **Commit:** base
+`origin/main` `7ac2db32` (rama `exp/D-2002.4-bandwidth-exits`). Antes: D-2002.2 el mismo día sobre `a7405f5`
+(`exp/D-2002.2-exit-bandwidth`), D-2002.3 el 2026-10-19 sobre `425041a` (`exp/D-2002-shed-pose-rate`) y
 D-2002.1 sobre `3d4a242` (`exp/D-2002-bandwidth-budget`). Lo mide `tests/test_company_bandwidth_budget.gd` (corre en
 la batería, filtro `company`; imprime líneas `COMPANY_BW`), con los casos en `tests/company_bandwidth_cases.gd`:
 
@@ -248,9 +249,10 @@ el host en el galpón o a bordo de cada vehículo, y cada cliente. Cada caso da 
   Steam puede juntar mensajes en un datagrama, y los intervalos distintos se cuentan en paquetes aparte.
   Para las salidas: la camioneta de la flota (`CompanyFleet`, `World/Vehicles/van_classic`) se maneja por código a
   través del portón con la carga completa preparada (sus `cargo_slots`: 7 pedidos de un día tardío, cada uno en su
-  caja), así que su sincronizador cuenta al ritmo que manda en movimiento (`NetRestThrottle` despierto: cada 16,7 ms)
+  caja), así que su sincronizador cuenta al ritmo que manda en movimiento (`NetRestThrottle` despierto: cada 16,7 ms
+hasta D-2002.4, cada 30 ms desde entonces)
   y los eventos `trip_started` / `trip_closed` son los reales que publica `CompanyTripsView`. El jugador a bordo
-  (`net_in_vehicle`) manda al ritmo que le da `apply_pose_rate()` (30/s). La carga es el sincronizador de
+  (`net_in_vehicle`) manda al ritmo que le da `apply_pose_rate()` (30/s; sentado, 15/s desde D-2002.4). La carga es el sincronizador de
   `package.tscn` (`BoxToPackage.PACKAGE_SCENE`).
 - **Medido (ENet):** 4 u 8 peers ENet en localhost, en un proceso, cada uno con un jugador real (`player.tscn`) por
   peer, sumado a la cuadrilla como lo hace el mundo de la empresa (`CompanyRoot.join_crew()`), y un `CompanyNet`;
@@ -270,8 +272,8 @@ el host en el galpón o a bordo de cada vehículo, y cada cliente. Cada caso da 
   el modelo. **No** es cierto que el margen cubra todo con vehículos afuera (`auditor-red`, 2026-10-22): ver
   "Salvedades de D-2002.2" abajo.
 
-**Salvedades de D-2002.2 (`auditor-red`, 2026-10-22): los números de las salidas suponen cosas que todavía no
-existen y dejan afuera costos reales. Con el código de hoy, "con 4 jugadores entra" no está probado.**
+**Salvedades de D-2002.2 (`auditor-red`, 2026-10-22), resueltas en D-2002.4 salvo la 5 (ver "D-2002.4" abajo):
+los números de las salidas de D-2002.2 suponían cosas que todavía no existían y dejaban afuera costos reales.**
 
 1. **Qué camioneta lleva cada cuerpo** (premisa, la resuelve D-0302.2.b.2): caja y jugador buscan su vehículo con
    `get_first_node_in_group(&"vehicle")` (`package.gd` `_find_vehicle`, `player_ride.gd`), siempre la primera de
@@ -289,7 +291,14 @@ existen y dejan afuera costos reales. Con el código de hoy, "con 4 jugadores en
 5. **Al reaparecer la visibilidad** puede reenviarse cada `ON_CHANGE` (NodePaths y diccionarios de la caja): falta
    verificarlo en el código de Godot 4.7.
 
-Todo eso entra en D-2002.4: el test tiene que contarlo antes de dar por buenos los presupuestos de las salidas.
+Qué hizo D-2002.4 con cada una: (1) resuelta por D-0302.2.b.4 del lado del dueño (`VehiclePick`);
+`test_company_multi_vehicle` prueba que una caja quieta en la segunda camioneta, que sigue andando, manda en su
+espacio y descansa (la copia en los otros peers sigue en la primera: D-0302.2.b.4.b); (2) contado con el
+`care_state` real más grande (`PackageRescue.publish_care()` de cada trampa, la bomba: 912 B) como delta
+`ON_CHANGE` confiable a su ritmo; (3) contada una caja en la mano, a 30/s, por cada jugador del galpón mientras
+hay vehículos afuera, en el modelo y en ENet; (4) cada cliente del galpón con su propio reloj de pulsos; (5)
+queda abierta (verificar en el código de Godot 4.7 si al reaparecer se reenvía cada `ON_CHANGE`). Además el test
+espera `is_resting()` de la camioneta estacionada en vez de 30 ticks fijos (descansa a los 26).
 
 Carga de "galpón a full": cada jugador hace una acción de negocio por segundo (tomar, guardar, poner en la grilla,
 encintar; a bordo, entregar: una petición que el host convierte en un evento para todos) más una por segundo de
@@ -321,12 +330,19 @@ estos ritmos se cambian por un día medido.
 una salida pasa 40 KB/s o 2 vehículos lejos pasan 64**; con 8 esos dos no entran todavía en el modelo: se imprimen
 (`over_budget` con los culpables) y no fallan (`FULL_CREW_FITS`; el test avisa cuando entren).
 
+**Desde D-2002.4 el test también falla si con 8 jugadores 2 vehículos lejos pasan 64** (`FULL_CREW_FITS["far"]`);
+la salida con 8 se imprime y no falla.
+
 | Caso | Presupuesto por cliente | 4 jugadores (modelo / ENet) | 8 jugadores (modelo / ENet) | Estado |
 |---|---|---|---|---|
-| Galpón, poses a 15/s (D-2002.3) | ≤ 24 KB/s | 9,1 / 5,9-6,0 | 20,2 / 12,8-13,6 | Entran los dos (el test falla si alguno se pasa) |
+| Galpón, poses a 15/s (D-2002.3, igual en D-2002.4) | ≤ 24 KB/s | 9,1 / 5,9-6,0 | 20,2 / 12,8-13,6 | Entran los dos (el test falla si alguno se pasa) |
+| **Una salida afuera (D-2002.4, todo contado y 4 palancas)** | ≤ 40 KB/s | **38,7 / 30,2-30,8** | **67,3 / 52,2-54,0** | 4 entra (el test falla si se pasa); 8 no entra: las 6 cajas en la mano de los que cargan |
+| **2 vehículos lejos (D-2002.4, todo contado y 4 palancas)** | ≤ 64 KB/s | **45,9 / 36,6-36,9** | **57,0 / 40,1-42,4** | Entran los dos (el test falla si alguno se pasa) |
+| Una salida, todo contado, sin palancas (D-2002.4, antes) | ≤ 40 KB/s | 54,3 / — | 82,9 / — | 4 no entraba |
+| 2 lejos, todo contado, sin palancas (D-2002.4, antes) | ≤ 64 KB/s | 69,9 / — | 90,9 / — | 4 no entraba |
 | Galpón, poses a 30/s (D-2002.1, antes) | ≤ 24 KB/s | 16,1 / 10,8-10,9 | 37,2 / 22,5-25,2 | 4 entraba; 8 se pasaba |
-| Una salida afuera (D-2002.2) | ≤ 40 KB/s | 35,6 / 23,1-23,6 | **46,6** / 26,0-30,3 | 4 entra (el test falla si se pasa); 8 se pasa en el modelo (6,6 KB/s), no en ENet |
-| 2 vehículos lejos (D-2002.2) | ≤ 64 KB/s | 50,1 / 33,2-33,7 | **66,2** / 38,3-42,7 | 4 entra (el test falla si se pasa); 8 se pasa en el modelo (2,2 KB/s), no en ENet |
+| Una salida afuera (D-2002.2, sin las salvedades) | ≤ 40 KB/s | 35,6 / 23,1-23,6 | 46,6 / 26,0-30,3 | Superado por D-2002.4 |
+| 2 vehículos lejos (D-2002.2, sin las salvedades) | ≤ 64 KB/s | 50,1 / 33,2-33,7 | 66,2 / 38,3-42,7 | Superado por D-2002.4 |
 
 El galpón subió 0,4 KB/s desde D-2002.3 (8,7 → 9,1 y 19,8 → 20,2): es la camioneta de la flota estacionada afuera
 (D-0302.2.b), que el modelo cuenta sola a su ritmo de reposo (133 B cada 0,5 s).
@@ -415,7 +431,7 @@ Con 4 jugadores (50,1, entra): 20,4 / 11,2 / 5,0 (el otro conductor) / 3,8 / 2,5
 4; 33,1 con 8): 2 camionetas, 2 cajas cuidadas y 12 quietas que se despiertan con el pulso (sin despertarlas serían
 ~0,5).
 
-**Qué haría entrar a 8 (estimado con el mismo modelo; no aplicado):**
+**Qué haría entrar a 8 (estimado en D-2002.2 con el mismo modelo; las primeras se aplicaron en D-2002.4, arriba):**
 
 - **La camioneta a 30/s en el mundo de la empresa** (0,0333 en vez de 0,0167): comparte el paquete de las cajas
   cuidadas. Una salida 46,6 → 37,9; 2 lejos 66,2 → 53,6. Entran las dos con un solo número. Además a 60 FPS el
@@ -438,6 +454,41 @@ Con 4 jugadores (50,1, entra): 20,4 / 11,2 / 5,0 (el otro conductor) / 3,8 / 2,5
 
 Con 4 jugadores las dos salidas entran sin nada de esto. Con el techo de diseño a bordo (conductor y 3 pasajeros, 3
 con 4 jugadores) una salida da 39,7: entra sin margen.
+
+**D-2002.4 (2026-10-22): lo que faltaba contar y las palancas de las salidas**
+([decisión](decisiones/2026-10-22-palancas-ancho-de-banda-salidas.md)). Todo solo en el modo Empresa; el Reparto
+y el Infinito no cambian:
+
+1. La camioneta de la flota manda cada 0,03 s en movimiento (`CompanyTuning.FLEET_POSE_INTERVAL_SEC`, en
+   `CompanyFleet._make()` antes de que `NetRestThrottle` guarde el intervalo). Medido con el tope de FPS del
+   motor, 2 peers ENet: el 0,0167 de siempre manda 35,8/s a 60 FPS y 47,9 a 144; 0,0333 (`pose_interval(30)`)
+   25,0 y 28,7; 0,03, 30,0 y 29,0. El modelo la cuenta a 33,3/s en un paquete propio.
+2. Sentados, 15/s (`CompanyTuning.SEATED_POSE_RATE_HZ`, `player_ride.gd` `set_seated_pose_rate()`); parado en la
+   caja de carga, 30. Los de a bordo de los casos van sentados (conductor y pasajero con la caja en la falda).
+3. El keepalive no despierta: `WorldCellInterest.pulse_visibility()` cambia la visibilidad con la meta
+   `net_rest_quiet` y `NetRestThrottle` la respeta; tampoco se despierta al ocultar. El test lo mide con una caja
+   real (`pulse wakes ... 0 times`).
+4. `care_state` de una caja de la empresa cada 0,2 s (`CompanyTuning.CARE_PUBLISH_SEC`, `BoxToPackage.tune()`).
+
+Lo que se cuenta nuevo (modelo): `care_state` de 912 B (bomba; con su cabecera de delta, 17 B) a 5/s por caja
+cuidada: 4,9 KB/s cada una (a 10/s eran 9,9); una caja en la mano a 30/s por cada jugador del galpón durante
+una salida: 5,2 KB/s cada una; con 2 lejos y 8, los pulsos desfasados de 3 clientes del galpón despertaban las
+cajas quietas por 7,4-9,9 KB/s para los de a bordo (ahora 0, y al galpón el pulso le cuesta 0,4).
+
+Culpables después de las palancas (modelo, peor cliente):
+
+- Salida con 4 (38,7; el peor va a bordo): 2 cajas en la mano en el galpón 10,4 / la camioneta 7,0 / la caja
+  cuidada 5,2 / su `care_state` 4,9 / el otro de a bordo 2,5 / el otro del galpón 2,5 / el resto (pose del host,
+  eventos, cajas quietas) 6,1.
+- Salida con 8 (67,3, no entra; el peor va a bordo): 6 cajas en la mano 28,5 / 5 del galpón reenviados 12,5 / la
+  camioneta 7,0 / `care_state` 4,9 / la caja cuidada 4,7 / el resto 9,6.
+- 2 lejos con 4 (45,9): las 2 camionetas 11,4 / las 2 cajas cuidadas 11,2 / sus `care_state` 9,9 / las 12 quietas
+  3,8 / el resto 9,7. Al del galpón le llegan 21,3.
+- 2 lejos con 8 (57,0): 11,4 / 11,2 / 9,9 / 3 de a bordo reenviados 7,5 / 3 del galpón 7,5 / el resto 9,5. Al del
+  galpón, 41,2 (entra en los 64 del caso, no en los 24 del galpón: ver `revisar/D-2002.4.md`).
+
+Por qué ENet sube tanto respecto de D-2002.2 (salida con 4, 23,6 → 30,8): ahora se miden las 2 cajas en la mano y
+los deltas de `care_state`, que antes no estaban; la camioneta y los sentados bajaron.
 
 **Cómo está hecho D-2002.3:**
 
