@@ -39,6 +39,7 @@ extends SceneTree
 const PORT: int = 24685
 const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 ## A catalog of the test: four real items, the real bike enabled and a machine that requires the label reader.
+const STARTED_BIKE: Array = [{"id": &"van_classic"}, {"vehicle": &"bike"}]
 const CATALOG: String = "user://test_company_shop_net"
 const COPIED: Array[String] = ["upgrade_1", "label_reader", "expansion_1", "expansion_2"]
 const HOST_MINUTE: int = 9 * 60 + 30
@@ -176,7 +177,7 @@ func _test_helper() -> void:
 		"An expansion moves warehouse_stage to 1 (%s)" % grown.get(&"warehouse_stage"))
 	grown.set(&"money", 300)
 	_expect(shop.apply(grown, {"item": &"vehicle_bike", "money": 50, "minute": HOST_MINUTE})
-		and (grown.get(&"fleet") as Array) == [{"vehicle": &"bike"}] and int(grown.get(&"money")) == 50,
+		and (grown.get(&"fleet") as Array) == STARTED_BIKE and int(grown.get(&"money")) == 50,
 		"A vehicle goes into the fleet (%s)" % [grown.get(&"fleet")])
 	_expect(not shop.take_drift(), "...and a wallet that matched the host's flags no drift")
 	state.free()
@@ -359,7 +360,7 @@ func _check_host_buys(host: Peer, client: Peer) -> void:
 		_expect(_wallet(client) == _wallet(host), "...both peers hold the same company after %s" % item)
 	var bought: Dictionary = _wallet(host)
 	_expect(bought["money"] == 0 and bought["equipment"] == [&"upgrade_1"] and bought["warehouse_stage"] == 1
-		and bought["fleet"] == [{"vehicle": &"bike"}],
+		and bought["fleet"] == STARTED_BIKE,
 		"1500 spent on upgrade_1, expansion_1 and the bike (%s)" % [bought])
 	var entries: Array = (client.state.get(&"ledger") as Array).slice(-3)
 	_expect(entries.map(func(entry: Dictionary) -> Array: return [entry["amount"], entry["reason"], entry["minute"]])
@@ -422,7 +423,7 @@ func _check_late_join(host: Peer, client: Peer, late: Peer, late_peer: ENetMulti
 		return
 	var seen: Dictionary = _wallet(late)
 	_expect(seen == _wallet(host) and seen["equipment"] == [&"upgrade_1", &"label_reader"]
-		and seen["warehouse_stage"] == 1 and seen["fleet"] == [{"vehicle": &"bike"}],
+		and seen["warehouse_stage"] == 1 and seen["fleet"] == STARTED_BIKE,
 		"The late peer gets every purchase from the snapshot's company part (%s)" % [seen])
 	_expect(_ask(host, {"item": &"test_sorter"}) == &"" and await _synced(host, [client, late]),
 		"The host buys a machine that requires the label reader and both followers apply it")

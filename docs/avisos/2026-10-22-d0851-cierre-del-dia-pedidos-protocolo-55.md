@@ -1,14 +1,14 @@
-# Protocolo 54: el cierre del día para los pedidos (D-0851)
+# Protocolo 55: el cierre del día para los pedidos (D-0851)
 
 **Fecha:** 2026-10-22 · **De:** Nacho (red, pedidos) · **Para:** Slatex
 
 ## Qué cambió
 
-- **`PROTOCOL_VERSION` 54** (`scripts/core/network_manager.gd`, zona compartida): la constante y su línea del historial.
+- **`PROTOCOL_VERSION` 55** (`scripts/core/network_manager.gd`, zona compartida): la constante y su línea del historial.
   El PR abierto #694 (D-0616.b) usa el 51, así que el 51 falta en esta rama hasta que entre: `test_protocol_version` falla
   acá por eso y pasa al mezclar `main` (`docs/convenciones-godot.md` §6). **Cambió el protocolo** sin RPC nuevo:
   `CompanyNet._apply_event` acepta un tipo nuevo, `order_closed {order, state}` (`failed` o `cancelled`), host-only como
-  `order_added` y `order_expired`. Un cliente con 50 y un host con 54 no se conectan.
+  `order_added` y `order_expired`. Un cliente con 50 y un host con 55 no se conectan.
 - **Qué hace**: un pedido que termina sin entrega (el cliente se cansó una ventana después de vencer, la camioneta volvió
   con él, o el día terminó) se cierra en el libro de cada peer. La reputación (−3 por `failed`) la escribe solo el host.
 - Archivos de zona compartida o ajena tocados: `scripts/core/network_manager.gd` (historial), `scripts/core/company/`

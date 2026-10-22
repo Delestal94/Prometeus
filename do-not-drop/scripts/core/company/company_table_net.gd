@@ -27,6 +27,8 @@ extends RefCounted
 ##   box_label     {station}                              (with the table's order, order_of)
 ##   box_stamp     {station, stamp: a BoxSeals kind}
 ##   box_tape      {station}
+##   box_restock   {station, supply: a StationSupplies kind}  (back to capacity, free: D-0715.c)
+##   box_discard   {station}                              (the open box is thrown away, D-0715.c)
 ## Events (`money` is the host's balance after the step, `minute` its clock minute for the wallet
 ## entry, as CompanyLayoutNet's: a copy whose wallet was off is set right and asks for a snapshot):
 ##   box_started   {table, size, box, money, minute}
@@ -37,11 +39,17 @@ extends RefCounted
 ##   box_stamped   {table, stamp, money, minute}
 ##   box_sealed    {table, order, package_id, node_name, trap, trap_intensity, contents, absorption,
 ##                  quality, pos, basis, money, minute}
+##   box_restocked {table, supply, count}                 (count: what the table holds after)
+##   box_discarded {table, box, contents, to: hands:<peer> or floor:<n>, pos (with floor:<n> only)}
 ## box_sealed takes the box off the table on every peer and puts the DeliveryPackage it became in
 ## the world, named node_name, at pos and basis (`packages`, CompanyPackages, D-0715.b); a peer
-## checks those fields too before it changes anything. Refusals: bad_data, no_station,
-## out_of_reach (CompanyNet's), not_enough, hands_busy, hands_full, no_room, no_money and the
-## REASON_* below.
+## checks those fields too before it changes anything. box_discarded takes the open box off the
+## table too, thrown away (D-0719's rules: its padding, label and seals go with it, nothing is
+## refunded, no box goes back to the supplies); its units go to the sender's hands when they all fit
+## there, else to one new floor bundle at the table's spot (`bundles`, CompanyNet's FloorBundles).
+## Restocking costs time, not money (D-0718): box_restocked moves none. Refusals: bad_data,
+## no_station, out_of_reach (CompanyNet's), not_enough, hands_busy, hands_full, no_room, no_money
+## and the REASON_* below.
 
 const START: StringName = &"box_start"
 const PLACE: StringName = &"box_place"
@@ -50,7 +58,9 @@ const FILL: StringName = &"box_fill"
 const LABEL: StringName = &"box_label"
 const STAMP: StringName = &"box_stamp"
 const TAPE: StringName = &"box_tape"
-const REQUEST_KINDS: Array[StringName] = [START, PLACE, TAKE_OUT, FILL, LABEL, STAMP, TAPE]
+const RESTOCK: StringName = &"box_restock"
+const DISCARD: StringName = &"box_discard"
+const REQUEST_KINDS: Array[StringName] = [START, PLACE, TAKE_OUT, FILL, LABEL, STAMP, TAPE, RESTOCK, DISCARD]
 const STARTED: StringName = &"box_started"
 const PLACED: StringName = &"box_placed"
 const TAKEN_OUT: StringName = &"box_taken_out"
@@ -58,8 +68,10 @@ const FILLED: StringName = &"box_filled"
 const LABELED: StringName = &"box_labeled"
 const STAMPED: StringName = &"box_stamped"
 const SEALED: StringName = &"box_sealed"
+const RESTOCKED: StringName = &"box_restocked"
+const DISCARDED: StringName = &"box_discarded"
 const EVENT_KINDS: Array[StringName] = [
-	STARTED, PLACED, TAKEN_OUT, FILLED, LABELED, STAMPED, SEALED,
+	STARTED, PLACED, TAKEN_OUT, FILLED, LABELED, STAMPED, SEALED, RESTOCKED, DISCARDED,
 ]
 ## Key of the tables in CompanyNet's snapshot (CompanyNet adds the part itself).
 const SNAPSHOT_KEY: String = "packing"
@@ -83,8 +95,11 @@ const REASON_HAS_BOX: StringName = &"has_box"
 const REASON_NO_BOX: StringName = &"no_box"
 ## A step on a box already taped shut.
 const REASON_SEALED: StringName = &"sealed"
-## The table ran out of that supply: boxes of that size, tape or padding (D-0718).
+## The table ran out of that supply: boxes of that size, tape or padding (D-0718); or box_restock of
+## a supply the shed is short of today (short_of: box_shortage).
 const REASON_NO_SUPPLY: StringName = &"no_supply"
+## box_restock of a supply the table already holds to capacity (D-0715.c).
+const REASON_FULL: StringName = &"supply_full"
 ## box_place where the product sticks out of the box or lands on a product or padding.
 const REASON_CELL_TAKEN: StringName = &"cell_taken"
 ## box_take_out at a cell with no product (empty or padding).
@@ -118,6 +133,13 @@ var order_of: Callable = Callable()
 ## The DeliveryPackage each box_sealed makes on this peer (D-0715.b). The world sets its `parent`
 ## (CompanyRoot: World/Packages); unset, no package is built and the event applies all the same.
 var packages: CompanyPackages = CompanyPackages.new()
+## Host: the supplies the shed can't restock today, as Callable(supply: StringName) -> bool (the day
+## event box_shortage, eventos-del-dia.md #4: that day's box_<size>); box_restock of one is refused
+## with no_supply. Unset, every supply restocks.
+var short_of: Callable = Callable()
+## Where the floor bundles lie on this peer: CompanyNet sets its own floor_bundles here. A
+## box_discarded whose units don't fit in the hands lays a new one at the table's spot (D-0715.c).
+var bundles: FloorBundles = FloorBundles.new()
 
 ## {table: PackingStation} of every table touched; {table: box id} of each one holding a box.
 var _tables: Dictionary = {}
@@ -199,6 +221,8 @@ func check(state: Object, stock: Inventory, kind: StringName, data: Dictionary,
 	var desk: PackingStation = _desk(table)
 	if kind == START:
 		return _check_start(state, stock, desk, table, data)
+	if kind == RESTOCK:
+		return _check_restock(desk, table, data)
 	if not desk.has_box():
 		return _refused(REASON_NO_BOX)
 	if desk.box.taped:
@@ -217,6 +241,8 @@ func check(state: Object, stock: Inventory, kind: StringName, data: Dictionary,
 			asked = _check_stamp(state, desk, table, data)
 		TAPE:
 			asked = _check_tape(state, desk, table, station)
+		DISCARD:
+			asked = _check_discard(stock, desk, table, station, hands)
 	return asked
 
 
@@ -233,6 +259,8 @@ func apply(state: Object, stock: Inventory, kind: StringName, data: Dictionary) 
 		return false
 	if kind == STARTED:
 		return _apply_started(state, StringName(table), data)
+	if kind == RESTOCKED:
+		return _apply_restocked(StringName(table), data)
 	var desk: PackingStation = _tables.get(StringName(table))
 	if desk == null or not desk.has_box() or desk.box.taped:
 		return false
@@ -251,6 +279,8 @@ func apply(state: Object, stock: Inventory, kind: StringName, data: Dictionary) 
 			applied = _apply_stamped(state, desk, data)
 		SEALED:
 			applied = _apply_sealed(state, stock, StringName(table), data)
+		DISCARDED:
+			applied = _apply_discarded(stock, StringName(table), data)
 	return applied
 
 
@@ -413,6 +443,48 @@ func _check_tape(state: Object, desk: PackingStation, table: StringName,
 		"contents": box.contents(), "absorption": BoxToPackage.absorption(shut), "quality": quality,
 		"pos": station.get("spot"), "basis": Basis.IDENTITY,
 	}))
+
+
+## Fills one supply of the table back to its capacity (StationSupplies.restock()), with or without a
+## box on it: a table out of tape gets unstuck. For free: restocking costs the time of whoever does
+## it, not money (D-0718). Refused when that supply is full already or the shed is short of it today.
+func _check_restock(desk: PackingStation, table: StringName, data: Dictionary) -> Dictionary:
+	var supply: Variant = data.get("supply")
+	if not (CompanyAsk.is_id(supply) and StationSupplies.is_kind(StringName(supply))):
+		return _refused(REASON_BAD_DATA)
+	var full: int = int(CompanyTuning.SUPPLY_CAPACITY[StringName(supply)])
+	if desk.supplies.count(StringName(supply)) >= full:
+		return _refused(REASON_FULL)
+	if short_of.is_valid() and short_of.call(StringName(supply)) == true:
+		return _refused(REASON_NO_SUPPLY)
+	return _granted(RESTOCKED, {"table": table, "supply": StringName(supply), "count": full})
+
+
+## Throws the open box away (D-0715.c): its units go back to the sender's hands when they all fit
+## there (_fits_in()), else into one new floor bundle at the table's spot, where the box was (the
+## products back on the table, as D-0719's disassemble()). Its padding, label and seals go with it.
+func _check_discard(stock: Inventory, desk: PackingStation, table: StringName, station: Dictionary,
+		hands: StringName) -> Dictionary:
+	var contents: Dictionary = desk.box.contents()
+	var discarded: Dictionary = {"table": table, "box": box_of(table), "contents": contents, "to": hands}
+	if not _fits_in(stock, hands, contents):
+		discarded["to"] = bundles.next_free(stock)
+		discarded["pos"] = station.get("spot")
+	return _granted(DISCARDED, discarded)
+
+
+## True when `contents` (product -> units) all fit in `hands`: nothing, or one product the hands are
+## empty of or already hold, up to HAND_MAX_UNITS (the rule of taking units, row 5).
+static func _fits_in(stock: Inventory, hands: StringName, contents: Dictionary) -> bool:
+	if contents.size() > 1:
+		return false
+	var held: Dictionary = stock.contents_at(hands)
+	for product: StringName in contents:
+		if held.size() > 1 or (held.size() == 1 and not held.has(product)):
+			return false
+		if stock.count(product, hands) + int(contents[product]) > CompanyTuning.HAND_MAX_UNITS:
+			return false
+	return true
 
 
 ## Row 10: a unit put in the box on `table` comes out of its order's reservation first and else
@@ -593,6 +665,56 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 	_box_ids.erase(table)
 	packages.put(package)
 	return true
+
+
+## The supply is back at its capacity (StationSupplies.restock()). `count` is what the host's table
+## holds after, so a copy that held another count ends on the host's. No money moves (D-0718).
+func _apply_restocked(table: StringName, data: Dictionary) -> bool:
+	var supply: Variant = data.get("supply")
+	var count: Variant = data.get("count")
+	if not (CompanyAsk.is_id(supply) and StationSupplies.is_kind(StringName(supply))):
+		return false
+	if typeof(count) != TYPE_INT or int(count) != int(CompanyTuning.SUPPLY_CAPACITY[StringName(supply)]):
+		return false
+	var desk: PackingStation = _desk(table)
+	desk.supplies.restock(StringName(supply))
+	_tables[table] = desk
+	return true
+
+
+## The open box leaves the table, thrown away (row 15b), and its units go where the host said: the
+## sender's hands (one product at most) or a new floor bundle at `pos` (`bundles`). Checked first
+## against this copy: the same box and contents, its units in box:<id>, a bundle that is free here.
+func _apply_discarded(stock: Inventory, table: StringName, data: Dictionary) -> bool:
+	var desk: PackingStation = _tables[table]
+	var box_id: StringName = _box_ids[table]
+	var contents: Variant = data.get("contents")
+	var to: Variant = data.get("to")
+	var pos: Variant = data.get("pos")
+	var held: Dictionary = desk.box.contents()
+	if not (_id_ok(data.get("box")) and StringName(data["box"]) == box_id):
+		return false
+	if not contents is Dictionary or contents != held:
+		return false
+	if not (_hands_ok(to) and held.size() <= 1) and not _bundle_free(stock, to, pos, held):
+		return false
+	var box_at: StringName = box_location(box_id)
+	for product: StringName in held:
+		if stock.count(product, box_at) < int(held[product]):
+			return false
+	for product: StringName in held:
+		bundles.apply_move(stock, product, int(held[product]), box_at, StringName(to), pos)
+	desk.take_box()
+	_box_ids.erase(table)
+	return true
+
+
+## A floor bundle a box_discarded may lay here: a floor:<n> id at a finite `pos`
+## (FloorBundles.positions_ok()), for some units, holding nothing and lying nowhere on this peer yet.
+func _bundle_free(stock: Inventory, to: Variant, pos: Variant, held: Dictionary) -> bool:
+	if held.is_empty() or not _id_ok(to) or not FloorBundles.positions_ok({to: pos}):
+		return false
+	return stock.contents_at(StringName(to)).is_empty() and bundles.position_of(StringName(to)) == null
 
 
 ## The host's balance before the event's movement: a copy that holds another missed something; it
