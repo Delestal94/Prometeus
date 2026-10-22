@@ -551,7 +551,7 @@ voto es D-0518.b).
 
 ## 13. Lo construido (D-0518): la tienda, solo el host gasta
 
-- **Petición** `shop_buy` y **evento** `shop_bought` (fila 25, protocolo 46), por el `_request` / `_apply_event` de
+- **Petición** `shop_buy` y **evento** `shop_bought` (fila 25, protocolo 47), por el `_request` / `_apply_event` de
   siempre: ningún RPC nuevo. `CompanyNet` los suma a `REQUEST_KINDS` / `EVENT_KINDS` y los pasa a `CompanyNet.shop`
   (`CompanyShopNet`, `scripts/core/company/company_shop_net.gd`): `ask()` / `check()` en el host, `apply()` en cada
   peer (una rama de `_apply_state()`, sin `_:`). No es crítica (regla 8): si se pierde, el jugador vuelve a apretar.

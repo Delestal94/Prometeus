@@ -38,7 +38,7 @@
 | D-0123 | ✅ Diseño de eventos del día (inspección, proveedor tarde, pedido gigante, huelga, ola de calor) | critico-diseno | medium | `diseno/eventos-del-dia.md` con 15 eventos |
 | D-0124 | ✅ Diseño de las licencias (náutica, vuelo, 4x4, alta montaña, zona volcánica) y cómo se obtienen | constructor-progresion | medium | sección en `diseno/hitos.md` |
 | ~~D-0125~~ | ~~Diseño de la competencia NPC (empresa rival que roba clientes si bajás la reputación)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | `diseno/rival.md` o recorte justificado |
-| D-0126 | Definir el modo solo: qué automatiza el juego para que una persona sola pueda llevar el negocio | critico-diseno | high | sección en `diseno/roles-tripulacion.md`; bot de D-2024 lo verifica |
+| D-0126 | ✅ Definir el modo solo: qué automatiza el juego para que una persona sola pueda llevar el negocio | critico-diseno | high | sección en `diseno/roles-tripulacion.md`; bot de D-2024 lo verifica |
 | D-0127 | Definir dificultad/tamaños de partida (empresa chica, mediana, grande) y modificadores | critico-diseno | medium | `diseno/dificultad.md` |
 | ~~D-0128~~ | ~~Encaje del Endless actual en la expansión (¿endless por distrito? ¿desafío diario?)~~ **Fusionada en D-0102 (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | decisión documentada |
 | D-0129 | Glosario de términos del juego (pedido, remito, palet, estación, turno, hito) en español e inglés | documentador | low | `diseno/glosario.md`; lo usa `loc_text` |
@@ -53,6 +53,7 @@
 | D-0138 | Ideas de logros de Steam de la expansión (30) | estratega-steam | low | lista en `docs/marketing/` |
 | D-0139 | Encaje de la expansión en la página de Steam y el tráiler (qué promete y qué no) | estratega-steam | medium | nota en `docs/marketing/` |
 | D-0140 | Revisión de `abogado-del-diablo` del diseño completo una vez escrito D-0101 a D-0139 | abogado-del-diablo | high | informe con lista SIMPLIFICAR/REHACER y tareas ajustadas |
+| D-0151 | Ayudas del modo solo de `diseno/roles-tripulacion.md` §6.2: pausa de verdad sin peers, pedidos que entran antes con 1 jugador, pedido automático al proveedor al cierre | constructor-progresion | high | `test_company_solo_assists` verde; el bot de D-2024 vive del pedido automático |
 
 ## Agentes y proceso
 

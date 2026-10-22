@@ -1,6 +1,6 @@
 # Aviso 2026-10-22 · la tienda de la empresa por red, solo compra el host (D-0518)
 
-**Cambia el protocolo:** `PROTOCOL_VERSION` 45 -> 46 (`scripts/core/network_manager.gd`, zona compartida; solo la
+**Cambia el protocolo:** `PROTOCOL_VERSION` 46 -> 47 (`scripts/core/network_manager.gd`, zona compartida; solo la
 línea del historial y la constante). Un cliente viejo con un host nuevo no se conecta (error claro de versión).
 El PR #630 (D-0618.b) también usa el 45 sobre el 44: al mezclar `main` sube al siguiente libre
 (`docs/convenciones-godot.md` §6.3).

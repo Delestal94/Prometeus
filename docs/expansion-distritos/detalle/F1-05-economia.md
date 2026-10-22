@@ -170,7 +170,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
 ### D-0518 · Solo el host (o un voto) gasta en la tienda — B · Sonnet 5.5 · high · Aviso: sí (`network_manager.gd`) · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 46; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
+**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 47; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
 **Depende de:** D-0511, D-2003, D-2004 (modelo: D-0910 y D-0603.b.2)
 **Qué:** la tienda de D-0511 por red, con el contrato de `diseno/red-autoridad.md` (fila 25 y §13).
 - El host comprueba con `CompanyShop.check()` y publica un evento; cada peer lo aplica con el mismo `CompanyShop.buy()`: máquina → `equipment`, vehículo → `fleet`, ampliación → `warehouse_stage`, libro con motivo `shop`.

@@ -669,17 +669,17 @@ func _on_jack_used(action: StringName, peer_id: int, from: Vector3) -> void:
 
 ## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
 ## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
-## (CompanyPallets.loaded_event: not the ones the shed started with, not the ones already loaded). Once per day,
-## even when nothing loads; never after the truck left.
+## (CompanyPallets.loaded_event), once per day; and when it drove off, jack_departed (D-0618.b, send_truck_off).
 func _load_truck_pallets() -> void:
 	if net == null or not net.is_host() or _hosted_state == null or clock == null or not is_instance_valid(clock):
 		return
 	var day: int = _hosted_state.day
 	var minute: int = floori(clock.minute_now())
-	if _pallets_day == day or _pallets_checked == Vector2i(day, minute):
+	if _pallets_checked == Vector2i(day, minute):
 		return
 	_pallets_checked = Vector2i(day, minute)
-	if not CompanyPallets.load_due(supplier_schedule, day, minute):
+	CompanyPallets.send_truck_off(net.pallets, supplier_schedule, day, minute, net.publish)
+	if _pallets_day == day or not CompanyPallets.load_due(supplier_schedule, day, minute):
 		return
 	var event: Dictionary = net.pallets.loaded_event(day, supplier_schedule.pallets_for(day), net.inventory)
 	if event.is_empty() or net.publish(CompanyPallets.LOADED, event):

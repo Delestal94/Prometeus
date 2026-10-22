@@ -192,3 +192,17 @@ class ScratchState extends RefCounted:
 
 	func store_stock(stock_in: Inventory) -> void:
 		inventory = stock_in.to_dict()
+
+
+## Until the order screen (D-0603) puts real orders in the calendar, the first order of the default shed arrives with
+## the truck every day for `days` days from `first_day`, the same on every peer, so the truck can be seen driving in.
+## It brings nothing: the stock stays what the shed started with.
+static func seed_stand_in(schedule: SupplierSchedule, first_day: int, days: int) -> void:
+	var data: DefaultShed = load_default()
+	if data == null:
+		return
+	var lines: Array = []
+	for line: Dictionary in data.first_order:
+		lines.append({"product": line.get("product", &""), "qty": line.get("qty", 0)})
+	for day: int in range(first_day, first_day + days):
+		schedule.place(day - 1, lines)
