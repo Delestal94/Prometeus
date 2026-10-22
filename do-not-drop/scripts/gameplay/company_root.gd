@@ -849,9 +849,9 @@ func _add_crew() -> void:
 	_world.add_child(_spawner)
 	_spawner.spawned.connect(_on_crew_spawned)
 	_spawns_crew = net != null and net.is_host()
-	if session != null and not session.peer_level_ready.is_connected(_on_peer_level_ready):
-		session.peer_level_ready.connect(_on_peer_level_ready)
-		session.roster_changed.connect(_on_roster_changed)
+	if session != null and not session.peer_level_ready.is_connected(_on_crew_changed):
+		session.peer_level_ready.connect(_on_crew_changed)
+		session.roster_changed.connect(_on_crew_changed)
 	_sync_crew()
 
 
@@ -938,11 +938,8 @@ func _crew_ids() -> Array[int]:
 	return ids
 
 
-func _on_peer_level_ready(_peer_id: int) -> void:
-	_sync_crew()
-
-
-func _on_roster_changed(_peer_ids: Array) -> void:
+## A peer's world is up (peer_level_ready: its id) or the roster changed (roster_changed: the ids).
+func _on_crew_changed(_why: Variant) -> void:
 	_sync_crew()
 
 
