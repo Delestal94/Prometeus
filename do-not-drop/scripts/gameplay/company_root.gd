@@ -341,9 +341,9 @@ func _event_bus() -> Node:
 	return get_node_or_null(^"/root/EventBus")
 
 
-func _on_day_summary(_day: int, summary: Dictionary) -> void:
+func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
-		summary_panel.open(summary)
+		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [])
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.
