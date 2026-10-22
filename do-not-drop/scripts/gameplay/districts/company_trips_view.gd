@@ -39,7 +39,8 @@ extends Node
 ## to that peer alone, as an RPC on this node (_held_here: on every peer and never hidden, unlike the
 ## vehicle, whose RPCs skip the peers it is hidden from), or tells itself when it drives; that peer's
 ## view emits departure_held and shows the reason (WORLD_DISPATCH_FAR_LIMIT) as EventBus.depot_notice,
-## by path. Nobody at the wheel (pushed): nobody is told.
+## by path. Nobody at the wheel (pushed): nobody is told. With it, held_at_gate carries the cap: a client
+## brakes the copy it predicts there too (CompanyGateBrake, D-0316.4).
 
 ## After every trip event applied here and after a snapshot: redraw from vehicles_out()/trip_of().
 signal changed
@@ -47,6 +48,9 @@ signal changed
 signal trip_closed(trip_id: StringName, vehicle_id: StringName, failed: Array[StringName])
 ## The driver's peer only: the host held `vehicle_id` at the gate; `text` is the reason, translated.
 signal departure_held(vehicle_id: StringName, text: String)
+## With departure_held: the cap it was held with (`cap` vehicles out). A client's CompanyGateBrake brakes the copy it
+## predicts at the gate from here, until fewer than `cap` are out (D-0316.4).
+signal held_at_gate(vehicle_id: StringName, cap: int)
 
 ## The event kinds (CompanyNet takes them in its EVENT_KINDS and HOST_EVENT_KINDS).
 const STARTED: StringName = &"trip_started"
@@ -246,12 +250,13 @@ func _held_here(vehicle: String, cap: int) -> void:
 	_tell_held(StringName(vehicle), cap)
 
 
-## This peer drives `vehicle_id`, held at the gate: departure_held and the reason as a HUD notice.
+## This peer drives `vehicle_id`, held at the gate: departure_held (and held_at_gate) and the reason as a HUD notice.
 func _tell_held(vehicle_id: StringName, cap: int) -> void:
 	var text: String = tr(CompanyTrips.FAR_LIMIT)
 	if text.count("%") == 1:
 		text = text % cap
 	departure_held.emit(vehicle_id, text)
+	held_at_gate.emit(vehicle_id, cap)
 	var bus: Node = get_node_or_null(^"/root/EventBus") if is_inside_tree() else null
 	if bus != null and bus.has_signal(&"depot_notice"):
 		bus.emit_signal(&"depot_notice", text)
