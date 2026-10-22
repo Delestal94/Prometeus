@@ -48,6 +48,29 @@ func consume(
 	return true
 
 
+## Units that rotted or were lost (D-0616): they go out like consume() but reservations don't
+## protect them. If the orders now promise more than is left, the newest reservations of the
+## product shrink until they fit. Returns { order id -> units it lost } (empty when none did);
+## false with nothing changed if the location holds fewer than qty.
+func discard(product: StringName, qty: int, location: StringName) -> Variant:
+	if qty <= 0 or count(product, location) < qty:
+		return false
+	_remove(product, location, qty)
+	var lost: Dictionary = {}
+	var excess: int = reserved_total(product) - count(product)
+	var orders: Array = _reserved.keys()
+	orders.reverse()
+	for order_id: StringName in orders:
+		if excess <= 0:
+			break
+		var cut: int = mini(excess, int((_reserved[order_id] as Dictionary).get(product, 0)))
+		if cut > 0:
+			_shrink_reservation(order_id, product, cut)
+			lost[order_id] = cut
+			excess -= cut
+	return lost
+
+
 ## Moves units between locations. Fails, changing nothing, if the source holds
 ## fewer than qty.
 func move(product: StringName, qty: int, from: StringName, to: StringName) -> bool:
