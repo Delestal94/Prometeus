@@ -142,6 +142,9 @@ var interest: CompanyInterest
 ## of its own before adding the root.
 var save_slot: String = CompanySave.DEFAULT_SLOT
 var save_dir: String = CompanySave.SAVE_DIR
+## The arguments CompanyDevFlags reads on the host when the world comes up (--company-day=, --district=,
+## --money=, D-0238): the command line's, unless a test hands its own before adding the root.
+var dev_args: PackedStringArray = OS.get_cmdline_user_args()
 ## The session and the CompanyState this world plays with. Unset, the NetworkManager and the
 ## CompanyState autoloads, found by path when the world comes up (N-919). Two peers in one process
 ## (a test) hand each root its own before adding it, as they do save_dir.
@@ -234,11 +237,13 @@ func _add_net(state: COMPANY_STATE) -> void:
 			state.new_company()
 	# A new company (or a save from before the default existed) starts with the furnished shed:
 	# pieces and units, free and the same on every run. It goes in the state before CompanyNet
-	# copies the stock, and reaches the clients with the snapshot (D-2004).
+	# copies the stock, and reaches the clients with the snapshot (D-2004). The development flags
+	# (D-0238) go in last, so the snapshot carries them too.
 	if DefaultShed.needs_default(state):
 		var report: Dictionary = DefaultShed.load_default().apply_to(state)
 		for refusal: Dictionary in report["refused"]:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
+	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
 	_hosted_state = state
 
