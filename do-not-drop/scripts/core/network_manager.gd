@@ -92,6 +92,10 @@ const MAX_PLAYERS: int = 8
 ## 39: CompanyNet's _request takes a new kind, cart_push, _apply_event a new one,
 ## cart_moved, and its snapshot a "carts" part: where the picking carts stand
 ## (company mode, D-0610.b);
+## 40: CompanyNet's _apply_event carries three new kinds, trip_started,
+## trip_refused and trip_closed, and its snapshot a "trips" part: the company
+## vehicles out of the shed, as the host's CompanyTrips decides them (company
+## mode, D-0302.2);
 ## 41: CompanyNet's _request takes three new kinds, jack_pick, jack_put and jack_push,
 ## _apply_event four, jack_picked, jack_placed, jack_moved and jack_loaded, and its
 ## snapshot a "pallets" part: the supplier pallets and the pallet jack (company

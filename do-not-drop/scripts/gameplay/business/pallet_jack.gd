@@ -39,7 +39,7 @@ func ids_at(at: StringName) -> Array[StringName]:
 	for id: StringName in places:
 		if places[id]["at"] == at:
 			found.append(id)
-	found.sort()
+	found.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	return found
 
 

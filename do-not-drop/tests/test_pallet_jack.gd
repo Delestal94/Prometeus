@@ -51,6 +51,10 @@ func _test_unload() -> void:
 	_expect(jack.ids_at(PalletJack.AT_BED) == [&"a", &"b"], "two valid pallets on the bed")
 	var again: Array[Dictionary] = [Pallet.make(&"a", &"hen", 3)]
 	_expect(jack.load_bed(again) == 0, "a repeated id is skipped")
+	var unordered := PalletJack.new()
+	for id: StringName in [&"zzz", &"aaa", &"mmm"]:
+		unordered.places[id] = {"at": PalletJack.AT_BED}
+	_expect(unordered.ids_at(PalletJack.AT_BED) == [&"aaa", &"mmm", &"zzz"], "ids come out in text order")
 	_expect(jack.pick_up(&"a"), "picks the pallet up from the bed")
 	_expect(inv.count(&"hen") == 0, "units are not counted while on the bed or the jack")
 	_expect(jack.put_down(Vector2(0, 0), FLOOR, inv), "puts it down on the floor")
