@@ -22,7 +22,7 @@
 | ✅ D-0312 | Direcciones: cada casa tiene calle y número legibles que coinciden con la etiqueta del paquete (incluye D-0326, D-0345, fusión de D-0112) | constructor-mundo | medium | test: etiqueta y cartel de la casa coinciden |
 | D-0313 | ✅ Cargar el distrito con la pantalla de carga existente sin congelar (N-408) | constructor-mundo | high | `test_loading_no_freeze` pasa con el distrito |
 | D-0314 | Unificar Barrio Centro como primer distrito jugable del corte vertical | constructor-mundo | high | ver D-1501; `--district=centro` arranca |
-| D-0315 | Adaptar la ruta actual (Campo) como distrito con la misma calidad de hoy | constructor-tramos | high | tests de ruta actuales verdes en modo Empresa |
+| D-0315 | ◐ (falta D-0315.b: el vehículo de la empresa en el Campo; ver detalle) Adaptar la ruta actual (Campo) como distrito con la misma calidad de hoy | constructor-tramos | high | tests de ruta actuales verdes en modo Empresa |
 | D-0316 | ◐ (falta D-0316.2-3: vehículo real y cajas sueltas) Seguro contra jugadores perdidos: quien se queda en el galpón no se carga ni sufre la ruta | constructor-red | xhigh | test de red: 2 en ruta, 1 en galpón, nadie se teletransporta |
 | ~~D-0317~~ | ~~Jugadores en distintos distritos a la vez (dos vehículos fuera) — sí/no por rendimiento~~ **Fusionada en D-2002 (D-0112, [crítica](diseno/critica-alcance.md))** | Plan | high | decisión con medición de costo; si sí, D-0318 |
 | ✅ D-0318 | (Si D-0317 sí) varias instancias de distrito cargadas a la vez con capas de física separadas | constructor-red | xhigh | test de red con 2 vehículos en 2 distritos |
