@@ -193,6 +193,7 @@ Cada riesgo con su mitigación y la tarea que la hace.
 **Hecho cuando:** 10+ riesgos, cada P0-P1 con su tarea `D-`.
 
 ### D-0121 · Narrativa de la empresa — B · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-22, PR #626)** — `diseno/narrativa-empresa.md`: la Jefa sigue mandando sin cara, premisa del galpón prestado, tono de 6 tipos de mensaje y textos actuales fuera de tono.
 **Depende de:** D-0101
 **Qué:** `diseno/narrativa-empresa.md`, alineado con `docs/narrativa.md` (que no se edita):
 - [x] D-0121.1 Quién manda (la Jefa Marta sin cara, el Jefe del depósito visible), por qué empezamos y por
