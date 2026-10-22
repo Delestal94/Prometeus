@@ -249,9 +249,11 @@ Decisión: `docs/decisiones/2026-10-22-modo-solo.md`.
 - [ ] D-0151.1 Pausa de verdad: con el host sin peers, la pausa del menú pausa el árbol y `GameClock`;
   despausar reanuda el reloj solo si lo pausó el menú (no en SUMMARY); un peer que entra despausa antes del
   snapshot. Online con alguien más, la pausa de hoy.
-- [ ] D-0151.2 `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
+- [x] D-0151.2 (2026-10-22) `OrderRhythm`: con `crew_size` 1 el último pedido entra a `CompanyTuning.SOLO_ORDER_LAST_ARRIVAL_MIN`
   (15:00), comprimiendo las horas de `ORDER_HOUR_WEIGHTS`; la cantidad no cambia. Misma semilla → mismos pedidos.
-- [ ] D-0151.3 Pedido sugerido (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
+- [ ] D-0151.3 Pedido sugerido (la parte pura, `SupplierOrderCart.suggested()` y `ordered_units()`, hecha el
+  2026-10-22; falta D-0151.3b: el carrito precargado y el envío del host al pasar a CLOSING con su línea en el
+  resumen) (`SupplierOrderCart.suggested(...)`, puro): `max(0, pedido hoy − stock)` por
   producto, recortado desde el de menos unidades hasta `plata − RENT_PER_DAY − SOLO_ORDER_CASH_RESERVE`; el carrito
   se abre precargado; al pasar a CLOSING, si no hay pedido para mañana, el host lo manda y lo anota el resumen.
 **Test** `test_company_solo_assists`: la pausa sin peers frena `minute_now()` y no la despausa el menú en SUMMARY;
