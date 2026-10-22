@@ -13,6 +13,9 @@ extends SceneTree
 ##   with its rear doors out of the shed and its nose away from it, sitting on the ground; no trip started
 ##   (trips_out() 0); the interest tracks its synchronizer and the host's cells anchor on it. build() with a
 ##   two-van fleet adds only the missing one, van_classic_2, parked beside it.
+## - A van bought mid-day (shop_bought through CompanyNet) is built at once beside the starting van, drivable and
+##   inside the gate (D-0302.2.b.5); CompanyShop keeps the starting van in the fleet and refuses a vehicle past
+##   the playon's PLAYON_SLOTS.
 ## - A player sits at the wheel (cab door open, the driver seat's interact(), as the host does): the van's
 ##   driver_peer_id is its peer and the player is seated there; getting up gives the wheel back.
 ## - With cargo staged on the van, moving it across the gate's line (the playon's far edge) outward starts a trip
@@ -189,6 +192,7 @@ func _check_solo(state: Node) -> void:
 	_check_parked(level, van)
 	await _check_tracked(level, van)
 	await _check_second_van(level, fleet)
+	await _check_purchase(level, fleet)
 	await _check_seat(level, van)
 	await _check_crossing(level, van)
 	await _check_rack_slot(level, van)
@@ -255,6 +259,30 @@ func _check_second_van(level: CompanyRoot, fleet: CompanyFleet) -> void:
 		_expect(apart > CompanyFleet.PARK_SPACING_M - SAME_M and level.trips.gate.side_of(second.global_position)
 			== TripGate.INSIDE, "...parked beside it, %.2f m apart, inside the gate's line too" % apart)
 		second.free()
+	await physics_frame
+
+
+## A vehicle bought mid-day (shop_bought, D-0302.2.b.5) is built beside the first, in the playon, with the starting
+## van kept; the shop refuses the one past the playon's slots.
+func _check_purchase(level: CompanyRoot, fleet: CompanyFleet) -> void:
+	var company: Object = level.net.company
+	company.set(&"money", 20000)
+	level.net.request(CompanyShopNet.BUY, {"item": &"vehicle_van"})
+	for _tick: int in range(5):
+		await physics_frame
+	var bought: Node3D = fleet.vehicle("van_classic_2")
+	_expect(fleet.vehicles().size() == 2 and bought != null and fleet.vehicle("van_classic") != null,
+		"A bought van joins the starting one at once (vehicles %d)" % fleet.vehicles().size())
+	if bought != null:
+		_expect(bool(bought.get(&"drivable_outside_run")) and bought.is_in_group(CompanyTrips.VEHICLE_GROUP)
+			and level.trips.gate.side_of(bought.global_position) == TripGate.INSIDE,
+			"...drivable, in the vehicle group, parked inside the gate's line")
+	var before: int = fleet.vehicles().size()
+	level.net.request(CompanyShopNet.BUY, {"item": &"vehicle_bike"})
+	await physics_frame
+	_expect(fleet.vehicles().size() >= before, "A bought vehicle never takes one away")
+	if bought != null:
+		bought.free()
 	await physics_frame
 
 
