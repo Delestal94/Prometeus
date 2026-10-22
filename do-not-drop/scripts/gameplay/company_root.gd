@@ -222,6 +222,7 @@ func _ready() -> void:
 		_add_zone_slab(zone)
 	CompanyGround.add_backup(_world, zones)
 	_add_shed()
+	ColdChainTick.add_to(self, net, day_cycle, shed, business_tick)
 	_add_supplier_truck()
 	_add_cells()
 	_add_packages()
@@ -425,6 +426,7 @@ func save_closed_day() -> bool:
 	if net != null and is_instance_valid(net) and net.inventory != null:
 		_hosted_state.store_stock(stock_for_save(net.inventory))
 		_hosted_state.pallets = net.pallets.to_save()
+		ColdChainTick.write_clocks(self, _hosted_state)
 	var next_opening := COMPANY_STATE.new()
 	next_opening.from_dict(_hosted_state.to_dict())
 	next_opening.day = _hosted_state.day + 1

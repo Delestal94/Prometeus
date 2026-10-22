@@ -48,7 +48,7 @@
 | ~~D-0133~~ | ~~Diseño del mercado de proveedores (precios que varían por día, calidad del proveedor)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | sección en `diseno/economia.md` |
 | D-0134 | ✅ Definir qué se guarda y qué no entre sesiones (empresa, stock, empleados, día en curso) | constructor-progresion | medium | `diseno/guardado.md`; D-0206 lo implementa |
 | D-0135 | ✅ Definir reglas de clima por distrito y su efecto en la carga y el vehículo | constructor-mundo | medium | tabla en `diseno/distritos.md` |
-| D-0136 | Definir reglas de horario de clientes (no reciben de noche, ventanas de entrega) | constructor-progresion | low | sección en `diseno/clientes.md` |
+| D-0136 | ✅ Definir reglas de horario de clientes (no reciben de noche, ventanas de entrega) | constructor-progresion | low | sección en `diseno/clientes.md` |
 | D-0137 | Diseño de cosméticos de la empresa (logo, colores de la flota, uniforme) | critico-diseno | low | `diseno/cosmeticos-empresa.md` |
 | D-0138 | Ideas de logros de Steam de la expansión (30) | estratega-steam | low | lista en `docs/marketing/` |
 | D-0139 | Encaje de la expansión en la página de Steam y el tráiler (qué promete y qué no) | estratega-steam | medium | nota en `docs/marketing/` |
