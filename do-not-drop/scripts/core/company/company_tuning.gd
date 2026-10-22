@@ -72,6 +72,13 @@ const TOW_BLACK_SCREEN_SECONDS: float = 3.0
 ## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
 ## D-0317 confirms or raises it with D-2002's measurements.
 const VEHICLES_FAR_MAX: int = 2
+## The gate holds a vehicle with cargo that may not leave (CompanyTrips.hold_at_gate, D-0316.2) and tells its
+## driver why at most this often, in real seconds, however long it pushes (CompanyTrips.held_notice_msec).
+const GATE_HELD_NOTICE_REAL_SECONDS: float = 3.0
+## A client at the wheel of a held vehicle brakes its own predicted copy at the gate, as the host does, for this
+## long after each notice (CompanyGateBrake, D-0316.4): the notice's period and a round trip to spare, so a vehicle
+## pushed against the gate for good stays braked from one notice to the next.
+const GATE_BRAKE_REAL_SECONDS: float = 3.5
 ## Who gets a company vehicle's or loose box's updates (CompanyInterest): the peers whose player is
 ## within CELL_LOAD_RADIUS cells of it, until it is past CELL_UNLOAD_RADIUS. They look again this often,
 ## in real seconds: a vehicle at 100 km/h covers 7 m, far under a cell.
