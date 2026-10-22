@@ -110,6 +110,11 @@ static func is_closed(day: Variant) -> bool:
 	return is_instance_valid(day) and day is DayCycle and (day as DayCycle).phase() == DayCycle.Phase.SUMMARY
 
 
+## Host: check() with what CompanyNet `net` holds: its `company` and its `day_cycle` (closed in SUMMARY).
+func ask(net: Object, peer: int, data: Dictionary) -> Dictionary:
+	return check(net.get(&"company"), data, peer, net.get(&"day_cycle"))
+
+
 ## Every peer, the host first: applies a supplier_ordered. False, changing nothing, when the data does
 ## not fit (rule 5: exactly its keys, a day, 1..MAX_LINES lines of an id and 1..MAX_LINE_QTY units, every
 ## product once, the day's truck under MAX_DAY_QTY a product).

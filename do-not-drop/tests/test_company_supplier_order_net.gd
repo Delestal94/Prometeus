@@ -14,13 +14,14 @@ extends SceneTree
 ##   past the snapshot's limits (days, units) to one a client takes, and leaves one that fits alone;
 ## - the save: CompanyState keeps the calendar (supplier_calendar) through CompanySave's JSON, and a
 ##   malformed one loads as an empty calendar;
-## - solo on the real root: the first day brings the first truck (DefaultShed.first_order) and nothing
-##   else; the board by the dock has its point and prompt and using it opens the order screen, whose rows
-##   (and focus) an event does not rebuild while it is open; one pallet
-##   (24 units) ordered with Order is in the calendar of the next day, in the company's save copy too,
-##   the cart is empty and the screen says so; on that day the truck comes; with no money the host refuses
-##   the request (no_funds) and nothing changes; leaving the root saves the calendar; a save whose calendar
-##   is past the snapshot's limits loads cut (one warning), so a client's put_snapshot() takes it;
+## - solo on the real root: a new company's calendar is empty (the first pallets, DefaultShed.first_pallets,
+##   already wait in reception) and the stock list counts the calendar as on the way; the board by the
+##   dock has its point and prompt and using it opens the order screen, whose rows (and focus) an event
+##   does not rebuild while it is open; one pallet (24 units) ordered with Order is in the calendar of the
+##   next day, in the company's save copy too, the cart is empty and the screen says so; on that day the
+##   truck comes; with no money the host refuses the request (no_funds) and nothing changes; leaving the
+##   root saves the calendar; a save whose calendar is past the snapshot's limits loads cut (one warning),
+##   so a client's put_snapshot() takes it;
 ## - two ENet peers and a late joiner in one process (each its own CompanyNet and company; the client
 ##   with a SupplierBoard): the client's Order is a request, the screen waits, the host applies it
 ##   and both calendars carry it, and the client's screen shows it ordered with the cart empty; when the
@@ -238,11 +239,15 @@ func _test_root() -> void:
 	var net: CompanyNet = level.net
 	var schedule: SupplierSchedule = level.supplier_schedule
 	_expect(net != null and net.supplier.schedule == schedule, "The truck's calendar is CompanyNet's")
-	var first: Dictionary = {}
-	for line: Dictionary in DefaultShed.load_default().first_order:
-		first[StringName(line["product"])] = int(line["qty"])
-	_expect(schedule.ordered_for(CompanyTuning.STARTING_DAY) == first and schedule.upcoming_days(0) == [1],
-		"Day 1 brings the first truck and nothing else is on the way (got %s)" % [schedule.to_dict()])
+	var first_ids: Array = DefaultShed.load_default().first_pallets().map(
+		func(pallet: Dictionary) -> String: return String(pallet["id"]))
+	var waiting: Array = CompanyShed.pallets_in(net.inventory).map(
+		func(entry: Dictionary) -> String: return String(entry["id"]))
+	_expect(schedule.day_count() == 0 and not first_ids.is_empty() and waiting == first_ids,
+		"A new company's calendar is empty: its first pallets already wait in reception (got %s)"
+		% [schedule.to_dict()])
+	_expect(level.stock_board != null and level.stock_board.real_calendar,
+		"The stock list counts the calendar as on the way (no stand-in)")
 	var point: SupplierBoardPoint = level.shed.supplier_point
 	_expect(point != null and point.is_inside_tree() and point.get_prompt() == tr("WORLD_SHED_USE_SUPPLIER")
 		and point.get_prompt() != "WORLD_SHED_USE_SUPPLIER", "The board by the dock has its point and prompt")

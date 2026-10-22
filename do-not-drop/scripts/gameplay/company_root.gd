@@ -66,6 +66,10 @@ extends Node3D
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every
 ## peer, the host too, knows which vehicles are out: the host's publishes each fact as a CompanyNet
 ## event and a late joiner gets them in the snapshot. A client never has a CompanyTrips.
+##
+## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
+## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
+## instead of falling through the missing floor (D-0318.1).
 
 ## The CompanyState autoload's script (no class_name: a --script compiles before the autoloads exist).
 const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
@@ -125,6 +129,8 @@ var player: Node3D
 var shed: CompanyShed
 ## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
 var builder: ShedBuilder
+## The stock list over the clipboard's key (D-0612.b): every peer, read only.
+var stock_board: StockBoard
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
 var supplier_truck: SupplierTruckView
 ## The supplier calendar the truck follows, on every peer: CompanyNet's (net.supplier.schedule), fed by the
@@ -152,6 +158,8 @@ var trips_view: CompanyTripsView
 var cells: CompanyCells
 ## Who gets each company vehicle's and loose box's updates (D-0316), on every peer.
 var interest: CompanyInterest
+## World/Packages: where every peer puts the package a sealed box becomes (D-0715.b).
+var packages: Node3D
 ## Host: the slot and folder the company is loaded from when the world comes up without one,
 ## and an interrupted day is saved to (save_interrupted_day()). A test points them at a folder
 ## of its own before adding the root.
@@ -206,10 +214,12 @@ func _ready() -> void:
 	_add_shed()
 	_add_supplier_truck()
 	_add_cells()
+	_add_packages()
 	_add_interest()
 	_add_trips()
 	_add_crew()
 	_add_builder()
+	_add_stock_board()
 	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()
@@ -653,9 +663,9 @@ func _add_supplier_truck() -> void:
 ## joiner gets it in the snapshot) and the shed's board opens the order screen on the peer that used it.
 ## Host (solo too): the calendar comes from the company's save (days before today dropped, the rest cut to
 ## what a client takes, CompanySupplierNet.fit(), so a broken save cannot keep anyone out) and is written
-## back to it after every order, so a closed or interrupted day keeps what was ordered. A company on its
-## first day with nothing for it gets the first truck, DefaultShed.first_order: the delivery whose pallets
-## DefaultShed.first_pallets() put in reception (same ids); the other days bring only what was ordered.
+## back to it after every order, so a closed or interrupted day keeps what was ordered. It holds only real
+## orders: the first delivery (DefaultShed.first_order) is not in it, its pallets already wait in reception
+## (DefaultShed.first_pallets()), so a new company's truck comes the day after its first order.
 func _add_supplier_orders() -> void:
 	if net == null:
 		return
@@ -670,7 +680,6 @@ func _add_supplier_orders() -> void:
 	if net.is_host() and _hosted_state != null:
 		supplier_schedule.copy_from(SupplierSchedule.from_dict(_hosted_state.supplier_calendar))
 		supplier_schedule.forget_before(_hosted_state.day)
-		_seed_first_truck(_hosted_state.day)
 		var cut: int = CompanySupplierNet.fit(supplier_schedule)
 		if cut > 0:
 			push_warning("CompanyRoot: the saved supplier calendar was cut to what a snapshot carries (%d cut)" % cut)
@@ -683,17 +692,6 @@ func _add_supplier_orders() -> void:
 	supplier_board.player_of = func() -> Node: return player
 	supplier_board.busy = func() -> bool: return builder != null and builder.is_building()
 	shed.supplier_board_opened.connect(func() -> void: supplier_board.open())
-
-
-## Host, on the company's first day: the first truck (DefaultShed.first_order) when nothing comes that day.
-func _seed_first_truck(day: int) -> void:
-	var data: DefaultShed = DefaultShed.load_default()
-	if data == null or day != CompanyTuning.STARTING_DAY or supplier_schedule.has_delivery(day):
-		return
-	var lines: Array = []
-	for line: Dictionary in data.first_order:
-		lines.append({"product": line.get("product", &""), "qty": line.get("qty", 0)})
-	supplier_schedule.place(day - 1, lines)
 
 
 ## Host: an order went into the calendar; the company keeps it for the save (CompanyState.supplier_calendar).
@@ -716,6 +714,29 @@ func _add_cells() -> void:
 	cells = CompanyCells.new()
 	cells.name = "WorldCells"
 	add_child(cells)
+
+
+## The packages the sealed boxes become (D-0715.b), on every peer under World/Packages: the same path
+## everywhere, so each one's synchronizer pairs up with the host's. CompanyNet's tables build them
+## there (CompanyPackages); the host's are watched by the cells (_on_package_added()).
+func _add_packages() -> void:
+	if net == null:
+		return
+	packages = Node3D.new()
+	packages.name = "Packages"
+	_world.add_child(packages)
+	net.table.packages.parent = packages
+	net.table.packages.added.connect(_on_package_added)
+
+
+## Host (D-0318.1): a package freezes while its cell isn't loaded (no floor under it) and thaws when it
+## is back (WorldCellStreamer.track_body); it is let go as it leaves the tree. A client's copy follows
+## the host's and is never tracked. Called while box_sealed is applied: no CompanyNet request here.
+func _on_package_added(package: DeliveryPackage) -> void:
+	if cells == null or not is_instance_valid(cells) or net == null or not net.is_host():
+		return
+	cells.track_body(package)
+	package.tree_exiting.connect(cells.untrack_body.bind(package), CONNECT_ONE_SHOT)
 
 
 ## Who gets each company vehicle's and loose box's updates, by distance to each player (D-0316).
@@ -768,6 +789,29 @@ func _add_builder() -> void:
 	add_child(builder)
 	builder.setup(shed, net, player)
 	builder.busy = func() -> bool: return supplier_board != null and supplier_board.is_open()
+
+
+## The stock list (D-0612.b): I / d-pad right opens it on any peer. The order book is the host's
+## (trips.book until D-0813.1), so only the host marks what the pending orders are missing; the
+## supplier calendar holds only real orders (D-0603.b.2), so what is ordered counts as on the way.
+func _add_stock_board() -> void:
+	if net == null:
+		return
+	stock_board = StockBoard.new()
+	stock_board.name = "StockBoard"
+	add_child(stock_board)
+	stock_board.setup(net)
+	stock_board.schedule = supplier_schedule
+	stock_board.real_calendar = true
+	stock_board.book_of = func() -> OrderBook:
+		return trips.book if trips != null else null
+	stock_board.player_of = func() -> Node:
+		return player
+	stock_board.busy = func() -> bool:
+		return builder != null and builder.is_building()
+	var catalog: CompanyCatalog = CompanyCatalog.load_all()
+	for id: StringName in catalog.ids(CompanyCatalog.PRODUCTS):
+		stock_board.products[id] = catalog.product(id)
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,

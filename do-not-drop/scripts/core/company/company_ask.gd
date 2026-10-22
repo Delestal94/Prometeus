@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## Static only, no state but the product catalog read once. CompanyNet hands each units request
 ## here (units_take, units_store: at_station(); units_drop: drop()) and refuses with bad_data
-## whatever comes back empty. Split out of company_net.gd in D-2006.
+## whatever comes back empty. Split out of company_net.gd in D-2006 (station_of() in D-0813).
 
 ## Where the product catalog lives: an id in a request must name one of its files.
 const PRODUCTS_DIR: String = "res://data/products/"
@@ -55,6 +55,29 @@ static func at_station(data: Dictionary) -> Dictionary:
 		return {}
 	ask["station"] = StringName(station)
 	return ask
+
+
+## The station a checked request names (`ask`, from at_station()), as the world describes it (`stations`,
+## CompanyNet.stations), or {} when `ask` is empty, the station is unknown or its description unusable (no
+## location, a hands: one, a spot that isn't a Vector3). A floor bundle with a position in `bundles` is its own
+## station (row 5): its id is its location and its spot is where it lies. Out of company_net.gd in D-0813.
+static func station_of(ask: Dictionary, bundles: FloorBundles, stations: Callable) -> Dictionary:
+	if ask.is_empty():
+		return {}
+	var id: StringName = ask["station"]
+	var bundle: Variant = bundles.position_of(id)
+	if bundle is Vector3:
+		return {"location": id, "spot": bundle}
+	if not stations.is_valid():
+		return {}
+	var found: Variant = stations.call(id)
+	if not found is Dictionary:
+		return {}
+	var station: Dictionary = found
+	var location: StringName = as_id(station.get("location"))
+	if location == &"" or String(location).begins_with(CompanyNet.HANDS_PREFIX):
+		return {}
+	return station if station.get("spot") is Vector3 else {}
 
 
 ## The product, quantity and position of a units_drop: units() plus a finite Vector3 `pos`,

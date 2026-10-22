@@ -144,3 +144,19 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Test** `test_company_vehicle_prices`: precio y `grant_key` de cada uno, escalera, fuera del catálogo mientras estén apagados, y la compra de la bici cobra 250 con motivo `shop`.
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
+
+### D-0513 · Precios de máquinas de automatización — B · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — `data/shop/conveyor.tres` (1 500) y `packer.tres` (4 000) junto a `label_reader.tres` (600, ya en la tienda); nombres `WORLD_SHOP_CONVEYOR` / `WORLD_SHOP_PACKER` en `strings_world.csv` y `CompanyShop.NAME_KEYS`; `test_company_machine_prices`.
+**Depende de:** D-0511
+**Qué:** la tabla de precios de las máquinas como `.tres` del catálogo de la tienda (`diseno/economia.md` §4: lectora de etiquetas 600 · cinta transportadora 1 500 · embaladora 4 000). Cada escalón cuesta entre 2× y 3× el anterior.
+**Decisión:** la cinta y la embaladora van con `enabled = false`, como los vehículos de D-0512: no se listan hasta que existe la máquina (cinta D-1101, embaladora D-1109); esa tarea solo cambia la línea a `true`. La clave de equipo es el id del `.tres` (`conveyor`, `packer`). Las otras máquinas del grupo 11 (encintadora, etiquetadora, balanza…) no tienen precio en el diseño: lo ponen sus tareas.
+**Test** `test_company_machine_prices`: precio y `grant_key` de cada una, escalera 2-3×, cuáles están a la venta, y la compra de la cinta cobra 1 500 con motivo `shop` y suma la clave al equipo.
+**Hecho cuando:** tabla en `.tres` (cumplido).
+
+### D-0514 · Precios de ampliaciones del galpón — A · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — `data/shop/expansion_1.tres` (800), `expansion_2.tres` (2 000) y `expansion_3.tres` (5 000), una por etapa (`diseno/economia.md` §4); `CompanyTuning.WAREHOUSE_STAGE_PRICE` pasa de `[0, 1500, 6000, 20000]` a `[0, 800, 2000, 5000]`; nombres `WORLD_SHOP_EXPANSION_2/3` en `strings_world.csv` y `CompanyShop.NAME_KEYS`; `test_company_expansion_prices`.
+**Depende de:** D-0511, D-0905
+**Qué:** la tabla de precios de las ampliaciones como `.tres` del catálogo de la tienda: 800 / 2 000 / 5 000, cada escalón 2,5× el anterior (regla de escala del §4).
+**Decisión:** manda `economia.md` §4 (el modelo económico de D-0117) sobre los 1 500 / 6 000 / 20 000 que D-0905 había puesto como supuesto de balance (su propio texto dice que se ajustan junto con D-0117). El precio vive en dos lugares (el `.tres` de la tienda y `WarehouseStages.price_for`) y el test los obliga a coincidir. Las tres van a la venta (`enabled = true`, como la primera): la tienda ya las ofrece en orden y rechaza saltar etapas con `WRONG_STAGE`.
+**Test** `test_company_expansion_prices`: precio, etapa y nombre de cada una, igualdad con `WarehouseStages`, escalera 2-3×, orden obligatorio, rechazo sin plata sin cobrar y compra de las tres (7 800, motivo `shop`).
+**Hecho cuando:** tabla en `.tres` (cumplido).

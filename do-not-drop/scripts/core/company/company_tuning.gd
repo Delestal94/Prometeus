@@ -130,7 +130,7 @@ const PLACEABLE_REFUND_RATIO: float = 0.5
 const WAREHOUSE_STAGE_IDS: Array[StringName] = [&"small", &"medium", &"large", &"logistics_center"]
 const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
 	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
-const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
+const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 800, 2000, 5000]
 ## Most pieces (shelves, tables, zones...) a stage can hold, so the built shed stays inside the
 ## performance budget (D-0915): about one piece per six floor cells. Same index as the arrays above.
 const WAREHOUSE_STAGE_MAX_PIECES: Array[int] = [16, 36, 64, 100]
@@ -252,6 +252,9 @@ const PENALTY_REPUTATION_CAP: float = -10.0
 const TIP_FAST_WINDOW_SHARE: float = 0.5
 const TIP_RATE: float = 0.15
 const TIP_REPUTATION: float = 1.0
+## Reputation a delivery with nothing wrong with it earns on top of its pay (D-0815); the tip adds
+## its own TIP_REPUTATION when it was also quick.
+const CLEAN_DELIVERY_REPUTATION: float = 0.5
 ## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
 const TRIP_MERIT_INTACT: int = 10
 

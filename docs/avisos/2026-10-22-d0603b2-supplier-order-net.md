@@ -1,9 +1,9 @@
 # Aviso 2026-10-22 · pedido al proveedor en el galpón y en red (D-0603.b.2)
 
-**Cambia el protocolo:** `PROTOCOL_VERSION` 40 -> 41 (`scripts/core/network_manager.gd`, zona compartida). Un
-cliente viejo con un host nuevo no se conecta (error claro de versión). Nada más cambió en `network_manager.gd`.
-Los PRs #617 (D-0605.b) y #610 (D-0813) también usan el 41: el que mezcle después sube al siguiente libre
-(`docs/convenciones-godot.md` §6.3).
+**Cambia el protocolo:** `PROTOCOL_VERSION` 42 -> 43 (`scripts/core/network_manager.gd`, zona compartida; el 41
+y el 42 son de #610 y #620, ya en main). Un cliente viejo con un host nuevo no se conecta (error claro de
+versión). Nada más cambió en `network_manager.gd`. El PR #617 (D-0605.b) también usaba el 41: al mezclar sube
+al siguiente libre (`docs/convenciones-godot.md` §6.3).
 
 Qué cambió en la red de la empresa (Nacho, `scripts/core/company/`):
 - `CompanyNet`: pedido nuevo `supplier_order` {<producto>: unidades} (plano, por `RpcGuard.dict_ok`), evento
@@ -35,11 +35,13 @@ Dominio de Slatex tocado (sin firmas cambiadas, solo agregados):
 `shed_builder.gd` (sin dueño): `var busy: Callable` nuevo; `enter()` se niega mientras devuelve true (la raíz le
 pasa `supplier_board.is_open()`, así no se entra al modo construcción con la pantalla de pedido abierta).
 
-Mundo (sin dueño): `company_root.gd` (`_add_supplier_orders()`, `_seed_first_truck()`, `_on_supplier_ordered()`;
-se quitó `_seed_stand_in_calendar()` y `STAND_IN_DAYS`), `company_shed.gd` (`_build_supplier_board()`,
+Mundo (sin dueño): `company_root.gd` (`_add_supplier_orders()`, `_on_supplier_ordered()`; se quitó
+`_seed_stand_in_calendar()` y `STAND_IN_DAYS`; `stock_board.real_calendar = true`, con su doc en
+`stock_board.gd`: el calendario solo tiene pedidos reales), `company_shed.gd` (`_build_supplier_board()`,
 `supplier_board_spot()`, señal `supplier_board_opened`, `var supplier_point`), `supplier_board.gd` (nuevo).
 
-**Ojo D-0605.b (PR #617):** el camión ya no viene todos los días. Su `test_company_pallet_jack_world`
+**Ojo D-0605.b (PR #617):** el camión ya no viene todos los días, y una empresa nueva arranca con el calendario
+vacío (el primer pedido ya está en recepción como palets, `DefaultShed.first_pallets()`). Su `test_company_pallet_jack_world`
 (`_test_root`, día 2 en la raíz real) contaba con el calendario de relleno: al mezclar, que pida antes el
 pedido del día 2 (por ejemplo `level.net.request(CompanySupplierNet.ORDER, {"milk_canister": 12,
 "wedding_cake": 6})` con plata suficiente en el día 1, o `level.supplier_schedule.place(1, ...)`).
