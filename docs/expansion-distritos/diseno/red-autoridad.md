@@ -111,6 +111,8 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | 13 | Etiquetar con el pedido (D-0707) | jugador | `box_label` `{station, rid}` | alcance; la mesa tiene pedido (#8; hasta que exista, `CompanyTableNet.order_of`) con casa (`no_order`); plata | `box_labeled` `{table, order, money, minute}` | etiqueta = pedido de la mesa |
 | 14 | Poner un sello (D-0708) | jugador | `box_stamp` `{station, stamp, rid}` | alcance; caja sin cinta; `stamp` ∈ los del catálogo; no repetido (`already_stamped`); plata | `box_stamped` `{table, stamp, money, minute}` | sellos de la caja |
 | 15 | Encintar y cerrar (D-0706, D-0709, D-0710, D-0711) | jugador | `box_tape` `{station, rid}` | alcance; caja con al menos un producto (`empty_box`); cinta en la mesa (`no_supply`); plata | `box_sealed` `{table, order, package_id, node_name, trap, trap_intensity, contents, absorption, quality, pos, basis, money, minute}` (D-0715: `package_id` = id de la caja) | la caja sale de la mesa; **cada peer crea el mismo `DeliveryPackage`** con esos datos (nombre de nodo estable, regla 10); `Inventory`: las unidades de `box:<id>` pasan a `package:<package_id>` y la reserva del pedido baja en lo que la caja lleva de cada producto (lo reservado ya no está libre: está en la caja); `OrderBook`: pedido → armado (`order_packed`) |
+| 15a | Reponer un insumo de la mesa (D-0718, D-0715.c) | jugador, en la mesa | `box_restock` `{station, supply, rid}` (`supply`: `box_S`, `box_M`, `box_L`, `box_XL`, `tape` o `fill`) | alcance; `supply` de `StationSupplies` (`bad_data`); la mesa no lo tiene lleno (`supply_full`); el galpón no está corto de eso hoy (`CompanyTableNet.short_of`, `box_shortage`: `no_supply`). Con caja en la mesa o sin ella. Gratis (D-0718) | `box_restocked` `{table, supply, count}` (`count`: lo que tiene la mesa del host después, su capacidad) | `StationSupplies.restock(supply)`; nada de plata ni libro |
+| 15b | Tirar la caja abierta (D-0719, D-0715.c) | jugador, en la mesa | `box_discard` `{station, rid}` | alcance; mesa con caja (`no_box`) sin cinta (`sealed`) | `box_discarded` `{table, box, contents, to, pos}` (`to`: `hands:<peer>` del que pide si entra todo, un producto hasta `HAND_MAX_UNITS`; si no, un bulto nuevo `floor:<n>` en el `spot` de la mesa, y solo entonces `pos`) | la caja sale de la mesa y se pierde con su relleno, etiqueta y sellos (nada se devuelve, D-0719); `Inventory.move` de `box:<id>` a `to` (la reserva del pedido sigue en pie); con `floor:<n>`, el bulto queda en `pos` (`FloorBundles`) |
 | 16 | Llevar, pasar y soltar una caja armada (D-0711) | jugador | los de hoy: `Interactable.request_interact`, `submit_carry_transform` (unreliable), `request_transfer`, `request_drop` (**crítica**) | como hoy (`PackageHandling`) | — (lo lleva el sincronizador de `DeliveryPackage`) | nada de negocio |
 | 17 | Dejar la caja en la zona de despacho (D-0716) | host (la caja quieta dentro del área) | — | caja sellada, en el área, en el piso o en un estante de despacho; no despachada antes | `box_dispatched` `{package_id, trip}` | `OrderBook`: pedido → salida `trip`. Si la caja sale del área antes de que arranque la salida, `box_undispatched` `{package_id}` la desata |
 | 18 | Cargar la camioneta (D-0717) | jugador, en un punto de carga | los de hoy (`PackageMountPoint`) | como hoy | — | nada de negocio (el pedido ya va con la salida) |
@@ -415,8 +417,9 @@ voto es D-0518.b).
   la mesa vendida (una mesa nueva con el mismo `uid` arranca llena).
 - **Motivos de `_rejected`:** los de `CompanyNet` (`bad_data`, `no_station`, `out_of_reach`, `not_enough`,
   `hands_busy`, `hands_full`, `no_room`) más `no_money`, `has_box`, `no_box`, `sealed`, `no_supply`,
-  `cell_taken`, `empty_cell`, `reserved_for_other`, `no_order`, `already_stamped`, `empty_box` y `no_trap`
-  (D-0715.b, §11). Una celda que llega como `Vector3i` no pasa `dict_ok` y se descarta sin aviso (regla 5).
+  `cell_taken`, `empty_cell`, `reserved_for_other`, `no_order`, `already_stamped`, `empty_box`, `no_trap`
+  (D-0715.b, §11) y `supply_full` (D-0715.c, §14). Una celda que llega como `Vector3i` no pasa `dict_ok` y se
+  descarta sin aviso (regla 5).
 - **Líneas:** el empaquetado del snapshot y los chequeos de lo que trae salieron a `CompanySnapshot`
   (`scripts/core/company/company_snapshot.gd`; `CompanyNet.pack_snapshot`, `unpack_snapshot` y `stock_ok`
   siguen con la misma firma). `company_net.gd` queda en 990 de las 1000 líneas de gdlint: la próxima acción
@@ -427,8 +430,9 @@ voto es D-0518.b).
     antes `pos`, `basis`, `quality`, `trap` y `node_name`~~ (hecho, §11); de D-0715.b quedan las cajas vivas
     en el snapshot con `update_visibility` después del último trozo, `OrderBook` → armado (`order_packed`)
     ahora que el libro está en `CompanyNet.orders.book` (D-0813, §10) (`_serial` no se guarda: [guardado.md](guardado.md) §4);
-  - **D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
-    `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja;
+  - ~~**D-0715.c** (bloquea D-0701.b): `box_restock` (reponer los insumos por red; D-0718 es local) y
+    `box_discard` (desarmar o tirar la caja abierta): sin ellas una mesa sin cinta queda trabada con su caja~~
+    (hecho, §14);
   - la mesa visible (D-0701.b) da `stations` para cada mesa y dibuja desde `net.table.station_of(uid)`;
   - `order_claim` (fila 8) llena `CompanyTableNet.order_of`;
   - ~~guardar las mesas con el día (D-0206)~~: no se guardan; lo de `box:<id>` va al bulto de devolución al
@@ -605,3 +609,49 @@ voto es D-0518.b).
     pero `CompanyShed.follow` no redibuja con `shop_bought`: el galpón grande se dibuja con el próximo evento de
     layout o snapshot. Va con D-0910.2 o con D-0511.2;
   - un vehículo comprado entra a `fleet` como dato; que aparezca en el mundo es de cada vehículo (D-1207, D-1221…).
+
+## 14. Lo construido (D-0715.c): reponer la mesa y tirar la caja
+
+- **Peticiones** `box_restock` y `box_discard`, **eventos** `box_restocked` y `box_discarded` (filas 15a y 15b,
+  protocolo 51), por el `_request` / `_apply_event` de siempre: ningún RPC nuevo. Van con los otros pasos de la
+  mesa en `CompanyTableNet` (`check()` en el host después del alcance de `CompanyNet._pack`, `apply()` en cada
+  peer, una rama de `_apply_state()` sin `_:`). Ninguna es crítica (regla 8): si se pierde, el jugador vuelve a
+  apretar. Sin ellas una mesa sin cinta quedaba trabada con su caja en una sesión.
+- **Reponer** (`box_restock {station, supply}`): un insumo por petición, de vuelta a su capacidad
+  (`StationSupplies.restock`), con caja en la mesa o sin ella. Motivos: `bad_data` (un `supply` que no es de
+  `StationSupplies`), `supply_full` (motivo nuevo: ya está lleno) y `no_supply` si el galpón está corto de eso
+  hoy (`CompanyTableNet.short_of`, `Callable(supply) -> bool` del host: el gancho para `box_shortage`,
+  [eventos-del-dia.md](eventos-del-dia.md) #4; sin él, todo se repone). **Decisión:** gratis, como decidió D-0718
+  (cuesta el tiempo del que se queda), así que `box_restocked` no lleva `money` ni `minute`; lleva `count`, lo que
+  queda en la mesa del host, y cada peer solo lo acepta si es la capacidad de ese insumo (un peer con otra tabla de
+  capacidades no lo aplica y pide snapshot).
+- **Tirar** (`box_discard {station}`): la caja abierta sale de la mesa y se pierde. **Decisión:** se tira, no
+  queda vacía en la mesa como en `PackingStation.disassemble()` (D-0719): una caja del tamaño equivocado seguiría
+  trabando la mesa, y sacar productos para rearmar la misma caja ya es `box_take_out`. De D-0719 vale el resto:
+  relleno, etiqueta y sellos se pierden, no se devuelve plata y la caja no vuelve a los insumos. `disassemble()`
+  no se usa porque deja los productos en `PackingStation.staged`, que por red no viaja.
+- **A dónde van las unidades:** a `hands:<peer>` del que pide si entran **todas** (un solo producto; mano vacía
+  o con ese producto; hasta `HAND_MAX_UNITS`, la regla de `units_take`); si no, **todas** a un bulto nuevo
+  `floor:<n>` (`FloorBundles.next_free`) en el `spot` de la mesa, donde estaba la caja, que se levanta con
+  `units_take` en ese bulto. **Decisión:** el `spot` y no los pies del jugador: no depende de la pose que replica
+  el cliente y es donde D-0719 deja los productos ("de vuelta en la mesa") y donde aparece el paquete de
+  `box_sealed`. `CompanyTableNet.bundles` es el `CompanyNet.floor_bundles` de ese peer (lo pone `CompanyNet` en
+  `_init()`). La reserva del pedido no cambia: por producto, sigue en pie como con `units_take`.
+- **Validación del evento (regla 6), todo antes del primer cambio:** la mesa tiene la caja `box` del evento y el
+  mismo `contents`; las unidades están en `box:<id>`; `to` es una mano (con a lo sumo un producto) o un bulto
+  `floor:<n>` con `pos` finito (`FloorBundles.positions_ok`), con algo que guardar, vacío y sin posición en esa
+  copia. `box_restocked`: `supply` conocido y `count` entero igual a la capacidad. Si no, no cambia nada y el peer
+  espera un snapshot (§3).
+- **Join tardío:** sin parte nueva del snapshot: los insumos van en `packing`, las unidades en `inventory` y la
+  posición del bulto en `floor`.
+- **Líneas:** `company_net.gd` queda en 997 de las 1000 de gdlint: la próxima acción tiene que sacar algo antes
+  (p. ej. el armado de trozos `_take_chunk`).
+- Test: `test_company_table_restock_discard` (solo con los rechazos y los destinos de las unidades, eventos que
+  no encajan, y host + cliente ENet + uno que entra tarde).
+- **Pendiente:**
+  - el gesto de reponer y el cartel de "falta X" (`StationSupplies.low_kinds()`) en la mesa visible (D-0718.b,
+    D-0701.b): pide `CompanyNet.request(CompanyTableNet.RESTOCK, {"station": id, "supply": kind})` por insumo;
+  - `short_of` lo llena el evento `box_shortage` cuando exista (grupo 05);
+  - dibujar el bulto que deja `box_discarded` (D-0611): está en el `spot` de la mesa, a la altura de la tabla, y
+    puede quedar debajo de la caja nueva que se abra ahí;
+  - textos de UI para `supply_full` (y los demás motivos de la mesa).
