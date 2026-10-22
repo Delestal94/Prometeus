@@ -87,6 +87,14 @@ static func attach(parent: Node, company_net: CompanyNet, company_shed: CompanyS
 	return grip
 
 
+## Host: a crew member worked a picking cart (D-0610.b, take D-0610.c2). The handle is ours; the rest goes to
+## PickingCartUse, which asks the host's own CompanyNet on their behalf (reach, hands and room).
+func on_cart_used(cart_id: StringName, action: StringName, peer: int, from: Vector3, what: StringName) -> void:
+	if net == null or not net.is_host() or handled(cart_id, action, peer):
+		return
+	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer, from, what)
+
+
 ## Host: `peer` used a point of cart `cart_id`. The handle grips or lets go and that is all (true); any other
 ## use of the cart lets go of it and goes on (false: the caller does what it asked).
 func handled(cart_id: StringName, action: StringName, peer: int) -> bool:

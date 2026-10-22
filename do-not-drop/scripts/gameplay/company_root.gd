@@ -130,7 +130,6 @@ var player: Node3D
 var shed: CompanyShed
 ## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
 var builder: ShedBuilder
-var cart_grip: PickingCartGrip  # who holds a picking cart's handle (D-0610.c2.b)
 ## The stock list over the clipboard's key (D-0612.b): every peer, read only.
 var stock_board: StockBoard
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
@@ -633,8 +632,7 @@ func _add_shed() -> void:
 		shed.follow(net)
 		net.stations = shed.station_for
 		shed.piece_used.connect(_on_piece_used)
-		shed.cart_used.connect(_on_cart_used)
-		cart_grip = PickingCartGrip.attach(self, net, shed)
+		shed.cart_used.connect(PickingCartGrip.attach(self, net, shed).on_cart_used)
 		shed.jack_used.connect(_on_jack_used)
 
 
@@ -655,15 +653,6 @@ func _on_piece_used(uid: StringName, role: StringName, peer_id: int) -> void:
 		{"station": plan["station"], "product": plan["product"], "qty": plan["qty"]})
 	if net.inventory.count(plan["product"], hands) > before:
 		_pick_after[key] = plan["slot"]
-
-
-## Host: a crew member worked a picking cart (D-0610.b, take D-0610.c2). PickingCartUse asks the host's own
-## CompanyNet on their behalf, which checks reach, hands and room.
-func _on_cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, what: StringName) -> void:
-	if net == null or not net.is_host():
-		return
-	if cart_grip != null and cart_grip.handled(cart_id, action, peer_id): return
-	PickingCartUse.use(net, shed.cart_views.get(cart_id) as PickingCartView, action, peer_id, from, what)
 
 
 ## Host: a crew member worked the pallet jack (D-0605.b): pick a pallet up or put it down, or push the jack.
