@@ -7,7 +7,7 @@ extends SceneTree
 ##   <stage>:<reason>", ok -> "" (the bot prints BOT_STAGE <stage> ok instead);
 ## - final_line is BOT_OK only when every stage is ok, else BOT_FAIL stages_missing=<n> (a bot that
 ##   always said OK would hide the missing stages);
-## - summary_lines keys and the BOT_COMPANY prefix;
+## - summary_lines keys (return_bundle_units too, D-0252) and the BOT_COMPANY prefix;
 ## - integration: the bot's own open_world/wait_opening open the company world (company_root.tscn)
 ##   and the day reaches OPENING within the bounded wait; closing leaves no error behind;
 ## - the stages, run in order on that one world (run_stage): receive_pallet, shelve_stock,
@@ -83,11 +83,12 @@ func _check_pure(bot: GDScript) -> void:
 	_expect(final != "BOT_OK", "A failed stage is not BOT_OK (got %s)" % final)
 
 	var stats: Dictionary = {
-		"players": 2, "money": 500, "deliveries": 0, "breaks": 0, "assembly_errors": 0,
+		"players": 2, "money": 500, "deliveries": 0, "breaks": 0, "assembly_errors": 0, "return_bundle_units": 3,
 		"stage_ms": {"drive": 7},
 	}
 	var lines: PackedStringArray = bot.call(&"summary_lines", stats)
-	_expect(lines.size() == 5 + names.size(), "Summary line count (got %d)" % lines.size())
+	_expect(lines.size() == 6 + names.size(), "Summary line count (got %d)" % lines.size())
+	_expect("BOT_COMPANY return_bundle_units=3" in lines, "Return bundle line (got %s)" % [lines])
 	_expect(lines[0] == "BOT_COMPANY players=2", "First line (got %s)" % lines[0])
 	_expect(lines[1] == "BOT_COMPANY money=500", "Money line (got %s)" % lines[1])
 	_expect("BOT_COMPANY stage_ms_drive=7" in lines, "Stage ms line (got %s)" % [lines])
@@ -169,7 +170,7 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 			"return":
 				_check_returned(root_level, ctx)
 			"close_day":
-				_check_closed(root_level)
+				_check_closed(root_level, ctx)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
 	# drive and return move the real van in real-time physics (about 2 s each).
 	_expect(seconds < 15.0, "The stages run in a bounded time (took %.1f s)" % seconds)
@@ -281,7 +282,7 @@ func _check_returned(level: CompanyRoot, ctx: Dictionary) -> void:
 	_expect(van != null and int(van.get(&"driver_peer_id")) == 0, "Nobody is left at the wheel")
 
 
-func _check_closed(level: CompanyRoot) -> void:
+func _check_closed(level: CompanyRoot, ctx: Dictionary) -> void:
 	var cycle: DayCycle = level.day_cycle
 	_expect(cycle.phase() == DAY_CYCLE.Phase.SUMMARY,
 		"The day is in SUMMARY (got %s)" % cycle.phase_name())
@@ -289,6 +290,14 @@ func _check_closed(level: CompanyRoot) -> void:
 	_expect(int(cycle.summary.get("costs", 0)) > 0, "The summary counts the day's costs")
 	var path: String = CompanySave.path_for(level.save_slot, level.save_dir)
 	_expect(FileAccess.file_exists(path), "The closed day was saved to the temp folder")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var saved := Inventory.new()
+	if raw is Dictionary:
+		saved.from_dict(((raw as Dictionary).get("company", {}) as Dictionary).get("inventory", {}))
+	var left: int = CompanyAsk.units_at(saved, CompanyRoot.SAVED_HANDS_LOCATION)
+	_expect(int(ctx.get("return_bundle_units", -1)) == left,
+		"The bot counts the units the save left in the return bundle (D-0252) (got %s, saved %d)"
+		% [ctx.get("return_bundle_units"), left])
 
 
 func _money(level: Node3D) -> int:

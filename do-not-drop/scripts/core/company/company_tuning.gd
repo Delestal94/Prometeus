@@ -181,6 +181,13 @@ const WAREHOUSE_STAGE_MAX_PIECES: Array[int] = [16, 36, 64, 100]
 const WAREHOUSE_DOCK_CELLS: Vector2i = Vector2i(4, 2)
 const WAREHOUSE_EXIT_CELLS: Vector2i = Vector2i(2, 2)
 
+# --- Return bundle (D-0252) ---
+## Where the return bundle (ReturnBundle) lies when a saved day loads, in the world at floor height: in the
+## starting shed (stage 0, standing at the origin), the middle of cell (10, 1), at the north end of the aisle in
+## front of the default packing tables (DefaultShed: table_1 and table_2 against the east wall, cells 11 x 2..5).
+## A bigger stage keeps it in that cell, as it keeps every piece; a piece over it moves it (ReturnBundle.spot()).
+const RETURN_BUNDLE_SPOT: Vector3 = Vector3(4.5, 0.0, -2.5)
+
 # --- Warehouse lighting (D-0913) ---
 ## Ceiling lamps: one per tile of at most this many meters, so the number grows with the stage
 ## (2 lamps in the small shed, 12 in the logistics center).
@@ -369,6 +376,8 @@ const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
 ## so a lost "stop" cannot send the forks to the top).
 const FORKLIFT_TIP_M: float = 1.2
 const FORKLIFT_MAST_BURST_S: float = 0.5
+## How fast its driver goes (m/s, D-0606.c2): a forklift's 8 km/h, under walking pace (3.6), and no running.
+const FORKLIFT_DRIVE_SPEED_MPS: float = 2.2
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0

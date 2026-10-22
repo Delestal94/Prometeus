@@ -53,7 +53,8 @@ extends SceneTree
 ##   BOT_FAIL no_opening                the day never reached OPENING
 ##   BOT_STAGE <stage> ok               a stage that passed
 ## then a summary block, one `BOT_COMPANY key=value` line each (players, money, deliveries,
-## breaks, assembly_errors, stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
+## breaks, assembly_errors, return_bundle_units: what the closed day's save left in the return bundle,
+## D-0252; stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
 ## ok, else `BOT_FAIL stages_missing=<n>`.
 ## The van's crossings are the real node's: nothing feeds the gate by hand (CompanyTrips.track).
 ## Exit codes: 0 BOT_OK, 1 any BOT_FAIL, 3 hard wall-clock timeout (`BOT_TIMEOUT`).
@@ -132,7 +133,7 @@ static func stage_ok_line(stage: String) -> String:
 ## One `BOT_COMPANY key=value` line per key: the fixed counters, then stage_ms_<stage> in order.
 static func summary_lines(stats: Dictionary) -> PackedStringArray:
 	var lines := PackedStringArray()
-	for key: String in ["players", "money", "deliveries", "breaks", "assembly_errors"]:
+	for key: String in ["players", "money", "deliveries", "breaks", "assembly_errors", "return_bundle_units"]:
 		lines.append("%s %s=%s" % [PREFIX, key, str(stats.get(key, 0))])
 	var times: Dictionary = stats.get("stage_ms", {})
 	for stage: String in STAGES:
@@ -245,7 +246,7 @@ func _run() -> void:
 	var stats: Dictionary = {
 		"players": _players, "money": money, "deliveries": int(ctx["deliveries"]),
 		"breaks": int(ctx["breaks"]), "assembly_errors": int(ctx["assembly_errors"]),
-		"stage_ms": times,
+		"return_bundle_units": int(ctx["return_bundle_units"]), "stage_ms": times,
 	}
 	close_world(self, level)
 	for line: String in summary_lines(stats):
@@ -276,7 +277,7 @@ func _on_hard_timeout() -> void:
 ## What the stages hand to each other, and the counters of the summary. `players` sizes the orders.
 static func new_context(players: int) -> Dictionary:
 	return {
-		"players": players, "assembly_errors": 0, "breaks": 0, "deliveries": 0,
+		"players": players, "assembly_errors": 0, "breaks": 0, "deliveries": 0, "return_bundle_units": 0,
 		# Pallets the bot opened: id -> the Pallet dictionary (state open).
 		"opened": {},
 		# What the bot holds after receive_pallet: {product, qty}.
@@ -317,7 +318,7 @@ static func run_stage(
 		"return":
 			return await _return(tree, level as CompanyRoot, ctx)
 		"close_day":
-			return await _close_day(tree, level as CompanyRoot)
+			return await _close_day(tree, level as CompanyRoot, ctx)
 	return _fail("unknown_stage")
 
 
@@ -683,7 +684,7 @@ static func _return(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dic
 
 ## The day closes the way its clock does: 20:00 comes, OPERATING goes to CLOSING and, with no trip
 ## out, to SUMMARY. The summary must carry what the day cost and the closed day must save and load.
-static func _close_day(tree: SceneTree, level: CompanyRoot) -> Dictionary:
+static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var cycle: DayCycle = level.day_cycle
 	var state: Node = level.net.company as Node
 	if not level.clock.start(float(CompanyTuning.DAY_END_MIN)):
@@ -713,13 +714,17 @@ static func _close_day(tree: SceneTree, level: CompanyRoot) -> Dictionary:
 		return _fail("summary_without_packing_costs")
 	if int(summary.get("closing", -1)) != int(state.get("money")):
 		return _fail("summary_money")
-	return _save_and_load(level, state)
+	return _save_and_load(level, state, ctx)
 
 
 ## What the closing screen's continue will do (D-0206's hook): the closed day is saved as a finished
 ## day and read back into a scratch company that must hold the same day, money, ledger and stock.
-static func _save_and_load(level: CompanyRoot, state: Node) -> Dictionary:
-	state.call(&"store_stock", CompanyRoot.stock_for_save(level.net.inventory))
+## The units the save leaves in the return bundle go to ctx (D-0252: with a full crew it may have to
+## be one bundle per product).
+static func _save_and_load(level: CompanyRoot, state: Node, ctx: Dictionary) -> Dictionary:
+	var kept: Inventory = CompanyRoot.stock_for_save(level.net.inventory)
+	ctx["return_bundle_units"] = CompanyAsk.units_at(kept, CompanyRoot.SAVED_HANDS_LOCATION)
+	state.call(&"store_stock", kept)
 	if not CompanySave.save(state, level.save_slot, level.save_dir):
 		return _fail("save_failed")
 	var scratch: Node = CompanyRoot.COMPANY_STATE.new()
