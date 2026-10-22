@@ -95,6 +95,9 @@ static func transfer(p: DeliveryPackage, sender_id: int, recipient_path: NodePat
 	var recipient: Player = p.get_node_or_null(recipient_path) as Player if RpcGuard.path_ok(recipient_path) else null
 	if recipient == null or recipient == p.carrier or recipient.carried_package != null:
 		return
+	# Somebody driving on foot (the shed's forklift, meta `driving`) has their hands on it: no box.
+	if recipient.has_meta(&"driving"):
+		return
 	if DeliveryPackage._reach_origin(recipient).distance_to(DeliveryPackage._reach_origin(p.carrier)) \
 			> TRANSFER_REACH + p.reach_slack(sender_id):
 		return

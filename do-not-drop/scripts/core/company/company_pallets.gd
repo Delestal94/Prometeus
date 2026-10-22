@@ -150,8 +150,38 @@ func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dic
 	return {} if found.is_empty() else {"day": day, "pallets": found}
 
 
+## Host: check() for a request `net` (CompanyNet) took from `peer`: the station with what only the host knows of
+## the requester, over anything the station says under the same keys: "peer"; for the forklift also "hands_free"
+## (no units in hands:<peer>, no box on their player) and "lag" (their round trip, s: NetStats).
+func check_for(net: CompanyNet, peer: int, kind: StringName, data: Dictionary, station: Dictionary) -> Dictionary:
+	var asker: Dictionary = {"peer": peer}
+	if kind == FORK_ACT:
+		asker["hands_free"] = hands_free(net, peer)
+		asker["lag"] = NetStats.round_trip_seconds(net.multiplayer.multiplayer_peer, peer)
+	return check(kind, data, station.merged(asker, true))
+
+
+## Host: `peer` left (CompanyNet._let_go(), on peer_removed with its player still there): the fork_state that frees
+## the forklift they drove where `station` (the forklift's) says it stands, or {reason} when they drove nothing.
+func let_go(peer: int, station: Dictionary) -> Dictionary:
+	return forklift.let_go(peer, station, Time.get_ticks_msec())
+
+
+## Host: whether `peer` holds nothing: no units in their hands in `net`'s stock and no box on their player (the
+## nodes of Interactable.player_group, `carried_package`).
+static func hands_free(net: CompanyNet, peer: int) -> bool:
+	if net.inventory != null and not net.inventory.contents_at(CompanyNet.hands_location(peer)).is_empty():
+		return false
+	if not net.is_inside_tree():
+		return true
+	for player: Node in net.get_tree().get_nodes_in_group(Interactable.player_group):
+		if player.get_multiplayer_authority() == peer and player.get(&"carried_package") != null:
+			return false
+	return true
+
+
 ## Host: the event a request asks for at `station`, or its refusal: {reason: &"", kind, data} or {reason}.
-## `station` has "peer" (the requester) when CompanyNet asks.
+## `station` has "peer" (the requester) when CompanyNet asks (check_for()).
 func check(kind: StringName, data: Dictionary, station: Dictionary) -> Dictionary:
 	if kind == FORK_ACT:
 		return forklift.check(data, station, book, Time.get_ticks_msec())
@@ -243,7 +273,9 @@ func _apply_picked(data: Dictionary) -> bool:
 	var held_at: Variant = (book.places[StringName(id)] as Dictionary).get("pos", Vector2.ZERO)
 	var taken: bool = book.pick_up(StringName(id), held_at)
 	var by: Variant = data.get("by")
-	forklift.holds = taken and CompanyAsk.is_id(by) and StringName(by) == CompanyForklift.BY
+	# A pick that did not take leaves the carried pallet where it was, forks or jack.
+	if taken:
+		forklift.holds = CompanyAsk.is_id(by) and StringName(by) == CompanyForklift.BY
 	return taken
 
 

@@ -631,7 +631,7 @@ func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
 func _on_object(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	var push: Dictionary = CompanyCarts.push_ask(data)
 	var ask: Dictionary = {"station": CompanyPallets.station_for(kind)}
-	var check: Callable = func(s: Dictionary) -> Dictionary: return pallets.check(kind, data, s.merged({"peer": peer}))
+	var check: Callable = func(s: Dictionary) -> Dictionary: return pallets.check_for(self, peer, kind, data, s)
 	if kind == CompanyCarts.PUSH:
 		ask = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
 		check = func(station: Dictionary) -> Dictionary: return carts.check(push, station)
@@ -732,9 +732,9 @@ func _drop_from_hands(peer: int, product: StringName, qty: int, pos: Vector3) ->
 	return _publish(&"units_moved", moved)
 
 
-## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second
-## finds empty hands). What it held goes onto the floor, one units_moved per product into a new
-## bundle at its feet (_feet_of()), else the origin. Mid-event it waits for the next frame.
+## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second finds empty hands and
+## no forklift). What it held goes onto the floor, one units_moved per product into a new bundle at its feet
+## (_feet_of()), else the origin; the forklift it drove stays where it is. Mid-event it waits for the next frame.
 func _let_go(peer: int) -> void:
 	if _applying:
 		_let_go.call_deferred(peer)
@@ -742,6 +742,7 @@ func _let_go(peer: int) -> void:
 	var held: Dictionary = {}
 	if is_host() and peer != multiplayer.get_unique_id() and inventory != null:
 		held = inventory.contents_at(hands_location(peer))
+		_grant(pallets.let_go(peer, _lookup_station({"station": CompanyPallets.FORK_STATION})))
 	var pos: Variant = _feet_of(peer) if not held.is_empty() else null
 	for product: StringName in held:
 		if not _drop_from_hands(peer, product, int(held[product]), pos if pos != null else Vector3.ZERO):

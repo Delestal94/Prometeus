@@ -7,24 +7,34 @@ extends SceneTree
 ## - the shed has pallet slots on its shelves (one per deck, ids "<shelf>-<level>") and the forklift waits at its
 ##   home, on the floor, clear of the jack and facing the truck's gate;
 ## - a player gets on it (the seat point, only with nobody driving and no box in hand), and it follows their player:
-##   the host judges every request by where the driver stands, the other peers draw it there;
+##   the host judges every request by where the driver stands, the other peers draw it there; the host itself refuses
+##   a driver with a box or units in hand (hands_busy, CompanyPallets.hands_free());
 ## - with the forks down and the truck parked it takes a pallet off the bed (one event, `by` forklift): the pallet is
 ##   drawn on its forks and not on the jack, the jack's forks refuse while it holds it, the stock does not move yet;
 ## - the mast: a request moves the forks for at most FORKLIFT_MAST_BURST_S, the host's height rides every event and
-##   a second peer integrates the same; held up to the high deck, a pallet is left on a rack slot: the stock rises
-##   once, the pallet is drawn on the rack where the slot is, on both peers;
+##   a second peer integrates the same; letting go of the key leaves the forks at the height the driver drew (the
+##   stop's at_height, within what the forks cover in the round trip: CompanyForklift.stop_height()); held against
+##   the top the key asks nothing and the host refuses what would change nothing (no_change), with no event; held up
+##   to the high deck, a pallet is left on a rack slot: the stock rises once, the pallet is drawn on the rack where
+##   the slot is, on both peers;
 ## - refused, changing nothing: a pallet to a taken slot or at the wrong level or out of reach (no_rack), a pallet
 ##   taken at a level where there is none (no_pallet), on the floor with the forks up, a driver who is not the driver
-##   (not_driver), a second driver (taken), bad data (a dir of 2, an unknown act, NaN, a negative peer);
-## - the pallet comes down from the rack and is left on the floor; the stock never counts it twice; leaving parks the
-##   forklift where it stood with its forks as they were;
+##   (not_driver, also when the station says another peer), a second driver (taken), bad data (a dir of 2, an
+##   unknown act, NaN, a negative peer, a NaN at_height); a jack_picked that does not take leaves `holds` as it was;
+## - the pallet comes down from the rack and is left on the floor; the stock never counts it twice; getting off only
+##   where the forklift may stand (no_room against a shelf or off the floor, and the driver's prompt says why);
+##   leaving parks the forklift where it stood with its forks as they were;
 ## - a peer that joins late gets the forklift (driver, forks, pallet on them) and the rack pallets from the snapshot
-##   part, and a part that does not fit is refused changing nothing;
-## - the host lets the forklift go when its driver's player is gone;
+##   part (forks whose burst is over go as still), and a part that does not fit is refused changing nothing;
+## - another driver right after one takes the keys at once, and a driver whose player shows up late takes them when
+##   it does; the driver's player is marked `driving` (no box is handed to it) while it drives;
+## - a driver who leaves (peer_removed, the player still there): the host lets the forklift go at once where their
+##   player stands, on both peers; a driver's player gone with no leave heard: let go within GONE_SECONDS even with
+##   stock events every 0.5 s redrawing the yard;
 ## - the real company world (company_root.tscn, solo): the seat point gets the host's player on the forklift.
-## - a real Player with the interact override (PlayerInteraction): the interact key and the prompt are the forklift's.
-## Not covered: the real keyboard and the ENet pair (a client's fork_act over the wire; the same CompanyNet requests
-## the pair tests already carry).
+## - a real Player with the interact override (PlayerInteraction): the interact key and the prompt are the forklift's;
+##   a taken seat is never the point its probe picks, and a teammate who drives is not one to hand a box to.
+## Not covered: the real keyboard; the ENet pair is test_company_forklift_net.
 
 const HEN: StringName = &"hen"
 const LAMP: StringName = &"antique_lamp"
@@ -65,6 +75,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_test_stop_height()
+	_test_hands_free()
 	await _test_world()
 	await _test_player_override()
 	await _test_root()
@@ -141,6 +153,12 @@ func _test_world() -> void:
 	fork.used.connect(func(_how: StringName, _peer: int, _from: Vector3) -> void: boarded[0] += 1)
 	fork.seat_point.interact(_driver)
 	_expect(boarded[0] == 0, "A player with a box in hand does not get on")
+	# The host's own check, whatever the seat let through: no box in hand.
+	_refusals.clear()
+	var seq_box: int = _net.seq
+	_expect(PalletJackUse.use(_net, yard, PalletJackPoint.ACTION_BOARD, 1, _driver.global_position)
+		== PalletJackUse.REASON_REFUSED and _refusals == [CompanyForklift.REASON_HANDS_BUSY] and _net.seq == seq_box
+		and state.driver == 0, "The host refuses a driver with a box in hand: hands_busy (%s)" % [_refusals])
 	(_driver.carried_package as Node).free()
 	_driver.carried_package = null
 	var seq_before: int = _net.seq
@@ -176,11 +194,40 @@ func _test_world() -> void:
 	_expect(while_held >= 2 and while_held <= 4 and state.mast_dir == 1,
 		"Holding the mast key asks now and then, not every frame (%d events in 1 s)" % while_held)
 	Input.action_release(&"forklift_mast_up")
+	# What the view drew when the key went up: its stop carries it (at_height).
+	var drawn_at_release: float = fork.fork_height()
 	await process_frame
 	await process_frame
-	_expect(state.mast_dir == 0 and state.height_at(Time.get_ticks_msec()) > 0.3,
-		"Letting go stops the forks where the host left them (%.2f m)" % state.height_at(Time.get_ticks_msec()))
+	var stopped_at: float = state.height_at(Time.get_ticks_msec())
+	_expect(state.mast_dir == 0 and stopped_at > 0.3 and absf(stopped_at - drawn_at_release) < 0.001,
+		"Letting go stops the forks where the driver saw them (%.3f m, drawn %.3f m)" % [stopped_at, drawn_at_release])
+
+	# Held against the top of the mast: no request, no event; the host refuses what would change nothing.
+	await _publish_height(CompanyTuning.FORKLIFT_MAX_LIFT_M - 0.15)
+	Input.action_press(&"forklift_mast_up")
+	var reached: bool = await _wait_until(func() -> bool:
+		return fork.fork_height() >= CompanyTuning.FORKLIFT_MAX_LIFT_M - CompanyForklift.END_M, 3.0)
+	var seq_top: int = _net.seq
+	await create_timer(1.0).timeout
+	var while_at_top: int = _net.seq - seq_top
+	Input.action_release(&"forklift_mast_up")
+	await process_frame
+	await process_frame
+	_expect(reached and while_at_top == 0 and _net.seq == seq_top,
+		"Held at the top for a second and let go: no event (%d while held, %d in all)" % [while_at_top,
+		_net.seq - seq_top])
+	_refusals.clear()
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 1})
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 0})
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 0,
+		"at_height": CompanyTuning.FORKLIFT_MAX_LIFT_M})
 	await _publish_height(0.0)
+	var seq_floor: int = _net.seq
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": -1})
+	var nothing: Array = [CompanyForklift.REASON_NO_CHANGE, CompanyForklift.REASON_NO_CHANGE,
+		CompanyForklift.REASON_NO_CHANGE, CompanyForklift.REASON_NO_CHANGE]
+	_expect(_refusals == nothing and _net.seq == seq_floor,
+		"Up at the top, a stop of still forks, down at the floor: no_change, no event (%s)" % [_refusals])
 
 	# Taking a pallet off the bed: forks down, the rear in reach of the forks.
 	var rear: Vector2 = SupplierTruckView.rear_of(0)
@@ -295,7 +342,24 @@ func _test_world() -> void:
 	# Bad data and who may.
 	_test_bad_data()
 
-	# Getting off.
+	# Getting off: only on the floor, where the forklift may stand (as a cart: clear of walls and furniture).
+	_stand(fork_at_rack, PI * 0.5)
+	_refusals.clear()
+	var seq_park: int = _net.seq
+	_expect(not _ask({"act": CompanyForklift.ACT_LEAVE}), "Against the shelf it does not get off")
+	_stand(Vector2(100.0, 3.0), 0.0)
+	_expect(not _ask({"act": CompanyForklift.ACT_LEAVE}) and state.driver == 1 and _net.seq == seq_park
+		and _refusals == [CompanyForklift.REASON_NO_ROOM, CompanyForklift.REASON_NO_ROOM],
+		"Against the shelf or off the floor: no_room, still driving (%s)" % [_refusals])
+	var drop_key := InputEventAction.new()
+	drop_key.action = &"package_drop"
+	drop_key.pressed = true
+	fork._unhandled_input(drop_key)
+	# The view's own prompt (the mirror's view, also "local" in one process, may hold the player's override).
+	var prompt: String = String(fork.call(&"_prompt"))
+	_expect(state.driver == 1 and prompt == fork.tr("WORLD_FORKLIFT_NO_PARK"),
+		"The driver's own key there: the prompt says why (%s)" % prompt)
+	_stand(PalletYardView.fork_home(0) + Vector2(-0.5, -0.5), 0.4)
 	var leave_at: Dictionary = fork.pose()
 	_expect(_ask({"act": CompanyForklift.ACT_LEAVE}) and state.driver == 0 and _mirror.pallets.forklift.driver == 0,
 		"Leaving frees the forklift on both peers")
@@ -311,24 +375,122 @@ func _test_world() -> void:
 		"Parked: the driver's player moves on, it does not (%s vs %s)" % [_pose_of(fork), parked_pose])
 	_same_as_mirror("after getting off")
 
-	# The host lets go of a forklift whose driver's player is gone.
 	_stand(state.at, state.yaw)
 	_expect(PalletJackUse.use(_net, yard, PalletJackPoint.ACTION_BOARD, 1, _driver.global_position)
 		== PalletJackUse.RESULT_BOARDED and state.driver == 1, "Getting on again, where it was left")
-	_driver.remove_from_group(&"player")
-	_driver.free()
-	_driver = null
-	var waited: int = 0
-	while state.driver != 0 and waited < 40:
-		await create_timer(0.1).timeout
-		waited += 1
-	_expect(state.driver == 0 and _mirror.pallets.forklift.driver == 0,
-		"Its driver's player gone, the host lets it go after about %.1f s (waited %.1f)"
-		% [ForkliftView.GONE_SECONDS, waited * 0.1])
-	_expect(_events_consistent(), "Both peers applied every event in order (%d / %d)" % [_mirror.seq, _net.seq])
+	_expect(_driver.has_meta(ForkliftView.DRIVING_META), "The driver's player is marked as driving")
+	_publish_driver(0)
+	await _test_next_driver()
+	await _test_leaver()
 
 	for node: Node in [_mirror_truck, _mirror_shed, _mirror, _truck, _shed, _net]:
 		node.free()
+
+
+## Another driver right after one, and a driver whose player shows up late: the keys are theirs as soon as their
+## player is there (ForkliftView: a lookup at once on a new driver, and _process takes the keys once it is found).
+func _test_next_driver() -> void:
+	var fork: ForkliftView = _shed.yard.forklift
+	var other: FakePlayer = _add_player("OtherDriver", 2, Vector2(-2.0, 2.0), 0.7)
+	_publish_driver(2)
+	await process_frame
+	_expect(other.has_meta(ForkliftView.DRIVING_META) and not fork.is_local_driving()
+		and not _driver.has_meta(ForkliftView.DRIVING_META), "Peer 2 drives: their player is marked, not ours")
+	_publish_driver(0)
+	_publish_driver(1)
+	_expect(fork.is_local_driving() and _driver.has_meta(&"interact_override")
+		and not other.has_meta(ForkliftView.DRIVING_META),
+		"Peer 1 gets on right after peer 2: the keys are theirs at once, with no wait for the next lookup")
+	_publish_driver(0)
+	_driver.remove_from_group(&"player")
+	_publish_driver(1)
+	var before: bool = fork.is_local_driving()
+	_driver.add_to_group(&"player")
+	var took: bool = await _wait_until(func() -> bool: return fork.is_local_driving(), 1.5)
+	_expect(not before and took and _driver.has_meta(&"interact_override"),
+		"A driver whose player shows up after the event takes the keys once it is found")
+	_publish_driver(0)
+	_expect(not _driver.has_meta(&"interact_override") and not _driver.has_meta(ForkliftView.DRIVING_META),
+		"... and gives them back on getting off")
+	other.free()
+
+
+## A driver who leaves: let go at once by CompanyNet (peer_removed, the player still there), where their player
+## stands; and the view's safety net for a player gone with no leave heard, even with stock events every 0.5 s.
+func _test_leaver() -> void:
+	var state: CompanyForklift = _net.pallets.forklift
+	var leaver: FakePlayer = _add_player("Leaver", 2, Vector2(-2.0, 2.0), 0.7)
+	_publish_driver(2)
+	await process_frame
+	leaver.global_position = Vector3(-2.5, 0.0, 3.0)
+	leaver.rotation = Vector3(0.0, 1.1, 0.0)
+	var seq: int = _net.seq
+	_net.call(&"_on_peer_removed", 2)
+	var parked: bool = state.at is Vector2 and (state.at as Vector2).is_equal_approx(Vector2(-2.5, 3.0))
+	_expect(_net.seq == seq + 1 and state.driver == 0 and _mirror.pallets.forklift.driver == 0 and parked
+		and absf(state.yaw - 1.1) < 0.001, "Its driver left: one event at once, parked where their player stood (%s)"
+		% [state.to_dict(Time.get_ticks_msec())])
+	_net.call(&"_on_peer_disconnected", 2)
+	_expect(_net.seq == seq + 1 and not leaver.has_meta(ForkliftView.DRIVING_META),
+		"The disconnect that follows changes nothing more, and the leaver is not marked as driving")
+	# The safety net: the player is gone, nobody heard the leave, stock events keep redrawing the yard.
+	_publish_driver(2)
+	await process_frame
+	leaver.free()
+	var start: int = Time.get_ticks_msec()
+	var redrawn: int = start
+	while state.driver != 0 and Time.get_ticks_msec() - start < 3000:
+		if Time.get_ticks_msec() - redrawn >= 500:
+			redrawn = Time.get_ticks_msec()
+			_shed.refresh_stock(_net.inventory)
+			_mirror_shed.refresh_stock(_mirror.inventory)
+		await process_frame
+	var took: float = (Time.get_ticks_msec() - start) / 1000.0
+	_expect(state.driver == 0 and _mirror.pallets.forklift.driver == 0 and took < 2.0,
+		"Its player gone with no leave heard, the host lets it go in %.1f s (under 2 s) despite a redraw every 0.5 s"
+		% took)
+	_expect(_events_consistent(), "Both peers applied every event in order (%d / %d)" % [_mirror.seq, _net.seq])
+
+
+## The stop of the mast (CompanyForklift.check(), stop_height()): the driver's drawn height when it lies within what
+## the forks cover in their round trip (the station's "lag") and STOP_SLACK_S, else the nearest that does; the
+## snapshot sends forks whose burst is over as still.
+func _test_stop_height() -> void:
+	var fork := CompanyForklift.new()
+	var book := PalletJack.new()
+	fork.apply(CompanyForklift.state_event(7, Vector2(1.0, 1.0), 0.0, 1, 0.5), 1000)
+	var station: Dictionary = {"peer": 7, "body": Vector2(1.0, 1.0), "yaw": 0.0, "lag": 0.2}
+	var stop := func(drawn: float, at: Dictionary) -> float:
+		var verdict: Dictionary = fork.check({"act": &"mast", "dir": 0, "at_height": drawn}, at, book, 1300)
+		return float(verdict["data"]["height"]) if verdict["reason"] == &"" else -1.0
+	# At 1300 ms the host's forks are at 0.5 + 0.55 * 0.3 = 0.665; the slack is 0.55 * (0.2 + 0.1) = 0.165.
+	var host: float = 0.5 + CompanyTuning.FORKLIFT_LIFT_SPEED * 0.3
+	var slack: float = CompanyTuning.FORKLIFT_LIFT_SPEED * (0.2 + CompanyForklift.STOP_SLACK_S)
+	_expect(is_equal_approx(stop.call(0.6, station), 0.6) and is_equal_approx(stop.call(0.3, station), host - slack)
+		and is_equal_approx(stop.call(2.0, station), host + slack),
+		"A stop takes the drawn height within the round trip's reach (0.6), else the nearest that is")
+	var no_lag: Dictionary = station.duplicate()
+	no_lag.erase("lag")
+	var huge: Dictionary = station.merged({"lag": 50.0}, true)
+	_expect(is_equal_approx(stop.call(0.3, no_lag), host - CompanyTuning.FORKLIFT_LIFT_SPEED
+		* CompanyForklift.STOP_SLACK_S) and is_equal_approx(stop.call(0.0, huge), maxf(host
+		- CompanyTuning.FORKLIFT_LIFT_SPEED * (1.0 + CompanyForklift.STOP_SLACK_S), 0.0)),
+		"No round trip known: STOP_SLACK_S alone; a huge one counts as 1 s")
+	var plain: Dictionary = fork.check({"act": &"mast", "dir": 0}, station, book, 1300)
+	_expect(plain["reason"] == &"" and is_equal_approx(float(plain["data"]["height"]), host),
+		"A stop with no at_height stops at the host's height")
+	_expect(fork.to_dict(1200)["dir"] == 1 and fork.to_dict(1600)["dir"] == 0
+		and is_equal_approx(float(fork.to_dict(1600)["height"]), 0.5 + CompanyTuning.FORKLIFT_LIFT_SPEED * 0.5),
+		"The snapshot sends moving forks as moving and forks whose burst is over as still, at their height")
+
+
+## CompanyPallets.hands_free(): units in hands:<peer> keep that peer off the forklift, and only them.
+func _test_hands_free() -> void:
+	var probe := CompanyNet.new()
+	probe.inventory.receive(HEN, 2, CompanyNet.hands_location(3))
+	_expect(not CompanyPallets.hands_free(probe, 3) and CompanyPallets.hands_free(probe, 4),
+		"Units in a peer's hands keep them off the forklift, and only them")
+	probe.free()
 
 
 ## The shelves' pallet slots and the forklift's home.
@@ -371,9 +533,28 @@ func _test_bad_data() -> void:
 	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 2})
 	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": "up"})
 	_net.request(CompanyPallets.FORK_ACT, {})
-	_expect(_refusals == [CompanyForklift.REASON_BAD_DATA, CompanyForklift.REASON_BAD_DATA,
-		CompanyForklift.REASON_BAD_DATA, CompanyForklift.REASON_BAD_DATA] and _net.seq == seq,
-		"An unknown act, a dir of 2, a text dir and no act are refused: bad_data (%s)" % [_refusals])
+	# A NaN never reaches the checks (RpcGuard.dict_ok() drops the request); the check refuses it all the same.
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 0, "at_height": NAN})
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 0, "at_height": "high"})
+	var bad: Array = []
+	bad.resize(5)
+	bad.fill(CompanyForklift.REASON_BAD_DATA)
+	var nan_stop: Dictionary = _net.pallets.check(CompanyPallets.FORK_ACT, {"act": &"mast", "dir": 0, "at_height": NAN},
+		_shed.station_for(CompanyPallets.FORK_STATION).merged({"peer": 1}, true))
+	_expect(_refusals == bad and _net.seq == seq and nan_stop["reason"] == CompanyForklift.REASON_BAD_DATA,
+		"An unknown act, a dir of 2, a text dir, no act, a NaN or text at_height: bad_data (%s)" % [_refusals])
+	# A station that names another peer (or says the hands are free, or a round trip): the host's requester and
+	# what the host knows of them count (CompanyPallets.check_for()), never the station's.
+	_net.stations = func(id: StringName) -> Dictionary:
+		return _shed.station_for(id).merged({"peer": 2, "hands_free": true, "lag": 99.0}, true)
+	_refusals.clear()
+	_net.request(CompanyPallets.FORK_ACT, {"act": CompanyForklift.ACT_MAST, "dir": 0})
+	var as_two: Dictionary = _net.pallets.check_for(_net, 2, CompanyPallets.FORK_ACT, {"act": &"mast", "dir": 1},
+		_shed.station_for(CompanyPallets.FORK_STATION).merged({"peer": 1}, true))
+	_net.stations = _shed.station_for
+	_expect(_refusals == [CompanyForklift.REASON_NO_CHANGE] and as_two["reason"] == CompanyForklift.REASON_NOT_DRIVER
+		and _net.seq == seq, "A station that says peer 2 does not make the driver someone else, nor peer 2 the driver "
+		+ "(%s, %s)" % [_refusals, as_two["reason"]])
 	# Somebody who is not the driver: judged at the station with their peer.
 	var station: Dictionary = _shed.station_for(CompanyPallets.FORK_STATION)
 	var other: Dictionary = station.merged({"peer": 2})
@@ -401,9 +582,11 @@ func _test_bad_data() -> void:
 	# jack_placed with a slot that is not an id, a pallet that is not the carried one.
 	var other_book := CompanyPallets.new()
 	var held := Inventory.new()
-	other_book.book.load_bed([Pallet.make(&"x1", HEN, 5)])
+	other_book.book.load_bed([Pallet.make(&"x1", HEN, 5), Pallet.make(&"x2", HEN, 5)])
 	_expect(other_book.apply(held, CompanyPallets.PICKED, {"pallet": &"x1", "by": CompanyForklift.BY})
 		and other_book.forklift.holds, "A jack_picked `by` the forklift puts the pallet on its forks")
+	_expect(not other_book.apply(held, CompanyPallets.PICKED, {"pallet": &"x2"}) and other_book.forklift.holds
+		and other_book.book.carrying == &"x1", "A jack_picked that does not take leaves the pallet on the forks")
 	_expect(not other_book.apply(held, CompanyPallets.PLACED, {"pallet": &"x1", "pos": Vector2.ZERO, "slot": 3})
 		and not other_book.apply(held, CompanyPallets.PLACED, {"pallet": &"x2", "pos": Vector2.ZERO, "slot": &"s-1"})
 		and other_book.forklift.holds and other_book.book.carrying == &"x1", "A bad slot or another pallet is refused")
@@ -465,7 +648,8 @@ func _check_late(part: Dictionary) -> void:
 
 ## A Player whose meta `interact_override` is set: interacting calls it, and the prompt it publishes is its own.
 func _test_player_override() -> void:
-	var player: Node = (load("res://scenes/gameplay/player/player.tscn") as PackedScene).instantiate()
+	var scene: PackedScene = load("res://scenes/gameplay/player/player.tscn")
+	var player: Node = scene.instantiate()
 	root.add_child(player)
 	await process_frame
 	var component: Node = player.get(&"_interaction_component")
@@ -479,6 +663,30 @@ func _test_player_override() -> void:
 	player.remove_meta(&"interact_override")
 	component.call(&"publish_prompt", "walking")
 	_expect(player.get(&"_last_prompt") == "walking", "Without the override the prompt is the aimed one again")
+	# The seat in front of the player: picked while free, never once taken.
+	var camera: Node3D = player.get(&"_camera")
+	var ahead: Vector3 = camera.global_position - camera.global_basis.z * 1.2
+	var seat := PalletJackPoint.make(PalletJackPoint.ACTION_BOARD, Vector3.ZERO, 1.0)
+	root.add_child(seat)
+	seat.global_position = ahead
+	(player.get(&"_nearby") as Array).append(seat)
+	var free_pick: Variant = component.call(&"closest_interactable")
+	seat.taken = true
+	var taken_pick: Variant = component.call(&"closest_interactable")
+	_expect(free_pick == seat and taken_pick == null and not seat.can_interact(player),
+		"A free seat is the point the probe picks; a taken one never is (%s, %s)" % [free_pick, taken_pick])
+	(player.get(&"_nearby") as Array).erase(seat)
+	seat.free()
+	# A teammate in front, at hand: one to hand a box to, unless they drive.
+	var mate: Node3D = scene.instantiate()
+	root.add_child(mate)
+	mate.global_position = ahead
+	var to_mate: Variant = player.call(&"_transfer_target")
+	mate.set_meta(ForkliftView.DRIVING_META, true)
+	var to_driver: Variant = player.call(&"_transfer_target")
+	_expect(to_mate == mate and to_driver == null,
+		"A teammate at hand takes a box, one who drives does not (%s, %s)" % [to_mate, to_driver])
+	mate.free()
 	player.free()
 
 
@@ -516,6 +724,34 @@ func _test_root() -> void:
 
 
 # --- Helpers ---
+
+
+## A player of peer `peer` standing at `body` (shed frame) facing `heading`.
+func _add_player(player_name: String, peer: int, body: Vector2, heading: float) -> FakePlayer:
+	var player := FakePlayer.new()
+	player.name = player_name
+	player.set_multiplayer_authority(peer)
+	root.add_child(player)
+	player.add_to_group(&"player")
+	player.global_position = Vector3(body.x, 0.0, body.y)
+	player.rotation = Vector3(0.0, heading, 0.0)
+	return player
+
+
+## The host sets who drives straight (a fork_state event, as for a driver who left), the forks as they are.
+func _publish_driver(peer: int) -> void:
+	var pose: Dictionary = _shed.yard.forklift.pose()
+	_net.publish(CompanyPallets.FORK, CompanyForklift.state_event(peer, pose["body"], pose["yaw"], 0,
+		_net.pallets.forklift.height_at(Time.get_ticks_msec())))
+
+
+func _wait_until(done: Callable, seconds: float) -> bool:
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		if done.call():
+			return true
+		await process_frame
+	return bool(done.call())
 
 
 ## Stands the driver's player at `body` (shed frame) facing `heading`.

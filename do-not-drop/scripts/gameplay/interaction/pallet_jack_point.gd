@@ -44,6 +44,11 @@ func get_prompt() -> String:
 	return tr(String(PROMPT_KEYS.get(action, "WORLD_SHED_USE_JACK")))
 
 
+## A taken seat is never the point the probe picks (closest_interactable) nor used on the host.
+func can_interact(player: Node) -> bool:
+	return not taken and super.can_interact(player)
+
+
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return

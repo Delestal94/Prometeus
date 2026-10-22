@@ -15,7 +15,9 @@ extends Node3D
 ##
 ## Controls of the local driver: the interact key takes / leaves a pallet (PlayerInteraction's
 ## `interact_override`), forklift_mast_up / forklift_mast_down raise and lower the forks, package_drop gets off.
-## The host also lets the forklift go when its driver's player is gone for good.
+## On every peer the driver's player carries the meta `driving` (DRIVING_META) while it drives: nobody hands it a box.
+## The host lets the forklift go when its driver leaves (CompanyNet, on peer_removed); here there is only a safety net
+## for a driver's player that is gone without that (GONE_SECONDS).
 
 signal used(action: StringName, peer_id: int, from: Vector3)
 
@@ -28,7 +30,11 @@ const MAST_RESEND_S: float = 0.35
 ## How long a refusal stays in the prompt, and how long the host waits for a vanished driver's player.
 const REFUSAL_SECONDS: float = 3.0
 const GONE_SECONDS: float = 1.5
-## The text a refusal shows (default: WORLD_FORKLIFT_REFUSED).
+## How often the driver's player is looked for among the players while it is not found (ms).
+const LOOKUP_MSEC: int = 500
+## The meta the driver's player carries while it drives (PackageHandling.transfer(), PlayerCarry.transfer_target()).
+const DRIVING_META: StringName = &"driving"
+## The text a refusal of work shows (default: WORLD_FORKLIFT_REFUSED).
 const REFUSAL_KEYS: Dictionary = {
 	CompanyForklift.REASON_NO_PALLET: "WORLD_FORKLIFT_NO_PALLET",
 	CompanyForklift.REASON_NO_ROOM: "WORLD_FORKLIFT_NO_ROOM",
@@ -36,6 +42,8 @@ const REFUSAL_KEYS: Dictionary = {
 	CompanyForklift.REASON_JACK_FULL: "WORLD_FORKLIFT_HANDS_FULL",
 	CompanyForklift.REASON_TRUCK_AWAY: "WORLD_FORKLIFT_TRUCK_AWAY",
 }
+## ... and of getting off.
+const LEAVE_REFUSAL_KEYS: Dictionary = {CompanyForklift.REASON_NO_ROOM: "WORLD_FORKLIFT_NO_PARK"}
 
 ## The seat: a point to get on when nobody drives.
 var seat_point: PalletJackPoint
@@ -57,10 +65,14 @@ var _driver_node: Node3D
 var _override_node: Node
 var _next_lookup_msec: int = 0
 var _gone_since_msec: int = -1
+## The driver the last refresh() drew (a change restarts the lookup and the wait for a gone player).
+var _drawn_driver: int = 0
 var _local_driving: bool = false
 var _sent_dir: int = 0
 var _sent_msec: int = 0
-var _work_rids: Dictionary = {}
+## The last request whose refusal the prompt shows (work, leave) and its act; -1 while it is being asked.
+var _shown_rid: int = 0
+var _shown_act: StringName = &""
 var _refusal: String = ""
 var _refusal_until_msec: int = 0
 
@@ -82,6 +94,13 @@ static func make(home: Vector2, heading: float) -> ForkliftView:
 func refresh(pallets: CompanyPallets) -> void:
 	_pallets = pallets
 	var state: CompanyForklift = pallets.forklift
+	if state.driver != _drawn_driver:
+		# Another driver: their player is looked for now, not at the next spaced lookup, and the wait for a gone
+		# one starts over (only here: any pallet or stock event redraws, and must not put it off).
+		_drawn_driver = state.driver
+		_next_lookup_msec = 0
+		_gone_since_msec = -1
+		_set_driver_node(null)
 	seat_point.taken = state.driver != 0
 	var book: PalletJack = pallets.book
 	if book.carrying != &"" and state.holds:
@@ -93,7 +112,6 @@ func refresh(pallets: CompanyPallets) -> void:
 		position = Vector3(parked.x, 0.0, parked.y)
 		rotation.y = state.yaw if state.at is Vector2 else rotation.y
 	_carriage.position.y = state.height_at(Time.get_ticks_msec())
-	_gone_since_msec = -1
 	_sync_local_driving()
 	set_process(state.driver != 0 or state.moving_at(Time.get_ticks_msec()))
 
@@ -130,6 +148,9 @@ func _process(_delta: float) -> void:
 	if state.driver != 0:
 		_follow_driver()
 		_release_if_gone(state, now)
+		# This peer drives but its player was not found yet (spaced lookups): the keys are taken once it is.
+		if state.driver == _my_id() and not _local_driving:
+			_sync_local_driving()
 		if _local_driving:
 			_steer_mast(now)
 	_carriage.position.y = state.height_at(now)
@@ -139,30 +160,43 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _local_driving and event.is_action_pressed(&"package_drop"):
-		_ask({"act": CompanyForklift.ACT_LEAVE})
+		_ask_shown(CompanyForklift.ACT_LEAVE)
 		get_viewport().set_input_as_handled()
 
 
 func _exit_tree() -> void:
 	_set_override(null)
+	_set_driver_node(null)
 
 
 ## The driver's player, found among the players by the peer that drives (null when there is none here yet).
 func _driver() -> Node3D:
 	if _pallets == null or not is_inside_tree():
 		return null
-	if is_instance_valid(_driver_node) and _driver_node.get_multiplayer_authority() == _pallets.forklift.driver:
+	var peer: int = _pallets.forklift.driver
+	if is_instance_valid(_driver_node) and peer != 0 and _driver_node.get_multiplayer_authority() == peer:
 		return _driver_node
-	_driver_node = null
+	_set_driver_node(null)
 	var now: int = Time.get_ticks_msec()
-	if now < _next_lookup_msec:
+	if peer == 0 or now < _next_lookup_msec:
 		return null
-	_next_lookup_msec = now + 500
-	for node: Node in get_tree().get_nodes_in_group(&"player"):
-		if node is Node3D and node.get_multiplayer_authority() == _pallets.forklift.driver:
-			_driver_node = node as Node3D
+	_next_lookup_msec = now + LOOKUP_MSEC
+	for node: Node in get_tree().get_nodes_in_group(Interactable.player_group):
+		if node is Node3D and node.get_multiplayer_authority() == peer:
+			_set_driver_node(node as Node3D)
 			return _driver_node
 	return null
+
+
+## The driver's player carries DRIVING_META while it drives, on every peer (and loses it after).
+func _set_driver_node(node: Node3D) -> void:
+	if node == _driver_node:
+		return
+	if is_instance_valid(_driver_node) and _driver_node.has_meta(DRIVING_META):
+		_driver_node.remove_meta(DRIVING_META)
+	_driver_node = node
+	if node != null:
+		node.set_meta(DRIVING_META, true)
 
 
 ## Puts the forklift under the driver's player, facing where it faces. False while that player is not here.
@@ -176,7 +210,9 @@ func _follow_driver() -> bool:
 	return true
 
 
-## Host: the driver's player is gone (the peer left): after GONE_SECONDS the forklift is let go where it stood.
+## Host, a safety net: the driver's player is gone and CompanyNet did not let the forklift go (a leave it never
+## heard of): after GONE_SECONDS without that player the forklift is let go where it stood. Only a new driver
+## (refresh()) or the player found again restarts the wait.
 func _release_if_gone(state: CompanyForklift, now: int) -> void:
 	if net == null or not net.is_host() or _driver() != null:
 		_gone_since_msec = -1
@@ -206,7 +242,7 @@ static func _yaw_of(body: Node3D) -> float:
 func _sync_local_driving() -> void:
 	var mine: bool = false
 	if _pallets != null and is_inside_tree() and _pallets.forklift.driver != 0:
-		mine = _pallets.forklift.driver == multiplayer.get_unique_id() and _driver() != null
+		mine = _pallets.forklift.driver == _my_id() and _driver() != null
 	var target: Node = _driver() if mine else null
 	if mine == _local_driving and target == _override_node:
 		return
@@ -214,6 +250,15 @@ func _sync_local_driving() -> void:
 	set_process_unhandled_input(mine)
 	_set_override(target)
 	_sent_dir = 0
+
+
+## This peer's id; 0 while its connection is not up (a closed ENet peer refuses to say, with an error).
+func _my_id() -> int:
+	var peer: MultiplayerPeer = multiplayer.multiplayer_peer
+	if peer == null or peer is OfflineMultiplayerPeer \
+			or peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		return multiplayer.get_unique_id()
+	return 0
 
 
 func _set_override(player: Node) -> void:
@@ -224,34 +269,58 @@ func _set_override(player: Node) -> void:
 		player.set_meta(&"interact_override", {"use": _work, "prompt": _prompt})
 
 
-## The mast keys: a request when the direction changes, and again while it is held.
+## The mast keys: a request when the direction changes, and again while it is held; none while it is held against
+## the end of the mast the forks reached, nor a stop for forks that are still already (this peer's burst is over, so
+## the host's is too). A stop says the height drawn here (`at_height`): the host leaves the forks where the driver
+## let go of the key, not a round trip further.
 func _steer_mast(now: int) -> void:
 	var dir: int = 0
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED or not keys_need_capture:
 		dir = int(signf(Input.get_axis(&"forklift_mast_down", &"forklift_mast_up")))
-	if dir == _sent_dir and (dir == 0 or float(now - _sent_msec) / 1000.0 < MAST_RESEND_S):
+	var drawn: float = fork_height()
+	if dir == 0 and _sent_dir != 0 and not _pallets.forklift.moving_at(now):
+		_sent_dir = 0
+		return
+	var at_end: bool = (dir > 0 and drawn >= CompanyTuning.FORKLIFT_MAX_LIFT_M - CompanyForklift.END_M) \
+		or (dir < 0 and drawn <= CompanyForklift.END_M)
+	if at_end or (dir == _sent_dir and (dir == 0 or float(now - _sent_msec) / 1000.0 < MAST_RESEND_S)):
 		return
 	_sent_dir = dir
 	_sent_msec = now
-	_ask({"act": CompanyForklift.ACT_MAST, "dir": dir})
+	var ask: Dictionary = {"act": CompanyForklift.ACT_MAST, "dir": dir}
+	if dir == 0:
+		ask["at_height"] = drawn
+	_ask(ask)
 
 
 func _work() -> void:
-	var rid: int = _ask({"act": CompanyForklift.ACT_WORK})
-	if rid != 0:
-		_work_rids[rid] = true
+	_ask_shown(CompanyForklift.ACT_WORK)
 
 
 func _ask(data: Dictionary) -> int:
 	return net.request(CompanyPallets.FORK_ACT, data) if net != null and is_instance_valid(net) else 0
 
 
+## A request whose refusal the prompt shows (work, leave). The host's own is refused before request() returns, so
+## the act is noted first and the rid after.
+func _ask_shown(act: StringName) -> void:
+	_shown_act = act
+	_shown_rid = -1
+	var rid: int = _ask({"act": act})
+	if _shown_rid == -1:
+		_shown_rid = rid
+		# Nobody to ask: a refusal with rid 0 (the host's request_for) is not this one's.
+		_shown_act = _shown_act if rid != 0 else &""
+
+
 func _on_rejected(rid: int, reason: StringName) -> void:
-	if not _work_rids.has(rid):
+	if _shown_act == &"" or (rid != _shown_rid and _shown_rid != -1):
 		return
-	_work_rids.erase(rid)
-	_refusal = String(REFUSAL_KEYS.get(reason, "WORLD_FORKLIFT_REFUSED"))
+	var keys: Dictionary = LEAVE_REFUSAL_KEYS if _shown_act == CompanyForklift.ACT_LEAVE else REFUSAL_KEYS
+	_refusal = String(keys.get(reason, "WORLD_FORKLIFT_REFUSED"))
 	_refusal_until_msec = Time.get_ticks_msec() + int(REFUSAL_SECONDS * 1000.0)
+	_shown_act = &""
+	_shown_rid = 0
 
 
 ## What the prompt says while driving: the last refusal for a moment, else the keys.

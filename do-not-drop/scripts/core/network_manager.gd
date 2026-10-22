@@ -113,8 +113,8 @@ const MAX_PLAYERS: int = 8
 ## one, supplier_ordered, and its snapshot a "supplier" part: the supplier
 ## calendar; the shed's SupplierBoardPoint has a new RPC, _open_here (company
 ## mode, D-0603.b.2);
-## 45: CompanyNet's _request takes a new kind, fork_act (get on, mast, take or leave a pallet,
-## get off: the forklift a player drives), jack_picked takes `by`, jack_placed takes
+## 45: CompanyNet's _request takes a new kind, fork_act (get on, mast with the stop's `at_height`,
+## take or leave a pallet, get off: the forklift a player drives), jack_picked takes `by`, jack_placed takes
 ## `slot`, _apply_event a new kind, fork_state, and the "pallets" snapshot part a
 ## "forklift" entry (company mode, D-0606.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload

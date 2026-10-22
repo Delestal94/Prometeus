@@ -12,6 +12,8 @@ Decidido por la sesión que hizo D-0606.b. Detalle en [detalle/F1-06-stock.md](.
   y la parte `pallets` del snapshot.
 - **Decisión: el mástil se integra por tiempo, con ráfagas de 0,5 s.** El host dice "sube / para / baja" y cada peer integra con su reloj; cada
   evento lleva la altura del host. El conductor repite el pedido mientras sostiene la tecla: un "parar" perdido no manda las horquillas al tope.
+  El "parar" lleva la altura que dibujó el conductor y el host la toma acotada a lo que suben en su ida y vuelta (con lag, las horquillas
+  quedan donde el conductor las vio, no un ping más arriba).
 - **Decisión: una sola mano para la zorra y el autoelevador.** Comparten el libro `PalletJack` y su `carrying`; `forklift.holds` dice cuál lo
   lleva y el otro rechaza.
 - **Decisión: el hueco de rack es la cubierta del estante** (`<estante>-<nivel>`), para tener racks altos sin una pieza nueva; un rack propio

@@ -11,20 +11,24 @@ extends RefCounted
 ##
 ## One request, fork_act {act, ...}, checked by the host at the station `forklift` (CompanyPallets.check() hands it
 ## here), answered with one event each, applied the same on every peer:
-##   board           -> fork_state {driver: the requester, ...}   the forklift is free
-##   leave           -> fork_state {driver: 0, at: where it stands}
-##   mast {dir}      -> fork_state {dir: -1, 0 or 1, height}      the forks rise, stop or sink
+##   board           -> fork_state {driver: the requester, ...}   the forklift is free, the requester's hands too
+##   leave           -> fork_state {driver: 0, at: where it stands}   on the floor, where the forklift may stand
+##   mast {dir[, at_height]} -> fork_state {dir: -1, 0 or 1, height}  the forks rise, stop or sink; refused
+##                      (no_change) when it would change nothing (up at the top, down at the floor, stop when still)
 ##   work            -> jack_picked {pallet, by} / jack_placed {pallet, pos[, slot]}   take the pallet in front of
 ##                      the forks or leave the carried one, on the floor or a rack slot at the forks' level
-## and one event nobody asks for, the host's when the driver is gone: fork_state {driver: 0}.
+## and one event nobody asks for, the host's when the driver left (let_go(), CompanyNet on peer_removed /
+## peer_disconnected, with the leaver's player still there): fork_state {driver: 0}.
 ## fork_state always carries {driver, at (Vector2, shed frame, metres), yaw, dir, height} and a peer takes it as it is.
 ##
 ## The forks move by time: the host says "up" and every peer integrates from its own clock. A mast request moves the
 ## forks at most FORKLIFT_MAST_BURST_S (the driver asks again while the key is held), and each event carries the
-## host's height, so what a peer drew is put right at every event. The station gives: "peer" (the requester, added by
-## CompanyNet), "body" and "yaw" (Vector2 / float: where the forklift stands now), "racks" (Array of {slot, pos,
-## level}), "floor", "stand_ok", "free_ok", "bed_open" and "bed_at" (as the jack's, CompanyPallets). No node and no
-## autoload.
+## host's height, so what a peer drew is put right at every event. A stop carries the height the driver drew
+## (`at_height`), taken within what the forks cover in the driver's round trip (stop_height()), so the forks stay
+## where the driver let go of the key. The station gives: "peer" (the requester), "hands_free" (bool: no units in
+## its hands, no box) and "lag" (its round trip, s), the three added by CompanyNet (CompanyPallets.check_for()),
+## "body" and "yaw" (Vector2 / float: where the forklift stands now), "racks" (Array of {slot, pos, level}), "floor",
+## "stand_ok", "free_ok", "bed_open" and "bed_at" (as the jack's, CompanyPallets). No node and no autoload.
 
 const ACT_BOARD: StringName = &"board"
 const ACT_LEAVE: StringName = &"leave"
@@ -43,6 +47,14 @@ const REASON_NO_PALLET: StringName = &"no_pallet"
 const REASON_NO_ROOM: StringName = &"no_room"
 const REASON_NO_RACK: StringName = &"no_rack"
 const REASON_TRUCK_AWAY: StringName = &"truck_away"
+const REASON_HANDS_BUSY: StringName = &"hands_busy"
+## A mast request that would change nothing (the forks at the end they are asked to go to, a stop with them still).
+const REASON_NO_CHANGE: StringName = &"no_change"
+
+## How close to an end of the mast the forks count as there (m), and the slack a stop's `at_height` gets on top of
+## what the forks cover in the driver's round trip (s).
+const END_M: float = 0.001
+const STOP_SLACK_S: float = 0.1
 
 ## Who drives it (a peer id), 0 when nobody does.
 var driver: int = 0
@@ -98,17 +110,44 @@ func check(data: Dictionary, station: Dictionary, book: PalletJack, now_msec: in
 	var height: float = height_at(now_msec)
 	var what := StringName(act)
 	if what == ACT_BOARD:
-		return {"reason": REASON_TAKEN} if driver != 0 else _state(state_event(peer, body, heading, 0, height))
+		return _check_board(station, peer, body, heading, height)
 	if driver != peer:
 		return {"reason": REASON_NOT_DRIVER}
 	if what == ACT_LEAVE:
-		return _state(state_event(0, body, heading, 0, height))
+		var parks: bool = parks_at(station, body)
+		return _state(state_event(0, body, heading, 0, height)) if parks else {"reason": REASON_NO_ROOM}
 	if what == ACT_MAST:
-		var dir: Variant = data.get("dir")
-		if typeof(dir) != TYPE_INT or absi(dir) > 1:
-			return {"reason": REASON_BAD_DATA}
-		return _state(state_event(peer, body, heading, dir, height))
+		return _check_mast(data, station, body, heading, now_msec)
 	return _check_work(station, book, tip_of(body, heading), height)
+
+
+## Host: the fork_state event that lets the forklift go because `peer`, its driver, left: parked where the station
+## says it stands ("body" and "yaw": the leaver's player, still there on peer_removed), else where they got on, its
+## forks still. {reason: not_driver} when `peer` does not drive it (the second of peer_removed / peer_disconnected).
+func let_go(peer: int, station: Dictionary, now_msec: int) -> Dictionary:
+	if peer == 0 or driver != peer:
+		return {"reason": REASON_NOT_DRIVER}
+	var body: Variant = station.get("body")
+	var heading: Variant = station.get("yaw")
+	if not (CompanyPallets.point_ok(body) and typeof(heading) == TYPE_FLOAT):
+		body = at if CompanyPallets.point_ok(at) else Vector2.ZERO
+		heading = yaw
+	return _state(state_event(0, body, heading, 0, height_at(now_msec)))
+
+
+## Whether the forklift may be left with its driver at `body`: on the station's floor, where it may stand.
+static func parks_at(station: Dictionary, body: Vector2) -> bool:
+	var floor_rect: Variant = station.get("floor")
+	var stand: Variant = station.get("stand_ok")
+	return floor_rect is Rect2 and (floor_rect as Rect2).has_point(body) and stand is Callable \
+		and (stand as Callable).is_valid() and bool((stand as Callable).call(body))
+
+
+## Where a stop leaves the forks: the height the driver drew (`drawn`) when it lies within what the forks cover in
+## the driver's round trip `lag` (s, at most 1) and STOP_SLACK_S of the host's `height`, else the nearest that does.
+static func stop_height(height: float, drawn: float, lag: float) -> float:
+	var slack: float = CompanyTuning.FORKLIFT_LIFT_SPEED * (clampf(lag, 0.0, 1.0) + STOP_SLACK_S)
+	return clampf(clampf(drawn, height - slack, height + slack), 0.0, CompanyTuning.FORKLIFT_MAX_LIFT_M)
 
 
 ## Every peer: a fork_state event. False, changing nothing, when its data does not fit.
@@ -125,9 +164,11 @@ func apply(data: Dictionary, now_msec: int) -> bool:
 	return true
 
 
-## The snapshot part: the state as of `now_msec`.
+## The snapshot part: the state as of `now_msec` (forks whose burst is over go as still: the late peer would
+## integrate a whole burst more from the height they stopped at).
 func to_dict(now_msec: int) -> Dictionary:
-	return {"driver": driver, "at": at, "yaw": yaw, "dir": mast_dir, "height": height_at(now_msec), "holds": holds}
+	return {"driver": driver, "at": at, "yaw": yaw, "dir": mast_dir if moving_at(now_msec) else 0,
+		"height": height_at(now_msec), "holds": holds}
 
 
 ## Client: the host's part in place of what is here. False, changing nothing, when it does not fit.
@@ -151,6 +192,38 @@ func put_snapshot(value: Variant, now_msec: int) -> bool:
 
 func _state(event: Dictionary) -> Dictionary:
 	return {"reason": &"", "kind": CompanyPallets.FORK, "data": event}
+
+
+## Getting on: a free forklift, and the requester's hands free (no units, no box: the station's "hands_free").
+func _check_board(station: Dictionary, peer: int, body: Vector2, heading: float, height: float) -> Dictionary:
+	if driver != 0:
+		return {"reason": REASON_TAKEN}
+	if not (station.get("hands_free") is bool and bool(station["hands_free"])):
+		return {"reason": REASON_HANDS_BUSY}
+	return _state(state_event(peer, body, heading, 0, height))
+
+
+## The mast: the forks go `dir` from where they are now, a stop from the height the driver drew (stop_height(),
+## within the requester's round trip, the station's "lag"). no_change for a request that would change nothing.
+func _check_mast(data: Dictionary, station: Dictionary, body: Vector2, heading: float, now_msec: int) -> Dictionary:
+	var dir: Variant = data.get("dir")
+	var drawn: Variant = data.get("at_height")
+	if typeof(dir) != TYPE_INT or absi(dir) > 1:
+		return {"reason": REASON_BAD_DATA}
+	if drawn != null and not (CompanyPallets.is_number(drawn) and is_finite(float(drawn))):
+		return {"reason": REASON_BAD_DATA}
+	var height: float = height_at(now_msec)
+	var target: float = height
+	if dir == 0 and drawn != null:
+		var lag: Variant = station.get("lag")
+		var seconds: float = float(lag) if CompanyPallets.is_number(lag) and is_finite(float(lag)) else 0.0
+		target = stop_height(height, float(drawn), seconds)
+	var going: int = mast_dir if moving_at(now_msec) else 0
+	var top: float = CompanyTuning.FORKLIFT_MAX_LIFT_M - END_M
+	var at_end: bool = (dir > 0 and target >= top) or (dir < 0 and target <= END_M)
+	if at_end or (dir == 0 and going == 0 and absf(target - height) <= END_M):
+		return {"reason": REASON_NO_CHANGE}
+	return _state(state_event(driver, body, heading, dir, target))
 
 
 ## The fields of a fork_state event checked and rebuilt from plain values; {} when one does not fit.

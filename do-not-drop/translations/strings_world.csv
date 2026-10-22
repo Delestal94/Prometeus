@@ -408,6 +408,7 @@ WORLD_FORKLIFT_NO_ROOM,No hay lugar para apoyar el palet acá,No room to set the
 WORLD_FORKLIFT_NO_RACK,Ningún hueco de estante a esta altura,No rack slot at this height
 WORLD_FORKLIFT_HANDS_FULL,La zorra ya lleva el palet,The pallet jack already carries the pallet
 WORLD_FORKLIFT_TRUCK_AWAY,El camión no está en el portón,The truck is not at the gate
+WORLD_FORKLIFT_NO_PARK,No hay lugar para bajarte acá: alejate de estantes y muros,No room to get off here: move away from shelves and walls
 WORLD_SHED_USE_SUPPLIER,Pedir al proveedor,Order from the supplier
 WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf
