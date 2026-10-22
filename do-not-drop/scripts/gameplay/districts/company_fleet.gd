@@ -21,17 +21,19 @@ extends Node3D
 ##
 ## How a client knows the fleet: the host's snapshot, whose company part is the host's CompanyState (fleet and
 ## stage). The client builds its vehicles when the snapshot is in (CompanyNet.company_state_restored), only the
-## missing ones. Rule 10 of red-autoridad.md, its snapshot clause: on the host each vehicle's synchronizer starts
-## invisible to every peer (a visibility filter, on top of CompanyInterest's flags, rule 11) and opens to a peer
-## (open_to()) once a snapshot went to it (its world came up, NetworkManager.peer_level_ready, or it asked,
-## CompanyNet.snapshot_requested), deferred to the end of that frame: the snapshot goes on the reliable channel
-## the synchronizer's first packet (its path) takes too, so it lands, and builds the vehicle, before that packet.
-## A synchronizer that reaches a peer before its node exists is never resolved there (package.gd's _enter_tree
-## note). A peer that leaves is closed again.
+## missing ones, and then tells the host which it has (_have_fleet, on this node: it has no synchronizer and is
+## on every peer from the world's _ready). Rule 10 of red-autoridad.md: on the host each vehicle's synchronizer
+## starts invisible to every peer (a visibility filter, on top of CompanyInterest's flags, rule 11) and opens to a
+## peer, vehicle by vehicle, only once that peer said it has it (ack()) and its world is up (is_peer_ready()). The
+## node's own word is the only safe one, as for CompanyPackages: a snapshot may not go out (too big) or not apply
+## there (a part it refuses), and a synchronizer that reaches a peer before its node exists is never resolved
+## there (package.gd's _enter_tree note). A vehicle built later on the host stays closed to a peer until that
+## peer acks it. A peer that leaves, or whose world comes up again, is closed until it acks again, and the host
+## takes it off any wheel it held (release_peer()): a dropped driver doesn't keep the van, nor its input.
 ##
-## Not here yet (D-0302.2.b.2): a vehicle bought or sold mid-day (an event, acknowledged as CompanyPackages does:
-## an event may land while a client waits for a snapshot), driving it (vehicle.gd drives only during a delivery
-## run) and CompanyTrips.forget() for one that leaves mid-day. Closing the world frees them all, which is no
+## Not here yet (D-0302.2.b.2): a vehicle bought or sold mid-day (an event every peer builds it from, then
+## tell_host()), driving it (vehicle.gd drives only during a delivery run) and CompanyTrips.forget() for one that
+## leaves mid-day. Closing the world frees them all, which is no
 ## vehicle leaving: the day is saved as it stood (D-2005). Nothing here names an autoload (lesson N-919).
 
 const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
@@ -53,8 +55,7 @@ const PARK_HEIGHT_M: float = 0.7
 const REST_WATCHED: Array[StringName] = [&"net_position", &"net_rotation", &"net_input_seq"]
 const SYNC_PATH: NodePath = ^"MultiplayerSynchronizer"
 
-## The CompanyNet whose company the fleet is (on a client, once its snapshot is in) and, on the host, whose
-## snapshots open the vehicles to each peer. Null: nothing is built.
+## The CompanyNet whose company the fleet is (on a client, once its snapshot is in). Null: nothing is built.
 var net: CompanyNet = null
 ## The shed whose exit they park at (CompanyRoot.shed).
 var shed: Node3D = null
@@ -63,8 +64,10 @@ var catalog: CompanyCatalog = null
 
 ## Decided when hooked (_hook()): the host (solo too) builds now and gates; a client builds on its snapshot.
 var _host: bool = false
-## Host: the peers the vehicles' synchronizers reach (rule 10), {peer: true}.
+## Host: the vehicles each peer said it has, so their synchronizers reach it (rule 10), {peer: {name: true}}.
 var _opened: Dictionary = {}
+## The session whose peers' worlds are up (CompanyRoot.session), or null: every connected peer counts.
+var _session: Node = null
 
 
 ## The fleet under `world` (World/Vehicles), parked at `company_shed`'s exit, from `company_net`'s company; the
@@ -104,24 +107,59 @@ func build(company: Object) -> int:
 	return added
 
 
-## Host: the vehicles' synchronizers reach `peer` from now on (a snapshot went to it: it has every vehicle, or
-## will before their first packet; rule 10). A peer that isn't connected stays closed.
-func open_to(peer: int) -> void:
+## Host: `peer` has the vehicles `names` (its _have_fleet, after building them), so their synchronizers reach it
+## from now on (rule 10); CompanyInterest still decides by distance. Refused, changing nothing (false), unless
+## `peer` is connected with its world up (the session's is_peer_ready()) and `names` holds 1 to MAX_VEHICLES
+## names of vehicles here, each short (RpcGuard.text_ok()).
+func ack(peer: int, names: PackedStringArray) -> bool:
 	if not _host or not is_inside_tree() or not multiplayer.get_peers().has(peer):
-		return
-	_opened[peer] = true
+		return false
+	if _session != null and _session.has_method(&"is_peer_ready") and not bool(_session.call(&"is_peer_ready", peer)):
+		return false
+	if names.is_empty() or names.size() > MAX_VEHICLES:
+		return false
+	for node_name: String in names:
+		if not RpcGuard.text_ok(node_name) or vehicle(node_name) == null:
+			return false
+	var had: Dictionary = _opened.get(peer, {})
+	for node_name: String in names:
+		had[node_name] = true
+	_opened[peer] = had
 	_refresh(peer)
+	return true
 
 
-## Host: `peer` left (or is leaving): no vehicle's synchronizer reaches it until a snapshot opens them again.
+## Host: `peer` left, or its world came up again (its copies are gone): no vehicle's synchronizer reaches it
+## until it acks again, and it holds no wheel (release_peer()).
 func close_to(peer: int) -> void:
+	release_peer(peer)
 	if _opened.erase(peer) and is_inside_tree() and multiplayer.get_peers().has(peer):
 		_refresh(peer)
 
 
-## Host: the vehicles' synchronizers may reach `peer` (open_to()); CompanyInterest still decides by distance.
-func is_open_to(peer: int) -> bool:
-	return _opened.has(peer)
+## Host: `peer` drives none of the vehicles, sits in none of their seats, as SeatPoint.release_occupant() leaves a
+## driver who got up: a dropped driver kept the wheel (and, back under the same id, sent its input to it again).
+func release_peer(peer: int) -> void:
+	if not _host or peer <= 0:
+		return
+	for body: Node3D in vehicles():
+		for seat: Node in body.find_children("*", "SeatPoint", true, false):
+			var occupant: Variant = seat.get(&"occupant")
+			if typeof(occupant) != TYPE_OBJECT:
+				continue
+			if not is_instance_valid(occupant) or (occupant as Node).get_multiplayer_authority() == peer:
+				seat.set(&"occupant", null)
+		if int(body.get(&"driver_peer_id")) != peer:
+			continue
+		body.set(&"driver_peer_id", 0)
+		body.set(&"controls_enabled", false)
+		if body.has_method(&"set_controls"):
+			body.call(&"set_controls", 0.0, 0.0, true)
+
+
+## Host: the synchronizer of the vehicle `node_name` reaches `peer` (it acked it, ack()).
+func is_open_to(peer: int, node_name: String) -> bool:
+	return (_opened.get(peer, {}) as Dictionary).has(node_name)
 
 
 ## The vehicle named `node_name` (a vehicle id, node_names()), or null.
@@ -226,24 +264,21 @@ static func park_transform(at_shed: Node3D, company: Object, index: int) -> Tran
 	return Transform3D(facing, exit_of(at_shed, company) + facing * offset)
 
 
-## The host (solo too) builds now, gates every synchronizer and opens it to each peer after its snapshot; a client
-## builds once the host's snapshot is in.
+## The host (solo too) builds now and gates every synchronizer until each peer acks it, closing a peer that leaves
+## or whose world comes up again; a client builds once the host's snapshot is in, then acks.
 func _hook(session: Node) -> void:
 	if net == null or not is_inside_tree():
 		return
 	_host = net.is_host()
+	_session = session
 	if not _host:
 		net.company_state_restored.connect(_on_snapshot)
 		return
-	if session != null and session.has_signal(&"peer_level_ready"):
-		session.connect(&"peer_level_ready", _open_later)
-	if session != null and session.has_signal(&"peer_removed"):
-		session.connect(&"peer_removed", close_to)
+	for gone: StringName in [&"peer_removed", &"peer_level_ready"]:
+		if session != null and session.has_signal(gone):
+			session.connect(gone, close_to)
 	multiplayer.peer_disconnected.connect(close_to)
-	net.snapshot_requested.connect(_open_later)
 	build(net.company)
-	# After CompanyNet's own deferred snapshot to the peers already up (_snapshot_ready_peers(), queued first).
-	_open_ready_peers.call_deferred(session)
 
 
 ## `definition`'s vehicle named `node_name`, frozen, in VEHICLE_GROUP and with its NetRestThrottle, not in the
@@ -268,14 +303,14 @@ func _make(definition: VehicleDefinition, node_name: String) -> Node3D:
 	throttle.watched.assign(REST_WATCHED.filter(func(property: StringName) -> bool: return property in body))
 	body.add_child(throttle)
 	if _host:
-		sync.add_visibility_filter(_filter(_opened))
+		sync.add_visibility_filter(_filter(_opened, node_name))
 	return body
 
 
-## The filter of a vehicle's synchronizer on the host: a peer opened to. Built in a static function, so it holds
-## no reference to this node (as CompanyPackages' does).
-static func _filter(peers: Dictionary) -> Callable:
-	return func(peer: int) -> bool: return peers.has(peer)
+## The filter of the synchronizer of the vehicle `node_name` on the host: a peer that acked it. Built in a static
+## function, so it holds no reference to this node (as CompanyPackages' does).
+static func _filter(peers: Dictionary, node_name: String) -> Callable:
+	return func(peer: int) -> bool: return (peers.get(peer, {}) as Dictionary).has(node_name)
 
 
 func _refresh(peer: int) -> void:
@@ -285,22 +320,34 @@ func _refresh(peer: int) -> void:
 			sync.update_visibility(peer)
 
 
-## Host: a snapshot just went to `peer` (inside that signal): opened at the end of the frame, after it.
-func _open_later(peer: int) -> void:
-	open_to.call_deferred(peer)
-
-
-## Host, once the world is up: the peers whose world was already up got CompanyNet's snapshot (deferred before
-## this) and are opened to.
-func _open_ready_peers(session: Node) -> void:
-	if not is_inside_tree():
-		return
-	var ready_check: bool = session != null and session.has_method(&"is_peer_ready")
-	for peer: int in multiplayer.get_peers():
-		if not ready_check or bool(session.call(&"is_peer_ready", peer)):
-			open_to(peer)
-
-
-## Client: the host's snapshot is in, its company in this peer's CompanyState: the vehicles it lacks.
+## Client: the host's snapshot is in, its company in this peer's CompanyState: the vehicles it lacks, then the
+## host is told which it has (tell_host()).
 func _on_snapshot(_snapshot_seq: int) -> void:
 	build(net.company)
+	tell_host()
+
+
+## Client: tells the host every vehicle it has (_have_fleet), so their synchronizers may reach it. Nothing when it
+## has none or isn't connected to a host (a client whose session never came up). Returns whether it was sent.
+func tell_host() -> bool:
+	var link: MultiplayerPeer = multiplayer.multiplayer_peer if is_inside_tree() else null
+	if _host or link == null or link is OfflineMultiplayerPeer or multiplayer.is_server():
+		return false
+	if link.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		return false
+	var names := PackedStringArray()
+	for body: Node3D in vehicles():
+		names.append(String(body.name))
+	if names.is_empty():
+		return false
+	_have_fleet.rpc_id(1, names)
+	return true
+
+
+## Host, from a client: it has the vehicles `names` (tell_host()). Sent once per snapshot, so it spends the critical
+## reserve (a lost one leaves those vehicles dead on that peer); checked and applied by ack().
+@rpc("any_peer", "call_remote", "reliable")
+func _have_fleet(names: PackedStringArray) -> void:
+	if not _host or not RpcGuard.allow_critical_request(self) or names.size() > MAX_VEHICLES:
+		return
+	ack(RpcGuard.sender(self), names)

@@ -125,9 +125,11 @@ const MAX_PLAYERS: int = 8
 ## set on every peer from the host's balance (company mode, D-0517);
 ## 48: the company world has its vehicles on every peer, World/Vehicles/<vehicle
 ## id> (vehicle.tscn and its synchronizer, sent only to the players near it): the
-## host opens each one's synchronizer to a peer only after its snapshot, from which
-## the client builds them; an older client has no such node and would not hide a
-## far copy (company mode, D-0302.2.b).
+## client builds them from the host's snapshot and acks them with a new RPC on
+## World/Vehicles, CompanyFleet._have_fleet, and only then does the host open each
+## one's synchronizer to it; an older client has no such node and would not hide a
+## far copy; the van relays vehicle_telemetry only during a run (company mode,
+## D-0302.2.b).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.

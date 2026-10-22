@@ -17,11 +17,17 @@ extends SceneTree
 ## - With cargo staged on the van, moving it across the gate's line outward starts a trip with that order (OUT,
 ##   and out in the TripsView); back across it closes the trip.
 ## - ENet pair in one process (the host on the NetworkManager autoload, the client on a second copy, each in
-##   the real company_root.tscn, as test_company_online): the host's synchronizer is still closed to the
-##   client when its world comes up, and opens right after its snapshot; the client builds the same
-##   World/Vehicles/van_classic from that snapshot, a frozen copy it doesn't own, which receives the host's
-##   updates, is shown, stands where the host's does and follows it when it moves; the client leaving closes it
-##   again. No engine error on the way (a synchronizer reaching the client before its van existed logs one).
+##   the real company_root.tscn, as test_company_online): the client builds the same
+##   World/Vehicles/van_classic from the host's snapshot, a frozen copy it doesn't own. Until the client acks
+##   it (its ack held back here, as if its snapshot had failed) the host's synchronizer stays closed to it and
+##   no update arrives; an ack naming an unknown vehicle, too many, none, or from a peer that isn't there is
+##   refused, also over the _have_fleet RPC. After the real ack (CompanyFleet.tell_host()) the copy receives
+##   the host's updates, is shown, stands where the host's van does and follows it when it moves.
+## - vehicle.gd: out of a run the parked van relays no vehicle_telemetry to the client; during one it does,
+##   and it stops once the run ends.
+## - The client's player takes the wheel (the seat's interact() on the host) and the client leaves: the host
+##   frees the wheel (driver_peer_id 0, controls off) and the seat, and closes its vehicles to it.
+## - No engine error on the way (a synchronizer reaching the client before its van existed logs one).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
@@ -44,8 +50,6 @@ var _client_side: Node
 var _client_session: NetSession
 var _client_state: Node
 var _client_root: CompanyRoot
-## The host's van synchronizer reached the client when its world came up (null: not seen yet).
-var _open_at_level_ready: Variant = null
 ## The client had its van when its snapshot came in (null: not seen yet).
 var _van_at_snapshot: Variant = null
 
@@ -295,7 +299,6 @@ func _check_pair(host_state: Node) -> void:
 		root.add_child(_host_root)
 		current_scene = _host_root
 		await process_frame
-		_host_session.peer_level_ready.connect(_on_host_peer_ready)
 		if await _join():
 			await _check_copy()
 	await _tear_down()
@@ -332,17 +335,16 @@ func _join() -> bool:
 
 func _check_copy() -> void:
 	var client_id: int = _client_side.multiplayer.get_unique_id()
-	var host_van: VehicleBody3D = _host_root.fleet.vehicle("van_classic") as VehicleBody3D
-	var copy: VehicleBody3D = _client_root.fleet.vehicle("van_classic") as VehicleBody3D
+	var host_fleet: CompanyFleet = _host_root.fleet
+	var client_fleet: CompanyFleet = _client_root.fleet
+	var host_van: VehicleBody3D = host_fleet.vehicle("van_classic") as VehicleBody3D
+	var copy: VehicleBody3D = client_fleet.vehicle("van_classic") as VehicleBody3D
 	_expect(host_van != null and copy != null and copy.get_path() != host_van.get_path()
 		and _host_root.get_path_to(host_van) == _client_root.get_path_to(copy),
 		"Both worlds hold the van at the same path under their root")
 	if host_van == null or copy == null:
 		return
-	_expect(_open_at_level_ready == false, "The host's van synchronizer is closed to the client as its world comes up"
-		+ " (got %s)" % [_open_at_level_ready])
-	_expect(_van_at_snapshot == true, "...and the client has its van once the snapshot is in (got %s)"
-		% [_van_at_snapshot])
+	_expect(_van_at_snapshot == true, "The client has its van once the snapshot is in (got %s)" % [_van_at_snapshot])
 	_expect(not copy.is_multiplayer_authority() and copy.freeze and copy.is_in_group(CompanyTrips.VEHICLE_GROUP),
 		"The client's copy is the host's, frozen, in the vehicle group")
 	var host_sync := host_van.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
@@ -350,9 +352,20 @@ func _check_copy() -> void:
 	var received: Array[int] = [0]
 	for arrived: Signal in [copy_sync.synchronized, copy_sync.delta_synchronized]:
 		arrived.connect(func() -> void: received[0] += 1)
+	var telemetry: Array[int] = [0]
+	_client_side.get_node(^"EventBus").connect(&"vehicle_telemetry", func(_kmh: float) -> void: telemetry[0] += 1)
+	# The snapshot is in and the van built, but this client hasn't acked it (its ack is held back, as if its
+	# snapshot had failed): the host's synchronizer stays closed to it, and nothing of the van arrives.
+	await _seconds(1.0)
+	_expect(not host_fleet.is_open_to(client_id, "van_classic") and received[0] == 0,
+		"Without the client's ack the host's van stays closed to it (open %s, %d updates)"
+		% [host_fleet.is_open_to(client_id, "van_classic"), received[0]])
+	_expect(telemetry[0] == 0, "Out of a run the parked van relays no telemetry to the client (got %d)" % telemetry[0])
+	await _check_bad_acks(host_fleet, client_fleet, client_id)
+	_expect(client_fleet.tell_host(), "The client tells the host which vehicles it has")
 	var opened: bool = await _wait_for(func() -> bool:
-		return _host_root.fleet.is_open_to(client_id) and host_sync.get_visibility_for(client_id))
-	_expect(opened, "Once the snapshot went out the host's van synchronizer reaches the client")
+		return host_fleet.is_open_to(client_id, "van_classic") and host_sync.get_visibility_for(client_id))
+	_expect(opened, "After its ack the host's van synchronizer reaches the client")
 	var follows: Callable = func() -> bool:
 		return (received[0] > 0 and not _client_root.interest.is_hidden_here(copy_sync)
 			and copy.global_position.distance_to(host_van.global_position) < SAME_M)
@@ -361,20 +374,67 @@ func _check_copy() -> void:
 	host_van.global_position += Vector3(2.0, 0.0, -1.0)
 	_expect(await _wait_for(follows), "...and follows it when the host moves it (%s vs %s)"
 		% [copy.global_position, host_van.global_position])
+	await _check_run_telemetry(telemetry)
+	await _check_driver_leaves(host_van, client_id)
+
+
+## Bad acks change nothing: an unknown vehicle, too many names, a peer that isn't there, and the same over the RPC.
+func _check_bad_acks(host_fleet: CompanyFleet, client_fleet: CompanyFleet, client_id: int) -> void:
+	var many := PackedStringArray()
+	for _i: int in range(CompanyFleet.MAX_VEHICLES + 1):
+		many.append("van_classic")
+	var unknown := PackedStringArray(["van_classic", "nope"])
+	_expect(not host_fleet.ack(client_id, unknown) and not host_fleet.ack(client_id, many)
+		and not host_fleet.ack(client_id, PackedStringArray())
+		and not host_fleet.ack(4242, PackedStringArray(["van_classic"]))
+		and not host_fleet.is_open_to(client_id, "van_classic"),
+		"An ack naming an unknown vehicle, too many, none, or from a peer that isn't there is refused")
+	client_fleet.rpc_id(1, &"_have_fleet", unknown)
+	client_fleet.rpc_id(1, &"_have_fleet", many)
+	await _seconds(0.3)
+	_expect(not host_fleet.is_open_to(client_id, "van_classic"), "...and so is a bad _have_fleet from the client")
+
+
+## During a run the host's van relays its telemetry to the client again; once it ends, it stops.
+func _check_run_telemetry(telemetry: Array[int]) -> void:
+	var run: Node = root.get_node(^"/root/RunManager")
+	telemetry[0] = 0
+	run.set(&"is_running", true)
+	await _seconds(0.6)
+	run.set(&"is_running", false)
+	var during: int = telemetry[0]
+	await _seconds(0.3)
+	var after_end: int = telemetry[0]
+	await _seconds(0.5)
+	run.call(&"reset_run")
+	_expect(during > 0 and telemetry[0] == after_end,
+		"During a run the client gets the van's telemetry (%d), none once it ended (%d more)"
+		% [during, telemetry[0] - after_end])
+
+
+## The client sits at the wheel of the host's van and leaves: the host takes it off the wheel and the seat.
+func _check_driver_leaves(host_van: VehicleBody3D, client_id: int) -> void:
+	var seat := host_van.get_node_or_null(SEAT_PATH) as SeatPoint
+	var driver: Node = _host_root.get_node_or_null(NodePath("World/Player_%d" % client_id))
+	_expect(seat != null and driver != null, "The host has the van's driver seat and the client's player")
+	if seat == null or driver == null:
+		return
+	host_van.call(&"set_door_open", &"cab_left", true)
+	seat.interact(driver)
+	_expect(int(host_van.get(&"driver_peer_id")) == client_id and host_van.get(&"controls_enabled") == true
+		and seat.occupant == driver,
+		"The client's player takes the wheel (driver %d)" % host_van.get(&"driver_peer_id"))
 	_client_session.leave_session()
-	var closed: bool = await _wait_for(func() -> bool: return not _host_root.fleet.is_open_to(client_id))
-	_expect(closed, "The client leaving closes the host's vehicles to it again")
+	var released: bool = await _wait_for(func() -> bool:
+		return int(host_van.get(&"driver_peer_id")) == 0 and not _host_root.fleet.is_open_to(client_id, "van_classic"))
+	_expect(released and host_van.get(&"controls_enabled") == false and seat.occupant == null,
+		"The driver leaving frees the wheel and the seat on the host, and closes its vehicles (driver %d)"
+		% host_van.get(&"driver_peer_id"))
 
 
-## Host: the client's world is up (inside the signal, before the fleet's deferred opening).
-func _on_host_peer_ready(peer_id: int) -> void:
-	var van: Node = _host_root.fleet.vehicle("van_classic") if _host_root != null else null
-	var sync := van.get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer if van != null else null
-	if sync != null and _open_at_level_ready == null:
-		_open_at_level_ready = _host_root.fleet.is_open_to(peer_id)
-
-
+## Client: the snapshot is in; its fleet built the van, but the ack is held back here (_check_copy() sends it).
 func _on_client_snapshot(_snapshot_seq: int) -> void:
+	_client_root.fleet.build(_client_root.net.company)
 	if _van_at_snapshot == null:
 		_van_at_snapshot = _client_root.fleet.vehicle("van_classic") != null
 
@@ -391,7 +451,8 @@ func _enter_client_world() -> void:
 	level.company_state = _client_state
 	_client_side.add_child(level)
 	_client_root = level
-	# After the root's own fleet hooked it (in the root's _ready).
+	# The fleet's own handler builds and acks; this one only builds, so the test decides when the ack goes.
+	level.net.company_state_restored.disconnect(level.fleet._on_snapshot)
 	level.net.company_state_restored.connect(_on_client_snapshot)
 
 
@@ -404,8 +465,6 @@ func _tear_down() -> void:
 		_host_root.queue_free()
 	current_scene = null
 	if _host_session != null:
-		if _host_session.peer_level_ready.is_connected(_on_host_peer_ready):
-			_host_session.peer_level_ready.disconnect(_on_host_peer_ready)
 		_host_session.leave_session()
 		_host_session.transport = NetSession.Transport.AUTO
 	await process_frame
@@ -434,6 +493,13 @@ func _instantiate() -> CompanyRoot:
 func _free_level(level: Node) -> void:
 	level.queue_free()
 	current_scene = null
+
+
+## Waits `seconds` of real time, frame by frame.
+func _seconds(seconds: float) -> void:
+	var until: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < until:
+		await process_frame
 
 
 func _wait_for(done: Callable, seconds: float = WAIT_SECONDS) -> bool:

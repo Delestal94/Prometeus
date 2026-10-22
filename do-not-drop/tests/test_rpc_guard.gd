@@ -42,6 +42,8 @@ const BUDGET_EXEMPT: Dictionary = {
 const CRITICAL_RPCS: Array[String] = [
 	"res://scripts/gameplay/package/package.gd:request_drop",
 	"res://modules/interaction/seat_point.gd:release_occupant",
+	# Sent once per snapshot: lost, the host never opens those vehicles to that peer (D-0302.2.b).
+	"res://scripts/gameplay/districts/company_fleet.gd:_have_fleet",
 ]
 ## Tokens that show a reliable request spends the sender's budget.
 const BUDGET_CHECKS: Array[String] = ["RpcGuard.allow_request(", "RpcGuard.allow_critical_request("]
@@ -54,7 +56,8 @@ const FINITE_CHECKS: Array[String] = ["RpcGuard.finite", "is_finite(", "is_nan("
 ## fewer found means the scanner broke, not that they went away.
 const MIN_RPCS: int = 34
 ## D-2007: the expansion's code. Every any_peer RPC in it follows the same rules.
-const EXPANSION_DIRS: Array[String] = ["res://scripts/core/company/", "res://scripts/gameplay/business/"]
+const EXPANSION_DIRS: Array[String] = ["res://scripts/core/company/", "res://scripts/gameplay/business/",
+	"res://scripts/gameplay/districts/"]
 ## A request a business script could add, written without any guard...
 const UNGUARDED_RPC: String = """@rpc("any_peer", "reliable")
 func request_move(units: int, label: String, note: Dictionary) -> void:
