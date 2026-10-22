@@ -31,8 +31,9 @@ const CUSTOMER_NAMES: Array[String] = [
 ## given (a node with money), sets how many orders the day opens with: a company in the red gets
 ## BANKRUPT_ORDER_SHARE of the usual count (Bankruptcy.orders_for_day, D-0510); null keeps the usual
 ## count. templates maps zone id -> OrderTemplateSet (D-0820.b): a zone with a set draws its products and
-## requirements from one of its templates (the ones within max_items); a zone without one, or with no template
-## that fits, draws them at random as before. The host's seed and money are all it takes: every peer gets the same orders.
+## requirements from one of its templates (the ones within max_items); a zone without one, or with no
+## template that fits, draws them at random as before. The host's seed and money are all it takes: every peer gets the
+## same orders.
 static func generate_day(
 	day_seed: int,
 	day: int,
