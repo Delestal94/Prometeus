@@ -379,7 +379,8 @@ static func _take_orders(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 			zones.append(zone)
 	var day: int = level.day_cycle.current_day()
 	var orders: Array[Dictionary] = OrderGenerator.generate_day(
-		ORDERS_SEED, day, int(ctx["players"]), zones, _products(), _requirements())
+		ORDERS_SEED, day, int(ctx["players"]), zones, _products(), _requirements(),
+		CompanyTuning.ORDER_ITEMS_MAX, level.net.company)
 	if orders.is_empty():
 		return _fail("no_orders")
 	for order: Dictionary in orders:

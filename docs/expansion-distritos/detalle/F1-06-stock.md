@@ -63,6 +63,15 @@ camión es D-0601 / D-0605, que usan esta clase.
 **Test** `test_pallet_jack`: palets válidos y repetidos en la caja; uno por vez y alcance; recepción única en el `Inventory`; soltar fuera del piso o encima de otro palet no cambia nada; lo que queda en la caja no se cuenta; 50 movimientos sin perder ni duplicar unidades; ida y vuelta de JSON.
 **Hecho cuando:** jugador mueve un palet del camión al piso (test de interacción, D-0605.b).
 
+### D-0606 · Descargar con el autoelevador manejado por un jugador — A · Sonnet 5.5 · xhigh · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del autoelevador (`PalletForklift`, `scripts/gameplay/business/pallet_forklift.gd`), los huecos de rack en `PalletJack` y `test_pallet_forklift`. Falta D-0606.b (el vehículo en el mundo, manejarlo y dibujar el palet).
+**Depende de:** D-0604 (`Pallet`), D-0605 (`PalletJack`, el mismo libro de palets), D-0608 (estanterías)
+**Qué:**
+- **D-0606.a (hecha) — la lógica.** `PalletForklift` (`RefCounted`): altura de las horquillas (`lift(dirección, delta)` a `FORKLIFT_LIFT_SPEED` = 0,55 m/s, entre 0 y `FORKLIFT_MAX_LIFT_M` = 2,4 m; `set_height`). Un palet se toma de la caja del camión, del piso o de un hueco de rack solo con las horquillas al nivel del palet (± `FORKLIFT_LEVEL_TOLERANCE_M` = 0,12 m; piso y caja a 0, el rack al nivel de su hueco) y a `PALLET_JACK_REACH_M` de él. Se deja en el piso con las horquillas abajo o en un hueco de rack libre a su nivel. El libro es el mismo `PalletJack` de la zorra: `put_on_rack(hueco, pos, inventory)`, `rack_pallet(hueco)` y el lugar `AT_RACK` (con `slot`), que entra en `to_dict`/`from_dict`. Las unidades entran al `Inventory` **una sola vez**, al apoyar el palet por primera vez (piso o rack).
+- **D-0606.b (pendiente) — el mundo.** El autoelevador como vehículo que un jugador maneja (reusa el modelo de `depot_forklift.gd`; el del depósito sigue siendo decorado), entrar y salir, mástil con dos teclas/gatillos, el palet dibujado en las horquillas, y los huecos de rack de `Shelf` con su altura (D-0608). El host aplica y replica (D-0619).
+**Test** `test_pallet_forklift`: las horquillas suben y bajan a su velocidad y paran en el mástil; con las horquillas arriba no se toma del piso ni de la caja, ni se apoya en el piso; el rack pide nivel, alcance y hueco libre; las unidades se reciben una vez; se baja un palet del rack y se comparte el libro con la zorra; 50 viajes caja/piso/rack sin perder ni duplicar; ida y vuelta de JSON con el hueco.
+**Hecho cuando:** jugador maneja el autoelevador y deja un palet en un rack (D-0606.b).
+
 ### D-0607 · Abrir palet — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-04, PR pendiente)** — `Pallet.open/take/is_depleted` en `pallet.gd`; ampliado `test_pallet`.
 **Depende de:** D-0604 (`Pallet`), D-0211 (`Inventory`)
@@ -97,6 +106,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Test** `test_shelf_picking`: nombres de estación; el plan topa en 4, completa lo que ya hay en la mano y rechaza manos llenas, ocupadas o estante vacío; rotación de huecos; el galpón resuelve solo huecos etiquetados; de punta a punta, tomar 3 baja el hueco en 3 y sube la mano en 3 sin crear unidades; lejos del estante lo rechaza.
 **Hecho cuando:** tomar 3 unidades baja el stock en 3 (test pasa).
 
+### D-0611 · Stock visible: la etiqueta del hueco muestra la cantidad — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-21, ya estaba: c52ac048, PR #431; seguimiento en todos los peers con D-0910)** — `CompanyShed._label_slot` dibuja en cada hueco etiquetado el nombre del producto y `×N` debajo, con una caja que se ve solo si hay unidades; `refresh_stock()` reescribe el número (rojizo en cero) y `follow(net)` lo llama en cada `units_moved` y snapshot, en el host y en los clientes. `test_company_default_layout` comprueba el `×N` y que baja al tomar; `tests/render_company_shed.gd` lo captura.
+**Depende de:** D-0608 (`Shelf`), D-0911 (`CompanyShed`)
+**Qué:** cada hueco etiquetado muestra cuántas unidades tiene, y se actualiza al mover stock en cualquier peer.
+**Hecho cuando:** captura con números (render_company_shed) y test.
+
 ### D-0602 · Calendario de entregas de proveedores — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `SupplierSchedule` (`scripts/gameplay/business/supplier_schedule.gd`): lo pedido el día N llega el N + 1; `test_supplier_schedule`.
 **Depende de:** D-0604 (`Pallet.plan`), supuestos (1 camión por día a las 08:30, espera 3 h)
@@ -120,13 +135,22 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 **Hecho cuando:** captura aérea con zonas rotuladas y los tests verdes.
 
 ### D-0603 · Pedido a proveedor desde el portapapeles o el tablero — B · Sonnet 5.5 · high · Aviso: no · F1
-**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del pedido (`SupplierOrderCart`, `scripts/gameplay/business/supplier_order_cart.gd`) y `test_supplier_order_cart`. Falta D-0603.b (la pantalla).
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del pedido (`SupplierOrderCart`, `scripts/gameplay/business/supplier_order_cart.gd`) y `test_supplier_order_cart`; la pantalla `SupplierOrderPanel` y `test_company_supplier_panel` (D-0603.b.1). Falta D-0603.b.2 (abrirla en el mundo y replicar el pedido).
 **Depende de:** D-0602 (`SupplierSchedule`), D-0503 (`SupplierPurchase`), D-0218 (`SupplierDefinition`), D-0204 (producto)
 **Qué:**
 - **D-0603.a (hecha) — el carrito.** `SupplierOrderCart` (`RefCounted`): líneas producto → unidades con `add`, `set_qty` y `remove`; solo se piden productos del catálogo que el proveedor vende, de 1 a `MAX_LINE_QTY` (240) unidades por línea. `lines()` (id, unidades, precio unitario y costo), `total()`, `pallet_count()` (24 unidades por palet) y `submit(wallet, schedule, día)`: con el saldo que cubre el total pone el pedido en el calendario para el día siguiente (`SupplierSchedule.arrival_day`) y vacía el carrito. No cobra nada: el cobro sigue siendo al recibir cada palet (D-0503), así que un camión que no se descarga no cuesta.
-- **D-0603.b (pendiente) — la pantalla** en el tablero del galpón y en el portapapeles: lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
+- **D-0603.b (partida) — la pantalla.** Hecha la pantalla (b.1): `SupplierOrderPanel` (`scripts/ui/supplier_order_panel.gd`) con una fila por producto del proveedor, + / − con teclado, mouse y mando, total, palets, día de llegada y "Pedir" (`SupplierOrderCart.submit`); `test_company_supplier_panel`. Pendiente b.2: abrirla desde el tablero/portapapeles del galpón, pedir por `CompanyNet` y que el host aplique y replique (D-0619). Pedido original:  lista de productos del proveedor, +/- por línea con teclado, mouse y mando, total, palets y "Pedir"; el cliente pide por `CompanyNet` y el host aplica `submit` y replica el calendario (D-0619). Con eso `CompanyRoot._seed_stand_in_calendar()` deja de hacer falta.
 **Test** `test_supplier_order_cart`: edición y rechazos, orden y costo de las líneas, palets (30 + 2 unidades = 3), `submit` con saldo corto (no cambia nada) y con saldo suficiente (calendario del día siguiente, camión con 3 palets, nada cobrado).
 **Hecho cuando:** test de UI: pedir un palet y que llegue al día siguiente (D-0603.b).
+
+### D-0612 · Vista de stock en el portapapeles (lista por producto) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — D-0612.a: `StockView` (`scripts/gameplay/business/stock_view.gd`, puro: una fila por producto con unidades en estante, recepción, manos, cajas y otros, más la falta de `StockAlert`) y la pantalla `StockPanel` (`scripts/ui/stock_panel.gd`, datos inyectados, teclado, mouse y mando, marca "⚠ Faltan N" / "⟳ Viene en camino" además del color); `test_company_stock_panel`. Falta D-0612.b. Revisar: [`revisar/D-0612.md`](../revisar/D-0612.md).
+**Depende de:** D-0211 (`Inventory`), D-0613 (`StockAlert`), D-0608 (huecos `shelf:`)
+**Qué:** una lista por producto de cuánto hay y dónde, con el aviso de lo que falta para los pedidos pendientes.
+- [x] **D-0612.a** Modelo y pantalla sin red: `StockView.rows(inventory, shortages)` y `StockPanel.open/refresh(ctx)` con `{inventory, shortages, products}`; solo lee, no manda nada.
+- [ ] **D-0612.b** Abrirla en el mundo: desde el portapapeles (D-0131/D-0413, todavía no existe) o, mientras tanto, desde el tablero del galpón; `refresh` en cada `units_moved` y snapshot de `CompanyNet` (en el cliente sobre su copia del `Inventory`), con `StockAlert.shortages(inventory, book.open_orders(), incoming)` y lo que trae el calendario del proveedor. Captura con `revisor-visual`.
+**Test** `test_company_stock_panel`: reparto por ubicación y totales, orden, un producto sin unidades que falta aparece marcado, cubierto vs. faltante, `refresh` después de mover cambia los números, inventario vacío, foco y `ui_cancel`, claves `UI_STOCK_*` en los dos idiomas.
+**Hecho cuando:** captura con la lista abierta en el galpón (D-0612.b).
 
 ### D-0613 · Aviso de stock bajo para productos con pedidos pendientes — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-21, PR pendiente)** — `StockAlert` (`scripts/gameplay/business/stock_alert.gd`): qué productos faltan para los pedidos pendientes; `test_stock_alert`. El aviso en pantalla (portapapeles, tablero) lo dibuja la UI de stock, D-0612.
@@ -138,3 +162,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - `Inventory.locations_of(product)` (nuevo): ubicación → unidades de un producto.
 **Test** `test_stock_alert`: falta y no falta, suma de varios pedidos con el vencimiento más cercano, pedidos armados/entregados/en caja y unidades selladas que no cuentan, `incoming` parcial y total, orden por urgencia, `fresh`.
 **Hecho cuando:** test: un pedido que pide más de lo que hay marca el producto con lo que falta (test pasa).
+
+### D-0614 · Recepción: control de remito (lo que llegó vs. lo pedido) — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-10-21, PR pendiente)** — la lógica del remito (`DeliveryNote`, `scripts/gameplay/business/delivery_note.gd`) y `test_delivery_note`. Falta D-0614.b (llamarlo al irse el camión y mostrarlo).
+**Depende de:** D-0602 (`SupplierSchedule.ordered_for`), D-0604 (`Pallet`), D-0605 (`PalletJack.left_on_bed`)
+**Qué:**
+- **D-0614.a (hecha) — la lógica.** `DeliveryNote` (`RefCounted`, sin nodos): `received_units(pallets, received_ids)` suma las unidades de los palets que sí se bajaron; `compare(pedido, recibido)` devuelve una línea por producto (`ordered`, `received`, `missing`, `extra`) en orden de id; `check(día, pedido, recibido)` guarda en el remito solo las líneas que no cierran (un día exacto no deja registro; volver a controlar el mismo día lo reemplaza). `days_with_shortfall()`, `discrepancies(día)`, `missing_totals()`, `is_exact` y `total_missing`. `to_dict`/`from_dict` toleran datos rotos y recalculan `missing`/`extra`.
+- **D-0614.b (pendiente) — el cableado.** Cuando el camión se va (`SupplierSchedule.truck_state` pasa a `left`, D-0618), `CompanyRoot` llama a `check(día, ordered_for(día), received_units(pallets_for(día), ids bajados))`, guarda el `DeliveryNote` en el save de empresa y lo replica con el resto del stock (D-0619). Lo que se muestra (lista de faltantes en el resumen del día o el tablero) es UI; el cobro solo de lo recibido ya lo hace D-0503 por palet.
+**Test** `test_delivery_note`: solo cuentan los palets bajados; faltante de 6 gallinas registrado en su día; entrega exacta sin registro y volver a controlar reemplaza; sobrante como `extra` y no como faltante; totales por producto y días inválidos; ida y vuelta de JSON y save roto.
+**Hecho cuando:** test: un faltante se registra (hecho en la lógica); en el juego, al irse el camión (D-0614.b).

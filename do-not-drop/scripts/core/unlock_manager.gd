@@ -16,11 +16,16 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 5: the editable gelatin body proportions persist with the appearance.
 ## 6: the selected gel face persists independently from the legacy face layers.
 ## 7: the selected gel skin persists by stable catalog ID.
-const PROFILE_VERSION := 7
+## 8: gel hair, facial hair, costume and accessory selections persist and use
+## the existing progression rewards instead of a second unlock economy.
+const PROFILE_VERSION := 8
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const NICKNAME = preload("res://scripts/core/nickname.gd")
 const GEL_PROPORTIONS = preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 const GEL_SKINS = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
+const GEL_HAIR = preload("res://scripts/gameplay/player/gel/gel_hair_catalog.gd")
+const GEL_COSTUMES = preload("res://scripts/gameplay/player/gel/gel_costume_catalog.gd")
+const GEL_ACCESSORIES = preload("res://scripts/gameplay/player/gel/gel_accessory_catalog.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (NetworkManager.color_slot(), N-226), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -74,6 +79,39 @@ const COSMETICS := {
 	&"sky_uniform": {"title": "UI_UNIFORM_SKY", "color": Color("6db3d6"), "unlock": &"sky_uniform"},
 }
 
+## New gel cosmetics share the campaign's established milestones. One earned
+## reward can reveal a small themed set; progress and notifications still have
+## a single source of truth in UNLOCKS.
+const GEL_HAIR_UNLOCKS := {
+	&"bald": &"starter_kit", &"quiff": &"starter_kit", &"curls": &"growing_weight_trap",
+	&"pigtails": &"noisy_trap", &"mohawk": &"coral_uniform", &"afro": &"liquid_trap",
+	&"fringe": &"agile_van", &"braid": &"violet_paint", &"bun": &"vintage_van",
+	&"long": &"hostile_trap",
+}
+const GEL_EYEBROW_UNLOCKS := {
+	&"none": &"starter_kit", &"soft": &"starter_kit", &"thick": &"growing_weight_trap",
+	&"angled": &"coral_uniform", &"arched": &"liquid_trap", &"split": &"sky_uniform",
+}
+const GEL_MOUSTACHE_UNLOCKS := {
+	&"none": &"starter_kit", &"pencil": &"starter_kit", &"handlebar": &"noisy_trap",
+	&"walrus": &"agile_van", &"chevron": &"vintage_van", &"curled": &"explosive_trap",
+}
+const GEL_COSTUME_UNLOCKS := {
+	&"courier": &"starter_kit", &"mail_carrier": &"growing_weight_trap",
+	&"firefighter": &"noisy_trap", &"chef": &"coral_uniform", &"pirate": &"liquid_trap",
+	&"dinosaur": &"agile_van", &"bee": &"violet_paint", &"mummy": &"vintage_van",
+	&"astronaut": &"explosive_trap", &"superhero": &"sky_uniform",
+	&"robot": &"hostile_trap", &"skeleton": &"hostile_trap",
+}
+const GEL_ACCESSORY_UNLOCKS := {
+	&"none": &"starter_kit", &"cap": &"starter_kit", &"glasses": &"starter_kit",
+	&"bow_tie": &"growing_weight_trap", &"flower": &"growing_weight_trap",
+	&"hard_hat": &"noisy_trap", &"fake_moustache": &"coral_uniform",
+	&"scarf": &"liquid_trap", &"backpack": &"agile_van", &"headphones": &"violet_paint",
+	&"party_hat": &"vintage_van", &"snorkel": &"explosive_trap", &"monocle": &"explosive_trap",
+	&"crown": &"sky_uniform", &"wristwatch": &"hostile_trap", &"fairy_wings": &"hostile_trap",
+}
+
 var total_score: int = 0
 var successful_deliveries: int = 0
 var completed_runs: int = 0
@@ -84,6 +122,11 @@ var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
 var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
 var selected_gel_face: StringName = &"none"
 var selected_gel_skin: StringName = GEL_SKINS.DEFAULT_ID
+var selected_gel_hair: StringName = GEL_HAIR.DEFAULT_HAIRSTYLE
+var selected_gel_eyebrows: StringName = GEL_HAIR.NONE
+var selected_gel_moustache: StringName = GEL_HAIR.NONE
+var selected_gel_costume: StringName = GEL_COSTUMES.DEFAULT_ID
+var selected_gel_accessory: StringName = &"none"
 var gel_proportions: Dictionary = GEL_PROPORTIONS.default_dictionary()
 ## What the player typed to be called by (N-606.1), cleaned; empty = the game
 ## hands out a funny one (Nickname.resolve). Travels with the appearance.
@@ -249,6 +292,70 @@ func select_gel_skin(skin_id: StringName) -> bool:
 	return true
 
 
+func gel_style_choices(kind: StringName) -> Array[Dictionary]:
+	match kind:
+		&"gel_hair":
+			return _gel_choices(GEL_HAIR.HAIRSTYLES, GEL_HAIR_UNLOCKS, &"color")
+		&"gel_eyebrows":
+			return _id_choices([GEL_HAIR.NONE] + GEL_HAIR.EYEBROWS, GEL_EYEBROW_UNLOCKS)
+		&"gel_moustache":
+			return _id_choices([GEL_HAIR.NONE] + GEL_HAIR.MOUSTACHES, GEL_MOUSTACHE_UNLOCKS)
+		&"gel_costume":
+			return _gel_choices(GEL_COSTUMES.COSTUMES, GEL_COSTUME_UNLOCKS, &"primary")
+		&"gel_accessory":
+			var result: Array[Dictionary] = _id_choices([&"none"], GEL_ACCESSORY_UNLOCKS)
+			result.append_array(_gel_choices(GEL_ACCESSORIES.ACCESSORIES, GEL_ACCESSORY_UNLOCKS, &"color"))
+			return result
+	return []
+
+
+func select_gel_style(kind: StringName, id: StringName) -> bool:
+	match kind:
+		&"gel_hair":
+			return _select_gel_choice(&"selected_gel_hair", id, GEL_HAIR_UNLOCKS)
+		&"gel_eyebrows":
+			return _select_gel_choice(&"selected_gel_eyebrows", id, GEL_EYEBROW_UNLOCKS)
+		&"gel_moustache":
+			return _select_gel_choice(&"selected_gel_moustache", id, GEL_MOUSTACHE_UNLOCKS)
+		&"gel_costume":
+			return _select_gel_choice(&"selected_gel_costume", id, GEL_COSTUME_UNLOCKS)
+		&"gel_accessory":
+			return _select_gel_choice(&"selected_gel_accessory", id, GEL_ACCESSORY_UNLOCKS)
+	return false
+
+
+func _gel_choices(definitions: Array[Dictionary], unlocks: Dictionary, color_key: StringName) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for definition: Dictionary in definitions:
+		var id: StringName = definition[&"id"]
+		var unlock: StringName = unlocks[id]
+		result.append({&"id": id, &"title": _gel_title(id), &"unlock": unlock,
+			&"available": is_unlocked(unlock), &"color": definition.get(color_key, Color.WHITE)})
+	return result
+
+
+func _id_choices(ids: Array, unlocks: Dictionary) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for id: StringName in ids:
+		var unlock: StringName = unlocks[id]
+		result.append({&"id": id, &"title": _gel_title(id), &"unlock": unlock,
+			&"available": is_unlocked(unlock), &"color": Color("6f4e37")})
+	return result
+
+
+func _select_gel_choice(field: StringName, id: StringName, unlocks: Dictionary) -> bool:
+	if not unlocks.has(id) or not is_unlocked(StringName(unlocks[id])):
+		return false
+	set(field, id)
+	save_profile()
+	progress_changed.emit()
+	return true
+
+
+func _gel_title(id: StringName) -> String:
+	return tr("None") if id == &"none" else String(id).replace("_", " ").capitalize()
+
+
 func set_nickname(text: String) -> void:
 	var cleaned: String = NICKNAME.clean(text)
 	if cleaned == nickname:
@@ -301,6 +408,11 @@ func _profile_fields() -> Dictionary:
 		"selected_mouth": selected_mouth,
 		"selected_gel_face": selected_gel_face,
 		"selected_gel_skin": selected_gel_skin,
+		"selected_gel_hair": selected_gel_hair,
+		"selected_gel_eyebrows": selected_gel_eyebrows,
+		"selected_gel_moustache": selected_gel_moustache,
+		"selected_gel_costume": selected_gel_costume,
+		"selected_gel_accessory": selected_gel_accessory,
 		"gel_proportions": gel_proportions,
 		"nickname": nickname,
 	}
@@ -321,6 +433,16 @@ func _read_profile(parsed: Dictionary, version: int) -> void:
 	var saved_gel_face := StringName(parsed.get("selected_gel_face", &"none"))
 	selected_gel_face = saved_gel_face if FaceCatalog.has_gel_face(saved_gel_face) else &"none"
 	selected_gel_skin = GEL_SKINS.valid_id(StringName(parsed.get("selected_gel_skin", GEL_SKINS.DEFAULT_ID)))
+	selected_gel_hair = _saved_gel_choice(parsed, "selected_gel_hair", GEL_HAIR_UNLOCKS,
+		GEL_HAIR.DEFAULT_HAIRSTYLE)
+	selected_gel_eyebrows = _saved_gel_choice(parsed, "selected_gel_eyebrows", GEL_EYEBROW_UNLOCKS,
+		GEL_HAIR.NONE)
+	selected_gel_moustache = _saved_gel_choice(parsed, "selected_gel_moustache", GEL_MOUSTACHE_UNLOCKS,
+		GEL_HAIR.NONE)
+	selected_gel_costume = _saved_gel_choice(parsed, "selected_gel_costume", GEL_COSTUME_UNLOCKS,
+		GEL_COSTUMES.DEFAULT_ID)
+	selected_gel_accessory = _saved_gel_choice(parsed, "selected_gel_accessory", GEL_ACCESSORY_UNLOCKS,
+		&"none")
 	gel_proportions = GEL_PROPORTIONS.sanitized_dictionary(Dictionary(parsed.get("gel_proportions", {})))
 	nickname = NICKNAME.clean(str(parsed.get("nickname", "")))
 
@@ -334,6 +456,21 @@ func _after_load(_version: int) -> void:
 		selected_truck = &"classic"
 	if not PAINTS.has(selected_paint) or not is_unlocked(StringName(PAINTS[selected_paint]["unlock"])):
 		selected_paint = &"white"
+	selected_gel_hair = _available_or_default(selected_gel_hair, GEL_HAIR_UNLOCKS, GEL_HAIR.DEFAULT_HAIRSTYLE)
+	selected_gel_eyebrows = _available_or_default(selected_gel_eyebrows, GEL_EYEBROW_UNLOCKS, GEL_HAIR.NONE)
+	selected_gel_moustache = _available_or_default(selected_gel_moustache, GEL_MOUSTACHE_UNLOCKS, GEL_HAIR.NONE)
+	selected_gel_costume = _available_or_default(selected_gel_costume, GEL_COSTUME_UNLOCKS,
+		GEL_COSTUMES.DEFAULT_ID)
+	selected_gel_accessory = _available_or_default(selected_gel_accessory, GEL_ACCESSORY_UNLOCKS, &"none")
+
+
+func _saved_gel_choice(parsed: Dictionary, field: String, unlocks: Dictionary, fallback: StringName) -> StringName:
+	var saved := StringName(parsed.get(field, fallback))
+	return saved if unlocks.has(saved) else fallback
+
+
+func _available_or_default(id: StringName, unlocks: Dictionary, fallback: StringName) -> StringName:
+	return id if unlocks.has(id) and is_unlocked(StringName(unlocks[id])) else fallback
 
 
 func _reset_fields() -> void:
@@ -347,6 +484,11 @@ func _reset_fields() -> void:
 	selected_mouth = FaceCatalog.DEFAULT_MOUTH
 	selected_gel_face = &"none"
 	selected_gel_skin = GEL_SKINS.DEFAULT_ID
+	selected_gel_hair = GEL_HAIR.DEFAULT_HAIRSTYLE
+	selected_gel_eyebrows = GEL_HAIR.NONE
+	selected_gel_moustache = GEL_HAIR.NONE
+	selected_gel_costume = GEL_COSTUMES.DEFAULT_ID
+	selected_gel_accessory = &"none"
 	gel_proportions = GEL_PROPORTIONS.default_dictionary()
 	nickname = ""
 

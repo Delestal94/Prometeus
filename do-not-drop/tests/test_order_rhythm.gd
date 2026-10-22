@@ -5,6 +5,7 @@ extends SceneTree
 ## - orders a day = 6 + 2 per player, capped at 16;
 ## - the same seed and crew size give the same arrival minutes, sorted, inside
 ##   the order hours and none in the last hour;
+## - an explicit count overrides the crew's (-1 keeps it): same seed and count, same minutes;
 ## - over many days the busiest hours are 10-12 and the lunch dip is lower
 ##   (the histogram is printed as the curve).
 
@@ -18,6 +19,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_count()
 	_test_determinism_and_range()
+	_test_count_override()
 	_test_curve()
 	quit(_failures)
 
@@ -42,6 +44,14 @@ func _test_determinism_and_range() -> void:
 		for minute in OrderRhythm.arrival_minutes(seed_value, 8):
 			_expect(minute >= CompanyTuning.DAY_START_MIN, "arrival not before opening")
 			_expect(minute < CompanyTuning.ORDER_LAST_ARRIVAL_MIN, "no arrival in the last hour")
+
+
+func _test_count_override() -> void:
+	_expect(OrderRhythm.arrival_minutes(42, 3, -1) == OrderRhythm.arrival_minutes(42, 3), "-1 is the usual count")
+	var few := OrderRhythm.arrival_minutes(42, 3, 7)
+	_expect(few.size() == 7, "an explicit count draws that many arrivals")
+	_expect(few == OrderRhythm.arrival_minutes(42, 3, 7), "same seed and count, same minutes")
+	_expect(OrderRhythm.arrival_minutes(42, 3, 0).is_empty(), "a count of 0 draws none")
 
 
 func _test_curve() -> void:
