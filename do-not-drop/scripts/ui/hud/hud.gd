@@ -18,6 +18,7 @@ const STATE_TEXT: Array[Color] = [UiTheme.INK, Color("c26a00"), Color("c73431")]
 const STATE_STATUS: Array[String] = ["HUD_STATE_OK", "HUD_STATE_AT_RISK", "HUD_STATE_RUINED"]
 enum Role { ON_FOOT, DRIVER, PASSENGER }
 const SHORTCUT_VISIBLE_SECONDS: float = 60.0
+const PromptPlates = preload("res://scripts/ui/hud/hud_prompt_plates.gd")
 const RESTART_HOLD_SECONDS: float = 0.9
 const CAPTURE_MODE_SCRIPT: String = "res://scripts/tools/capture_mode.gd"
 ## The logical height the HUD is laid out for (project.godot's viewport).
@@ -98,7 +99,11 @@ var _prep_refresh: float = 0.0
 ## newspaper, a lost connection, a restart).
 var overlay_mode: String = "start":
 	set = _set_overlay_mode
-var interaction_label: Label
+## The prompt ("E  Agarrar paquete", keycap drawn) and, apart under it, the
+## sound subtitles (N-983); built by hud_prompt_plates.gd.
+var prompt_stack: VBoxContainer
+var interaction_label: RichTextLabel
+var subtitle_label: RichTextLabel
 var interaction_icon: TextureRect
 var interaction_prompt: String = ""
 var ping_label: Label
@@ -371,7 +376,11 @@ func _build_top_bar() -> void:
 	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, HUD_MIN_FONT_SIZE)
 	set_economy_visible(false)
 	card_label = make_rich(metrics, HUD_MIN_FONT_SIZE)
-	card_label.custom_minimum_size.x = 236
+	# 320 (was 236): "CARTA: Descuento • G usar" on one line (N-983.5); the card only
+	# takes that width while it shows a card. HudNotices.fit_card_line() cuts the
+	# name to fit it, so the card never grows past it.
+	card_label.custom_minimum_size.x = 320
+	card_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	card_label.add_theme_color_override("default_color", INK)
 
 
@@ -387,10 +396,12 @@ func _build_bottom_bar() -> void:
 	# Context owns the bottom centre, right above the controls in the
 	# dashboard's own flow: pinned at a fixed offset it sat on the route bar,
 	# and it never competes with the critical alerts up top.
-	interaction_label = UiTheme.floating_label(dashboard, "", PILL_FONT_SIZE, PAPER, 560, 0)
-	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	interaction_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var plates: Dictionary = PromptPlates.build(dashboard, make_rich, PILL_FONT_SIZE)
+	prompt_stack = plates["stack"]
+	interaction_label = plates["prompt"]
+	subtitle_label = plates["subtitle"]
 	_plate(interaction_label, Color(INK, 0.88), INK)
+	_plate(subtitle_label, Color(INK, 0.88), INK)
 	GameSettings.text_backdrop_opacity_changed.connect(func(_opacity: float) -> void: apply_text_backdrop())
 	apply_text_backdrop()
 	interaction_icon = TextureRect.new()
@@ -456,7 +467,7 @@ func _pill_style() -> StyleBoxFlat:
 ## A dark rounded plate behind a floating message, so it reads as HUD and
 ## not as a sign in the world (the depot's signs are yellow on grey too).
 ## Label draws its "normal" stylebox; _process() hides it while empty.
-func _plate(label: Label, fill: Color, border: Color) -> void:
+func _plate(label: Control, fill: Color, border: Color) -> void:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
 	style.border_color = border
@@ -479,13 +490,8 @@ func _plate(label: Label, fill: Color, border: Color) -> void:
 ## setting (N-969): fill, border and shadow fade together; at 0 only the
 ## outlined text is left.
 func apply_text_backdrop() -> void:
-	var plate := interaction_label.get_theme_stylebox("normal") as StyleBoxFlat
-	if plate == null:
-		return
-	var opacity: float = GameSettings.text_backdrop_opacity
-	plate.bg_color = Color(INK, opacity)
-	plate.border_color = Color(INK, opacity)
-	plate.shadow_color = Color(INK, opacity * 0.5)
+	var plates: Array[RichTextLabel] = [interaction_label, subtitle_label]
+	PromptPlates.apply_backdrop(plates, GameSettings.text_backdrop_opacity)
 
 
 ## Messages that float over the view: pings, toasts, route events, interaction prompts.
@@ -670,8 +676,9 @@ func _process(delta: float) -> void:
 	var event_pulse: float = 0.84 + sin(Time.get_ticks_msec() * 0.008) * 0.16
 	event_label.modulate.a = event_pulse if not event_label.text.is_empty() else 1.0
 	# The plated messages (_plate()) would show an empty plate otherwise.
-	for plated: Label in [event_label, toast_label, interaction_label, code_label]:
+	for plated: Label in [event_label, toast_label, code_label]:
 		plated.visible = not plated.text.is_empty()
+	prompts.refresh_plates()
 	cargo_card.visible = cargo_rows_box.get_child_count() > 0
 	if overlay_mode == "pause" and not soft_pause and not get_tree().paused:
 		overlay.hide()
@@ -765,6 +772,7 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	action_button.release_focus()
 	interaction_prompt = ""
 	interaction_label.text = ""
+	subtitle_label.text = ""
 	if is_endless:
 		section_label.text = tr("HUD_SECTION_ENDLESS")
 		distance_label.text = tr("HUD_ZERO_METERS")

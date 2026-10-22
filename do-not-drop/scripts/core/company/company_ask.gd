@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## Static only, no state but the product catalog read once. CompanyNet hands each units request
 ## here (units_take, units_store: at_station(); units_drop: drop()) and refuses with bad_data
-## whatever comes back empty. Split out of company_net.gd in D-2006 (units_at() in D-0813).
+## whatever comes back empty. Split out of company_net.gd in D-2006 (station_of() in D-0813).
 
 ## Where the product catalog lives: an id in a request must name one of its files.
 const PRODUCTS_DIR: String = "res://data/products/"
@@ -57,12 +57,27 @@ static func at_station(data: Dictionary) -> Dictionary:
 	return ask
 
 
-## Units of every product at `location` in `stock` (the capacity check of units_store).
-static func units_at(stock: Inventory, location: StringName) -> int:
-	var total: int = 0
-	for qty: int in stock.contents_at(location).values():
-		total += qty
-	return total
+## The station a checked request names (`ask`, from at_station()), as the world describes it (`stations`,
+## CompanyNet.stations), or {} when `ask` is empty, the station is unknown or its description unusable (no
+## location, a hands: one, a spot that isn't a Vector3). A floor bundle with a position in `bundles` is its own
+## station (row 5): its id is its location and its spot is where it lies. Out of company_net.gd in D-0813.
+static func station_of(ask: Dictionary, bundles: FloorBundles, stations: Callable) -> Dictionary:
+	if ask.is_empty():
+		return {}
+	var id: StringName = ask["station"]
+	var bundle: Variant = bundles.position_of(id)
+	if bundle is Vector3:
+		return {"location": id, "spot": bundle}
+	if not stations.is_valid():
+		return {}
+	var found: Variant = stations.call(id)
+	if not found is Dictionary:
+		return {}
+	var station: Dictionary = found
+	var location: StringName = as_id(station.get("location"))
+	if location == &"" or String(location).begins_with(CompanyNet.HANDS_PREFIX):
+		return {}
+	return station if station.get("spot") is Vector3 else {}
 
 
 ## The product, quantity and position of a units_drop: units() plus a finite Vector3 `pos`,
@@ -74,3 +89,20 @@ static func drop(data: Dictionary) -> Dictionary:
 		return {}
 	ask["pos"] = pos
 	return ask
+
+
+## Text as a StringName, &"" for anything else (a value that came over the network).
+static func as_id(value: Variant) -> StringName:
+	return StringName(value) if is_id(value) else &""
+
+
+static func as_int(value: Variant) -> int:
+	return int(value) if typeof(value) == TYPE_INT else 0
+
+
+## Units of all products at `location`.
+static func units_at(stock: Inventory, location: StringName) -> int:
+	var total: int = 0
+	for qty: int in stock.contents_at(location).values():
+		total += qty
+	return total

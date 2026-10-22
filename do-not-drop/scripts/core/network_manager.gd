@@ -89,13 +89,18 @@ const MAX_PLAYERS: int = 8
 ## 38: the company world (company_root.tscn) is in LEVEL_SCENES, so a joiner may
 ## be sent to it, and its World/PlayerSpawner spawns the crew (company mode
 ## online, D-0214);
-## 39: CompanyNet's _apply_event carries two new kinds, order_added and
+## 39: CompanyNet's _request takes a new kind, cart_push, _apply_event a new one,
+## cart_moved, and its snapshot a "carts" part: where the picking carts stand
+## (company mode, D-0610.b);
+## 40: skipped here (the open PR #606, D-0302.2, bumps to it; whichever of the
+## two merges second keeps the other's line, docs/convenciones-godot.md 6);
+## 41: CompanyNet's _apply_event carries two new kinds, order_added and
 ## order_expired, and its snapshot an "orders" part: the day's order book from
 ## the host (company mode, D-0813).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 39
+const PROTOCOL_VERSION: int = 41
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
