@@ -55,7 +55,7 @@ func _test_link(entry: Dictionary, book: OrderBook, centro: Array[HouseSpot]) ->
 	var view := CompanyTripsView.new()
 	root.add_child(view)
 	var net := CompanyNet.new()
-	net.book = book
+	net.orders.book = book
 	root.add_child(net)
 	var link := CompanyGpsLink.new()
 	link.fleet = fleet

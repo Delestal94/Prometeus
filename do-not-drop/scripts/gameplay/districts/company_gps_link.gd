@@ -86,6 +86,6 @@ func _guidance_of(vehicle: Node3D, gps: CompanyGps) -> Dictionary:
 	if net != null and net.company != null:
 		gates = net.company.get(&"opened_gates")
 	gps.open_locks = gates
-	var book: OrderBook = net.book if net != null else null
+	var book: OrderBook = net.orders.book if net != null else null
 	var stop: StringName = next_stop(view.trip_of(StringName(vehicle.name)) if view != null else {}, book)
 	return gps.guidance_to(Vector2(vehicle.global_position.x, vehicle.global_position.z), stop)
