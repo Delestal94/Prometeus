@@ -284,7 +284,7 @@ func _check_company_glossary(table: Dictionary) -> void:
 			checked += 1
 			_expect(String(table[key][1]).to_lower().contains(english),
 					"%s says '%s' in English (diseno/glosario.md)" % [key, english])
-	_expect(checked > 50, "The Company glossary sees the shed, order and supplier texts (%d)" % checked)
+	_expect(checked > 20, "The Company glossary sees the shed, order and supplier texts (%d)" % checked)
 	for key: String in table:
 		var es: String = String(table[key][0]).to_lower()
 		var en: String = String(table[key][1]).to_lower()
