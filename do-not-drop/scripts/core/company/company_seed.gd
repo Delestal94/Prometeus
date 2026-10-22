@@ -4,8 +4,8 @@ extends RefCounted
 ##
 ## One seed per company, saved with it (CompanyState.company_seed): every random draw of the
 ## business (the day's orders and their arrival minutes, later the suppliers' market) starts from
-## for_day(seed, day, stream), so the same company and day give the same day on every load and on
-## every host. Each stream gets its own seed, so drawing one more order never shifts what a
+## for_day(seed, day, stream), so the same company, day, crew and money give the same day on every
+## load and on every host. Each stream gets its own seed, so drawing one more order never shifts what a
 ## supplier draws. Clients never draw: the host plans with it and sends the results whole
 ## (docs/expansion-distritos/diseno/red-autoridad.md, "La semilla de la empresa").
 ##
@@ -32,7 +32,7 @@ static func fresh() -> int:
 static func normalize(raw: Variant) -> int:
 	if typeof(raw) == TYPE_FLOAT:
 		var value: float = raw
-		if value != floorf(value):
+		if value != floorf(value) or value < 1.0 or value > float(MAX_SEED):
 			return 0
 		raw = int(value)
 	if typeof(raw) != TYPE_INT:

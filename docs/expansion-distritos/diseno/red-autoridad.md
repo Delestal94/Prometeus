@@ -476,3 +476,5 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
   `day_seed()` (o derivada de ella), y solo en el host. `test_company_seed` falla si aparece un `randi()`, `randf()`,
   `randomize()`, `shuffle()` o `pick_random()` global en `scripts/gameplay/business/` o `scripts/core/company/`.
 - Guardado de antes de D-0246: semilla sacada del nombre (`CompanySeed.from_name`), estable entre cargas.
+- "Mismo día" es con la misma semilla, día, tripulación y plata (`OrderRhythm`, `Bankruptcy`). `test_company_seed` fija
+  `for_day(1234, 3, "orders")` = 550168617 (Godot 4.7.2): si un motor nuevo hashea distinto, el test avisa.

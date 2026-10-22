@@ -11,11 +11,19 @@ extends SceneTree
 ## - the whole day of orders (OrderGenerator.generate_day) is the same for two companies with the
 ##   same seed, and for a host and a client mirror loaded from the host's to_dict(), and changes
 ##   with the seed;
+## - for_day() hashes as Godot 4.7.2 does (a pinned value), so an engine update that changes it fails;
 ## - nothing in the business draws randomness outside a seeded generator (no randi()/randf()/
-##   randomize()/shuffle()/pick_random() in scripts/gameplay/business/ or scripts/core/company/,
-##   other than CompanySeed.fresh()).
+##   randomize()/shuffle()/pick_random() and no RandomNumberGenerator without a .seed in
+##   scripts/gameplay/business/, scripts/core/company/, scripts/gameplay/districts/, company_root.gd
+##   or company_shed.gd, other than CompanySeed.fresh()).
 
-const BUSINESS_DIRS: Array[String] = ["res://scripts/gameplay/business", "res://scripts/core/company"]
+const BUSINESS_DIRS: Array[String] = ["res://scripts/gameplay/business", "res://scripts/core/company",
+		"res://scripts/gameplay/districts"]
+const BUSINESS_FILES: Array[String] = ["res://scripts/gameplay/company_root.gd",
+		"res://scripts/gameplay/company_shed.gd"]
+## for_day(1234, 3, ORDERS) as Godot 4.7.2 hashes it: a new engine that hashes otherwise would
+## plan other days from the same saves.
+const PINNED_DAY_SEED: int = 550168617
 
 var _failures: int = 0
 
@@ -79,7 +87,7 @@ func _test_old_and_malformed(state: Node) -> void:
 		"a save without a seed gets the same one from its name on every load (got %d, %d)"
 		% [first, state.company_seed])
 	_expect(CompanySeed.from_name("Old SRL") != CompanySeed.from_name("New SRL"), "another name, another seed")
-	for bad: Variant in ["123", 12.5, 0, -3, CompanySeed.MAX_SEED + 1, null, [1], {}]:
+	for bad: Variant in ["123", 12.5, 0, -3, CompanySeed.MAX_SEED + 1, 1e20, INF, null, [1], {}]:
 		_expect(CompanySeed.normalize(bad) == 0, "normalize() refuses %s" % [bad])
 		var data: Dictionary = old.duplicate()
 		data["company_seed"] = bad
@@ -91,6 +99,7 @@ func _test_old_and_malformed(state: Node) -> void:
 
 func _test_for_day(state: Node) -> void:
 	var a: int = CompanySeed.for_day(1234, 3, CompanySeed.ORDERS)
+	_expect(a == PINNED_DAY_SEED, "for_day() hashes as in Godot 4.7.2 (got %d)" % a)
 	_expect(a == CompanySeed.for_day(1234, 3, CompanySeed.ORDERS), "same seed, day and stream: same day seed")
 	_expect(a != CompanySeed.for_day(1234, 4, CompanySeed.ORDERS), "another day, another seed")
 	_expect(a != CompanySeed.for_day(1234, 3, CompanySeed.SUPPLIERS), "another stream, another seed")
@@ -135,20 +144,27 @@ func _test_same_orders(state: Node) -> void:
 
 
 func _test_no_unseeded_draws() -> void:
-	# Global draws (randi(), randf(), randomize()...) and Array.shuffle() / pick_random() use the
-	# engine's unseeded generator; rng.randi() on a seeded RandomNumberGenerator is fine.
+	# Global draws (randi(), randf(), randomize()...), Array.shuffle() / pick_random() and
+	# rng.randomize() use an unseeded generator, and so does a RandomNumberGenerator.new() that never
+	# gets a .seed (or .state): every generator of the business takes its seed from day_seed().
 	var unseeded := RegEx.create_from_string(
-		"(?<![\\w.])(randi|randf|randi_range|randf_range|randfn|randomize)\\(|\\.(shuffle|pick_random)\\(")
-	var hits: Array[String] = []
+		"(?<![\\w.])(randi|randf|randi_range|randf_range|randfn|randomize)\\(|\\.(shuffle|pick_random|randomize)\\(")
+	var files: Array[String] = BUSINESS_FILES.duplicate()
 	for dir: String in BUSINESS_DIRS:
 		for file: String in DirAccess.get_files_at(dir):
-			if not file.ends_with(".gd") or file == "company_seed.gd":
-				continue
-			var lines: PackedStringArray = FileAccess.get_file_as_string(dir.path_join(file)).split("\n")
-			for i: int in lines.size():
-				var line: String = lines[i].strip_edges()
-				if not line.begins_with("#") and unseeded.search(line) != null:
-					hits.append("%s:%d %s" % [file, i + 1, line])
+			if file.ends_with(".gd") and file != "company_seed.gd":
+				files.append(dir.path_join(file))
+	var hits: Array[String] = []
+	for path: String in files:
+		var text: String = FileAccess.get_file_as_string(path)
+		_expect(not text.is_empty(), "%s is read" % path)
+		if text.contains("RandomNumberGenerator.new()") and not (text.contains(".seed =") or text.contains(".state =")):
+			hits.append("%s: a RandomNumberGenerator without a seed" % path.get_file())
+		var lines: PackedStringArray = text.split("\n")
+		for i: int in lines.size():
+			var line: String = lines[i].strip_edges()
+			if not line.begins_with("#") and unseeded.search(line) != null:
+				hits.append("%s:%d %s" % [path.get_file(), i + 1, line])
 	_expect(hits.is_empty(), "no unseeded randomness in the business (found %s)" % [hits])
 
 
