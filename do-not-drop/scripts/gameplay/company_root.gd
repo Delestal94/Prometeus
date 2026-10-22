@@ -241,7 +241,8 @@ static func load_zones() -> Array[ZoneDefinition]:
 ## Same name on every peer, so its RPCs reach the same node. The host (solo
 ## counts), with no company on, loads its slot (a new company only when there is
 ## none to load) and hands CompanyNet its stock (CompanyState.stock(): a copy the
-## events keep up to date). A client
+## events keep up to date), the saved day's return bundle laid on the shed's floor
+## (ReturnBundle.place(), D-0252: the snapshot takes it to the clients). A client
 ## writes nothing (rule 1 of red-autoridad.md): an empty stock, and every event
 ## held until the host's snapshot puts the real one, and the host's company, in
 ## place (D-2004); what the client's CompanyState held before comes back when it
@@ -278,6 +279,7 @@ func _add_net(state: COMPANY_STATE) -> void:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
 	CompanyDevFlags.apply(state, dev_args, load_zones())
 	net.inventory = state.stock()
+	ReturnBundle.place(net.floor_bundles, net.inventory, SAVED_HANDS_LOCATION, state.layout, state.warehouse_stage)
 	net.pallets.load_save(state.pallets)
 	_hosted_state = state
 
@@ -428,20 +430,11 @@ func save_closed_day() -> bool:
 	return saved
 
 
-## A copy of `stock` as a save keeps it (D-2005): what every hands:<peer> held lies in
-## SAVED_HANDS_LOCATION, with the total of each product and the reservations unchanged. `stock`
-## itself (CompanyNet's live one) is not touched.
+## A copy of `stock` as a save keeps it (D-2005, D-0252: ReturnBundle.for_save()): what lay in hands, on the
+## floor, in open boxes and in packages lies in SAVED_HANDS_LOCATION, the total of each product kept and
+## nothing reserved. `stock` itself (CompanyNet's live one) is not touched.
 static func stock_for_save(stock: Inventory) -> Inventory:
-	var copy := Inventory.new()
-	copy.from_dict(stock.to_dict())
-	var by_product: Dictionary = copy.to_dict().get("stock", {})
-	for product: Variant in by_product:
-		var locations: Dictionary = by_product[product]
-		for location: Variant in locations:
-			if String(location).begins_with(CompanyNet.HANDS_PREFIX):
-				copy.move(StringName(product), int(locations[location]), StringName(location),
-					SAVED_HANDS_LOCATION)
-	return copy
+	return ReturnBundle.for_save(stock, SAVED_HANDS_LOCATION)
 
 
 ## What this client saw of the host's day (CompanyInterruptedDay.summary()): the mirror's day,
