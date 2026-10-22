@@ -107,6 +107,10 @@ el `Trip` se cierra.
 **Hecho cuando:** el test pasa.
 
 ### D-0308 · GPS y navegación por el grafo — A · Opus 5.5 · high · Aviso: no · F1
+**[~] Parcial (2026-10-22, PR pendiente)** — `RoadNavigator` (`scripts/gameplay/districts/road_navigator.gd`, funciones puras sobre un `RoadNetwork`): `route()` da el camino más rápido entre dos puntos del mapa (peso = largo / velocidad de la superficie, `CompanyTuning.SURFACE_SPEED`), sin cruzar un bloqueo cerrado; si el único camino pasa por uno, lo rechaza con `gate_closed` y la lista de candados que lo abrirían; `guidance()` lee la posición del vehículo y devuelve metros y segundos que faltan y el punto adelante (`GPS_LOOKAHEAD`) al que apunta la flecha. `test_road_graph_path`.
+**Subtareas abiertas:**
+- **D-0308.1** Conectar al tablero: `DashboardGps.guidance_provider` (ya existe) que llame `RoadNavigator.guidance()` hacia `Trip.next_stop()` (casa del `HouseMap`) con los candados abiertos de `CompanyState`, recalculando la ruta cuando el vehículo se sale; dibujar el camino (polilínea) en la pantalla. Captura de `revisor-visual`.
+- **D-0308.2** Estimar la llegada en hora de juego (`seconds` × 60 / 90, D-0319).
 **Depende de:** D-0304
 **Qué:** el GPS del tablero (N-501/N-502) calcula el camino más corto por `road_graph`, con A* y peso por
 tiempo (largo / velocidad típica de la superficie), hasta la próxima parada, y dibuja la flecha y el
