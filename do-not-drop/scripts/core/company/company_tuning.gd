@@ -366,6 +366,9 @@ const SUPPLIER_TRUCKS_PER_DAY: int = 1
 const SUPPLIER_ARRIVAL_MIN: int = 8 * 60 + 30
 ## It waits this long at the dock (3 game hours).
 const SUPPLIER_WAIT_MIN: int = 180
+## Docks the shed has for supplier trucks (D-0621.c.a, DockQueue): trucks that overlap in time queue for one.
+## D-0640 (a second dock) raises it.
+const SUPPLIER_DOCK_BAYS: int = 1
 ## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
 ## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
 ## turn radius, how far it reverses in a straight line, the straight run before the turn, and the
