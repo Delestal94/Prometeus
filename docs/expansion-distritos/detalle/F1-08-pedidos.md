@@ -195,3 +195,14 @@ Decisión: fundirla, como recomendó la revisión del 2026-10-19 (`docs/auditori
 **Test** `test_order_door_reaction`: umbrales por estrella y fuera de rango, un gesto distinto por reacción, las líneas de enojo de los 10 clientes (caja equivocada gana sobre roto), pozos genéricos deterministas y sin huecos, `react` de punta a punta sin tocar el resultado, claves en los dos idiomas.
 **Hecho cuando:** 3 reacciones con test (la lógica, en este PR; la animación y el enchufe a la puerta, en D-0817.b).
 - [ ] **D-0817.b** (`constructor-mundo`, medium) `DeliveryHouse` llama `OrderDoorReaction.react` con el resultado de `settle()` y muestra la línea (globo o `HudNotices`) y el gesto; la animación del cliente es del `animador`. Depende de D-0815.b.
+
+### D-0820 · Datos de 40 pedidos plantilla por distrito — B · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-22, PR pendiente)** — `OrderTemplate` / `OrderTemplateSet` / `OrderTemplateCheck` (`scripts/gameplay/business/`) y `data/order_templates/centro.tres` y `campo.tres` con 40 plantillas cada uno; `test_order_templates`. Falta que `OrderGenerator` las use (D-0820.b).
+**Depende de:** D-0801, D-0806, D-0116
+**Qué:** una plantilla es un pedido sin cliente, casa ni minuto: productos con cantidad (1-3 productos distintos, 1 o 2 unidades) y los requisitos, los que implican los productos (frágil, frío) más, a veces, un capricho (regalo, urgente, no doblar). El cliente, la casa y la hora siguen saliendo de la semilla. Un archivo `.tres` por zona (`OrderTemplateSet`, 40 `OrderTemplate`). `OrderTemplate.to_order()` arma el pedido con las reglas de paga y ventana de `OrderGenerator`. `OrderTemplateCheck.problems()` valida: 40 por zona, una sola colección por zona, ids únicos, productos y requisitos del catálogo, cantidades, al menos un producto de la zona, requisitos implícitos presentes, sin plantillas repetidas.
+- Decisión: solo las zonas que hoy reparten (`shipping_fee > 0`: Barrio Centro y Campo). Las demás zonas reciben su archivo cuando tengan productos y tarifa (grupos 13 a 17); el test exige un set por cada zona con tarifa, así que no se pueden olvidar.
+- Decisión: mezcla 14 de 1 producto, 16 de 2 y 10 de 3 por zona, para que los primeros días (tope de 2) tengan de dónde elegir.
+- Decisión: los `.tres` salieron de un generador con semilla fija, pero son datos a mano de ahí en adelante (se editan directo).
+- [ ] **D-0820.b** (`constructor-progresion`, medium) `OrderGenerator.generate_day` elige plantillas de la zona (respetando `items_cap_for_day`) en vez de armar productos al azar. Cambia las semillas actuales: regenerar `test_order_generator` y el golden de D-0848 en el mismo PR.
+**Test** `test_order_templates`: datos sin problemas, 40 por zona con tarifa, mezcla de tamaños y caprichos, `to_order` válido, y el validador atrapa 9 clases de error.
+**Hecho cuando:** `.tres` validados.

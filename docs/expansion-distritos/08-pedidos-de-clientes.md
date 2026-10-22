@@ -26,7 +26,7 @@
 | ✅ D-0817 | Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
 | ~~D-0818~~ | ~~Firma del cliente en el celular/remito~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-jugador | low | gesto |
 | ~~D-0819~~ | ~~Cliente ausente: dejar en buzón, vecino o volver~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test de las 3 opciones |
-| D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |
+| ✅ D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |
 
 ## Ampliación
 
