@@ -143,6 +143,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 		return
 	if CompanyLayoutNet.EVENT_KINDS.has(kind):
 		rebuild(_net.company, _net.inventory)
+	elif kind == CompanyShopNet.BOUGHT and int(_net.company.get(&"warehouse_stage")) != stage:
+		rebuild(_net.company, _net.inventory)
 	elif kind == &"units_moved" and _pallet_root != null:
 		refresh_stock(_net.inventory)
 	elif kind == CompanyCarts.MOVED:
@@ -762,7 +764,9 @@ func _draw_pallets(stock: Inventory) -> void:
 		_pallet_root.remove_child(child)
 		child.queue_free()
 	pallet_nodes.clear()
-	var spots: Array[Vector2] = _default.pallet_spots if _default != null and _default.stage == stage else []
+	var spots: Array[Vector2] = []
+	if _default != null and _default.stage == stage:
+		spots.assign(_default.pallet_spots)
 	for index: int in waiting.size():
 		var spot: Vector2 = spots[index % spots.size()] if not spots.is_empty() else Vector2(grid) * 0.5
 		var lift: float = floorf(index / float(maxi(spots.size(), 1))) * 1.25
