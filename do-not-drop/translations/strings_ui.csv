@@ -1423,6 +1423,7 @@ UI_STOCK_TOTALS,%d unidades en %d productos,%d units in %d products
 UI_STOCK_CLOSE,Cerrar,Close
 UI_SUPPLIER_TITLE,Pedido al proveedor,Supplier order
 UI_SUPPLIER_FROM,Proveedor: %s,Supplier: %s
+UI_SUPPLIER_ALREADY,Ya pedido para mañana: %d unidades,Already ordered for tomorrow: %d units
 UI_SUPPLIER_HINT,Sumá unidades de cada producto y después Pedir,Add units of each product and then Order
 UI_SUPPLIER_ROW,%s · $%d c/u,%s · $%d each
 UI_SUPPLIER_TOTAL,Total: $%d,Total: $%d

@@ -20,6 +20,11 @@ extends Node
 ## The build mode does not start while it is open (CompanyRoot hands ShedBuilder.busy is_open()), nor it
 ## while the mode is on (`busy`). Every event and snapshot rewrites its totals, day and Order (money and
 ## the day may have changed) without rebuilding the rows, so the focus stays.
+##
+## The first opening of each day with an empty cart preloads it with the suggested order less what is already
+## ordered for tomorrow (SupplierAutoOrder.cart_preload, D-0151.3c), and the screen says how much is already ordered.
+## Today's orders are the ones this peer saw come in since the day opened (a late joiner sees fewer and so gets a
+## smaller suggestion, never a wrong order: the host checks it like any other).
 
 ## Reason of a refusal (CompanyNet / CompanySupplierNet) -> translation key of the line under the list.
 const REASON_KEYS: Dictionary = {
@@ -55,6 +60,9 @@ var _sent_before: Dictionary = {}
 ## True inside send(): a host answers its own request before request() returns.
 var _sending: bool = false
 var _answered: bool = false
+## Ids of the orders that came in today (SupplierAutoOrder.note_today) and the last day the cart was preloaded.
+var _today: Dictionary = {}
+var _preloaded_day: int = 0
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _player_off: Node = null
 
@@ -107,6 +115,7 @@ func open() -> bool:
 	if player != null and is_instance_valid(player):
 		player.set_process_unhandled_input(false)
 		_player_off = player
+	preload_cart()
 	panel.open(context())
 	return true
 
@@ -123,7 +132,25 @@ func context() -> Dictionary:
 	return {
 		"cart": cart, "wallet": company, "schedule": net.supplier.schedule if net != null else null,
 		"day": _day(), "supplier_name": supplier_name, "can_act": true, "request": send,
+		"already_ordered": SupplierAutoOrder.units_of(_tomorrow_lines()),
 	}
+
+
+## Fills the empty cart with the suggested order less what is already ordered for tomorrow, once per day: a cart
+## the player emptied, or one that was ordered, stays empty for the rest of the day. True when it put units in.
+func preload_cart() -> bool:
+	var company: Object = net.company if net != null else null
+	var day: int = _day()
+	if company == null or not cart.is_empty() or day == _preloaded_day:
+		return false
+	_preloaded_day = day
+	var book_orders: Array = net.orders.book.to_dict().get("orders", [])
+	var wanted: Dictionary = SupplierAutoOrder.cart_preload(
+		int(company.get(&"money")), net.supplier.schedule, SupplierAutoOrder.todays_orders(book_orders, _today),
+		SupplierAutoOrder.stock_units(net.inventory, cart.products), cart.products, cart.supplier, day)
+	for id: StringName in wanted:
+		cart.set_qty(id, int(wanted[id]))
+	return not cart.is_empty()
 
 
 ## The panel's `request`: asks the host for an order of `lines` (CompanySupplierNet.ORDER) and returns
@@ -161,12 +188,13 @@ func _process(_delta: float) -> void:
 
 
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
+	SupplierAutoOrder.note_today(_today, kind, data)
 	var awaited: bool = _sending or is_pending()
 	if kind == CompanySupplierNet.ORDERED and awaited and int(data.get("peer", 0)) == _my_id():
 		_settle()
 		_answered = true
 		panel.placed(SupplierSchedule.arrival_day(int(data.get("order_day", 0))))
-	elif is_open():
+	if is_open():
 		panel.update_totals(context())
 
 
@@ -211,6 +239,17 @@ func _settle() -> void:
 	_pending_rid = 0
 	_sent_lines = []
 	set_process(false)
+
+
+## Tomorrow's truck as [{product, qty}] (empty when nothing is ordered for it).
+func _tomorrow_lines() -> Array:
+	var out: Array = []
+	if net == null or net.supplier.schedule == null:
+		return out
+	var already: Dictionary = net.supplier.schedule.ordered_for(SupplierSchedule.arrival_day(_day()))
+	for id: StringName in already:
+		out.append({"product": id, "qty": int(already[id])})
+	return out
 
 
 func _day() -> int:

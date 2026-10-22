@@ -18,6 +18,8 @@ class_name SupplierOrderPanel
 ##     with the cart's lines instead of calling submit() here, and the screen waits for the answer:
 ##     placed() when the host's order event lands, refused() with the reason when it says no. The
 ##     cart keeps its lines until then. The callable returns the request id (0: nobody to ask).
+##   already_ordered: int (optional, D-0151.3c): units already on tomorrow's truck; above 0 a line under the
+##     supplier says "already ordered: N" (the cart opens with the suggested order less those).
 ##
 ## Gamepad first: rows are two buttons (minus, plus) in a grid of focus neighbours, then Order and
 ## Close. Every state has a mark besides its colour: "+" more, "−" less, "✓" ordered.
@@ -41,6 +43,7 @@ var _sent_pallets: int = 0
 var _refused_now: bool = false
 
 var _supplier_label: Label
+var _already_label: Label
 var _rows_box: VBoxContainer
 var _scroll: ScrollContainer
 var _total_label: Label
@@ -210,6 +213,11 @@ func status_text() -> String:
 	return _status_label.text if _status_label != null else ""
 
 
+## The "already ordered: N" line ("" when nothing is ordered for tomorrow).
+func already_text() -> String:
+	return _already_label.text if _already_label != null else ""
+
+
 func total_text() -> String:
 	return _total_label.text if _total_label != null else ""
 
@@ -239,6 +247,8 @@ func _build() -> void:
 	UiTheme.title(column, tr("UI_SUPPLIER_TITLE"), 34)
 	_supplier_label = UiTheme.label(column, "", 19, UiTheme.INK, true)
 	_supplier_label.name = "Supplier"
+	_already_label = UiTheme.label(column, "", 16, UiTheme.INK)
+	_already_label.name = "Already"
 	UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
 	_scroll.custom_minimum_size = Vector2(0, 250)
@@ -336,6 +346,9 @@ func _update_view() -> void:
 	var cart: SupplierOrderCart = _cart()
 	var supplier: String = String(_ctx.get("supplier_name", ""))
 	_supplier_label.text = tr("UI_SUPPLIER_FROM") % supplier if supplier != "" else ""
+	var already: int = int(_ctx.get("already_ordered", 0))
+	_already_label.text = tr("UI_SUPPLIER_ALREADY") % already if already > 0 else ""
+	_already_label.visible = already > 0
 	for product: StringName in _rows:
 		var n: int = cart.qty(product) if cart != null else 0
 		var parts: Dictionary = _rows[product]

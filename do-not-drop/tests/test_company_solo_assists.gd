@@ -18,7 +18,11 @@ extends SceneTree
 ##   event, or send() again, does not double it; two days in a row order only the second day's own orders (the
 ##   book keeps the whole session's, the hook notes the ids that came in since the last OPENING); a client's
 ##   hook (a fake peer connected as client 2, no socket) does nothing;
-## - the day summary's line "automatic supplier order: N units" (DaySummaryPanel) shows with N > 0, hides at 0.
+## - the day summary's line "automatic supplier order: N units" (DaySummaryPanel) shows with N > 0, hides at 0;
+## - the preloaded cart (D-0151.3c, SupplierAutoOrder.cart_preload + SupplierBoard): the suggested order less what is
+##   already on tomorrow's truck, whose units count as stock and whose cost comes off the budget; the board's first
+##   opening of the day fills the empty cart with it and the screen says "already ordered: N"; a cart the player
+##   emptied stays empty for the rest of the day, one with lines is not overwritten, and the next day preloads again.
 
 const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 
@@ -110,6 +114,8 @@ func _run() -> void:
 	_test_auto_order_two_days()
 	_test_auto_order_client()
 	_test_summary_line()
+	_test_preload_rule()
+	_test_board_preload()
 	quit(_failures)
 
 
@@ -402,6 +408,62 @@ func _test_summary_line() -> void:
 			"%s has the line" % locale)
 	TranslationServer.set_locale("es")
 	panel.queue_free()
+
+
+func _test_preload_rule() -> void:
+	var products: Dictionary = _catalog()
+	var orders: Array = [{"id": &"a", "items": [{"product": &"lamp", "qty": 6}, {"product": &"vase", "qty": 4}]}]
+	var schedule := SupplierSchedule.new()
+	var got: Dictionary = SupplierAutoOrder.cart_preload(1000, schedule, orders, {&"lamp": 1}, products, null, 3)
+	_expect(got == {&"lamp": 5, &"vase": 4}, "preload with nothing ordered is the suggested (got %s)" % [got])
+	schedule.place(3, [{"product": &"vase", "qty": 3}, {"product": &"mug", "qty": 9}])
+	got = SupplierAutoOrder.cart_preload(1000, schedule, orders, {&"lamp": 1}, products, null, 3)
+	_expect(got == {&"lamp": 5, &"vase": 1}, "preload takes off what tomorrow's truck brings (got %s)" % [got])
+	_expect(SupplierAutoOrder.cart_preload(1000, schedule, orders, {&"lamp": 1}, products, null, 4)
+		== {&"lamp": 5, &"vase": 4}, "the truck of another day does not count")
+	# Rent + reserve + the 3 vases and 9 mugs already ordered (33): 18 left buys one lamp, the fewest-units vase goes.
+	var tight: int = CompanyTuning.RENT_PER_DAY + CompanyTuning.SOLO_ORDER_CASH_RESERVE + 33 + 18
+	got = SupplierAutoOrder.cart_preload(tight, schedule, orders, {&"lamp": 1}, products, null, 3)
+	_expect(got == {&"lamp": 1}, "the cost already ordered comes off the budget (got %s)" % [got])
+	schedule.place(3, [{"product": &"lamp", "qty": 5}, {"product": &"vase", "qty": 1}])
+	_expect(SupplierAutoOrder.cart_preload(1000, schedule, orders, {&"lamp": 1}, products, null, 3).is_empty(),
+		"tomorrow's truck covers the day: the cart opens empty")
+
+
+func _test_board_preload() -> void:
+	var parts: Dictionary = _closing_side("BoardSide")
+	var net: CompanyNet = parts["net"]
+	var side: Node = parts["side"]
+	var board := SupplierBoard.new()
+	board.name = "SupplierBoard"
+	side.add_child(board)
+	board.setup(net, null, net.supplier.products)
+	# The board notes the orders that come in after it hooks up: the second batch of day 1.
+	_add_orders(net, "b1", {&"antique_lamp": 6, &"porcelain_vase": 4}, 5)
+	_expect(net.supplier.apply({"order_day": 1, "lines": [{"product": "porcelain_vase", "qty": 3}], "peer": 1}),
+		"board: 3 vases already ordered for tomorrow")
+	_expect(board.open(), "board: the screen opens")
+	var cart: SupplierOrderCart = board.cart
+	_expect(cart.qty(&"antique_lamp") == 5 and cart.qty(&"porcelain_vase") == 1 and cart.qty(&"hen") == 0,
+		"board: the cart opens with the suggested less what is ordered (got %s)" % [cart.to_array()])
+	_expect(board.panel.already_text().contains("3"),
+		"board: the screen says 3 units are already ordered (got '%s')" % board.panel.already_text())
+	board.close()
+	cart.clear()
+	_expect(board.open() and cart.is_empty(), "board: a cart emptied by the player stays empty the same day")
+	board.close()
+	cart.set_qty(&"hen", 2)
+	_expect(not board.preload_cart() and cart.to_array() == [{"product": &"hen", "qty": 2}],
+		"board: a cart with lines is not overwritten")
+	cart.clear()
+	(parts["state"] as Node).set(&"day", 2)
+	net.event_applied.emit(net.seq, CompanyNet.DAY_PHASE, {"day": 2, "phase": "OPENING"})
+	_add_orders(net, "d2", {&"porcelain_vase": 2}, 1)
+	_expect(board.open() and cart.to_array() == [{"product": &"porcelain_vase", "qty": 2}],
+		"board: the next day preloads again, from that day's orders only (got %s)" % [cart.to_array()])
+	_expect(board.panel.already_text() == "", "board: nothing ordered for day 3, no line")
+	board.close()
+	_free(parts)
 
 
 func _catalog() -> Dictionary:
