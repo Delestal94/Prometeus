@@ -28,8 +28,10 @@ func _run() -> void:
 		_expect(DistrictLabel.COLORS.has(zone), "paid zone %s has a label colour" % zone)
 
 	var centro: Dictionary = {"id": "o1", "zone": "centro"}
-	_expect(DistrictLabel.color_for_order(centro) == DistrictLabel.color_for(&"centro"), "order takes its zone colour")
-	_expect(DistrictLabel.color_for_order({}) == DistrictLabel.FALLBACK_COLOR, "an order without zone gets the fallback")
+	var centro_color: Color = DistrictLabel.color_for(&"centro")
+	_expect(DistrictLabel.color_for_order(centro) == centro_color, "order takes its zone colour")
+	var fallback: Color = DistrictLabel.FALLBACK_COLOR
+	_expect(DistrictLabel.color_for_order({}) == fallback, "an order without zone gets the fallback")
 	_expect(DistrictLabel.color_for(&"atlantida") == DistrictLabel.FALLBACK_COLOR, "an unknown zone gets the fallback")
 	_expect(DistrictLabel.name_key(&"atlantida") == &"", "an unknown zone has no name key")
 	_expect(DistrictLabel.district_name(&"atlantida") == "", "an unknown zone has no name")
