@@ -203,3 +203,12 @@ El nodo que dibuja el estante y la interacción son D-0609 / D-0611; el frío es
 - **D-0614.b (pendiente) — el cableado.** Cuando el camión se va (`SupplierSchedule.truck_state` pasa a `left`, D-0618), `CompanyRoot` llama a `check(día, ordered_for(día), received_units(pallets_for(día), ids bajados))`, guarda el `DeliveryNote` en el save de empresa y lo replica con el resto del stock (D-0619). Lo que se muestra (lista de faltantes en el resumen del día o el tablero) es UI; el cobro solo de lo recibido ya lo hace D-0503 por palet.
 **Test** `test_delivery_note`: solo cuentan los palets bajados; faltante de 6 gallinas registrado en su día; entrega exacta sin registro y volver a controlar reemplaza; sobrante como `extra` y no como faltante; totales por producto y días inválidos; ida y vuelta de JSON y save roto.
 **Hecho cuando:** test: un faltante se registra (hecho en la lógica); en el juego, al irse el camión (D-0614.b).
+
+### D-0619 · Replicación del stock y de los palets en red — A · Opus 5.5 · xhigh · Aviso: no · F1
+**[x] Hecho (2026-10-22, ya estaba en el código, PR pendiente)** — el stock y los palets ya se replican por `CompanyNet` (D-2003/D-2004, D-0605.b, D-0603.b2, D-0618.b); esta tarea solo lo comprueba y lo cierra, sin cambios de código.
+**Depende de:** D-0211 (`Inventory`), D-0605 (`PalletJack`), D-2003 / D-2004 (`CompanyNet` y snapshot)
+**Qué:** que dos peers vean el mismo stock y los mismos palets tras muchos movimientos.
+- Stock: todo movimiento es un pedido al host (`units_take`, `units_store`, `units_move`) y un evento `units_moved` que aplica cada peer; el snapshot lleva el `Inventory` completo. `test_company_net` (`_check_hundred_events`): 100 eventos seguidos, pedidos del host y del cliente mezclados, dejan `Inventory.to_dict()` igual (más que los 50 pedidos).
+- Palets: el libro, la zorra, el piso y la caja del camión son la parte `pallets` del snapshot (`CompanyPallets.SNAPSHOT_KEY`); `jack_pick/put/push/loaded` son eventos que aplica cada peer. `test_company_pallet_jack_world` prueba que un peer que entra tarde recibe el libro, la zorra, el piso y la caja.
+- Decisión: no se agrega un test de 50 movimientos aparte; lo cubre el de 100 eventos y duplicarlo sumaría minutos de CI sin cubrir nada nuevo.
+**Test:** `test_company_net`, `test_company_pallet_jack_world`, `test_company_online`. **Hecho cuando:** dos peers ven el mismo stock tras 50 movimientos (comprobado arriba).
