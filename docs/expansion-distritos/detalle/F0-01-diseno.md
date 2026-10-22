@@ -350,7 +350,7 @@ Decisión: `docs/decisiones/2026-10-22-cosmeticos-empresa.md`.
 **Hecho cuando:** `diseno/cosmeticos-empresa.md` existe y D-0437 y D-1234 se pueden construir sin preguntar.
 
 ### D-0138 · Logros de Steam de la expansión — A · Opus 5.5 · low · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — `docs/marketing/logros-expansion.md`: 30 logros `EXP_` (13 de progreso, 9 de habilidad coop, 8 graciosos; 5 ocultos), todos alcanzables con 1 y con 8 jugadores, decididos en el host y recibidos por los presentes, con condición medible, fase, 2 stats y pedido de ícono por logro. Lo construye D-0440.
+**[x] Hecho (2026-10-22, PR #705)** — `docs/marketing/logros-expansion.md`: 30 logros `EXP_` (13 de progreso, 9 de habilidad coop, 8 graciosos; 5 ocultos), todos alcanzables con 1 y con 8 jugadores, decididos en el host y recibidos por los presentes, con condición medible, fase, 2 stats y pedido de ícono por logro. Lo construye D-0440.
 **Depende de:** D-0118 (`diseno/hitos.md`), D-0127 (los modificadores no bloquean), D-0112 (lo recortado no tiene logro)
 **Qué:** lista de 30 logros del modo Empresa en `docs/marketing/`, contrastada con las señales que ya existen
 (`EventBus`, `CompanyNet`, `OrderBook`, `CompanyFleet`) y separada de los 15 del juego actual (S-907, prefijo `BASE_`).
