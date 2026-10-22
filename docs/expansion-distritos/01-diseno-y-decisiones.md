@@ -33,7 +33,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0121 | Narrativa de la empresa: quién es el jefe, por qué empezamos, tono de los mensajes de clientes | documentador | medium | `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md` |
+| D-0121 | ✅ Narrativa de la empresa: quién es el jefe, por qué empezamos, tono de los mensajes de clientes | documentador | medium | `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md` |
 | ~~D-0122~~ | ~~Personajes de clientes recurrentes por distrito (2-3 por distrito) con pedidos característicos~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | medium | lista en `diseno/clientes.md` |
 | D-0123 | Diseño de eventos del día (inspección, proveedor tarde, pedido gigante, huelga, ola de calor) | critico-diseno | medium | `diseno/eventos-del-dia.md` con 15 eventos |
 | D-0124 | Diseño de las licencias (náutica, vuelo, 4x4, alta montaña, zona volcánica) y cómo se obtienen | constructor-progresion | medium | sección en `diseno/hitos.md` |
