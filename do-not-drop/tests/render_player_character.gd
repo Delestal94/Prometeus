@@ -25,7 +25,13 @@ const SEAT_PROBE_LAYER: int = 1 << 19
 ## player_character_proposed_*.png. Empty: no preview pass.
 const PREVIEW_DELTAS: Dictionary = {}
 ## Deltas (up, back) scored by the "try" rows, relative to the current offset.
-const TRY_DELTAS: Array[Vector2] = [Vector2(0.0, 0.0), Vector2(0.03, 0.0), Vector2(-0.03, 0.0), Vector2(0.0, -0.03), Vector2(0.0, 0.03)]
+const TRY_DELTAS: Array[Vector2] = [
+	Vector2(0.0, 0.0),
+	Vector2(0.03, 0.0),
+	Vector2(-0.03, 0.0),
+	Vector2(0.0, -0.03),
+	Vector2(0.0, 0.03)
+]
 
 var _level: Node3D
 var _van: VehicleBody3D
@@ -67,7 +73,9 @@ func _run() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	# --- 1. Standing crew beside the driver's door, one walking. -----------
-	var standing_spots: Array[Vector3] = [Vector3(-2.0, 0, -1.9), Vector3(-2.3, 0, -0.9), Vector3(-2.0, 0, 0.2)]
+	var standing_spots: Array[Vector3] = [
+		Vector3(-2.0, 0, -1.9), Vector3(-2.3, 0, -0.9), Vector3(-2.0, 0, 0.2)
+	]
 	for i: int in range(3):
 		var player := _spawn_player(i + 2, _ground(_van.to_global(standing_spots[i])))
 		player.look_at(_van.to_global(Vector3(-6.0, 0, -0.8)), Vector3.UP)
@@ -104,13 +112,21 @@ func _run() -> void:
 	# --- 2/3. Seated: driver, a wall seat and a rack seat. ------------------
 	_van.set_door_open(&"cab_left", true)
 	_van.set_door_open(&"rear", true)
-	var seats: Array[NodePath] = [^"CabinInterior/DriverEyePoint", ^"CargoBay/LeftSeat1EyePoint", ^"CargoBay/RackSeat1EyePoint",
-		^"CargoBay/RightSeat1EyePoint", ^"CargoBay/CenterSeatEyePoint", ^"CargoBay/LeftSeat3EyePoint"]
+	var seats: Array[NodePath] = [
+		^"CabinInterior/DriverEyePoint",
+		^"CargoBay/LeftSeat1EyePoint",
+		^"CargoBay/RackSeat1EyePoint",
+		^"CargoBay/RightSeat1EyePoint",
+		^"CargoBay/CenterSeatEyePoint",
+		^"CargoBay/LeftSeat3EyePoint"
+	]
 	for peer: int in [5, 6, 7]:
 		_spawn_player(peer, _van.to_global(Vector3(0.0, 1.0, 1.0)))
 	for i: int in range(seats.size()):
 		var seat: Node3D = _van.get_node(seats[i])
-		_players[i].call(&"board_seat", seat.get_node(^"FirstPersonCamera").get_path(), seat.get_path())
+		_players[i].call(
+			&"board_seat", seat.get_node(^"FirstPersonCamera").get_path(), seat.get_path()
+		)
 	for i: int in range(40):
 		await physics_frame
 	_camera.make_current()
@@ -167,7 +183,9 @@ func _run() -> void:
 			var seat: Node3D = _van.get_node(seats[i])
 			if not PREVIEW_DELTAS.has(String(seat.name)):
 				continue
-			var offset: Vector3 = _current_offset(_players[i], seat) + PREVIEW_DELTAS[String(seat.name)]
+			var offset: Vector3 = (
+				_current_offset(_players[i], seat) + PREVIEW_DELTAS[String(seat.name)]
+			)
 			var body: Node3D = _players[i].get_node(^"BodyVisual")
 			_players[i].process_mode = Node.PROCESS_MODE_DISABLED
 			body.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -208,7 +226,9 @@ func _spawn_player(peer: int, at: Vector3) -> Node3D:
 
 
 func _ground(point: Vector3) -> Vector3:
-	var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 5.0, point + Vector3.DOWN * 10.0, 1)
+	var query := PhysicsRayQueryParameters3D.create(
+		point + Vector3.UP * 5.0, point + Vector3.DOWN * 10.0, 1
+	)
 	var hit: Dictionary = _level.get_world_3d().direct_space_state.intersect_ray(query)
 	return hit.position if not hit.is_empty() else point
 
@@ -302,12 +322,24 @@ func _measure(player: Node3D, seat: Node3D) -> void:
 	var aabb := AABB(verts[0][0], Vector3.ZERO)
 	for entry: Array in verts:
 		aabb = aabb.expand(entry[0])
-	var seat_local_aabb := AABB(_van.to_local(aabb.position), Vector3.ZERO).expand(_van.to_local(aabb.end))
-	print("MEASURE %s at %s: %d verts, body bounds (van space) %s" % [player.name, seat.name, verts.size(), seat_local_aabb])
+	var seat_local_aabb := AABB(_van.to_local(aabb.position), Vector3.ZERO).expand(
+		_van.to_local(aabb.end)
+	)
+	print(
+		(
+			"MEASURE %s at %s: %d verts, body bounds (van space) %s"
+			% [player.name, seat.name, verts.size(), seat_local_aabb]
+		)
+	)
 	var keys: Array = report.keys()
 	keys.sort()
 	for key: String in keys:
-		print("MEASURE   inside %-40s %4d verts, deepest %.3f m" % [key, report[key][0], report[key][1]])
+		print(
+			(
+				"MEASURE   inside %-40s %4d verts, deepest %.3f m"
+				% [key, report[key][0], report[key][1]]
+			)
+		)
 	# Headroom: roof above the head's highest vertex.
 	var top: Vector3 = verts[0][0]
 	var bottom: Vector3 = verts[0][0]
@@ -319,20 +351,40 @@ func _measure(player: Node3D, seat: Node3D) -> void:
 	var up := _ray(space, top, top + Vector3.UP * 2.0)
 	print("MEASURE   head top y=%.3f, first surface above: %s" % [top.y, _hit_text(up, top)])
 	var down := _ray(space, bottom + Vector3.UP * 0.02, bottom + Vector3.DOWN * 1.0)
-	print("MEASURE   lowest vertex (%s) y=%.3f, first surface below: %s" % [_bone_at(verts, bottom), bottom.y, _hit_text(down, bottom)])
+	print(
+		(
+			"MEASURE   lowest vertex (%s) y=%.3f, first surface below: %s"
+			% [_bone_at(verts, bottom), bottom.y, _hit_text(down, bottom)]
+		)
+	)
 	# Seat gap: from the pelvis straight down to the cushion.
 	var hips: Vector3 = skeleton.to_global(skeleton.get_bone_global_pose(0).origin)
 	var under := _ray(space, hips, hips + Vector3.DOWN * 1.2)
-	print("MEASURE   root bone %s at y=%.3f, surface below: %s" % [skeleton.get_bone_name(0), hips.y, _hit_text(under, hips)])
+	print(
+		(
+			"MEASURE   root bone %s at y=%.3f, surface below: %s"
+			% [skeleton.get_bone_name(0), hips.y, _hit_text(under, hips)]
+		)
+	)
 	var butt_low := INF
 	for entry: Array in verts:
 		var q: Vector3 = entry[0]
 		if Vector2(q.x - hips.x, q.z - hips.z).length() < 0.12:
 			butt_low = minf(butt_low, q.y)
 	if not under.is_empty():
-		print("MEASURE   lowest vertex within 12 cm of the root bone axis y=%.3f -> %.3f m above that surface (negative = sunk in)" % [butt_low, butt_low - (under.position as Vector3).y])
+		print(
+			(
+				"MEASURE   lowest vertex within 12 cm of the root bone axis y=%.3f -> %.3f m above that surface (negative = sunk in)"
+				% [butt_low, butt_low - (under.position as Vector3).y]
+			)
+		)
 	var current := _current_offset(player, seat)
-	print("MEASURE   player.gd seat_offset for %s: %s, lean %.2f rad" % [seat.name, current, (player.get_node(^"BodyVisual") as Node3D).rotation.x])
+	print(
+		(
+			"MEASURE   player.gd seat_offset for %s: %s, lean %.2f rad"
+			% [seat.name, current, (player.get_node(^"BodyVisual") as Node3D).rotation.x]
+		)
+	)
 	_fit_report(seat, verts, current)
 	if seat.name == &"DriverEyePoint":
 		_measure_wheel(verts)
@@ -342,7 +394,10 @@ func _measure(player: Node3D, seat: Node3D) -> void:
 
 
 func _measure_wheel(verts: Array) -> void:
-	var rim := _van.find_child("SteeringWheel", true, false).find_child("Rim", true, false) as MeshInstance3D
+	var rim := (
+		_van.find_child("SteeringWheel", true, false).find_child("Rim", true, false)
+		as MeshInstance3D
+	)
 	if rim == null:
 		return
 	var torus := rim.mesh as TorusMesh
@@ -359,18 +414,37 @@ func _measure_wheel(verts: Array) -> void:
 	var bones: Array = closest.keys()
 	bones.sort_custom(func(a: String, b: String) -> bool: return closest[a] < closest[b])
 	for bone: String in bones.slice(0, 8):
-		print("MEASURE   wheel rim vs %-14s closest %+.3f m (negative = inside the rim tube)" % [bone, closest[bone]])
+		print(
+			(
+				"MEASURE   wheel rim vs %-14s closest %+.3f m (negative = inside the rim tube)"
+				% [bone, closest[bone]]
+			)
+		)
 	# Belly vs the wheel's disc: nearest torso vertex to the wheel plane, inside the rim circle.
 	var worst := INF
 	for entry: Array in verts:
-		if not String(entry[1]).begins_with("spine") and not String(entry[1]).begins_with("torso") and String(entry[1]) != "hips" and not String(entry[1]).begins_with("chest"):
+		if (
+			not String(entry[1]).begins_with("spine")
+			and not String(entry[1]).begins_with("torso")
+			and String(entry[1]) != "hips"
+			and not String(entry[1]).begins_with("chest")
+		):
 			continue
 		var local: Vector3 = inv * (entry[0] as Vector3)
 		if Vector2(local.x, local.z).length() < major + tube:
 			worst = minf(worst, absf(local.y))
 	print("MEASURE   torso distance to the wheel plane inside the rim circle: %.3f m" % worst)
 	var wheel_node := rim.get_parent() as Node3D
-	print("MEASURE   wheel centre (van space) %s, radius %.3f, axis %s" % [_van.to_local(rim.global_position), major, _van.global_basis.inverse() * rim.global_basis.y])
+	print(
+		(
+			"MEASURE   wheel centre (van space) %s, radius %.3f, axis %s"
+			% [
+				_van.to_local(rim.global_position),
+				major,
+				_van.global_basis.inverse() * rim.global_basis.y
+			]
+		)
+	)
 
 
 ## For every seat anchor: what's right under it (the cushion) and how far
@@ -382,9 +456,16 @@ func _survey_seats() -> void:
 	if bulkhead != null:
 		var box := AABB()
 		for i: int in range(8):
-			var corner := _van.to_local(bulkhead.global_transform * bulkhead.get_aabb().get_endpoint(i))
+			var corner := _van.to_local(
+				bulkhead.global_transform * bulkhead.get_aabb().get_endpoint(i)
+			)
 			box = AABB(corner, Vector3.ZERO) if i == 0 else box.expand(corner)
-		print("SURVEY BulkheadLower (van space) z %.3f..%.3f  y %.3f..%.3f" % [box.position.z, box.end.z, box.position.y, box.end.y])
+		print(
+			(
+				"SURVEY BulkheadLower (van space) z %.3f..%.3f  y %.3f..%.3f"
+				% [box.position.z, box.end.z, box.position.y, box.end.y]
+			)
+		)
 	for marker: Node in _van.find_children("*EyePoint", "Marker3D", true, false):
 		var eye: Vector3 = (marker as Node3D).global_position
 		var hit := _ray(space, eye, eye + Vector3.DOWN * 2.0)
@@ -397,8 +478,12 @@ func _survey_seats() -> void:
 			floor_hit = h
 			from = (h.position as Vector3) + Vector3.DOWN * 0.0005
 		var local_eye := _van.to_local(eye)
-		print("SURVEY %-22s eye (van) %s | first surface below: %s | lowest: %s" % [marker.name, local_eye,
-			_hit_text(hit, eye), _hit_text(floor_hit, eye)])
+		print(
+			(
+				"SURVEY %-22s eye (van) %s | first surface below: %s | lowest: %s"
+				% [marker.name, local_eye, _hit_text(hit, eye), _hit_text(floor_hit, eye)]
+			)
+		)
 
 
 ## How far the body must move so the seat of the shorts rests on the cushion
@@ -420,13 +505,34 @@ func _fit_report(seat: Node3D, verts: Array, current: Vector3) -> void:
 	var line := "MEASURE   fit: "
 	if not cushion.is_empty():
 		var dy: float = (cushion.position as Vector3).y - butt_low
-		line += "cushion %s top is %.3f m under the eye marker; butt is %.3f m %s it -> raise body %+.3f m (seat_offset.y %.2f)" % [
-			_probe_bodies.get(cushion.rid, "?"), eye.y - (cushion.position as Vector3).y, absf(dy), "below" if dy > 0 else "above", dy, current.y + dy]
+		line += (
+			"cushion %s top is %.3f m under the eye marker; butt is %.3f m %s it -> raise body %+.3f m (seat_offset.y %.2f)"
+			% [
+				_probe_bodies.get(cushion.rid, "?"),
+				eye.y - (cushion.position as Vector3).y,
+				absf(dy),
+				"below" if dy > 0 else "above",
+				dy,
+				current.y + dy
+			]
+		)
 	if not behind.is_empty():
 		var room: float = eye.distance_to(behind.position - Vector3.DOWN * 0.45) - back_extent
-		line += "; backrest/wall %s is %.3f m behind the eye, back of the body reaches %.3f m -> %s" % [
-			_probe_bodies.get(behind.rid, "?"), eye.distance_to(behind.position - Vector3.DOWN * 0.45), back_extent,
-			"clear by %.3f m" % room if room >= 0.0 else "move body forward %.3f m (seat_offset.z %+.3f)" % [-room, current.z + room]]
+		line += (
+			"; backrest/wall %s is %.3f m behind the eye, back of the body reaches %.3f m -> %s"
+			% [
+				_probe_bodies.get(behind.rid, "?"),
+				eye.distance_to(behind.position - Vector3.DOWN * 0.45),
+				back_extent,
+				(
+					"clear by %.3f m" % room
+					if room >= 0.0
+					else (
+						"move body forward %.3f m (seat_offset.z %+.3f)" % [-room, current.z + room]
+					)
+				)
+			]
+		)
 	print(line)
 	# Seat-local geometry (x right, y up, z back, origin at the eye marker).
 	var inv := seat.global_transform.affine_inverse()
@@ -446,28 +552,71 @@ func _fit_report(seat: Node3D, verts: Array, current: Vector3) -> void:
 				first = false
 			else:
 				box = box.expand(corner)
-		print("MEASURE   seat-local %s %s: y %.3f..%.3f  z %.3f..%.3f" % [pair[0], mesh.name, box.position.y, box.end.y, box.position.z, box.end.z])
+		print(
+			(
+				"MEASURE   seat-local %s %s: y %.3f..%.3f  z %.3f..%.3f"
+				% [pair[0], mesh.name, box.position.y, box.end.y, box.position.z, box.end.z]
+			)
+		)
 	var ranges: Dictionary = {}
 	for entry: Array in verts:
 		var q: Vector3 = inv * (entry[0] as Vector3)
 		var group: String = String(entry[1]).trim_suffix(".L").trim_suffix(".R")
 		if not ranges.has(group):
 			ranges[group] = [q, q]
-		ranges[group][0] = Vector3(minf(ranges[group][0].x, q.x), minf(ranges[group][0].y, q.y), minf(ranges[group][0].z, q.z))
-		ranges[group][1] = Vector3(maxf(ranges[group][1].x, q.x), maxf(ranges[group][1].y, q.y), maxf(ranges[group][1].z, q.z))
-	for group: String in ["head", "neck", "chest", "belly", "spine", "pelvis", "thigh", "shin", "foot", "upper_arm", "forearm", "hand"]:
+		ranges[group][0] = Vector3(
+			minf(ranges[group][0].x, q.x),
+			minf(ranges[group][0].y, q.y),
+			minf(ranges[group][0].z, q.z)
+		)
+		ranges[group][1] = Vector3(
+			maxf(ranges[group][1].x, q.x),
+			maxf(ranges[group][1].y, q.y),
+			maxf(ranges[group][1].z, q.z)
+		)
+	for group: String in [
+		"head",
+		"neck",
+		"chest",
+		"belly",
+		"spine",
+		"pelvis",
+		"thigh",
+		"shin",
+		"foot",
+		"upper_arm",
+		"forearm",
+		"hand"
+	]:
 		if ranges.has(group):
-			print("MEASURE   seat-local body %-9s x %+.3f..%+.3f  y %.3f..%.3f  z %.3f..%.3f" % [group, ranges[group][0].x, ranges[group][1].x,
-				ranges[group][0].y, ranges[group][1].y, ranges[group][0].z, ranges[group][1].z])
+			print(
+				(
+					"MEASURE   seat-local body %-9s x %+.3f..%+.3f  y %.3f..%.3f  z %.3f..%.3f"
+					% [
+						group,
+						ranges[group][0].x,
+						ranges[group][1].x,
+						ranges[group][0].y,
+						ranges[group][1].y,
+						ranges[group][0].z,
+						ranges[group][1].z
+					]
+				)
+			)
 
 
 ## What the body would look like moved by (up, back) in the seat's own
 ## frame (back = +Z) from player.gd's current offset. Every 4th vertex is
 ## tested.
-func _try_offset(player: Node3D, seat: Node3D, verts: Array, up: float, back: float, current: Vector3) -> void:
+func _try_offset(
+	player: Node3D, seat: Node3D, verts: Array, up: float, back: float, current: Vector3
+) -> void:
 	var space := _level.get_world_3d().direct_space_state
 	var shift: Vector3 = seat.global_basis * Vector3(0.0, up, back)
-	var line := "MEASURE   try seat_offset (%.2f, %.2f, %.2f):" % [current.x, current.y + up, current.z + back]
+	var line := (
+		"MEASURE   try seat_offset (%.2f, %.2f, %.2f):"
+		% [current.x, current.y + up, current.z + back]
+	)
 	var top := -INF
 	var top_p := Vector3.ZERO
 	var butt_low := INF
@@ -489,22 +638,37 @@ func _try_offset(player: Node3D, seat: Node3D, verts: Array, up: float, back: fl
 				var key: String = "%s/%s" % [hit.mesh, bone]
 				inside[key] = maxf(inside.get(key, 0.0), hit.depth)
 	var roof := _ray(space, top_p, top_p + Vector3.UP * 2.0)
-	line += " headroom %s" % ("%.3f" % top_p.distance_to(roof.position) if not roof.is_empty() else "?")
+	line += (
+		" headroom %s" % ("%.3f" % top_p.distance_to(roof.position) if not roof.is_empty() else "?")
+	)
 	var pelvis_axis := Vector3.ZERO
 	var skeleton := _find_skeleton(player.get_node(^"BodyVisual"))
 	pelvis_axis = skeleton.to_global(skeleton.get_bone_global_pose(0).origin) + shift
 	var cushion := _ray(space, pelvis_axis + Vector3.UP * 0.6, pelvis_axis + Vector3.DOWN * 1.5)
 	if not cushion.is_empty():
-		line += " | butt %+.3f over %s" % [butt_low - (cushion.position as Vector3).y, _probe_bodies.get(cushion.rid, "?")]
-	var floor_hit := _ray(space, Vector3(pelvis_axis.x, foot_low + 0.6, pelvis_axis.z) - seat.global_basis.z * 0.3, Vector3(pelvis_axis.x, foot_low - 1.0, pelvis_axis.z) - seat.global_basis.z * 0.3)
+		line += (
+			" | butt %+.3f over %s"
+			% [butt_low - (cushion.position as Vector3).y, _probe_bodies.get(cushion.rid, "?")]
+		)
+	var floor_hit := _ray(
+		space,
+		Vector3(pelvis_axis.x, foot_low + 0.6, pelvis_axis.z) - seat.global_basis.z * 0.3,
+		Vector3(pelvis_axis.x, foot_low - 1.0, pelvis_axis.z) - seat.global_basis.z * 0.3
+	)
 	if not floor_hit.is_empty():
-		line += " | feet %+.3f over %s" % [foot_low - (floor_hit.position as Vector3).y, _probe_bodies.get(floor_hit.rid, "?")]
+		line += (
+			" | feet %+.3f over %s"
+			% [foot_low - (floor_hit.position as Vector3).y, _probe_bodies.get(floor_hit.rid, "?")]
+		)
 	if seat.name == &"DriverEyePoint":
 		for side: String in ["Left", "Right"]:
 			var target := _van.find_child("DriverHandTarget" + side, true, false) as Node3D
 			var bone: int = skeleton.find_bone("upper_arm." + side.left(1))
 			var shoulder := skeleton.to_global(skeleton.get_bone_global_pose(bone).origin) + shift
-			line += " | %s shoulder-grip %.3f/0.508" % [side, shoulder.distance_to(target.global_position)]
+			line += (
+				" | %s shoulder-grip %.3f/0.508"
+				% [side, shoulder.distance_to(target.global_position)]
+			)
 	var keys: Array = inside.keys()
 	keys.sort()
 	var parts: PackedStringArray = []
@@ -516,10 +680,16 @@ func _try_offset(player: Node3D, seat: Node3D, verts: Array, up: float, back: fl
 
 func _reach_analysis(player: Node3D, seat: Node3D, verts: Array, current: Vector3) -> void:
 	var skeleton := _find_skeleton(player.get_node(^"BodyVisual"))
-	var rim := _van.find_child("SteeringWheel", true, false).find_child("Rim", true, false) as MeshInstance3D
+	var rim := (
+		_van.find_child("SteeringWheel", true, false).find_child("Rim", true, false)
+		as MeshInstance3D
+	)
 	var space := _level.get_world_3d().direct_space_state
 	var arms: Array = []
-	for pair: Array in [[&"upper_arm.L", &"forearm.L", &"hand.L", "DriverHandTargetLeft"], [&"upper_arm.R", &"forearm.R", &"hand.R", "DriverHandTargetRight"]]:
+	for pair: Array in [
+		[&"upper_arm.L", &"forearm.L", &"hand.L", "DriverHandTargetLeft"],
+		[&"upper_arm.R", &"forearm.R", &"hand.R", "DriverHandTargetRight"]
+	]:
 		var ua: int = skeleton.find_bone(pair[0])
 		var fa: int = skeleton.find_bone(pair[1])
 		var hd: int = skeleton.find_bone(pair[2])
@@ -531,12 +701,16 @@ func _reach_analysis(player: Node3D, seat: Node3D, verts: Array, current: Vector
 		var b := skeleton.to_global(skeleton.get_bone_global_rest(fa).origin)
 		var c := skeleton.to_global(skeleton.get_bone_global_rest(hd).origin)
 		var shoulder := skeleton.to_global(skeleton.get_bone_global_pose(ua).origin)
-		arms.append([pair[2], shoulder, target.global_position, a.distance_to(b) + b.distance_to(c)])
+		arms.append(
+			[pair[2], shoulder, target.global_position, a.distance_to(b) + b.distance_to(c)]
+		)
 	var pelvis := skeleton.to_global(skeleton.get_bone_global_pose(0).origin)
 	var inv := rim.global_transform.affine_inverse()
 	var torus := rim.mesh as TorusMesh
 	var major: float = (torus.inner_radius + torus.outer_radius) * 0.5
-	print("MEASURE   driver reach table (seat_offset.z -> shoulder-to-grip / arm chain; torso-to-wheel-plane; pelvis-over-cushion):")
+	print(
+		"MEASURE   driver reach table (seat_offset.z -> shoulder-to-grip / arm chain; torso-to-wheel-plane; pelvis-over-cushion):"
+	)
 	for dz: float in [-0.15, -0.1, -0.05, 0.0, 0.05, 0.1]:
 		var z_offset: float = current.z + dz
 		var shift: Vector3 = seat.global_basis * Vector3(0, 0, dz)
@@ -554,11 +728,18 @@ func _reach_analysis(player: Node3D, seat: Node3D, verts: Array, current: Vector
 					torso_gap = minf(torso_gap, absf(local.y) - 0.03)
 			if bone == "pelvis":
 				butt_low = minf(butt_low, q.y)
-		line += "  torso-to-rim-plane %.3f" % torso_gap if torso_gap < INF else "  torso clear of the rim circle"
+		line += (
+			"  torso-to-rim-plane %.3f" % torso_gap
+			if torso_gap < INF
+			else "  torso clear of the rim circle"
+		)
 		var p := pelvis + shift
 		var hit := _ray(space, p + Vector3.UP * 0.6, p + Vector3.DOWN * 1.0)
 		if not hit.is_empty():
-			line += "  cushion %s: butt %+.3f m above it" % [_probe_bodies.get(hit.rid, "?"), butt_low - (hit.position as Vector3).y]
+			line += (
+				"  cushion %s: butt %+.3f m above it"
+				% [_probe_bodies.get(hit.rid, "?"), butt_low - (hit.position as Vector3).y]
+			)
 		print(line)
 
 
@@ -570,7 +751,9 @@ func _inside_mesh(space: PhysicsDirectSpaceState3D, p: Vector3) -> Dictionary:
 	for rid: RID in up_counts:
 		if up_counts[rid] % 2 == 1 and down_counts.get(rid, 0) % 2 == 1:
 			var depth: float = INF
-			for dir: Vector3 in [Vector3.UP, Vector3.DOWN, Vector3.LEFT, Vector3.RIGHT, Vector3.FORWARD, Vector3.BACK]:
+			for dir: Vector3 in [
+				Vector3.UP, Vector3.DOWN, Vector3.LEFT, Vector3.RIGHT, Vector3.FORWARD, Vector3.BACK
+			]:
 				var hit := _ray_on(space, p, dir, rid)
 				if not hit.is_empty():
 					depth = minf(depth, p.distance_to(hit.position))
@@ -633,7 +816,13 @@ func _skinned_vertices(skeleton: Skeleton3D, mesh_instance: MeshInstance3D) -> A
 		bind_bones.append(bone)
 	var palette: Array[Transform3D] = []
 	for b: int in range(skin.get_bind_count()):
-		palette.append(skeleton.global_transform * skeleton.get_bone_global_pose(bind_bones[b]) * skin.get_bind_pose(b))
+		palette.append(
+			(
+				skeleton.global_transform
+				* skeleton.get_bone_global_pose(bind_bones[b])
+				* skin.get_bind_pose(b)
+			)
+		)
 	var mesh := mesh_instance.mesh
 	for s: int in range(mesh.get_surface_count()):
 		var arrays: Array = mesh.surface_get_arrays(s)
