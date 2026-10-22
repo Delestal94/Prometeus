@@ -11,7 +11,8 @@ extends SceneTree
 ##   clock, DaySummary counts it that same day;
 ## - an order that is not out on the road (or unknown, or settled twice) changes nothing;
 ## - the result carries the customer's stars (D-0816): 5 for the quick perfect one, 4 for the slow
-##   one, fewer for each failure, 0 when nothing was settled (test_order_rating covers the rules).
+##   one, fewer for each failure, 0 when nothing was settled (test_order_rating covers the rules), and
+##   the closed order keeps them in the book (D-0816.b); nothing settled, nothing rated.
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -78,6 +79,7 @@ func _test_perfect(state: Node) -> void:
 	_expect(book.state_of(&"o1") == Order.STATE_DELIVERED, "the order is closed")
 	var closed: Dictionary = book.get_order(&"o1")
 	_expect(closed["paid"] == 200 and closed["quality"] == 100 and closed["intact"], "closed with its pay")
+	_expect(closed.get("stars") == 5, "and the book keeps its 5 stars")
 	var again: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 70, [], _products)
 	_expect(not again["ok"] and state.money == money + 230, "settling twice pays once")
 	_expect(again["stars"] == 0, "and the second try has no stars")
@@ -123,6 +125,7 @@ func _test_penalties(state: Node) -> void:
 		else:
 			_expect(result["reputation"] < 0.0 and state.reputation < rep, "%s: costs reputation" % name)
 		_expect(book.get_order(&"o1")["paid"] == result["paid"], "%s: the book keeps that pay" % name)
+		_expect(book.get_order(&"o1").get("stars") == result["stars"], "%s: and those stars" % name)
 		book.free()
 
 
@@ -135,6 +138,7 @@ func _test_not_deliverable(state: Node) -> void:
 	var open: Dictionary = OrderSettlement.settle(book, state, &"o1", _box(2), 70, [], _products)
 	_expect(not open["ok"] and book.state_of(&"o1") == Order.STATE_OPEN, "an open order is not settled")
 	_expect(open["stars"] == 0, "and has no stars")
+	_expect(not book.get_order(&"o1").has("stars"), "nor any in the book")
 	var ghost: Dictionary = OrderSettlement.settle(book, state, &"nope", _box(2), 70, [], _products)
 	_expect(not ghost["ok"], "an unknown order is not settled")
 	_expect(not OrderSettlement.settle(null, state, &"o1", _box(2), 70, [], _products)["ok"], "no book")

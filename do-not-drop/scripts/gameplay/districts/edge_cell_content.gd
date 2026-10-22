@@ -16,6 +16,13 @@ extends RefCounted
 ## the deer, the flock and the dog only with `spawn_events` on (off by default: they
 ## need a vehicle to run for, which the Campo's company trips bring with D-0315.b).
 
+## What each event with a node claims of the ground: Vector2(lateral from the street, radius).
+const EVENT_CLAIMS: Dictionary = {
+	EdgeEvents.DEER: Vector2(WildlifeCrossing.WAIT_LATERAL, 1.5),
+	EdgeEvents.FLOCK: Vector2(11.0, 7.0),
+	EdgeEvents.DOG: Vector2(ChasingDog.HOME_LATERAL, 1.0),
+}
+
 var graph: RoadGraph
 var cell_size: float
 var session_seed: int
@@ -23,6 +30,8 @@ var session_seed: int
 var spawn_events: bool = false
 ## What Centro holds besides its streets; null: the cells hold the streets only.
 var decor: CentroDecor
+## Ground rectangle the streets leave clear (the shed's, D-0314.a); empty: none.
+var keep_clear: Rect2
 
 ## { Vector2i cell: Array[{ edge: StringName, piece: int }] }, built once.
 var _by_cell: Dictionary = {}
@@ -33,12 +42,13 @@ var _events_by_cell: Dictionary = {}
 
 func _init(
 		road_graph: RoadGraph, size: float, world_seed: int = 0, with_events: bool = false,
-		centro_decor: CentroDecor = null) -> void:
+		centro_decor: CentroDecor = null, clear: Rect2 = Rect2()) -> void:
 	graph = road_graph
 	cell_size = size
 	session_seed = world_seed
 	spawn_events = with_events
 	decor = centro_decor
+	keep_clear = clear
 	_index()
 	_index_events()
 
@@ -75,6 +85,33 @@ func event_cells() -> Array[Vector2i]:
 	return found
 
 
+## The ground the deer, the flock and the dog of the cell's events wait on (D-0315.b), as the
+## circles RoutePlacement.occupy() takes: Vector3(x, z, radius) in world space, the same lateral
+## and radius RouteWildlife claims on the route (the deer 1.5 m at WAIT_LATERAL, the flock 7 m at
+## 11 m, the dog 1 m at HOME_LATERAL). Empty for the events that have no node (cargo, mud).
+func event_claims(cell: Vector2i) -> Array[Vector3]:
+	var claims: Array[Vector3] = []
+	for event: Dictionary in events_in(cell):
+		var claim: Vector2 = EVENT_CLAIMS.get(event.kind, Vector2.ZERO)
+		if claim.y <= 0.0:
+			continue
+		var ground: Vector2 = event.position
+		var lateral: Vector3 = Basis(Vector3.UP, event.yaw) * Vector3(float(event.side) * claim.x, 0.0, 0.0)
+		claims.append(Vector3(ground.x + lateral.x, ground.y + lateral.z, claim.y))
+	return claims
+
+
+## Marks the cell's event claims on `placement`, before whatever dresses the cell places a prop, so
+## none lands where the animal waits. Only the cell's own events: a flock near the cell's edge can
+## reach into the next one, so the dresser of a cell should reserve its neighbours' too. Returns
+## how many circles it took. Independent of `spawn_events` (the claim is the same with no node).
+func reserve_events(placement: RoutePlacement, cell: Vector2i) -> int:
+	var claims: Array[Vector3] = event_claims(cell)
+	for claim: Vector3 in claims:
+		placement.occupy(Vector3(claim.x, 0.0, claim.y), claim.z)
+	return claims.size()
+
+
 ## The cell a ground point (x, z in a Vector3) lies in.
 func cell_of(position: Vector3) -> Vector2i:
 	return Vector2i(floori(position.x / cell_size), floori(position.z / cell_size))
@@ -104,7 +141,7 @@ func build_cell(cell: Vector2i) -> Node3D:
 
 func _index() -> void:
 	for edge: RoadEdge in graph.edges:
-		var pieces: Array[Dictionary] = EdgePieces.plan(graph, edge.id)
+		var pieces: Array[Dictionary] = EdgePieces.plan(graph, edge.id, keep_clear)
 		_plans[edge.id] = pieces
 		for i in pieces.size():
 			var ground: Vector2 = pieces[i].position

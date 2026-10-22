@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SupplierDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/supplier_definition.gd" id="1_supplier"]
+
+[resource]
+script = ExtResource("1_supplier")
+id = &"panaderia_mayorista"
+products = Array[StringName]([&"milk_canister", &"sourdough", &"wedding_cake"])
+price_factor = 1.1
+arrival_min = 390
+wait_minutes = 90

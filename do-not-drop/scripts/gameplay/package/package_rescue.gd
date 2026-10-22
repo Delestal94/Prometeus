@@ -25,6 +25,15 @@ const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 ## The vehicle's movement interface (D-0209): its readers ask the van by name and fall back to a
 ## plain Node3D's transform. Preloaded: it names no autoload.
 const FleetMotion = preload("res://scripts/gameplay/fleet/fleet_motion.gd")
+## Seconds between two care_state publishes of a box under care (its panel, ring and hint on every
+## peer). A world may ask a box for another in this meta (the company's: BoxToPackage.tune(), D-2002.4).
+const CARE_PUBLISH_SEC: float = 0.1
+const CARE_PUBLISH_META: StringName = &"care_publish_sec"
+
+
+## How often `p` publishes its care_state: CARE_PUBLISH_SEC unless its world asked for another.
+static func care_publish_interval(p: Node) -> float:
+	return maxf(float(p.get_meta(CARE_PUBLISH_META, CARE_PUBLISH_SEC)), 0.0)
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -85,7 +94,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 				before_state = p.trap_state
 		p._award_pending_trap_milestones()
 	consume_input_edges(p)
-	_publish_cushion_change(p)
+	_publish_hand_change(p)
 	check_recovery(p)
 	var tool := StringName(input.get("tool", "tape"))
 	var run: Node = PackageAutoloads.run_manager(p)
@@ -97,7 +106,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 			p.care.message = LocText.make("HUD_CARE_MSG_SUPPLY_TAKEN")
 	p._report_change(before_integrity, before_state, p.tr("HUD_CARE_RUINED_IN_RESCUE"))
 	p._care_publish_time += delta
-	if p._care_publish_time >= 0.1:
+	if p._care_publish_time >= care_publish_interval(p):
 		p._care_publish_time = 0.0
 		publish_care(p)
 		p._emit_event(&"package_hint_changed", [p.package_id, p.hint_text()])
@@ -240,18 +249,38 @@ static func owner_peer(p: DeliveryPackage) -> int:
 	return p._care_worker
 
 
-## The ring on the box and the card's "tap now" follow the trap's cushion
-## state, and a bump warning that arrives 0.1 s late is most of what a tap
-## can use: send it as soon as it changes.
-static func _publish_cushion_change(p: DeliveryPackage) -> void:
-	var cushion: Dictionary = p.trap_behavior.cushion_state()
-	if cushion.is_empty():
-		return
-	var signature: int = int(float(cushion["eta"]) >= 0.0) + 2 * int(bool(cushion["shield"])) \
-			+ 4 * int(cushion["saved"]) + 4096 * int(cushion["taps"])
+## What the hands answer to goes out as soon as it changes instead of waiting for the next care
+## publish (care_publish_interval(): 0.2 s for a company box, D-2002.4): the ring on the box and the
+## card's "tap now" follow the trap's cushion state, and a bump warning that arrives late is most of
+## what a tap can use; a sequence's step taken, missed or solved (the bomb's code, the growing
+## weight's) and the side a gesture pushes to (the balance's lean, the liquid's scrub) are what the
+## tender's card answers to. Publishes on this tick when care_signature() changed.
+static func _publish_hand_change(p: DeliveryPackage) -> void:
+	var signature: int = care_signature(p.trap_behavior)
 	if signature != p._cushion_signature:
 		p._cushion_signature = signature
-		p._care_publish_time = 0.1
+		p._care_publish_time = care_publish_interval(p)
+
+
+## What of `behavior`'s published care the hands answer to, as one number (0: nothing): the cushion
+## (bump announced, tap shielding, hits saved, taps), the sequence (index, mistakes, solved) and the
+## sign of the gesture's push. Its seconds and the push's size wait for the next publish.
+static func care_signature(behavior: ITrapBehavior) -> int:
+	if behavior == null:
+		return 0
+	var parts: Array = []
+	var cushion: Dictionary = behavior.cushion_state()
+	if not cushion.is_empty():
+		parts.append_array([float(cushion["eta"]) >= 0.0, bool(cushion["shield"]), int(cushion["saved"]),
+			int(cushion["taps"])])
+	var sequence: Dictionary = behavior.sequence_state()
+	if not sequence.is_empty():
+		parts.append_array([int(sequence.get("index", 0)), int(sequence.get("mistakes", 0)),
+			int(sequence.get("solved", 0))])
+	var gesture: Dictionary = behavior.gesture_state()
+	if not gesture.is_empty():
+		parts.append(signf(float(gesture.get("push", 0.0))))
+	return 0 if parts.is_empty() else hash(parts)
 
 
 static func check_recovery(p: DeliveryPackage) -> void:

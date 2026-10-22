@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SupplierDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/supplier_definition.gd" id="1_supplier"]
+
+[resource]
+script = ExtResource("1_supplier")
+id = &"importadora_express"
+products = Array[StringName]([&"antique_lamp", &"fireworks_crate", &"glass_tower"])
+price_factor = 0.85
+arrival_min = 840
+wait_minutes = 60

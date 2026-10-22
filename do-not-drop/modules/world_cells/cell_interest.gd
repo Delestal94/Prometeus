@@ -40,7 +40,11 @@ extends Node
 ## for over half of that (9 min at 60 fps) could be ignored for minutes once it is
 ## back. So every `keepalive_sec` a hidden body is shown to that peer for
 ## `keepalive_pulse_sec` (at least two of its replication intervals): a handful of
-## updates every 20 s, nothing like a stream.
+## updates every 20 s, nothing like a stream. A pulse shows and hides the body
+## with the synchronizer's meta QUIET_META set (pulse_visibility()): a sender that
+## would speed up for a peer it is shown to (net_pose_smoother's NetRestThrottle
+## reads the same meta) leaves its rate alone; the pulse already lasts two of its
+## intervals. A peer that comes near during a pulse is told again without it.
 ##
 ## On a client (`hide_far_copies`), the copy of a tracked body the host owns is hidden
 ## and taken out of physics (visible = false, and the collision layer and mask of
@@ -56,7 +60,9 @@ extends Node
 ## or by the game) is kept for the showing and zeroed again, at that update or at the next
 ## look: the copy stays out of physics. copy_shown tells the game a copy is back, so it can
 ## derive again the layers it owns (one written as 0 while hidden can't be told from the
-## zeroing).
+## zeroing). A copy `keep_shown` names (one this peer simulates itself, a vehicle it drives
+## and predicts: with its mask zeroed it would fall through the world) is never hidden, and
+## shows at the next look if it was.
 ##
 ## Bodies come in through track(), or by themselves while they are in one of
 ## `groups` (each MultiplayerSynchronizer child whose root is the body). Only nodes
@@ -65,6 +71,12 @@ extends Node
 
 ## Client: a copy this node hid shows again, its collision layers given back.
 signal copy_shown(body: Node3D)
+## Client: this node hid a copy, or a copy it keeps hidden got an update (which may have written
+## something the game derives elsewhere, a slot it claims: the game can let go of it until copy_shown).
+signal copy_hidden(body: Node3D)
+
+## The meta a keepalive pulse sets on a synchronizer while it changes its visibility (pulse_visibility()).
+const QUIET_META: StringName = &"net_rest_quiet"
 
 ## Only the cell size and the two radii are read.
 var grid := WorldCellGrid.new()
@@ -72,6 +84,8 @@ var grid := WorldCellGrid.new()
 var anchor_of: Callable
 ## Callable(body: Node3D) -> Array: ids of the peers that always get this body. Optional.
 var viewers_of: Callable
+## Client, Callable(body: Node3D) -> bool: a copy this peer must never hide (it predicts it). Optional.
+var keep_shown: Callable
 ## Nodes in these groups are tracked by themselves (and untracked when they leave).
 var groups: Array[StringName] = []
 ## Seconds between two looks at the anchors and the bodies.
@@ -278,15 +292,28 @@ func _decide(sync: MultiplayerSynchronizer, entry: _Entry, peers: Array, anchors
 		entry.near[peer] = near
 		if near:
 			entry.hidden_at.erase(peer)
-			entry.pulse_until.erase(peer)
+			if entry.pulse_until.has(peer):
+				entry.pulse_until.erase(peer)
+				# Shown by a quiet pulse and near now: told again, without the meta, so a sender that speeds up
+				# for a peer it is shown to (NetRestThrottle) does it for this one.
+				if sync.get_visibility_for(peer):
+					sync.update_visibility(peer)
 		elif not entry.hidden_at.has(peer):
 			entry.hidden_at[peer] = now
 		elif now - float(entry.hidden_at[peer]) >= keepalive_sec:
 			entry.hidden_at[peer] = now
 			entry.pulse_until[peer] = now + maxf(keepalive_pulse_sec, 2.0 * sync.replication_interval)
+			pulse_visibility(sync, peer, true)
 		var want: bool = near or entry.pulse_until.has(peer)
 		if sync.get_visibility_for(peer) != want:
 			sync.set_visibility_for(peer, want)
+
+
+## A keepalive pulse's start (`show`) or end for `peer`: its visibility flag, set with QUIET_META on.
+static func pulse_visibility(sync: MultiplayerSynchronizer, peer: int, show: bool) -> void:
+	sync.set_meta(QUIET_META, true)
+	sync.set_visibility_for(peer, show)
+	sync.remove_meta(QUIET_META)
 
 
 func _is_near(entry: _Entry, peer: int, anchor: Variant, viewers: Array) -> bool:
@@ -317,14 +344,14 @@ func _end_pulses(now: float) -> void:
 				continue
 			entry.pulse_until.erase(peer)
 			if connected.has(peer) and not bool(entry.near.get(peer, false)):
-				typed.set_visibility_for(peer, false)
+				pulse_visibility(typed, peer, false)
 
 
 ## The client's side, the same hysteresis as the host's: hides past the unload radius, or past the
 ## load radius when stale, or near but never updated once the grace is over; shows within the load
 ## radius once an update came since the last look.
 func _follow_copy(entry: _Entry, local_anchor: Variant, now: float) -> void:
-	if not (local_anchor is Vector3):
+	if not (local_anchor is Vector3) or (keep_shown.is_valid() and bool(keep_shown.call(entry.body))):
 		_show_copy(entry)
 		return
 	if entry.tracked_at < 0.0:
@@ -359,6 +386,7 @@ func _hide_copy(entry: _Entry) -> void:
 		entry.collisions[solid] = [solid.collision_layer, solid.collision_mask]
 		solid.collision_layer = 0
 		solid.collision_mask = 0
+	copy_hidden.emit(entry.body)
 
 
 func _show_copy(entry: _Entry) -> void:
@@ -386,6 +414,8 @@ func _on_synchronized(sync: MultiplayerSynchronizer) -> void:
 	entry.synced_at = _clock
 	if entry.hidden_here:
 		_keep_hidden_solids(entry)
+		if is_instance_valid(entry.body):
+			copy_hidden.emit(entry.body)
 
 
 ## A hidden copy got an update, is looked at again or is about to show: a layer or mask written
