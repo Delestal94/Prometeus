@@ -52,7 +52,9 @@ DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0,
              'TurnInPlace': TURN_PERIOD, 'CarryWalk': GAITS['Walk']['period'],
              'ThrowPackage': 1.0, 'DropPackage': .9, 'Drive': 2.0,
-             'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1}
+             'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1,
+             'Stumble': 1.2, 'Slip': 1.3, 'Pushed': .9, 'BoxHit': .8,
+             'Scared': 1.0, 'Dizzy': 2.4, 'ShakeOffWater': 1.8}
 LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace', 'CarryWalk', 'Drive')
 
 # Foot geometry, relative to the ankle (IK target) at rest.
@@ -733,6 +735,149 @@ def ring_doorbell(t):
     P['armR'] = lerp(rest['armR'], button_arm, reach)
     return P
 
+
+# --- reaction clips ------------------------------------------------------------
+
+def stumble(t):
+    """Catch a forward trip with one hurried step and wide balancing arms."""
+    rest = IDLE0
+    lurch = keys(t, [(0., 0.), (.12, 1.), (.48, .72), (.9, 0.), (1.2, 0.)])
+    step = math.sin(math.pi*smooth(.04, .78, t))
+    P = dict(rest)
+    P.update(
+        py=rest['py']-.22*lurch, pz=rest['pz']-.12*lurch,
+        p_pitch=rest['p_pitch']+5.*lurch, p_roll=rest['p_roll']-5.*lurch,
+        s_pitch=rest['s_pitch']+22.*lurch, s_roll=rest['s_roll']+5.*lurch,
+        c_pitch=rest['c_pitch']+8.*lurch,
+        h_pitch=rest['h_pitch']-13.*lurch, h_roll=rest['h_roll']-4.*lurch,
+        by=rest['by']-.025*lurch, bz=rest['bz']-.04*lurch,
+        footL=(.05*step, -.30*step, .13*step, -7.*step), groundL=1.-step,
+    )
+    P['armL'] = lerp(rest['armL'], (30., 36., 44., -18., 28., 5.), lurch)
+    P['armR'] = lerp(rest['armR'], (34., 25., 50., 18., 30., 4.), lurch)
+    return blend(P, rest, smooth(.9, 1.2, t))
+
+
+def slip(t):
+    """One foot shoots forward while the torso and arms save a backward fall."""
+    rest = IDLE0
+    skid = keys(t, [(0., 0.), (.14, 1.), (.58, .9), (1.0, 0.), (1.3, 0.)])
+    foot = math.sin(math.pi*smooth(.03, .92, t))
+    P = dict(rest)
+    P.update(
+        py=rest['py']+.20*skid, pz=rest['pz']-.13*skid,
+        p_pitch=rest['p_pitch']-7.*skid, p_roll=rest['p_roll']+4.*skid,
+        s_pitch=rest['s_pitch']-17.*skid, s_roll=rest['s_roll']-4.*skid,
+        c_pitch=rest['c_pitch']-8.*skid,
+        h_pitch=rest['h_pitch']+10.*skid, h_roll=rest['h_roll']+4.*skid,
+        by=rest['by']+.02*skid, bz=rest['bz']-.025*skid,
+        footR=(-.04*foot, -.36*foot, .16*foot, -12.*foot), groundR=1.-foot,
+        footL=(.02*skid, .07*skid, 0., 0.),
+    )
+    P['armL'] = lerp(rest['armL'], (28., -20., 38., -12., 32., 5.), skid)
+    P['armR'] = lerp(rest['armR'], (26., -30., 44., 12., 34., 6.), skid)
+    return blend(P, rest, smooth(1., 1.3, t))
+
+
+def pushed(t):
+    """A shove from the right displaces the body left before it regains balance."""
+    rest = IDLE0
+    hit = keys(t, [(0., 0.), (.08, 1.), (.38, .7), (.7, 0.), (.9, 0.)])
+    brace = math.sin(math.pi*smooth(.03, .68, t))
+    P = dict(rest)
+    P.update(
+        px=rest['px']+.24*hit, pz=rest['pz']-.07*hit,
+        p_roll=rest['p_roll']-16.*hit, p_yaw=rest['p_yaw']-5.*hit,
+        s_roll=rest['s_roll']-11.*hit, s_yaw=rest['s_yaw']+7.*hit,
+        c_roll=rest['c_roll']+6.*hit,
+        h_roll=rest['h_roll']+12.*hit, h_yaw=rest['h_yaw']+5.*hit,
+        footL=(.14*brace, -.03*brace, .08*brace, 0.), groundL=1.-brace,
+        footR=(-.03*hit, .02*hit, 0., 0.),
+    )
+    P['armL'] = lerp(rest['armL'], (34., -22., 38., -10., 28., 4.), hit)
+    P['armR'] = lerp(rest['armR'], (44., 32., 54., 18., 24., 5.), hit)
+    return blend(P, rest, smooth(.7, .9, t))
+
+
+def box_hit(t):
+    """A box to the upper body produces a compact, asymmetric protective flinch."""
+    rest = IDLE0
+    recoil = keys(t, [(0., 0.), (.06, 1.), (.32, .72), (.58, 0.), (.8, 0.)])
+    P = dict(rest)
+    P.update(
+        py=rest['py']+.08*recoil, pz=rest['pz']-.08*recoil,
+        p_pitch=rest['p_pitch']-4.*recoil, p_roll=rest['p_roll']+5.*recoil,
+        s_pitch=rest['s_pitch']-10.*recoil, s_roll=rest['s_roll']-6.*recoil,
+        c_pitch=rest['c_pitch']-7.*recoil, c_yaw=rest['c_yaw']+6.*recoil,
+        h_pitch=rest['h_pitch']+15.*recoil, h_roll=rest['h_roll']-8.*recoil,
+        by=rest['by']+.018*recoil, bz=rest['bz']-.03*recoil,
+    )
+    P['armL'] = lerp(rest['armL'], (22., 52., 78., -28., 42., 8.), recoil)
+    P['armR'] = lerp(rest['armR'], (30., 38., 68., 24., 38., 7.), recoil)
+    return blend(P, rest, smooth(.58, .8, t))
+
+
+def scared(t):
+    """An explosive surprise: duck, shoulders up, hands high, then recover."""
+    rest = IDLE0
+    fright = keys(t, [(0., 0.), (.07, 1.), (.42, .86), (.72, 0.), (1., 0.)])
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.18*fright, py=rest['py']+.05*fright,
+        p_pitch=rest['p_pitch']+5.*fright,
+        s_pitch=rest['s_pitch']+10.*fright, c_pitch=rest['c_pitch']-5.*fright,
+        h_pitch=rest['h_pitch']-12.*fright, h_roll=rest['h_roll']+3.*fright,
+        by=rest['by']-.02*fright, bz=rest['bz']-.035*fright,
+        bs=rest['bs']+.025*fright,
+        footL=(.04*fright, .04*fright, 0., 0.),
+        footR=(-.04*fright, .04*fright, 0., 0.),
+    )
+    P['armL'] = lerp(rest['armL'], (18., 50., 66., -22., 42., 12.), fright)
+    P['armR'] = lerp(rest['armR'], (20., 44., 72., 22., 44., 12.), fright)
+    return blend(P, rest, smooth(.72, 1., t))
+
+
+def dizzy(t):
+    """Two slow, increasingly damped sways with the head lagging the body."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.22, 1.), (1.65, 1.), (2.4, 0.)])
+    wave = math.sin(TAU*t/.9)
+    lag = math.sin(TAU*t/.9-.85)
+    P = dict(rest)
+    P.update(
+        px=rest['px']+.06*wave*envelope, py=rest['py']+.025*lag*envelope,
+        p_roll=rest['p_roll']-6.*wave*envelope,
+        s_roll=rest['s_roll']+10.*wave*envelope,
+        c_roll=rest['c_roll']-6.*lag*envelope,
+        h_roll=rest['h_roll']+15.*lag*envelope,
+        h_yaw=rest['h_yaw']+12.*wave*envelope,
+        h_pitch=rest['h_pitch']+4.*lag*envelope,
+        by=rest['by']+.012*lag*envelope, bz=rest['bz']-.018*wave*envelope,
+    )
+    P['armL'] = lerp(rest['armL'], (40., -10.+8.*wave, 32., -8., 25., 3.), envelope)
+    P['armR'] = lerp(rest['armR'], (42., 6.-8.*wave, 36., 8., 26., 3.), envelope)
+    return blend(P, rest, smooth(2.05, 2.4, t))
+
+
+def shake_off_water(t):
+    """Dog-like whole-body shake with planted feet and loose, trailing arms."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.16, 1.), (1.42, 1.), (1.8, 0.)])
+    shake = math.sin(TAU*5.*t)*envelope
+    trail = math.sin(TAU*5.*t-.8)*envelope
+    P = dict(rest)
+    P.update(
+        p_yaw=rest['p_yaw']+7.*shake, p_roll=rest['p_roll']+2.5*trail,
+        s_yaw=rest['s_yaw']-13.*shake, s_roll=rest['s_roll']-4.*trail,
+        c_yaw=rest['c_yaw']+16.*trail, c_roll=rest['c_roll']+5.*shake,
+        h_yaw=rest['h_yaw']-22.*shake, h_roll=rest['h_roll']-7.*trail,
+        by=rest['by']+.018*trail, bz=rest['bz']-.012*abs(shake),
+        bs=rest['bs']+.018*abs(shake),
+    )
+    P['armL'] = lerp(rest['armL'], (38., 5.+10.*trail, 34., -10., 26., 3.), envelope)
+    P['armR'] = lerp(rest['armR'], (40., 5.-10.*trail, 36., 10., 28., 3.), envelope)
+    return blend(P, rest, smooth(1.55, 1.8, t))
+
 # --- build ----------------------------------------------------------------------
 
 def build(rig):
@@ -755,7 +900,9 @@ def build(rig):
              'TurnInPlace': turn_in_place, 'CarryWalk': carry_walk,
              'ThrowPackage': throw_package, 'DropPackage': drop_package, 'Drive': drive,
              'EnterTruck': enter_truck, 'ExitTruck': exit_truck,
-             'RingDoorbell': ring_doorbell}
+             'RingDoorbell': ring_doorbell, 'Stumble': stumble, 'Slip': slip,
+             'Pushed': pushed, 'BoxHit': box_hit, 'Scared': scared, 'Dizzy': dizzy,
+             'ShakeOffWater': shake_off_water}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action

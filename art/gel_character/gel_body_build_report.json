@@ -17,7 +17,14 @@
       "Drive": 2.0,
       "EnterTruck": 1.2,
       "ExitTruck": 1.2,
-      "RingDoorbell": 1.1
+      "RingDoorbell": 1.1,
+      "Stumble": 1.2,
+      "Slip": 1.3,
+      "Pushed": 0.9,
+      "BoxHit": 0.8,
+      "Scared": 1.0,
+      "Dizzy": 2.4,
+      "ShakeOffWater": 1.8
     },
     "maximum_rotation_error_radians": 0.0,
     "maximum_bone_length_error_m": 3.8222786719055435e-07,
@@ -84,6 +91,34 @@
         "time_s": 0.0
       },
       "RingDoorbell": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Stumble": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Slip": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Pushed": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "BoxHit": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Scared": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Dizzy": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ShakeOffWater": {
         "distance_m": 0.0,
         "time_s": 0.0
       }
@@ -157,6 +192,34 @@
       "RingDoorbell": [
         0.1599988341331482,
         0.15999926626682281
+      ],
+      "Stumble": [
+        0.15999732911586761,
+        0.22489504516124725
+      ],
+      "Slip": [
+        0.1599951833486557,
+        0.23991245031356812
+      ],
+      "Pushed": [
+        0.15999723970890045,
+        0.19993063807487488
+      ],
+      "BoxHit": [
+        0.159988671541214,
+        0.15999920666217804
+      ],
+      "Scared": [
+        0.1599659025669098,
+        0.15999916195869446
+      ],
+      "Dizzy": [
+        0.15999816358089447,
+        0.1599997580051422
+      ],
+      "ShakeOffWater": [
+        0.1599985808134079,
+        0.15999944508075714
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -464,8 +527,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "c8106da89167a7976c5e5cba9bc1f0648468f97a08319046d204b05865ac52dc",
-      "morph_sha256": "b2bfb30cdc9b6c75337395476cc5f0b28ca75f8904974df3f03fc49ccbb571b0",
+      "geometry_sha256": "779efe532641f4b17a4cf153c8d3a73db421aa77b5323f79e3dfd0136a1ce567",
+      "morph_sha256": "be209ef4263976e1a1cebcbd1db3a09998d7f084e5c9753cdc011b325311c35b",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -523,7 +586,7 @@
             "sampled_edges": 238
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 52.02870742494424,
+            "adjacent_face_angle_p95_degrees": 53.61382580799235,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
             "sampled_edges": 167
           }

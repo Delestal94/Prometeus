@@ -1,7 +1,7 @@
 """Validate all final gel GLBs, including finite animated morph samples.
 
 python art/gel_character/validate_gel_exports.py --output <report.json>
-This is a finite 720-sample gate, not proof over continuous poses or morphs.
+This is a finite 1035-sample gate, not proof over continuous poses or morphs.
 """
 import argparse
 import json
@@ -19,7 +19,9 @@ DURATIONS = {'Idle': 6., 'Walk': 1/3, 'Stroll': .6, 'Run': 1/3,
              'Jump': 1.6, 'PickUpPackage': 1.6, 'PickUpHigh': 1.6,
              'Sit': 4., 'TurnInPlace': .8, 'CarryWalk': 1/3,
              'ThrowPackage': 1., 'DropPackage': .9, 'Drive': 2.,
-             'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1}
+             'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1,
+             'Stumble': 1.2, 'Slip': 1.3, 'Pushed': .9, 'BoxHit': .8,
+             'Scared': 1., 'Dizzy': 2.4, 'ShakeOffWater': 1.8}
 EXPECTED_SAMPLES = len(DURATIONS) * 5 * 3 * 3
 
 
