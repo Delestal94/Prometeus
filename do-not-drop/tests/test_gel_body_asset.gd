@@ -62,6 +62,7 @@ func _run() -> void:
 					var duration: float = player.get_animation(clip).length
 					_expect(absf(duration - float(DURATIONS[clip])) < 0.02,
 						"LOD%d %s duration matches source (got %.3f)" % [lod, clip, duration])
+			_check_clean_clips(player, lod)
 		var body: MeshInstance3D = _find(model, "MeshInstance3D") as MeshInstance3D
 		_expect(body != null and body.mesh != null, "LOD%d has body geometry (got %s)" % [lod, body])
 		if body != null and body.mesh != null:
@@ -70,6 +71,40 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: isolated gel body LODs, morphs, rig, clips and geometry")
 	quit(_failures)
+
+
+func _check_clean_clips(player: AnimationPlayer, lod: int) -> void:
+	var secondary_tracks: Array[String] = []
+	var animated_scale_tracks: Array[String] = []
+	for clip: String in DURATIONS:
+		if not player.has_animation(clip):
+			continue
+		var animation: Animation = player.get_animation(clip)
+		for track: int in animation.get_track_count():
+			var path: String = String(animation.track_get_path(track))
+			for bone: String in JIGGLE_BONES:
+				if path.contains(bone):
+					secondary_tracks.append("%s:%s" % [clip, path])
+			if animation.track_get_type(track) == Animation.TYPE_SCALE_3D \
+					and _scale_track_changes(animation, track):
+				animated_scale_tracks.append("%s:%s" % [clip, path])
+	_expect(secondary_tracks.is_empty(),
+		"LOD%d leaves all six jelly bones to SpringBoneSimulator3D (got %s)"
+		% [lod, secondary_tracks.slice(0, 3)])
+	_expect(animated_scale_tracks.is_empty(),
+		"LOD%d clips contain no animated squash/stretch scale tracks (got %d: %s)"
+		% [lod, animated_scale_tracks.size(), animated_scale_tracks.slice(0, 3)])
+
+
+func _scale_track_changes(animation: Animation, track: int) -> bool:
+	if animation.track_get_key_count(track) < 2:
+		return false
+	var first: Vector3 = animation.track_get_key_value(track, 0)
+	for key: int in range(1, animation.track_get_key_count(track)):
+		var value: Vector3 = animation.track_get_key_value(track, key)
+		if not value.is_equal_approx(first):
+			return true
+	return false
 
 
 func _check_mesh(body: MeshInstance3D, lod: int) -> void:

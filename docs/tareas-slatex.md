@@ -376,7 +376,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   sacudirse el agua.
 - [x] **S-311.80** Máquina de estados y mezclas en `PlayerAnimator` con tiempos pulidos; pies sin
   patinar con cualquier largo de pierna (medido: desplazamiento del pie apoyado < 2 cm por paso).
-- [ ] **S-311.81** Los clips quedan limpios y la física (bloque F) pone el "jelly" encima: sin bamboleo
+- [x] **S-311.81** Los clips quedan limpios y la física (bloque F) pone el "jelly" encima: sin bamboleo
   dibujado a mano que choque con la simulación.
 - [ ] **S-311.82** Anticipación, squash & stretch y follow-through en los clips clave (salto, lanzar,
   aterrizar, levantar), con los 12 principios de animación.
