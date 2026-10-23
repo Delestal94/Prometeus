@@ -921,7 +921,9 @@ def bake_clips(source, target):
         assert tuple(action.frame_range) == (0, round(DURATIONS[name]*FPS))
         action.name = 'Source_'+name
     # Secondary bones intentionally have no animation tracks: they inherit the
-    # baked game-bone pose and SpringBoneSimulator3D supplies the delta.
+    # baked game-bone pose and SpringBoneSimulator3D supplies the delta. Scale
+    # is constant too, so omit those tracks instead of baking a second source
+    # of squash/stretch on top of the runtime gel deformation.
     order = sorted(GAME_JOINTS, key=lambda n: len(target.data.bones[n].parent_recursive))
     max_rotation_error = 0.
     max_bone_length_error = 0.
@@ -971,7 +973,6 @@ def bake_clips(source, target):
                 dst.matrix_basis = inherited.inverted() @ world
                 dst.keyframe_insert('location', frame=frame, group=bone_name)
                 dst.keyframe_insert('rotation_quaternion', frame=frame, group=bone_name)
-                dst.keyframe_insert('scale', frame=frame, group=bone_name)
             bpy.context.view_layer.update()
             for bone_name, wanted in poses.items():
                 angle = target.pose.bones[bone_name].matrix.to_quaternion().rotation_difference(wanted.to_quaternion()).angle
