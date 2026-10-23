@@ -372,7 +372,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   (impulso, aire, aterrizaje), girar en el lugar.
 - [x] **S-311.78** Clips de juego: levantar caja baja y alta, caminar cargando, lanzar, dejar, sentarse,
   manejar (IK de volante y pedales de Nacho: aviso), subir y bajar del camión, tocar timbre.
-- [ ] **S-311.79** Reacciones: tropezar, resbalar, empujado, golpe de caja, susto (explosiva), mareo,
+- [x] **S-311.79** Reacciones: tropezar, resbalar, empujado, golpe de caja, susto (explosiva), mareo,
   sacudirse el agua.
 - [ ] **S-311.80** Máquina de estados y mezclas en `PlayerAnimator` con tiempos pulidos; pies sin
   patinar con cualquier largo de pierna (medido: desplazamiento del pie apoyado < 2 cm por paso).
