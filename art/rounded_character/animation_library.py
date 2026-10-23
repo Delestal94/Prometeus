@@ -385,13 +385,13 @@ def jump(t):
             bz=keys(t, [(0, -.02), (.4, .012), (.84, .02)]),
         )
     # Touchdown: the air pose hands over to Idle's first frame while the
-    # impact adds a squash, and the heavy head, tummy and arms keep going.
+    # skeleton compresses into a landing pose and the head and arms keep
+    # going. Gel squash and secondary wobble are runtime physics layers.
     air = jump(.84)
     base = blend(air, rest, smooth(.9, 1.06, t))
     u = clamp01((t-.9)/.1)
     squash = 1-(1-u)**3 if t < 1. else keys(t, [(1., 1.), (1.2, .26), (1.42, .04), (1.6, 0.)])
     head_nod = ramped(t, .93, 1., 2.6, 5.5)
-    belly_jig = ramped(t, .92, 1., 4.2, 6.5)
     arm_swing = ramped(t, 1.0, 1., 1.8, 4.)
     P = dict(base)
     P.update(
@@ -399,8 +399,6 @@ def jump(t):
         py=base['py']+.06*squash,
         s_pitch=base['s_pitch']+15*squash, c_pitch=base['c_pitch']+6*squash,
         h_pitch=base['h_pitch']-4*squash+9*head_nod,
-        bz=base['bz']-.065*belly_jig, by=base['by']-.02*belly_jig,
-        bs=base['bs']+.06*squash+.02*belly_jig,
         footL=lerp(base['footL'], (.03, 0., 0., 0.), squash),
         footR=lerp(base['footR'], (-.03, 0., 0., 0.), squash),
         groundL=1., groundR=1., toeL=0., toeR=0.,
@@ -434,17 +432,18 @@ def pickup(t):
     c = pickup_timing(t)
     look, rise, down, lift = c['look'], c['rise'], c['down'], c['lift']
     effort, settle, hug = c['effort'], c['settle'], c['hug']
-    wobble = effort*math.sin(TAU*3.2*(t-.5))
+    # One deliberate weight transfer and overshoot, not a repeating wobble:
+    # SpringBoneSimulator3D owns all jelly motion on top of this acting pose.
+    load_shift = keys(t, [(0., 0.), (.42, 0.), (.82, 1.), (1.18, -.28), (1.48, 0.), (1.6, 0.)])
     P = dict(rest)
     P.update(
         pz=rest['pz']+.025*rise-.43*down-.03*settle,
         py=.16*down,                                  # hips back: a squat, not a stoop
         s_pitch=rest['s_pitch']+24*down-6*effort*lift, c_pitch=rest['c_pitch']+8*down-3*effort,
-        s_roll=rest['s_roll']+1.8*wobble, c_roll=rest['c_roll']-1.2*wobble,
+        s_roll=rest['s_roll']+2.4*load_shift, c_roll=rest['c_roll']-1.5*load_shift,
         h_pitch=rest['h_pitch']+14*look*(1-lift)-10*down*(1-lift)-4*effort+2*settle,
         h_roll=rest['h_roll']+keys(t, [(0, 0.), (.3, -4.), (.9, 3.), (1.6, 0.)]),
         h_yaw=rest['h_yaw']*(1-look),
-        by=rest['by']-.02*down, bz=rest['bz']-.02*down-.02*settle,
     )
     # Hands on arcs: out and down around the tummy to the box's sides, a
     # squeeze, then the box comes in toward the chest before going up.
@@ -482,7 +481,7 @@ def pickup_high(t):
     c = pickup_timing(t)
     look, rise, down, lift = c['look'], c['rise'], c['down'], c['lift']
     effort, settle, hug = c['effort'], c['settle'], c['hug']
-    wobble = effort*math.sin(TAU*3.2*(t-.5))
+    load_shift = keys(t, [(0., 0.), (.42, 0.), (.82, 1.), (1.18, -.22), (1.48, 0.), (1.6, 0.)])
     P = dict(rest)
     P.update(
         # A small dip, weight a little back as the arms reach forward.
@@ -491,11 +490,10 @@ def pickup_high(t):
         # Leans from the waist toward the box, then back a touch under the
         # weight as it comes in to the chest.
         s_pitch=rest['s_pitch']+9*down-5*effort*lift, c_pitch=rest['c_pitch']+4*down-2*effort,
-        s_roll=rest['s_roll']+1.*wobble, c_roll=rest['c_roll']-.7*wobble,
+        s_roll=rest['s_roll']+1.4*load_shift, c_roll=rest['c_roll']-.9*load_shift,
         h_pitch=rest['h_pitch']+9*look*(1-lift)-3*down*(1-lift)-2*effort+2*settle,
         h_roll=rest['h_roll']+keys(t, [(0, 0.), (.3, -3.), (.9, 2.), (1.6, 0.)]),
         h_yaw=rest['h_yaw']*(1-look),
-        by=rest['by']-.01*down, bz=rest['bz']-.01*down-.015*settle,
     )
     reach = c['reach']
     for side, s in (('L', 1), ('R', -1)):
@@ -641,14 +639,15 @@ def throw_package(t):
     rest = IDLE0
     prepare = keys(t, [(0., 0.), (.2, 1.), (.32, 1.), (.48, 0.)])
     release = keys(t, [(0., 0.), (.22, 0.), (.45, 1.), (.58, 1.), (.82, 0.), (1., 0.)])
+    follow = keys(t, [(0., 0.), (.48, 0.), (.62, 1.), (.78, -.3), (1., 0.)])
     recover = smooth(.58, 1., t)
     P = dict(rest)
     P.update(
         py=-.10*prepare+.08*release, pz=rest['pz']-.08*prepare+.035*release,
-        s_pitch=rest['s_pitch']-8.*prepare+13.*release,
-        c_pitch=rest['c_pitch']-5.*prepare+8.*release,
-        h_pitch=rest['h_pitch']+5.*prepare-7.*release,
-        by=rest['by']-.025*prepare, bz=rest['bz']-.025*prepare+.018*release,
+        s_pitch=rest['s_pitch']-8.*prepare+13.*release+3.*follow,
+        c_pitch=rest['c_pitch']-5.*prepare+8.*release+4.*follow,
+        h_pitch=rest['h_pitch']+5.*prepare-7.*release-6.*follow,
+        c_yaw=rest['c_yaw']+2.5*follow,
         footL=(0., .08*prepare, 0., 8.*prepare),
         footR=(0., -.08*prepare, 0., 0.),
     )
