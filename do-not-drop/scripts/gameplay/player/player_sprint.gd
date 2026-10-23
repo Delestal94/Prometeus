@@ -339,7 +339,7 @@ func play_stumble() -> void:
 	running = false
 	player.locomotion_speed = minf(player.locomotion_speed, Player.WALK_SPEED)
 	if player.is_local():
-		player.animator.play_one_shot(Player.ANIM_JUMP, 420)
+		player.animator.play_one_shot(PlayerAnimator.ANIM_STUMBLE, PlayerAnimator.STUMBLE_ANIM_LOCK_MS)
 	player._flinch_time = 0.32
 
 

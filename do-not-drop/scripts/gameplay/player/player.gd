@@ -320,7 +320,6 @@ func _build_body() -> void:
 	add_child(_carry_pose)
 	_carry_pose.setup(self, PlayerAppearance.find_skeleton(visual))
 
-
 func _apply_face() -> void:
 	if _character_face != null:
 		_character_face.set_expression(face_eyes, face_mouth)
@@ -614,7 +613,7 @@ func receive_package_hit(push: Vector3, simulation_seed: int = 0) -> void:
 		return
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
-		animator.play_one_shot(ANIM_JUMP, 420)
+		animator.play_one_shot(PlayerAnimator.ANIM_BOX_HIT, PlayerAnimator.BOX_HIT_ANIM_LOCK_MS)
 
 
 func _activate_ragdoll(push: Vector3, simulation_seed: int = 0) -> void:
