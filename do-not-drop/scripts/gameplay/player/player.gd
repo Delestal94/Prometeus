@@ -101,10 +101,14 @@ const PICKUP_HIGH_GRIP: float = 0.925
 ## Played by every peer while seat_node_path is set -- it's derived from that
 ## replicated path, not from anim_state, so it needs no sync of its own.
 const ANIM_SIT: StringName = &"Sit"
+const ANIM_DRIVE: StringName = &"Drive"
 ## Presentation-only gait under Walk: a real walk for partial stick input.
 ## anim_state still says Walk; each peer picks the gait from the replicated
 ## locomotion_speed (PlayerAnimator), so it needs no sync of its own.
 const ANIM_STROLL: StringName = &"Stroll"
+## Derived locally from Walk plus the replicated carried package; the state
+## itself remains Walk so dropping the box does not need another network field.
+const ANIM_CARRY_WALK: StringName = &"CarryWalk"
 ## Small steps in place while the player turns standing still (the whole
 ## body rotates with the look yaw; without this the feet swivelled on the
 ## spot). The owner picks it (PlayerAnimator.update_movement()) from its own look
@@ -112,6 +116,8 @@ const ANIM_STROLL: StringName = &"Stroll"
 ## rad/s, smoothed; hysteresis so a mouse flick doesn't flicker it. Turning
 ## with the truck the player rides in doesn't count: the floor turns too.
 const ANIM_TURN: StringName = &"TurnInPlace"
+const ANIM_STUMBLE: StringName = &"Stumble"
+const ANIM_BOX_HIT: StringName = &"BoxHit"
 ## Driver IK chain on the rounded character's skeleton (glTF bone names).
 const DRIVER_ARM_BONES: Dictionary = {
 	-1.0: [&"upper_arm.L", &"hand.L"],
@@ -122,6 +128,8 @@ const DRIVER_ARM_BONES: Dictionary = {
 ## final pose before movement can take over again.
 const JUMP_ANIM_LOCK_MS: int = 1500
 const PICKUP_ANIM_LOCK_MS: int = 1550
+const STUMBLE_ANIM_LOCK_MS: int = 1050
+const BOX_HIT_ANIM_LOCK_MS: int = 650
 var _body_visual: Node3D = null
 @onready var _gel_appearance: PlayerGelAppearance = $GelAppearance
 ## Replicated (see player.tscn) so every peer's own copy of this player's
@@ -315,10 +323,18 @@ func _build_body() -> void:
 	_apply_face()
 
 	animator = PlayerAnimator.new(self, PlayerAppearance.find_animation_player(visual), _character_face)
+	var gel_state := $GelProportions as PlayerGelProportionSync
+	animator.set_leg_length_factor(gel_state.proportions.leg_length)
+	gel_state.proportions_changed.connect(_fit_animation_to_proportions)
 	_carry_pose = CarryPose.new()
 	_carry_pose.name = "CarryPose"
 	add_child(_carry_pose)
 	_carry_pose.setup(self, PlayerAppearance.find_skeleton(visual))
+
+
+func _fit_animation_to_proportions(proportions: GelBodyProportions) -> void:
+	if animator != null:
+		animator.set_leg_length_factor(proportions.leg_length)
 
 
 func _apply_face() -> void:
@@ -614,7 +630,7 @@ func receive_package_hit(push: Vector3, simulation_seed: int = 0) -> void:
 		return
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
-		animator.play_one_shot(ANIM_JUMP, 420)
+		animator.play_one_shot(ANIM_BOX_HIT, BOX_HIT_ANIM_LOCK_MS)
 
 
 func _activate_ragdoll(push: Vector3, simulation_seed: int = 0) -> void:

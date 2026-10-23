@@ -1,9 +1,9 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_animation_fit.gd
 ##
-## S-311.25 exercises the real gel rig at both leg/arm extremes: gait distance
-## follows leg length, both wrists land on the real box, and the visible head
-## is fitted below the reference truck's cab roof and rear-door opening.
+## Exercises the real gel rig at both leg/arm extremes: planted gait feet
+## follow the ground, both wrists land on the real box, and the visible head is
+## fitted below the reference truck's cab roof and rear-door opening.
 
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
@@ -39,7 +39,7 @@ func _run() -> void:
 	_expect(skeleton != null and animation != null and shaper.setup(gel),
 		"the real gel rig exposes its skeleton, clips and proportion shaper")
 	if skeleton != null and animation != null:
-		_check_gaits(player, animation, shaper)
+		_check_gaits(player, skeleton, animation, shaper)
 		await _check_box_hands(player, skeleton, shaper)
 		_check_truck_clearance(gel, skeleton, animation, shaper, vehicle)
 
@@ -51,11 +51,16 @@ func _run() -> void:
 	quit(_failures)
 
 
-func _check_gaits(player: Player, animation: AnimationPlayer, shaper: GelBodyShaper) -> void:
+func _check_gaits(
+	player: Player,
+	skeleton: Skeleton3D,
+	animation: AnimationPlayer,
+	shaper: GelBodyShaper
+) -> void:
 	var animator := PlayerAnimator.new(player, animation, null)
 	var clip: Animation = animation.get_animation(Player.ANIM_WALK)
 	var base_stride: float = PlayerAnimator.WALK_AUTHORED_SPEED * clip.length
-	for leg_length: float in [0.75, 1.25]:
+	for leg_length: float in [0.75, 0.85, 1.0, 1.15, 1.25]:
 		var proportions := Proportions.new()
 		proportions.leg_length = leg_length
 		shaper.apply(proportions)
@@ -63,12 +68,45 @@ func _check_gaits(player: Player, animation: AnimationPlayer, shaper: GelBodySha
 		player.anim_state = Player.ANIM_WALK
 		player.locomotion_speed = PlayerAnimator.WALK_AUTHORED_SPEED
 		animator.animate()
-		var expected_scale: float = 1.0 / leg_length
+		var stride_factor: float = MotionFit.stride_factor(leg_length)
+		var expected_scale: float = 1.0 / stride_factor
 		_expect(is_equal_approx(animation.speed_scale, expected_scale),
 			"leg length %.2f sets gait playback to %.3f" % [leg_length, expected_scale])
 		var travelled_per_cycle: float = player.locomotion_speed * clip.length / animation.speed_scale
-		_expect(is_equal_approx(travelled_per_cycle, base_stride * leg_length),
-			"leg length %.2f produces a matching visual stride" % leg_length)
+		_expect(is_equal_approx(travelled_per_cycle, base_stride * stride_factor),
+			"leg length %.2f matches its measured IK-foot stride" % leg_length)
+		for gait: Array in [
+			[Player.ANIM_WALK, PlayerAnimator.WALK_AUTHORED_SPEED, 0.03, 0.105],
+			[Player.ANIM_STROLL, PlayerAnimator.STROLL_AUTHORED_SPEED, 0.10, 0.36],
+			[Player.ANIM_RUN, PlayerAnimator.RUN_AUTHORED_SPEED, 0.02, 0.055],
+		]:
+			player.anim_state = Player.ANIM_WALK if gait[0] == Player.ANIM_STROLL else gait[0]
+			player.locomotion_speed = gait[1]
+			animator.animate()
+			var first: Vector3 = _foot_ball(animation, skeleton, gait[0], gait[2])
+			var last: Vector3 = _foot_ball(animation, skeleton, gait[0], gait[3])
+			var elapsed: float = (float(gait[3]) - float(gait[2])) / animation.speed_scale
+			var residual: Vector3 = last + Vector3.FORWARD * float(gait[1]) * elapsed - first
+			var slip: float = Vector2(residual.x, residual.z).length()
+			_expect(slip < 0.02,
+				"%s keeps its planted foot under 2 cm at leg length %.2f (%.4f m)" \
+				% [gait[0], leg_length, slip])
+
+
+func _foot_ball(
+	animation: AnimationPlayer,
+	skeleton: Skeleton3D,
+	clip: StringName,
+	at: float
+) -> Vector3:
+	animation.play(clip)
+	animation.seek(at, true)
+	animation.advance(0.0)
+	skeleton.force_update_all_bone_transforms()
+	var foot: int = skeleton.find_bone(&"foot.L")
+	var rest: Transform3D = skeleton.global_transform * skeleton.get_bone_global_rest(foot)
+	var local: Vector3 = rest.affine_inverse() * (rest.origin + Vector3(0.0, -0.1135, -0.1225))
+	return skeleton.global_transform * skeleton.get_bone_global_pose(foot) * local
 
 
 func _check_box_hands(

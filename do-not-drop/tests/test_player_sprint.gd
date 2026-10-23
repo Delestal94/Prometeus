@@ -20,12 +20,14 @@ extends SceneTree
 ##   it and Walk sped up if not; the other peer sees the same state
 ##   (anim_state / locomotion_speed are replicated) and hears the footfalls;
 ## - the real character (sm_char_player_rounded.glb) ships its own looping "Run"
-##   clip (N-115.3), played at speed / 6 m/s, never the Walk fallback.
+##   clip (N-115.3), played at its measured proportion-aware gait rate, never
+##   the Walk fallback.
 
 const Sprint = preload("res://scripts/gameplay/player/player_sprint.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
 const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
+const MotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
 const TRAP_KINDS: Array[String] = ["fragile", "balance", "liquid", "noisy", "explosive", "hostile", "growing_weight"]
 
 var _failures: int = 0
@@ -375,8 +377,12 @@ func _test_character_library_has_a_looping_run(level: Node) -> void:
 		player.animator.animate()
 		_expect(playing.current_animation == "Run", "At %.1f m/s the runner plays Run, not Walk (got %s)" % [
 				pace, playing.current_animation])
-		_expect(is_equal_approx(playing.speed_scale, pace / PlayerAnimator.RUN_AUTHORED_SPEED),
-				"...at speed / 6 m/s so the feet don't skate (%.1f m/s: x%.3f)" % [pace, playing.speed_scale])
+		var expected: float = MotionFit.gait_speed_scale(
+			pace, PlayerAnimator.RUN_AUTHORED_SPEED, player.animator.leg_length_factor(),
+			PlayerAnimator.RUN_MIN_SCALE, 1.3)
+		_expect(is_equal_approx(playing.speed_scale, expected),
+				"...at the calibrated gait rate so the feet don't skate (%.1f m/s: x%.3f)" \
+				% [pace, playing.speed_scale])
 
 
 func _test_other_peer_sees_the_run(level: Node) -> void:
