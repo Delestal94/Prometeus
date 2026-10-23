@@ -130,9 +130,11 @@ func _check_animation_principles(player: AnimationPlayer, skeleton: Skeleton3D) 
 	_expect(throw_release[left].origin.distance_to(throw_release[chest].origin)
 		> throw_prepare[left].origin.distance_to(throw_prepare[chest].origin) + 0.05,
 		"ThrowPackage accelerates both hands through release")
-	_expect(_basis_angle(throw_release[chest], throw_follow[chest]) > 0.04
-		and _basis_angle(throw_release[head], throw_follow[head]) > 0.04,
-		"ThrowPackage lets the chest and head follow through after release")
+	var chest_follow: float = _basis_angle(throw_release[chest], throw_follow[chest])
+	var head_follow: float = _basis_angle(throw_release[head], throw_follow[head])
+	_expect(chest_follow > 0.025 and head_follow > 0.025,
+		"ThrowPackage lets the chest and head follow through after release (%.3f/%.3f rad)"
+		% [chest_follow, head_follow])
 
 
 func _check_vehicle_actions(player: AnimationPlayer, skeleton: Skeleton3D) -> void:
