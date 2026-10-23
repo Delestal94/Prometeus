@@ -41,11 +41,33 @@ const TURN_STEP_ABOVE: float = 1.5
 const TURN_STEP_BELOW: float = 0.8
 const TURN_RATE_SMOOTHING: float = 10.0
 const GelMotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
+const ANIM_DRIVE: StringName = &"Drive"
+const ANIM_CARRY_WALK: StringName = &"CarryWalk"
+const ANIM_STUMBLE: StringName = &"Stumble"
+const ANIM_BOX_HIT: StringName = &"BoxHit"
+const STUMBLE_ANIM_LOCK_MS: int = 1050
+const BOX_HIT_ANIM_LOCK_MS: int = 650
 ## Under this ground speed (m/s) the player stands (Idle), over it walks.
 const IDLE_BELOW_SPEED: float = 0.3
 ## Clips that loop (the glTF importer drops Blender's loop flag).
 const LOOPING: Array[StringName] = [
-	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, Player.ANIM_SIT, Player.ANIM_TURN]
+	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN,
+	ANIM_CARRY_WALK, Player.ANIM_SIT, ANIM_DRIVE, Player.ANIM_TURN]
+const GAIT_CLIPS: Array[StringName] = [
+	Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, ANIM_CARRY_WALK]
+const REACTION_CLIPS: Array[StringName] = [
+	ANIM_STUMBLE, &"Slip", &"Pushed", ANIM_BOX_HIT,
+	&"Scared", &"Dizzy", &"ShakeOffWater"]
+## Cross-fades are short into impacts, slower while settling out, and phase
+## preserving between gaits. Keeping the policy here makes every peer apply
+## the same authored timing to the replicated state.
+const GAIT_BLEND: float = 0.12
+const LOCOMOTION_BLEND: float = 0.18
+const TURN_BLEND: float = 0.20
+const ONE_SHOT_BLEND: float = 0.14
+const REACTION_IN_BLEND: float = 0.06
+const REACTION_OUT_BLEND: float = 0.18
+const SEAT_BLEND: float = 0.24
 
 ## The character's AnimationPlayer; null for a model without one (state still runs).
 var anim_player: AnimationPlayer
@@ -64,8 +86,9 @@ var _turn_yaw: float = 0.0
 var _anim_lock_until_msec: int = 0
 var _jump_airborne: bool = false
 var _jump_landing_elapsed: float = -1.0
-## Visual stride only. Delgada and the current rounded player stay at 1.0;
-## the gel appearance supplies its replicated leg-length factor.
+## Replicated presentation factor. The authored IK targets retain their
+## horizontal stride at every value; GelMotionFit therefore keeps gait tempo
+## tied to ground speed while the longer/shorter leg rests change reach.
 var _leg_length_factor: float = 1.0
 
 
@@ -73,6 +96,10 @@ func _init(player: Player, animation_player: AnimationPlayer, face: Node) -> voi
 	_player = player
 	_face = face
 	anim_player = animation_player
+	var gel_state := _player.get_node_or_null(^"GelProportions") as PlayerGelProportionSync
+	if gel_state != null:
+		_fit_to_proportions(gel_state.proportions)
+		gel_state.proportions_changed.connect(_fit_to_proportions)
 	if anim_player == null:
 		return
 	for loop_clip: StringName in LOOPING:
@@ -152,6 +179,14 @@ func set_leg_length_factor(value: float) -> void:
 	_leg_length_factor = clampf(value, GelMotionFit.MIN_LENGTH_FACTOR, GelMotionFit.MAX_LENGTH_FACTOR)
 
 
+func _fit_to_proportions(proportions: GelBodyProportions) -> void:
+	set_leg_length_factor(proportions.leg_length)
+
+
+func leg_length_factor() -> float:
+	return _leg_length_factor
+
+
 ## Samples the jump clip from the real ascent and landing instead of playing
 ## a crouch after leaving the floor.
 func update_jump(delta: float, ground_speed: float) -> void:
@@ -186,7 +221,7 @@ func update_jump(delta: float, ground_speed: float) -> void:
 func animate() -> void:
 	if anim_player == null:
 		return
-	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else Player.ANIM_SIT
+	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else _seat_clip()
 	var run_fallback: bool = false
 	if clip == Player.ANIM_WALK:
 		clip = _gait_clip()
@@ -196,6 +231,8 @@ func animate() -> void:
 	elif clip == Player.ANIM_PICKUP:
 		clip = pickup_clip()
 	elif clip == Player.ANIM_TURN and not anim_player.has_animation(Player.ANIM_TURN):
+		clip = Player.ANIM_IDLE
+	if not anim_player.has_animation(clip):
 		clip = Player.ANIM_IDLE
 	if anim_player.current_animation != String(clip):
 		_play_clip(clip)
@@ -210,7 +247,7 @@ func animate() -> void:
 		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
 			_player.locomotion_speed, RUN_AUTHORED_SPEED, _leg_length_factor, RUN_MIN_SCALE, 1.3
 		)
-	elif clip == Player.ANIM_WALK:
+	elif clip == Player.ANIM_WALK or clip == ANIM_CARRY_WALK:
 		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
 			_player.locomotion_speed, WALK_AUTHORED_SPEED, _leg_length_factor, 0.5,
 			RUN_FALLBACK_MAX_SCALE if run_fallback else 1.5
@@ -284,30 +321,60 @@ func _gait_clip() -> StringName:
 		_strolling = false
 	elif not _strolling and _player.locomotion_speed < STROLL_BELOW:
 		_strolling = true
+	if is_instance_valid(_player.carried_package) and anim_player.has_animation(ANIM_CARRY_WALK):
+		return ANIM_CARRY_WALK
 	return Player.ANIM_STROLL if _strolling and anim_player.has_animation(Player.ANIM_STROLL) else Player.ANIM_WALK
+
+
+func _seat_clip() -> StringName:
+	var path: NodePath = _player.seat_node_path
+	var last_name: StringName = path.get_name(path.get_name_count() - 1) if path.get_name_count() > 0 else &""
+	if last_name == &"DriverEyePoint" and anim_player.has_animation(ANIM_DRIVE):
+		return ANIM_DRIVE
+	return Player.ANIM_SIT
 
 
 ## The gaits all start on the left foot's touchdown, so switching between them
 ## keeps the cycle phase: the feet carry on instead of skating to a new step.
 func _play_clip(clip: StringName) -> void:
-	var gaits: Array[String] = [String(Player.ANIM_WALK), String(Player.ANIM_STROLL), String(Player.ANIM_RUN)]
 	var phase: float = -1.0
-	if anim_player.current_animation in gaits and String(clip) in gaits:
+	var previous := StringName(anim_player.current_animation)
+	if previous in GAIT_CLIPS and clip in GAIT_CLIPS:
 		phase = anim_player.current_animation_position / maxf(anim_player.current_animation_length, 0.001)
 	# A pickup whose height arrives late (anim_state replicated before the
 	# pick_up RPC) swaps blends in place instead of restarting the squat.
 	var pickup_time: float = -1.0
 	if _is_pickup_clip(StringName(anim_player.current_animation)) and _is_pickup_clip(clip):
 		pickup_time = anim_player.current_animation_position
-	# Idle <-> TurnInPlace blend a little longer: a step cut short settles.
-	var turn_blend: bool = clip == Player.ANIM_TURN or anim_player.current_animation == String(Player.ANIM_TURN)
-	anim_player.play(String(clip), 0.2 if phase >= 0.0 or turn_blend else 0.15)
+	anim_player.play(String(clip), transition_blend_time(previous, clip))
 	if phase >= 0.0:
 		anim_player.seek(phase * anim_player.current_animation_length)
 	elif pickup_time >= 0.0:
 		anim_player.seek(pickup_time)
 
 
-func _is_pickup_clip(clip: StringName) -> bool:
+static func transition_blend_time(from_clip: StringName, to_clip: StringName) -> float:
+	if from_clip.is_empty() or from_clip == to_clip:
+		return 0.0
+	if from_clip in GAIT_CLIPS and to_clip in GAIT_CLIPS:
+		return GAIT_BLEND
+	if to_clip in REACTION_CLIPS:
+		return REACTION_IN_BLEND
+	if from_clip in REACTION_CLIPS:
+		return REACTION_OUT_BLEND
+	if from_clip in [Player.ANIM_SIT, ANIM_DRIVE] \
+			or to_clip in [Player.ANIM_SIT, ANIM_DRIVE]:
+		return SEAT_BLEND
+	if from_clip == Player.ANIM_TURN or to_clip == Player.ANIM_TURN:
+		return TURN_BLEND
+	if _is_pickup_clip(from_clip) or _is_pickup_clip(to_clip) \
+			or from_clip == Player.ANIM_JUMP or to_clip == Player.ANIM_JUMP:
+		return ONE_SHOT_BLEND
+	if from_clip in GAIT_CLIPS or to_clip in GAIT_CLIPS:
+		return LOCOMOTION_BLEND
+	return ONE_SHOT_BLEND
+
+
+static func _is_pickup_clip(clip: StringName) -> bool:
 	return clip == Player.ANIM_PICKUP or clip == Player.ANIM_PICKUP_HIGH \
 			or String(clip).begins_with(String(PICKUP_BLEND_LIBRARY) + "/")
