@@ -35,6 +35,7 @@ func _run() -> void:
 		_check_manifest(player)
 		_check_carry(player, skeleton)
 		_check_package_actions(player, skeleton)
+		_check_animation_principles(player, skeleton)
 		_check_vehicle_actions(player, skeleton)
 		_check_doorbell(player, skeleton)
 	gel.free()
@@ -87,6 +88,51 @@ func _check_package_actions(player: AnimationPlayer, skeleton: Skeleton3D) -> vo
 		"DropPackage lowers both hands before release")
 	_expect(_worst_position(throw_end, idle) < 0.01, "ThrowPackage recovers into Idle")
 	_expect(_worst_position(drop_end, idle) < 0.01, "DropPackage recovers into Idle")
+
+
+func _check_animation_principles(player: AnimationPlayer, skeleton: Skeleton3D) -> void:
+	var idle: Array[Transform3D] = _pose(player, skeleton, &"Idle", 0.0)
+	var pelvis: int = skeleton.find_bone(&"pelvis")
+	var chest: int = skeleton.find_bone(&"chest")
+	var head: int = skeleton.find_bone(&"head")
+	var left: int = skeleton.find_bone(&"hand.L")
+	var right: int = skeleton.find_bone(&"hand.R")
+
+	var jump_launch: Array[Transform3D] = _pose(player, skeleton, &"Jump", 0.0)
+	var jump_apex: Array[Transform3D] = _pose(player, skeleton, &"Jump", 0.4)
+	var landing: Array[Transform3D] = _pose(player, skeleton, &"Jump", 0.98)
+	var rebound: Array[Transform3D] = _pose(player, skeleton, &"Jump", 1.2)
+	_expect(jump_launch[left].origin.distance_to(jump_apex[left].origin) > 0.22,
+		"Jump follows its low launch anticipation with a clear arm arc")
+	_expect(landing[pelvis].origin.y < idle[pelvis].origin.y - 0.12,
+		"Landing compresses the skeleton before runtime gel squash is layered on top")
+	_expect(rebound[pelvis].origin.y > landing[pelvis].origin.y + 0.08
+		and _basis_angle(landing[head], rebound[head]) > 0.05,
+		"Landing rebounds while the head follows through")
+
+	var pickup_rise: Array[Transform3D] = _pose(player, skeleton, &"PickUpPackage", 0.07)
+	var pickup_down: Array[Transform3D] = _pose(player, skeleton, &"PickUpPackage", 0.48)
+	var pickup_lift: Array[Transform3D] = _pose(player, skeleton, &"PickUpPackage", 1.3)
+	var pickup_settle: Array[Transform3D] = _pose(player, skeleton, &"PickUpPackage", 1.38)
+	_expect(pickup_rise[pelvis].origin.y > idle[pelvis].origin.y + 0.004
+		and pickup_down[pelvis].origin.y < idle[pelvis].origin.y - 0.15,
+		"PickUpPackage rises in anticipation before the squat")
+	_expect(pickup_lift[left].origin.y > pickup_down[left].origin.y + 0.25,
+		"PickUpPackage lifts the load along a readable hand arc")
+	_expect(_basis_angle(pickup_lift[chest], pickup_settle[chest]) > 0.01,
+		"PickUpPackage settles its weight once after the lift")
+
+	var throw_prepare: Array[Transform3D] = _pose(player, skeleton, &"ThrowPackage", 0.3)
+	var throw_release: Array[Transform3D] = _pose(player, skeleton, &"ThrowPackage", 0.52)
+	var throw_follow: Array[Transform3D] = _pose(player, skeleton, &"ThrowPackage", 0.66)
+	_expect(throw_prepare[pelvis].origin.y < idle[pelvis].origin.y - 0.025,
+		"ThrowPackage compresses in anticipation")
+	_expect(throw_release[left].origin.distance_to(throw_release[chest].origin)
+		> throw_prepare[left].origin.distance_to(throw_prepare[chest].origin) + 0.05,
+		"ThrowPackage accelerates both hands through release")
+	_expect(_basis_angle(throw_release[chest], throw_follow[chest]) > 0.04
+		and _basis_angle(throw_release[head], throw_follow[head]) > 0.04,
+		"ThrowPackage lets the chest and head follow through after release")
 
 
 func _check_vehicle_actions(player: AnimationPlayer, skeleton: Skeleton3D) -> void:
@@ -146,6 +192,10 @@ func _worst_position(first: Array[Transform3D], second: Array[Transform3D]) -> f
 	for bone: int in first.size():
 		worst = maxf(worst, first[bone].origin.distance_to(second[bone].origin))
 	return worst
+
+
+func _basis_angle(first: Transform3D, second: Transform3D) -> float:
+	return first.basis.get_rotation_quaternion().angle_to(second.basis.get_rotation_quaternion())
 
 
 func _expect(condition: bool, description: String) -> void:

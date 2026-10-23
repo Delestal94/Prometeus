@@ -125,7 +125,7 @@
     },
     "maximum_chain_attachment_error_m": 3.21326533747432e-07,
     "maximum_ankle_goal_error_m": 1.1567869294553018e-06,
-    "maximum_interaction_grip_error_m": 7.731391055031327e-07,
+    "maximum_interaction_grip_error_m": 7.86239263908441e-07,
     "maximum_pelvis_adjustment_m": 0.0,
     "endpoint_measurement": "baked keyframes; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous interpolation certification",
     "foot_joint_height_ranges_m": {
@@ -527,7 +527,7 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "779efe532641f4b17a4cf153c8d3a73db421aa77b5323f79e3dfd0136a1ce567",
+      "geometry_sha256": "c63cf91a26bf3f178a7b1bca55942a189deb472ea881b81e357bad827ccc599c",
       "morph_sha256": "be209ef4263976e1a1cebcbd1db3a09998d7f084e5c9753cdc011b325311c35b",
       "body_shape": {
         "lod_index": 2,
@@ -581,7 +581,7 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 53.823270874719086,
+            "adjacent_face_angle_p95_degrees": 53.82325157173518,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
             "sampled_edges": 238
           },
