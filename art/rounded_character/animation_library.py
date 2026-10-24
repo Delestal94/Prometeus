@@ -104,6 +104,28 @@ def blend(p, q, f):
         out[k] = lerp(p.get(k, NEUTRAL[k]), q.get(k, NEUTRAL[k]), f)
     return out
 
+def polish_action_curves(action):
+    """Keep dense authored samples smooth without allowing Bezier overshoot.
+
+    The clips are sampled at 60 Hz so the exact authored pose still exists on
+    every frame. Auto-clamped handles only soften the sub-frame path between
+    those samples; unlike free handles they cannot introduce a new extremum
+    that sinks a planted foot or flips an IK pole.
+    """
+    curve_count = 0
+    key_count = 0
+    for layer in action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                for curve in bag.fcurves:
+                    curve_count += 1
+                    for key in curve.keyframe_points:
+                        key.interpolation = 'BEZIER'
+                        key.handle_left_type = 'AUTO_CLAMPED'
+                        key.handle_right_type = 'AUTO_CLAMPED'
+                        key_count += 1
+    return {'curves': curve_count, 'keyframes': key_count}
+
 # --- pose parameters ------------------------------------------------------------
 # Angles in degrees, about world axes at rest: +pitch leans forward, +roll
 # tilts toward the character's left, +yaw turns toward the character's left.
@@ -919,13 +941,9 @@ def build(rig):
                 rig.keyframe_insert('["IK_brazo.%s"]' % side, frame=frame)
                 rig.keyframe_insert('["IK_pierna.%s"]' % side, frame=frame)
         action.frame_range = (0, last); action.use_frame_range = True
-        # Dense sampling preserves authored velocities; Bezier overshoot can
-        # otherwise sink toes between samples or overshoot knee pole targets.
-        for layer in action.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    for curve in bag.fcurves:
-                        for key in curve.keyframe_points: key.interpolation = 'LINEAR'
+        # Dense samples preserve the authored arcs; clamped handles smooth the
+        # sub-frame path without the overshoot of unrestricted Bezier curves.
+        polish_action_curves(action)
     rig.animation_data.action = bpy.data.actions['Idle']
     poser.apply(idle(0.))
     return DURATIONS

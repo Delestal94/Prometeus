@@ -380,7 +380,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   dibujado a mano que choque con la simulación.
 - [x] **S-311.82** Anticipación, squash & stretch y follow-through en los clips clave (salto, lanzar,
   aterrizar, levantar), con los 12 principios de animación.
-- [ ] **S-311.83** Pulido de estudio: curvas revisadas (arcos, overlap, sin interpolaciones lineales
+- [x] **S-311.83** Pulido de estudio: curvas revisadas (arcos, overlap, sin interpolaciones lineales
   duras), turntable y capturas en movimiento por clip en `art/gel_character/review/`, con Delgada, Flaca
   y un extremo.
 - [ ] **S-311.84** Los clips dependen solo del estado replicado: los otros ven la misma animación (test

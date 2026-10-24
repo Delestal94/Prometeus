@@ -41,6 +41,7 @@ decir de dónde vino cada una (agregadas por el mantenimiento del 2026-10-01).
 | 2026-09-30 | `art/marketing/capturas/2026-09-30_{salida_deposito,curva_bosque,cruce_tren,puente_lluvia,casa_noche}.png` | Capturas del juego (`tests/render_store_shots.gd`, N-316, #121) | Capturas de tienda |
 | 2026-10-01 | `assets/textures/characters/faces/{eyes,brows,mouth}_*.svg` | Dibujadas por código (`art/rounded_character/build_faces.py`, N-506, #151) | Caras del personaje |
 | 2026-10-01 | `art/rounded_character/review/{customization_*,face_lineup_*}.png` | Capturas del juego (`tests/render_character_faces.gd`, N-506, #151) | Revisión; no son assets del juego |
+| 2026-10-24 | `art/gel_character/review/s311_83_{turntable,motion_*}.png` | Capturas del juego (`tests/render_gel_animation_review.gd`, S-311.83) | Revisión de los 23 clips en Delgada, Flaca y un extremo seguro; no son assets del juego |
 | 2026-10-01 | `assets/textures/depot/tx_depot_{mural_brand,cork_photos,employee_month}.png` | Pillow + numpy (`assets/tools/depot_textures/`; las fotos del corcho son recortes de capturas del juego), N-319, #145 | Texturas del depósito |
 | 2026-10-01 | `assets/textures/depot/tx_depot_{pictograms_512,cage_mesh_256}.png` | Dibujadas por código (`assets/tools/build_depot_props.py`), N-319, #145 | Texturas del depósito |
 | 2026-10-01 | `art/concept/loading/loading_bg_seed1407.png` → `assets/ui/backgrounds/tx_ui_loading_background_1920.png` | 1407 (Z-Image Turbo, ComfyUI 0.37) | Fondo de la pantalla de carga (N-407) | ver `art/concept/loading/prompt.txt` |

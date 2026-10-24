@@ -127,7 +127,17 @@
     "maximum_ankle_goal_error_m": 1.1567869294553018e-06,
     "maximum_interaction_grip_error_m": 7.86239263908441e-07,
     "maximum_pelvis_adjustment_m": 0.0,
-    "endpoint_measurement": "baked keyframes; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous interpolation certification",
+    "curve_review": {
+      "sample_rate_hz": 60,
+      "source_interpolation": "BEZIER",
+      "handle_type": "AUTO_CLAMPED",
+      "linear_keyframes": 0,
+      "curves": 3220,
+      "keyframes": 288820,
+      "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
+      "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
+    },
+    "endpoint_measurement": "baked 60 Hz keyframes with auto-clamped sub-frame curves; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous-space collision certification",
     "foot_joint_height_ranges_m": {
       "Idle": [
         0.15999871492385864,

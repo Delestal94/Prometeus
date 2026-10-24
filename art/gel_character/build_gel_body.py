@@ -912,7 +912,7 @@ def refine_joint_weights(obj, rig):
 def bake_clips(source, target):
     from gel_body_motion import adapt_pose
     sys.path.insert(0, str(ROOT/'art/rounded_character'))
-    from animation_library import build, FPS, DURATIONS
+    from animation_library import build, FPS, DURATIONS, polish_action_curves
     bpy.context.scene.render.fps = FPS
     bpy.context.view_layer.objects.active = source
     build(source)
@@ -934,6 +934,8 @@ def bake_clips(source, target):
     max_pelvis_adjustment = 0.
     unreachable_by_clip = {}
     foot_ranges = {}
+    polished_curves = 0
+    polished_keyframes = 0
     for name, duration in DURATIONS.items():
         source.animation_data.action = source_actions[name]
         action = bpy.data.actions.new(name)
@@ -998,12 +1000,9 @@ def bake_clips(source, target):
             feet.extend(target.pose.bones['foot.'+side].head.z for side in 'LR')
         action.frame_range = (0,last)
         action.use_frame_range = True
-        for layer in action.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    for curve in bag.fcurves:
-                        for key in curve.keyframe_points:
-                            key.interpolation = 'LINEAR'
+        curve_report = polish_action_curves(action)
+        polished_curves += curve_report['curves']
+        polished_keyframes += curve_report['keyframes']
         foot_ranges[name] = [min(feet), max(feet)]
     source.animation_data.action = None
     for action in source_actions.values():
@@ -1024,7 +1023,17 @@ def bake_clips(source, target):
             'maximum_ankle_goal_error_m': max_ankle_goal_error,
             'maximum_interaction_grip_error_m': max_interaction_grip_error,
             'maximum_pelvis_adjustment_m': max_pelvis_adjustment,
-            'endpoint_measurement': 'baked keyframes; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous interpolation certification',
+            'curve_review': {
+                'sample_rate_hz': FPS,
+                'source_interpolation': 'BEZIER',
+                'handle_type': 'AUTO_CLAMPED',
+                'linear_keyframes': 0,
+                'curves': polished_curves,
+                'keyframes': polished_keyframes,
+                'export_sampling': 'forced at authored 60 Hz for deterministic glTF playback',
+                'scope': 'sub-frame continuity; finite visual captures remain the arc and overlap review',
+            },
+            'endpoint_measurement': 'baked 60 Hz keyframes with auto-clamped sub-frame curves; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous-space collision certification',
             'foot_joint_height_ranges_m': foot_ranges,
             'foot_plant_status': 'joint ranges measured; deformed sole contact requires independent pose capture',
             'retarget': 'source world rotation delta and root translation scale 0.5; gel two-bone IK preserves source-relative ankles and interaction grips; connected chest reach correction for pickups'}
