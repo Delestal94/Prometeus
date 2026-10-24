@@ -18,7 +18,7 @@ extends SceneTree
 ##   a remote jog (Walk above walking pace) counts as running;
 ## - PlayerAnimator: Run picked with hysteresis, plays "Run" if the library has
 ##   it and Walk sped up if not; the other peer sees the same state
-##   (anim_state / locomotion_speed are replicated) and hears the footfalls;
+##   (anim_state / anim_clip / locomotion_speed are replicated) and hears the footfalls;
 ## - the real character (sm_char_player_rounded.glb) ships its own looping "Run"
 ##   clip (N-115.3), played at its measured proportion-aware gait rate, never
 ##   the Walk fallback.
@@ -398,8 +398,9 @@ func _test_other_peer_sees_the_run(level: Node) -> void:
 	_expect(not remote.is_local(), "The second crew member belongs to another peer")
 	var sprint: Node = remote.get_node(^"Sprint")
 	_expect(not sprint.running, "A standing peer is not running")
-	# What the owner replicates: anim_state Run and the pace.
+	# What the owner replicates: anim_state, the resolved clip and the pace.
 	remote.anim_state = Player.ANIM_RUN
+	remote.anim_clip = Player.ANIM_RUN
 	remote.locomotion_speed = 6.0
 	var footsteps_before: int = sprint.steps_taken
 	for i: int in 90:
@@ -416,6 +417,7 @@ func _test_other_peer_sees_the_run(level: Node) -> void:
 			"...and sees the character's Run clip at its authored pace (got %s x%.2f)" % [
 			playing.current_animation, playing.speed_scale])
 	remote.anim_state = Player.ANIM_WALK
+	remote.anim_clip = Player.ANIM_WALK
 	remote.locomotion_speed = Player.WALK_SPEED
 	await physics_frame
 	await physics_frame
@@ -424,8 +426,9 @@ func _test_other_peer_sees_the_run(level: Node) -> void:
 	var replicated: Array[String] = []
 	for path: NodePath in synchronizer.replication_config.get_properties():
 		replicated.append(String(path))
-	_expect(replicated.has(".:anim_state") and replicated.has(".:locomotion_speed"),
-			"The run travels as anim_state plus the pace, which the synchronizer replicates (got %s)" % [replicated])
+	_expect(replicated.has(".:anim_state") and replicated.has(".:anim_clip") \
+			and replicated.has(".:locomotion_speed"),
+			"The run travels as state, exact clip and pace through the synchronizer (got %s)" % [replicated])
 	var footstep: AudioStreamWAV = SynthAudioSteps.footstep()
 	_expect(footstep.data.size() > 1000 and footstep == SynthAudioSteps.footstep(),
 			"The footfall is a shared synthesized sound")

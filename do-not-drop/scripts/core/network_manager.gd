@@ -170,11 +170,13 @@ const MAX_PLAYERS: int = 8
 ## with host_only (company mode, D-0910.2).
 ## 60: a package no longer replicates hold_offset and submit_carry_transform drops its
 ## `in_hands`: every peer draws a box held on foot in its carrier's hands from that player's
-## own pose, and the host sends its pose only every 5 s meanwhile (D-2002.5).
+## own pose, and the host sends its pose only every 5 s meanwhile (D-2002.5);
+## 61: player.tscn replicates anim_clip, the exact clip chosen by the player authority:
+## remote copies no longer derive gait/pickup variants from transient local state (S-311.84).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 60
+const PROTOCOL_VERSION: int = 61
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
