@@ -1,7 +1,7 @@
 class_name DepotWorker
 extends AnimatableBody3D
-## One of the depot's staff. Uses the crew's own character model in a hi-vis
-## uniform, so the place is never empty while you get ready.
+## One of the depot's staff. Uses the same named-bone gel rig and clips as the
+## crew, with a preset applied at spawn and no per-character animation edits.
 ##
 ## A worker either stands at a post (the counter, the office) or walks a loop
 ## of waypoints, pausing at each. Either way they turn to face a player who
@@ -15,15 +15,17 @@ extends AnimatableBody3D
 ## client predicting its truck would be stopped where the host's drove on.
 
 const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_through.gd")
-const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
+const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
+const DEFAULT_SKIN: StringName = &"milk"
 const GREET_DISTANCE: float = 3.2
 const TURN_SPEED: float = 4.0
 const LINE_SECONDS: float = 3.5
 const LINE_COOLDOWN: float = 14.0
 
 @export var uniform: Color = Color("ff9f1c")
+@export var proportion_preset: StringName = &"delgada"
 @export var walk_speed: float = 1.25
 ## Seconds spent at each waypoint before moving on.
 @export var pause_seconds: float = 2.5
@@ -57,7 +59,8 @@ func _ready() -> void:
 	_visual = CHARACTER_SCENE.instantiate()
 	_visual.name = "Body"
 	add_child(_visual)
-	_tint()
+	if not configure_character(_visual, uniform, proportion_preset):
+		push_warning("Depot worker could not configure gel preset %s" % proportion_preset)
 	_anim = _visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _anim != null:
 		for clip: StringName in [ANIM_IDLE, ANIM_WALK]:
@@ -152,16 +155,24 @@ func _play(clip: StringName) -> void:
 		_anim.play(clip, 0.25)
 
 
-## Same approach as the player's uniform: the suit material is duplicated per
-## worker, never edited in place on the shared imported resource.
-func _tint() -> void:
-	for node: Node in _visual.find_children("*", "MeshInstance3D", true, false):
-		var mesh_instance := node as MeshInstance3D
-		if mesh_instance.mesh == null or mesh_instance.mesh.get_surface_count() == 0:
-			continue
-		var suit := mesh_instance.mesh.surface_get_material(0) as BaseMaterial3D
-		if suit != null:
-			var tinted := suit.duplicate() as BaseMaterial3D
-			tinted.albedo_color = uniform
-			mesh_instance.set_surface_override_material(0, tinted)
-		return
+## Shared setup for standing/walking staff and the forklift operator. The
+## shaper resolves lengths by stable bone names, so every preset reuses the
+## exact same imported clips without an NPC-specific retarget pass.
+static func configure_character(
+	character: Node,
+	team_color: Color,
+	preset_id: StringName
+) -> bool:
+	var proportions: GelBodyProportions = GelProportionPresets.load_preset(preset_id)
+	if proportions == null:
+		return false
+	var shaper := GelBodyShaper.new()
+	if not shaper.setup(character) or not shaper.apply(proportions):
+		return false
+	var settings: Node = character.get_node_or_null(^"/root/GameSettings")
+	var opaque: bool = bool(settings.call(&"uses_opaque_gel")) if settings != null else false
+	PlayerAppearance.set_gel_material(character, opaque)
+	PlayerAppearance.enable_shadows(character)
+	var skin_applied: bool = PlayerAppearance.apply_gel_skin(character, DEFAULT_SKIN, team_color)
+	character.set_meta(&"gel_proportion_preset", preset_id)
+	return skin_applied
