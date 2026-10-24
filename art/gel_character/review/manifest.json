@@ -1,0 +1,299 @@
+{
+  "animations": [
+    {
+      "clip": "Idle",
+      "duration_seconds": 6.0,
+      "file": "s311_83_motion_idle.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Walk",
+      "duration_seconds": 0.333333,
+      "file": "s311_83_motion_walk.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Stroll",
+      "duration_seconds": 0.6,
+      "file": "s311_83_motion_stroll.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Run",
+      "duration_seconds": 0.333333,
+      "file": "s311_83_motion_run.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Jump",
+      "duration_seconds": 1.6,
+      "file": "s311_83_motion_jump.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "PickUpPackage",
+      "duration_seconds": 1.6,
+      "file": "s311_83_motion_pick_up_package.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "PickUpHigh",
+      "duration_seconds": 1.6,
+      "file": "s311_83_motion_pick_up_high.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Sit",
+      "duration_seconds": 4.0,
+      "file": "s311_83_motion_sit.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "TurnInPlace",
+      "duration_seconds": 0.8,
+      "file": "s311_83_motion_turn_in_place.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "CarryWalk",
+      "duration_seconds": 0.333333,
+      "file": "s311_83_motion_carry_walk.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "ThrowPackage",
+      "duration_seconds": 1.0,
+      "file": "s311_83_motion_throw_package.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "DropPackage",
+      "duration_seconds": 0.9,
+      "file": "s311_83_motion_drop_package.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Drive",
+      "duration_seconds": 2.0,
+      "file": "s311_83_motion_drive.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "EnterTruck",
+      "duration_seconds": 1.2,
+      "file": "s311_83_motion_enter_truck.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "ExitTruck",
+      "duration_seconds": 1.2,
+      "file": "s311_83_motion_exit_truck.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "RingDoorbell",
+      "duration_seconds": 1.1,
+      "file": "s311_83_motion_ring_doorbell.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Stumble",
+      "duration_seconds": 1.2,
+      "file": "s311_83_motion_stumble.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Slip",
+      "duration_seconds": 1.3,
+      "file": "s311_83_motion_slip.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Pushed",
+      "duration_seconds": 0.9,
+      "file": "s311_83_motion_pushed.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "BoxHit",
+      "duration_seconds": 0.8,
+      "file": "s311_83_motion_box_hit.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Scared",
+      "duration_seconds": 1.0,
+      "file": "s311_83_motion_scared.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "Dizzy",
+      "duration_seconds": 2.4,
+      "file": "s311_83_motion_dizzy.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    },
+    {
+      "clip": "ShakeOffWater",
+      "duration_seconds": 1.8,
+      "file": "s311_83_motion_shake_off_water.png",
+      "sample_fractions": [
+        0.18,
+        0.5,
+        0.82
+      ]
+    }
+  ],
+  "cell_size": [
+    320,
+    240
+  ],
+  "extreme_values": {
+    "arm_length": 1.15,
+    "arm_thickness": 0.55,
+    "belly": 0.6,
+    "chest": 0.6,
+    "foot_size": 0.7,
+    "general_thickness": -0.55,
+    "hand_size": 0.7,
+    "head_shape": -0.5,
+    "head_size": 1.15,
+    "hips": 0.6,
+    "leg_length": 0.85,
+    "leg_thickness": 0.55,
+    "neck_length": 1.1,
+    "neck_thickness": 0.55,
+    "shoulders": 0.55,
+    "torso_length": 0.85,
+    "total_height": 0.9
+  },
+  "files": [
+    "s311_83_turntable.png",
+    "s311_83_motion_idle.png",
+    "s311_83_motion_walk.png",
+    "s311_83_motion_stroll.png",
+    "s311_83_motion_run.png",
+    "s311_83_motion_jump.png",
+    "s311_83_motion_pick_up_package.png",
+    "s311_83_motion_pick_up_high.png",
+    "s311_83_motion_sit.png",
+    "s311_83_motion_turn_in_place.png",
+    "s311_83_motion_carry_walk.png",
+    "s311_83_motion_throw_package.png",
+    "s311_83_motion_drop_package.png",
+    "s311_83_motion_drive.png",
+    "s311_83_motion_enter_truck.png",
+    "s311_83_motion_exit_truck.png",
+    "s311_83_motion_ring_doorbell.png",
+    "s311_83_motion_stumble.png",
+    "s311_83_motion_slip.png",
+    "s311_83_motion_pushed.png",
+    "s311_83_motion_box_hit.png",
+    "s311_83_motion_scared.png",
+    "s311_83_motion_dizzy.png",
+    "s311_83_motion_shake_off_water.png"
+  ],
+  "row_order": [
+    "Delgada",
+    "Flaca",
+    "Extremo seguro"
+  ],
+  "task": "S-311.83",
+  "turntable_angles_degrees": [
+    0.0,
+    45.0,
+    90.0,
+    135.0,
+    180.0,
+    225.0,
+    270.0,
+    315.0
+  ]
+}
