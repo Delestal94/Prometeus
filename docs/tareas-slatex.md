@@ -383,7 +383,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.83** Pulido de estudio: curvas revisadas (arcos, overlap, sin interpolaciones lineales
   duras), turntable y capturas en movimiento por clip en `art/gel_character/review/`, con Delgada, Flaca
   y un extremo.
-- [ ] **S-311.84** Los clips dependen solo del estado replicado: los otros ven la misma animación (test
+- [x] **S-311.84** Los clips dependen solo del estado replicado: los otros ven la misma animación (test
   de dos pares).
 - [ ] **S-311.85** Los mismos clips funcionan con cualquier proporción y en los NPC del depósito sin
   retoque a mano (retarget por nombres de huesos; test de clips presentes).

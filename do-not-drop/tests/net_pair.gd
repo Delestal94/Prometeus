@@ -173,7 +173,8 @@ func _run_host() -> void:
 		&"night_neon", &"layered_gummy"), $SkinCheck.detail)
 	_expect(await $RagdollCheck.run_host(host_player, _client_peer_id),
 		$RagdollCheck.detail)
-
+	_expect(await $AnimationCheck.run_host(host_player, client_player, _client_peer_id),
+		$AnimationCheck.detail)
 	# N-235: admitted and loaded, both ends drop a silent peer within the
 	# session timeout, not the 45 s load budget -- once the host's settle
 	# margin (settle_delay_seconds) has passed.

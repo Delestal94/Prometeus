@@ -6,9 +6,12 @@ extends RefCounted
 ##   a one-shot (Jump, PickUpPackage) that locks it for a moment -- and the
 ##   jump's sampled time. Player replicates both through its
 ##   MultiplayerSynchronizer; nothing here is synced on its own.
-## - Playback (every peer): turns the replicated anim_state into the clip
-##   that actually plays -- the gait for the speed, the pickup blend for the
-##   box's height -- keeping the step phase across gait changes.
+## - Clip choice (owning peer only): turns that state into the exact clip --
+##   the gait for the speed, the pickup blend for the box's height -- and
+##   publishes anim_clip through Player's MultiplayerSynchronizer.
+## - Playback (every peer): plays only replicated anim_clip, keeping the step
+##   phase across gait changes. Remote copies never infer a clip from local
+##   carried-package timing or their own gait hysteresis.
 ##
 ## Only reads and writes the Player's public state.
 
@@ -215,27 +218,45 @@ func update_jump(delta: float, ground_speed: float) -> void:
 # --- Playback (every peer) ------------------------------------------------------
 
 
-## Runs for every peer's copy of the player, local or not -- anim_state is
-## only ever written by the owning peer and reaches everyone else through the
-## MultiplayerSynchronizer, same as seat_node_path.
+## Runs for every peer's copy of the player. The owning peer resolves the
+## exact clip into anim_clip; all copies then play that replicated value.
 func animate() -> void:
+	var clip: StringName = _player.anim_clip
+	if _player.is_local():
+		clip = _resolve_owned_clip()
+		if _player.anim_clip != clip:
+			_player.anim_clip = clip
 	if anim_player == null:
 		return
-	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else _seat_clip()
-	var run_fallback: bool = false
-	if clip == Player.ANIM_WALK:
-		clip = _gait_clip()
-	elif clip == Player.ANIM_RUN and not anim_player.has_animation(Player.ANIM_RUN):
+	_ensure_replicated_clip(clip)
+	var run_fallback: bool = clip == Player.ANIM_RUN and not anim_player.has_animation(Player.ANIM_RUN)
+	if run_fallback:
 		clip = Player.ANIM_WALK
-		run_fallback = true
-	elif clip == Player.ANIM_PICKUP:
-		clip = pickup_clip()
-	elif clip == Player.ANIM_TURN and not anim_player.has_animation(Player.ANIM_TURN):
-		clip = Player.ANIM_IDLE
 	if not anim_player.has_animation(clip):
 		clip = Player.ANIM_IDLE
 	if anim_player.current_animation != String(clip):
 		_play_clip(clip)
+	_apply_playback(clip, run_fallback)
+
+
+## Only the owner calls this. Everything it consults that is not replicated
+## is collapsed into anim_clip before another peer renders the character.
+func _resolve_owned_clip() -> StringName:
+	if anim_player == null:
+		return _player.anim_state
+	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else _seat_clip()
+	if clip == Player.ANIM_WALK:
+		clip = _gait_clip()
+	elif clip == Player.ANIM_PICKUP:
+		clip = pickup_clip()
+	elif clip == Player.ANIM_TURN and not anim_player.has_animation(Player.ANIM_TURN):
+		clip = Player.ANIM_IDLE
+	if clip != Player.ANIM_RUN and not anim_player.has_animation(clip):
+		clip = Player.ANIM_IDLE
+	return clip
+
+
+func _apply_playback(clip: StringName, run_fallback: bool) -> void:
 	if clip == Player.ANIM_JUMP:
 		anim_player.speed_scale = 0.0
 		anim_player.seek(_player.jump_anim_time, true)
@@ -260,11 +281,27 @@ func animate() -> void:
 		anim_player.speed_scale = 1.0
 
 
+## A blended pickup clip is generated lazily per AnimationPlayer. The owner
+## created its copy while resolving anim_clip; a remote peer creates the same
+## deterministic blend from the replicated step name, without needing the
+## owner's package or pickup height.
+func _ensure_replicated_clip(clip: StringName) -> void:
+	var prefix: String = String(PICKUP_BLEND_LIBRARY) + "/"
+	if anim_player.has_animation(clip) or not String(clip).begins_with(prefix):
+		return
+	var step: int = String(clip).trim_prefix(prefix).to_int()
+	_pickup_clip_for_step(step)
+
+
 ## The pickup clip for the player's pickup_high_weight: either authored clip
 ## at the ends, a baked blend of both in between (quantised, so at most a
 ## handful exist).
 func pickup_clip() -> StringName:
 	var step: int = roundi(_player.pickup_high_weight * PICKUP_BLEND_STEPS)
+	return _pickup_clip_for_step(step)
+
+
+func _pickup_clip_for_step(step: int) -> StringName:
 	if step <= 0 or not anim_player.has_animation(Player.ANIM_PICKUP_HIGH):
 		return Player.ANIM_PICKUP
 	if step >= PICKUP_BLEND_STEPS:

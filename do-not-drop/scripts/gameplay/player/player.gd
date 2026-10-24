@@ -129,7 +129,10 @@ var _body_visual: Node3D = null
 ## ever computed on the owning peer (is_local()), same authority split as
 ## seat_node_path above.
 var anim_state: StringName = ANIM_IDLE
-## Picks anim_state (owner) and plays it (every peer); see PlayerAnimator.
+## Exact clip selected by the owner and replicated so copies never redo that
+## choice from transient local data (carried_package or gait hysteresis).
+var anim_clip: StringName = ANIM_IDLE
+## Picks anim_state/anim_clip (owner) and plays anim_clip (every peer); see PlayerAnimator.
 var animator: PlayerAnimator
 ## Presentation state authored by the owning peer, replicated with anim_state.
 ## Scales the gait clips (see PlayerAnimator.WALK_AUTHORED_SPEED); jump samples the real
