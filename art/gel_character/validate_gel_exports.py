@@ -21,11 +21,14 @@ DURATIONS = {'Idle': 6., 'Walk': 1/3, 'Stroll': .6, 'Run': 1/3,
              'ThrowPackage': 1., 'DropPackage': .9, 'Drive': 2.,
              'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1,
              'Stumble': 1.2, 'Slip': 1.3, 'Pushed': .9, 'BoxHit': .8,
-             'Scared': 1., 'Dizzy': 2.4, 'ShakeOffWater': 1.8}
+             'Scared': 1., 'Dizzy': 2.4, 'ShakeOffWater': 1.8,
+             'Wave': 2.2, 'Clap': 2.4, 'Facepalm': 2.2, 'Shrug': 2.,
+             'Point': 2., 'ThumbsUp': 2., 'MeltAndReturn': 3.,
+             'ShakeLikeDog': 1.8}
 EXPECTED_SAMPLES = len(DURATIONS) * 5 * 3 * 3
 
 
-def validate_exports(directory):
+def validate_exports(directory, animation_names=None):
     states = {
         'base': [0.]*len(MORPH_NAMES),
         'general_thickness+1': [
@@ -58,7 +61,9 @@ def validate_exports(directory):
         })
         errors.extend(f'LOD{lod} static: {error}' for error in static_errors)
         for state, weights in states.items():
-            failures, report = check_poses(path, lod, morph_weights=weights)
+            failures, report = check_poses(
+                path, lod, morph_weights=weights,
+                animation_names=animation_names)
             samples = report.get('samples', [])
             result['sample_count'] += len(samples)
             result['animated'].append({
@@ -70,10 +75,12 @@ def validate_exports(directory):
             })
             errors.extend(f'LOD{lod} {state}: {error}' for error in failures)
     result['errors'] = errors
-    result['valid'] = not errors and result['sample_count'] == EXPECTED_SAMPLES
-    if result['sample_count'] != EXPECTED_SAMPLES:
+    expected_samples = (len(animation_names) if animation_names is not None
+                        else len(DURATIONS)) * 5 * 3 * 3
+    result['valid'] = not errors and result['sample_count'] == expected_samples
+    if result['sample_count'] != expected_samples:
         result['errors'].append(
-            f"Expected {EXPECTED_SAMPLES} animated samples, got {result['sample_count']}")
+            f"Expected {expected_samples} animated samples, got {result['sample_count']}")
     return result
 
 
@@ -81,8 +88,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', type=Path, default=DEFAULT_DIRECTORY)
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--clips', nargs='+', choices=sorted(DURATIONS),
+                        help='validate only these clips across every LOD/morph state')
     args = parser.parse_args()
-    report = validate_exports(args.directory)
+    report = validate_exports(args.directory, args.clips)
     encoded = json.dumps(report, indent=2)+'\n'
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

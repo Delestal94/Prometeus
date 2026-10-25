@@ -390,7 +390,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### L. Emotes graciosos y bailes (86-91)
 
-- [ ] **S-311.86** 8 emotes: saludar, aplaudir, facepalm, encogerse de hombros, señalar, pulgar arriba,
+- [x] **S-311.86** 8 emotes: saludar, aplaudir, facepalm, encogerse de hombros, señalar, pulgar arriba,
   derretirse al piso y volver, sacudirse como un perro.
 - [ ] **S-311.87** 6 animaciones de gelatina pura: panqueque, chicle estirado, rebote de pelota,
   dividirse en dos y juntarse, temblar de frío, inflarse.

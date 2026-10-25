@@ -118,15 +118,18 @@ def pose_surface(points, faces, joints, weights, transforms, trajectory_keys):
     return contacts, flipped
 
 
-def check(path, lod, fractions=(0., .25, .5, .75, 1.), morph_weights=None):
+def check(path, lod, fractions=(0., .25, .5, .75, 1.), morph_weights=None,
+          animation_names=None):
     """Validate finite samples of every supplied GLB clip; return errors/report."""
     try:
-        return check_asset(Asset(Path(path)), lod, fractions, morph_weights)
+        return check_asset(Asset(Path(path)), lod, fractions, morph_weights,
+                           animation_names)
     except (ValueError, KeyError, IndexError, TypeError, OSError) as error:
         return [str(error)], {'lod': lod, 'samples': [], 'scope': 'finite samples only'}
 
 
-def check_asset(asset, lod, fractions=(0., .25, .5, .75, 1.), morph_weights=None):
+def check_asset(asset, lod, fractions=(0., .25, .5, .75, 1.), morph_weights=None,
+                animation_names=None):
     errors = []
     report = {'lod': lod, 'samples': [], 'scope':
               'all supplied clips at listed fractions and fixed morph weights; '
@@ -193,7 +196,13 @@ def check_asset(asset, lod, fractions=(0., .25, .5, .75, 1.), morph_weights=None
             raise ValueError('Inverse bind count mismatch')
         if not doc.get('animations'):
             raise ValueError('Pose checker requires animation clips')
+        selected = set(animation_names) if animation_names is not None else None
+        matched = set()
         for animation in doc['animations']:
+            name = animation.get('name', '')
+            if selected is not None and name not in selected:
+                continue
+            matched.add(name)
             channels, starts, ends = [], [], []
             for channel in animation['channels']:
                 sampler = animation['samplers'][channel['sampler']]
@@ -242,6 +251,9 @@ def check_asset(asset, lod, fractions=(0., .25, .5, .75, 1.), morph_weights=None
                 if contacts or flipped:
                     errors.append(f"{sample['clip']} at {time:g}: {len(contacts)} contacts, "
                                   f"{len(flipped)} orientation failures")
+        if selected is not None and matched != selected:
+            raise ValueError('Requested animations missing: '
+                             +', '.join(sorted(selected-matched)))
         report['morph_weights'] = morphs
         report['fractions'] = list(fractions)
     except (ValueError, KeyError, IndexError, TypeError, ZeroDivisionError) as error:
