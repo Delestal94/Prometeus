@@ -24,7 +24,15 @@
       "BoxHit": 0.8,
       "Scared": 1.0,
       "Dizzy": 2.4,
-      "ShakeOffWater": 1.8
+      "ShakeOffWater": 1.8,
+      "Wave": 2.2,
+      "Clap": 2.4,
+      "Facepalm": 2.2,
+      "Shrug": 2.0,
+      "Point": 2.0,
+      "ThumbsUp": 2.0,
+      "MeltAndReturn": 3.0,
+      "ShakeLikeDog": 1.8
     },
     "maximum_rotation_error_radians": 0.0,
     "maximum_bone_length_error_m": 3.8222786719055435e-07,
@@ -121,6 +129,38 @@
       "ShakeOffWater": {
         "distance_m": 0.0,
         "time_s": 0.0
+      },
+      "Wave": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Clap": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Facepalm": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Shrug": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Point": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ThumbsUp": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "MeltAndReturn": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ShakeLikeDog": {
+        "distance_m": 0.0,
+        "time_s": 0.0
       }
     },
     "maximum_chain_attachment_error_m": 3.21326533747432e-07,
@@ -132,8 +172,8 @@
       "source_interpolation": "BEZIER",
       "handle_type": "AUTO_CLAMPED",
       "linear_keyframes": 0,
-      "curves": 3220,
-      "keyframes": 288820,
+      "curves": 4340,
+      "keyframes": 437780,
       "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
       "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
     },
@@ -230,6 +270,38 @@
       "ShakeOffWater": [
         0.1599985808134079,
         0.15999944508075714
+      ],
+      "Wave": [
+        0.15999895334243774,
+        0.1599990278482437
+      ],
+      "Clap": [
+        0.1599985659122467,
+        0.15999923646450043
+      ],
+      "Facepalm": [
+        0.15999718010425568,
+        0.15999919176101685
+      ],
+      "Shrug": [
+        0.15999820828437805,
+        0.15999926626682281
+      ],
+      "Point": [
+        0.1599988043308258,
+        0.15999934077262878
+      ],
+      "ThumbsUp": [
+        0.15999895334243774,
+        0.1599990278482437
+      ],
+      "MeltAndReturn": [
+        -0.21500088274478912,
+        0.1599990278482437
+      ],
+      "ShakeLikeDog": [
+        0.1599971354007721,
+        0.15999943017959595
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -529,7 +601,7 @@
         "height_m": 1.7549998760710537,
         "head_diameter_m": 0.4874519407749176,
         "arm_shoulder_to_hand_m": 0.648615026473999,
-        "torso_waist_width_m": 0.4191860109567642,
+        "torso_waist_width_m": 0.41141435503959656,
         "foot_width_m": 0.25846489518880844,
         "foot_forward_reach_m": 0.19561456143856049,
         "foot_depth_m": 0.24271920323371887,
@@ -537,8 +609,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "c63cf91a26bf3f178a7b1bca55942a189deb472ea881b81e357bad827ccc599c",
-      "morph_sha256": "be209ef4263976e1a1cebcbd1db3a09998d7f084e5c9753cdc011b325311c35b",
+      "geometry_sha256": "e56af1ae506d5df25542a86b9bf1540b718ca1d78d6b3b3a20cc9a5f28edb032",
+      "morph_sha256": "aeb10beb9b9de1d1b826bb155d0a0505d4da045b068edb0fe0debc7b0c40c968",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -593,12 +665,12 @@
           "neck_shoulders": {
             "adjacent_face_angle_p95_degrees": 53.82325157173518,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
-            "sampled_edges": 238
+            "sampled_edges": 243
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 53.61382580799235,
+            "adjacent_face_angle_p95_degrees": 53.63154322028392,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
-            "sampled_edges": 167
+            "sampled_edges": 163
           }
         }
       }

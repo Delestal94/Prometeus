@@ -111,6 +111,18 @@ class PoseValidationTests(unittest.TestCase):
         errors, _ = check_asset(toy, 0)
         self.assertIn('Node hierarchy cycle', errors)
 
+    def test_animation_filter_checks_only_requested_clips(self):
+        toy = ToyAsset()
+        skipped = dict(toy.data['animations'][0])
+        skipped['name'] = 'Skipped'
+        skipped['samplers'] = [dict(skipped['samplers'][0], interpolation='CUBICSPLINE')]
+        toy.data['animations'].append(skipped)
+        errors, report = check_asset(toy, 0, animation_names=('Move',))
+        self.assertFalse(errors, errors)
+        self.assertEqual(len(report['samples']), 5)
+        errors, _ = check_asset(toy, 0, animation_names=('Missing',))
+        self.assertIn('Requested animations missing: Missing', errors)
+
     def test_actual_joint_world_and_inverse_bind_used(self):
         toy = ToyAsset()
         # Three independently moving joints fold this triangle only if the

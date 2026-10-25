@@ -44,6 +44,22 @@ class ExportGateTests(unittest.TestCase):
         self.assertIn('fold', ' '.join(report['errors']))
         self.assertIn('Expected %d' % EXPECTED_SAMPLES, report['errors'][-1])
 
+    def test_targeted_clip_gate_keeps_all_lods_and_morph_states(self):
+        animations = [{'name': name, 'duration_seconds': duration}
+                      for name, duration in DURATIONS.items()]
+        static = {'valid': True, 'errors': [], 'triangles': 10,
+                  'gel_body': {'sample_count': 53}, 'animations': animations}
+        samples = [{'contacts': 0, 'orientation_failures': 0} for _ in range(5)]
+        with tempfile.TemporaryDirectory() as directory, \
+                patch('validate_gel_exports.validate_gel_body', return_value=static), \
+                patch('validate_gel_exports.check_poses',
+                      return_value=([], {'samples': samples})) as poses:
+            report = validate_exports(Path(directory), ['Clap'])
+        self.assertTrue(report['valid'], report)
+        self.assertEqual(report['sample_count'], 45)
+        self.assertTrue(all(call.kwargs['animation_names'] == ['Clap']
+                            for call in poses.call_args_list))
+
     def test_wrong_animation_names_or_durations_fail_gate(self):
         static = {'valid': True, 'errors': [], 'triangles': 10,
                   'gel_body': {'sample_count': 53},

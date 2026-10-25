@@ -108,7 +108,7 @@
     "foot_width_m": 0.26951086956521736,
     "neck_visible_height_m": 0.05201086956521739
   },
-  "reference_pose": "measured static front pose: upper arm 100 degrees, forearm -25 degrees, hand 20 degrees; 23 source-timed clips adapted to gel limb proportions",
+  "reference_pose": "measured static front pose: upper arm 100 degrees, forearm -25 degrees, hand 20 degrees; 31 source-timed clips adapted to gel limb proportions",
   "morph_amplitudes": {
     "general_thickness": 0.3,
     "belly": 0.18,
