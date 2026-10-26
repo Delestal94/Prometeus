@@ -2,8 +2,8 @@ class_name PlayerPingInput
 extends RefCounted
 ## The ping button: a tap sends the plain warning, holding it opens the ping
 ## wheel (aimed with the mouse or the right stick) and releasing sends what
-## was picked. Local to the owning player; the ping itself goes through the
-## Player's _send_ping().
+## was picked. C / R3 changes its page between pings and emotes. Local to the
+## owning player; pings use Player._send_ping(), emotes use replicated anim_clip.
 
 const PingWheelScene = preload("res://scripts/ui/ping_wheel.gd")
 const HOLD_SECONDS: float = 0.28
@@ -32,6 +32,8 @@ func handle_event(event: InputEvent) -> bool:
 		_begin()
 	elif event.is_action_released(&"ui_ping"):
 		_finish()
+	elif wheel_open and event.is_action_pressed(&"look_center"):
+		_wheel.toggle_page()
 	elif wheel_open and event is InputEventMouseMotion:
 		_wheel.select_from_pointer(event.position)
 	else:
@@ -73,8 +75,13 @@ func _begin() -> void:
 func _finish() -> void:
 	if not _held:
 		return
-	var label: String = _wheel.selected_label() if wheel_open else Player.PING_LABEL
+	var emote: bool = wheel_open and _wheel.is_emote_page()
+	var label: String = _wheel.selected_label() if wheel_open and not emote else Player.PING_LABEL
+	var clip: StringName = _wheel.selected_clip() if emote else &""
 	_held = false
 	_hold_seconds = 0.0
 	close_wheel()
-	_player.call(&"_send_ping", label)
+	if emote:
+		_player.animator.play_emote(clip)
+	else:
+		_player.call(&"_send_ping", label)

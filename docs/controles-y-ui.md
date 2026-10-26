@@ -50,7 +50,7 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 ### General (todos los jugadores)
 | Acción | Input |
 |---|---|
-| Ping/emote rápido | Rueda del mouse click / D-pad arriba | Tocar: “¡Cuidado!”. Mantener: rueda de seis mensajes; elegir con mouse o stick derecho. |
+| Ping/emote rápido | V o rueda del mouse click / D-pad arriba | Tocar: “¡Cuidado!”. Mantener: rueda de ocho mensajes; C / R3 cambia a los ocho emotes. Elegir con mouse o stick derecho y soltar para confirmar. |
 | Usar carta | G (reasignable) / D-pad izquierda | Rescate en ruta; Descuento y Re-voto desde Suministros |
 | Pausa/menú | Esc / Start | — |
 | Tripulación (solo en el depósito) | **Mantener** Tab / Back | Lista de quién está, con uniforme, quién maneja y quién tiene caja; el anfitrión LAN ve además el código de sala |

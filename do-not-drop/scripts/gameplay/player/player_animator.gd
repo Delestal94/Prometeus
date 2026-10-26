@@ -44,11 +44,16 @@ const TURN_STEP_ABOVE: float = 1.5
 const TURN_STEP_BELOW: float = 0.8
 const TURN_RATE_SMOOTHING: float = 10.0
 const GelMotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
+const EmoteCatalogData = preload("res://scripts/core/emote_catalog.gd")
 const ANIM_DRIVE: StringName = &"Drive"
 const ANIM_CARRY_WALK: StringName = &"CarryWalk"
 const ANIM_STUMBLE: StringName = &"Stumble"
 const ANIM_BOX_HIT: StringName = &"BoxHit"
 const ANIM_CONGA: StringName = &"Conga"
+const EMOTE_CLIPS: Array[StringName] = [
+	&"Wave", &"Clap", &"Facepalm", &"Shrug", &"Point", &"ThumbsUp",
+	&"MeltAndReturn", &"ShakeLikeDog",
+]
 const DANCE_CLIPS: Array[StringName] = [
 	&"SimpleStep", &"Robot", &"Disco", &"FloorWorm", &"Headbang",
 	&"VictoryDance", &"Flan", ANIM_CONGA,
@@ -132,6 +137,10 @@ func add_look_yaw(yaw: float) -> void:
 ## writes (and re-replicates) anim_state when the target state changes.
 func update_movement(ground_speed: float, pickup_elapsed: float) -> void:
 	measure_turn_rate(_player.get_physics_process_delta_time())
+	# Emotes are deliberate standing poses. Moving cancels them immediately
+	# instead of sliding the character around on a planted full-body pose.
+	if _player.anim_state in EMOTE_CLIPS and ground_speed > IDLE_BELOW_SPEED:
+		_anim_lock_until_msec = 0
 	# An interrupted pickup must not make a moving player slide on its
 	# planted crouch. The package lift and hand contact continue independently.
 	if _player.anim_state == Player.ANIM_PICKUP and ground_speed > 0.3 and pickup_elapsed > 0.16:
@@ -180,6 +189,17 @@ func play_one_shot(clip: StringName, lock_ms: int) -> void:
 		_jump_airborne = true
 		_jump_landing_elapsed = -1.0
 		_player.jump_anim_time = 0.0
+
+
+func play_emote(clip: StringName) -> bool:
+	if clip not in EMOTE_CLIPS or anim_player == null or not anim_player.has_animation(clip):
+		return false
+	# Seated presentation deliberately resolves to Sit/Drive; accepting an
+	# emote there would replicate a choice that nobody can see.
+	if not _player.seat_node_path.is_empty():
+		return false
+	play_one_shot(clip, EmoteCatalogData.lock_msec(clip))
+	return true
 
 
 ## Lets movement take anim_state back right away.

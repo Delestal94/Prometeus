@@ -37,15 +37,29 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 	var host_saw_client: bool = client_owner_ok and await _wait_until(func() -> bool:
 		return _plays(client_player, Player.ANIM_WALK, Player.ANIM_STROLL))
 
+	# S-311.89: the radial emote uses the same replicated exact-clip contract.
+	# No new RPC carries it; the client sees the owner's chosen emote through
+	# anim_state / anim_clip just like every other authored animation.
+	_set_owner_sample(host_player, &"Wave", 0.0, 0.0)
+	var host_emote_ok: bool = await _wait_until(func() -> bool:
+		return _plays(host_player, &"Wave", &"Wave"))
+	_client_reported = false
+	_client_passed = false
+	rpc_id(client_peer_id, &"_client_check_remote", host_player.get_path(), &"Wave", &"Wave")
+	var client_saw_emote: bool = await _wait_until(func() -> bool: return _client_reported) \
+			and _client_passed
+
 	_clear_owner(host_player)
 	rpc_id(client_peer_id, &"_client_clear", client_player.get_path())
 	await _wait_until(func() -> bool:
 		return host_player.anim_clip == Player.ANIM_IDLE and client_player.anim_clip == Player.ANIM_IDLE)
 
-	var passed: bool = host_owner_ok and client_saw_host and client_owner_ok and host_saw_client
-	detail = "both authorities publish the exact clip and the other process plays it" if passed else (
-		"animation host_owner=%s client_saw_host=%s client_owner=%s host_saw_client=%s"
-		% [host_owner_ok, client_saw_host, client_owner_ok, host_saw_client])
+	var passed: bool = host_owner_ok and client_saw_host and client_owner_ok and host_saw_client \
+			and host_emote_ok and client_saw_emote
+	detail = "both authorities publish exact clips, including a radial emote, and the other process plays them" \
+			if passed else (
+		"animation host_owner=%s client_saw_host=%s client_owner=%s host_saw_client=%s host_emote=%s client_emote=%s"
+		% [host_owner_ok, client_saw_host, client_owner_ok, host_saw_client, host_emote_ok, client_saw_emote])
 	return passed
 
 

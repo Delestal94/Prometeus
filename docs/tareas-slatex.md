@@ -397,7 +397,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.88** 8 bailes originales (sin copiar coreografías de otros juegos): paso simple, robot,
   disco, gusano en el piso, headbang, baile de la victoria, "flan" (todo el cuerpo ondulando) y conga
   que se sincroniza con quien esté cerca.
-- [ ] **S-311.89** Rueda de emotes con teclado y gamepad (junto a la rueda de pings S-505 o aparte),
+- [x] **S-311.89** Rueda de emotes con teclado y gamepad (junto a la rueda de pings S-505 o aparte),
   replicada.
 - [ ] **S-311.90** Idles largos si el jugador no toca nada: mirarse la mano transparente, hacer una
   burbuja, rebotar en el lugar.
