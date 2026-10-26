@@ -57,7 +57,11 @@ DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Scared': 1.0, 'Dizzy': 2.4, 'ShakeOffWater': 1.8,
              'Wave': 2.2, 'Clap': 2.4, 'Facepalm': 2.2, 'Shrug': 2.0,
              'Point': 2.0, 'ThumbsUp': 2.0, 'MeltAndReturn': 3.0,
-             'ShakeLikeDog': 1.8}
+             'ShakeLikeDog': 1.8, 'Pancake': 2.4, 'GumStretch': 2.8,
+             'BallBounce': 2.4, 'SplitAndJoin': 3.2, 'ColdShiver': 2.0,
+             'Inflate': 2.8}
+PURE_GEL_CLIPS = ('Pancake', 'GumStretch', 'BallBounce', 'SplitAndJoin',
+                  'ColdShiver', 'Inflate')
 LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace', 'CarryWalk', 'Drive')
 
 # Foot geometry, relative to the ankle (IK target) at rest.
@@ -148,6 +152,7 @@ NEUTRAL = dict(
     c_pitch=0., c_roll=0., c_yaw=0.,
     h_pitch=0., h_roll=0., h_yaw=0.,
     by=0., bz=0., bs=0.,
+    s_scale=(1., 1., 1.), c_scale=(1., 1., 1.), h_scale=(1., 1., 1.),
     armL=HANG, armR=HANG,
     thumbL=5., thumbR=5.,
     ikL=0., ikR=0., handL=(1.115, -.035, 1.47), handR=(-1.115, -.035, 1.47),
@@ -215,10 +220,11 @@ class Poser:
     def apply(self, P):
         q = dict(NEUTRAL); q.update(P)
         self.reset()
-        self.fk('pelvis', q['p_pitch'], q['p_roll'], q['p_yaw'], loc=(q['px'], q['py'], q['pz']))
-        self.fk('spine', q['s_pitch'], q['s_roll'], q['s_yaw'])
-        self.fk('chest', q['c_pitch'], q['c_roll'], q['c_yaw'])
-        self.fk('head', q['h_pitch'], q['h_roll'], q['h_yaw'])
+        self.fk('pelvis', q['p_pitch'], q['p_roll'], q['p_yaw'],
+                loc=(q['px'], q['py'], q['pz']))
+        self.fk('spine', q['s_pitch'], q['s_roll'], q['s_yaw'], scale=q['s_scale'])
+        self.fk('chest', q['c_pitch'], q['c_roll'], q['c_yaw'], scale=q['c_scale'])
+        self.fk('head', q['h_pitch'], q['h_roll'], q['h_yaw'], scale=q['h_scale'])
         self.fkm('belly', None, loc=(0, q['by'], q['bz']),
                  scale=(1+q['bs'], 1, 1+q['bs']*.7))
         for side in 'LR':
@@ -1050,6 +1056,127 @@ def shake_like_dog(t):
                      (43., 7.-14.*trail, 41., 14., 31., 4.), envelope)
     return blend(P, rest, smooth(1.5, 1.8, t))
 
+
+# --- pure gelatin clips ---------------------------------------------------------
+
+def pancake(t):
+    """Squash the body into a wide, low pancake and spring upright."""
+    rest = IDLE0
+    flat = keys(t, [(0., 0.), (.48, 1.), (1.35, 1.), (2.4, 0.)])
+    wobble = math.sin(TAU*2.2*max(0., t-.42))*flat*.04
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.08*flat,
+        s_scale=(1.+.18*flat, 1.-.20*flat, 1.+.12*flat),
+        c_scale=(1.+.18*flat, 1.-.18*flat, 1.+.12*flat),
+        h_scale=(1.+.24*flat, 1.-.20*flat, 1.+.15*flat),
+        p_roll=rest['p_roll']+3.*wobble, c_roll=rest['c_roll']-4.*wobble,
+        by=rest['by']-.05*flat, bz=rest['bz']-.05*flat, bs=rest['bs']+.08*flat,
+    )
+    P['armL'] = lerp(rest['armL'], (24., -6., 18., -8., 15., 0.), flat)
+    P['armR'] = lerp(rest['armR'], (24., -6., 18., 8., 15., 0.), flat)
+    return blend(P, rest, smooth(1.82, 2.4, t))
+
+
+def gum_stretch(t):
+    """Pull the character tall and thin like warm chewing gum."""
+    rest = IDLE0
+    stretch = keys(t, [(0., 0.), (.58, 1.), (1.65, 1.), (2.8, 0.)])
+    sway = math.sin(TAU*1.25*max(0., t-.5))*stretch
+    P = dict(rest)
+    P.update(
+        s_scale=(1.-.13*stretch, 1.+.18*stretch, 1.-.13*stretch),
+        c_scale=(1.-.10*stretch, 1.+.13*stretch, 1.-.10*stretch),
+        h_scale=(1.-.08*stretch, 1.+.14*stretch, 1.-.08*stretch),
+        p_roll=rest['p_roll']+1.5*sway, h_roll=rest['h_roll']-3.*sway,
+        by=rest['by']-.025*stretch, bs=rest['bs']-.06*stretch,
+    )
+    P['armL'] = lerp(rest['armL'], (10., 5., 16., -5., 16., 5.), stretch)
+    P['armR'] = lerp(rest['armR'], (10., 5., 16., 5., 16., 5.), stretch)
+    return blend(P, rest, smooth(2.0, 2.8, t))
+
+
+def ball_bounce(t):
+    """Compress, bounce three times like a rubber ball, and settle."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.18, 1.), (1.55, .65), (2.05, .3), (2.4, 0.)])
+    phase = max(0., t-.18)/.58
+    arc = abs(math.sin(math.pi*phase))*envelope
+    impact = (1.-abs(math.sin(math.pi*phase)))**6*envelope
+    height = .46*arc
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']+height-.05*impact,
+        s_scale=(1.+.07*impact, 1.-.06*impact, 1.+.07*impact),
+        c_scale=(1.+.06*impact, 1.-.05*impact, 1.+.06*impact),
+        h_scale=(1.+.05*impact, 1.-.04*impact, 1.+.05*impact),
+        by=rest['by']-.025*impact, bs=rest['bs']+.06*impact,
+        footL=(0., 0., height, 0.), footR=(0., 0., height, 0.),
+        groundL=1.-arc, groundR=1.-arc,
+    )
+    P['armL'] = lerp(rest['armL'], (42., -8., 26., -6., 18., 1.), arc)
+    P['armR'] = lerp(rest['armR'], (42., -8., 26., 6., 18., 1.), arc)
+    return blend(P, rest, smooth(2.05, 2.4, t))
+
+
+def split_and_join(t):
+    """Pull upper and lower halves apart, hover, then snap back together."""
+    rest = IDLE0
+    split = keys(t, [(0., 0.), (.62, 1.), (1.72, 1.), (2.75, 0.), (3.2, 0.)])
+    tremor = math.sin(TAU*2.8*max(0., t-.55))*split
+    reunion = spring(t, 2.42, .035, 3.2, 5.5)
+    P = dict(rest)
+    P.update(
+        px=rest['px']-.08*split+reunion, pz=rest['pz']-.06*split,
+        p_roll=rest['p_roll']-3.*split,
+        s_roll=rest['s_roll']+4.*split+1.5*tremor,
+        c_roll=rest['c_roll']-3.*split-1.2*tremor,
+        h_roll=rest['h_roll']+2.*split,
+        by=rest['by']-.03*split, bz=rest['bz']+.02*split,
+    )
+    P['armL'] = lerp(rest['armL'], (34., -7., 25., -8., 20., 3.), split)
+    P['armR'] = lerp(rest['armR'], (34., -7., 25., 8., 20., 3.), split)
+    return blend(P, rest, smooth(2.75, 3.2, t))
+
+
+def cold_shiver(t):
+    """Contract and vibrate rapidly as if the gel were freezing."""
+    rest = IDLE0
+    cold = keys(t, [(0., 0.), (.18, 1.), (1.52, 1.), (2., 0.)])
+    shiver = math.sin(TAU*8.5*t)*cold
+    echo = math.sin(TAU*8.5*t-.9)*cold
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.035*cold, p_yaw=rest['p_yaw']+3.*shiver,
+        s_yaw=rest['s_yaw']-7.*shiver, s_roll=rest['s_roll']+3.*echo,
+        c_yaw=rest['c_yaw']+9.*echo, c_roll=rest['c_roll']-4.*shiver,
+        h_yaw=rest['h_yaw']-12.*shiver, h_roll=rest['h_roll']+5.*echo,
+        by=rest['by']+.015*echo, bs=rest['bs']+.025*abs(shiver),
+    )
+    P['armL'] = lerp(rest['armL'], (45., 17.+8.*echo, 48., -14., 24., 9.), cold)
+    P['armR'] = lerp(rest['armR'], (45., 17.-8.*echo, 48., 14., 24., 9.), cold)
+    return blend(P, rest, smooth(1.52, 2., t))
+
+
+def inflate(t):
+    """Swallow air, inflate into a round balloon, wobble, and deflate."""
+    rest = IDLE0
+    full = keys(t, [(0., 0.), (.72, 1.), (1.72, 1.), (2.8, 0.)])
+    wobble = math.sin(TAU*2.1*max(0., t-.65))*full
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']+.025*full,
+        s_scale=(1.+.10*full, 1.+.035*full, 1.+.10*full),
+        c_scale=(1.+.11*full, 1.+.035*full, 1.+.11*full),
+        h_scale=(1.+.08*full, 1.+.025*full, 1.+.08*full),
+        p_roll=rest['p_roll']+1.5*wobble, c_roll=rest['c_roll']-2.*wobble,
+        h_roll=rest['h_roll']+2.5*wobble,
+        by=rest['by']-.045*full, bz=rest['bz']+.01*full, bs=rest['bs']+.18*full,
+    )
+    P['armL'] = lerp(rest['armL'], (38., -5., 20., -8., 20., 3.), full)
+    P['armR'] = lerp(rest['armR'], (38., -5., 20., 8., 20., 3.), full)
+    return blend(P, rest, smooth(2.0, 2.8, t))
+
 # --- build ----------------------------------------------------------------------
 
 def build(rig):
@@ -1077,7 +1204,10 @@ def build(rig):
              'ShakeOffWater': shake_off_water, 'Wave': wave, 'Clap': clap,
              'Facepalm': facepalm, 'Shrug': shrug, 'Point': point,
              'ThumbsUp': thumbs_up, 'MeltAndReturn': melt_and_return,
-             'ShakeLikeDog': shake_like_dog}
+             'ShakeLikeDog': shake_like_dog, 'Pancake': pancake,
+             'GumStretch': gum_stretch, 'BallBounce': ball_bounce,
+             'SplitAndJoin': split_and_join, 'ColdShiver': cold_shiver,
+             'Inflate': inflate}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action

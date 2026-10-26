@@ -2,7 +2,7 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
 ## three triangle budgets, eleven zero-default working morphs, twenty-six named bones,
-## thirty-one animation durations, finite vertex/UV data, normalized four-slot skinning,
+## thirty-seven animation durations, finite vertex/UV data, normalized four-slot skinning,
 ## zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
 
@@ -16,6 +16,10 @@ const JIGGLE_BONES: Array[String] = [
 	"jiggle_head", "jiggle_belly", "jiggle_forearm.L", "jiggle_forearm.R",
 	"jiggle_calf.L", "jiggle_calf.R",
 ]
+const PURE_GEL_CLIPS: Array[String] = [
+	"Pancake", "GumStretch", "BallBounce", "SplitAndJoin", "ColdShiver", "Inflate",
+]
+const SCALE_GEL_CLIPS: Array[String] = ["Pancake", "GumStretch", "BallBounce", "Inflate"]
 const DURATIONS: Dictionary = {
 	"Idle": 6.0, "Walk": 1.0 / 3.0, "Stroll": 0.6, "Run": 1.0 / 3.0, "Jump": 1.6,
 	"PickUpPackage": 1.6, "PickUpHigh": 1.6, "Sit": 4.0, "TurnInPlace": 0.8,
@@ -25,6 +29,8 @@ const DURATIONS: Dictionary = {
 	"Scared": 1.0, "Dizzy": 2.4, "ShakeOffWater": 1.8,
 	"Wave": 2.2, "Clap": 2.4, "Facepalm": 2.2, "Shrug": 2.0,
 	"Point": 2.0, "ThumbsUp": 2.0, "MeltAndReturn": 3.0, "ShakeLikeDog": 1.8,
+	"Pancake": 2.4, "GumStretch": 2.8, "BallBounce": 2.4,
+	"SplitAndJoin": 3.2, "ColdShiver": 2.0, "Inflate": 2.8,
 }
 var _failures: int = 0
 
@@ -77,7 +83,8 @@ func _run() -> void:
 
 func _check_clean_clips(player: AnimationPlayer, lod: int) -> void:
 	var secondary_tracks: Array[String] = []
-	var animated_scale_tracks: Array[String] = []
+	var unexpected_scale_tracks: Array[String] = []
+	var pure_clips_with_scale: Dictionary = {}
 	for clip: String in DURATIONS:
 		if not player.has_animation(clip):
 			continue
@@ -89,13 +96,19 @@ func _check_clean_clips(player: AnimationPlayer, lod: int) -> void:
 					secondary_tracks.append("%s:%s" % [clip, path])
 			if animation.track_get_type(track) == Animation.TYPE_SCALE_3D \
 					and _scale_track_changes(animation, track):
-				animated_scale_tracks.append("%s:%s" % [clip, path])
+				if clip in PURE_GEL_CLIPS:
+					pure_clips_with_scale[clip] = true
+				else:
+					unexpected_scale_tracks.append("%s:%s" % [clip, path])
 	_expect(secondary_tracks.is_empty(),
 		"LOD%d leaves all six jelly bones to SpringBoneSimulator3D (got %s)"
 		% [lod, secondary_tracks.slice(0, 3)])
-	_expect(animated_scale_tracks.is_empty(),
-		"LOD%d clips contain no animated squash/stretch scale tracks (got %d: %s)"
-		% [lod, animated_scale_tracks.size(), animated_scale_tracks.slice(0, 3)])
+	_expect(unexpected_scale_tracks.is_empty(),
+		"LOD%d restricts animated scale tracks to pure-gel clips (got %d: %s)"
+		% [lod, unexpected_scale_tracks.size(), unexpected_scale_tracks.slice(0, 3)])
+	for clip: String in SCALE_GEL_CLIPS:
+		_expect(pure_clips_with_scale.has(clip),
+			"LOD%d %s visibly uses squash/stretch scale" % [lod, clip])
 
 
 func _scale_track_changes(animation: Animation, track: int) -> bool:

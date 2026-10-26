@@ -32,10 +32,18 @@
       "Point": 2.0,
       "ThumbsUp": 2.0,
       "MeltAndReturn": 3.0,
-      "ShakeLikeDog": 1.8
+      "ShakeLikeDog": 1.8,
+      "Pancake": 2.4,
+      "GumStretch": 2.8,
+      "BallBounce": 2.4,
+      "SplitAndJoin": 3.2,
+      "ColdShiver": 2.0,
+      "Inflate": 2.8
     },
     "maximum_rotation_error_radians": 0.0,
+    "maximum_deformed_rotation_error_radians": 0.3083655536174774,
     "maximum_bone_length_error_m": 3.8222786719055435e-07,
+    "maximum_deformed_bone_length_delta_m": 0.21488751607212497,
     "maximum_unreachable_endpoint_m": 0.0,
     "maximum_unreachable_endpoint_by_clip": {
       "Idle": {
@@ -161,9 +169,33 @@
       "ShakeLikeDog": {
         "distance_m": 0.0,
         "time_s": 0.0
+      },
+      "Pancake": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "GumStretch": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "BallBounce": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "SplitAndJoin": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ColdShiver": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Inflate": {
+        "distance_m": 0.0,
+        "time_s": 0.0
       }
     },
-    "maximum_chain_attachment_error_m": 3.21326533747432e-07,
+    "maximum_chain_attachment_error_m": 3.694053160340814e-07,
     "maximum_ankle_goal_error_m": 1.1567869294553018e-06,
     "maximum_interaction_grip_error_m": 7.86239263908441e-07,
     "maximum_pelvis_adjustment_m": 0.0,
@@ -172,8 +204,8 @@
       "source_interpolation": "BEZIER",
       "handle_type": "AUTO_CLAMPED",
       "linear_keyframes": 0,
-      "curves": 4340,
-      "keyframes": 437780,
+      "curves": 5540,
+      "keyframes": 626180,
       "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
       "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
     },
@@ -302,6 +334,30 @@
       "ShakeLikeDog": [
         0.1599971354007721,
         0.15999943017959595
+      ],
+      "Pancake": [
+        0.1599946916103363,
+        0.1599993109703064
+      ],
+      "GumStretch": [
+        0.15999877452850342,
+        0.15999937057495117
+      ],
+      "BallBounce": [
+        0.15999814867973328,
+        0.3847082853317261
+      ],
+      "SplitAndJoin": [
+        0.15999533236026764,
+        0.15999935567378998
+      ],
+      "ColdShiver": [
+        0.15999825298786163,
+        0.15999926626682281
+      ],
+      "Inflate": [
+        0.1599987894296646,
+        0.15999968349933624
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",

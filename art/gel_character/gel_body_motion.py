@@ -59,6 +59,24 @@ def _fit_pelvis(target, poses, feet):
     return offset
 
 
+def _smooth(a, b, value):
+    t = max(0., min(1., (value-a)/(b-a)))
+    return t*t*t*(t*(6.*t-15.)+10.)
+
+
+def _split_upper_body(target, poses, time):
+    """Separate the connected chest subtree for the gel-only split clip."""
+    amount = (_smooth(0., .62, time) if time < .62 else
+              1. if time <= 1.72 else
+              1.-_smooth(1.72, 2.75, time) if time < 2.75 else 0.)
+    offset = Vector((.075*amount, 0., .22*amount))
+    for name, pose in poses.items():
+        bone = target.data.bones[name]
+        if name == 'chest' or any(parent.name == 'chest'
+                                  for parent in bone.parent_recursive):
+            pose.translation += offset
+
+
 def _reach_torso(target, poses, goals, reaches=None):
     """Lean the connected chest hierarchy to reach the original pickup grips.
 
@@ -164,6 +182,8 @@ def adapt_pose(source, target, poses, clip, time):
     poses = {name: matrix.copy() for name, matrix in poses.items()}
     feet = _foot_targets(source, target)
     _fit_pelvis(target, poses, feet)
+    if clip == 'SplitAndJoin':
+        _split_upper_body(target, poses, time)
     arms = {}
     if clip in ('PickUpPackage', 'PickUpHigh', 'Sit'):
         for side in 'LR':
