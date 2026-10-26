@@ -29,6 +29,7 @@ func _run() -> void:
 		_check_clip_resolution(player, animation, animator)
 		_check_transition_policy()
 		_check_live_leg_length(player, animation, animator)
+		await _check_nearby_conga_sync(player, animation)
 	player.free()
 	if _failures == 0:
 		print("PASS: PlayerAnimator resolves gameplay states, blends and proportioned gait timing")
@@ -112,6 +113,40 @@ func _check_live_leg_length(
 	var expected_scale: float = 1.0 / MotionFit.stride_factor(1.25)
 	_expect(absf(animation.speed_scale - expected_scale) < 0.01,
 		"the measured IK-foot stride calibrates live gait tempo")
+
+
+func _check_nearby_conga_sync(player: Player, animation: AnimationPlayer) -> void:
+	var partner: Player = PLAYER_SCENE.instantiate()
+	partner.name = "Player_2"
+	root.add_child(partner)
+	await process_frame
+	partner.set_process(false)
+	partner.set_physics_process(false)
+	var partner_animation: AnimationPlayer = PlayerAppearance.find_animation_player(
+		partner.get_node(^"BodyVisual")
+	)
+	_expect(partner_animation != null, "a nearby teammate exposes the same dance library")
+	if partner_animation == null:
+		partner.free()
+		return
+	animation.active = false
+	partner_animation.active = false
+	player.position = Vector3.ZERO
+	partner.position = Vector3(3.0, 0.0, 0.0)
+	player.anim_state = PlayerAnimator.ANIM_CONGA
+	partner.anim_clip = PlayerAnimator.ANIM_CONGA
+	player.animator.animate()
+	partner.animator.animate()
+	var length: float = animation.current_animation_length
+	var nearby_gap: float = absf(animation.current_animation_position
+		- partner_animation.current_animation_position)
+	nearby_gap = minf(nearby_gap, length - nearby_gap)
+	_expect(nearby_gap < 0.03, "nearby conga dancers share one visible loop phase")
+
+	_expect(PlayerAnimator.conga_distance_is_near(3.0)
+		and not PlayerAnimator.conga_distance_is_near(PlayerAnimator.CONGA_SYNC_RADIUS + 1.0),
+		"the conga phase policy includes nearby teammates but excludes distant solo dancers")
+	partner.free()
 
 
 func _expect(condition: bool, description: String) -> void:

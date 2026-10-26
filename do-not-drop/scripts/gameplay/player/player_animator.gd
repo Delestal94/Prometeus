@@ -48,6 +48,14 @@ const ANIM_DRIVE: StringName = &"Drive"
 const ANIM_CARRY_WALK: StringName = &"CarryWalk"
 const ANIM_STUMBLE: StringName = &"Stumble"
 const ANIM_BOX_HIT: StringName = &"BoxHit"
+const ANIM_CONGA: StringName = &"Conga"
+const DANCE_CLIPS: Array[StringName] = [
+	&"SimpleStep", &"Robot", &"Disco", &"FloorWorm", &"Headbang",
+	&"VictoryDance", &"Flan", ANIM_CONGA,
+]
+## Players already replicate the selected clip. Conga only needs a shared
+## presentation phase on each peer so nearby dancers visibly step together.
+const CONGA_SYNC_RADIUS: float = 4.0
 const STUMBLE_ANIM_LOCK_MS: int = 1050
 const BOX_HIT_ANIM_LOCK_MS: int = 650
 ## Under this ground speed (m/s) the player stands (Idle), over it walks.
@@ -55,7 +63,8 @@ const IDLE_BELOW_SPEED: float = 0.3
 ## Clips that loop (the glTF importer drops Blender's loop flag).
 const LOOPING: Array[StringName] = [
 	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN,
-	ANIM_CARRY_WALK, Player.ANIM_SIT, ANIM_DRIVE, Player.ANIM_TURN]
+	ANIM_CARRY_WALK, Player.ANIM_SIT, ANIM_DRIVE, Player.ANIM_TURN,
+] + DANCE_CLIPS
 const GAIT_CLIPS: Array[StringName] = [
 	Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, ANIM_CARRY_WALK]
 const REACTION_CLIPS: Array[StringName] = [
@@ -237,6 +246,8 @@ func animate() -> void:
 	if anim_player.current_animation != String(clip):
 		_play_clip(clip)
 	_apply_playback(clip, run_fallback)
+	if clip == ANIM_CONGA:
+		_sync_nearby_conga()
 
 
 ## Only the owner calls this. Everything it consults that is not replicated
@@ -279,6 +290,35 @@ func _apply_playback(clip: StringName, run_fallback: bool) -> void:
 		)
 	else:
 		anim_player.speed_scale = 1.0
+
+
+## All conga copies visible on one peer use that peer's monotonic clock. This
+## aligns nearby dancers without another network stream or dependence on who
+## entered the dance first; distant solo dancers keep their natural start.
+func _sync_nearby_conga() -> void:
+	if not _player.is_inside_tree():
+		return
+	var has_partner: bool = false
+	for candidate: Node in _player.get_tree().get_nodes_in_group(&"player"):
+		var other := candidate as Player
+		if other == null or other == _player or other.anim_clip != ANIM_CONGA:
+			continue
+		if conga_distance_is_near(_player.global_position.distance_to(other.global_position)):
+			has_partner = true
+			break
+	if not has_partner:
+		return
+	var length: float = anim_player.current_animation_length
+	if length > 0.0:
+		anim_player.seek(conga_phase_msec(Time.get_ticks_msec(), length), true)
+
+
+static func conga_phase_msec(now_msec: int, length: float) -> float:
+	return fposmod(float(now_msec) / 1000.0, maxf(length, 0.001))
+
+
+static func conga_distance_is_near(distance: float) -> bool:
+	return distance <= CONGA_SYNC_RADIUS
 
 
 ## A blended pickup clip is generated lazily per AnimationPlayer. The owner

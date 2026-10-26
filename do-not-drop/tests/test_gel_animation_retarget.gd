@@ -14,7 +14,8 @@ const CLIPS: Array[StringName] = [
 	&"Wave", &"Clap", &"Facepalm", &"Shrug", &"Point", &"ThumbsUp",
 	&"MeltAndReturn", &"ShakeLikeDog",
 	&"Pancake", &"GumStretch", &"BallBounce", &"SplitAndJoin", &"ColdShiver",
-	&"Inflate",
+	&"Inflate", &"SimpleStep", &"Robot", &"Disco", &"FloorWorm", &"Headbang",
+	&"VictoryDance", &"Flan", &"Conga",
 ]
 
 var _failures: int = 0
@@ -39,7 +40,7 @@ func _run() -> void:
 	gel.free()
 	await _check_depot_characters()
 	if _failures == 0:
-		print("PASS: all gel presets and depot NPCs reuse the 37 named-bone clips")
+		print("PASS: all gel presets and depot NPCs reuse the 45 named-bone clips")
 	quit(_failures)
 
 
