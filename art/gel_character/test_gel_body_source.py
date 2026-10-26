@@ -290,7 +290,7 @@ class SourceBodyTests(unittest.TestCase):
                 bpy.data.objects.remove(obj, do_unlink=True)
         target = body.create_rig(source)
         report = body.bake_clips(source, target)
-        self.assertEqual(len(report['durations']), 37)
+        self.assertEqual(len(report['durations']), 45)
         self.assertEqual(report['curve_review']['source_interpolation'], 'BEZIER')
         self.assertEqual(report['curve_review']['handle_type'], 'AUTO_CLAMPED')
         self.assertEqual(report['curve_review']['linear_keyframes'], 0)

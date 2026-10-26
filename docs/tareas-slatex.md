@@ -394,7 +394,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   derretirse al piso y volver, sacudirse como un perro.
 - [x] **S-311.87** 6 animaciones de gelatina pura: panqueque, chicle estirado, rebote de pelota,
   dividirse en dos y juntarse, temblar de frío, inflarse.
-- [ ] **S-311.88** 8 bailes originales (sin copiar coreografías de otros juegos): paso simple, robot,
+- [x] **S-311.88** 8 bailes originales (sin copiar coreografías de otros juegos): paso simple, robot,
   disco, gusano en el piso, headbang, baile de la victoria, "flan" (todo el cuerpo ondulando) y conga
   que se sincroniza con quien esté cerca.
 - [ ] **S-311.89** Rueda de emotes con teclado y gamepad (junto a la rueda de pings S-505 o aparte),

@@ -59,10 +59,15 @@ DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Point': 2.0, 'ThumbsUp': 2.0, 'MeltAndReturn': 3.0,
              'ShakeLikeDog': 1.8, 'Pancake': 2.4, 'GumStretch': 2.8,
              'BallBounce': 2.4, 'SplitAndJoin': 3.2, 'ColdShiver': 2.0,
-             'Inflate': 2.8}
+             'Inflate': 2.8, 'SimpleStep': 2.4, 'Robot': 2.4,
+             'Disco': 2.8, 'FloorWorm': 3.2, 'Headbang': 1.6,
+             'VictoryDance': 2.8, 'Flan': 2.4, 'Conga': 2.4}
 PURE_GEL_CLIPS = ('Pancake', 'GumStretch', 'BallBounce', 'SplitAndJoin',
-                  'ColdShiver', 'Inflate')
-LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace', 'CarryWalk', 'Drive')
+                  'ColdShiver', 'Inflate', 'Flan')
+DANCE_CLIPS = ('SimpleStep', 'Robot', 'Disco', 'FloorWorm', 'Headbang',
+               'VictoryDance', 'Flan', 'Conga')
+LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace',
+           'CarryWalk', 'Drive') + DANCE_CLIPS
 
 # Foot geometry, relative to the ankle (IK target) at rest.
 BALL = Vector((0, -.245, -.227))   # ball of the foot on the ground
@@ -1177,6 +1182,179 @@ def inflate(t):
     P['armR'] = lerp(rest['armR'], (38., -5., 20., 8., 20., 3.), full)
     return blend(P, rest, smooth(2.0, 2.8, t))
 
+
+# --- original dance loops ------------------------------------------------------
+
+def simple_step(t):
+    """An easy side-to-side two-step with loose opposing arm swings."""
+    a = TAU*t/DURATIONS['SimpleStep']
+    side = math.sin(a)
+    bounce = .5-.5*math.cos(2.*a)
+    lift_l = max(0., side)**2
+    lift_r = max(0., -side)**2
+    return dict(
+        px=.11*side, pz=-.055-.045*bounce, p_roll=-6.*side,
+        p_yaw=3.*math.sin(2.*a), s_roll=4.*side,
+        c_roll=-3.*side, c_yaw=-4.*math.sin(2.*a),
+        h_roll=2.*side, h_yaw=4.*math.sin(a-.35),
+        by=.012*math.sin(a-.7), bz=-.018*bounce,
+        armL=(48., 12.-22.*side, 34., -10., 25., 2.),
+        armR=(48., 12.+22.*side, 34., 10., 25., 2.),
+        footL=(.10*lift_l, -.04*side, .12*lift_l, 0.),
+        footR=(-.10*lift_r, .04*side, .12*lift_r, 0.),
+        groundL=1.-lift_l, groundR=1.-lift_r,
+    )
+
+
+def robot(t):
+    """Angular locks and alternating elbows, deliberately mechanical."""
+    a = TAU*t/DURATIONS['Robot']
+    square = math.sin(a)**3
+    counter = math.sin(2.*a)**3
+    return dict(
+        px=.045*square, pz=-.08-.025*abs(counter),
+        p_roll=-4.*square, p_yaw=8.*counter,
+        s_pitch=4.*counter, s_roll=5.*square, s_yaw=-12.*counter,
+        c_pitch=-5.*counter, c_roll=-4.*square, c_yaw=15.*counter,
+        h_pitch=7.*counter, h_roll=4.*square, h_yaw=-18.*counter,
+        by=.012*square, bz=-.016*abs(counter),
+        armL=(32.+12.*counter, 22.+28.*square, 82.-18.*counter,
+              -25., 36., 7.),
+        armR=(32.-12.*counter, 22.-28.*square, 82.+18.*counter,
+              25., 36., 7.),
+        footL=(0., -.035*square, .035*max(0., square), 0.),
+        footR=(0., .035*square, .035*max(0., -square), 0.),
+        groundL=1.-max(0., square), groundR=1.-max(0., -square),
+    )
+
+
+def disco(t):
+    """A broad hip groove with alternating diagonal pointing arms."""
+    a = TAU*t/DURATIONS['Disco']
+    side = math.sin(a)
+    pulse = .5-.5*math.cos(2.*a)
+    left_up = .5+.5*side
+    right_up = 1.-left_up
+    return dict(
+        px=.12*side, pz=-.055-.035*pulse, p_roll=-9.*side,
+        p_yaw=6.*math.sin(2.*a), s_roll=7.*side, s_yaw=-8.*side,
+        c_roll=-5.*side, c_yaw=11.*side,
+        h_roll=5.*side, h_yaw=-13.*side,
+        by=.02*math.sin(a-.55), bz=-.02*pulse,
+        armL=lerp((58., -24., 38., -12., 22., 2.),
+                  (-20., 36., 18., -8., 18., 10.), left_up),
+        armR=lerp((58., -24., 38., 12., 22., 2.),
+                  (-20., 36., 18., 8., 18., 10.), right_up),
+        footL=(.06*max(0., side), -.035*side, .07*max(0., side), 0.),
+        footR=(-.06*max(0., -side), .035*side, .07*max(0., -side), 0.),
+        groundL=1.-max(0., side), groundR=1.-max(0., -side),
+    )
+
+
+def floor_worm(t):
+    """A low travelling body wave, authored for the gel rather than copied."""
+    a = TAU*t/DURATIONS['FloorWorm']
+    wave = math.sin(a)
+    follow = math.sin(a-.9)
+    tail = math.sin(a-1.8)
+    return dict(
+        py=.035*math.sin(2.*a), pz=-.59+.07*wave,
+        p_pitch=18.+10.*wave, p_roll=4.*tail,
+        s_pitch=-24.*follow, s_roll=-5.*tail,
+        c_pitch=28.*tail, c_roll=5.*wave,
+        h_pitch=-18.*math.sin(a-2.55), h_roll=-6.*follow,
+        by=-.05*follow, bz=.035*tail, bs=.045*(.5+.5*wave),
+        armL=(72., -24.+10.*follow, 28., -18., 12., 0.),
+        armR=(72., -18.-10.*follow, 34., 18., 14., 0.),
+        footL=(.08, .04*tail, -.48+.08*max(0., tail), -8.*wave),
+        footR=(-.08, -.04*tail, -.48+.08*max(0., -tail), 8.*wave),
+        groundL=0., groundR=0.,
+    )
+
+
+def headbang(t):
+    """A planted heavy beat: torso drives first and the head follows hard."""
+    a = TAU*t/DURATIONS['Headbang']
+    beat = .5-.5*math.cos(2.*a)
+    side = math.sin(a)
+    return dict(
+        pz=-.10-.10*beat, p_pitch=7.+8.*beat, p_roll=3.*side,
+        s_pitch=10.+16.*beat, s_roll=-3.*side,
+        c_pitch=7.+12.*beat, c_roll=4.*side,
+        h_pitch=-10.+48.*beat, h_roll=-5.*side,
+        by=.02*side, bz=-.045*beat, bs=.025*beat,
+        armL=(58., -12.+8.*side, 48., -18., 24., 2.),
+        armR=(58., -12.-8.*side, 48., 18., 24., 2.),
+        footL=(.035, 0., 0., 0.), footR=(-.035, 0., 0., 0.),
+    )
+
+
+def victory_dance(t):
+    """Alternating celebratory hops with an open, readable overhead V."""
+    a = TAU*t/DURATIONS['VictoryDance']
+    hop = max(0., math.sin(2.*a))**1.5
+    side = math.sin(a)
+    height = .18*hop
+    return dict(
+        px=.07*side, pz=-.055+height, p_roll=-5.*side,
+        p_yaw=4.*math.sin(2.*a), s_pitch=-4.*hop, s_roll=4.*side,
+        c_pitch=-5.*hop, c_roll=-3.*side,
+        h_pitch=-7.*hop, h_roll=4.*side, h_yaw=-5.*side,
+        by=-.018*hop, bz=.018*hop,
+        armL=(-26., 22.+8.*side, 28., -12., 18., 11.),
+        armR=(-26., 22.-8.*side, 28., 12., 18., 11.),
+        footL=(.07*side, 0., height, 0.),
+        footR=(.07*side, 0., height, 0.),
+        groundL=1.-hop, groundR=1.-hop,
+    )
+
+
+def flan(t):
+    """The whole gel ripples in a soft delayed wave from pelvis to head."""
+    a = TAU*t/DURATIONS['Flan']
+    pelvis = math.sin(a)
+    spine = math.sin(a-.55)
+    chest = math.sin(a-1.1)
+    head = math.sin(a-1.65)
+    return dict(
+        px=.045*pelvis, pz=-.065-.025*(.5+.5*math.cos(2.*a)),
+        p_roll=8.*pelvis, p_yaw=4.*spine,
+        s_roll=-12.*spine, s_yaw=-5.*chest,
+        c_roll=14.*chest, c_yaw=6.*head,
+        h_roll=-16.*head, h_yaw=-7.*pelvis,
+        s_scale=(1.+.045*spine, 1.-.035*spine, 1.+.045*spine),
+        c_scale=(1.+.055*chest, 1.-.04*chest, 1.+.055*chest),
+        h_scale=(1.+.04*head, 1.-.03*head, 1.+.04*head),
+        by=.035*chest, bz=.025*head, bs=.055*(.5+.5*spine),
+        armL=(46., 8.-16.*chest, 34., -12., 26., 4.),
+        armR=(46., 8.+16.*chest, 34., 12., 26., 4.),
+        footL=(.025*pelvis, 0., .025*max(0., pelvis), 0.),
+        footR=(.025*pelvis, 0., .025*max(0., -pelvis), 0.),
+        groundL=1.-max(0., pelvis), groundR=1.-max(0., -pelvis),
+    )
+
+
+def conga(t):
+    """A compact travelling conga step whose shared loop phase can align a crew."""
+    a = TAU*t/DURATIONS['Conga']
+    side = math.sin(a)
+    step_l = max(0., side)**2
+    step_r = max(0., -side)**2
+    bounce = .5-.5*math.cos(2.*a)
+    return dict(
+        px=.07*side, py=.025*math.sin(2.*a), pz=-.07-.04*bounce,
+        p_roll=-7.*side, p_yaw=8.*math.sin(2.*a),
+        s_pitch=4., s_roll=5.*side, s_yaw=-7.*math.sin(2.*a),
+        c_roll=-4.*side, c_yaw=9.*math.sin(2.*a),
+        h_pitch=-3., h_roll=3.*side, h_yaw=-8.*math.sin(2.*a),
+        by=.018*math.sin(a-.7), bz=-.02*bounce,
+        armL=(50., -18.-12.*side, 58., -16., 28., 3.),
+        armR=(50., -18.+12.*side, 58., 16., 28., 3.),
+        footL=(.08*step_l, -.09*side, .11*step_l, 0.),
+        footR=(-.08*step_r, .09*side, .11*step_r, 0.),
+        groundL=1.-step_l, groundR=1.-step_r,
+    )
+
 # --- build ----------------------------------------------------------------------
 
 def build(rig):
@@ -1207,7 +1385,9 @@ def build(rig):
              'ShakeLikeDog': shake_like_dog, 'Pancake': pancake,
              'GumStretch': gum_stretch, 'BallBounce': ball_bounce,
              'SplitAndJoin': split_and_join, 'ColdShiver': cold_shiver,
-             'Inflate': inflate}
+             'Inflate': inflate, 'SimpleStep': simple_step, 'Robot': robot,
+             'Disco': disco, 'FloorWorm': floor_worm, 'Headbang': headbang,
+             'VictoryDance': victory_dance, 'Flan': flan, 'Conga': conga}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action

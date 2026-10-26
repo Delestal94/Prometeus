@@ -38,7 +38,15 @@
       "BallBounce": 2.4,
       "SplitAndJoin": 3.2,
       "ColdShiver": 2.0,
-      "Inflate": 2.8
+      "Inflate": 2.8,
+      "SimpleStep": 2.4,
+      "Robot": 2.4,
+      "Disco": 2.8,
+      "FloorWorm": 3.2,
+      "Headbang": 1.6,
+      "VictoryDance": 2.8,
+      "Flan": 2.4,
+      "Conga": 2.4
     },
     "maximum_rotation_error_radians": 0.0,
     "maximum_deformed_rotation_error_radians": 0.3083655536174774,
@@ -193,6 +201,38 @@
       "Inflate": {
         "distance_m": 0.0,
         "time_s": 0.0
+      },
+      "SimpleStep": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Robot": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Disco": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "FloorWorm": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Headbang": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "VictoryDance": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Flan": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Conga": {
+        "distance_m": 0.0,
+        "time_s": 0.0
       }
     },
     "maximum_chain_attachment_error_m": 3.694053160340814e-07,
@@ -204,8 +244,8 @@
       "source_interpolation": "BEZIER",
       "handle_type": "AUTO_CLAMPED",
       "linear_keyframes": 0,
-      "curves": 5540,
-      "keyframes": 626180,
+      "curves": 6720,
+      "keyframes": 804000,
       "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
       "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
     },
@@ -358,6 +398,38 @@
       "Inflate": [
         0.1599987894296646,
         0.15999968349933624
+      ],
+      "SimpleStep": [
+        0.1599990278482437,
+        0.2199772745370865
+      ],
+      "Robot": [
+        0.15999819338321686,
+        0.17749528586864471
+      ],
+      "Disco": [
+        0.15999895334243774,
+        0.1949925720691681
+      ],
+      "FloorWorm": [
+        -0.08002069592475891,
+        -0.040005724877119064
+      ],
+      "Headbang": [
+        0.15996646881103516,
+        0.15999844670295715
+      ],
+      "VictoryDance": [
+        0.15999837219715118,
+        0.24999932944774628
+      ],
+      "Flan": [
+        0.1599966585636139,
+        0.17249944806098938
+      ],
+      "Conga": [
+        0.15999865531921387,
+        0.21497689187526703
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -665,8 +737,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "e56af1ae506d5df25542a86b9bf1540b718ca1d78d6b3b3a20cc9a5f28edb032",
-      "morph_sha256": "aeb10beb9b9de1d1b826bb155d0a0505d4da045b068edb0fe0debc7b0c40c968",
+      "geometry_sha256": "b852c0f5a233b06a1b6d61d268dd5c342ed2a496fa055f215b49dd1de0248aab",
+      "morph_sha256": "04ee88d4bf388aea661b7d161c51835fa825c02679456594131327ad10ee3e20",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -721,12 +793,12 @@
           "neck_shoulders": {
             "adjacent_face_angle_p95_degrees": 53.82325157173518,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
-            "sampled_edges": 243
+            "sampled_edges": 235
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 53.63154322028392,
+            "adjacent_face_angle_p95_degrees": 53.69575244832536,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
-            "sampled_edges": 163
+            "sampled_edges": 158
           }
         }
       }
