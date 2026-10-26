@@ -912,7 +912,8 @@ def refine_joint_weights(obj, rig):
 def bake_clips(source, target):
     from gel_body_motion import adapt_pose
     sys.path.insert(0, str(ROOT/'art/rounded_character'))
-    from animation_library import build, FPS, DURATIONS, polish_action_curves
+    from animation_library import (build, FPS, DURATIONS, PURE_GEL_CLIPS,
+                                   polish_action_curves)
     bpy.context.scene.render.fps = FPS
     bpy.context.view_layer.objects.active = source
     build(source)
@@ -921,12 +922,14 @@ def bake_clips(source, target):
         assert tuple(action.frame_range) == (0, round(DURATIONS[name]*FPS))
         action.name = 'Source_'+name
     # Secondary bones intentionally have no animation tracks: they inherit the
-    # baked game-bone pose and SpringBoneSimulator3D supplies the delta. Scale
-    # is constant too, so omit those tracks instead of baking a second source
-    # of squash/stretch on top of the runtime gel deformation.
+    # baked game-bone pose and SpringBoneSimulator3D supplies the delta. Pure
+    # gel clips may scale game bones; the secondary bones inherit that scale
+    # instead of receiving a competing squash/stretch track.
     order = sorted(GAME_JOINTS, key=lambda n: len(target.data.bones[n].parent_recursive))
     max_rotation_error = 0.
+    max_deformed_rotation_error = 0.
     max_bone_length_error = 0.
+    max_deformed_bone_length_delta = 0.
     max_unreachable_endpoint = 0.
     max_chain_attachment_error = 0.
     max_ankle_goal_error = 0.
@@ -957,7 +960,10 @@ def bake_clips(source, target):
                     location = (poses[dst.parent.name] @ parent_rest.inverted() @ dst.bone.matrix_local).translation
                 else:
                     location = dst.bone.head_local + (src.matrix.translation-src.bone.head_local)*.5
-                world = Matrix.LocRotScale(location, rotation, Vector((1,1,1)))
+                scale = (src.matrix.to_scale() if name in PURE_GEL_CLIPS
+                         and bone_name in ('chest', 'neck', 'head')
+                         else Vector((1., 1., 1.)))
+                world = Matrix.LocRotScale(location, rotation, scale)
                 poses[bone_name] = world
             pelvis_before = poses['pelvis'].translation.copy()
             poses, unreachable = adapt_pose(source, target, poses, name, frame/FPS)
@@ -975,12 +981,24 @@ def bake_clips(source, target):
                 dst.matrix_basis = inherited.inverted() @ world
                 dst.keyframe_insert('location', frame=frame, group=bone_name)
                 dst.keyframe_insert('rotation_quaternion', frame=frame, group=bone_name)
+                if name in PURE_GEL_CLIPS:
+                    dst.keyframe_insert('scale', frame=frame, group=bone_name)
             bpy.context.view_layer.update()
             for bone_name, wanted in poses.items():
                 angle = target.pose.bones[bone_name].matrix.to_quaternion().rotation_difference(wanted.to_quaternion()).angle
-                max_rotation_error = max(max_rotation_error, min(angle, math.tau-angle))
+                angle = min(angle, math.tau-angle)
+                if name in PURE_GEL_CLIPS:
+                    max_deformed_rotation_error = max(
+                        max_deformed_rotation_error, angle)
+                else:
+                    max_rotation_error = max(max_rotation_error, angle)
                 pb = target.pose.bones[bone_name]
-                max_bone_length_error = max(max_bone_length_error, abs((pb.tail-pb.head).length-pb.bone.length))
+                length_delta = abs((pb.tail-pb.head).length-pb.bone.length)
+                if name in PURE_GEL_CLIPS:
+                    max_deformed_bone_length_delta = max(
+                        max_deformed_bone_length_delta, length_delta)
+                else:
+                    max_bone_length_error = max(max_bone_length_error, length_delta)
             for side in 'LR':
                 for parent, child in (('thigh.', 'shin.'), ('shin.', 'foot.'),
                                       ('upper_arm.', 'forearm.'), ('forearm.', 'hand.')):
@@ -1016,7 +1034,9 @@ def bake_clips(source, target):
     assert max_ankle_goal_error < .00001, max_ankle_goal_error
     assert max_interaction_grip_error < .00001, max_interaction_grip_error
     return {'durations': DURATIONS, 'maximum_rotation_error_radians': max_rotation_error,
+            'maximum_deformed_rotation_error_radians': max_deformed_rotation_error,
             'maximum_bone_length_error_m': max_bone_length_error,
+            'maximum_deformed_bone_length_delta_m': max_deformed_bone_length_delta,
             'maximum_unreachable_endpoint_m': max_unreachable_endpoint,
             'maximum_unreachable_endpoint_by_clip': unreachable_by_clip,
             'maximum_chain_attachment_error_m': max_chain_attachment_error,

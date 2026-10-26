@@ -392,7 +392,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 - [x] **S-311.86** 8 emotes: saludar, aplaudir, facepalm, encogerse de hombros, señalar, pulgar arriba,
   derretirse al piso y volver, sacudirse como un perro.
-- [ ] **S-311.87** 6 animaciones de gelatina pura: panqueque, chicle estirado, rebote de pelota,
+- [x] **S-311.87** 6 animaciones de gelatina pura: panqueque, chicle estirado, rebote de pelota,
   dividirse en dos y juntarse, temblar de frío, inflarse.
 - [ ] **S-311.88** 8 bailes originales (sin copiar coreografías de otros juegos): paso simple, robot,
   disco, gusano en el piso, headbang, baile de la victoria, "flan" (todo el cuerpo ondulando) y conga
