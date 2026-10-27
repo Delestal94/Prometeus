@@ -5,6 +5,7 @@ extends Node
 
 const TIMEOUT_SECONDS: float = 6.0
 const OWNER_LOCK_MS: int = 8000
+const Knockout = preload("res://scripts/gameplay/player/gel/gel_knockout.gd")
 
 var detail: String = "replicated animation check did not finish"
 var _client_peer_id: int = 0
@@ -78,12 +79,14 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 	# remote copy runs its own deterministic shader timeline and particle burst.
 	var host_effects := _knockout_effects(host_player)
 	var host_knockout_started: bool = host_effects != null \
-			and host_effects.set_local_knocked_out(true) \
+			and host_effects.set_local_knockout_cause(Knockout.Cause.RUN_OVER) \
 			and await _wait_until(func() -> bool:
-				return host_effects.knocked_out and host_effects.knockout_amount() > 0.05)
+				return host_effects.knockout_cause == Knockout.Cause.RUN_OVER \
+					and host_effects.knockout_amount() > 0.05)
 	_client_reported = false
 	_client_passed = false
-	rpc_id(client_peer_id, &"_client_check_knockout", host_player.get_path(), true)
+	rpc_id(client_peer_id, &"_client_check_knockout", host_player.get_path(),
+		Knockout.Cause.RUN_OVER)
 	var client_saw_knockout: bool = await _wait_until(func() -> bool: return _client_reported) \
 			and _client_passed
 	if host_effects != null:
@@ -126,11 +129,11 @@ func _client_publish(player_path: NodePath, state: StringName, speed: float, pic
 
 
 @rpc("authority", "call_remote", "reliable")
-func _client_check_knockout(player_path: NodePath, active: bool) -> void:
+func _client_check_knockout(player_path: NodePath, cause: int) -> void:
 	var player := get_node_or_null(player_path) as Player
 	var effects := _knockout_effects(player)
 	var passed: bool = effects != null and await _wait_until(func() -> bool:
-		return effects.knocked_out == active and effects.knockout_amount() > 0.05)
+		return effects.knockout_cause == cause and effects.knockout_amount() > 0.05)
 	rpc_id(MultiplayerPeer.TARGET_PEER_SERVER, &"_receive_report", passed)
 
 

@@ -18,9 +18,9 @@ instance uniform vec4 gel_skin_surface = vec4(-1.0, -1.0, 0.0, 0.0);
 instance uniform vec4 gel_interior = vec4(0.0, 0.0, 0.0, 8.0);
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
-// Positive = contact compression; negative = reversible knockout melt. The
-// packed channel avoids exceeding Godot's 16 per-instance-uniform limit.
-instance uniform float gel_contact_compression : hint_range(-1.0, 0.16) = 0.0;
+// Positive = contact compression. Negative values pack knockout cause in the
+// integer part and transition amount in the fraction, preserving 16 uniforms.
+instance uniform float gel_contact_compression : hint_range(-6.0, 0.16) = 0.0;
 instance uniform vec4 gel_wave_0 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
@@ -237,7 +237,9 @@ float environment_ripple(vec3 point) {
 }
 
 void vertex() {
-	float knockout = clamp(-gel_contact_compression, 0.0, 1.0);
+	float knockout_packed = max(-gel_contact_compression, 0.0);
+	float knockout_cause = floor(knockout_packed + 0.0001);
+	float knockout = fract(knockout_packed);
 	float contact_compression = max(gel_contact_compression, 0.0);
 	float drag_mask = inertial_drag_mask(VERTEX);
 	vec3 turning_drag = vec3(-VERTEX.z, 0.0, VERTEX.x) * gel_inertia.w;
@@ -268,12 +270,38 @@ void vertex() {
 	);
 	float melt = knockout * knockout * (3.0 - 2.0 * knockout);
 	float source_height = clamp(VERTEX.y / 1.75, 0.0, 1.0);
-	float puddle_spread = mix(1.0, 1.55 + source_height * 0.38, melt);
-	float puddle_height = 0.025 + source_height * 0.055;
-	VERTEX.xz *= puddle_spread;
-	VERTEX.y = mix(VERTEX.y, puddle_height, melt);
-	float melt_vertical_scale = mix(1.0, 0.045, melt);
-	NORMAL = normalize(NORMAL / vec3(puddle_spread, melt_vertical_scale, puddle_spread));
+	if (knockout_cause < 1.5) {
+		// Default melt: a soft, rounded puddle.
+		float puddle_spread = mix(1.0, 1.55 + source_height * 0.38, melt);
+		float puddle_height = 0.025 + source_height * 0.055;
+		VERTEX.xz *= puddle_spread;
+		VERTEX.y = mix(VERTEX.y, puddle_height, melt);
+		NORMAL = normalize(NORMAL / vec3(puddle_spread, mix(1.0, 0.045, melt), puddle_spread));
+	} else if (knockout_cause < 2.5) {
+		// Crushed: a broad, even pancake with a thicker rim.
+		float pancake_spread = mix(1.0, 1.82 + source_height * 0.24, melt);
+		VERTEX.xz *= pancake_spread;
+		VERTEX.y = mix(VERTEX.y, 0.045 + source_height * 0.035, melt);
+		NORMAL = normalize(NORMAL / vec3(pancake_spread, mix(1.0, 0.035, melt), pancake_spread));
+	} else if (knockout_cause < 3.5) {
+		// Explosion: the body contracts to a tiny core while droplets carry the silhouette.
+		vec3 burst_direction = normalize(VERTEX + vec3(0.13, 0.37, -0.09));
+		VERTEX = mix(VERTEX, vec3(0.0, 0.68, 0.0) + burst_direction * 0.055, melt);
+	} else if (knockout_cause < 4.5) {
+		// Water: dissolve downward into a narrow, rippled remnant.
+		float dissolve_wave = sin(VERTEX.x * 15.0 + VERTEX.z * 11.0) * 0.018;
+		VERTEX.xz *= mix(1.0, 0.42, melt);
+		VERTEX.y = mix(VERTEX.y, -0.12 + source_height * 0.025 + dissolve_wave, melt);
+		NORMAL = normalize(NORMAL / vec3(mix(1.0, 0.42, melt), mix(1.0, 0.025, melt), mix(1.0, 0.42, melt)));
+	} else {
+		// Run over: a low skid stretched strongly along the wheel direction.
+		float skid_x = mix(1.0, 2.18, melt);
+		float skid_z = mix(1.0, 1.18, melt);
+		VERTEX.x = VERTEX.x * skid_x + source_height * melt * 0.34;
+		VERTEX.z *= skid_z;
+		VERTEX.y = mix(VERTEX.y, 0.035 + source_height * 0.03, melt);
+		NORMAL = normalize(NORMAL / vec3(skid_x, mix(1.0, 0.03, melt), skid_z));
+	}
 	float wind_mask = smoothstep(0.12, 1.55, VERTEX.y);
 	float wind_sway = sin(gel_weather.x * 1.35 + gel_weather.y * 6.28318);
 	wind_sway = wind_sway * 0.72 + sin(gel_weather.x * 2.1 + gel_weather.y * 3.1) * 0.28;

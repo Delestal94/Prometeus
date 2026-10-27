@@ -368,9 +368,10 @@ modificarlo:
   `InspectHand`, `BlowBubble` e `IdleBounce` se alternan tras 15 s sin entrada y se
   cancelan apenas el jugador toca un control. En resultados, una entrega usa
   `VictoryDance` y una derrota usa el loop encorvado `Defeat`; cada dueño publica el
-  clip por el estado de animación existente. Un knockout replica sólo `knocked_out`:
-  ambos shaders gel aplanan el cuerpo hasta un charco, dos ráfagas acotadas heredan
-  su color y al reaparecer la misma deformación se reproduce al revés. `player.gd` ubica el cuerpo sobre
+  clip por el estado de animación existente. Un knockout replica sólo `knockout_cause`:
+  ambos shaders gel distinguen derretido, aplastado, explosión, disolución en agua y
+  atropello; dos ráfagas acotadas heredan el color y las gotas de explosión vuelven
+  al centro al reaparecer. La misma deformación se reproduce al revés. `player.gd` ubica el cuerpo sobre
   cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)
