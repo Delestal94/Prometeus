@@ -76,15 +76,18 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 
 	# S-311.92: knockout is another owner-authored presentation property. The
 	# remote copy runs its own deterministic shader timeline and particle burst.
-	var host_knockout_started: bool = host_player.set_knocked_out(true) \
+	var host_effects := _knockout_effects(host_player)
+	var host_knockout_started: bool = host_effects != null \
+			and host_effects.set_local_knocked_out(true) \
 			and await _wait_until(func() -> bool:
-				return host_player.knocked_out and _knockout_amount(host_player) > 0.05)
+				return host_effects.knocked_out and host_effects.knockout_amount() > 0.05)
 	_client_reported = false
 	_client_passed = false
 	rpc_id(client_peer_id, &"_client_check_knockout", host_player.get_path(), true)
 	var client_saw_knockout: bool = await _wait_until(func() -> bool: return _client_reported) \
 			and _client_passed
-	host_player.set_knocked_out(false)
+	if host_effects != null:
+		host_effects.set_local_knocked_out(false)
 
 	_clear_owner(host_player)
 	rpc_id(client_peer_id, &"_client_clear", client_player.get_path())
@@ -125,8 +128,9 @@ func _client_publish(player_path: NodePath, state: StringName, speed: float, pic
 @rpc("authority", "call_remote", "reliable")
 func _client_check_knockout(player_path: NodePath, active: bool) -> void:
 	var player := get_node_or_null(player_path) as Player
-	var passed: bool = player != null and await _wait_until(func() -> bool:
-		return player.knocked_out == active and _knockout_amount(player) > 0.05)
+	var effects := _knockout_effects(player)
+	var passed: bool = effects != null and await _wait_until(func() -> bool:
+		return effects.knocked_out == active and effects.knockout_amount() > 0.05)
 	rpc_id(MultiplayerPeer.TARGET_PEER_SERVER, &"_receive_report", passed)
 
 
@@ -165,8 +169,12 @@ func _plays(player: Player, state: StringName, clip: StringName) -> bool:
 
 
 func _knockout_amount(player: Player) -> float:
-	var effects := player.get_node_or_null(^"GelEffects") as PlayerGelEffects
+	var effects := _knockout_effects(player)
 	return effects.knockout_amount() if effects != null else 0.0
+
+
+func _knockout_effects(player: Player) -> PlayerGelEffects:
+	return player.get_node_or_null(^"GelEffects") as PlayerGelEffects if player != null else null
 
 
 func _wait_until(condition: Callable, seconds: float = TIMEOUT_SECONDS) -> bool:

@@ -140,18 +140,6 @@ var animator: PlayerAnimator
 var locomotion_speed: float = 0.0
 var turn_rate: float = 0.0
 var jump_anim_time: float = 0.0
-## Presentation state authored by this player's owning peer. Future gameplay
-## causes only toggle this flag; every peer runs the same reversible gel VFX.
-var knocked_out: bool = false:
-	set(value):
-		if knocked_out == value:
-			return
-		knocked_out = value
-		if is_instance_valid(_gel_effects_component):
-			_gel_effects_component.set_knocked_out(value)
-		var reactions: GelFaceReactions = get_node_or_null(^"GelFaceReactions") as GelFaceReactions
-		if reactions != null:
-			reactions.set_knocked_out(value)
 var _carry_pose: Node3D
 var _pickup_elapsed: float = 2.0
 var _pickup_from: Transform3D = Transform3D.IDENTITY
@@ -318,7 +306,6 @@ func _build_body() -> void:
 	_gel_appearance.setup(visual)
 	PlayerAppearance.enable_shadows(visual)
 	_gel_effects_component.setup(visual, get_multiplayer_authority())
-	_gel_effects_component.set_knocked_out(knocked_out)
 
 	PlayerAppearance.set_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_cosmetic()
@@ -375,15 +362,6 @@ func pickup_high_weight_for_package(package: DeliveryPackage) -> float:
 
 func is_local() -> bool:
 	return is_multiplayer_authority()
-
-
-## Owner-side hook for the gameplay cause. The replicated property drives the
-## visuals on every peer without a dedicated VFX RPC.
-func set_knocked_out(active: bool) -> bool:
-	if not is_local():
-		return false
-	knocked_out = active
-	return true
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -33,8 +33,8 @@ func _run() -> void:
 	_expect(float(mesh.get_instance_shader_parameter(&"gel_contact_compression")) > 0.05,
 		"the shared packed channel still carries ordinary contact compression")
 
-	_expect(player.set_knocked_out(true), "the local owner can start knockout")
-	_expect(player.knocked_out and knockout.phase == Knockout.Phase.MELTING,
+	_expect(effects.set_local_knocked_out(true), "the local owner can start knockout")
+	_expect(effects.knocked_out and knockout.phase == Knockout.Phase.MELTING,
 		"knockout enters the melt phase")
 	var face := player.get_node(^"GelFaceReactions") as GelFaceReactions
 	_expect(face.knocked_out, "the existing X-eyes face follows knockout")
@@ -49,7 +49,7 @@ func _run() -> void:
 		"the body holds as a puddle until respawn")
 	_check_drops(knockout, mesh)
 
-	_expect(player.set_knocked_out(false), "the local owner can start respawn")
+	_expect(effects.set_local_knocked_out(false), "the local owner can start respawn")
 	knockout.advance(Knockout.REASSEMBLE_SECONDS * 0.5)
 	_expect(knockout.phase == Knockout.Phase.REASSEMBLING
 			and knockout.amount > 0.45 and knockout.amount < 0.55,
@@ -74,7 +74,7 @@ func _run() -> void:
 
 func _check_replication(player: Player) -> void:
 	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	var path := NodePath(".:knocked_out")
+	var path := NodePath("GelEffects:knocked_out")
 	_expect(sync.replication_config.has_property(path)
 			and sync.replication_config.property_get_spawn(path)
 			and sync.replication_config.property_get_replication_mode(path)
