@@ -49,17 +49,30 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 	var client_saw_emote: bool = await _wait_until(func() -> bool: return _client_reported) \
 			and _client_passed
 
+	# S-311.90: inactivity chooses a long idle only on the owner. Its exact
+	# clip follows the same property replication as the radial emote.
+	_set_owner_sample(host_player, &"InspectHand", 0.0, 0.0)
+	var host_long_idle_ok: bool = await _wait_until(func() -> bool:
+		return _plays(host_player, &"InspectHand", &"InspectHand"))
+	_client_reported = false
+	_client_passed = false
+	rpc_id(client_peer_id, &"_client_check_remote", host_player.get_path(),
+		&"InspectHand", &"InspectHand")
+	var client_saw_long_idle: bool = await _wait_until(func() -> bool: return _client_reported) \
+			and _client_passed
+
 	_clear_owner(host_player)
 	rpc_id(client_peer_id, &"_client_clear", client_player.get_path())
 	await _wait_until(func() -> bool:
 		return host_player.anim_clip == Player.ANIM_IDLE and client_player.anim_clip == Player.ANIM_IDLE)
 
 	var passed: bool = host_owner_ok and client_saw_host and client_owner_ok and host_saw_client \
-			and host_emote_ok and client_saw_emote
-	detail = "both authorities publish exact clips, including a radial emote, and the other process plays them" \
+			and host_emote_ok and client_saw_emote and host_long_idle_ok and client_saw_long_idle
+	detail = "both authorities publish exact clips, including an emote and long idle, and peers play them" \
 			if passed else (
-		"animation host_owner=%s client_saw_host=%s client_owner=%s host_saw_client=%s host_emote=%s client_emote=%s"
-		% [host_owner_ok, client_saw_host, client_owner_ok, host_saw_client, host_emote_ok, client_saw_emote])
+		"animation pickup=%s/%s gait=%s/%s emote=%s/%s idle=%s/%s"
+		% [host_owner_ok, client_saw_host, client_owner_ok, host_saw_client, host_emote_ok,
+			client_saw_emote, host_long_idle_ok, client_saw_long_idle])
 	return passed
 
 

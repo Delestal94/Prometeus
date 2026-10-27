@@ -365,8 +365,8 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_local() and animator != null: animator.note_activity()
 	OnFootInput.handle_event(self, event)
-
 
 ## Runs on every peer's copy of this player, seated or driving, local or
 ## not -- posing BodyVisual at the seat is pure presentation, so it doesn't

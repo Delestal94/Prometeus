@@ -45,6 +45,7 @@ const TURN_STEP_BELOW: float = 0.8
 const TURN_RATE_SMOOTHING: float = 10.0
 const GelMotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
 const EmoteCatalogData = preload("res://scripts/core/emote_catalog.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const ANIM_DRIVE: StringName = &"Drive"
 const ANIM_CARRY_WALK: StringName = &"CarryWalk"
 const ANIM_STUMBLE: StringName = &"Stumble"
@@ -58,6 +59,13 @@ const DANCE_CLIPS: Array[StringName] = [
 	&"SimpleStep", &"Robot", &"Disco", &"FloorWorm", &"Headbang",
 	&"VictoryDance", &"Flan", ANIM_CONGA,
 ]
+const LONG_IDLE_CLIPS: Array[StringName] = [&"InspectHand", &"BlowBubble", &"IdleBounce"]
+const LONG_IDLE_DURATIONS: Dictionary = {
+	&"InspectHand": 3.4,
+	&"BlowBubble": 3.2,
+	&"IdleBounce": 2.6,
+}
+const LONG_IDLE_DELAY_SECONDS: float = 15.0
 ## Players already replicate the selected clip. Conga only needs a shared
 ## presentation phase on each peer so nearby dancers visibly step together.
 const CONGA_SYNC_RADIUS: float = 4.0
@@ -107,6 +115,9 @@ var _jump_landing_elapsed: float = -1.0
 ## horizontal stride at every value; GelMotionFit therefore keeps gait tempo
 ## tied to ground speed while the longer/shorter leg rests change reach.
 var _leg_length_factor: float = 1.0
+var _long_idle_elapsed: float = 0.0
+var _long_idle_index: int = 0
+var _idle_bubble: MeshInstance3D
 
 
 func _init(player: Player, animation_player: AnimationPlayer, face: Node) -> void:
@@ -123,6 +134,7 @@ func _init(player: Player, animation_player: AnimationPlayer, face: Node) -> voi
 		if anim_player.has_animation(loop_clip):
 			anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 	anim_player.play(Player.ANIM_IDLE)
+	_build_idle_bubble()
 
 
 # --- State (owning peer) --------------------------------------------------------
@@ -137,6 +149,13 @@ func add_look_yaw(yaw: float) -> void:
 ## writes (and re-replicates) anim_state when the target state changes.
 func update_movement(ground_speed: float, pickup_elapsed: float) -> void:
 	measure_turn_rate(_player.get_physics_process_delta_time())
+	var active_motion: bool = ground_speed > IDLE_BELOW_SPEED or _player.turn_rate > TURN_STEP_BELOW
+	if active_motion:
+		note_activity()
+	var long_idle_eligible: bool = not active_motion and _player.is_on_floor() \
+			and _player.seat_node_path.is_empty() and not is_instance_valid(_player.carried_package)
+	if update_long_idle(_player.get_physics_process_delta_time(), long_idle_eligible):
+		return
 	# Emotes are deliberate standing poses. Moving cancels them immediately
 	# instead of sliding the character around on a planted full-body pose.
 	if _player.anim_state in EMOTE_CLIPS and ground_speed > IDLE_BELOW_SPEED:
@@ -199,6 +218,33 @@ func play_emote(clip: StringName) -> bool:
 	if not _player.seat_node_path.is_empty():
 		return false
 	play_one_shot(clip, EmoteCatalogData.lock_msec(clip))
+	return true
+
+
+## Any deliberate input interrupts an automatic idle and restarts its wait.
+func note_activity() -> void:
+	_long_idle_elapsed = 0.0
+	if _player.anim_state in LONG_IDLE_CLIPS:
+		_anim_lock_until_msec = 0
+		_player.anim_state = Player.ANIM_IDLE
+
+
+## Owner-only deterministic timer. The exact selected clip is already carried
+## by anim_state/anim_clip, so observers and late joiners need no new RPC.
+func update_long_idle(delta: float, eligible: bool) -> bool:
+	if _player.anim_state in LONG_IDLE_CLIPS:
+		return false
+	if not eligible or _player.anim_state != Player.ANIM_IDLE \
+			or Time.get_ticks_msec() < _anim_lock_until_msec:
+		_long_idle_elapsed = 0.0
+		return false
+	_long_idle_elapsed += maxf(delta, 0.0)
+	if _long_idle_elapsed < LONG_IDLE_DELAY_SECONDS:
+		return false
+	var clip: StringName = LONG_IDLE_CLIPS[_long_idle_index % LONG_IDLE_CLIPS.size()]
+	_long_idle_index = (_long_idle_index + 1) % LONG_IDLE_CLIPS.size()
+	_long_idle_elapsed = 0.0
+	play_one_shot(clip, roundi(float(LONG_IDLE_DURATIONS[clip]) * 1000.0))
 	return true
 
 
@@ -266,8 +312,55 @@ func animate() -> void:
 	if anim_player.current_animation != String(clip):
 		_play_clip(clip)
 	_apply_playback(clip, run_fallback)
+	_update_idle_bubble(clip)
 	if clip == ANIM_CONGA:
 		_sync_nearby_conga()
+
+
+func _build_idle_bubble() -> void:
+	_idle_bubble = MeshInstance3D.new()
+	_idle_bubble.name = "LongIdleBubble"
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.14
+	sphere.height = 0.28
+	sphere.radial_segments = 16
+	sphere.rings = 8
+	_idle_bubble.mesh = sphere
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color("8fe8ff58")
+	material.metallic = 0.18
+	material.roughness = 0.08
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_idle_bubble.material_override = material
+	_idle_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_idle_bubble.layers = RenderLayers.LOCAL_BODY if _player.is_local() else RenderLayers.WORLD
+	_idle_bubble.visible = false
+	_player.add_child(_idle_bubble)
+
+
+func _update_idle_bubble(clip: StringName) -> void:
+	if not is_instance_valid(_idle_bubble) or anim_player == null or clip != &"BlowBubble":
+		if is_instance_valid(_idle_bubble):
+			_idle_bubble.visible = false
+		return
+	var at: float = anim_player.current_animation_position
+	var amount: float = idle_bubble_amount(at)
+	_idle_bubble.visible = amount > 0.01
+	_idle_bubble.scale = Vector3.ONE * amount
+	_idle_bubble.position = Vector3(0.0, 1.48 + 0.32 * bubble_float_amount(at), -0.43)
+
+
+static func idle_bubble_amount(at: float) -> float:
+	if at < 0.62 or at > 2.62:
+		return 0.0
+	var grow: float = smoothstep(0.62, 1.18, at)
+	var fade: float = 1.0 - smoothstep(2.2, 2.62, at)
+	return maxf(grow * fade, 0.0)
+
+
+static func bubble_float_amount(at: float) -> float:
+	return clampf((at - 1.0) / 1.62, 0.0, 1.0)
 
 
 ## Only the owner calls this. Everything it consults that is not replicated

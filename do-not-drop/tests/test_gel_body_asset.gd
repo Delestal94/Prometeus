@@ -2,7 +2,7 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
 ## three triangle budgets, eleven zero-default working morphs, twenty-six named bones,
-## forty-five animation durations, finite vertex/UV data, normalized four-slot skinning,
+## forty-eight animation durations, finite vertex/UV data, normalized four-slot skinning,
 ## zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
 
@@ -18,9 +18,11 @@ const JIGGLE_BONES: Array[String] = [
 ]
 const PURE_GEL_CLIPS: Array[String] = [
 	"Pancake", "GumStretch", "BallBounce", "SplitAndJoin", "ColdShiver", "Inflate",
-	"Flan",
+	"Flan", "IdleBounce",
 ]
-const SCALE_GEL_CLIPS: Array[String] = ["Pancake", "GumStretch", "BallBounce", "Inflate", "Flan"]
+const SCALE_GEL_CLIPS: Array[String] = [
+	"Pancake", "GumStretch", "BallBounce", "Inflate", "Flan", "IdleBounce",
+]
 const DURATIONS: Dictionary = {
 	"Idle": 6.0, "Walk": 1.0 / 3.0, "Stroll": 0.6, "Run": 1.0 / 3.0, "Jump": 1.6,
 	"PickUpPackage": 1.6, "PickUpHigh": 1.6, "Sit": 4.0, "TurnInPlace": 0.8,
@@ -32,6 +34,7 @@ const DURATIONS: Dictionary = {
 	"Point": 2.0, "ThumbsUp": 2.0, "MeltAndReturn": 3.0, "ShakeLikeDog": 1.8,
 	"Pancake": 2.4, "GumStretch": 2.8, "BallBounce": 2.4,
 	"SplitAndJoin": 3.2, "ColdShiver": 2.0, "Inflate": 2.8,
+	"InspectHand": 3.4, "BlowBubble": 3.2, "IdleBounce": 2.6,
 	"SimpleStep": 2.4, "Robot": 2.4, "Disco": 2.8, "FloorWorm": 3.2,
 	"Headbang": 1.6, "VictoryDance": 2.8, "Flan": 2.4, "Conga": 2.4,
 }
