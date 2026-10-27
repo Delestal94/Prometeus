@@ -74,6 +74,18 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 	var client_saw_defeat: bool = await _wait_until(func() -> bool: return _client_reported) \
 			and _client_passed
 
+	# S-311.92: knockout is another owner-authored presentation property. The
+	# remote copy runs its own deterministic shader timeline and particle burst.
+	var host_knockout_started: bool = host_player.set_knocked_out(true) \
+			and await _wait_until(func() -> bool:
+				return host_player.knocked_out and _knockout_amount(host_player) > 0.05)
+	_client_reported = false
+	_client_passed = false
+	rpc_id(client_peer_id, &"_client_check_knockout", host_player.get_path(), true)
+	var client_saw_knockout: bool = await _wait_until(func() -> bool: return _client_reported) \
+			and _client_passed
+	host_player.set_knocked_out(false)
+
 	_clear_owner(host_player)
 	rpc_id(client_peer_id, &"_client_clear", client_player.get_path())
 	await _wait_until(func() -> bool:
@@ -81,13 +93,14 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 
 	var passed: bool = host_owner_ok and client_saw_host and client_owner_ok and host_saw_client \
 			and host_emote_ok and client_saw_emote and host_long_idle_ok and client_saw_long_idle \
-			and host_defeat_ok and client_saw_defeat
-	detail = "both authorities publish exact clips, including emote, long idle and result defeat" \
+			and host_defeat_ok and client_saw_defeat \
+			and host_knockout_started and client_saw_knockout
+	detail = "owners publish exact clips and the remote gel knockout timeline starts" \
 			if passed else (
-		"animation pickup=%s/%s gait=%s/%s emote=%s/%s idle=%s/%s defeat=%s/%s"
+		"animation pickup=%s/%s gait=%s/%s emote=%s/%s idle=%s/%s defeat=%s/%s knockout=%s/%s"
 		% [host_owner_ok, client_saw_host, client_owner_ok, host_saw_client, host_emote_ok,
 			client_saw_emote, host_long_idle_ok, client_saw_long_idle,
-			host_defeat_ok, client_saw_defeat])
+			host_defeat_ok, client_saw_defeat, host_knockout_started, client_saw_knockout])
 	return passed
 
 
@@ -106,6 +119,14 @@ func _client_publish(player_path: NodePath, state: StringName, speed: float, pic
 		_set_owner_sample(player, state, speed, pickup_weight)
 	var passed: bool = player != null and await _wait_until(func() -> bool:
 		return _plays(player, state, Player.ANIM_STROLL))
+	rpc_id(MultiplayerPeer.TARGET_PEER_SERVER, &"_receive_report", passed)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _client_check_knockout(player_path: NodePath, active: bool) -> void:
+	var player := get_node_or_null(player_path) as Player
+	var passed: bool = player != null and await _wait_until(func() -> bool:
+		return player.knocked_out == active and _knockout_amount(player) > 0.05)
 	rpc_id(MultiplayerPeer.TARGET_PEER_SERVER, &"_receive_report", passed)
 
 
@@ -141,6 +162,11 @@ func _plays(player: Player, state: StringName, clip: StringName) -> bool:
 	return player.anim_state == state and player.anim_clip == clip \
 		and player.animator != null and player.animator.anim_player != null \
 		and StringName(player.animator.anim_player.current_animation) == clip
+
+
+func _knockout_amount(player: Player) -> float:
+	var effects := player.get_node_or_null(^"GelEffects") as PlayerGelEffects
+	return effects.knockout_amount() if effects != null else 0.0
 
 
 func _wait_until(condition: Callable, seconds: float = TIMEOUT_SECONDS) -> bool:
