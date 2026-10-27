@@ -39,6 +39,9 @@
       "SplitAndJoin": 3.2,
       "ColdShiver": 2.0,
       "Inflate": 2.8,
+      "InspectHand": 3.4,
+      "BlowBubble": 3.2,
+      "IdleBounce": 2.6,
       "SimpleStep": 2.4,
       "Robot": 2.4,
       "Disco": 2.8,
@@ -202,6 +205,18 @@
         "distance_m": 0.0,
         "time_s": 0.0
       },
+      "InspectHand": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "BlowBubble": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "IdleBounce": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
       "SimpleStep": {
         "distance_m": 0.0,
         "time_s": 0.0
@@ -244,8 +259,8 @@
       "source_interpolation": "BEZIER",
       "handle_type": "AUTO_CLAMPED",
       "linear_keyframes": 0,
-      "curves": 6720,
-      "keyframes": 804000,
+      "curves": 7200,
+      "keyframes": 891120,
       "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
       "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
     },
@@ -398,6 +413,18 @@
       "Inflate": [
         0.1599987894296646,
         0.15999968349933624
+      ],
+      "InspectHand": [
+        0.159998819231987,
+        0.1599992960691452
+      ],
+      "BlowBubble": [
+        0.15999850630760193,
+        0.1599993258714676
+      ],
+      "IdleBounce": [
+        0.15999820828437805,
+        0.2999874949455261
       ],
       "SimpleStep": [
         0.1599990278482437,

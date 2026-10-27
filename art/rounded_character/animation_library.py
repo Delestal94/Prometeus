@@ -59,11 +59,12 @@ DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Point': 2.0, 'ThumbsUp': 2.0, 'MeltAndReturn': 3.0,
              'ShakeLikeDog': 1.8, 'Pancake': 2.4, 'GumStretch': 2.8,
              'BallBounce': 2.4, 'SplitAndJoin': 3.2, 'ColdShiver': 2.0,
-             'Inflate': 2.8, 'SimpleStep': 2.4, 'Robot': 2.4,
+             'Inflate': 2.8, 'InspectHand': 3.4, 'BlowBubble': 3.2,
+             'IdleBounce': 2.6, 'SimpleStep': 2.4, 'Robot': 2.4,
              'Disco': 2.8, 'FloorWorm': 3.2, 'Headbang': 1.6,
              'VictoryDance': 2.8, 'Flan': 2.4, 'Conga': 2.4}
 PURE_GEL_CLIPS = ('Pancake', 'GumStretch', 'BallBounce', 'SplitAndJoin',
-                  'ColdShiver', 'Inflate', 'Flan')
+                  'ColdShiver', 'Inflate', 'Flan', 'IdleBounce')
 DANCE_CLIPS = ('SimpleStep', 'Robot', 'Disco', 'FloorWorm', 'Headbang',
                'VictoryDance', 'Flan', 'Conga')
 LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace',
@@ -1183,6 +1184,69 @@ def inflate(t):
     return blend(P, rest, smooth(2.0, 2.8, t))
 
 
+# --- long idles ----------------------------------------------------------------
+
+def inspect_hand(t):
+    """Notice the translucent hand, turn it over twice, then relax."""
+    rest = IDLE0
+    show = keys(t, [(0., 0.), (.48, 1.), (2.72, 1.), (3.4, 0.)])
+    turn = math.sin(TAU*1.05*max(0., t-.45))*show
+    P = dict(rest)
+    P.update(
+        p_yaw=rest['p_yaw']+3.*show,
+        s_yaw=rest['s_yaw']+7.*show, c_yaw=rest['c_yaw']+12.*show,
+        h_pitch=rest['h_pitch']+8.*show, h_yaw=rest['h_yaw']+24.*show,
+        h_roll=rest['h_roll']-4.*show,
+    )
+    P['armL'] = lerp(rest['armL'],
+                     (18., 38.+5.*turn, 74.+10.*turn, -28., 48., 12.), show)
+    P['armR'] = lerp(rest['armR'], (54., 5., 32., 10., 22., 2.), show)
+    P['thumbL'] = lerp(rest['thumbL'], 18.+7.*turn, show)
+    return blend(P, rest, smooth(2.72, 3.4, t))
+
+
+def blow_bubble(t):
+    """Cup both hands at the mouth and gently blow a floating gel bubble."""
+    rest = IDLE0
+    cup = keys(t, [(0., 0.), (.48, 1.), (2.45, 1.), (3.2, 0.)])
+    breath = smooth(.62, 1.15, t)*(1.-smooth(2.15, 2.55, t))*cup
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.025*cup, s_pitch=rest['s_pitch']+4.*cup,
+        c_pitch=rest['c_pitch']+7.*cup, h_pitch=rest['h_pitch']-9.*cup,
+        by=rest['by']-.025*breath, bz=rest['bz']+.012*breath,
+        bs=rest['bs']+.045*breath,
+    )
+    P['armL'] = lerp(rest['armL'], (8., 33., 88., -34., 52., 14.), cup)
+    P['armR'] = lerp(rest['armR'], (8., 33., 88., 34., 52., 14.), cup)
+    P['thumbL'] = lerp(rest['thumbL'], 22., cup)
+    P['thumbR'] = lerp(rest['thumbR'], 22., cup)
+    return blend(P, rest, smooth(2.45, 3.2, t))
+
+
+def idle_bounce(t):
+    """Two soft hops in place, with a gelatin squash on each landing."""
+    rest = IDLE0
+    active = keys(t, [(0., 0.), (.25, 1.), (2.05, 1.), (2.6, 0.)])
+    phase = max(0., t-.25)/.82
+    arc = abs(math.sin(math.pi*phase))*active
+    impact = (1.-abs(math.sin(math.pi*phase)))**7*active
+    height = .28*arc
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']+height-.045*impact,
+        s_scale=(1.+.045*impact, 1.-.04*impact, 1.+.045*impact),
+        c_scale=(1.+.04*impact, 1.-.035*impact, 1.+.04*impact),
+        h_scale=(1.+.03*impact, 1.-.025*impact, 1.+.03*impact),
+        by=rest['by']-.018*impact, bs=rest['bs']+.04*impact,
+        footL=(0., 0., height, 0.), footR=(0., 0., height, 0.),
+        groundL=1.-arc, groundR=1.-arc,
+    )
+    P['armL'] = lerp(rest['armL'], (40., -7., 30., -8., 20., 2.), arc)
+    P['armR'] = lerp(rest['armR'], (40., -7., 30., 8., 20., 2.), arc)
+    return blend(P, rest, smooth(2.05, 2.6, t))
+
+
 # --- original dance loops ------------------------------------------------------
 
 def simple_step(t):
@@ -1385,7 +1449,9 @@ def build(rig):
              'ShakeLikeDog': shake_like_dog, 'Pancake': pancake,
              'GumStretch': gum_stretch, 'BallBounce': ball_bounce,
              'SplitAndJoin': split_and_join, 'ColdShiver': cold_shiver,
-             'Inflate': inflate, 'SimpleStep': simple_step, 'Robot': robot,
+             'Inflate': inflate, 'InspectHand': inspect_hand,
+             'BlowBubble': blow_bubble, 'IdleBounce': idle_bounce,
+             'SimpleStep': simple_step, 'Robot': robot,
              'Disco': disco, 'FloorWorm': floor_worm, 'Headbang': headbang,
              'VictoryDance': victory_dance, 'Flan': flan, 'Conga': conga}
     for name, duration in DURATIONS.items():

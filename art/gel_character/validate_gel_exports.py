@@ -26,7 +26,8 @@ DURATIONS = {'Idle': 6., 'Walk': 1/3, 'Stroll': .6, 'Run': 1/3,
              'Point': 2., 'ThumbsUp': 2., 'MeltAndReturn': 3.,
              'ShakeLikeDog': 1.8, 'Pancake': 2.4, 'GumStretch': 2.8,
              'BallBounce': 2.4, 'SplitAndJoin': 3.2, 'ColdShiver': 2.,
-             'Inflate': 2.8, 'SimpleStep': 2.4, 'Robot': 2.4,
+             'Inflate': 2.8, 'InspectHand': 3.4, 'BlowBubble': 3.2,
+             'IdleBounce': 2.6, 'SimpleStep': 2.4, 'Robot': 2.4,
              'Disco': 2.8, 'FloorWorm': 3.2, 'Headbang': 1.6,
              'VictoryDance': 2.8, 'Flan': 2.4, 'Conga': 2.4}
 EXPECTED_SAMPLES = len(DURATIONS) * 5 * 3 * 3

@@ -399,7 +399,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   que se sincroniza con quien esté cerca.
 - [x] **S-311.89** Rueda de emotes con teclado y gamepad (junto a la rueda de pings S-505 o aparte),
   replicada.
-- [ ] **S-311.90** Idles largos si el jugador no toca nada: mirarse la mano transparente, hacer una
+- [x] **S-311.90** Idles largos si el jugador no toca nada: mirarse la mano transparente, hacer una
   burbuja, rebotar en el lugar.
 - [ ] **S-311.91** Celebración al entregar y derrota en resultados (`hud_results.gd` y S-508 están en la
   lista de Nacho: aviso).
