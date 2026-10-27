@@ -34,7 +34,8 @@ func _run() -> void:
 		"the shared packed channel still carries ordinary contact compression")
 
 	_expect(effects.set_local_knocked_out(true), "the local owner can start knockout")
-	_expect(effects.knocked_out and knockout.phase == Knockout.Phase.MELTING,
+	_expect(effects.knockout_cause == Knockout.Cause.MELT
+			and effects.knocked_out and knockout.phase == Knockout.Phase.MELTING,
 		"knockout enters the melt phase")
 	var face := player.get_node(^"GelFaceReactions") as GelFaceReactions
 	_expect(face.knocked_out, "the existing X-eyes face follows knockout")
@@ -74,7 +75,7 @@ func _run() -> void:
 
 func _check_replication(player: Player) -> void:
 	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	var path := NodePath("GelEffects:knocked_out")
+	var path := NodePath("GelEffects:knockout_cause")
 	_expect(sync.replication_config.has_property(path)
 			and sync.replication_config.property_get_spawn(path)
 			and sync.replication_config.property_get_replication_mode(path)
@@ -90,7 +91,7 @@ func _check_shader_contract() -> void:
 		var source: String = FileAccess.get_file_as_string(path)
 		_expect(source.count("instance uniform ") == 16,
 			"%s keeps the per-instance uniform budget" % path)
-		_expect(source.contains("clamp(-gel_contact_compression, 0.0, 1.0)")
+		_expect(source.contains("float knockout_cause = floor(knockout_packed")
 				and source.contains("puddle_spread")
 				and source.contains("puddle_height"),
 			"%s contains the reversible shader puddle deformation" % path)

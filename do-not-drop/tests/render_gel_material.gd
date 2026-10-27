@@ -8,6 +8,7 @@ extends SceneTree
 ## a soft translucent shadow on the floor and received directional shadows.
 ## Pass `-- --opaque` for the S-311.35 no-screen-read milky fallback.
 ## Pass `-- --knockout` for the S-311.92 alive/melt/puddle/reassemble sheet.
+## Pass `-- --knockout-causes` for the four S-311.93 cause silhouettes.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
@@ -19,6 +20,7 @@ var _camera: Camera3D
 var _gel: Node3D
 var _use_opaque: bool = false
 var _review_knockout: bool = false
+var _review_knockout_causes: bool = false
 var _knockout: Node
 
 
@@ -34,11 +36,16 @@ func _run() -> void:
 	root.size = Vector2i(960, 960)
 	_use_opaque = "--opaque" in OS.get_cmdline_user_args()
 	_review_knockout = "--knockout" in OS.get_cmdline_user_args()
+	_review_knockout_causes = "--knockout-causes" in OS.get_cmdline_user_args()
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
 	var file_name: String
-	if _review_knockout:
+	if _review_knockout_causes:
+		file_name = "s311_93_knockout_causes_opaque.png" if _use_opaque \
+				else "s311_93_knockout_causes_transparent.png"
+		await _save_knockout_causes_sheet(output_path.path_join(file_name))
+	elif _review_knockout:
 		file_name = "s311_92_knockout_opaque.png" if _use_opaque \
 				else "s311_92_knockout_transparent.png"
 		await _save_knockout_sheet(output_path.path_join(file_name))
@@ -107,7 +114,7 @@ func _build_stage() -> void:
 	_camera.look_at(Vector3(0.0, 0.74, 0.0))
 	_camera.fov = 31.0
 	_camera.make_current()
-	if _review_knockout:
+	if _review_knockout or _review_knockout_causes:
 		_knockout = Knockout.new()
 		root.add_child(_knockout)
 		_knockout.setup(_gel)
@@ -161,6 +168,27 @@ func _save_knockout_sheet(path: String) -> void:
 	]
 	for index: int in stages.size():
 		stages[index].call()
+		var frame: Image = await _capture()
+		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
+		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), Vector2i(index * 480, 0))
+	var error: Error = sheet.save_png(path)
+	if error != OK:
+		push_error("Cannot save %s (got %d)" % [path, error])
+		quit(1)
+
+
+func _save_knockout_causes_sheet(path: String) -> void:
+	var sheet := Image.create_empty(1920, 480, false, Image.FORMAT_RGBA8)
+	var causes: Array[int] = [
+		Knockout.Cause.CRUSHED,
+		Knockout.Cause.EXPLOSION,
+		Knockout.Cause.WATER,
+		Knockout.Cause.RUN_OVER,
+	]
+	for index: int in causes.size():
+		_knockout.reset()
+		_knockout.set_knockout_cause(causes[index])
+		_knockout.advance(Knockout.MELT_SECONDS * 0.78)
 		var frame: Image = await _capture()
 		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
 		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), Vector2i(index * 480, 0))
