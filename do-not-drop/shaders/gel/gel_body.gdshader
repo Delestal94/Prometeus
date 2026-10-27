@@ -23,7 +23,9 @@ instance uniform vec4 gel_skin_surface = vec4(-1.0, -1.0, 0.0, 0.0);
 instance uniform vec4 gel_interior = vec4(0.0, 0.0, 0.0, 8.0);
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
-instance uniform float gel_contact_compression : hint_range(0.0, 0.16) = 0.0;
+// Positive = contact compression; negative = reversible knockout melt. The
+// packed channel avoids exceeding Godot's 16 per-instance-uniform limit.
+instance uniform float gel_contact_compression : hint_range(-1.0, 0.16) = 0.0;
 instance uniform vec4 gel_wave_0 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
@@ -255,6 +257,8 @@ float environment_ripple(vec3 point) {
 }
 
 void vertex() {
+	float knockout = clamp(-gel_contact_compression, 0.0, 1.0);
+	float contact_compression = max(gel_contact_compression, 0.0);
 	float drag_mask = inertial_drag_mask(VERTEX);
 	vec3 turning_drag = vec3(-VERTEX.z, 0.0, VERTEX.x) * gel_inertia.w;
 	VERTEX += (gel_inertia.xyz + turning_drag) * drag_mask;
@@ -269,7 +273,7 @@ void vertex() {
 	VERTEX *= vec3(radial_scale, vertical_scale, radial_scale);
 	NORMAL = normalize(NORMAL / vec3(radial_scale, vertical_scale, radial_scale));
 	vec3 contact_axis = normalize(gel_contact_direction);
-	float contact_scale = max(1.0 - gel_contact_compression, 0.82);
+	float contact_scale = max(1.0 - contact_compression, 0.82);
 	float contact_radial = inversesqrt(contact_scale);
 	float contact_position = dot(VERTEX, contact_axis);
 	vec3 contact_perpendicular = VERTEX - contact_axis * contact_position;
@@ -282,6 +286,14 @@ void vertex() {
 		contact_axis * contact_normal / contact_scale
 		+ (NORMAL - contact_axis * contact_normal) / contact_radial
 	);
+	float melt = knockout * knockout * (3.0 - 2.0 * knockout);
+	float source_height = clamp(VERTEX.y / 1.75, 0.0, 1.0);
+	float puddle_spread = mix(1.0, 1.55 + source_height * 0.38, melt);
+	float puddle_height = 0.025 + source_height * 0.055;
+	VERTEX.xz *= puddle_spread;
+	VERTEX.y = mix(VERTEX.y, puddle_height, melt);
+	float melt_vertical_scale = mix(1.0, 0.045, melt);
+	NORMAL = normalize(NORMAL / vec3(puddle_spread, melt_vertical_scale, puddle_spread));
 	float wind_mask = smoothstep(0.12, 1.55, VERTEX.y);
 	float wind_sway = sin(gel_weather.x * 1.35 + gel_weather.y * 6.28318);
 	wind_sway = wind_sway * 0.72 + sin(gel_weather.x * 2.1 + gel_weather.y * 3.1) * 0.28;

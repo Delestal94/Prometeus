@@ -406,7 +406,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### M. Muerte, distorsión y efectos (92-95)
 
-- [ ] **S-311.92** Knockout de gelatina: se derrite en un charco (shader + partículas) y se rearma al
+- [x] **S-311.92** Knockout de gelatina: se derrite en un charco (shader + partículas) y se rearma al
   reaparecer con animación de reensamble.
 - [ ] **S-311.93** Variantes por causa: aplastado (panqueque), explosión (gotas que vuelven al centro),
   caída al agua (se disuelve), atropellado.

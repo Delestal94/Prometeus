@@ -7,15 +7,19 @@ extends SceneTree
 ## runtime material through a full turn. S-311.33 verifies stable self-overlap,
 ## a soft translucent shadow on the floor and received directional shadows.
 ## Pass `-- --opaque` for the S-311.35 no-screen-read milky fallback.
+## Pass `-- --knockout` for the S-311.92 alive/melt/puddle/reassemble sheet.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
+const Knockout = preload("res://scripts/gameplay/player/gel/gel_knockout.gd")
 
 var _camera: Camera3D
 var _gel: Node3D
 var _use_opaque: bool = false
+var _review_knockout: bool = false
+var _knockout: Node
 
 
 func _initialize() -> void:
@@ -29,12 +33,19 @@ func _run() -> void:
 		return
 	root.size = Vector2i(960, 960)
 	_use_opaque = "--opaque" in OS.get_cmdline_user_args()
+	_review_knockout = "--knockout" in OS.get_cmdline_user_args()
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
-	var file_name := "s311_35_opaque_milky_turntable.png" if _use_opaque \
-		else "s311_33_transparency_shadow_turntable.png"
-	await _save_turntable(output_path.path_join(file_name))
+	var file_name: String
+	if _review_knockout:
+		file_name = "s311_92_knockout_opaque.png" if _use_opaque \
+				else "s311_92_knockout_transparent.png"
+		await _save_knockout_sheet(output_path.path_join(file_name))
+	else:
+		file_name = "s311_35_opaque_milky_turntable.png" if _use_opaque \
+				else "s311_33_transparency_shadow_turntable.png"
+		await _save_turntable(output_path.path_join(file_name))
 	print("PASS: gel %s turntable at %s" % ["opaque milky" if _use_opaque else "transparency and shadow", output_path])
 	quit(0)
 
@@ -83,6 +94,7 @@ func _build_stage() -> void:
 		quit(1)
 		return
 	mesh.material_override = GEL_OPAQUE_MATERIAL if _use_opaque else GEL_MATERIAL
+	PlayerAppearance.set_gel_look(_gel, Color("72d7ec"), 0.9, 1.05)
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var animation: AnimationPlayer = PlayerAppearance.find_animation_player(_gel)
 	if animation != null and animation.has_animation(&"Idle"):
@@ -95,6 +107,10 @@ func _build_stage() -> void:
 	_camera.look_at(Vector3(0.0, 0.74, 0.0))
 	_camera.fov = 31.0
 	_camera.make_current()
+	if _review_knockout:
+		_knockout = Knockout.new()
+		root.add_child(_knockout)
+		_knockout.setup(_gel)
 
 
 func _build_dark_studio_backdrop() -> void:
@@ -125,6 +141,29 @@ func _save_turntable(path: String) -> void:
 		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
 		var destination := Vector2i((index % 4) * 480, (index / 4) * 480)
 		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), destination)
+	var error: Error = sheet.save_png(path)
+	if error != OK:
+		push_error("Cannot save %s (got %d)" % [path, error])
+		quit(1)
+
+
+func _save_knockout_sheet(path: String) -> void:
+	var sheet := Image.create_empty(1920, 480, false, Image.FORMAT_RGBA8)
+	var stages: Array[Callable] = [
+		func() -> void: _knockout.reset(),
+		func() -> void:
+			_knockout.set_knocked_out(true)
+			_knockout.advance(Knockout.MELT_SECONDS * 0.5),
+		func() -> void: _knockout.advance(Knockout.MELT_SECONDS),
+		func() -> void:
+			_knockout.set_knocked_out(false)
+			_knockout.advance(Knockout.REASSEMBLE_SECONDS * 0.5),
+	]
+	for index: int in stages.size():
+		stages[index].call()
+		var frame: Image = await _capture()
+		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
+		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), Vector2i(index * 480, 0))
 	var error: Error = sheet.save_png(path)
 	if error != OK:
 		push_error("Cannot save %s (got %d)" % [path, error])

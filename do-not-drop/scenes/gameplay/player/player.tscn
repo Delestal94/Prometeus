@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_effects.gd" id="10_gel_effects"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_face_reactions.gd" id="11_face_reactions"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_gel_appearance.gd" id="12_gel_appearance"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_knockout.gd" id="13_gel_knockout"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -80,6 +81,9 @@ properties/15/replication_mode = 1
 properties/16/path = NodePath(".:anim_clip")
 properties/16/spawn = true
 properties/16/replication_mode = 2
+properties/17/path = NodePath("GelEffects:knocked_out")
+properties/17/spawn = true
+properties/17/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8
@@ -118,6 +122,9 @@ script = ExtResource("8_gel_contact")
 
 [node name="GelEnvironment" type="Node" parent="GelEffects"]
 script = ExtResource("9_gel_environment")
+
+[node name="GelKnockout" type="Node" parent="GelEffects"]
+script = ExtResource("13_gel_knockout")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="GelProportions"]
 replication_config = SubResource("Repl_gel_proportions")
