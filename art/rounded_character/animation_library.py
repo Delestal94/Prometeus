@@ -62,13 +62,14 @@ DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Inflate': 2.8, 'InspectHand': 3.4, 'BlowBubble': 3.2,
              'IdleBounce': 2.6, 'SimpleStep': 2.4, 'Robot': 2.4,
              'Disco': 2.8, 'FloorWorm': 3.2, 'Headbang': 1.6,
-             'VictoryDance': 2.8, 'Flan': 2.4, 'Conga': 2.4}
+             'VictoryDance': 2.8, 'Defeat': 3.0, 'Flan': 2.4, 'Conga': 2.4}
 PURE_GEL_CLIPS = ('Pancake', 'GumStretch', 'BallBounce', 'SplitAndJoin',
                   'ColdShiver', 'Inflate', 'Flan', 'IdleBounce')
 DANCE_CLIPS = ('SimpleStep', 'Robot', 'Disco', 'FloorWorm', 'Headbang',
                'VictoryDance', 'Flan', 'Conga')
+RESULT_CLIPS = ('Defeat',)
 LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace',
-           'CarryWalk', 'Drive') + DANCE_CLIPS
+           'CarryWalk', 'Drive') + DANCE_CLIPS + RESULT_CLIPS
 
 # Foot geometry, relative to the ankle (IK target) at rest.
 BALL = Vector((0, -.245, -.227))   # ball of the foot on the ground
@@ -1373,6 +1374,23 @@ def victory_dance(t):
     )
 
 
+def defeat(t):
+    """A quiet looping loss pose: dropped chest, heavy head and a soft sway."""
+    a = TAU*t/DURATIONS['Defeat']
+    breath = .5+.5*math.cos(a)
+    sway = math.sin(a)
+    return dict(
+        px=.018*sway, pz=-.14-.018*breath, p_pitch=7., p_roll=2.5*sway,
+        s_pitch=13.+2.*breath, s_roll=-2.*sway,
+        c_pitch=15.+2.*breath, c_roll=2.5*sway,
+        h_pitch=29.+3.*breath, h_roll=-4.*sway, h_yaw=3.*sway,
+        by=-.012*sway, bz=-.018*breath,
+        armL=(66., -5.+3.*sway, 13., -8., 10., -4.),
+        armR=(66., -5.-3.*sway, 13., 8., 10., -4.),
+        footL=(.025, 0., 0., 0.), footR=(-.025, 0., 0., 0.),
+    )
+
+
 def flan(t):
     """The whole gel ripples in a soft delayed wave from pelvis to head."""
     a = TAU*t/DURATIONS['Flan']
@@ -1453,7 +1471,8 @@ def build(rig):
              'BlowBubble': blow_bubble, 'IdleBounce': idle_bounce,
              'SimpleStep': simple_step, 'Robot': robot,
              'Disco': disco, 'FloorWorm': floor_worm, 'Headbang': headbang,
-             'VictoryDance': victory_dance, 'Flan': flan, 'Conga': conga}
+             'VictoryDance': victory_dance, 'Defeat': defeat,
+             'Flan': flan, 'Conga': conga}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action

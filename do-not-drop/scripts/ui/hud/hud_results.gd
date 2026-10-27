@@ -57,10 +57,18 @@ func show_host_gone() -> void:
 func _on_ended(score: int, results: Dictionary) -> void:
 	hud.soft_pause = false
 	hud.notices.clear_all_notices()
+	if results.has("delivered"):
+		_play_result_reaction(bool(results["delivered"]))
 	# The next-day newspaper comes first when the host sent one (N-606.2).
 	if hud.newspaper != null and hud.newspaper.present(show_results.bind(score, results)):
 		return
 	show_results(score, results)
+
+
+## Every peer owns exactly one player. Results already arrive on each peer,
+## so that owner can publish its reaction through the normal animation state.
+func _play_result_reaction(success: bool) -> bool:
+	return PlayerAnimator.play_local_result(get_tree(), success)
 
 
 func show_results(score: int, results: Dictionary) -> void:
@@ -82,7 +90,10 @@ func show_results(score: int, results: Dictionary) -> void:
 	if results.has("distance_traveled"):
 		hud.overlay_title.text = tr("HUD_RESULT_ENDLESS_TITLE")
 		hud.overlay_body.text = tr(String(results["reason"]))
-		hud.overlay_stats.text = tr("HUD_RESULT_ENDLESS_STATS") % [float(results["distance_traveled"]), results["elapsed_seconds"], CrewProgression.team_money, best_line, client_line]
+		hud.overlay_stats.text = tr("HUD_RESULT_ENDLESS_STATS") % [
+			float(results["distance_traveled"]), results["elapsed_seconds"],
+			CrewProgression.team_money, best_line, client_line,
+		]
 		hud.complaints_label.visible = false
 		hud.photo_strip.visible = false
 		hud.result_details.visible = false
@@ -224,7 +235,10 @@ func _show_unlock_progress() -> void:
 
 
 static func format_score_breakdown(results: Dictionary, score: int) -> String:
-	var lines: PackedStringArray = [TranslationServer.translate("HUD_RESULT_ON_ROAD") % float(results.get("elapsed_seconds", 0.0))]
+	var lines: PackedStringArray = [
+		TranslationServer.translate("HUD_RESULT_ON_ROAD")
+		% float(results.get("elapsed_seconds", 0.0)),
+	]
 	for line: Dictionary in results.get("breakdown", []):
 		var points: int = int(line["points"])
 		var label: String = TranslationServer.translate(String(line["label"]))
@@ -243,7 +257,8 @@ static func format_score_breakdown(results: Dictionary, score: int) -> String:
 func _delivery_summary(delivered_doors: int, missed_doors: int, aboard: int, ruined: int, intact: int) -> String:
 	var lines: PackedStringArray = []
 	if delivered_doors > 0:
-		lines.append((tr("HUD_RESULT_DOORS_ONE") if delivered_doors == 1 else tr("HUD_RESULT_DOORS_MANY")) % delivered_doors)
+		lines.append((tr("HUD_RESULT_DOORS_ONE") if delivered_doors == 1
+			else tr("HUD_RESULT_DOORS_MANY")) % delivered_doors)
 	if missed_doors > 0:
 		lines.append(tr("HUD_RESULT_MISSED_ONE") if missed_doors == 1 else tr("HUD_RESULT_MISSED_MANY") % missed_doors)
 	if aboard > 0:

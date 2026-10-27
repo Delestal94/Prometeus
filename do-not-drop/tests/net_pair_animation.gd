@@ -61,18 +61,33 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 	var client_saw_long_idle: bool = await _wait_until(func() -> bool: return _client_reported) \
 			and _client_passed
 
+	# S-311.91: results choose the reaction on the owner and reuse the exact
+	# replicated clip contract. Defeat is the new path; VictoryDance already
+	# exercises the same authored/looping playback path as the dances.
+	_set_owner_sample(host_player, PlayerAnimator.ANIM_DEFEAT, 0.0, 0.0)
+	var host_defeat_ok: bool = await _wait_until(func() -> bool:
+		return _plays(host_player, PlayerAnimator.ANIM_DEFEAT, PlayerAnimator.ANIM_DEFEAT))
+	_client_reported = false
+	_client_passed = false
+	rpc_id(client_peer_id, &"_client_check_remote", host_player.get_path(),
+		PlayerAnimator.ANIM_DEFEAT, PlayerAnimator.ANIM_DEFEAT)
+	var client_saw_defeat: bool = await _wait_until(func() -> bool: return _client_reported) \
+			and _client_passed
+
 	_clear_owner(host_player)
 	rpc_id(client_peer_id, &"_client_clear", client_player.get_path())
 	await _wait_until(func() -> bool:
 		return host_player.anim_clip == Player.ANIM_IDLE and client_player.anim_clip == Player.ANIM_IDLE)
 
 	var passed: bool = host_owner_ok and client_saw_host and client_owner_ok and host_saw_client \
-			and host_emote_ok and client_saw_emote and host_long_idle_ok and client_saw_long_idle
-	detail = "both authorities publish exact clips, including an emote and long idle, and peers play them" \
+			and host_emote_ok and client_saw_emote and host_long_idle_ok and client_saw_long_idle \
+			and host_defeat_ok and client_saw_defeat
+	detail = "both authorities publish exact clips, including emote, long idle and result defeat" \
 			if passed else (
-		"animation pickup=%s/%s gait=%s/%s emote=%s/%s idle=%s/%s"
+		"animation pickup=%s/%s gait=%s/%s emote=%s/%s idle=%s/%s defeat=%s/%s"
 		% [host_owner_ok, client_saw_host, client_owner_ok, host_saw_client, host_emote_ok,
-			client_saw_emote, host_long_idle_ok, client_saw_long_idle])
+			client_saw_emote, host_long_idle_ok, client_saw_long_idle,
+			host_defeat_ok, client_saw_defeat])
 	return passed
 
 
