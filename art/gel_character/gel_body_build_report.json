@@ -48,6 +48,7 @@
       "FloorWorm": 3.2,
       "Headbang": 1.6,
       "VictoryDance": 2.8,
+      "Defeat": 3.0,
       "Flan": 2.4,
       "Conga": 2.4
     },
@@ -241,6 +242,10 @@
         "distance_m": 0.0,
         "time_s": 0.0
       },
+      "Defeat": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
       "Flan": {
         "distance_m": 0.0,
         "time_s": 0.0
@@ -259,8 +264,8 @@
       "source_interpolation": "BEZIER",
       "handle_type": "AUTO_CLAMPED",
       "linear_keyframes": 0,
-      "curves": 7200,
-      "keyframes": 891120,
+      "curves": 7340,
+      "keyframes": 916460,
       "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
       "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
     },
@@ -449,6 +454,10 @@
       "VictoryDance": [
         0.15999837219715118,
         0.24999932944774628
+      ],
+      "Defeat": [
+        0.15999001264572144,
+        0.159995898604393
       ],
       "Flan": [
         0.1599966585636139,
@@ -764,7 +773,7 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "b852c0f5a233b06a1b6d61d268dd5c342ed2a496fa055f215b49dd1de0248aab",
+      "geometry_sha256": "8df794d71e673523cd0a982e6e65ed47fd45ed5bb10cc18e11ef31bbb2e090a2",
       "morph_sha256": "04ee88d4bf388aea661b7d161c51835fa825c02679456594131327ad10ee3e20",
       "body_shape": {
         "lod_index": 2,
@@ -818,7 +827,7 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 53.82325157173518,
+            "adjacent_face_angle_p95_degrees": 53.823270874719086,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
             "sampled_edges": 235
           },

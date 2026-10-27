@@ -401,7 +401,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   replicada.
 - [x] **S-311.90** Idles largos si el jugador no toca nada: mirarse la mano transparente, hacer una
   burbuja, rebotar en el lugar.
-- [ ] **S-311.91** Celebración al entregar y derrota en resultados (`hud_results.gd` y S-508 están en la
+- [x] **S-311.91** Celebración al entregar y derrota en resultados (`hud_results.gd` y S-508 están en la
   lista de Nacho: aviso).
 
 ### M. Muerte, distorsión y efectos (92-95)

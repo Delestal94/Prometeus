@@ -51,6 +51,8 @@ const ANIM_CARRY_WALK: StringName = &"CarryWalk"
 const ANIM_STUMBLE: StringName = &"Stumble"
 const ANIM_BOX_HIT: StringName = &"BoxHit"
 const ANIM_CONGA: StringName = &"Conga"
+const ANIM_VICTORY: StringName = &"VictoryDance"
+const ANIM_DEFEAT: StringName = &"Defeat"
 const EMOTE_CLIPS: Array[StringName] = [
 	&"Wave", &"Clap", &"Facepalm", &"Shrug", &"Point", &"ThumbsUp",
 	&"MeltAndReturn", &"ShakeLikeDog",
@@ -60,6 +62,7 @@ const DANCE_CLIPS: Array[StringName] = [
 	&"VictoryDance", &"Flan", ANIM_CONGA,
 ]
 const LONG_IDLE_CLIPS: Array[StringName] = [&"InspectHand", &"BlowBubble", &"IdleBounce"]
+const RESULT_CLIPS: Array[StringName] = [ANIM_VICTORY, ANIM_DEFEAT]
 const LONG_IDLE_DURATIONS: Dictionary = {
 	&"InspectHand": 3.4,
 	&"BlowBubble": 3.2,
@@ -77,7 +80,7 @@ const IDLE_BELOW_SPEED: float = 0.3
 const LOOPING: Array[StringName] = [
 	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN,
 	ANIM_CARRY_WALK, Player.ANIM_SIT, ANIM_DRIVE, Player.ANIM_TURN,
-] + DANCE_CLIPS
+] + DANCE_CLIPS + [ANIM_DEFEAT]
 const GAIT_CLIPS: Array[StringName] = [
 	Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, ANIM_CARRY_WALK]
 const REACTION_CLIPS: Array[StringName] = [
@@ -149,6 +152,10 @@ func add_look_yaw(yaw: float) -> void:
 ## writes (and re-replicates) anim_state when the target state changes.
 func update_movement(ground_speed: float, pickup_elapsed: float) -> void:
 	measure_turn_rate(_player.get_physics_process_delta_time())
+	# Results own the character until the scene restarts. Movement still runs
+	# behind the card, but it must not replace the visible win/loss reaction.
+	if _player.anim_state in RESULT_CLIPS:
+		return
 	var active_motion: bool = ground_speed > IDLE_BELOW_SPEED or _player.turn_rate > TURN_STEP_BELOW
 	if active_motion:
 		note_activity()
@@ -219,6 +226,31 @@ func play_emote(clip: StringName) -> bool:
 		return false
 	play_one_shot(clip, EmoteCatalogData.lock_msec(clip))
 	return true
+
+
+## Results are decided locally on every peer. Each owner publishes its own
+## reaction through the existing anim_state / anim_clip properties, so no
+## results-only RPC or remote state inference is needed.
+func play_result(success: bool) -> bool:
+	var clip: StringName = result_clip(success)
+	if anim_player == null or not anim_player.has_animation(clip):
+		return false
+	_long_idle_elapsed = 0.0
+	_anim_lock_until_msec = 0
+	_player.anim_state = clip
+	return true
+
+
+static func result_clip(success: bool) -> StringName:
+	return ANIM_VICTORY if success else ANIM_DEFEAT
+
+
+static func play_local_result(tree: SceneTree, success: bool) -> bool:
+	for candidate: Node in tree.get_nodes_in_group(&"player"):
+		var player := candidate as Player
+		if player != null and player.is_local() and player.animator != null:
+			return player.animator.play_result(success)
+	return false
 
 
 ## Any deliberate input interrupts an automatic idle and restarts its wait.
@@ -368,7 +400,9 @@ static func bubble_float_amount(at: float) -> float:
 func _resolve_owned_clip() -> StringName:
 	if anim_player == null:
 		return _player.anim_state
-	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else _seat_clip()
+	var clip: StringName = _player.anim_state \
+			if _player.seat_node_path.is_empty() or _player.anim_state in RESULT_CLIPS \
+			else _seat_clip()
 	if clip == Player.ANIM_WALK:
 		clip = _gait_clip()
 	elif clip == Player.ANIM_PICKUP:

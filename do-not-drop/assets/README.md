@@ -366,7 +366,9 @@ modificarlo:
   manos sobre la panza, pies que se balancean) y `TurnInPlace` 0,8 s en loop (dos
   pasitos que reacomodan los pies; `player.gd` lo usa al girar parado). Los idles largos
   `InspectHand`, `BlowBubble` e `IdleBounce` se alternan tras 15 s sin entrada y se
-  cancelan apenas el jugador toca un control. `player.gd` ubica el cuerpo sobre
+  cancelan apenas el jugador toca un control. En resultados, una entrega usa
+  `VictoryDance` y una derrota usa el loop encorvado `Defeat`; cada dueño publica el
+  clip por el estado de animación existente. `player.gd` ubica el cuerpo sobre
   cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)
