@@ -12,6 +12,7 @@ extends RefCounted
 ##   SynthAudioHandling  camera shutter, tape, cardboard, tension bed
 ##   SynthAudioWorld     wind, rain, birds, crickets, road, crossing bell, roller door, reverse beep
 ##   SynthAudioAnimals   dog bark, sheep bleat
+##   SynthAudioGel       footsteps by surface and the gel body's elastic foley
 ##   SynthAudioNewspaper rooster, morning birds, "extra!" hit, paper rustle, page turn, mate spit
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
@@ -19,6 +20,7 @@ extends RefCounted
 ## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
 ## shared: a stream is read-only data, and every AudioStreamPlayer keeps its own playback of it.
 static var _cache: Dictionary = {}
+const GelSounds = preload("res://modules/synth_audio/synth_audio_gel.gd")
 const SCENE_SOUNDS_FILE: String = "synth_audio_scenes.gd"
 static var _scene_sounds_script: Script
 
@@ -119,6 +121,43 @@ static func engine_high_loop() -> AudioStreamWAV:
 ## Short low thump for a vehicle impact (vehicle_impact).
 static func impact_thud() -> AudioStreamWAV:
 	return _cached(&"impact_thud", SynthAudioVehicle.make_impact_thud)
+
+
+## Gel-character foley, built by SynthAudioGel.
+
+
+static func gel_footstep(surface: int = GelSounds.Surface.ROAD) -> AudioStreamWAV:
+	var safe_surface: int = clampi(surface, GelSounds.Surface.ROAD, GelSounds.Surface.SOFT)
+	var key := StringName("gel_footstep_%s" % GelSounds.surface_name(safe_surface))
+	return _cached(key, GelSounds.make_footstep.bind(safe_surface))
+
+
+static func gel_jump() -> AudioStreamWAV:
+	return _cached(&"gel_jump", GelSounds.make_jump)
+
+
+static func gel_landing() -> AudioStreamWAV:
+	return _cached(&"gel_landing", GelSounds.make_landing)
+
+
+static func gel_bounce() -> AudioStreamWAV:
+	return _cached(&"gel_bounce", GelSounds.make_bounce)
+
+
+static func gel_hit() -> AudioStreamWAV:
+	return _cached(&"gel_hit", GelSounds.make_hit)
+
+
+static func gel_stretch() -> AudioStreamWAV:
+	return _cached(&"gel_stretch", GelSounds.make_stretch)
+
+
+static func gel_melt() -> AudioStreamWAV:
+	return _cached(&"gel_melt", GelSounds.make_melt)
+
+
+static func gel_reassemble() -> AudioStreamWAV:
+	return _cached(&"gel_reassemble", GelSounds.make_reassemble)
 
 
 ## Looping tyre screech; pitch and volume follow the wheel skid.

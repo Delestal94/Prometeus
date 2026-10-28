@@ -378,7 +378,11 @@ modificarlo:
   burbujas; correr deja una estela mundial de 0,36 s y los impactos crean manchas
   orgánicas en pisos o paredes. Todo hereda `gel_color`, usa 45 partículas fijas y
   mantiene como máximo 12 manchas que se desvanecen en 3,5 s. `player.gd` ubica el cuerpo sobre
-  cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
+  cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`. Cuatro
+  voces 3D reutilizables reproducen foley sintetizado y cacheado: pasos squish distintos para
+  ruta, grava, metal y suelo blando, además de salto, aterrizaje, rebote, golpe, estiramiento,
+  derretido y rearmado; el estado de movimiento/animación ya replicado dispara los mismos cues
+  en cada peer sin agregar RPC.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)
   y recorta la pierna dentro del short y la cintura del short bajo la camiseta.
