@@ -38,6 +38,9 @@ const FOOTSTEP_DB: float = -20.0
 ## Elastic gel one-shots sit under package/trap signals; S-311.98 will add
 ## Interior/Exterior routing and body-size pitch without changing this base.
 const GEL_FOLEY_DB: float = -18.0
+## Each player's short positional dance loop is normalized to -18 dB RMS;
+## -6 lands on the music target before distance attenuation and the Music slider.
+const GEL_DANCE_MUSIC_DB: float = -6.0
 
 # Outdoors (route.gd, route_sky.gd).
 ## The wind, the distant road, the crickets and the dog's bark are

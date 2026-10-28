@@ -13,6 +13,7 @@ extends RefCounted
 ##   SynthAudioWorld     wind, rain, birds, crickets, road, crossing bell, roller door, reverse beep
 ##   SynthAudioAnimals   dog bark, sheep bleat
 ##   SynthAudioGel       footsteps by surface and the gel body's elastic foley
+##   SynthAudioGelPerformance  gelatinous voices and one short loop per dance
 ##   SynthAudioNewspaper rooster, morning birds, "extra!" hit, paper rustle, page turn, mate spit
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
@@ -21,6 +22,7 @@ extends RefCounted
 ## shared: a stream is read-only data, and every AudioStreamPlayer keeps its own playback of it.
 static var _cache: Dictionary = {}
 const GelSounds = preload("res://modules/synth_audio/synth_audio_gel.gd")
+const GelPerformance = preload("res://modules/synth_audio/synth_audio_gel_performance.gd")
 const SCENE_SOUNDS_FILE: String = "synth_audio_scenes.gd"
 static var _scene_sounds_script: Script
 
@@ -158,6 +160,22 @@ static func gel_melt() -> AudioStreamWAV:
 
 static func gel_reassemble() -> AudioStreamWAV:
 	return _cached(&"gel_reassemble", GelSounds.make_reassemble)
+
+
+## The S-402 wordless voice with a wet chorus and little bubble transients,
+## reserved for the gel's reactions (ping callouts keep their drier voice).
+static func gel_voice(color_slot: int = 0, syllables: int = 3) -> AudioStreamWAV:
+	var slot: int = posmod(color_slot, 8)
+	var count: int = clampi(syllables, 1, 5)
+	var key := StringName("gel_voice_%d_%d" % [slot, count])
+	return _cached(key, GelPerformance.make_gel_voice.bind(slot, count))
+
+
+## A compact, looping musical identity for each of the eight original dances.
+static func gel_dance_music(clip: StringName = &"SimpleStep") -> AudioStreamWAV:
+	var safe_clip: StringName = clip if GelPerformance.DANCE_CLIPS.has(clip) else &"SimpleStep"
+	var key := StringName("gel_dance_music_%s" % safe_clip)
+	return _cached(key, GelPerformance.make_dance_music.bind(safe_clip))
 
 
 ## Looping tyre screech; pitch and volume follow the wheel skid.

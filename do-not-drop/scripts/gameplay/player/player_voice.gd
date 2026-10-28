@@ -4,8 +4,8 @@ extends Node3D
 ## Presentation only: it observes its player and the EventBus signals that
 ## already reach every peer, so nothing here is replicated or changes play.
 ##
-## The syllables are SynthAudio.callout_voice() (vowel formants, 120 ms each,
-## base pitch per colour slot, the same voice the ping wheel babbles with);
+## The syllables are SynthAudio.gel_voice() (vowel formants, 120 ms each,
+## base pitch per colour slot, with a wet chorus and little bubble transients);
 ## the mood comes from the syllable count and a pitch glide on the player node:
 ##   hurt     "ow!"    two syllables, sharp start, drops
 ##   ragdoll  "aaah"   four syllables, high wail sliding down
@@ -73,6 +73,7 @@ func _ready() -> void:
 	voice.volume_db = WorldMix.CALLOUT_VOICE_DB
 	voice.bus = &"Voice" if AudioServer.get_bus_index(&"Voice") >= 0 else &"Master"
 	add_child(voice)
+	add_child(preload("res://scripts/gameplay/player/gel/gel_dance_audio.gd").new())
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"package_ruined", _on_package_ruined)
@@ -108,7 +109,7 @@ func speak(kind: StringName) -> bool:
 	last_line = kind
 	var line: Dictionary = LINES[kind]
 	slot = _crew_slot()
-	var stream: AudioStreamWAV = SynthAudio.callout_voice(slot, int(line["syllables"]))
+	var stream: AudioStreamWAV = SynthAudio.gel_voice(slot, int(line["syllables"]))
 	var jitter: float = 1.0 + _rng.randf_range(-PITCH_JITTER, PITCH_JITTER)
 	voice.stream = stream
 	voice.pitch_scale = float(line["from"]) * jitter
