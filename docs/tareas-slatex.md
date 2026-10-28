@@ -412,7 +412,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   caída al agua (se disuelve), atropellado.
 - [x] **S-311.94** Distorsión extrema al chocar fuerte: se estira más allá de lo normal y vuelve con
   rebote, con tope para que la malla nunca se rompa ni se invierta.
-- [ ] **S-311.95** VFX con `artista-vfx` del color de la skin: gotas, salpicaduras, burbujas al aterrizar,
+- [x] **S-311.95** VFX con `artista-vfx` del color de la skin: gotas, salpicaduras, burbujas al aterrizar,
   estela corta al correr, y manchas en piso y paredes que se desvanecen en segundos, con tope de
   cantidad (test de que no crecen sin límite).
 

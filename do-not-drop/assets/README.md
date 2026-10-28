@@ -374,7 +374,10 @@ modificarlo:
   al centro al reaparecer. La misma deformación se reproduce al revés. Un choque de
   7 m/s o más usa el canal de contacto existente para comprimir hasta 0,36, rebotar
   con volumen constante y volver a cero; ambos shaders limitan cada eje a valores
-  positivos para que la malla no se invierta. `player.gd` ubica el cuerpo sobre
+  positivos para que la malla no se invierta. Aterrizajes emiten gotas, salpicadura y
+  burbujas; correr deja una estela mundial de 0,36 s y los impactos crean manchas
+  orgánicas en pisos o paredes. Todo hereda `gel_color`, usa 45 partículas fijas y
+  mantiene como máximo 12 manchas que se desvanecen en 3,5 s. `player.gd` ubica el cuerpo sobre
   cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)
