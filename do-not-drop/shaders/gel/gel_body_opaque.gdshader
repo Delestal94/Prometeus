@@ -20,7 +20,7 @@ instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
 // Positive = contact compression. Negative values pack knockout cause in the
 // integer part and transition amount in the fraction, preserving 16 uniforms.
-instance uniform float gel_contact_compression : hint_range(-6.0, 0.16) = 0.0;
+instance uniform float gel_contact_compression : hint_range(-6.0, 1.25) = 0.0;
 instance uniform vec4 gel_wave_0 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
@@ -240,7 +240,10 @@ void vertex() {
 	float knockout_packed = max(-gel_contact_compression, 0.0);
 	float knockout_cause = floor(knockout_packed + 0.0001);
 	float knockout = fract(knockout_packed);
-	float contact_compression = max(gel_contact_compression, 0.0);
+	float positive_deformation = max(gel_contact_compression, 0.0);
+	float extreme_impact = positive_deformation > 0.2
+		? clamp((positive_deformation - 0.75) / 0.5, -1.0, 1.0) : 0.0;
+	float contact_compression = positive_deformation > 0.2 ? 0.0 : positive_deformation;
 	float drag_mask = inertial_drag_mask(VERTEX);
 	vec3 turning_drag = vec3(-VERTEX.z, 0.0, VERTEX.x) * gel_inertia.w;
 	VERTEX += (gel_inertia.xyz + turning_drag) * drag_mask;
@@ -267,6 +270,20 @@ void vertex() {
 	NORMAL = normalize(
 		contact_axis * contact_normal / contact_scale
 		+ (NORMAL - contact_axis * contact_normal) / contact_radial
+	);
+	// A hard impact uses the same direction and packed uniform, but expands far
+	// past ordinary contact before an underdamped rebound. The positive bounds
+	// guarantee that neither positions nor normals can invert.
+	float extreme_axis_scale = clamp(1.0 - extreme_impact * 0.64, 0.36, 1.65);
+	float extreme_radial_scale = inversesqrt(extreme_axis_scale);
+	float extreme_position = dot(VERTEX, contact_axis);
+	vec3 extreme_perpendicular = VERTEX - contact_axis * extreme_position;
+	VERTEX = contact_axis * extreme_position * extreme_axis_scale
+		+ extreme_perpendicular * extreme_radial_scale;
+	float extreme_normal = dot(NORMAL, contact_axis);
+	NORMAL = normalize(
+		contact_axis * extreme_normal / extreme_axis_scale
+		+ (NORMAL - contact_axis * extreme_normal) / extreme_radial_scale
 	);
 	float melt = knockout * knockout * (3.0 - 2.0 * knockout);
 	float source_height = clamp(VERTEX.y / 1.75, 0.0, 1.0);
