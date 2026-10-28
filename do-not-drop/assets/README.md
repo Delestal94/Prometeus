@@ -371,7 +371,10 @@ modificarlo:
   clip por el estado de animación existente. Un knockout replica sólo `knockout_cause`:
   ambos shaders gel distinguen derretido, aplastado, explosión, disolución en agua y
   atropello; dos ráfagas acotadas heredan el color y las gotas de explosión vuelven
-  al centro al reaparecer. La misma deformación se reproduce al revés. `player.gd` ubica el cuerpo sobre
+  al centro al reaparecer. La misma deformación se reproduce al revés. Un choque de
+  7 m/s o más usa el canal de contacto existente para comprimir hasta 0,36, rebotar
+  con volumen constante y volver a cero; ambos shaders limitan cada eje a valores
+  positivos para que la malla no se invierta. `player.gd` ubica el cuerpo sobre
   cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)

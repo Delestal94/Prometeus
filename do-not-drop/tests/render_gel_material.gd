@@ -9,12 +9,16 @@ extends SceneTree
 ## Pass `-- --opaque` for the S-311.35 no-screen-read milky fallback.
 ## Pass `-- --knockout` for the S-311.92 alive/melt/puddle/reassemble sheet.
 ## Pass `-- --knockout-causes` for the four S-311.93 cause silhouettes.
+## Pass `-- --extreme-impact` for the S-311.94 compress/rebound safety sheet.
 
 const OUTPUT: String = "res://../art/gel_character/review_bloque_d"
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const GEL_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body.tres")
 const GEL_OPAQUE_MATERIAL: ShaderMaterial = preload("res://shaders/gel/gel_body_opaque.tres")
 const Knockout = preload("res://scripts/gameplay/player/gel/gel_knockout.gd")
+const ContactDeformation = preload(
+	"res://scripts/gameplay/player/gel/gel_contact_deformation.gd"
+)
 
 var _camera: Camera3D
 var _gel: Node3D
@@ -22,6 +26,8 @@ var _use_opaque: bool = false
 var _review_knockout: bool = false
 var _review_knockout_causes: bool = false
 var _knockout: Node
+var _review_extreme_impact: bool = false
+var _contact: Node
 
 
 func _initialize() -> void:
@@ -37,11 +43,16 @@ func _run() -> void:
 	_use_opaque = "--opaque" in OS.get_cmdline_user_args()
 	_review_knockout = "--knockout" in OS.get_cmdline_user_args()
 	_review_knockout_causes = "--knockout-causes" in OS.get_cmdline_user_args()
+	_review_extreme_impact = "--extreme-impact" in OS.get_cmdline_user_args()
 	var output_path: String = ProjectSettings.globalize_path(OUTPUT)
 	DirAccess.make_dir_recursive_absolute(output_path)
 	_build_stage()
 	var file_name: String
-	if _review_knockout_causes:
+	if _review_extreme_impact:
+		file_name = "s311_94_extreme_impact_opaque.png" if _use_opaque \
+				else "s311_94_extreme_impact_transparent.png"
+		await _save_extreme_impact_sheet(output_path.path_join(file_name))
+	elif _review_knockout_causes:
 		file_name = "s311_93_knockout_causes_opaque.png" if _use_opaque \
 				else "s311_93_knockout_causes_transparent.png"
 		await _save_knockout_causes_sheet(output_path.path_join(file_name))
@@ -118,6 +129,10 @@ func _build_stage() -> void:
 		_knockout = Knockout.new()
 		root.add_child(_knockout)
 		_knockout.setup(_gel)
+	if _review_extreme_impact:
+		_contact = ContactDeformation.new()
+		root.add_child(_contact)
+		_contact.setup(_gel)
 
 
 func _build_dark_studio_backdrop() -> void:
@@ -189,6 +204,30 @@ func _save_knockout_causes_sheet(path: String) -> void:
 		_knockout.reset()
 		_knockout.set_knockout_cause(causes[index])
 		_knockout.advance(Knockout.MELT_SECONDS * 0.78)
+		var frame: Image = await _capture()
+		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
+		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), Vector2i(index * 480, 0))
+	var error: Error = sheet.save_png(path)
+	if error != OK:
+		push_error("Cannot save %s (got %d)" % [path, error])
+		quit(1)
+
+
+func _save_extreme_impact_sheet(path: String) -> void:
+	var sheet := Image.create_empty(1920, 480, false, Image.FORMAT_RGBA8)
+	var stages: Array[Callable] = [
+		func() -> void: _contact.reset_deformation(),
+		func() -> void:
+			_contact.trigger_extreme_impact(Vector3.RIGHT, ContactDeformation.FULL_IMPACT_SPEED),
+		func() -> void:
+			for _step: int in 42:
+				_contact.advance(1.0 / 120.0),
+		func() -> void:
+			for _step: int in 480:
+				_contact.advance(1.0 / 120.0),
+	]
+	for index: int in stages.size():
+		stages[index].call()
 		var frame: Image = await _capture()
 		frame.resize(480, 480, Image.INTERPOLATE_LANCZOS)
 		sheet.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), Vector2i(index * 480, 0))
