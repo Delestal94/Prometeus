@@ -7,7 +7,8 @@ extends SceneTree
 ##   only the ragdoll, not the yelp too), an intact delivery of the box the
 ##   player held or tended (and nobody else's), your own box ruined (and not a
 ##   crewmate's);
-## - pitch follows the colour slot, so two crewmates never sound alike;
+## - pitch follows the colour slot, so two crewmates never sound alike, and
+##   reactions use the gel's wet chorus rather than the ping wheel's dry babble;
 ## - the cooldown stops a pile of hits from machine-gunning;
 ## - the ping wheel's babble (hud_notices.gd) now goes to the Voice bus too.
 ## The signals are wired to EventBus (checked with is_connected); the handlers
@@ -75,7 +76,7 @@ func _run() -> void:
 	mia.set(&"_flinch_time", 0.32)
 	mia_voice.call(&"_process", 0.0)
 	_expect(mia_voice.get(&"last_line") == &"hurt" and mia_speaker.playing, "A hit makes the player yelp")
-	_expect(mia_speaker.stream == SynthAudio.callout_voice(2, 2), "The yelp is the player's own colour voice")
+	_expect(mia_speaker.stream == SynthAudio.gel_voice(2, 2), "The yelp is the player's own gelatinous colour voice")
 	_expect(mia_speaker.bus == &"Voice", "The yelp is on the Voice bus")
 	_expect(leo_voice.get(&"last_line") == &"", "Only the player who was hit yelps")
 
@@ -98,8 +99,8 @@ func _run() -> void:
 	mia.set(&"_ragdolled", true)
 	mia_voice.call(&"_process", 0.0)
 	_expect(mia_voice.get(&"last_line") == &"ragdoll", "Being bowled over makes the player wail, not just yelp")
-	_expect(mia_speaker.stream == SynthAudio.callout_voice(2, 4), "The ragdoll wail is longer than the hurt yelp")
-	_expect(mia_speaker.stream.get_length() > SynthAudio.callout_voice(2, 2).get_length(), "Longer, in seconds")
+	_expect(mia_speaker.stream == SynthAudio.gel_voice(2, 4), "The ragdoll wail is longer than the hurt yelp")
+	_expect(mia_speaker.stream.get_length() > SynthAudio.gel_voice(2, 2).get_length(), "Longer, in seconds")
 	mia.set(&"_ragdolled", false)
 	mia.set(&"_flinch_time", 0.0)
 	mia_voice.call(&"_process", 0.0)
@@ -153,7 +154,7 @@ func _run() -> void:
 
 	# The synthesized lines are real audio.
 	for syllables: int in [2, 3, 4]:
-		var stream: AudioStreamWAV = SynthAudio.callout_voice(2, syllables)
+		var stream: AudioStreamWAV = SynthAudio.gel_voice(2, syllables)
 		var peak: int = 0
 		for i: int in range(0, stream.data.size() - 1, 2):
 			peak = maxi(peak, absi(stream.data.decode_s16(i)))

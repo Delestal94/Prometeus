@@ -22,6 +22,7 @@ func _initialize() -> void:
 		SynthAudio.extra_stinger, SynthAudio.paper_rustle, SynthAudio.page_turn, SynthAudio.mate_spit,
 		SynthAudio.gel_footstep, SynthAudio.gel_jump, SynthAudio.gel_landing, SynthAudio.gel_bounce,
 		SynthAudio.gel_hit, SynthAudio.gel_stretch, SynthAudio.gel_melt, SynthAudio.gel_reassemble,
+		SynthAudio.gel_voice,
 	]
 	for build: Callable in one_shots:
 		_check_stream(build.call(), String(build.get_method()))
@@ -29,6 +30,7 @@ func _initialize() -> void:
 		SynthAudio.engine_loop, SynthAudio.engine_idle_loop, SynthAudio.engine_high_loop, SynthAudio.ambient_wind,
 		SynthAudio.rain_loop, SynthAudio.ambient_birds, SynthAudio.night_crickets, SynthAudio.distant_road,
 		SynthAudio.river_flow_loop, SynthAudio.train_chug_loop,
+		SynthAudio.gel_dance_music,
 	]
 	for build: Callable in loops:
 		var stream: AudioStreamWAV = _check_stream(build.call(), String(build.get_method()))
