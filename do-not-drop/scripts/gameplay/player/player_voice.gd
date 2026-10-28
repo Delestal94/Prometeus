@@ -1,6 +1,6 @@
 extends Node3D
 ## A player's wordless voice (S-402): cartoon babble from their head, pitched
-## by their colour slot, on the "Voice" bus so the "Voces" slider owns it.
+## by their colour slot, through Interior/Exterior while "Voces" owns its gain.
 ## Presentation only: it observes its player and the EventBus signals that
 ## already reach every peer, so nothing here is replicated or changes play.
 ##
@@ -28,6 +28,7 @@ extends Node3D
 ## ruined boxes never machine-guns.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const GelMix = preload("res://scripts/gameplay/player/gel/gel_audio_mix.gd")
 const LINES: Dictionary = {
 	&"hurt": {"syllables": 2, "from": 1.25, "to": 0.95},
 	&"ragdoll": {"syllables": 4, "from": 1.4, "to": 0.75},
@@ -70,8 +71,8 @@ func _ready() -> void:
 	voice.name = "Voice"
 	voice.unit_size = 6.0
 	voice.max_distance = 40.0
-	voice.volume_db = WorldMix.CALLOUT_VOICE_DB
-	voice.bus = &"Voice" if AudioServer.get_bus_index(&"Voice") >= 0 else &"Master"
+	voice.volume_db = WorldMix.GEL_VOICE_DB
+	voice.bus = GelMix.listener_bus(player)
 	add_child(voice)
 	add_child(preload("res://scripts/gameplay/player/gel/gel_dance_audio.gd").new())
 	var bus: Node = get_node_or_null(^"/root/EventBus")
@@ -81,6 +82,10 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var target_bus: StringName = GelMix.listener_bus(player)
+	if voice.bus != target_bus:
+		voice.bus = target_bus
+	voice.volume_db = GelMix.with_setting(player, WorldMix.GEL_VOICE_DB, &"voice_volume")
 	var flinch: float = float(player.get(&"_flinch_time"))
 	var ragdolled: bool = bool(player.get(&"_ragdolled"))
 	if ragdolled and not _last_ragdolled:
@@ -111,13 +116,14 @@ func speak(kind: StringName) -> bool:
 	slot = _crew_slot()
 	var stream: AudioStreamWAV = SynthAudio.gel_voice(slot, int(line["syllables"]))
 	var jitter: float = 1.0 + _rng.randf_range(-PITCH_JITTER, PITCH_JITTER)
+	var size_pitch: float = GelMix.body_pitch(GelMix.proportions_for(player))
 	voice.stream = stream
-	voice.pitch_scale = float(line["from"]) * jitter
+	voice.pitch_scale = float(line["from"]) * jitter * size_pitch
 	voice.play()
 	if _tween != null:
 		_tween.kill()
 	_tween = create_tween()
-	_tween.tween_property(voice, ^"pitch_scale", float(line["to"]) * jitter,
+	_tween.tween_property(voice, ^"pitch_scale", float(line["to"]) * jitter * size_pitch,
 		stream.get_length() / float(line["from"]))
 	return true
 

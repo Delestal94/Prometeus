@@ -421,7 +421,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.96** Sonidos sintetizados en `SynthAudio` con `disenador-audio`: pasos "squish" por
   superficie, salto, aterrizaje, rebote, golpe, estirarse, derretirse, rearmarse.
 - [x] **S-311.97** Voz sin palabras gelatinosa (base: S-402) y música corta propia para cada baile.
-- [ ] **S-311.98** Mezcla en los buses Interior/Exterior; tono según el jugador y el tamaño del cuerpo
+- [x] **S-311.98** Mezcla en los buses Interior/Exterior; tono según el jugador y el tamaño del cuerpo
   (más grande, más grave); nunca tapan los sonidos de las trampas (medido como en S-404).
 
 ### O. Integración y entrega (99-100)

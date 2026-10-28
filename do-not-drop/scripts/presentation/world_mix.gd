@@ -35,9 +35,12 @@ const CLUTTER_DB: float = -26.0
 
 # The crew (player_sprint.gd): a footfall while running, "detail" class.
 const FOOTSTEP_DB: float = -20.0
-## Elastic gel one-shots sit under package/trap signals; S-311.98 will add
-## Interior/Exterior routing and body-size pitch without changing this base.
+## Elastic gel one-shots sit under package/trap signals; S-311.98 routes them
+## through Interior/Exterior and changes pitch, without changing this base.
 const GEL_FOLEY_DB: float = -18.0
+## Reaction babble is deliberately below the -18 dBFS trap cues; ping
+## callouts keep CALLOUT_VOICE_DB because they are explicit player signals.
+const GEL_VOICE_DB: float = -12.0
 ## Each player's short positional dance loop is normalized to -18 dB RMS;
 ## -6 lands on the music target before distance attenuation and the Music slider.
 const GEL_DANCE_MUSIC_DB: float = -6.0

@@ -6,6 +6,7 @@ extends Node
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const Knockout = preload("res://scripts/gameplay/player/gel/gel_knockout.gd")
 const GelSounds = preload("res://modules/synth_audio/synth_audio_gel.gd")
+const Mix = preload("res://scripts/gameplay/player/gel/gel_audio_mix.gd")
 const VOICE_COUNT: int = 4
 const WALK_STEP_DISTANCE: float = 1.2
 const RUN_STEP_DISTANCE: float = 2.0
@@ -37,7 +38,7 @@ func setup(player: Player) -> void:
 	for index: int in VOICE_COUNT:
 		var voice := AudioStreamPlayer3D.new()
 		voice.name = "GelFoley%d" % index
-		voice.bus = &"SFX"
+		voice.bus = Mix.listener_bus(player)
 		voice.unit_size = 5.0
 		voice.max_distance = 26.0
 		voice.attenuation_filter_cutoff_hz = 10500.0
@@ -52,6 +53,7 @@ func setup(player: Player) -> void:
 func update_audio(player: Player, knockout: Node, delta: float, enabled: bool) -> void:
 	if _voices.is_empty():
 		return
+	_apply_bus_routing(player)
 	_update_clip_cues(player)
 	_update_knockout_cues(knockout)
 	_update_footsteps(player, maxf(delta, 0.0), enabled)
@@ -192,8 +194,15 @@ func _play(cue: StringName, stream: AudioStreamWAV, volume_db: float, pitch: flo
 	var voice: AudioStreamPlayer3D = _voices[_next_voice]
 	_next_voice = (_next_voice + 1) % _voices.size()
 	voice.stream = stream
-	voice.volume_db = volume_db
-	voice.pitch_scale = clampf(pitch, 0.5, 1.5)
+	voice.volume_db = Mix.with_setting(_player, volume_db, &"effects_volume")
+	voice.pitch_scale = clampf(pitch * Mix.player_pitch(_player), 0.5, 1.5)
 	voice.play()
 	last_cue = cue
 	cue_counts[cue] = int(cue_counts.get(cue, 0)) + 1
+
+
+func _apply_bus_routing(player: Player) -> void:
+	var target: StringName = Mix.listener_bus(player)
+	for voice: AudioStreamPlayer3D in _voices:
+		if voice.bus != target:
+			voice.bus = target
