@@ -16,10 +16,8 @@ extends Node
 ##
 ## Nothing runs seated, driving, or on top of a truck that is moving.
 
-const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
-const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 ## What the NetworkManager autoload runs (world_seed is not on NetSession).
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
@@ -61,7 +59,6 @@ const CRASH_HAZARD: float = 0.8
 const VERGE_HAZARD: float = 0.2
 ## strings of the first-time tip live in tutorial_catalog.gd.
 const TIP_ID: StringName = &"sprint_carry"
-const FOOTSTEP_PITCH_SPREAD: float = 0.06
 ## Host: step reports it accepts per second (a full-speed runner makes RUN_SPEED / STEP_DISTANCE), and how
 ## many it lets pile up, so a client cannot flood the damage road.
 const STEP_TOKENS_PER_SECOND: float = RUN_SPEED / STEP_DISTANCE
@@ -83,7 +80,6 @@ var _stagger: float = 0.0
 ## Host: steps reported by the owner with a box in the arms, the number the roll uses.
 var _host_steps: int = 0
 var _solo_seed: int = 0
-var _footstep_player: AudioStreamPlayer3D
 var _was_running_with_box: bool = false
 ## The physics tick ground_speed() last decided in: a tick the controller
 ## skipped (a menu is open) is not a tick spent running.
@@ -202,7 +198,6 @@ func remote_is_running() -> bool:
 
 func _on_step() -> void:
 	steps_taken += 1
-	_play_footstep()
 	var box: DeliveryPackage = player.carried_package if is_instance_valid(player.carried_package) else null
 	if box == null:
 		return
@@ -210,20 +205,6 @@ func _on_step() -> void:
 	RunShake.bounce(box, steps_taken)
 	if player.is_local():
 		rpc_id(1, &"submit_run_step", measure_hazard())
-
-
-func _play_footstep() -> void:
-	if _footstep_player == null:
-		_footstep_player = AudioStreamPlayer3D.new()
-		_footstep_player.name = "Footstep"
-		_footstep_player.bus = &"SFX"
-		_footstep_player.stream = SynthAudioSteps.footstep()
-		_footstep_player.volume_db = WorldMix.FOOTSTEP_DB
-		_footstep_player.unit_size = 5.0
-		_footstep_player.max_distance = 25.0
-		player.add_child(_footstep_player)  # In 3D space: this node is not a Node3D.
-	_footstep_player.pitch_scale = 1.0 + randf_range(-FOOTSTEP_PITCH_SPREAD, FOOTSTEP_PITCH_SPREAD)
-	_footstep_player.play()
 
 
 # --- Owner: how bad is the ground under this step ---------------------------------------------

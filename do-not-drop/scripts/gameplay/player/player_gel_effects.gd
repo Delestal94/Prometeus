@@ -9,6 +9,7 @@ const Knockout = preload("res://scripts/gameplay/player/gel/gel_knockout.gd")
 @onready var _environment: Node = $GelEnvironment
 @onready var _knockout: Node = $GelKnockout
 @onready var _vfx: Node = $GelVFX
+@onready var _audio: Node = $GelAudio
 
 ## Owner-authored presentation state. MultiplayerSynchronizer replicates the
 ## cause so every peer chooses the same bounded particles and shader shape.
@@ -30,6 +31,7 @@ func setup(model: Node, phase_seed: int) -> void:
 	_environment.setup(model, phase_seed)
 	_knockout.setup(model)
 	_vfx.setup(model, get_parent())
+	_audio.setup(get_parent() as Player)
 	_apply_knockout(knockout_cause)
 
 
@@ -40,6 +42,11 @@ func update_effects(player: CharacterBody3D, delta: float) -> void:
 	_environment.update_environment(delta)
 	_knockout.advance(delta)
 	_vfx.update_vfx(player, delta, active)
+	_audio.update_audio(player, _knockout, delta, active)
+
+
+func play_hit(strength: float) -> void:
+	_audio.play_hit(strength)
 
 
 ## Gameplay causes use this owner-side hook; remote peers receive the property.

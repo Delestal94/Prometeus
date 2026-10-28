@@ -40,6 +40,8 @@ const LEVEL_SOUNDS: Array[StringName] = [
 	&"roller_door", &"engine_loop", &"train_chug_loop", &"sheep_bleat", &"reverse_beep", &"glass_chime",
 	&"crossing_bell", &"honk_horn", &"care_error", &"tire_screech", &"hostile_hiss", &"liquid_slosh",
 	&"care_whoosh", &"impact_thud", &"camera_shutter", &"care_step", &"care_tick", &"explosive_tick",
+	&"gel_footstep", &"gel_jump", &"gel_landing", &"gel_bounce", &"gel_hit", &"gel_stretch", &"gel_melt",
+	&"gel_reassemble",
 	# The next-day newspaper (N-606.4a) plays at the end of the run.
 	&"rooster_crow", &"morning_chirps", &"extra_stinger", &"paper_rustle", &"page_turn", &"mate_spit",
 ]

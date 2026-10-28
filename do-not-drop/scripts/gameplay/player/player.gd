@@ -604,13 +604,13 @@ func _within_reach(target: Node3D) -> bool:
 
 @rpc("any_peer", "call_local", "unreliable")
 func receive_package_hit(push: Vector3, simulation_seed: int = 0) -> void:
-	# Loose boxes are simulated on the host; nobody else gets to knock people over.
-	if not _from_host() or not RpcGuard.finite_vec3(push):
+	if not _from_host() or not RpcGuard.finite_vec3(push):  # Only host-simulated loose boxes can knock people over.
 		return
 	if _package_hit_cooldown > 0.0 or _seated:
 		return
 	_package_hit_cooldown = 0.45
 	_flinch_time = 0.32
+	_gel_effects_component.play_hit(push.length())
 	if push.length() >= 2.2:
 		_activate_ragdoll(push, simulation_seed)
 		return

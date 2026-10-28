@@ -20,6 +20,8 @@ func _initialize() -> void:
 		SynthAudio.scanner_beep, SynthAudio.care_step, SynthAudio.care_error, SynthAudio.care_success,
 		SynthAudio.care_whoosh, SynthAudio.care_tick, SynthAudio.rooster_crow, SynthAudio.morning_chirps,
 		SynthAudio.extra_stinger, SynthAudio.paper_rustle, SynthAudio.page_turn, SynthAudio.mate_spit,
+		SynthAudio.gel_footstep, SynthAudio.gel_jump, SynthAudio.gel_landing, SynthAudio.gel_bounce,
+		SynthAudio.gel_hit, SynthAudio.gel_stretch, SynthAudio.gel_melt, SynthAudio.gel_reassemble,
 	]
 	for build: Callable in one_shots:
 		_check_stream(build.call(), String(build.get_method()))
