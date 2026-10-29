@@ -4,11 +4,32 @@ extends Node
 
 const GEL_SKINS: Script = preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
 const TIMEOUT_SECONDS: float = 6.0
+const HOST_LOOK: Dictionary = {
+	&"selected_gel_face": &"happy", &"selected_gel_skin": &"night_neon",
+	&"selected_gel_hair": &"quiff", &"selected_gel_eyebrows": &"thick",
+	&"selected_gel_moustache": &"handlebar", &"selected_gel_costume": &"astronaut",
+	&"selected_gel_accessory": &"glasses",
+}
+const CLIENT_LOOK: Dictionary = {
+	&"selected_gel_face": &"angry", &"selected_gel_skin": &"layered_gummy",
+	&"selected_gel_hair": &"braid", &"selected_gel_eyebrows": &"arched",
+	&"selected_gel_moustache": &"pencil", &"selected_gel_costume": &"pirate",
+	&"selected_gel_accessory": &"scarf",
+}
 
 var detail: String = "replicated gel skin check did not finish"
 var _client_peer_id: int = 0
 var _client_reported: bool = false
 var _client_passed: bool = false
+
+
+func look(host: bool) -> Dictionary:
+	return HOST_LOOK if host else CLIENT_LOOK
+
+
+func apply_profile(profile: Node, host: bool) -> void:
+	for field: StringName in look(host):
+		profile.set(field, look(host)[field])
 
 
 func run_host(host_player: Player, client_player: Player, client_peer_id: int,

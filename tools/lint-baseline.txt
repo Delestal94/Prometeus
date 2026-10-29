@@ -12,7 +12,6 @@ do-not-drop/modules/world_mood/world_mood.gd|max-line-length 2
 do-not-drop/scripts/core/crew_progression.gd|max-line-length 1
 do-not-drop/scripts/core/route_event_manager.gd|max-line-length 6
 do-not-drop/scripts/gameplay/depot/depot_campaign_board.gd|max-line-length 2
-do-not-drop/scripts/gameplay/depot/depot_forklift.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_kit.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_mirror.gd|max-line-length 1
 do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 2
@@ -46,7 +45,6 @@ do-not-drop/scripts/tools/trailer_shot.gd|max-line-length 10
 do-not-drop/scripts/ui/depot_panel.gd|max-line-length 3
 do-not-drop/scripts/ui/hud/hud_cargo_panel.gd|max-line-length 2
 do-not-drop/scripts/ui/hud/hud_pause.gd|max-line-length 2
-do-not-drop/scripts/ui/hud/hud_results.gd|max-line-length 3
 do-not-drop/scripts/ui/options_panel.gd|max-line-length 6
 do-not-drop/scripts/ui/sound_check_panel.gd|max-line-length 1
 do-not-drop/scripts/ui/ui_theme.gd|max-line-length 8
