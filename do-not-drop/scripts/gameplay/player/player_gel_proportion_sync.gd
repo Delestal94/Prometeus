@@ -7,9 +7,13 @@ extends Node
 
 signal proportions_changed(proportions: GelBodyProportions)
 signal skin_changed(skin_id: StringName)
+signal cosmetics_changed
 
 const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 const Skins := preload("res://scripts/gameplay/player/gel/gel_skin_catalog.gd")
+const Hair := preload("res://scripts/gameplay/player/gel/gel_hair_catalog.gd")
+const Costumes := preload("res://scripts/gameplay/player/gel/gel_costume_catalog.gd")
+const Accessories := preload("res://scripts/gameplay/player/gel/gel_accessory_catalog.gd")
 
 var proportions := Proportions.new()
 var packet: PackedByteArray = proportions.to_packet():
@@ -23,6 +27,26 @@ var skin_id: StringName = Skins.DEFAULT_ID:
 	set(value):
 		skin_id = Skins.valid_id(value)
 		skin_changed.emit(skin_id)
+var hair_id: StringName = Hair.DEFAULT_HAIRSTYLE:
+	set(value):
+		hair_id = StringName(Hair.hairstyle(value)[&"id"])
+		cosmetics_changed.emit()
+var eyebrows_id: StringName = Hair.NONE:
+	set(value):
+		eyebrows_id = Hair.valid_eyebrows(value)
+		cosmetics_changed.emit()
+var moustache_id: StringName = Hair.NONE:
+	set(value):
+		moustache_id = Hair.valid_moustache(value)
+		cosmetics_changed.emit()
+var costume_id: StringName = Costumes.DEFAULT_ID:
+	set(value):
+		costume_id = StringName(Costumes.costume(value)[&"id"])
+		cosmetics_changed.emit()
+var accessory_id: StringName = &"none":
+	set(value):
+		accessory_id = _valid_accessory(value)
+		cosmetics_changed.emit()
 
 
 func _enter_tree() -> void:
@@ -46,12 +70,21 @@ func _sync_from_profile() -> void:
 		return
 	var requested: PackedByteArray = Proportions.packet_from_dictionary(profile.get(&"gel_proportions"))
 	var requested_skin := Skins.valid_id(StringName(profile.get(&"selected_gel_skin")))
+	var requested_styles := {
+		&"hair": StringName(profile.get(&"selected_gel_hair")),
+		&"eyebrows": StringName(profile.get(&"selected_gel_eyebrows")),
+		&"moustache": StringName(profile.get(&"selected_gel_moustache")),
+		&"costume": StringName(profile.get(&"selected_gel_costume")),
+		&"accessory": StringName(profile.get(&"selected_gel_accessory")),
+	}
 	if multiplayer.is_server():
 		packet = requested
 		skin_id = requested_skin
+		_set_styles(requested_styles)
 	else:
 		_submit_packet.rpc_id(1, requested)
 		_submit_skin.rpc_id(1, requested_skin)
+		_submit_styles.rpc_id(1, requested_styles)
 
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -76,3 +109,30 @@ func _submit_skin(requested: StringName) -> void:
 	if multiplayer.get_remote_sender_id() != get_parent().get_multiplayer_authority():
 		return
 	skin_id = Skins.valid_id(requested)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _submit_styles(requested: Dictionary) -> void:
+	if not multiplayer.is_server() or not RpcGuard.allow_request(self) \
+			or not RpcGuard.dict_ok(requested):
+		return
+	if multiplayer.get_remote_sender_id() != get_parent().get_multiplayer_authority():
+		return
+	for key: StringName in [&"hair", &"eyebrows", &"moustache", &"costume", &"accessory"]:
+		if not RpcGuard.name_ok(StringName(requested.get(key, &""))):
+			return
+	_set_styles(requested)
+
+
+func _set_styles(styles: Dictionary) -> void:
+	hair_id = StringName(styles.get(&"hair", Hair.DEFAULT_HAIRSTYLE))
+	eyebrows_id = StringName(styles.get(&"eyebrows", Hair.NONE))
+	moustache_id = StringName(styles.get(&"moustache", Hair.NONE))
+	costume_id = StringName(styles.get(&"costume", Costumes.DEFAULT_ID))
+	accessory_id = StringName(styles.get(&"accessory", &"none"))
+
+
+func _valid_accessory(requested: StringName) -> StringName:
+	if requested == &"none":
+		return &"none"
+	return StringName(Accessories.accessory(requested)[&"id"])
