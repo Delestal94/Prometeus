@@ -17,7 +17,11 @@ static func listener_bus(context: Node) -> StringName:
 		return EXTERIOR_BUS
 	for vehicle: Node in context.get_tree().get_nodes_in_group(&"vehicle"):
 		var presentation: Node = vehicle.get_node_or_null(^"VehiclePresentation")
-		if presentation != null and presentation.has_method(&"viewer_inside") \
+		# A player can finish entering the tree while a vehicle presentation is
+		# still between _enter_tree and _ready. Its @onready vehicle reference is
+		# not valid yet, so treat that short bootstrap window as exterior.
+		if presentation != null and presentation.is_node_ready() \
+				and presentation.has_method(&"viewer_inside") \
 				and bool(presentation.call(&"viewer_inside")):
 			return _available_bus(INTERIOR_BUS)
 	return _available_bus(EXTERIOR_BUS)
