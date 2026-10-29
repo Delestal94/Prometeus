@@ -113,7 +113,8 @@ func _submit_skin(requested: StringName) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _submit_styles(requested: Dictionary) -> void:
-	if not multiplayer.is_server() or not RpcGuard.allow_request(self):
+	if not multiplayer.is_server() or not RpcGuard.allow_request(self) \
+			or not RpcGuard.dict_ok(requested):
 		return
 	if multiplayer.get_remote_sender_id() != get_parent().get_multiplayer_authority():
 		return
