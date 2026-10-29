@@ -141,7 +141,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.13** (`face5c9`) Manos manopla con pulgar separado como en la foto (sin dedos, hueso de pulgar para
   cerrar sobre una caja), pies de bota redondeada con planta plana, y uniones cuello-hombros y
   torso-piernas como en la referencia, resueltas con forma y sombreado, no con geometría abierta.
-- [ ] **S-311.14** Prueba de "núcleo": una malla interna más chica y más densa para que el torso se vea
+- [x] **S-311.14** Prueba de "núcleo": una malla interna más chica y más densa para que el torso se vea
   más opaco que las extremidades (criterio 11), con los mismos morphs. Se compara con resolverlo solo con
   el mapa de grosor (ítem 15) y se deja la opción más barata que pase el bloque E.
 - [ ] **S-311.15** Normales suaves y **mapa de grosor** (thickness): la luz atraviesa más en manos y

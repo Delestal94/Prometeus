@@ -1,0 +1,55 @@
+{
+  "task": "S-311.14",
+  "decision": "thickness_map",
+  "decision_complete": true,
+  "internal_core_trial": {
+    "artifact": "art/gel_character/review_bloque_b/core_experiment.glb",
+    "report": "art/gel_character/review_bloque_b/core_experiment_report.json",
+    "same_topology_morphs_weights": true,
+    "outer_triangles": 4704,
+    "core_triangles": 4704,
+    "combined_triangles": 9408,
+    "lod0_triangle_budget": 6000,
+    "within_triangle_budget": false,
+    "estimated_runtime_triangles": 37632,
+    "runtime_triangle_budget": 20000,
+    "within_runtime_triangle_budget": false,
+    "body_draw_calls": 2,
+    "selected": false,
+    "gpu_benchmark_skipped_reason": "The candidate already fails the hard LOD0 triangle budget."
+  },
+  "thickness_map_solution": {
+    "asset": "do-not-drop/assets/textures/characters/gel/thickness.png",
+    "material": "do-not-drop/shaders/gel/gel_body.tres",
+    "source_triangles": 4704,
+    "runtime_triangles": 18816,
+    "source_triangle_budget": 6000,
+    "runtime_triangle_budget": 20000,
+    "morphs": 11,
+    "body_draw_calls": 1,
+    "within_source_triangle_budget": true,
+    "within_runtime_triangle_budget": true,
+    "extra_shader_passes": 0,
+    "texture_size": [
+      1024,
+      1024
+    ],
+    "block_e": {
+      "report": "art/gel_character/review_bloque_e/round_149/report.json",
+      "silhouette_iou": 0.920871,
+      "torso_mean_delta_e": 6.0676,
+      "all_twelve_visual_criteria": true,
+      "denser_torso": true,
+      "passed": true
+    },
+    "four_character_gpu_benchmark": {
+      "report": "art/gel_character/review_bloque_d/s311_37_performance.md",
+      "gel_gpu_p50_ms": 0.135,
+      "delta_vs_previous_character_ms": -0.011,
+      "maximum_allowed_delta_ms": 0.5,
+      "passed": true
+    },
+    "selected": true
+  },
+  "conclusion": "The thickness map is the only candidate that passes Block E and the LOD0 budget. It keeps the existing single body draw and all eleven morphs; the internal core doubles geometry and adds a body draw before shading cost."
+}
