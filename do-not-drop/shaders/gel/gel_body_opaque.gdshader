@@ -11,8 +11,9 @@ instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 // Values >= 2 pack a 15-bit team colour above the fractional brightness.
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 // Packed to stay within Godot's 16 instance-uniform limit:
-// surface = absorption, shine, skin effect mode, effect amount. Negative X/Y
-// keep the shared material's legacy absorption and shine until a skin applies.
+// surface = absorption, shine, skin effect mode plus general-thickness weight,
+// effect amount. Negative X/Y keep the shared material's legacy absorption and
+// shine until a skin applies. The mode's fractional offset is weight * 0.25.
 instance uniform vec4 gel_skin_surface = vec4(-1.0, -1.0, 0.0, 0.0);
 // interior = RGB feature colour plus object-space feature scale.
 instance uniform vec4 gel_interior = vec4(0.0, 0.0, 0.0, 8.0);
@@ -117,6 +118,11 @@ float team_accent_signature() {
 	float green = mod(floor(color_code / 32.0), 32.0);
 	float blue = floor(color_code / 1024.0);
 	return mod(red + green * 8.0 + blue * 10.0, 11.0);
+}
+
+float general_thickness_weight() {
+	float skin_mode = floor(gel_skin_surface.z + 0.5);
+	return clamp((gel_skin_surface.z - skin_mode) * 4.0, -1.0, 1.0);
 }
 
 float team_core_mask(vec3 point) {
@@ -340,7 +346,9 @@ void fragment() {
 	// preserving visual distinction without returning to alpha blending.
 	vec3 opaque_tint = mix(vec3(1.0), player_tint, mix(0.72, 1.0, gel_opacity));
 	vec3 surface_tint = mix(opaque_tint, vec3(1.0), milkiness * (1.0 - fresnel));
-	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters;
+	float thickness_morph_scale = 1.0 + general_thickness_weight() * 0.21;
+	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters
+		* thickness_morph_scale;
 	float thickness_absorption = 1.0 - exp(-absorption_coefficient * thickness_meters);
 	if (gel_skin_surface.x >= 0.0) {
 		thickness_absorption = 1.0 - exp(-gel_skin_surface.x * thickness_meters);
