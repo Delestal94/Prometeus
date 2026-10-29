@@ -101,7 +101,9 @@ func _ready() -> void:
 	var profile: Node = get_node(^"/root/UnlockManager")
 	profile.set(&"completed_runs", 6 if _host else 0)
 	profile.set(&"gel_proportions", _gel_values(_host))
-	profile.set(&"selected_gel_skin", &"night_neon" if _host else &"layered_gummy")
+	var gel_look: Dictionary = _gel_look(_host)
+	for field: StringName in gel_look:
+		profile.set(field, gel_look[field])
 	if not _host:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		profile.set(&"selected_cosmetic", CLIENT_COSMETIC)
@@ -170,7 +172,7 @@ func _run_host() -> void:
 		GEL_PROPORTIONS.packet_from_dictionary(_gel_values(true)))
 	await _wait_for_report(&"gel_proportions")
 	_expect(await $SkinCheck.run_host(host_player, client_player, _client_peer_id,
-		&"night_neon", &"layered_gummy"), $SkinCheck.detail)
+		_gel_look(true), _gel_look(false)), $SkinCheck.detail)
 	_expect(await $RagdollCheck.run_host(host_player, _client_peer_id),
 		$RagdollCheck.detail)
 	_expect(await $AnimationCheck.run_host(host_player, client_player, _client_peer_id),
@@ -940,6 +942,18 @@ func _gel_values(host: bool) -> Dictionary:
 	values[&"general_thickness"] = 0.64 if host else -0.72
 	values[&"belly"] = -0.35 if host else 0.48
 	return values
+
+
+func _gel_look(host: bool) -> Dictionary:
+	return {
+		&"selected_gel_face": &"happy" if host else &"angry",
+		&"selected_gel_skin": &"night_neon" if host else &"layered_gummy",
+		&"selected_gel_hair": &"quiff" if host else &"braid",
+		&"selected_gel_eyebrows": &"thick" if host else &"arched",
+		&"selected_gel_moustache": &"handlebar" if host else &"pencil",
+		&"selected_gel_costume": &"astronaut" if host else &"pirate",
+		&"selected_gel_accessory": &"glasses" if host else &"scarf",
+	}
 
 
 func _wait_for_report(stage: StringName) -> bool:
