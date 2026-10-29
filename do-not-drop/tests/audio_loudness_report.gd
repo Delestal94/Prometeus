@@ -9,9 +9,11 @@ const SynthAudio = preload("res://modules/synth_audio/synth_audio.gd")
 const SynthAudioTraps = preload("res://modules/synth_audio/synth_audio_traps.gd")
 const PackageFeedbackScript = preload("res://scripts/gameplay/package/package_feedback.gd")
 const UiSounds = preload("res://scripts/ui/ui_sounds.gd")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const TOLERANCE_DB: float = 2.0
 const TRAP_TARGET_DBFS: float = -18.0
 const UI_TARGET_DBFS: float = -24.0
+const GEL_TRAP_HEADROOM_DB: float = 6.0
 
 const TRAP_SOUNDS: Array = [
 	[&"glass_chime", "Frágil"],
@@ -23,6 +25,18 @@ const TRAP_SOUNDS: Array = [
 	[&"hostile_hiss", "Hostil"],
 	[&"comic_ruin_stinger", "Ruina general"],
 	[&"comic_boom", "Ruina explosiva"],
+]
+const GEL_SOUNDS: Array = [
+	[&"gel_footstep", "Paso gel", &"FOOTSTEP_DB"],
+	[&"gel_jump", "Salto gel", &"GEL_FOLEY_DB"],
+	[&"gel_landing", "Aterrizaje gel", &"GEL_FOLEY_DB"],
+	[&"gel_bounce", "Rebote gel", &"GEL_FOLEY_DB"],
+	[&"gel_hit", "Golpe gel", &"GEL_FOLEY_DB"],
+	[&"gel_stretch", "Estirar gel", &"GEL_FOLEY_DB"],
+	[&"gel_melt", "Derretir gel", &"GEL_FOLEY_DB"],
+	[&"gel_reassemble", "Rearmar gel", &"GEL_FOLEY_DB"],
+	[&"gel_voice", "Voz gel", &"GEL_VOICE_DB"],
+	[&"gel_dance_music", "Música de baile gel", &"GEL_DANCE_MUSIC_DB"],
 ]
 
 var _failures: int = 0
@@ -38,8 +52,11 @@ func _initialize() -> void:
 		_check(String(entry[1]), "trap", stream, float(trap_levels[cue]), TRAP_TARGET_DBFS)
 	for cue: StringName in UiSounds.CUES:
 		_check(String(cue), "ui", UiSounds.stream_for(cue), UiSounds.volume_db_for(cue), UI_TARGET_DBFS)
+	var gel_levels: Dictionary = (WorldMix as Script).get_script_constant_map()
+	for entry: Array in GEL_SOUNDS:
+		_check_gel_headroom(String(entry[1]), (SynthAudio as Script).call(entry[0]), float(gel_levels[entry[2]]))
 	if _failures == 0:
-		print("PASS: every trap and UI cue is within %.0f dB of its RMS target" % TOLERANCE_DB)
+		print("PASS: trap/UI targets pass and every gel cue keeps %.0f dB of trap headroom" % GEL_TRAP_HEADROOM_DB)
 	quit(_failures)
 
 
@@ -53,6 +70,20 @@ func _check(label: String, group: String, stream: AudioStreamWAV, level_db: floa
 	])
 	_expect(absf(difference) <= TOLERANCE_DB,
 		"%s %s lands at %.1f dBFS RMS, target %.1f ± %.0f" % [group, label, result_dbfs, target_dbfs, TOLERANCE_DB])
+
+
+func _check_gel_headroom(label: String, stream: AudioStreamWAV, level_db: float) -> void:
+	var rms_dbfs: float = measure_rms_dbfs(stream)
+	var peak_dbfs: float = measure_peak_dbfs(stream)
+	var result_dbfs: float = rms_dbfs + level_db
+	var ceiling: float = TRAP_TARGET_DBFS - GEL_TRAP_HEADROOM_DB
+	print("REPORT | gel | %s | %.1f | %.1f | %.1f | %.1f | <= %.1f | %+.1f" % [
+		label, rms_dbfs, peak_dbfs, level_db, result_dbfs, ceiling, result_dbfs - ceiling,
+	])
+	_expect(result_dbfs <= ceiling + 0.1,
+		"gel %s lands at %.1f dBFS RMS, must stay at least %.0f dB below trap cues" % [
+			label, result_dbfs, GEL_TRAP_HEADROOM_DB,
+		])
 
 
 static func measure_rms_dbfs(stream: AudioStreamWAV) -> float:

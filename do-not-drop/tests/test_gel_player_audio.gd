@@ -65,8 +65,8 @@ func _test_player_integration() -> void:
 	_expect(audio.voice_count() == 4, "the spatial voice pool is fixed at four")
 	for index: int in audio.voice_count():
 		var voice := player.get_node_or_null(NodePath("GelFoley%d" % index)) as AudioStreamPlayer3D
-		_expect(voice != null and voice.bus == &"SFX" and voice.max_distance <= 26.0,
-			"voice %d is a bounded SFX player" % index)
+		_expect(voice != null and voice.bus == &"Exterior" and voice.max_distance <= 26.0,
+			"voice %d is a bounded exterior player" % index)
 
 	player.anim_clip = &"Jump"
 	player.jump_anim_time = 0.1

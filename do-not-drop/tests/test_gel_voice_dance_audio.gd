@@ -52,7 +52,8 @@ func _check_player_component() -> void:
 		player.free()
 		return
 	var emitter: AudioStreamPlayer3D = component.get(&"music")
-	_expect(emitter != null and emitter.bus == &"Music", "dance music follows the Music slider")
+	_expect(emitter != null and emitter.bus == &"Exterior",
+		"dance music starts on the listener's exterior environment bus")
 	_expect(component.find_children("*", "AudioStreamPlayer3D", true, false).size() == 1,
 		"one bounded positional emitter is reused")
 	player.set(&"anim_clip", &"Robot")

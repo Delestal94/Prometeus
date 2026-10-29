@@ -5,6 +5,7 @@ extends Node3D
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const GelPerformance = preload("res://modules/synth_audio/synth_audio_gel_performance.gd")
+const Mix = preload("res://scripts/gameplay/player/gel/gel_audio_mix.gd")
 const CONGA: StringName = &"Conga"
 
 var player: Node
@@ -23,13 +24,18 @@ func _ready() -> void:
 	music.unit_size = 7.0
 	music.max_distance = 28.0
 	music.volume_db = WorldMix.GEL_DANCE_MUSIC_DB
-	music.bus = &"Music" if AudioServer.get_bus_index(&"Music") >= 0 else &"Master"
+	music.bus = Mix.listener_bus(player)
 	add_child(music)
 
 
 func _process(_delta: float) -> void:
 	if player == null:
 		return
+	var target_bus: StringName = Mix.listener_bus(player)
+	if music.bus != target_bus:
+		music.bus = target_bus
+	music.volume_db = Mix.with_setting(player, WorldMix.GEL_DANCE_MUSIC_DB, &"music_volume")
+	music.pitch_scale = Mix.player_pitch(player)
 	var observed: Variant = player.get(&"anim_clip")
 	var clip: StringName = observed if observed is StringName else &""
 	if clip == current_dance:

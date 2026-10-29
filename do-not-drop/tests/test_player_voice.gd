@@ -1,8 +1,8 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_player_voice.gd
 ## Covers S-402 (wordless voices, docs/tareas-nacho.md), player_voice.gd:
-## - every player gets a PlayerVoice head-height speaker on the "Voice" bus, the
-##   one GameSettings' "Voces" slider drives;
+## - every player gets a PlayerVoice head-height speaker on the listener's
+##   Interior/Exterior bus while the "Voces" slider still drives its gain;
 ## - each trigger produces a line: a hit (the flinch), a ragdoll (which voices
 ##   only the ragdoll, not the yelp too), an intact delivery of the box the
 ##   player held or tended (and nobody else's), your own box ruined (and not a
@@ -16,6 +16,7 @@ extends SceneTree
 ## for real would also run RunManager's bookkeeping.
 
 const PingCatalogData = preload("res://scripts/ui/ping_catalog.gd")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 
 var _failures: int = 0
 
@@ -39,7 +40,8 @@ func _run() -> void:
 	_expect(real_voice != null, "Every player builds a PlayerVoice")
 	if real_voice != null:
 		_expect(is_equal_approx(real_voice.position.y, 1.7), "The voice comes from head height")
-		_expect((real_voice.get(&"voice") as AudioStreamPlayer3D).bus == &"Voice", "The voice plays on the Voice bus")
+		_expect((real_voice.get(&"voice") as AudioStreamPlayer3D).bus == &"Exterior",
+			"The voice starts on the exterior environment bus")
 		real.set(&"_flinch_time", 0.32)
 		real_voice.call(&"_process", 0.0)
 		_expect(real_voice.get(&"last_line") == &"hurt", "A real player's flinch makes it yelp")
@@ -77,7 +79,7 @@ func _run() -> void:
 	mia_voice.call(&"_process", 0.0)
 	_expect(mia_voice.get(&"last_line") == &"hurt" and mia_speaker.playing, "A hit makes the player yelp")
 	_expect(mia_speaker.stream == SynthAudio.gel_voice(2, 2), "The yelp is the player's own gelatinous colour voice")
-	_expect(mia_speaker.bus == &"Voice", "The yelp is on the Voice bus")
+	_expect(mia_speaker.bus == &"Exterior", "The yelp is on the exterior environment bus")
 	_expect(leo_voice.get(&"last_line") == &"", "Only the player who was hit yelps")
 
 	# Pitch differs between colour slots, and the two voices are different sounds.
@@ -116,7 +118,7 @@ func _run() -> void:
 	leo_voice.call(&"_on_house_delivery_recorded", 4, &"delivered_ok", &"box_ok")
 	_expect(mia_voice.get(&"last_line") == &"cheer" and mia_speaker.playing, "The player who brought it cheers")
 	_expect(leo_voice.get(&"last_line") == &"", "A crewmate who didn't hold the box stays quiet")
-	_expect(mia_speaker.bus == &"Voice", "The cheer is on the Voice bus")
+	_expect(mia_speaker.bus == &"Exterior", "The cheer is on the exterior environment bus")
 	_reset(mia_voice)
 	mia_voice.call(&"_on_house_delivery_recorded", 4, &"delivered_at_risk", &"box_ok")
 	mia_voice.call(&"_on_house_delivery_recorded", 4, &"delivered_ruined", &"box_ok")
@@ -140,16 +142,20 @@ func _run() -> void:
 	_expect(mia_voice.get(&"last_line") == &"", "A crewmate's ruined box isn't yours to mourn")
 	leo_voice.call(&"_on_package_ruined", &"box_his", "test")
 	_expect(leo_voice.get(&"last_line") == &"ruined", "The box at your seat (tender_peer_id) counts as your own")
-	_expect(mia_speaker.bus == &"Voice" and leo_speaker.bus == &"Voice", "Every line is on the Voice bus")
+	_expect(mia_speaker.bus == &"Exterior" and leo_speaker.bus == &"Exterior",
+		"Every line follows the listener's environment bus")
 
-	# "Voces" reaches the bus the voices play on.
+	# "Voces" still reaches gel voices even though their reverb bus is environmental.
 	var voice_bus: int = AudioServer.get_bus_index(&"Voice")
 	settings.set(&"voice_volume", 0.5)
-	_expect(is_equal_approx(AudioServer.get_bus_volume_db(voice_bus), linear_to_db(0.5)),
-		"The Voces slider writes to the Voice bus")
-	_expect(AudioServer.get_bus_index(mia_speaker.bus) == voice_bus, "The voice plays on that same bus")
+	mia_voice.call(&"_process", 0.0)
+	_expect(is_equal_approx(mia_speaker.volume_db, WorldMix.GEL_VOICE_DB + linear_to_db(0.5)),
+		"The Voces slider is preserved on the environmental emitter")
+	_expect(AudioServer.get_bus_index(mia_speaker.bus) != voice_bus,
+		"The environmental bus is independent from ping callouts")
 	settings.set(&"voice_volume", 0.0)
-	_expect(AudioServer.get_bus_volume_db(voice_bus) < -60.0, "Voces at zero silences every player's voice")
+	mia_voice.call(&"_process", 0.0)
+	_expect(mia_speaker.volume_db < -60.0, "Voces at zero silences every player's gel voice")
 	settings.set(&"voice_volume", 1.0)
 
 	# The synthesized lines are real audio.
@@ -184,7 +190,7 @@ func _run() -> void:
 	for node: Node in [box, mine, his, mia, leo]:
 		node.free()
 	if _failures == 0:
-		print("PASS: players babble on the Voice bus for hits, ragdolls, intact deliveries and their own ruined boxes")
+		print("PASS: player babble follows environment buses and the voice slider for every reaction")
 	quit(_failures)
 
 
