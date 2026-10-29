@@ -1,0 +1,108 @@
+{
+  "animation_reel": "s311_100_animation_reel.avi",
+  "animation_reel_preview": "s311_100_animation_reel_preview.png",
+  "cell_size": [
+    220,
+    180
+  ],
+  "colors": [
+    {
+      "html": "83e2ba",
+      "id": "mint",
+      "label": "Menta"
+    },
+    {
+      "html": "f4c562",
+      "id": "amber",
+      "label": "Ámbar"
+    },
+    {
+      "html": "f47e6d",
+      "id": "coral",
+      "label": "Coral"
+    },
+    {
+      "html": "6db3d6",
+      "id": "sky",
+      "label": "Cielo"
+    },
+    {
+      "html": "c9a0e0",
+      "id": "lilac",
+      "label": "Lila"
+    },
+    {
+      "html": "5f7fd0",
+      "id": "cobalt",
+      "label": "Cobalto"
+    }
+  ],
+  "default_character_changed": false,
+  "editor_preview": "s311_100_editor_preview.png",
+  "editor_video": "s311_100_editor_sliders.avi",
+  "preset_row_order": [
+    "Delgada",
+    "Flaca",
+    "Rellena",
+    "Petisa",
+    "Cabezona",
+    "Larguirucha"
+  ],
+  "reel_categories": {
+    "base": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Jump"
+    ],
+    "dances": [
+      "SimpleStep",
+      "Robot",
+      "Disco",
+      "FloorWorm",
+      "VictoryDance",
+      "Conga"
+    ],
+    "deaths": [
+      "Pancake",
+      "MeltAndReturn",
+      "Defeat",
+      "SplitAndJoin"
+    ],
+    "funny": [
+      "Point",
+      "ShakeLikeDog",
+      "BlowBubble",
+      "BallBounce"
+    ]
+  },
+  "sheet_size": [
+    1760,
+    1080
+  ],
+  "source": "Godot LOD0 runtime character",
+  "task": "S-311.100",
+  "turntable_angles_degrees": [
+    0.0,
+    45.0,
+    90.0,
+    135.0,
+    180.0,
+    225.0,
+    270.0,
+    315.0
+  ],
+  "turntable_files": [
+    "s311_100_turntable_mint.png",
+    "s311_100_turntable_amber.png",
+    "s311_100_turntable_coral.png",
+    "s311_100_turntable_sky.png",
+    "s311_100_turntable_lilac.png",
+    "s311_100_turntable_cobalt.png"
+  ],
+  "video_fps": 24,
+  "video_resolution": [
+    1280,
+    720
+  ]
+}

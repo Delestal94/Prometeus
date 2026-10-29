@@ -429,6 +429,6 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.99** Todo junto en la personalización (preset, proporciones, color, skin, cara, pelo,
   disfraz), guardado y replicado. `tests/test_gel_character.gd`: huesos, clips, morphs, materiales,
   presupuesto, ragdoll estable, red de dos pares. Capturas finales con `revisor-visual`.
-- [ ] **S-311.100** Presentación de estudio en `art/gel_character/review/`: turntable de los seis presets
+- [x] **S-311.100** Presentación de estudio en `art/gel_character/review/`: turntable de los seis presets
   en 6 colores, un video del editor moviendo los sliders, reel de animaciones (base, graciosas, bailes,
   muertes) y `LEEME.md` final. Pasa a ser el personaje por defecto solo con el visto bueno del usuario.
