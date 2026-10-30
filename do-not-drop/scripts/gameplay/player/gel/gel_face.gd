@@ -242,6 +242,11 @@ func apply_proportions(proportions: Resource) -> void:
 	_apply_head_size()
 
 
+## Head-shape factors the patch is currently built for.
+func head_axes() -> Vector3:
+	return _head_axes
+
+
 func _apply_head_size() -> void:
 	for visual: MeshInstance3D in [_eyes, _brows, _mouth]:
 		if visual == null:

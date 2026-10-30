@@ -34,6 +34,9 @@ func setup(body: Node3D) -> void:
 	var use_opaque: bool = bool(_settings.call(&"uses_opaque_gel")) if _settings != null else false
 	PlayerAppearance.set_gel_material(_body, use_opaque)
 	_shaper.setup(_body)
+	var skeleton: Skeleton3D = PlayerAppearance.find_skeleton(_body)
+	if skeleton != null:
+		skeleton.child_entered_tree.connect(_on_skeleton_child)
 	_apply_proportions(_state.proportions)
 	_state.proportions_changed.connect(_apply_proportions)
 	_state.skin_changed.connect(_apply_skin)
@@ -62,19 +65,20 @@ func _set_opaque(use_opaque: bool) -> void:
 	_apply_skin(_state.skin_id)
 
 
-## The face is built after the body, so fit it to the current proportions now
-## and on every later edit.
-func attach_face(face: GelFace) -> void:
-	_face = face
-	if _state != null:
-		_apply_proportions(_state.proportions)
+## The face is built after the body and joins the skeleton during its setup;
+## GelFace keeps the values until its layers exist. Fit it now and on every
+## later edit.
+func _on_skeleton_child(node: Node) -> void:
+	if node is GelFace and _state != null:
+		_face = node as GelFace
+		_face.apply_proportions(_state.proportions)
 
 
 func _apply_proportions(proportions: GelBodyProportions) -> void:
 	if _body == null:
 		return
 	_shaper.apply(proportions)
-	if _face != null:
+	if is_instance_valid(_face):
 		_face.apply_proportions(proportions)
 	if _hair_attachment != null:
 		_hair_attachment.apply_proportions(proportions)

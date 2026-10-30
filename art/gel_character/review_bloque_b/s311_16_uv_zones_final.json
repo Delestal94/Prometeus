@@ -52,7 +52,7 @@
         "1.0": 1.0132
       },
       "limit_percent": 15.0,
-      "wired_into": ["PlayerGelAppearance.attach_face (player.gd)", "CharacterPreview.show_proportions"]
+      "wired_into": ["PlayerGelAppearance (picks up the GelFace when it joins the skeleton)", "CharacterPreview.show_proportions"]
     }
   },
   "not_verified": [

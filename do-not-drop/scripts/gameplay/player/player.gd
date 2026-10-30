@@ -315,7 +315,6 @@ func _build_body() -> void:
 		PlayerAppearance.find_skeleton(visual),
 		RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
 	)
-	_gel_appearance.attach_face(_character_face as GelFace)
 	_apply_face()
 
 	animator = PlayerAnimator.new(self, PlayerAppearance.find_animation_player(visual), _character_face)

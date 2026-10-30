@@ -35,6 +35,7 @@ func _run() -> void:
 		_check_lod(lod)
 	_check_shaders()
 	_check_face()
+	await _check_player_face()
 	if _failures == 0:
 		print("PASS: UV0, zone mask, skins and faces hold under every morph")
 	quit(_failures)
@@ -117,6 +118,38 @@ func _check_face() -> void:
 		print("face head_shape %.1f: max distortion %.2f %%, centre shell %.4f" % [head_shape, worst * 100.0, shell])
 		_expect(shell > 1.0 and shell < 1.03,
 			"head_shape %.1f keeps the face on the deformed shell (%.4f)" % [head_shape, shell])
+
+
+## The real player builds its face after the body: it must still pick up the
+## current proportions and every later edit.
+func _check_player_face() -> void:
+	var player: Node = (load("res://scenes/gameplay/player/player.tscn") as PackedScene).instantiate()
+	root.add_child(player)
+	await process_frame
+	var state := player.get_node(^"GelProportions") as PlayerGelProportionSync
+	var face: GelFace = _find_face(player)
+	_expect(face != null and face.head_axes().is_equal_approx(
+		GelFaceScript.head_shape_axes(state.proportions.head_shape)),
+		"the player's face starts on the current head shape")
+	state.proportions.head_shape = 1.0
+	state.proportions.head_size = 1.2
+	state.proportions_changed.emit(state.proportions)
+	var eyes := face.get_node_or_null(^"Eyes") as MeshInstance3D if face != null else null
+	_expect(face != null and face.head_axes().is_equal_approx(GelFaceScript.head_shape_axes(1.0))
+		and eyes != null and eyes.scale.is_equal_approx(Vector3.ONE * 1.2),
+		"a head-shape edit refits the player's face")
+	player.queue_free()
+	await process_frame
+
+
+func _find_face(node: Node) -> GelFace:
+	if node is GelFace:
+		return node
+	for child: Node in node.get_children():
+		var found := _find_face(child)
+		if found != null:
+			return found
+	return null
 
 
 func _patch(axes: Vector3) -> PackedVector3Array:
