@@ -197,6 +197,26 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/runtime-audit/render-gel-legibility.log"
           test "$(find "$RUNNER_TEMP/runtime-audit/captures" -type f -name 's311_69_*.png' | wc -l)" -eq 7
 
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      # S-311.17: LOD1/LOD2 keep LOD0's silhouette (<= 5 % pixel difference at 15 m)
+      # for the real Delgada and Flaca presets and every single morph extreme.
+      - name: Compare gel LOD silhouettes at 15 metres
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          out="$RUNNER_TEMP/runtime-audit/gel-lods"
+          timeout 480 xvfb-run -a "$GODOT" --path do-not-drop --audio-driver Dummy \
+            --script res://tests/render_gel_body_lods.gd -- --out="$out" \
+            2>&1 | tee "$RUNNER_TEMP/runtime-audit/render-gel-lods.log"
+          pip install --quiet numpy pillow
+          python art/gel_character/compare_lod_silhouettes.py "$out" \
+            --output "$RUNNER_TEMP/runtime-audit/lod_silhouette_report.json"
+
       - name: Measure rendered performance
         if: always()
         env:

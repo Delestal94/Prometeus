@@ -1,10 +1,11 @@
 extends SceneTree
 ## Run: Godot --path do-not-drop --rendering-driver opengl3 --audio-driver Dummy
 ## --script res://tests/render_gel_body_lods.gd -- --out=<absolute-directory>
-## Opaque diagnostic silhouettes for S-311 B: three LODs, three views, base,
-## a limb-thinning proxy for future Flaca, and 22 single morph extremes.
-## Fixed 60-degree vertical FOV, 1920x1080, camera 15m from body centre.
-## This is not material approval E or the final bone-length Flaca preset C.
+## Opaque silhouettes for S-311.17: three LODs, three views, the real Delgada and
+## Flaca presets (bone lengths, head size and morphs through GelBodyShaper) and
+## 22 single morph extremes on neutral bones. Fixed 60-degree vertical FOV,
+## 1920x1080, camera 15m from body centre. Compared by
+## art/gel_character/compare_lod_silhouettes.py. Not material approval E.
 
 const BASE: String = "res://assets/models/characters/gel/gel_body_lod%d.glb"
 var _output: String = "user://gel_body_lods"
@@ -73,18 +74,26 @@ func _run() -> void:
 			failed = true
 			continue
 		body.material_override = material
+		var shaper := GelBodyShaper.new()
+		if not shaper.setup(model):
+			push_error("Gel LOD%d cannot be shaped" % lod)
+			failed = true
 		var states: Array[Dictionary] = [
-			{"name": "delgada", "weights": {}},
-			{"name": "flaca_shape_proxy", "weights": {"general_thickness": -1.0}},
+			{"name": "delgada", "proportions": GelProportionPresets.load_preset(&"delgada")},
+			{"name": "flaca", "proportions": GelProportionPresets.load_preset(&"flaca")},
 		]
 		for index: int in body.mesh.get_blend_shape_count():
 			var name: String = String(body.mesh.get_blend_shape_name(index))
-			states.append({"name": name + "_minus", "weights": {name: -1.0}})
-			states.append({"name": name + "_plus", "weights": {name: 1.0}})
+			for side: float in [-1.0, 1.0]:
+				var extreme := GelBodyProportions.new()
+				extreme.set(name, side)
+				states.append({"name": name + ("_minus" if side < 0.0 else "_plus"), "proportions": extreme})
 		for state: Dictionary in states:
-			for index: int in body.mesh.get_blend_shape_count():
-				var name: String = String(body.mesh.get_blend_shape_name(index))
-				body.set_blend_shape_value(index, float(state.weights.get(name, 0.0)))
+			var proportions: GelBodyProportions = state.proportions
+			shaper.apply(proportions)
+			state.weights = proportions.as_dictionary()
+			if animation != null and animation.has_animation("Idle"):
+				animation.seek(0.0, true)
 			for view: String in ["front", "profile", "three_quarter"]:
 				var direction: Vector3 = Vector3(0, 0, -1)
 				if view == "profile":
@@ -117,8 +126,7 @@ func _run() -> void:
 						push_error("Cannot save %s (got %d)" % [close_name, close_error])
 						failed = true
 		if lod == 0:
-			for index: int in body.mesh.get_blend_shape_count():
-				body.set_blend_shape_value(index, 0.0)
+			shaper.apply(GelBodyProportions.new())
 			var skeleton: Skeleton3D = _find(model, "Skeleton3D") as Skeleton3D
 			if skeleton != null:
 				if animation != null:
@@ -149,7 +157,7 @@ func _run() -> void:
 	var report: Dictionary = {
 		"distance_m": 15.0, "fov_vertical_deg": 60.0, "resolution": [1920, 1080],
 		"renderer": "gl_compatibility", "material": "opaque_unshaded_diagnostic",
-		"flaca_note": "shape proxy only; bone-length preset awaits C", "captures": _manifest,
+		"presets": "gel_body_shaper", "captures": _manifest,
 	}
 	var file: FileAccess = FileAccess.open(_output.path_join("capture_manifest.json"), FileAccess.WRITE)
 	if file == null:
