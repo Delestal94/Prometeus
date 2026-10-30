@@ -1,6 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_hair_attachment.gd
 ## S-311.64: all hair follows the head extremes and explicit hat rules prevent intersections.
+## S-311.16 follow-up: the fit uses the real head_shape direction (+1 narrower and taller).
 
 const GEL_SCENE: PackedScene = preload("res://assets/models/characters/gel/gel_body_lod0.glb")
 const Catalog := preload("res://scripts/gameplay/player/gel/gel_hair_catalog.gd")
@@ -31,16 +32,17 @@ func _run() -> void:
 				proportions.set(&"head_shape", head_shape)
 				attachment.apply_proportions(proportions)
 				var hair: Node3D = attachment.hair_root()
-				var expected := Vector3(
-					(1.0 + head_shape * Attachment.HEAD_SHAPE_X) * head_size,
-					(1.0 + head_shape * Attachment.HEAD_SHAPE_Y) * head_size,
-					head_size
-				)
+				# The real morph: +1 narrows and lengthens about GelFace.HEAD_SHAPE_CENTRE.
+				var fit: Transform3D = GelFace.head_shape_fit(head_shape)
+				var expected: Vector3 = GelFace.head_shape_axes(head_shape) * head_size
 				attachment.set_hat_rule(Attachment.HatRule.NONE)
-				_expect(hair.scale.is_equal_approx(expected) and hair.visible,
+				var fitted_y: float = hair.position.y
+				_expect(hair.scale.is_equal_approx(expected) and hair.visible
+					and hair.position.is_equal_approx(fit.origin * head_size)
+					and (expected.x < head_size) == (head_shape > 0.0),
 					"%s copies head size %.2f and shape %.0f" % [style_id, head_size, head_shape])
 				attachment.set_hat_rule(Attachment.HatRule.COMPRESS)
-				_expect(hair.visible and hair.scale.y < expected.y and hair.position.y < 0.0,
+				_expect(hair.visible and hair.scale.y < expected.y and hair.position.y < fitted_y,
 					"%s compresses below a fitted hat" % style_id)
 				attachment.set_hat_rule(Attachment.HatRule.HIDE)
 				_expect(not hair.visible, "%s hides under a closed hat" % style_id)

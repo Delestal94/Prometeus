@@ -665,7 +665,8 @@ func _thickness_factor(role: StringName, values: Dictionary) -> float:
 		&"torso":
 			factor *= 1.0 + (float(values[&"belly"]) + float(values[&"chest"])) * 0.07
 		&"head":
-			factor *= float(values[&"head_size"]) * (1.0 + float(values[&"head_shape"]) * 0.06)
+			# The sphere follows the real morph's width (+1 narrows, -1 widens).
+			factor *= float(values[&"head_size"]) * GelFace.head_shape_axes(float(values[&"head_shape"])).x
 		&"arm":
 			factor *= 1.0 + float(values[&"arm_thickness"]) * 0.18
 		&"leg":

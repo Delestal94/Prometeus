@@ -19,6 +19,9 @@ const SURFACE_OFFSET: float = 0.0025
 ## HEAD_SHAPE_CENTRE; -1 does the opposite.
 const HEAD_SHAPE_MORPH: float = 0.16
 const HEAD_SHAPE_CENTRE := Vector3(0.0, 1.485, 0.0)
+## Head bone bind origin in gel_body_lod0.glb; rigid head attachments live in
+## this space (test_gel_head_shape_fit checks it against the asset).
+const HEAD_BONE_ORIGIN := Vector3(0.0, 1.28, 0.0)
 const PATCH_STEPS: int = 16
 const EYE_LINE_V: Dictionary = {
 	&"classic": 0.416, &"joyful": 0.416, &"worried": 0.416,
@@ -260,6 +263,15 @@ func _apply_head_size() -> void:
 static func head_shape_axes(head_shape: float) -> Vector3:
 	var weight: float = clampf(head_shape, -1.0, 1.0) * HEAD_SHAPE_MORPH
 	return Vector3(1.0 - weight, 1.0 + weight, 1.0 - weight)
+
+
+## Head-bone-space fit of a rigid head attachment (hair, eyebrows, hats) to the
+## real head_shape morph: head_shape_axes about the morph centre, so the piece
+## stays on the deformed shell instead of only resizing about the bone.
+static func head_shape_fit(head_shape: float) -> Transform3D:
+	var axes: Vector3 = head_shape_axes(head_shape)
+	var centre: Vector3 = HEAD_SHAPE_CENTRE - HEAD_BONE_ORIGIN
+	return Transform3D(Basis.from_scale(axes), centre - centre * axes)
 
 
 func visible_layer_count() -> int:

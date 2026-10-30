@@ -155,7 +155,9 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   > sigue el `head_shape` real reconstruyendo su parche sobre la cabeza deformada: máximo 9,45 %
   > (antes ignoraba la forma y flotaba o se hundía unos 4 cm). Evidencia:
   > `art/gel_character/review_bloque_b/s311_16_uv_zones_final.json`, test `test_gel_uv_zones.gd`.
-  > Pendiente aparte: pelo, cejas, bigote, disfraz y ragdoll usan el signo de `head_shape` al revés.
+  > Pelo, cejas, bigote, piezas de cabeza del disfraz y esfera de cabeza del ragdoll ahora siguen el
+  > `head_shape` real (+1 más angosta y alta alrededor de `GelFace.HEAD_SHAPE_CENTRE`, -1 al revés) con
+  > `GelFace.head_shape_fit`; test `test_gel_head_shape_fit.gd` compara contra los vértices del GLB en ±1.
 - [ ] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
   una captura a 15 m, en Delgada, Flaca y los extremos).
 - [x] **S-311.18** (`9bf1593`) `validate_glb.py` ampliado: huesos que usa el juego, pesos normalizados, ningún vértice
