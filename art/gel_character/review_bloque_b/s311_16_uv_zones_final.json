@@ -1,0 +1,62 @@
+{
+  "task": "S-311.16",
+  "base_commit": "79eae4fa",
+  "test": "do-not-drop/tests/test_gel_uv_zones.gd",
+  "criterion": "Visible content (skins, faces, decals) distorts at most 15 % under any morph. Measured on what is drawn, not on the body surface under fixed UV0.",
+  "uv0": {
+    "morphs_moving_uv0": 0,
+    "blend_shapes_per_lod": 11,
+    "overlap": "rejected by art/gel_character/gel_body_validation.py (UV0 triangles overlap check)",
+    "layout": "one island per face (build_gel_body.py decorate), used only to read thickness.png",
+    "surface_change_under_fixed_uv0": "geometry_metrics.json keeps uv_passes_15_percent=false (max scale 61.14 %, anisotropy 230.09 % at general_thickness). That is the body surface itself growing; thickness.png must follow it and no texture drawn on the body uses UV0."
+  },
+  "zone_mask": {
+    "attribute": "COLOR_0 / Blender GelZone, per vertex, fixed under morphs",
+    "zones": {
+      "head": [0, 0, 1],
+      "neck": [0, 1, 1],
+      "torso": [1, 0, 1],
+      "arm": [1, 0, 0],
+      "hand": [1, 1, 1],
+      "leg": [0, 1, 0],
+      "foot": [1, 1, 0]
+    },
+    "lods_checked": [0, 1, 2],
+    "checks": "every vertex in one zone; head > neck > torso > leg > foot by height; hands outside arms outside torso"
+  },
+  "skins": {
+    "sampling": "model_position = deformed VERTEX in gel_body.gdshader and gel_body_opaque.gdshader",
+    "distortion_percent": 0.0,
+    "note": "Object-space patterns keep their size on any morph; the only UV read in both shaders is texture(thickness_map, UV)."
+  },
+  "decals": "No body decal exists. A future decal must be projected in model space like the skins, or it inherits the body surface change above.",
+  "faces": {
+    "before": {
+      "head_shape_followed_in_game": false,
+      "face_centre_shell_distance_at_plus_1": 1.204,
+      "face_centre_shell_distance_at_minus_1": 0.872,
+      "note": "GelFace.apply_proportions was never called by the player or the preview and its constants assumed +1 was wider; the real morph makes +1 narrower (x/z 0.84) and taller (y 1.16), so the face floated about 4 cm off (+1) or sank about 3 cm in (-1). A plain non-uniform scale fitted to the real head would have distorted the drawing by 38 %."
+    },
+    "after": {
+      "method": "the curved patch is rebuilt on the morphed head ellipsoid; rows move to the latitude whose meridian arc is the uniform scale sqrt(width*height) times the rest arc and each row's longitude span is corrected by its circle radius",
+      "max_distortion_percent": {
+        "-1.0": 7.40,
+        "-0.5": 4.07,
+        "0.5": 4.60,
+        "1.0": 9.45
+      },
+      "centre_shell_distance": {
+        "-1.0": 1.0096,
+        "-0.5": 1.0103,
+        "0.5": 1.0121,
+        "1.0": 1.0132
+      },
+      "limit_percent": 15.0,
+      "wired_into": ["PlayerGelAppearance.attach_face (player.gd)", "CharacterPreview.show_proportions"]
+    }
+  },
+  "not_verified": [
+    "No new rendered captures: Godot only ran headless.",
+    "Hair, eyebrows, moustache, costume and ragdoll head fitting still use the inverted head_shape sign (+1 wider); separate task."
+  ]
+}

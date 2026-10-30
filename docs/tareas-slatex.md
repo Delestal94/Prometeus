@@ -147,9 +147,15 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.15** Normales suaves y **mapa de grosor** (thickness): la luz atraviesa más en manos y
   brazos que en el torso. El grosor tiene que seguir a los morphs (grosor horneado en el cuerpo base y
   corregido en el shader con los pesos de "grosor general"; comprobar en los extremos).
-- [ ] **S-311.16** UV0 sin solapamiento y estable con cualquier morph (skins, caras, decals no se estiran
+- [x] **S-311.16** UV0 sin solapamiento y estable con cualquier morph (skins, caras, decals no se estiran
   más de un 15 %) y UV1 o color de vértice con la máscara de zonas (cabeza, torso, brazos, manos,
   piernas, pies) para skins por zona.
+  > Ningún morph mueve UV0; la máscara `GelZone` (color de vértice, 7 zonas con cuello) está en los
+  > tres LOD. Las skins se muestrean en espacio objeto deformado (0 % de estiramiento). La cara ahora
+  > sigue el `head_shape` real reconstruyendo su parche sobre la cabeza deformada: máximo 9,45 %
+  > (antes ignoraba la forma y flotaba o se hundía unos 4 cm). Evidencia:
+  > `art/gel_character/review_bloque_b/s311_16_uv_zones_final.json`, test `test_gel_uv_zones.gd`.
+  > Pendiente aparte: pelo, cejas, bigote, disfraz y ragdoll usan el signo de `head_shape` al revés.
 - [ ] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
   una captura a 15 m, en Delgada, Flaca y los extremos).
 - [x] **S-311.18** (`9bf1593`) `validate_glb.py` ampliado: huesos que usa el juego, pesos normalizados, ningún vértice

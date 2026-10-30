@@ -24,6 +24,7 @@ var _costume: Node3D
 var _costume_fitter
 var _accessory: Node3D
 var _cosmetics_queued: bool = false
+var _face: GelFace
 
 
 func setup(body: Node3D) -> void:
@@ -61,10 +62,20 @@ func _set_opaque(use_opaque: bool) -> void:
 	_apply_skin(_state.skin_id)
 
 
+## The face is built after the body, so fit it to the current proportions now
+## and on every later edit.
+func attach_face(face: GelFace) -> void:
+	_face = face
+	if _state != null:
+		_apply_proportions(_state.proportions)
+
+
 func _apply_proportions(proportions: GelBodyProportions) -> void:
 	if _body == null:
 		return
 	_shaper.apply(proportions)
+	if _face != null:
+		_face.apply_proportions(proportions)
 	if _hair_attachment != null:
 		_hair_attachment.apply_proportions(proportions)
 	_fit_face_hair(proportions)
