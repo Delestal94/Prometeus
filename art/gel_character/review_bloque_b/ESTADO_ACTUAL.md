@@ -185,3 +185,22 @@ siguen pendientes, sin afirmar que se haya calcado la referencia.
 Código41testsOK con3bpySKIP explícitos;3pruebasBlenderPASS por separado.
 Godot4/4PASS tras sincronizar Run. LintGDScript/baseOK,
 18módulosportablesOK. No cambios en el jugador activo, red o colisiones.
+
+## S-311.17 — LOD con los mismos morphs y la misma silueta (2026-10-30)
+
+LOD1 suma una vuelta de quads bajo el ecuador de la cabeza (`add_lower_head_loop`):
+antes quedaban 11 cm sin anillo entre el cuello y el ecuador y la mandíbula se veía
+como una cuerda recta a distancia, que LOD2 heredaba. LOD1 queda en 1136 vértices /
+2268 triángulos (≤ 2500). El simplificador de LOD2 rechaza colapsos que invierten la
+normal suavizada de una esquina (`rejected_corner_normals`); LOD2 sigue en 399 / 794
+(≤ 800), todo suave. Admite importancia por vértice, hoy neutra.
+
+CI (xvfb, 1920x1080, 15 m, 60°), métrica XOR/unión, 144 comparaciones con
+`GelBodyShaper`: Delgada máx. 3,66 %, Flaca máx. 4,82 % (LOD2, tres cuartos, el peor
+caso), extremos de un morph máx. 4,58 %. `lod_silhouette_report.json`:
+`final_item_17_complete: true`. Antes del cambio LOD2 `head_shape` +1 de perfil daba
+5,02 %.
+
+Topología, tests Python, tres GLB y exportaciones (2205 muestras) PASS. Fuente Blender
+PASS salvo el conteo de clips, corregido a 49. `compare_delgada_silhouette.py` falla
+con IoU 0,828 < 0,84 igual en `main` limpio (LOD0 no cambia en este bloque): pendiente aparte.
