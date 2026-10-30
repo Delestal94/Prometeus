@@ -51,8 +51,18 @@ func _run() -> void:
 	proportions.set(&"head_shape", 1.0)
 	surface_face.apply_proportions(proportions)
 	var eyes := surface_face.get_node(^"Eyes") as MeshInstance3D
-	_expect(eyes.scale.x > eyes.scale.y and eyes.scale.x > 1.25,
-		"the face follows both head size and the wide head-shape extreme")
+	var narrow_mesh: Mesh = eyes.mesh
+	_expect(eyes.scale.is_equal_approx(Vector3.ONE * 1.25),
+		"the face follows head size without a non-uniform scale")
+	proportions.set(&"head_shape", -1.0)
+	surface_face.apply_proportions(proportions)
+	_expect(eyes.mesh != narrow_mesh, "a head-shape edit rebuilds the face patch")
+	var narrow_front: Vector3 = GelFaceScript.face_model_point(
+		centre_uv, GelFaceScript.Mode.SURFACE, GelFaceScript.head_shape_axes(1.0))
+	var wide_front: Vector3 = GelFaceScript.face_model_point(
+		centre_uv, GelFaceScript.Mode.SURFACE, GelFaceScript.head_shape_axes(-1.0))
+	_expect(wide_front.z < surface_point.z and surface_point.z < narrow_front.z,
+		"the face sits deeper on the narrow (+1) head and further out on the wide (-1) head")
 	_expect(surface_face.bone_name == &"head" and surface_face.get_parent() == skeleton,
 		"the face follows head animation through its real bone")
 

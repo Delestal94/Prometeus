@@ -99,6 +99,8 @@ func show_proportions(proportions: GelBodyProportions) -> void:
 	mannequin.visible = false
 	gel_mannequin.visible = true
 	_gel_shaper.apply(proportions)
+	if face is GelFace:
+		(face as GelFace).apply_proportions(proportions)
 	if _hair_attachment != null:
 		_hair_attachment.call(&"apply_proportions", proportions)
 	_fit_face_hair(proportions)

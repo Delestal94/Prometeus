@@ -14,8 +14,11 @@ const HEAD_CENTRE := Vector3(0.0, 1.49, 0.0)
 const HEAD_RADII := Vector3(0.245, 0.245, 0.225)
 const INTERNAL_SCALE := Vector3(0.84, 0.84, 0.68)
 const SURFACE_OFFSET: float = 0.0025
-const HEAD_SHAPE_X: float = 0.12
-const HEAD_SHAPE_Y: float = -0.10
+## The real head_shape morph (art/gel_character/build_gel_body.py, morph_delta):
+## +1 narrows width and depth and lengthens height by this fraction around
+## HEAD_SHAPE_CENTRE; -1 does the opposite.
+const HEAD_SHAPE_MORPH: float = 0.16
+const HEAD_SHAPE_CENTRE := Vector3(0.0, 1.485, 0.0)
 const PATCH_STEPS: int = 16
 const EYE_LINE_V: Dictionary = {
 	&"classic": 0.416, &"joyful": 0.416, &"worried": 0.416,
@@ -51,6 +54,9 @@ var _gaze_offset: Vector2 = Vector2.ZERO
 var _voice_amplitude: float = 0.0
 var _mouth_openness: float = 0.0
 var _rng := RandomNumberGenerator.new()
+var _to_bone := Transform3D.IDENTITY
+var _head_axes := Vector3.ONE
+var _head_size: float = 1.0
 
 
 func setup(model: Node3D, skeleton: Skeleton3D, layers: int, face_mode: Mode = SELECTED_MODE) -> bool:
@@ -66,10 +72,12 @@ func setup(model: Node3D, skeleton: Skeleton3D, layers: int, face_mode: Mode = S
 		* skeleton.global_transform
 		* skeleton.get_bone_global_rest(bone)
 	)
-	var mesh: ArrayMesh = _curved_patch(head_rest.affine_inverse(), mode)
+	_to_bone = head_rest.affine_inverse()
+	var mesh: ArrayMesh = _curved_patch(_to_bone, mode, _head_axes)
 	_eyes = _layer("Eyes", mesh, layers)
 	_brows = _layer("Brows", mesh, layers)
 	_mouth = _layer("Mouth", mesh, layers)
+	_apply_head_size()
 	_rng.randomize()
 	_next_blink = _rng.randf_range(0.8, 4.0)
 	if face_id == &"":
@@ -216,21 +224,42 @@ func _apply_mouth_uv() -> void:
 	material.uv1_offset = Vector3(0.0, MOUTH_LINE_V - MOUTH_LINE_V / height, 0.0)
 
 
+## Fits the layers to the deformed head. head_shape rebuilds the curved patch
+## on the morphed shell instead of scaling the drawing, so the face stays on the
+## surface while its texture keeps one scale in both directions (S-311.16).
+## Safe before setup(): the values are kept and used when the layers exist.
 func apply_proportions(proportions: Resource) -> void:
 	if proportions == null:
 		return
-	var head_size: float = clampf(float(proportions.get(&"head_size")), 0.75, 1.25)
-	var head_shape: float = clampf(float(proportions.get(&"head_shape")), -1.0, 1.0)
-	var authored_scale := Vector3(
-		1.0 + head_shape * HEAD_SHAPE_X,
-		1.0 + head_shape * HEAD_SHAPE_Y,
-		1.0
-	)
+	_head_size = clampf(float(proportions.get(&"head_size")), 0.75, 1.25)
+	var axes: Vector3 = head_shape_axes(float(proportions.get(&"head_shape")))
+	if not axes.is_equal_approx(_head_axes):
+		_head_axes = axes
+		if _eyes != null:
+			var mesh: ArrayMesh = _curved_patch(_to_bone, mode, _head_axes)
+			for visual: MeshInstance3D in [_eyes, _brows, _mouth]:
+				visual.mesh = mesh
+	_apply_head_size()
+
+
+## Head-shape factors the patch is currently built for.
+func head_axes() -> Vector3:
+	return _head_axes
+
+
+func _apply_head_size() -> void:
 	for visual: MeshInstance3D in [_eyes, _brows, _mouth]:
 		if visual == null:
 			continue
-		visual.set_meta(&"gel_head_base_scale", authored_scale)
-		visual.scale = authored_scale * head_size
+		# GelBodyShaper multiplies this base by head_size on later edits.
+		visual.set_meta(&"gel_head_base_scale", Vector3.ONE)
+		visual.scale = Vector3.ONE * _head_size
+
+
+## Width, height and depth factors of the real head_shape morph.
+static func head_shape_axes(head_shape: float) -> Vector3:
+	var weight: float = clampf(head_shape, -1.0, 1.0) * HEAD_SHAPE_MORPH
+	return Vector3(1.0 - weight, 1.0 + weight, 1.0 - weight)
 
 
 func visible_layer_count() -> int:
@@ -241,9 +270,25 @@ func visible_layer_count() -> int:
 	return count
 
 
-static func face_model_point(uv: Vector2, face_mode: Mode) -> Vector3:
-	var longitude: float = (0.5 - uv.x) * 1.55
-	var latitude: float = (0.5 - uv.y) * 1.28
+## Model-space patch point for a texture coordinate on a head deformed by
+## head_axes (see head_shape_axes). The drawing keeps one uniform scale, the
+## geometric mean of width and height: each row moves to the latitude whose
+## front meridian arc is that scale times the rest arc, and each row's
+## longitude span is corrected by its new circle radius.
+static func face_model_point(uv: Vector2, face_mode: Mode, head_axes := Vector3.ONE) -> Vector3:
+	var rest_longitude: float = (0.5 - uv.x) * 1.55
+	var rest_latitude: float = (0.5 - uv.y) * 1.28
+	var longitude: float = rest_longitude
+	var latitude: float = rest_latitude
+	if not head_axes.is_equal_approx(Vector3.ONE):
+		var uniform: float = sqrt(head_axes.x * head_axes.y)
+		latitude = _matching_latitude(
+			uniform * _meridian_arc(rest_latitude, HEAD_RADII.y, HEAD_RADII.z),
+			HEAD_RADII.y * head_axes.y,
+			HEAD_RADII.z * head_axes.z,
+			rest_latitude * uniform / head_axes.y
+		)
+		longitude = rest_longitude * uniform * cos(rest_latitude) / (head_axes.x * cos(latitude))
 	var relative := Vector3(
 		HEAD_RADII.x * sin(longitude) * cos(latitude),
 		HEAD_RADII.y * sin(latitude),
@@ -251,9 +296,35 @@ static func face_model_point(uv: Vector2, face_mode: Mode) -> Vector3:
 	)
 	if face_mode == Mode.INTERNAL:
 		relative *= INTERNAL_SCALE
-	else:
+	relative *= head_axes
+	if face_mode == Mode.SURFACE:
 		relative *= 1.0 + SURFACE_OFFSET / maxf(relative.length(), 0.0001)
-	return HEAD_CENTRE + relative
+	var centre: Vector3 = HEAD_SHAPE_CENTRE + (HEAD_CENTRE - HEAD_SHAPE_CENTRE) * head_axes
+	return centre + relative
+
+
+## Signed arc length along the front meridian of an ellipse with these
+## vertical and depth semi-axes, from the equator to the latitude.
+static func _meridian_arc(latitude: float, vertical: float, depth: float) -> float:
+	const STEPS: int = 8
+	var step: float = latitude / STEPS
+	var total: float = 0.0
+	for index: int in range(STEPS + 1):
+		var weight: float = 1.0 if index == 0 or index == STEPS else (4.0 if index % 2 == 1 else 2.0)
+		total += weight * _meridian_speed(step * index, vertical, depth)
+	return total * step / 3.0
+
+
+static func _meridian_speed(latitude: float, vertical: float, depth: float) -> float:
+	return Vector2(vertical * cos(latitude), depth * sin(latitude)).length()
+
+
+## Newton search for the latitude with the requested meridian arc length.
+static func _matching_latitude(arc: float, vertical: float, depth: float, guess: float) -> float:
+	var latitude: float = guess
+	for _iteration: int in 5:
+		latitude -= (_meridian_arc(latitude, vertical, depth) - arc) / _meridian_speed(latitude, vertical, depth)
+	return latitude
 
 
 static func ellipsoid_distance(point: Vector3) -> float:
@@ -283,14 +354,14 @@ func _layer(label: String, mesh: ArrayMesh, layers: int) -> MeshInstance3D:
 	return part
 
 
-static func _curved_patch(to_bone: Transform3D, face_mode: Mode) -> ArrayMesh:
+static func _curved_patch(to_bone: Transform3D, face_mode: Mode, head_axes: Vector3) -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for row: int in range(PATCH_STEPS + 1):
 		for column: int in range(PATCH_STEPS + 1):
 			var uv := Vector2(float(column) / PATCH_STEPS, float(row) / PATCH_STEPS)
 			surface.set_uv(uv)
-			surface.add_vertex(to_bone * face_model_point(uv, face_mode))
+			surface.add_vertex(to_bone * face_model_point(uv, face_mode, head_axes))
 	for row: int in range(PATCH_STEPS):
 		for column: int in range(PATCH_STEPS):
 			var start: int = row * (PATCH_STEPS + 1) + column
