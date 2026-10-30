@@ -12,6 +12,7 @@ const BONE_LENGTHS: Dictionary = {
 	&"torso_length": [&"pelvis", &"chest"],
 	&"neck_length": [&"neck"],
 }
+const THICKNESS_MODE_PACK_SCALE: float = 0.25
 
 var application_count: int = 0
 
@@ -49,6 +50,7 @@ func apply(proportions: GelBodyProportions) -> bool:
 	_apply_head_size(float(values[&"head_size"]))
 	_fit_head_attachments(float(values[&"head_size"]))
 	_apply_morphs(values)
+	_apply_thickness_shader_weight(float(values[&"general_thickness"]))
 	_skeleton.force_update_all_bone_transforms()
 	_last_values = values.duplicate(true)
 	application_count += 1
@@ -115,6 +117,19 @@ func _apply_morphs(values: Dictionary) -> void:
 			var morph_index: int = body.find_blend_shape_by_name(morph_name)
 			if morph_index >= 0:
 				body.set_blend_shape_value(morph_index, float(values[morph_name]))
+
+
+## Packs the general-thickness weight into the unused fractional range around
+## the integer skin mode. Every shader branch has a half-unit mode margin, so
+## the full [-1, 1] morph range remains unambiguous without a seventeenth
+## instance uniform.
+func _apply_thickness_shader_weight(weight: float) -> void:
+	for body: MeshInstance3D in _bodies:
+		var current: Variant = body.get_instance_shader_parameter(&"gel_skin_surface")
+		var surface := current as Vector4 if current is Vector4 else Vector4(-1.0, -1.0, 0.0, 0.0)
+		var skin_mode := roundf(surface.z)
+		surface.z = skin_mode + clampf(weight, -1.0, 1.0) * THICKNESS_MODE_PACK_SCALE
+		body.set_instance_shader_parameter(&"gel_skin_surface", surface)
 
 
 func _find_skeleton(node: Node) -> Skeleton3D:

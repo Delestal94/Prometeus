@@ -13,10 +13,18 @@ static func apply(target: GeometryInstance3D, definition: Resource) -> bool:
 	var animation_mode: int = int(definition.get(&"animation_mode"))
 	if animation_mode != GelSkinDefinition.AnimationMode.NONE:
 		mode = ANIMATION_MODE_OFFSET + animation_mode
+	var current_surface: Variant = target.get_instance_shader_parameter(&"gel_skin_surface")
+	var thickness_offset: float = 0.0
+	if current_surface is Vector4:
+		thickness_offset = clampf(
+			(current_surface as Vector4).z - roundf((current_surface as Vector4).z),
+			-GelBodyShaper.THICKNESS_MODE_PACK_SCALE,
+			GelBodyShaper.THICKNESS_MODE_PACK_SCALE
+		)
 	var surface := Vector4(
 		definition.get(&"absorption"),
 		definition.get(&"shine"),
-		float(mode),
+		float(mode) + thickness_offset,
 		definition.get(&"interior_amount")
 	)
 	var color: Color = definition.get(&"interior_color")

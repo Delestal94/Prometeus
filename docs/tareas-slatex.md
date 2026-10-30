@@ -144,7 +144,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.14** Prueba de "núcleo": una malla interna más chica y más densa para que el torso se vea
   más opaco que las extremidades (criterio 11), con los mismos morphs. Se compara con resolverlo solo con
   el mapa de grosor (ítem 15) y se deja la opción más barata que pase el bloque E.
-- [ ] **S-311.15** Normales suaves y **mapa de grosor** (thickness): la luz atraviesa más en manos y
+- [x] **S-311.15** Normales suaves y **mapa de grosor** (thickness): la luz atraviesa más en manos y
   brazos que en el torso. El grosor tiene que seguir a los morphs (grosor horneado en el cuerpo base y
   corregido en el shader con los pesos de "grosor general"; comprobar en los extremos).
 - [ ] **S-311.16** UV0 sin solapamiento y estable con cualquier morph (skins, caras, decals no se estiran
@@ -242,8 +242,8 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.29** (`a05dafc`) Reflejos de estudio nítidos como los de la foto (criterio 4): especular
   de rugosidad baja + matcap procedural chico de ventana y cinta, visibles aunque el cielo sea oscuro.
 - [x] **S-311.30** (`33d459a`) Absorción por grosor (Beer-Lambert aproximado con el mapa base del ítem
-  15): más color y menos transparencia donde hay más gelatina. La corrección del mapa para morphs sigue
-  pendiente en S-311.15 y no se da por cerrada aquí.
+  15): más color y menos transparencia donde hay más gelatina. El mapa ya sigue la corrección validada
+  en S-311.15 para el peso de grosor general.
 - [x] **S-311.31** (`2e1a75f`) Luz trasera / subsurface falso: wrap lighting y transmisión a
   contraluz calculados en el mismo `light()` del shader, sin material ni pasada adicional.
 - [x] **S-311.32** (`39e09bc`) Motas y burbujas internas (criterio 7): ruido 3D en espacio del objeto,
