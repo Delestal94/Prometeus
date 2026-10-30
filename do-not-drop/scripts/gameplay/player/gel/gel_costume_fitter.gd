@@ -69,9 +69,7 @@ func _scale_for(bone: StringName, values: Dictionary) -> Vector3:
 	var thickness: float = 1.0 + float(values[&"general_thickness"]) * 0.12
 	var result := Vector3(thickness, float(values[&"total_height"]), thickness)
 	if bone == &"head":
-		var head_width: float = 1.0 + float(values[&"head_shape"]) * 0.10
-		return Vector3(head_width, 1.0 - float(values[&"head_shape"]) * 0.07, head_width) \
-			* float(values[&"head_size"])
+		return GelFace.head_shape_axes(float(values[&"head_shape"])) * float(values[&"head_size"])
 	if bone == &"chest":
 		result.x *= 1.0 + float(values[&"shoulders"]) * 0.14
 		result.z *= 1.0 + float(values[&"chest"]) * 0.16 + float(values[&"belly"]) * 0.08
@@ -94,6 +92,10 @@ func _scale_for(bone: StringName, values: Dictionary) -> Vector3:
 
 func _fit_origin(origin: Vector3, bone: StringName, values: Dictionary) -> Vector3:
 	var fitted := origin
+	if bone == &"head":
+		# The real head_shape morph scales about its centre, not the piece.
+		var centre: Vector3 = GelFace.HEAD_SHAPE_CENTRE
+		fitted = centre + (origin - centre) * GelFace.head_shape_axes(float(values[&"head_shape"]))
 	fitted.y *= float(values[&"total_height"])
 	if bone == &"head":
 		fitted.x *= float(values[&"head_size"])

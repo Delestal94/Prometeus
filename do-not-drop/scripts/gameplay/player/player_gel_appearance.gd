@@ -139,14 +139,9 @@ func _add_face_hair(skeleton: Skeleton3D, visual: Node3D, style_id: StringName) 
 
 
 func _fit_face_hair(proportions: GelBodyProportions) -> void:
-	var scale := Vector3(
-		1.0 + proportions.head_shape * HairAttachment.HEAD_SHAPE_X,
-		1.0 + proportions.head_shape * HairAttachment.HEAD_SHAPE_Y,
-		1.0
-	) * proportions.head_size
 	for attachment: BoneAttachment3D in _face_hair_attachments:
 		if attachment.get_child_count() > 0:
-			(attachment.get_child(0) as Node3D).scale = scale
+			HairAttachment.fit_head_visual(attachment.get_child(0) as Node3D, proportions)
 
 
 func _strongest_hat_rule(first: StringName, second: StringName) -> int:

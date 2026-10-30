@@ -7,8 +7,6 @@ enum HatRule { NONE, COMPRESS, HIDE }
 const Library := preload("res://scripts/gameplay/player/gel/gel_hair_library.gd")
 const Springs := preload("res://scripts/gameplay/player/gel/gel_hair_springs.gd")
 const Catalog := preload("res://scripts/gameplay/player/gel/gel_hair_catalog.gd")
-const HEAD_SHAPE_X: float = 0.12
-const HEAD_SHAPE_Y: float = -0.10
 const HAT_COMPRESSION: float = 0.60
 const HAT_DROP: float = 0.07
 
@@ -18,6 +16,7 @@ var hat_rule: HatRule = HatRule.NONE
 var _hair: Node3D
 var _springs: Node
 var _fitted_scale: Vector3 = Vector3.ONE
+var _fitted_position: Vector3 = Vector3.ZERO
 
 
 func setup(skeleton: Skeleton3D, requested_style: StringName, layers: int = 1) -> bool:
@@ -40,15 +39,24 @@ func setup(skeleton: Skeleton3D, requested_style: StringName, layers: int = 1) -
 func apply_proportions(proportions: Resource) -> void:
 	if proportions == null or _hair == null:
 		return
-	var head_size: float = clampf(float(proportions.get(&"head_size")), 0.75, 1.25)
-	var head_shape: float = clampf(float(proportions.get(&"head_shape")), -1.0, 1.0)
-	_fitted_scale = Vector3(
-		1.0 + head_shape * HEAD_SHAPE_X,
-		1.0 + head_shape * HEAD_SHAPE_Y,
-		1.0
-	) * head_size
-	_hair.set_meta(&"gel_head_base_scale", _fitted_scale / head_size)
+	fit_head_visual(_hair, proportions)
+	_fitted_scale = _hair.scale
+	_fitted_position = _hair.position
 	_apply_hat_rule()
+
+
+## Fits a visual parented to a head BoneAttachment3D to head_size and the real
+## head_shape morph (GelFace.head_shape_fit). GelBodyShaper later multiplies
+## the cached base scale by head_size; the position already carries it.
+static func fit_head_visual(visual: Node3D, proportions: Resource) -> void:
+	if visual == null or proportions == null:
+		return
+	var head_size: float = clampf(float(proportions.get(&"head_size")), 0.75, 1.25)
+	var fit: Transform3D = GelFace.head_shape_fit(float(proportions.get(&"head_shape")))
+	var axes: Vector3 = fit.basis.get_scale()
+	visual.set_meta(&"gel_head_base_scale", axes)
+	visual.scale = axes * head_size
+	visual.position = fit.origin * head_size
 
 
 func set_hat_rule(rule: HatRule) -> void:
@@ -68,7 +76,9 @@ func _apply_hat_rule() -> void:
 	if _hair == null:
 		return
 	_hair.visible = hat_rule != HatRule.HIDE
-	_hair.position = Vector3(0.0, -HAT_DROP, 0.0) if hat_rule == HatRule.COMPRESS else Vector3.ZERO
+	_hair.position = _fitted_position
+	if hat_rule == HatRule.COMPRESS:
+		_hair.position.y -= HAT_DROP
 	_hair.scale = _fitted_scale
 	if hat_rule == HatRule.COMPRESS:
 		_hair.scale.y *= HAT_COMPRESSION
