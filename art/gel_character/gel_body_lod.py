@@ -10,7 +10,7 @@ import numpy as np
 
 def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=794,
                         protected_vertices=(), pose_samples=None,
-                        pose_normal_matrices=None):
+                        pose_normal_matrices=None, vertex_importance=None):
     """Return source indices, remapped triangles and actual collapse statistics.
 
     Morph samples include the baseline first. Optional pose matrices are each
@@ -18,6 +18,8 @@ def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=79
     pose samples. Local contact tests use the exported-geometry validator's
     authoritative predicate. The caller must supply a closed source that has
     already passed its finite contact sweep; unchanged faces are not retested.
+    Optional per-vertex importance multiplies the cost of removing a vertex, so
+    regions whose distant silhouette matters more are collapsed last.
     """
     from gel_body_validation import EPS, triangle_intersection
     points = np.asarray(points, dtype=np.float64)
@@ -60,6 +62,10 @@ def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=79
     protected = set(protected_vertices)
     if any(not isinstance(i,(int,np.integer)) or i<0 or i>=len(points) for i in protected):
         raise ValueError('Protected vertices must be valid source vertex indices')
+    importance = (np.ones(len(points)) if vertex_importance is None
+                  else np.asarray(vertex_importance,dtype=np.float64))
+    if importance.shape!=(len(points),) or not np.isfinite(importance).all() or np.any(importance<=0):
+        raise ValueError('Vertex importance must be one positive finite value per source vertex')
     vertex_faces = [set() for _ in points]
     for fi,face in enumerate(faces):
         for i in face:
@@ -83,8 +89,36 @@ def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=79
     minima = samples[:,faces,:].min(axis=2)
     maxima = samples[:,faces,:].max(axis=2)
     heap = []
-    stats = dict(collapses=0,rejected_topology=0,rejected_orientation=0,
+    stats = dict(collapses=0,rejected_topology=0,rejected_orientation=0,rejected_corner_normals=0,
                  rejected_contacts=0,morph_sample_count=morph_count,pose_sample_count=pose_count)
+    base = samples[0]
+    def corner_normals_flip(keep,proposed,excluded):
+        """Blender shades a smooth corner with the angle-weighted vertex normal.
+        Reject a collapse that would turn any corner around a changed vertex
+        against its own face at the baseline: the export would have to flat-shade
+        that triangle, which the all-smooth surface contract forbids."""
+        changed = {int(v) for face in proposed for v in face}
+        for vertex in changed:
+            around = [faces[fi] for fi in vertex_faces[vertex] if fi not in excluded]
+            around += [face for face in proposed if vertex in face]
+            total = np.zeros(3)
+            units = []
+            for face in around:
+                a,b,c = base[face[0]],base[face[1]],base[face[2]]
+                n = np.cross(b-a,c-a)
+                length = np.linalg.norm(n)
+                if length<=EPS:return True
+                n /= length
+                corner = list(face).index(vertex)
+                p = base[face[corner]]
+                u = base[face[(corner+1)%3]]-p
+                w = base[face[(corner+2)%3]]-p
+                angle = np.arctan2(np.linalg.norm(np.cross(u,w)),np.dot(u,w))
+                total += angle*n
+                units.append(n)
+            if any(float(np.dot(total,n))<=1e-9 for n in units):
+                return True
+        return False
     def neighbors(i):
         return {int(v) for fi in vertex_faces[i] for v in faces[fi] if v!=i}
     def push(a,b):
@@ -96,6 +130,7 @@ def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=79
             h = homogeneous[:,keep]
             cost = float(np.max(np.einsum('si,sij,sj->s',h,q,h)))
             cost += float(np.max(np.sum((samples[:,a]-samples[:,b])**2,axis=1)))*1e-7
+            cost *= float(importance[remove])
             heapq.heappush(heap,(max(0.,cost),keep,remove,int(versions[keep]),int(versions[remove])))
     edges = {tuple(sorted((int(face[i]),int(face[(i+1)%3])))) for face in faces for i in range(3)}
     for a,b in sorted(edges):push(a,b)
@@ -138,6 +173,9 @@ def simplify_morph_safe(points, triangles, morph_samples, *, target_triangles=79
                 or np.any(morph_dots<=orientation_margin*morph_scales)
                 or np.any(np.sum(new_normals[0]*normals[0,affected],axis=1)<=0)):
             stats['rejected_orientation']+=1
+            continue
+        if corner_normals_flip(keep,proposed,excluded):
+            stats['rejected_corner_normals']+=1
             continue
         if pose_count:
             expected = np.einsum('pfvij,fj->pfi',
