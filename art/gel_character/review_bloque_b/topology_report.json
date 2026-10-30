@@ -19,53 +19,53 @@
         },
         "joints": {
           "shoulder": {
-            "closed_loops": 12,
+            "closed_loops": 10,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.0010575827211141697,
+            "nearest_loop_distance_m": 0.0009943891316652187,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.0499463808988243
+            "morph_extremes_edge_aspect_p90": 1.937365387977014
           },
           "elbow": {
             "closed_loops": 18,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.011856336104869858,
+            "nearest_loop_distance_m": 0.010965961921215073,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 1.471768950627746
+            "morph_extremes_edge_aspect_p90": 1.5964713301884088
           },
           "wrist": {
             "closed_loops": 12,
             "minimum_loop_vertices": 16,
             "nearest_loop_distance_m": 0.006682498735189446,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.7140481544911754
+            "morph_extremes_edge_aspect_p90": 2.8147217377284885
           },
           "hip": {
             "closed_loops": 6,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.04996472045779232,
+            "nearest_loop_distance_m": 0.049973847419023554,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.0661685412081927
+            "morph_extremes_edge_aspect_p90": 2.074398158589935
           },
           "knee": {
             "closed_loops": 16,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.012694444507360458,
+            "nearest_loop_distance_m": 0.012696517631411552,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 1.2760971349087213
+            "morph_extremes_edge_aspect_p90": 1.234181986807587
           },
           "ankle": {
             "closed_loops": 12,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.003072870112955567,
+            "nearest_loop_distance_m": 0.00307286266237497,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.6519407943339828
+            "morph_extremes_edge_aspect_p90": 2.6519416735691936
           },
           "neck": {
             "closed_loops": 1,
             "minimum_loop_vertices": 16,
-            "nearest_loop_distance_m": 0.0684793049097061,
+            "nearest_loop_distance_m": 0.072533061504364,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.171766818823651
+            "morph_extremes_edge_aspect_p90": 1.9448169335561816
           }
         }
       },
@@ -77,8 +77,8 @@
     {
       "lod": 1,
       "topology": {
-        "faces": 1124,
-        "quad_faces": 1124,
+        "faces": 1134,
+        "quad_faces": 1134,
         "joint_contract": {
           "minimum_bilateral_loops": 2,
           "minimum_neck_loops": 1,
@@ -88,39 +88,39 @@
         },
         "joints": {
           "shoulder": {
-            "closed_loops": 6,
+            "closed_loops": 4,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.0014693728515079996,
+            "nearest_loop_distance_m": 0.026549768447875988,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.699725651223019
+            "morph_extremes_edge_aspect_p90": 2.8177208579534816
           },
           "elbow": {
             "closed_loops": 10,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.01193866182735992,
+            "nearest_loop_distance_m": 0.010981713512965618,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.6535252154066287
+            "morph_extremes_edge_aspect_p90": 2.68518421209777
           },
           "wrist": {
             "closed_loops": 4,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.033997182423727845,
+            "nearest_loop_distance_m": 0.033991766916002586,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 3.0943895175726572
+            "morph_extremes_edge_aspect_p90": 2.9918914185096743
           },
           "hip": {
             "closed_loops": 2,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.08986645545278282,
+            "nearest_loop_distance_m": 0.0899648329189846,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.8019081368134344
+            "morph_extremes_edge_aspect_p90": 2.774079429879485
           },
           "knee": {
             "closed_loops": 8,
             "minimum_loop_vertices": 14,
-            "nearest_loop_distance_m": 0.012802353927067356,
+            "nearest_loop_distance_m": 0.012876025268009739,
             "maximum_vertex_valence": 4,
-            "morph_extremes_edge_aspect_p90": 2.4769226308327625
+            "morph_extremes_edge_aspect_p90": 2.477201373924896
           },
           "ankle": {
             "closed_loops": 6,
@@ -132,9 +132,9 @@
           "neck": {
             "closed_loops": 1,
             "minimum_loop_vertices": 10,
-            "nearest_loop_distance_m": 0.004396893978118932,
+            "nearest_loop_distance_m": 0.003511991500854572,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.9671519286240806
+            "morph_extremes_edge_aspect_p90": 2.770583171743068
           }
         }
       },

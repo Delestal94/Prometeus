@@ -158,8 +158,12 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   > Pelo, cejas, bigote, piezas de cabeza del disfraz y esfera de cabeza del ragdoll ahora siguen el
   > `head_shape` real (+1 más angosta y alta alrededor de `GelFace.HEAD_SHAPE_CENTRE`, -1 al revés) con
   > `GelFace.head_shape_fit`; test `test_gel_head_shape_fit.gd` compara contra los vértices del GLB en ±1.
-- [ ] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
+- [x] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
   una captura a 15 m, en Delgada, Flaca y los extremos).
+  > CI compara las siluetas en cada PR (xvfb, 144 comparaciones con `GelBodyShaper`): Delgada 3,66 %,
+  > Flaca 4,82 %, extremos 4,58 %. LOD1 sumó una vuelta bajo la cabeza (2268 triángulos) y el
+  > simplificador de LOD2 rechaza colapsos que invierten normales (794). Evidencia:
+  > `art/gel_character/review_bloque_b/lod_silhouette_report.json`, `ESTADO_ACTUAL.md`.
 - [x] **S-311.18** (`9bf1593`) `validate_glb.py` ampliado: huesos que usa el juego, pesos normalizados, ningún vértice
   sin peso, malla cerrada, triángulos y morphs dentro del presupuesto, pivote en los pies, y un barrido de
   los extremos de cada morph y de 30 combinaciones al azar sin autointersección.

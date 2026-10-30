@@ -40,6 +40,8 @@ JIGGLE_JOINTS = tuple(JIGGLE_SOURCES)
 JOINTS = GAME_JOINTS + JIGGLE_JOINTS
 LOD_LEVELS = (3, 1, 0)
 BUDGETS = (20000, 2500, 800)
+LOD2_HEAD_Z = 1.30
+LOD2_HEAD_IMPORTANCE = 1.
 ARM_SHOULDER_X = .225
 ARM_LENGTH_SCALE = 1.07
 DELGADA_FOOT_OUTSET = .045
@@ -178,6 +180,30 @@ def rebuild_axilla(obj):
     bpy.data.meshes.remove(old_mesh)
 
 
+def add_lower_head_loop(obj):
+    """S-311.17: split LOD1's lower head band with one quad loop.
+
+    Level-1 Skin leaves about 11 cm between the neck junction ring and the head
+    equator, so the jaw's distant profile was a straight chord inside the round
+    LOD0 head (and LOD2 inherits it). The new ring is projected onto the head
+    sphere with the rest of the cap; the band stays all quads and closed.
+    """
+    centre = DELGADA_CAGE['head'][0][2]
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    ring = [edge for edge in bm.edges
+            if all(v.co.z > 1.30 and math.hypot(v.co.x, v.co.y) < .30 for v in edge.verts)
+            and min(v.co.z for v in edge.verts) < centre-.06
+            and max(v.co.z for v in edge.verts) > centre-.03]
+    if len(ring) < 8:
+        bm.free()
+        raise ValueError(f'Lower head band not found ({len(ring)} edges)')
+    bmesh.ops.subdivide_edgering(bm, edges=ring, cuts=1, interp_mode='LINEAR')
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.update()
+
+
 def make_body(level, *, source=None, rig=None, clip_actions=None):
     """A tree Skin surface is sewn at every branch, then subdivided as quads."""
     if level == 0:
@@ -234,6 +260,8 @@ def make_body(level, *, source=None, rig=None, clip_actions=None):
     sub = obj.modifiers.new('Quad joint loops', 'SUBSURF')
     sub.levels = max(1, level)
     bpy.ops.object.modifier_apply(modifier=sub.name)
+    if level == 1:
+        add_lower_head_loop(obj)
     # Preserve the neck junction while projecting the head cap onto a sphere.
     for v in obj.data.vertices:
         p = v.co
@@ -347,16 +375,20 @@ def make_distant_body(source=None, rig=None, *, clip_actions=None):
     poses, normals = canonical_pose_samples(source, rig, clip_actions=clip_actions) if rig else (None, None)
     protected = [i for i, p in enumerate(points) if abs(p[2]) < 1e-6
                  or abs(p[2]-max(points[:, 2])) < 1e-6]
+    # S-311.17: the head's distant profile drifted past 5 % of LOD0 at the
+    # head_shape extremes; collapse its vertices last.
+    importance = np.where(points[:, 2] > LOD2_HEAD_Z, LOD2_HEAD_IMPORTANCE, 1.)
     # Repeated source tests build identical meshes. Cache only immutable inputs;
     # changed weights, geometry, morphs, poses or protection produce a new key.
     digest = hashlib.sha256()
-    for values in (points, faces, samples, np.asarray(protected), poses, normals):
+    for values in (points, faces, samples, np.asarray(protected), poses, normals, importance):
         if values is not None:
             digest.update(np.asarray(values).tobytes())
     key = digest.digest()
     if key not in _LOD_CACHE:
         result = simplify_morph_safe(points, faces, samples,
-            protected_vertices=protected, pose_samples=poses, pose_normal_matrices=normals)
+            protected_vertices=protected, pose_samples=poses, pose_normal_matrices=normals,
+            vertex_importance=importance)
         if not result[2]['target_reached'] or result[2]['triangle_count'] > BUDGETS[2]:
             raise ValueError('Morph-safe LOD2 cannot meet its existing triangle budget')
         if len(_LOD_CACHE) >= 2:
