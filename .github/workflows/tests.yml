@@ -217,6 +217,25 @@ jobs:
           python art/gel_character/compare_lod_silhouettes.py "$out" \
             --output "$RUNNER_TEMP/runtime-audit/lod_silhouette_report.json"
 
+      # S-311 reference gate: re-render the approved round 149 (LOD0, real Delgada
+      # preset, approved pose and camera) and keep silhouette IoU >= 0.92 against
+      # referencia_frente.jpg, the threshold the body was approved with.
+      - name: Compare Delgada with the front reference
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          out="$RUNNER_TEMP/runtime-audit/delgada-reference"
+          mkdir -p "$out"
+          timeout 180 xvfb-run -a -s "-screen 0 1280x1400x24" "$GODOT" --path do-not-drop \
+            --audio-driver Dummy --rendering-method gl_compatibility \
+            --script res://tests/render_gel_reference.gd -- --round=149 \
+            --output="$out/godot_render.png" \
+            2>&1 | tee "$RUNNER_TEMP/runtime-audit/render-delgada-reference.log"
+          python art/gel_character/check_delgada_reference.py "$out/godot_render_mask.png" \
+            --output "$RUNNER_TEMP/runtime-audit/delgada_reference_report.json"
+
       - name: Measure rendered performance
         if: always()
         env:
