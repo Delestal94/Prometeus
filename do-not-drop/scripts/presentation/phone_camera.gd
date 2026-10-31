@@ -7,11 +7,11 @@ class_name PhoneCamera
 ## claiming the box arrived wrecked has no case against a photo of it
 ## sitting on their own porch.
 ##
-## Deliberately self-contained. It borrows the active camera's pose into a
-## camera of its own instead of touching player.gd (Slatex's file, see
-## docs/colaboracion-equipo.md), and never writes the player's FOV, which
-## player_movement.gd apply_context_fov() lerps every physics frame and would fight it. Drop
-## this node into a level and it works; nothing else has to know it exists.
+## Mostly self-contained. It borrows the active camera's pose into a camera
+## of its own and never writes the player's FOV, which player_movement.gd
+## apply_context_fov() lerps every physics frame and would fight it. The one
+## thing it writes on the player is `phone_raised` (S-304), so the crew sees
+## the phone held up in that player's hand. Drop this node into a level and it works.
 
 ## The truck's script, as a type (N-224.4; vehicle.gd has no class name):
 ## has_manual_gearbox and driver_peer_id fail to compile here if renamed.
@@ -158,6 +158,7 @@ func _open() -> void:
 	if _hud != null:
 		_hud.visible = false
 	_frame.visible = true
+	_hold_phone(true)
 	_refresh_hint()
 	_refresh_status()
 
@@ -166,6 +167,7 @@ func _close() -> void:
 	if not is_open:
 		return
 	is_open = false
+	_hold_phone(false)
 	_frame.visible = false
 	_camera.current = false
 	if _hud != null and is_instance_valid(_hud):
@@ -173,6 +175,17 @@ func _close() -> void:
 	_hud = null
 	if _previous_camera != null and is_instance_valid(_previous_camera):
 		_previous_camera.current = true
+
+
+## Tells the crew the local player is holding the phone up (S-304): the player
+## replicates `phone_raised` and every peer draws the arm and phone
+## (player_phone_prop.gd). The local body is culled from this lens, so nothing
+## shows here.
+func _hold_phone(raised: bool) -> void:
+	for node: Node in get_tree().get_nodes_in_group(&"player"):
+		var player := node as Player
+		if player != null and player.is_local():
+			player.phone_raised = raised
 
 
 ## Sees what the eyes it replaces see. The first-person camera culls the
@@ -190,7 +203,10 @@ func _match_lens(source: Camera3D) -> void:
 func _process(_delta: float) -> void:
 	if not is_open:
 		return
-	if get_tree().paused:
+	# Online the pause menu doesn't pause the tree, it only frees the mouse:
+	# put the phone away then too, or the menu opens on the hidden HUD and the
+	# crew keeps seeing the phone up.
+	if get_tree().paused or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		_close()
 		return
 	if _previous_camera == null or not is_instance_valid(_previous_camera):

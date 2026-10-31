@@ -58,7 +58,7 @@
 | Jugador cartoon redondeado con rig y 8 clips | `models/characters/sm_char_player_rounded.glb` | ✅ | Cuerpo actual del jugador y del maniquí de cosméticos. Clips `Idle`, `Walk`, `Stroll`, `TurnInPlace`, `Jump`, `PickUpPackage`, `PickUpHigh` y `Sit`; IK de brazos para cargar cajas y conducir. La camiseta toma el color del equipo. Espec. #19, #29, #30, #32, #82 y #95. |
 | Jugador low-poly anterior | `models/characters/sm_char_player_lowpoly.glb` | ✅ | Sigue en uso solo para NPC del depósito y vecinos; no volver a usarlo como cuerpo del jugador. |
 | Guantes del viewmodel (izq./der.) | `models/characters/sm_char_viewmodel_glove_{left,right}.glb` | ⛔ | Assets conservados pero retirados del juego por decisión del usuario (2026-09-24). No hay manos flotantes en primera persona; las manos visibles son las del cuerpo real. Espec. #20. |
-| Celular en la mano | `models/props/handheld/sm_prop_phone.glb` | 🟡 | Pantalla hacia −Z en Godot, lente atrás. `phone_camera.gd` todavía no lo carga y ya no existe un viewmodel donde colgarlo: S-304 debe resolverlo con el cuerpo real o como overlay de UI. Rehacer el modelo antes de integrarlo (sección 10). |
+| Celular en la mano | `models/props/handheld/sm_prop_phone_refined.glb` | ✅ | S-304: en `hand.R` del gel (`player_phone_prop.gd`) mientras el celular está abierto, visible para los demás peers; pantalla hacia −Z, lentes atrás, 7,2 × 14,2 cm centrado. `sm_prop_phone.glb` (la versión vieja, sin usar) sigue en el repo. |
 | Accesorios/cosméticos (gorras, chalecos) | — | ⬜ | Fase 5 (progresión). |
 
 ## 3. Paquetes (dominio Slatex)
