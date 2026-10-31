@@ -32,6 +32,9 @@ var _camera_target_x: float = CAMERA_TARGET.x
 var _camera_distance: float = CAMERA_DISTANCE_M
 var _camera_fov: float = CAMERA_FOV_DEGREES
 var _pose_degrees: Dictionary = POSE_DEGREES.duplicate()
+## --shipped-preset keeps the round's camera and pose but uses delgada.tres as
+## shipped, so CI gates what players see rather than the recorded round values.
+var _shipped_preset: bool = false
 
 
 func _initialize() -> void:
@@ -90,6 +93,8 @@ func _load_round_options() -> bool:
 			_round = maxi(1, int(argument.get_slice("=", 1)))
 		elif argument.begins_with("--output="):
 			_output_path = argument.get_slice("=", 1)
+		elif argument == "--shipped-preset":
+			_shipped_preset = true
 		else:
 			push_error("Unknown reference-render option: %s" % argument)
 			return false
@@ -108,7 +113,8 @@ func _load_round_options() -> bool:
 		push_error("Reference-round configuration has no round %d" % _round)
 		return false
 	var configuration: Dictionary = (parsed as Dictionary)[round_key]
-	_round_values = configuration.get("proportions", {})
+	if not _shipped_preset:
+		_round_values = configuration.get("proportions", {})
 	_round_material = configuration.get("material", {})
 	_camera_target_y = float(configuration.get("camera_target_y", CAMERA_TARGET.y))
 	_camera_target_x = float(configuration.get("camera_target_x", CAMERA_TARGET.x))

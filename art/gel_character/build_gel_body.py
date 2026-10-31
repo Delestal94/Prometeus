@@ -774,7 +774,14 @@ def assign_jiggle_weights(obj):
             if amount <= 0.:
                 continue
             source_name = JIGGLE_SOURCES[target]
-            weights[source_name] = max(0., weights.get(source_name, 0.)-amount)
+            remaining = max(0., weights.get(source_name, 0.)-amount)
+            influences = sum(weight > 0. for weight in weights.values())
+            # A partial split adds a fifth influence at four-way joints (the
+            # jaw corner keeps head/neck/chest/upper_arm). The cap would then
+            # evict a real owner and move the base pose, so keep it whole.
+            if remaining > 0. and weights.get(target, 0.) <= 0. and influences >= 4:
+                continue
+            weights[source_name] = remaining
             weights[target] = weights.get(target, 0.)+amount
         chosen = sorted(((name, weight) for name, weight in weights.items() if weight > 0.),
                         key=lambda pair: (-pair[1], JOINTS.index(pair[0])))[:4]

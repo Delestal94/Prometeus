@@ -23,6 +23,47 @@ class SourceBodyTests(unittest.TestCase):
                               for name, duration in self._clip_durations.items()}
         return source, rig, objects
 
+    def test_jiggle_weights_keep_the_base_pose(self):
+        """Folding each jiggle bone back into its source restores the heat weights.
+
+        A partial split at a four-way joint used to evict an owner (upper_arm at
+        the jaw corner), which pulled the approved Delgada silhouette inwards.
+        """
+        import bpy
+        import build_gel_body as body
+        bpy.ops.wm.open_mainfile(filepath=str(
+            body.ROOT/'art/rounded_character/personaje_redondeado.blend'))
+        source = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
+        for obj in list(bpy.data.objects):
+            if obj != source:
+                bpy.data.objects.remove(obj, do_unlink=True)
+        transfer = body.assign_jiggle_weights
+        body.assign_jiggle_weights = lambda obj: None
+        try:
+            obj = body.make_body(body.LOD_LEVELS[1])
+            rig = body.create_rig(source)
+            body.assign_weights(obj, rig)
+        finally:
+            body.assign_jiggle_weights = transfer
+
+        def folded():
+            result = []
+            for vertex in obj.data.vertices:
+                weights = {}
+                for group in vertex.groups:
+                    name = obj.vertex_groups[group.group].name
+                    name = body.JIGGLE_SOURCES.get(name, name)
+                    weights[name] = weights.get(name, 0.) + group.weight
+                result.append(weights)
+            return result
+
+        before = folded()
+        transfer(obj)
+        after = folded()
+        moved = [i for i, (a, b) in enumerate(zip(before, after))
+                 if set(a) != set(b) or any(abs(a[n]-b[n]) > 1e-5 for n in a)]
+        self.assertEqual(moved[:10], [], f'{len(moved)} vertices changed owners')
+
     def _pose_failures(self, obj, rig, *, shoulder_only=True):
         """Check actual evaluated geometry against transported local normals."""
         import bpy

@@ -66,9 +66,9 @@ quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
 suprime ramas anatómicas. Los límites son 20000/2500/800 triángulos.
 
 La silueta Delgada contra `referencia/referencia_frente.jpg` la vigila CI en cada PR
-(job de capturas): `render_gel_reference.gd -- --round=149` vuelve a renderizar la
-ronda aprobada (LOD0, preset `delgada` real por `GelBodyShaper`, pose y cámara
-aprobadas) y `check_delgada_reference.py <mask.png>` exige IoU ≥ 0,92 con las mismas
+(job de capturas): `render_gel_reference.gd -- --round=149 --shipped-preset` renderiza
+LOD0 con `delgada.tres` tal como se envía (por `GelBodyShaper`) y la pose y cámara de la
+ronda aprobada, y `check_delgada_reference.py <mask.png>` exige IoU ≥ 0,92 con las mismas
 máscaras que `compare_reference.py`, sin Blender. Reemplaza a la vieja
 `compare_delgada_silhouette.py` (IoU ≥ 0,84 sobre la malla base sin preset y con la
 pose 100°/−25°/20°), que dejó de representar a Delgada cuando las rondas de referencia
