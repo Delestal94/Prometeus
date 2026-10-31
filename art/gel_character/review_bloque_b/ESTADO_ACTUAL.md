@@ -203,4 +203,7 @@ caso), extremos de un morph máx. 4,58 %. `lod_silhouette_report.json`:
 
 Topología, tests Python, tres GLB y exportaciones (2205 muestras) PASS. Fuente Blender
 PASS salvo el conteo de clips, corregido a 49. `compare_delgada_silhouette.py` falla
-con IoU 0,828 < 0,84 igual en `main` limpio (LOD0 no cambia en este bloque): pendiente aparte.
+con IoU 0,828 < 0,84 igual en `main` limpio (LOD0 no cambia en este bloque). Resuelto después:
+medía la malla base sin el preset Delgada y con una pose descartada, desde las rondas de referencia
+del 14/10; la reemplaza `check_delgada_reference.py`, que CI corre sobre el render real de la
+ronda 149 con IoU ≥ 0,92.

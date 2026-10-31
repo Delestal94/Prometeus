@@ -51,7 +51,6 @@ Desde la raíz, con Blender en `PATH` (5.2.2 LTS comprobado):
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/build_gel_body.py
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/test_gel_body_source.py
 blender --background --factory-startup --python-exit-code 1 --python art/gel_character/validate_gel_topology.py
-blender --background --factory-startup --python-exit-code 1 --python art/gel_character/compare_delgada_silhouette.py
 python -m unittest discover -s art/gel_character -p "test_*.py"
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod0.glb --gel-body
 python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod1.glb --gel-body
@@ -66,11 +65,16 @@ en `do-not-drop/assets/models/characters/gel/`. El cuerpo de autoría y LOD1 tie
 quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
 suprime ramas anatómicas. Los límites son 20000/2500/800 triángulos.
 
-`compare_delgada_silhouette.py` reconstruye LOD0, aplica la pose frontal medida,
-proyecta sus triángulos sobre `referencia/silueta_mascara.png` y exige IoU ≥ 0,84.
-Guarda el valor y una superposición cian/magenta en `review_bloque_b/`. La puerta
-compara forma, no material; cabeza, cuello, hombros y botas conservan además sus
-medidas físicas y las pruebas de superficie cerrada, una sola pieza y animación.
+La silueta Delgada contra `referencia/referencia_frente.jpg` la vigila CI en cada PR
+(job de capturas): `render_gel_reference.gd -- --round=149` vuelve a renderizar la
+ronda aprobada (LOD0, preset `delgada` real por `GelBodyShaper`, pose y cámara
+aprobadas) y `check_delgada_reference.py <mask.png>` exige IoU ≥ 0,92 con las mismas
+máscaras que `compare_reference.py`, sin Blender. Reemplaza a la vieja
+`compare_delgada_silhouette.py` (IoU ≥ 0,84 sobre la malla base sin preset y con la
+pose 100°/−25°/20°), que dejó de representar a Delgada cuando las rondas de referencia
+movieron las proporciones al preset. La puerta compara forma, no material; cabeza,
+cuello, hombros y botas conservan además sus medidas físicas y las pruebas de
+superficie cerrada, una sola pieza y animación.
 
 La axila de LOD1 reconstruye loops cruzados de quads y los proyecta a la
 superficie curva de LOD0; LOD2 se deriva de esa superficie corregida. Tras los
