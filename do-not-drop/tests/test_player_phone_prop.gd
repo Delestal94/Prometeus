@@ -5,7 +5,7 @@ extends SceneTree
 ## phone camera open (player_phone_prop.gd), so the rest of the crew can see it.
 ## Checks that:
 ## - the phone is not even built by default (nothing costs anything for a player
-##   who never opens it) and `phone_raised` is replicated by player.tscn, spawn
+##   who never opens it) and `PlayerPhoneProp:phone_raised` is replicated by player.tscn, spawn
 ##   state included, so a late joiner sees the phone already up;
 ## - setting `phone_raised` builds the phone under a BoneAttachment3D on hand.R,
 ##   shows it, and the right hand really comes up to the head while the left arm
@@ -66,18 +66,18 @@ func _check_replication() -> void:
 	_expect(config != null, "player.tscn has a replication config for the player")
 	if config == null:
 		return
-	_expect(config.has_property(^".:phone_raised"), "phone_raised is replicated with the player")
-	_expect(config.property_get_spawn(^".:phone_raised"), "phone_raised is part of the spawn state")
-	var mode: int = config.property_get_replication_mode(^".:phone_raised")
+	_expect(config.has_property(^"PlayerPhoneProp:phone_raised"), "phone_raised is replicated with the player")
+	_expect(config.property_get_spawn(^"PlayerPhoneProp:phone_raised"), "phone_raised is part of the spawn state")
+	var mode: int = config.property_get_replication_mode(^"PlayerPhoneProp:phone_raised")
 	_expect(mode == SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE, "phone_raised only goes out when it changes")
 	var manager: Node = root.get_node(^"/root/NetworkManager")
 	_expect(int(manager.get(&"PROTOCOL_VERSION")) >= 62, "The protocol version moved with phone_raised (S-304)")
 
 
 func _check_default_and_raise(player: Player) -> void:
-	var prop: Node3D = player._phone_prop
+	var prop: Node3D = player.get_node(^"PlayerPhoneProp")
 	var skeleton: Skeleton3D = PlayerAppearance.find_skeleton(player._body_visual)
-	_expect(not player.phone_raised, "The phone starts down")
+	_expect(not _raised(player), "The phone starts down")
 	_expect(prop.phone() == null, "No phone exists until it is raised")
 	var hand_probe := BoneAttachment3D.new()
 	hand_probe.bone_name = &"hand.R"
@@ -91,7 +91,7 @@ func _check_default_and_raise(player: Player) -> void:
 	var head: Vector3 = skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone(&"head")).origin
 	head -= player.global_position
 
-	player.phone_raised = true
+	_raise(player, true)
 	await _settle(player)
 	var phone: Node3D = prop.phone()
 	_expect(phone != null and phone.is_visible_in_tree(), "Raising the phone shows it")
@@ -120,7 +120,7 @@ func _check_default_and_raise(player: Player) -> void:
 		var screen: Vector3 = player.global_basis.inverse() * (-phone.global_basis.z).normalized()
 		_expect(screen.z > 0.7, "The screen faces the player's eyes (normal %s)" % screen)
 
-	player.phone_raised = false
+	_raise(player, false)
 	await _settle(player)
 	_expect(prop.phone() == null and prop.wrist_target() == null, "Putting the phone away removes it and the IK")
 	await process_frame
@@ -132,8 +132,8 @@ func _check_default_and_raise(player: Player) -> void:
 
 
 func _check_blockers(player: Player) -> void:
-	var prop: Node3D = player._phone_prop
-	player.phone_raised = true
+	var prop: Node3D = player.get_node(^"PlayerPhoneProp")
+	_raise(player, true)
 	await _settle(player)
 	_expect(prop.phone() != null, "Raised again, the phone is back")
 
@@ -169,20 +169,20 @@ func _check_blockers(player: Player) -> void:
 	prop.update_pose(0.016)
 	_expect(prop.phone() == null, "A knocked-out gel drops the phone")
 	player._gel_effects_component.knockout_cause = 0
-	player.phone_raised = false
+	_raise(player, false)
 	await _settle(player)
 
 
 func _check_layers(player: Player) -> void:
-	player.phone_raised = true
+	_raise(player, true)
 	await _settle(player)
-	var phone: Node3D = player._phone_prop.phone()
+	var phone: Node3D = player.get_node(^"PlayerPhoneProp").phone()
 	_expect(phone != null, "The phone exists to check its layers")
 	if phone != null:
 		_expect(_all_layers(phone, RenderLayers.LOCAL_BODY),
 			"The local player's phone is on the local-body layer, culled from their own view")
 		_expect(_all_shadows(phone), "The phone casts a shadow like the body does")
-	player.phone_raised = false
+	_raise(player, false)
 	await _settle(player)
 	# A remote copy of the same player is drawn for everyone else.
 	var remote: Player = PLAYER_SCENE.instantiate()
@@ -191,9 +191,9 @@ func _check_layers(player: Player) -> void:
 	await process_frame
 	await process_frame
 	_expect(not remote.is_local(), "Player_2 is another peer's copy here")
-	remote.phone_raised = true
+	_raise(remote, true)
 	await _settle(remote)
-	var remote_phone: Node3D = remote._phone_prop.phone()
+	var remote_phone: Node3D = remote.get_node(^"PlayerPhoneProp").phone()
 	_expect(remote_phone != null and remote_phone.is_visible_in_tree(),
 		"A replicated phone_raised raises the phone on the remote copy")
 	if remote_phone != null:
@@ -213,7 +213,7 @@ func _check_phone_camera(local: Player) -> void:
 	root.add_child(camera)
 	await process_frame
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	_expect(not local.phone_raised and not remote.phone_raised, "Both players start with the phone down")
+	_expect(not _raised(local) and not _raised(remote), "Both players start with the phone down")
 	# Opening needs a captured mouse, which a headless run never grants (it reads
 	# back as visible); then the same call _open() makes stands in for it.
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -222,31 +222,39 @@ func _check_phone_camera(local: Player) -> void:
 	else:
 		camera.call(&"_hold_phone", true)
 		camera.set(&"is_open", true)
-	_expect(local.phone_raised, "Opening the camera raises the local player's phone")
-	_expect(not remote.phone_raised, "Another player's copy is not touched")
+	_expect(_raised(local), "Opening the camera raises the local player's phone")
+	_expect(not _raised(remote), "Another player's copy is not touched")
 	camera.call(&"toggle")
-	_expect(not bool(camera.get(&"is_open")) and not local.phone_raised, "Closing the camera puts the local phone away")
+	_expect(not bool(camera.get(&"is_open")) and not _raised(local), "Closing the camera puts the local phone away")
 	camera.call(&"_hold_phone", true)
 	camera.set(&"is_open", true)
 	camera.call(&"_on_run_ended", 0, {})
-	_expect(not local.phone_raised, "The end of the run closes the camera and lowers the phone")
+	_expect(not _raised(local), "The end of the run closes the camera and lowers the phone")
 	# The online pause menu only frees the mouse; the camera must close then too.
 	camera.call(&"_hold_phone", true)
 	camera.set(&"is_open", true)
 	camera.set(&"_previous_camera", eyes)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	await process_frame
-	_expect(not bool(camera.get(&"is_open")) and not local.phone_raised,
+	_expect(not bool(camera.get(&"is_open")) and not _raised(local),
 		"Freeing the mouse (online pause) closes the camera and lowers the phone")
 	camera.free()
 	remote.free()
 	eyes.free()
 
 
+func _raise(player: Player, raised: bool) -> void:
+	player.get_node(^"PlayerPhoneProp").set(&"phone_raised", raised)
+
+
+func _raised(player: Player) -> bool:
+	return bool(player.get_node(^"PlayerPhoneProp").get(&"phone_raised"))
+
+
 ## Frames for the arm to finish rising or lowering (0.2 s of game time).
 func _settle(player: Player) -> void:
 	for step: int in 6:
-		player._phone_prop.update_pose(0.1)
+		player.get_node(^"PlayerPhoneProp").update_pose(0.1)
 		await process_frame
 
 

@@ -97,13 +97,13 @@ func run_host(host_player: Player, client_player: Player, client_peer_id: int) -
 	# A knocked-out or ragdolled body hides the phone, so let the knockout end first.
 	await _wait_until(func() -> bool:
 		return host_effects == null or (not host_effects.knocked_out and not host_player._ragdolled))
-	host_player.phone_raised = true
+	host_player.get_node(^"PlayerPhoneProp").set(&"phone_raised", true)
 	_client_reported = false
 	_client_passed = false
 	rpc_id(client_peer_id, &"_client_check_phone", host_player.get_path(), true)
 	var client_saw_phone: bool = await _wait_until(func() -> bool: return _client_reported) \
 			and _client_passed
-	host_player.phone_raised = false
+	host_player.get_node(^"PlayerPhoneProp").set(&"phone_raised", false)
 	_client_reported = false
 	_client_passed = false
 	rpc_id(client_peer_id, &"_client_check_phone", host_player.get_path(), false)
@@ -181,7 +181,7 @@ func _client_check_phone(player_path: NodePath, raised: bool) -> void:
 func _client_raise_phone(player_path: NodePath, raised: bool) -> void:
 	var player := get_node_or_null(player_path) as Player
 	if player != null:
-		player.phone_raised = raised
+		player.get_node(^"PlayerPhoneProp").set(&"phone_raised", raised)
 	rpc_id(MultiplayerPeer.TARGET_PEER_SERVER, &"_receive_report", player != null)
 
 
@@ -221,7 +221,7 @@ func _plays(player: Player, state: StringName, clip: StringName) -> bool:
 
 ## The owner's phone_raised arrived and this copy has (or no longer has) the phone in the hand.
 func _phone_drawn(player: Player, raised: bool) -> bool:
-	if player.phone_raised != raised:
+	if player.get_node(^"PlayerPhoneProp").get(&"phone_raised") != raised:
 		return false
 	var phone: Node3D = (player.get_node(^"PlayerPhoneProp") as Node3D).call(&"phone") as Node3D
 	return phone != null and phone.is_visible_in_tree() if raised else phone == null

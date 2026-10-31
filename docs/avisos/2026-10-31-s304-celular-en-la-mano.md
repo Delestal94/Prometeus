@@ -14,11 +14,12 @@ cámara de primera persona y de la lente, así que quien saca la foto no ve nada
   `upper_arm.R`..`hand.R` y `BoneAttachment3D` en `hand.R` con `props/handheld/sm_prop_phone_refined.glb`.
   Se arma al levantar el celular y se libera al bajarlo. Se guarda al sentarse, en ragdoll, con una caja en
   las manos, en un emote o derretido.
-- `scripts/gameplay/player/player.gd` (Slatex): `var phone_raised`, el nodo `PlayerPhoneProp` y su `setup`
-  (5 líneas).
-- `scenes/gameplay/player/player.tscn`: `phone_raised` replicada (propiedad 18, spawn + on change) y el nodo nuevo.
+- `scripts/gameplay/player/player.gd` **no se toca**: `PlayerPhoneProp` guarda su propio `phone_raised`, toma al
+  jugador de su padre y busca el esqueleto cuando el cuerpo ya existe (`test_player_split` limita `player.gd` a 700 líneas).
+- `scenes/gameplay/player/player.tscn`: `PlayerPhoneProp:phone_raised` replicada (propiedad 18, spawn + on change,
+  mismo patrón que `GelEffects:knockout_cause`) y el nodo nuevo.
 - `scripts/presentation/phone_camera.gd` (zona de Slatex): `_open()` y `_close()` ponen `phone_raised` en el
-  jugador local (`_hold_phone`). Además la cámara se cierra si se suelta el mouse: en línea la pausa no pausa
+  `PlayerPhoneProp` del jugador local (`_hold_phone`). Además la cámara se cierra si se suelta el mouse: en línea la pausa no pausa
   el árbol, y el menú se abría sobre el HUD oculto con el celular todavía levantado para el resto.
 - `scripts/core/network_manager.gd`: `PROTOCOL_VERSION` 61 -> 62 (entrada `## 62` en el historial).
 - Tests: nuevo `tests/test_player_phone_prop.gd`; `tests/net_pair_animation.gd` ahora comprueba en dos procesos

@@ -15,6 +15,7 @@ extends Node3D
 ## The refined phone: 7.2 x 14.2 x 0.9 cm, centred on its origin, screen toward
 ## -Z and the camera lenses at the back (tools/generate_lowpoly_assets.py phone()).
 const PHONE_SCENE: PackedScene = preload("res://assets/models/props/handheld/sm_prop_phone_refined.glb")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const SHOULDER_BONE: StringName = &"upper_arm.R"
 const ELBOW_BONE: StringName = &"forearm.R"
 const HAND_BONE: StringName = &"hand.R"
@@ -36,6 +37,11 @@ const PHONE_IN_HAND: Vector3 = Vector3(0.0, 0.07, -0.03)
 ## in toward the face (-X) and a little up.
 const SCREEN_NORMAL: Vector3 = Vector3(-0.3, 0.3, 0.9)
 
+## The owner has the phone camera open: replicated by player.tscn
+## (`PlayerPhoneProp:phone_raised`, spawn + on change) and written by PhoneCamera on the
+## local player, so every peer draws the arm and phone.
+var phone_raised: bool = false
+
 var _player: Player
 var _skeleton: Skeleton3D
 var _layers: int = 1
@@ -46,10 +52,20 @@ var _solver: SkeletonIK3D
 var _target: Marker3D
 
 
-func setup(player: Player, skeleton: Skeleton3D, layers: int) -> void:
-	_player = player
-	_skeleton = skeleton
-	_layers = layers
+func _ready() -> void:
+	_player = get_parent() as Player
+
+
+## The character is built by Player._ready, after this node's own: the skeleton
+## and the render layer are picked up the first time they are needed.
+func _find_skeleton() -> bool:
+	if _skeleton != null:
+		return true
+	if _player == null or _player._body_visual == null:
+		return false
+	_skeleton = PlayerAppearance.find_skeleton(_player._body_visual)
+	_layers = RenderLayers.LOCAL_BODY if _player.is_local() else RenderLayers.WORLD
+	return _skeleton != null
 
 
 ## The prop while it exists (null once the arm is back down and it is cleared).
@@ -83,15 +99,15 @@ func _process(delta: float) -> void:
 
 
 func update_pose(delta: float) -> void:
-	if _player == null or _skeleton == null:
+	if not _find_skeleton():
 		return
-	var active: bool = _player.phone_raised and not is_blocked()
+	var active: bool = phone_raised and not is_blocked()
 	if not active and _solver == null:
 		return
 	if is_blocked():
 		_weight = 0.0
 	else:
-		_weight = move_toward(_weight, 1.0 if _player.phone_raised else 0.0, delta * RAISE_SPEED)
+		_weight = move_toward(_weight, 1.0 if phone_raised else 0.0, delta * RAISE_SPEED)
 	if active and _solver == null:
 		_build()
 	if _solver == null:

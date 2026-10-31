@@ -173,7 +173,7 @@ const MAX_PLAYERS: int = 8
 ## own pose, and the host sends its pose only every 5 s meanwhile (D-2002.5);
 ## 61: player.tscn replicates anim_clip, the exact clip chosen by the player authority:
 ## remote copies no longer derive gait/pickup variants from transient local state (S-311.84).
-## 62: player replicates phone_raised (phone held up in the right hand), S-304.
+## 62: player.tscn replicates PlayerPhoneProp:phone_raised (phone held up in the right hand), S-304.
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.

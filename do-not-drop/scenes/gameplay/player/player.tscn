@@ -102,7 +102,7 @@ properties/16/replication_mode = 2
 properties/17/path = NodePath("GelEffects:knockout_cause")
 properties/17/spawn = true
 properties/17/replication_mode = 2
-properties/18/path = NodePath(".:phone_raised")
+properties/18/path = NodePath("PlayerPhoneProp:phone_raised")
 properties/18/spawn = true
 properties/18/replication_mode = 2
 

@@ -47,7 +47,6 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _seat_pose_component: Node = $PlayerSeatPose
 @onready var _ragdoll_component: Node = $GelRagdoll
 @onready var _gel_effects_component: Node = $GelEffects
-@onready var _phone_prop: Node3D = $PlayerPhoneProp
 
 var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
@@ -133,9 +132,6 @@ var anim_state: StringName = ANIM_IDLE
 ## Exact clip selected by the owner and replicated so copies never redo that
 ## choice from transient local data (carried_package or gait hysteresis).
 var anim_clip: StringName = ANIM_IDLE
-## The owner has the phone camera open (S-304): every peer lifts this player's right arm
-## with the phone in hand (player_phone_prop.gd). Written by PhoneCamera on the local player.
-var phone_raised: bool = false
 ## Picks anim_state/anim_clip (owner) and plays anim_clip (every peer); see PlayerAnimator.
 var animator: PlayerAnimator
 ## Presentation state authored by the owning peer, replicated with anim_state.
@@ -326,8 +322,6 @@ func _build_body() -> void:
 	_carry_pose.name = "CarryPose"
 	add_child(_carry_pose)
 	_carry_pose.setup(self, PlayerAppearance.find_skeleton(visual))
-	_phone_prop.setup(self, PlayerAppearance.find_skeleton(visual),
-			RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 
 func _apply_face() -> void:
 	if _character_face != null:

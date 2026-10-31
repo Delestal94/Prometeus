@@ -10,7 +10,7 @@ class_name PhoneCamera
 ## Mostly self-contained. It borrows the active camera's pose into a camera
 ## of its own and never writes the player's FOV, which player_movement.gd
 ## apply_context_fov() lerps every physics frame and would fight it. The one
-## thing it writes on the player is `phone_raised` (S-304), so the crew sees
+## thing it writes on the player is `phone_raised` of its PlayerPhoneProp node (S-304), so the crew sees
 ## the phone held up in that player's hand. Drop this node into a level and it works.
 
 ## The truck's script, as a type (N-224.4; vehicle.gd has no class name):
@@ -177,15 +177,16 @@ func _close() -> void:
 		_previous_camera.current = true
 
 
-## Tells the crew the local player is holding the phone up (S-304): the player
-## replicates `phone_raised` and every peer draws the arm and phone
+## Tells the crew the local player is holding the phone up (S-304): the player's
+## PlayerPhoneProp replicates `phone_raised` and every peer draws the arm and phone
 ## (player_phone_prop.gd). The local body is culled from this lens, so nothing
 ## shows here.
 func _hold_phone(raised: bool) -> void:
 	for node: Node in get_tree().get_nodes_in_group(&"player"):
 		var player := node as Player
-		if player != null and player.is_local():
-			player.phone_raised = raised
+		var prop: Node = player.get_node_or_null(^"PlayerPhoneProp") if player != null else null
+		if prop != null and player.is_local():
+			prop.set(&"phone_raised", raised)
 
 
 ## Sees what the eyes it replaces see. The first-person camera culls the
