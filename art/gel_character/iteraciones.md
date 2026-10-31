@@ -18,6 +18,12 @@ Umbrales: IoU de silueta ≥ 0,92; ΔE CIE76 medio ≤ 8 en cabeza, torso, brazo
 
 El preset `delgada.tres` conserva: `leg_length=0.99`, `arm_length=0.90`, `head_size=1.15`, `general_thickness=0.60`, `chest=-0.45`, `shoulders=-1.0`, `hips=0.35`, `arm_thickness=0.20`, `leg_thickness=0.55`, `hand_size=-0.70`, `foot_size=0.70`, `head_shape=0.50` y `neck_thickness=0.35`.
 
+> 2026-10-30: S-311.44 (15/10) bajó la fuerza del morph `hand_size` de 0,45 a 0,30 para que
+> las combinaciones extremas no inviertan triángulos de la manopla. La manopla aprobada
+> (−0,70 × 0,45) equivale ahora a −1,05, fuera de rango, así que `delgada.tres` usa −1,0. CI
+> renderiza el preset tal como se envía con la pose y cámara de la ronda 149 y exige IoU ≥ 0,92
+> (`check_delgada_reference.py`). La ronda 149 queda registrada con sus valores originales.
+
 La captura aprobada usa brazos `88° / −14° / 10°`, color `#9c9da5`, brillo `0,85`, densidad de borde `0,5`, refracción `0,4`, mezcla de absorción `0,7`, envolvente subsuperficial `1,0` y contraluz `0,5`.
 
 ## Resultado final

@@ -773,8 +773,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "3a6b715031c56d00718be04200e7eeee7500b6b526b10720cffd30c504bfd310",
-      "morph_sha256": "2ecc1db036a0df9ff61ee7fcd6817b1dccea4bd38ca52cbce21691068be3b1a8",
+      "geometry_sha256": "ea5dad94e68b85dfefcd4b67d430ac10a367e41a55bb54518f21eb8220ee13e5",
+      "morph_sha256": "eda4a27692d49f1a60645ea7b467f101646f70775dbe1d5b935511d250303b55",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -827,14 +827,14 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 54.50472922065141,
+            "adjacent_face_angle_p95_degrees": 54.16878047823,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
-            "sampled_edges": 227
+            "sampled_edges": 226
           },
           "torso_legs": {
             "adjacent_face_angle_p95_degrees": 53.69575244832536,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
-            "sampled_edges": 155
+            "sampled_edges": 154
           }
         }
       }

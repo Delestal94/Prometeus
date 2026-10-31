@@ -47,7 +47,9 @@ func _check_presets() -> void:
 		&"leg_length": 0.99, &"arm_length": 0.9, &"head_size": 1.15,
 		&"general_thickness": 0.6, &"chest": -0.45, &"shoulders": -1.0,
 		&"hips": 0.35, &"arm_thickness": 0.2, &"leg_thickness": 0.55,
-		&"hand_size": -0.7, &"foot_size": 0.7, &"head_shape": 0.5,
+		# Approved at -0.70 with the 0.45 mitt morph; S-311.44 cut the morph to
+		# 0.30, so -1.0 is the closest value to the approved mitt (-1.05).
+		&"hand_size": -1.0, &"foot_size": 0.7, &"head_shape": 0.5,
 		&"neck_thickness": 0.35,
 	}
 	for parameter_name: StringName in reference_values:
