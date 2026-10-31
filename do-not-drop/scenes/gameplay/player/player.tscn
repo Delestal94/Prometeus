@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_knockout.gd" id="13_gel_knockout"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_player_vfx.gd" id="14_gel_vfx"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_player_audio.gd" id="15_gel_audio"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_phone_prop.gd" id="16_phone_prop"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -101,6 +102,9 @@ properties/16/replication_mode = 2
 properties/17/path = NodePath("GelEffects:knockout_cause")
 properties/17/spawn = true
 properties/17/replication_mode = 2
+properties/18/path = NodePath("PlayerPhoneProp:phone_raised")
+properties/18/spawn = true
+properties/18/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8
@@ -130,6 +134,9 @@ script = ExtResource("12_gel_appearance")
 
 [node name="GelFaceReactions" type="Node" parent="."]
 script = ExtResource("11_face_reactions")
+
+[node name="PlayerPhoneProp" type="Node3D" parent="."]
+script = ExtResource("16_phone_prop")
 
 [node name="GelEffects" type="Node" parent="."]
 script = ExtResource("10_gel_effects")
