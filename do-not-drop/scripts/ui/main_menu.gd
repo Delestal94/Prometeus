@@ -79,7 +79,7 @@ void fragment() {
 }
 """
 
-enum Page { HOME, PLAY, JOIN, GARAGE }
+enum Page { HOME, PLAY, JOIN, GARAGE, COMPANY }
 const CONNECTION_ERROR_TEXT: Dictionary = {
 	"version": "UI_MENU_ERROR_VERSION",
 	"timeout": "UI_MENU_ERROR_TIMEOUT",
@@ -91,12 +91,14 @@ const PAGE_TITLES: Dictionary = {
 	Page.PLAY: "UI_MENU_PAGE_PLAY",
 	Page.JOIN: "UI_MENU_PAGE_JOIN",
 	Page.GARAGE: "UI_MENU_PAGE_GARAGE",
+	Page.COMPANY: "UI_MENU_PAGE_COMPANY",
 }
 ## Where "Volver" (and Esc / B) lead from each sub-page.
 const PAGE_PARENT: Dictionary = {
 	Page.PLAY: Page.HOME,
 	Page.JOIN: Page.PLAY,
 	Page.GARAGE: Page.HOME,
+	Page.COMPANY: Page.PLAY,
 }
 
 var _status_label: Label
@@ -106,6 +108,8 @@ var _progress: ProgressPanel
 var _tutorial: TutorialPanel
 var _cosmetics: CosmeticsPanel
 var _leaderboard: LeaderboardPanel
+## The Modo Empresa page (D-1904): saved companies, a new one, their modifiers.
+var _company_slots: CompanySlotsPage
 var _play_button: Button
 var _cancel_button: Button
 var _page_title: Label
@@ -218,7 +222,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _page == Page.HOME or _busy or _overlay_open():
 		return
 	if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"ui_pause"):
-		_show_page(PAGE_PARENT[_page])
+		# A company form (new, options) goes back to the company list first.
+		if _page != Page.COMPANY or not _company_slots.back():
+			_show_page(PAGE_PARENT[_page])
 		get_viewport().set_input_as_handled()
 
 
@@ -230,6 +236,7 @@ func _build_ui() -> void:
 	_build_play_page(column)
 	_build_join_page(column)
 	focus_return.merge(_build_garage_page(column))
+	_build_company_page(column)
 	_build_connection_status(column)
 	_build_footer()
 	_build_overlays(focus_return)
@@ -354,10 +361,10 @@ func _build_play_page(column: VBoxContainer) -> void:
 	_page_focus[Page.PLAY] = solo_button
 	_entry_buttons.append(_button(play, tr("UI_MENU_ENDLESS"), false))
 	_entry_buttons[-1].pressed.connect(_play_endless)
-	# Modo Empresa (D-0214): in testing, solo only, until it replaces the others (D-0102). A company
-	# room opens with --host-company for now: one more button here pushed "Volver" off a 720p screen.
+	# Modo Empresa (D-0214): in testing until it replaces the others (D-0102). Its own page (D-1904)
+	# picks the company and solo or a room: one more button here pushed "Volver" off a 720p screen.
 	_entry_buttons.append(_button(play, tr("UI_MENU_COMPANY"), false))
-	_entry_buttons[-1].pressed.connect(_play_company)
+	_entry_buttons[-1].pressed.connect(_open_company_page)
 	_spacer(play, 4)
 	_label(play, tr("UI_MENU_WITH_FRIENDS"), 15, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_entry_buttons.append(_button(play, tr("UI_MENU_HOST"), false))
@@ -408,6 +415,32 @@ func _build_garage_page(column: VBoxContainer) -> Dictionary:
 	_entry_buttons.append(leaderboard_button)
 	_back_button(garage)
 	return {"cosmetics": cosmetics_button, "progress": progress_button, "leaderboard": leaderboard_button}
+
+
+## D-1904: the company page; it hands back the slot to play (CompanySlotsPage).
+func _build_company_page(column: VBoxContainer) -> void:
+	_company_slots = CompanySlotsPage.new()
+	_company_slots.name = "CompanySlots"
+	_add_page(column, Page.COMPANY).add_child(_company_slots)
+	_page_focus[Page.COMPANY] = _company_slots.find_child("NewCompany", true, false)
+	_company_slots.play_requested.connect(_on_company_play)
+	_company_slots.closed.connect(_show_page.bind(Page.PLAY))
+
+
+func _open_company_page() -> void:
+	_show_page(Page.COMPANY, false)
+	_company_slots.open()
+
+
+## A slot picked on the company page: solo, or a room (AUTO, like "Crear sala") on that slot.
+func _on_company_play(slot: String, host: bool) -> void:
+	if _busy:
+		return
+	_launch_slot = slot
+	if host:
+		_host_session(NetworkManager.Transport.AUTO, COMPANY_SCENE)
+	else:
+		_play_company()
 
 
 func _build_connection_status(column: VBoxContainer) -> void:
