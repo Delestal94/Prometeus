@@ -14,8 +14,12 @@ extends Node
 ## already sends.
 ##
 ## Entry points: Esc (ui_pause) and EventBus.pause_requested, which the HUD emits (HudPause) once
-## the company has one. A panel that is open takes Esc first (it handles it). Until the company
-## HUD exists a plain "PAUSED" label stands in for its pause card.
+## the company has one. A panel that is open takes Esc first (it handles it).
+##
+## What shows is the company's pause menu (CompanyPauseMenu, D-1909): Esc opens it as a real pause
+## when alone (toggle) or as a soft one when not (open_menu: the world goes on, the mouse is free
+## so the player takes no input), and closes it again; inside it Esc goes back from a confirmation
+## first. A client opens the soft one too: its "Close the day" is off, the host closes the day.
 
 ## The day's clock and phases (CompanyRoot's children). day_cycle may be null.
 var clock: GameClock = null
@@ -28,7 +32,9 @@ var _paused: bool = false
 ## True when this pause stopped the clock (it was running), so only then it runs it again.
 var _paused_clock: bool = false
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
-var _label: Label = null
+var _menu: CompanyPauseMenu = null
+## World nodes whose keys the open menu switched off (_hold_world_keys).
+var _held: Array[Node] = []
 
 
 ## The pause of this world's `clock` and `day_cycle`, ready to add as a child.
@@ -45,28 +51,90 @@ func _ready() -> void:
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"pause_requested", toggle)
+		# The day's summary takes the screen: an open menu would sit over it and swallow its Esc / A.
+		bus.connect(&"company_day_summary", _on_day_summary)
 	var net: Node = get_node_or_null(^"/root/NetworkManager")
 	if net != null and not peers_other.is_valid():
 		net.connect(&"roster_changed", _on_roster_changed)
 
 
 ## The world stops being paused when it is left (the next scene starts running), and the pause
-## unhooks from the roster. (It names no autoload: they are reached by path, lesson N-919.)
+## unhooks from the roster. (It names no autoload: they are reached by path, lesson N-919.) Leaving is
+## always for a menu: the cursor stays free, whatever the world had before the pause.
 func _exit_tree() -> void:
+	var was_open: bool = _paused or menu_open()
 	if _paused:
 		resume()
+	elif menu_open():
+		close_menu()
+	if was_open:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null and bus.is_connected(&"pause_requested", toggle):
 		bus.disconnect(&"pause_requested", toggle)
+	if bus != null and bus.is_connected(&"company_day_summary", _on_day_summary):
+		bus.disconnect(&"company_day_summary", _on_day_summary)
 	var net: Node = get_node_or_null(^"/root/NetworkManager")
 	if net != null and net.is_connected(&"roster_changed", _on_roster_changed):
 		net.disconnect(&"roster_changed", _on_roster_changed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"ui_pause") and (_paused or can_pause()):
+	var open: bool = menu_open()
+	if not event.is_action_pressed(&"ui_pause") and not (open and event.is_action_pressed(&"ui_cancel")):
+		return
+	if open and _menu.options_open():
+		return
+	if open:
+		_menu.back()
+	else:
+		open_menu()
+	get_viewport().set_input_as_handled()
+
+
+## Esc in the world: a real pause when alone, else the menu over a world that goes on.
+func open_menu() -> void:
+	if menu_open():
+		return
+	if can_pause():
 		toggle()
-		get_viewport().set_input_as_handled()
+		return
+	_save_mouse()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_show_menu(true)
+
+
+## Continue / Esc: resumes a real pause, or just closes the soft menu.
+func close_menu() -> void:
+	if _paused:
+		resume()
+	elif menu_open():
+		_show_menu(false)
+		Input.mouse_mode = _mouse_before
+
+
+## Esc only reaches the pause from the world (an open panel takes it first), where the mouse is
+## captured; a free one there is the ping wheel's, which captures it again on release.
+func _save_mouse() -> void:
+	var mode: Input.MouseMode = Input.mouse_mode
+	_mouse_before = Input.MOUSE_MODE_CAPTURED if mode == Input.MOUSE_MODE_VISIBLE else mode
+
+
+## The day reached its summary under an open menu (soft: a crew's 20:00): the menu goes so the summary
+## gets the screen, its focus and its keys.
+func _on_day_summary(_day: int, _summary: Dictionary) -> void:
+	if menu_open():
+		close_menu()
+
+
+func menu_open() -> bool:
+	return _menu != null and _menu.is_open()
+
+
+## The menu (built on first use), for the tests.
+func menu() -> CompanyPauseMenu:
+	_ensure_menu()
+	return _menu
 
 
 ## True where the pause is real: this peer decides the clock (host or offline) and nobody else is
@@ -90,9 +158,11 @@ func toggle() -> bool:
 	_paused = true
 	_paused_clock = clock.pause()
 	get_tree().paused = true
-	_mouse_before = Input.mouse_mode
+	# A soft menu already open (a peer just left) keeps the mouse it saved.
+	if not menu_open():
+		_save_mouse()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_show_label(true)
+	_show_menu(true)
 	return true
 
 
@@ -110,7 +180,7 @@ func resume() -> void:
 		clock.resume()
 	_paused_clock = false
 	Input.mouse_mode = _mouse_before
-	_show_label(false)
+	_show_menu(false)
 
 
 ## Host: someone joined (roster_changed comes before the snapshot goes out): the pause ends here
@@ -127,16 +197,49 @@ func _others() -> int:
 	return maxi((net.get(&"peer_ids") as Array).size() - 1, 0) if net != null else 0
 
 
-func _show_label(shown: bool) -> void:
-	if _label == null:
-		if not shown:
+func _show_menu(shown: bool) -> void:
+	if _menu == null and not shown:
+		return
+	_ensure_menu()
+	_menu.day_cycle = day_cycle
+	if shown:
+		_menu.open(_paused)
+	else:
+		_menu.close()
+	_hold_world_keys(shown)
+
+
+## The world's own keys (the stock list's I, the build mode's B and its actions) run always and sit
+## later in the tree than this pause: while the menu is up they are switched off, so nothing opens
+## under it, no piece is sold in a pause and B backs out of the menu. Only the ones it switched off
+## come back on.
+func _hold_world_keys(hold: bool) -> void:
+	if hold:
+		var parent: Node = get_parent()
+		if parent == null:
 			return
-		var layer := CanvasLayer.new()
-		layer.layer = 90
-		add_child(layer)
-		_label = Label.new()
-		_label.text = tr("HUD_PAUSED")
-		_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		_label.add_theme_font_size_override(&"font_size", 48)
-		layer.add_child(_label)
-	_label.visible = shown
+		for node: Node in parent.get_children():
+			if (node is ShedBuilder or node is StockBoard) and node.is_processing_unhandled_input():
+				node.set_process_unhandled_input(false)
+				_held.append(node)
+		return
+	for node: Node in _held:
+		if is_instance_valid(node):
+			node.set_process_unhandled_input(true)
+	_held.clear()
+
+
+func _ensure_menu() -> void:
+	if _menu != null:
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "PauseLayer"
+	layer.layer = 90
+	add_child(layer)
+	_menu = CompanyPauseMenu.new()
+	_menu.name = "PauseMenu"
+	_menu.day_cycle = day_cycle
+	layer.add_child(_menu)
+	_menu.resume_requested.connect(close_menu)
+	# The day goes to CLOSING: the trips have to come back, so the world runs again.
+	_menu.day_closed.connect(func(_ok: bool) -> void: close_menu())
