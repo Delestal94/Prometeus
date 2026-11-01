@@ -29,6 +29,8 @@ const FleetMotion = preload("res://scripts/gameplay/fleet/fleet_motion.gd")
 ## peer). A world may ask a box for another in this meta (the company's: BoxToPackage.tune(), D-2002.4).
 const CARE_PUBLISH_SEC: float = 0.1
 const CARE_PUBLISH_META: StringName = &"care_publish_sec"
+## The soonest (s) after a publish that hands going on or off the box may force the next one.
+const HANDS_PUBLISH_MIN_SEC: float = 0.05
 
 
 ## How often `p` publishes its care_state: CARE_PUBLISH_SEC unless its world asked for another.
@@ -260,6 +262,44 @@ static func _publish_hand_change(p: DeliveryPackage) -> void:
 	if signature != p._cushion_signature:
 		p._cushion_signature = signature
 		p._care_publish_time = care_publish_interval(p)
+	# Hands going on or off the box (held_by / helped_by, S-205) are what every peer's copy of that
+	# player grips with: out on this tick too, but only when they changed -- nothing extra while held --
+	# and at most one such publish per HANDS_PUBLISH_MIN_SEC, so an input flapping every tick stays bounded.
+	var steady: Dictionary = steadying_peers(p)
+	if p._care_publish_time >= HANDS_PUBLISH_MIN_SEC \
+			and (int(steady["held_by"]) != int(p.care_state.get("held_by", 0))
+			or int(steady["helped_by"]) != int(p.care_state.get("helped_by", 0))):
+		p._care_publish_time = care_publish_interval(p)
+
+
+## The run is not simulating this box (stopped, or it is not in the run's cargo), so nothing would
+## republish it: nobody is steadying it any more. A new dictionary, so the replication sees the change.
+static func clear_steadying(p: DeliveryPackage) -> void:
+	if int(p.care_state.get("held_by", 0)) != 0 or int(p.care_state.get("helped_by", 0)) != 0:
+		var state: Dictionary = p.care_state.duplicate()
+		state["held_by"] = 0
+		state["helped_by"] = 0
+		p.care_state = state
+
+
+## Who has the primary action down on the box right now, from the samples the host holds (the same
+## ones that decide `steady`, before a trap that hands cannot answer, or the solo assistant, overrides
+## it: the hands are on the box either way). `held_by`: the tender, or whoever works the box loose;
+## `helped_by`: the helper. 0 when nobody. It rides in care_state so every peer can show those hands
+## gripping the box (player_hold_pose.gd); a sample that stops arriving expires on its own.
+static func steadying_peers(p: DeliveryPackage) -> Dictionary:
+	var held_by: int = 0
+	for peer_id: int in [p.tender_peer_id, p._care_worker]:
+		if _is_steadying(p, peer_id):
+			held_by = peer_id
+			break
+	var helper: int = p.assistant_peer_id
+	return {"held_by": held_by, "helped_by": helper if _is_steadying(p, helper) else 0}
+
+
+static func _is_steadying(p: DeliveryPackage, peer_id: int) -> bool:
+	return peer_id > 0 and p._has_fresh_input(peer_id) \
+			and bool((p._tender_inputs[peer_id]["input"] as Dictionary).get("steady", false))
 
 
 ## What of `behavior`'s published care the hands answer to, as one number (0: nothing): the cushion
@@ -331,6 +371,7 @@ static func publish_care(p: DeliveryPackage) -> void:
 		var gesture: Dictionary = p.trap_behavior.gesture_state()
 		if not gesture.is_empty():
 			state["gesture"] = gesture
+	state.merge(steadying_peers(p))
 	p.care_state = state
 	var run: Node = PackageAutoloads.run_manager(p)
 	if run != null and (run.get(&"cargo") as Dictionary).has(p.package_id):
