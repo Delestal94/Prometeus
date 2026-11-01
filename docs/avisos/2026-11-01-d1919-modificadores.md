@@ -7,7 +7,9 @@
   - `scripts/core/company/company_save.gd`: `list_slots()` suma `"options"` a cada slot.
   - `scripts/core/company/company_table_net.gd`: con `assisted_packing`, el `box_tape` del host calcula
     `PackingStation.assisted_cells()` y `box_sealed` lleva `assisted` y `filled`. Cada copia rellena esas celdas
-    (cobro con el minuto del host) y después pone la cinta. `_assist_ok()` rechaza un `filled` que no entra.
+    (cobro con el minuto del host) y después pone la cinta. `_assist_ok()` rechaza un `filled` que no entra o un
+    `assisted` que no coincide con `filled > 0`: una caja que el jugador llenó a mano no queda asistida.
+  - `scripts/core/company/company_snapshot.gd`: una caja abierta con `assisted` se rechaza (solo la cinta la rellena).
   - `scripts/gameplay/business/packing_station.gd`: `seal(wallet, fill = 0)` y `assisted_cells(money)`.
   - `scripts/gameplay/business/packed_box.gd`: `assisted` (va en `to_dict`). `box_to_package.gd`: una caja asistida
     absorbe como mínimo `CompanyTuning.ASSISTED_MIN_ABSORPTION` (0,75, nueva en `company_tuning.gd`).

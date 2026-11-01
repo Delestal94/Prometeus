@@ -8,14 +8,15 @@ extends SceneTree
 ## - PackingStation.seal() with Armado asistido: a box with 3 free cells is sealed padded (fill_ratio 1.0, 3 cells
 ##   and the tape charged, the table's padding down by 3, the box marked assisted); money just for the tape seals
 ##   with no padding (assisted_cells 0); no tape on the table refuses and changes nothing; padding short on the
-##   table pads only what there is;
+##   table pads only what there is; more cells than are free changes nothing; a review made before stands;
 ## - PackedBox.assisted survives to_dict() / from_dict(); BoxToPackage.absorption gives the same padded box 0.6 by
 ##   hand and 0.75 assisted (ASSISTED_MIN_ABSORPTION);
 ## - the table over the network, solo host: with assisted_packing on, taping a box with free cells pads them in the
 ##   same event (box_sealed carries assisted and filled, the money and the package's absorption count them), and a
 ##   second copy of the tables applying the same events ends the same (wallet, padding on the table); with the
-##   option off box_sealed pads nothing; a box_sealed with a bad filled (negative, text, more than the free cells)
-##   is not applied by the copy.
+##   option off box_sealed pads nothing, and with it on a box padded full by hand is not assisted; assisted must
+##   match filled > 0; the options travel in CompanyNet's snapshot; a box_sealed with a bad filled (negative,
+##   text, more than the free cells) is not applied by the copy.
 ## Pending (no system yet): the day-event draw with calm_days (D-0123) and the new-company and slot screens
 ## (D-0235 / D-1904).
 
@@ -39,6 +40,8 @@ func _run() -> void:
 	_test_absorption()
 	_test_table_net(true)
 	_test_table_net(false)
+	_test_full_box()
+	_test_snapshot()
 	_clean()
 	if _failures == 0:
 		print("PASS: modifiers are saved, Armado asistido pads with the tape and cushions like the quick match")
@@ -124,6 +127,16 @@ func _test_station() -> void:
 	var short: PackingStation = _box_with(3)
 	short.supplies.take(StationSupplies.FILL, short.supplies.count(StationSupplies.FILL) - 1)
 	_expect(short.assisted_cells(1000) == 1, "one unit of padding on the table: 1 cell")
+	wallet.set(&"money", 1000)
+	var over: PackingStation = _box_with(3)
+	var over_before: Dictionary = over.box.to_dict()
+	_expect(not over.seal(wallet, 5) and over.box.to_dict() == over_before and int(wallet.get(&"money")) == 1000,
+		"padding more cells than are free: false, nothing changes")
+	var reviewed: PackingStation = _box_with(3)
+	reviewed.box.reviewed_by = &"bea"
+	reviewed.box.review_seal = BoxReview.signature(reviewed.box)
+	_expect(reviewed.seal(wallet, 3) and BoxReview.is_reviewed(reviewed.box),
+		"a review made before the tape stands after the assisted padding")
 	var bare: PackingStation = _box_with(3)
 	bare.supplies.take(StationSupplies.TAPE, bare.supplies.count(StationSupplies.TAPE))
 	wallet.set(&"money", 1000)
@@ -205,9 +218,12 @@ func _test_table_net(assisted: bool) -> void:
 		"%s: the package cushions %.2f (got %s)" % [label, expected, data.get("absorption")])
 	if assisted:
 		# A box_sealed whose `filled` does not fit is refused by the copy, its box still open.
-		for bad: Variant in [-1, "3", free + 1]:
+		for bad: Variant in [-1, "3", free + 1, [false, 1]]:
 			var wrong: Dictionary = data.duplicate()
 			wrong["filled"] = bad
+			if bad is Array:
+				wrong["assisted"] = bad[0]
+				wrong["filled"] = bad[1]
 			_expect(not mirror.apply(mirror_state, mirror_stock, T.SEALED, wrong) and mirror.has_box(&"table_1"),
 				"a box_sealed with filled %s is not applied" % [bad])
 	mirrored.append(mirror.apply(mirror_state, mirror_stock, T.SEALED, data))
@@ -219,6 +235,52 @@ func _test_table_net(assisted: bool) -> void:
 	_expect(host_fill == copy_fill, "%s: ...and the same padding left on the table (%d vs %d)"
 		% [label, host_fill, copy_fill])
 	_cleanup([net, state, mirror_state])
+
+
+## The option on, a box packed full by hand: the tape pads nothing and the box stays a hand box (0.6, not 0.75).
+func _test_full_box() -> void:
+	var state: Node = _new_state("FullState")
+	state.call(&"new_company", "Llena SRL")
+	state.set(&"options", {"assisted_packing": true, "calm_days": false})
+	var net := CompanyNet.new()
+	net.company = state
+	root.add_child(net)
+	net.inventory = Inventory.new()
+	net.stations = func(id: StringName) -> Dictionary:
+		return {"location": &"table:%s" % id, "spot": SPOT} if id == &"table_1" else {}
+	net.player_origin = func(_peer: int) -> Variant: return Vector3.ZERO
+	var heard: Array = []
+	net.request_rejected.connect(func(rid: int, reason: StringName) -> void: heard.append([rid, reason]))
+	var sealed: Array[Dictionary] = []
+	net.event_applied.connect(func(_seq: int, kind: StringName, data: Dictionary) -> void:
+		if kind == T.SEALED:
+			sealed.append(data))
+	net.inventory.receive(&"hen", 1, CompanyNet.hands_location(1))
+	net.table.order_of = func(_table: StringName) -> Dictionary: return {}
+	_ask(net, heard, T.START, {"station": &"table_1", "size": &"S"})
+	_ask(net, heard, T.PLACE, {"station": &"table_1", "cx": 0, "cy": 0, "cz": 0, "product": &"hen", "rot": 0})
+	var open_box: PackedBox = net.table.call(&"_desk", &"table_1").box
+	_ask(net, heard, T.FILL, {"station": &"table_1", "cells": open_box.total_cells() - open_box.grid.size()})
+	_ask(net, heard, T.TAPE, {"station": &"table_1"})
+	_expect(sealed.size() == 1 and sealed[0].get("assisted") == false and sealed[0].get("filled") == 0,
+		"option on, a box padded full by hand: box_sealed is not assisted (got %s)" % [sealed])
+	_cleanup([net, state])
+
+
+## The options reach a client in the company part of CompanyNet's snapshot.
+func _test_snapshot() -> void:
+	var state: Node = _new_state("SnapState")
+	state.call(&"new_company", "Foto SRL")
+	state.set(&"options", {"assisted_packing": true, "calm_days": true})
+	var net := CompanyNet.new()
+	net.company = state
+	root.add_child(net)
+	net.inventory = Inventory.new()
+	var company: Dictionary = net.snapshot().get("company", {})
+	var client: Node = _new_state("ClientState")
+	_expect(client.call(&"from_dict", company) and bool(client.call(&"option", "assisted_packing"))
+		and bool(client.call(&"option", "calm_days")), "a client reads the options from the snapshot")
+	_cleanup([net, state, client])
 
 
 func _cleanup(nodes: Array) -> void:

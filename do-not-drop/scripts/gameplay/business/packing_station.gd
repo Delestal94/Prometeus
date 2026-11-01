@@ -84,22 +84,35 @@ func is_sealed() -> bool:
 ## Tapes the box on the table shut and pays the tape (PackagingSupplies.tape). False, changing
 ## nothing, if the table has no box, it is already taped or the wallet cannot pay.
 ## With `fill` over 0 (Armado asistido, D-1919, dificultad.md §2.1) it first pads that many free cells
-## (assisted_cells() says how many) and marks the box assisted; the wallet must cover padding and tape
-## together, so the padding's money never leaves the box open.
+## (assisted_cells() says how many, assist_pad()) and marks the box assisted; the wallet must cover padding
+## and tape together, so the padding's money never leaves the box open.
 func seal(wallet: Object, fill: int = 0) -> bool:
 	if box == null or box.taped or not supplies.has(StationSupplies.TAPE):
 		return false
 	if fill > 0:
 		var cost: int = PackagingSupplies.fill_cost(fill) + CompanyTuning.TAPE_COST
-		if fill > supplies.count(StationSupplies.FILL) or wallet == null or not wallet.call(&"can_afford", cost):
+		var free: int = box.total_cells() - box.grid.size()
+		var short: bool = fill > free or fill > supplies.count(StationSupplies.FILL)
+		if short or wallet == null or not wallet.call(&"can_afford", cost):
 			return false
-		if pad(fill, wallet) != fill:
+		if assist_pad(fill, wallet) != fill:
 			return false
-		box.assisted = true
 	if not PackagingSupplies.tape(box, wallet):
 		return false
 	supplies.take(StationSupplies.TAPE)
 	return true
+
+
+## Armado asistido's padding (D-1919): pad() on `fill` cells, the box marked assisted when any was padded. A
+## review made before it stands (BoxReview.signature counts the padding the tape put in, not the packer's).
+func assist_pad(fill: int, wallet: Object) -> int:
+	var reviewed: bool = BoxReview.is_reviewed(box)
+	var padded: int = pad(fill, wallet) if fill > 0 else 0
+	if padded > 0:
+		box.assisted = true
+		if reviewed:
+			box.review_seal = BoxReview.signature(box)
+	return padded
 
 
 ## Armado asistido (D-1919, dificultad.md §2.1): how many free cells the tape would pad with `money` in the
