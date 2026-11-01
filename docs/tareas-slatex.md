@@ -444,3 +444,78 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.100** Presentación de estudio en `art/gel_character/review/`: turntable de los seis presets
   en 6 colores, un video del editor moviendo los sliders, reel de animaciones (base, graciosas, bailes,
   muertes) y `LEEME.md` final. Pasa a ser el personaje por defecto solo con el visto bueno del usuario.
+
+---
+
+## Expansión: tareas asignadas a Slatex (2026-11-01)
+
+Pedido de Slatex (2026-11-01): de las 1000 `D-` de `docs/expansion-distritos/`, las que caen en su dominio
+(UI, audio, efectos, jugador, paquete) y que ninguna rutina tiene en su carril. Las rutinas `desarrollador`
+y `sesion-arte` **no las toman** (`.claude/rutinas/desarrollador.md` §2). El detalle y el "hecho cuando"
+siguen en la tabla de su grupo; al cerrar una se marca allá y acá con el hash. Lo que toque código de
+la Empresa (`scripts/core/company/`, `scripts/gameplay/business/`, `data/`) lleva aviso en `docs/avisos/`.
+
+Quedan para Nacho, aunque estén en estos grupos: D-1930 (SFX de vehículos), D-1931 (clima por distrito),
+D-1936 (voz de proximidad, red), y del grupo 18 el galpón, máquinas, vehículos, distritos, animales y casas
+(los pide `arte-pendiente/` a la sesión de arte de su PC).
+
+**Para empezar** (su diseño ya está cerrado): D-1909 (pausa con "Cerrar el día": lo espera D-0253.a),
+D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboarding.md`) y D-1919
+(modificadores, `diseno/dificultad.md`). El resto depende de sistemas de F1-F4 que todavía arman las rutinas.
+
+### Grupo 19 — UI, tutorial, audio y efectos (`19-ui-audio-vfx.md`)
+
+- [ ] **D-1901** Tutorial de la primera semana: un objetivo por vez.
+- [ ] **D-1902** Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8).
+- [ ] **D-1903** HUD del día: hora, plata, pedidos pendientes.
+- [ ] **D-1904** Menú principal con modo Empresa y slots de guardado.
+- [ ] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).
+- [ ] **D-1906** Pantalla de despacho con estilo final.
+- [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
+- [ ] **D-1908** Tooltips de productos y requisitos.
+- [ ] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
+- [ ] **D-1910** Escalado de UI y Steam Deck.
+- [ ] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
+- [ ] **D-1912** Mezcla: buses para galpón, máquinas y distritos.
+- [ ] **D-1913** SFX de UI del portapapeles.
+- [ ] **D-1914** Efecto de pedido completado.
+- [ ] **D-1915** Efecto de error de armado.
+- [ ] **D-1916** Fuente y estilo visual unificado de la expansión.
+- [ ] **D-1917** Traducción al inglés de todo lo nuevo.
+- [ ] **D-1918** Accesibilidad: daltonismo en requisitos y estados.
+- [ ] **D-1919** Modificadores de la empresa (armado asistido, días tranquilos).
+- [ ] **D-1920** Test de que todo texto nuevo pasa por `tr()`.
+- [ ] **D-1923** Celular del jugador con app de pedidos y mapa.
+- [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
+- [ ] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
+- [ ] **D-1929** Música por distrito (9 temas compuestos por código).
+- [ ] **D-1935** Feed de eventos del galpón (quién hizo qué).
+- [ ] **D-1940** Créditos actualizados.
+- [ ] **D-1941** Pasada de pulido de UI completa.
+- [ ] **D-1942** Pasada de mezcla de audio completa.
+- [ ] **D-1943** Pasada de VFX para no tapar visión.
+- [ ] **D-1944** Revisión de UX copy de la expansión.
+- [ ] **D-1945** Capturas de cada pantalla nueva.
+- [ ] **D-1946** Revisión de accesibilidad.
+- [ ] **D-1947** Rendimiento de la UI (portapapeles sin picos).
+- [ ] **D-1948** Test de navegación con mando de todas las pantallas nuevas.
+- [ ] **D-1949** Documentar controles nuevos en `controles-y-ui.md`.
+- [ ] **D-1950** QA de UI.
+
+### Grupo 18 — productos, embalaje, portapapeles y clientes (`18-modelos-y-arte.md`, necesitan PC)
+
+- [ ] **D-1802** Productos lote 1: 10 del corte vertical.
+- [ ] **D-1803** Productos lote 2: 10 frágiles.
+- [ ] **D-1804** Productos lote 3: 10 fríos y perecederos.
+- [ ] **D-1805** Productos lote 4: 10 grandes y raros.
+- [ ] **D-1806** Cajas S, M, L, XL abiertas y cerradas.
+- [ ] **D-1807** Insumos: rollo de cinta, dispensador, burbuja, papel, espuma.
+- [ ] **D-1808** Sellos y etiquetas como decals.
+- [ ] **D-1809** Conservadora, caja térmica, caja impermeable.
+- [ ] **D-1816** Portapapeles en la mano (primera persona).
+- [ ] **D-1819** Clientes NPC en la puerta (6 variantes).
+- [ ] **D-1821** Productos lote 5: 10 de distritos.
+- [ ] **D-1822** Productos lote 6: 10 peligrosos/vivos.
+- [ ] **D-1833** Texturas de productos (marcas ficticias graciosas).
+- [ ] **D-1840** Animación del jugador con portapapeles y escáner.
+- [ ] **D-1845** Íconos de productos para UI (render automático).

@@ -49,6 +49,8 @@ Fuente: `docs/expansion-distritos/detalle/*.md` (tareas con detalle) y las tabla
 1. En los grupos de tu carril, en orden, la **primera** tarea que cumple todo esto:
    - no está `[x]` ni `⚠ Bloqueada` ni tachada;
    - no tiene PR abierto ni rama `origin/exp/<ID>-*`;
+   - no está en la sección "Expansión: tareas asignadas a Slatex" de `docs/tareas-slatex.md` (las hace él;
+     si una tuya depende de una de esas, elegí otra);
    - todas sus `Depende de` están `[x]`. Las decididas cuentan como hechas, y una dependencia de otro
      carril sin hacer **no** se espera: se elige otra;
    - es de la fase en curso. F0 y F1 hasta que D-2016 esté `[x]` (con D-2016.3 y D-2016.4: es el criterio de cierre de
