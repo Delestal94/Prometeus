@@ -1554,11 +1554,11 @@ UI_CLIPBOARD_HINT_PAD,"%s / %s: cambiar de hoja · %s: guardar","%s / %s: change
 UI_ONBOARD_STOCK_PALLET,Guardá la mercadería del palet en el estante,Put the pallet's goods away on the shelf
 UI_ONBOARD_PICK,Buscá en el estante lo que pide el tablero,Pick from the shelf what the board asks for
 UI_ONBOARD_PACK,Armá la caja del pedido en la mesa y dejala en despacho,Pack the order's box at the table and leave it at dispatch
-UI_ONBOARD_DRIVE,Cargá la camioneta y seguí el GPS,Load the van and follow the GPS
+UI_ONBOARD_DRIVE,Cargá el camión y seguí el GPS,Load the truck and follow the GPS
 UI_ONBOARD_DELIVER,Entregá la caja en la puerta,Deliver the box at the door
 UI_ONBOARD_RETURN,Volvé al galpón,Drive back to the shed
-UI_ONBOARD_RESTOCK,"Reponé la mesa: cinta, cajas y relleno","Restock the table: tape, boxes and padding"
+UI_ONBOARD_RESTOCK,"Reponé la mesa: cinta, cajas y relleno","Restock the table: tape, boxes and filler"
 UI_ONBOARD_UNLOAD,Bajá el palet del proveedor con la zorra,Unload the supplier's pallet with the pallet jack
 UI_ONBOARD_ORDER_MORE,Sumá lo que faltó al pedido de mañana,Add what was missing to tomorrow's order
-UI_ONBOARD_FILL,Llená el hueco con relleno antes de cerrar,Fill the gap with padding before taping
-UI_ONBOARD_CONTROL,Tecla: %s,Control: %s
+UI_ONBOARD_FILL,Llená el hueco con relleno antes de cerrar,Fill the gap with filler before taping
+UI_ONBOARD_CONTROL,Usá %s,Use %s

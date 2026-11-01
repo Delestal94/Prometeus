@@ -11,7 +11,9 @@ extends SceneTree
 ##   nothing shows; every id has a translation key that exists in es and en and an action;
 ## - the tracker on its own: a units_moved from this peer's hands to a shelf ticks stock_pallet, one from a shelf
 ##   into the hands ticks pick (another peer's does not), an order packed / out with the player seated /
-##   delivered and a trip back tick pack, drive, deliver and return; each tick goes once into the profile
+##   delivered and a trip back after it tick pack, drive, deliver and return (a trip back before the delivery
+##   does not); who joins mid-day does not tick what the books already held, and a late order never packed
+##   ticks nothing; each tick goes once into the profile
 ##   (company_onboard_<id>) and a new tracker reading that profile starts where it was left;
 ## - the line: shows the objective with its control and "✓" with the line just done, then the next one.
 ## The bot test (test_company_bot_day) checks the same tracker on the real world while the bot plays day 1.
@@ -177,11 +179,15 @@ func _test_tracker() -> void:
 	tracker.refresh()
 	_expect(tracker.is_done(CompanyOnboarding.DRIVE), "seated with an order out ticks drive")
 	tracker.call(&"_on_trip_closed", &"t1", &"van", [] as Array[StringName])
+	tracker.refresh()
 	_expect(not tracker.is_done(CompanyOnboarding.RETURN), "a trip back before any delivery is not return")
 	_expect(book.mark_delivered(&"d1_o01", 90, true, 600) >= 0, "the order is delivered")
 	tracker.refresh()
-	_expect(tracker.is_done(CompanyOnboarding.DELIVER) and tracker.is_done(CompanyOnboarding.RETURN),
-		"delivered ticks deliver, and the trip already back ticks return")
+	_expect(tracker.is_done(CompanyOnboarding.DELIVER) and not tracker.is_done(CompanyOnboarding.RETURN),
+		"delivered ticks deliver; the trip back from before does not tick return")
+	tracker.call(&"_on_trip_closed", &"t1", &"van", [] as Array[StringName])
+	tracker.refresh()
+	_expect(tracker.is_done(CompanyOnboarding.RETURN), "a trip back after the delivery ticks return")
 	_expect(tracker.line().is_empty(), "day 1 done: no line")
 	var tips: Array[StringName] = []
 	for id: StringName in CompanyOnboarding.DAY_ONE:
@@ -192,6 +198,24 @@ func _test_tracker() -> void:
 	_expect(again.line().is_empty() and again.is_done(CompanyOnboarding.RETURN),
 		"a tracker on that profile starts with the loop done")
 	again.free()
+	# Joining a company mid-day: what the books already hold was the crew's, not this player's.
+	var joiner_profile := FakeProfile.new()
+	var joiner: CompanyOnboardingTracker = _tracker(net, joiner_profile, player, book)
+	await process_frame
+	joiner.refresh()
+	_expect(not joiner.is_done(CompanyOnboarding.PACK) and not joiner.is_done(CompanyOnboarding.DELIVER),
+		"who joins mid-day does not tick the crew's packed and delivered orders")
+	var late := OrderBook.new()
+	var late_items: Array = [{"product": &"hen", "qty": 1}]
+	_expect(late.add(Order.make(&"d1_o02", "Leo", &"centro", &"h2", late_items, 0, {})), "a second order")
+	var late_tracker: CompanyOnboardingTracker = _tracker(net, FakeProfile.new(), player, late)
+	await process_frame
+	_expect(late.expire(10000).size() == 1 and late.state_of(&"d1_o02") == &"late", "an order goes late unpacked")
+	late_tracker.refresh()
+	_expect(not late_tracker.is_done(CompanyOnboarding.PACK) and not late_tracker.is_done(CompanyOnboarding.DELIVER),
+		"a late order that was never packed ticks neither pack nor deliver")
+	late_tracker.free()
+	joiner.free()
 	tracker.free()
 	player.free()
 	net.free()

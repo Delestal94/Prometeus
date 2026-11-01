@@ -103,6 +103,11 @@ func _check_pure(bot: GDScript) -> void:
 
 
 func _check_world(bot: GDScript) -> void:
+	# D-1901: the guide starts from a profile that never saw it (a run before this one may have ticked it).
+	var unlocks: Node = root.get_node_or_null(^"/root/UnlockManager")
+	if unlocks != null:
+		for id: StringName in CompanyOnboarding.KEYS:
+			(unlocks.get(&"seen_tips") as Dictionary).erase(CompanyOnboarding.tip_id(id))
 	var level: Node3D = await bot.call(&"open_world", self)
 	_expect(level is CompanyRoot, "The company world opens (got %s)" % level)
 	var reached: bool = await bot.call(&"wait_opening", self, level, 10.0)

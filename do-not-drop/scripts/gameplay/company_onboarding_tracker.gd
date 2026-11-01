@@ -9,10 +9,14 @@ extends Node
 ##   pick          a units_moved from a shelf slot into this peer's hands;
 ##   pack          an order of the day is packed (packed, out or delivered in the books it reads);
 ##   drive         this player sits in a seat while an order is out;
-##   deliver       an order is delivered (also late);
-##   return        a trip came back through the gate (CompanyTripsView.trip_closed, or the host's closed trips);
+##   deliver       an order is delivered;
+##   return        a trip came back through the gate after that (CompanyTripsView.trip_closed, or the host's closed
+##                 trips growing);
 ##   unload        the supplier pallets of a day from 2 on were waiting and are not any more;
 ##   order_more    this peer's supplier order (supplier_ordered with its peer) after the row showed.
+## The books count only from what this peer first saw (its first poll, or each snapshot): who joins mid-day does not
+## tick the crew's earlier work. "At the packing table" is not known yet (the line shows pack after pick instead).
+## Past the first week, or with every row done, the tracker stops (no poll, no event handler).
 ## pack, deliver and return read the company's books: in F1 the table and the door are not per player events yet,
 ## so a crew ticks them together (onboarding §3 asks per player; that waits for the table's and the door's events).
 ## restock and fill have no trigger yet (the table's supplies and the box's Q are host-side only): their rows wait
@@ -25,8 +29,11 @@ signal line_changed(line: Dictionary)
 signal ticked(id: StringName)
 
 const POLL_SECONDS: float = 0.25
-const DONE_STATES: Array[StringName] = [&"packed", &"out", &"delivered", &"late"]
-const DELIVERED_STATES: Array[StringName] = [&"delivered", &"late"]
+## Order states that mean the box was packed (`late` is the overdue state, not a delivery: a late order may still be
+## open, so a packed late one is told by its box_id).
+const PACKED_STATES: Array[StringName] = [&"packed", &"out", &"delivered"]
+const DELIVERED: StringName = &"delivered"
+const OUT: StringName = &"out"
 
 var net: CompanyNet
 ## Returns this peer's own player (or null).
@@ -45,7 +52,14 @@ var _seen: Dictionary = {}
 var _line: Dictionary = {}
 var _poll: float = 0.0
 var _unload_waiting: bool = false
-var _returned: bool = false
+## Trips back through the gate seen since deliver was ticked (return needs one after it).
+var _trips_back: int = 0
+var _closed_at_deliver: int = -1
+## Order id -> what it was when this peer first saw it (its first poll, or a snapshot): only what changes after
+## counts, so who joins a company mid-day does not tick the crew's work as their own.
+var _baseline: Dictionary = {}
+var _has_baseline: bool = false
+var _dirty: bool = true
 
 
 ## The tracker and its line on the company's world `root` (CompanyRoot): reads its net, player, books and trips
@@ -89,6 +103,7 @@ func _ready() -> void:
 	_load_seen()
 	if net != null:
 		net.event_applied.connect(_on_event_applied)
+		net.company_state_restored.connect(_on_restored)
 	refresh()
 
 
@@ -114,6 +129,10 @@ func mark(id: StringName) -> bool:
 
 ## Looks at the world (what the events do not say) and recomputes the line.
 func refresh() -> void:
+	_dirty = false
+	if is_over():
+		_stop()
+		return
 	_poll_world()
 	var next: Dictionary = CompanyOnboarding.current(_player_ctx(), _company_ctx(), _seen)
 	if next != _line:
@@ -121,9 +140,29 @@ func refresh() -> void:
 		line_changed.emit(_line)
 
 
+## Nothing left to teach: past the first week, or every row done. The tracker then stops looking.
+func is_over() -> bool:
+	if _day() > CompanyOnboarding.GUIDE_LAST_DAY:
+		return true
+	for id: StringName in CompanyOnboarding.KEYS:
+		if not is_done(id):
+			return false
+	return true
+
+
+func _stop() -> void:
+	set_process(false)
+	if net != null and net.event_applied.is_connected(_on_event_applied):
+		net.event_applied.disconnect(_on_event_applied)
+	if not _line.is_empty():
+		_line = {}
+		line_changed.emit(_line)
+
+
+## The poll runs every POLL_SECONDS, or sooner after an event marked something to look at.
 func _process(delta: float) -> void:
 	_poll += delta
-	if _poll >= POLL_SECONDS:
+	if _poll >= POLL_SECONDS or (_dirty and _poll >= POLL_SECONDS * 0.2):
 		_poll = 0.0
 		refresh()
 
@@ -141,46 +180,97 @@ func _load_seen() -> void:
 
 
 func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
+	var ticked_now: bool = false
 	if kind == &"units_moved":
 		var hands: String = String(CompanyNet.hands_location(_peer()))
 		var from: String = String(data.get("from", ""))
 		var to: String = String(data.get("to", ""))
 		if from == hands and to.begins_with("shelf:"):
-			mark(CompanyOnboarding.STOCK_PALLET)
+			ticked_now = mark(CompanyOnboarding.STOCK_PALLET)
 		elif from.begins_with("shelf:") and to == hands:
-			mark(CompanyOnboarding.PICK)
+			ticked_now = mark(CompanyOnboarding.PICK)
 	elif kind == CompanySupplierNet.ORDERED and int(data.get("peer", 0)) == _peer():
 		if _line.get("id", &"") == CompanyOnboarding.ORDER_MORE:
-			mark(CompanyOnboarding.ORDER_MORE)
-	refresh()
+			ticked_now = mark(CompanyOnboarding.ORDER_MORE)
+	# A tick moves the line at once; anything else waits for the poll (events come many a second).
+	if ticked_now:
+		refresh()
+	else:
+		_dirty = true
+
+
+## A snapshot replaced the books: what they hold now is the new baseline (nothing in them was this peer's doing).
+func _on_restored(_snapshot_seq: int) -> void:
+	_has_baseline = false
+	_dirty = true
 
 
 func _on_trip_closed(_trip_id: StringName, _vehicle_id: StringName, _failed: Array) -> void:
-	_returned = true
-	refresh()
+	if is_done(CompanyOnboarding.DELIVER):
+		_trips_back += 1
+	_dirty = true
 
 
 ## What no event of this peer says: the books, the seat, the trips back, the supplier pallets.
 func _poll_world() -> void:
-	var states: Dictionary = _order_states()
-	if _any(states, DONE_STATES):
+	var road: Array[StringName] = [
+		CompanyOnboarding.PACK, CompanyOnboarding.DRIVE, CompanyOnboarding.DELIVER, CompanyOnboarding.RETURN,
+	]
+	if not road.all(is_done):
+		_poll_books()
+	if not is_done(CompanyOnboarding.UNLOAD):
+		_poll_unload()
+
+
+## pack, drive, deliver and return from the books, counting only what changed since the baseline.
+func _poll_books() -> void:
+	var orders: Dictionary = _orders()
+	if not _has_baseline:
+		_baseline = orders
+		_has_baseline = true
+		return
+	var packed: bool = false
+	var out: bool = false
+	var delivered: bool = false
+	for id: StringName in orders:
+		var now: Dictionary = orders[id]
+		var before: Dictionary = _baseline.get(id, {"state": Order.STATE_OPEN, "box_id": ""})
+		packed = packed or (_was_packed(now) and not _was_packed(before))
+		out = out or (now["state"] == OUT and before["state"] != OUT)
+		delivered = delivered or (now["state"] == DELIVERED and before["state"] != DELIVERED)
+	if packed:
 		mark(CompanyOnboarding.PACK)
 	var player: Node = _player()
-	if player != null and _any(states, [&"out"]):
+	if out and player != null:
 		var seat: NodePath = player.get(&"seat_node_path")
 		if not seat.is_empty():
 			mark(CompanyOnboarding.DRIVE)
-	if _any(states, DELIVERED_STATES):
-		mark(CompanyOnboarding.DELIVER)
-	var trips: CompanyTrips = trips_of.call() as CompanyTrips if trips_of.is_valid() else null
-	if trips != null and not trips.closed_trips().is_empty():
-		_returned = true
-	if _returned and is_done(CompanyOnboarding.DELIVER):
+	if delivered and mark(CompanyOnboarding.DELIVER):
+		_closed_at_deliver = _closed_count()
+		_trips_back = 0
+	var back: bool = _trips_back > 0 or (_closed_at_deliver >= 0 and _closed_count() > _closed_at_deliver)
+	if is_done(CompanyOnboarding.DELIVER) and back:
 		mark(CompanyOnboarding.RETURN)
+
+
+static func _was_packed(order: Dictionary) -> bool:
+	return PACKED_STATES.has(order["state"]) or String(order.get("box_id", "")) != ""
+
+
+## The host's trips back through the gate (-1 on a client: the view's trip_closed counts there).
+func _closed_count() -> int:
+	var trips: CompanyTrips = trips_of.call() as CompanyTrips if trips_of.is_valid() else null
+	return trips.closed_trips().size() if trips != null else -1
+
+
+## unload: from its first day, the supplier pallets were waiting and are not any more.
+func _poll_unload() -> void:
+	if _day() < int(CompanyOnboarding.LATER[CompanyOnboarding.UNLOAD]):
+		return
 	var waiting: bool = _pallets_waiting()
-	if _unload_waiting and not waiting and _day() >= int(CompanyOnboarding.LATER[CompanyOnboarding.UNLOAD]):
+	if _unload_waiting and not waiting:
 		mark(CompanyOnboarding.UNLOAD)
-	_unload_waiting = waiting and _day() >= int(CompanyOnboarding.LATER[CompanyOnboarding.UNLOAD])
+	_unload_waiting = waiting
 
 
 func _player_ctx() -> Dictionary:
@@ -198,13 +288,15 @@ func _company_ctx() -> Dictionary:
 	var triggers: Dictionary = {}
 	if _unload_waiting:
 		triggers[CompanyOnboarding.UNLOAD] = true
-	if _day() >= int(CompanyOnboarding.LATER[CompanyOnboarding.ORDER_MORE]) and _short_today():
+	var order_more: bool = not is_done(CompanyOnboarding.ORDER_MORE)
+	if order_more and _day() >= int(CompanyOnboarding.LATER[CompanyOnboarding.ORDER_MORE]) and _short_today():
 		triggers[CompanyOnboarding.ORDER_MORE] = true
-	return {"day": _day(), "pallet_left": _pallet_units() > 0, "triggers": triggers}
+	var pallet_left: bool = is_done(CompanyOnboarding.STOCK_PALLET) or _pallet_units() > 0
+	return {"day": _day(), "pallet_left": pallet_left, "triggers": triggers}
 
 
-## Order id -> state over every book read (a later book wins: CompanyTrips' is the one packing moves).
-func _order_states() -> Dictionary:
+## Order id -> {state, box_id} over every book read (a later book wins: CompanyTrips' is the one packing moves).
+func _orders() -> Dictionary:
 	var out: Dictionary = {}
 	var books: Array = books_of.call() if books_of.is_valid() else []
 	for book: Variant in books:
@@ -212,15 +304,10 @@ func _order_states() -> Dictionary:
 			continue
 		for order: Variant in (book as OrderBook).to_dict().get("orders", []):
 			if order is Dictionary:
-				out[StringName((order as Dictionary).get("id", ""))] = StringName((order as Dictionary).get("state", ""))
+				var entry: Dictionary = order
+				var id := StringName(entry.get("id", ""))
+				out[id] = {"state": StringName(entry.get("state", "")), "box_id": String(entry.get("box_id", ""))}
 	return out
-
-
-static func _any(states: Dictionary, wanted: Array) -> bool:
-	for id: StringName in states:
-		if wanted.has(states[id]):
-			return true
-	return false
 
 
 ## Units still on a supplier pallet (pallet:<id>, before it is opened and put away).

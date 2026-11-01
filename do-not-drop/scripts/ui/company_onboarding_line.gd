@@ -26,6 +26,7 @@ func _ready() -> void:
 	var column: VBoxContainer = UiTheme.panel(self, Vector2(360, 0), 12)
 	(column.get_parent() as Control).position = Vector2(16, 64)
 	(column.get_parent() as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label = UiTheme.label(column, "", 18, UiTheme.INK, true)
 	_label.name = "Objective"
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -61,6 +62,12 @@ func objective_text() -> String:
 ## The control's text as shown.
 func control_text() -> String:
 	return _key_label.text if _key_label != null and visible else ""
+
+
+## A language change redraws the line in the new one.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _label != null and _tick_left <= 0.0:
+		_draw_line(_shown)
 
 
 func _process(delta: float) -> void:
