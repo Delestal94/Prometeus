@@ -139,6 +139,20 @@ static func mark_interrupted(slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR
 	return SafeJson.write(path, raw)
 
 
+## Writes the modifiers of the company in the slot (D-1904, "Opciones" on a saved company in the
+## main menu; diseno/dificultad.md §3: only outside a match). Only "company.options" changes, cleaned
+## by CompanyState.sanitize_options(); the rest of the file (the day's opening) stays as it was. False,
+## touching nothing, like mark_interrupted(): no save of ours, a newer build's, or a write error.
+static func write_options(options: Dictionary, slot: String = DEFAULT_SLOT, dir: String = SAVE_DIR) -> bool:
+	var path: String = path_for(slot, dir)
+	var raw: Dictionary = _peek(path)
+	var saved_version: int = _version_of(raw)
+	if saved_version <= 0 or saved_version > VERSION or not raw.get("company") is Dictionary:
+		return false
+	(raw["company"] as Dictionary)["options"] = COMPANY_STATE_SCRIPT.sanitize_options(options)
+	return SafeJson.write(path, raw)
+
+
 ## Climbs `company` from `from_version` up to `to_version`. Empty when a step is
 ## missing or does not return a dictionary.
 static func migrate(

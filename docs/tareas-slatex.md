@@ -476,7 +476,11 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Rama `codex/D-1902-clipboard`: `scripts/gameplay/company_clipboard.gd`, `scripts/ui/clipboard_frame.gd`,
   `scripts/gameplay/player/player_held_tool.gd`, `tests/test_company_clipboard.gd`. La hoja Empleados espera a D-1038.
 - [ ] **D-1903** HUD del día: hora, plata, pedidos pendientes.
-- [ ] **D-1904** Menú principal con modo Empresa y slots de guardado.
+- [x] **D-1904** Menú principal con modo Empresa y slots de guardado.
+  Rama `codex/D-1904-company-slots`: `scripts/ui/company_slots_page.gd` (página "Modo Empresa" del menú: lista de
+  empresas con día, plata, fecha y un chip por modificador, "Abrir sala para amigos", empresa nueva con nombre y
+  modificadores, "Opciones" y "Borrar" del slot), `main_menu.gd` (página `COMPANY`), `CompanySave.write_options()`,
+  `tests/test_company_slots_menu.gd`. Pendiente: la captura de la página (sin pantalla en esta sesión).
 - [ ] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).
 - [ ] **D-1906** Pantalla de despacho con estilo final.
 - [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
@@ -497,7 +501,7 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Armado asistido (`PackingStation.seal`, `box_sealed` con `assisted` y `filled`), `PackedBox.assisted` y absorción
   mínima 0,75; `tests/test_company_modifiers.gd`. Pendiente, sin sistema todavía: `calm_days` en el sorteo de
   eventos del día (D-0123, pasa a la tarea que lo construya), las pantallas de empresa nueva y "Opciones" del slot
-  (D-0235 / D-1904), y en la mesa el aviso "Relleno insuficiente" y la ayuda "Cerrar (rellena solo)" (con la ayuda
+  (D-0235 / D-1904, hechas con D-1904), y en la mesa el aviso "Relleno insuficiente" y la ayuda "Cerrar (rellena solo)" (con la ayuda
   de la mesa del HUD de la Empresa).
 - [ ] **D-1920** Test de que todo texto nuevo pasa por `tr()`.
 - [ ] **D-1923** Celular del jugador con app de pedidos y mapa.

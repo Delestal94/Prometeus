@@ -441,6 +441,24 @@ UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, sal
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
 UI_COMPANY_PRESENCE_UNNAMED,Modo Empresa — día %d,Company mode — day %d
+UI_COMPANY_SLOTS_HOST,Abrir sala para amigos,Open a room for friends
+UI_COMPANY_SLOTS_NEW,Nueva empresa,New company
+UI_COMPANY_SLOTS_EMPTY,Todavía no hay ninguna empresa guardada.,No company saved yet.
+UI_COMPANY_SLOTS_DETAILS,Día %d · $%d · %s,Day %d · $%d · %s
+UI_COMPANY_SLOTS_TOO_NEW,Guardada con una versión más nueva,Saved by a newer version
+UI_COMPANY_SLOTS_DELETE,Borrar,Delete
+UI_COMPANY_SLOTS_DELETE_CONFIRM,¿Seguro? Borrar,Sure? Delete
+UI_COMPANY_SLOTS_NAME,Nombre de la empresa,Company name
+UI_COMPANY_SLOTS_DEFAULT_NAME,Mi empresa,My company
+UI_COMPANY_SLOTS_CREATE,Crear y jugar,Create and play
+UI_COMPANY_SLOTS_OPTIONS_TITLE,Opciones de %s,Options for %s
+UI_COMPANY_SLOTS_SAVE,Guardar,Save
+UI_COMPANY_OPT_ASSISTED_PACKING,Armado asistido,Assisted packing
+UI_COMPANY_OPT_ASSISTED_PACKING_DESC,"Al poner la cinta, la mesa de armado completa sola el relleno y cierra la caja.","Taping a box makes the packing table add the filler and close it for you."
+UI_COMPANY_OPT_ASSISTED_PACKING_SHORT,Asistido,Assisted
+UI_COMPANY_OPT_CALM_DAYS,Días tranquilos,Calm days
+UI_COMPANY_OPT_CALM_DAYS_DESC,"Sin eventos del día: solo pedidos, stock y ruta.","No daily events: just orders, stock and the road."
+UI_COMPANY_OPT_CALM_DAYS_SHORT,Tranquilo,Calm
 UI_MENU_COMPANY,Modo Empresa (en pruebas),Company mode (testing)
 UI_MENU_ENDLESS,Modo Endless,Endless mode
 UI_MENU_ERROR_CONNECTION,No se pudo completar la conexión. Revisá la dirección e intentá de nuevo.,Couldn't complete the connection. Check the address and try again.
@@ -462,6 +480,7 @@ UI_MENU_PAGE_HOME,¿LISTOS PARA REPARTIR?,READY TO DELIVER?
 UI_MENU_PAGE_JOIN,UNIRSE A UNA SALA,JOIN A ROOM
 UI_MENU_PAGE_GARAGE,GARAJE,GARAGE
 UI_MENU_PAGE_PLAY,¿CÓMO SALIMOS HOY?,HOW ARE WE HEADING OUT?
+UI_MENU_PAGE_COMPANY,MODO EMPRESA,COMPANY MODE
 UI_MENU_PLAY,¡JUGAR!,PLAY!
 UI_MENU_QUIT,Salir,Quit
 UI_MENU_SOLO,Jugar solo,Play solo
