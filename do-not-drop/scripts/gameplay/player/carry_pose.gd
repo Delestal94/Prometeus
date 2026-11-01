@@ -8,6 +8,11 @@ var _solvers: Array[SkeletonIK3D] = []
 var _targets: Array[Marker3D] = []
 var _hand_basis: Array[Basis] = []
 var _weight: float = 0.0
+## 0..1: the hands press in on the box's sides while their owner steadies it (player_hold_pose.gd,
+## S-205): a few centimetres, written by that node each frame and eased there, not here.
+var squeeze: float = 0.0
+## How far (m) the palms pull in at full squeeze: from just off the box to touching it.
+const SQUEEZE_IN: float = 0.025
 
 
 func setup(player: Node3D, skeleton: Skeleton3D) -> void:
@@ -31,7 +36,7 @@ func update_pose(package: Node3D, elapsed: float, delta: float) -> void:
 		var side: float = -1.0 if i == 0 else 1.0
 		var half: Vector3 = package.get_half_extents()
 		# Contact the upper near corners: the palm remains outside the box.
-		var contact: Vector3 = package.to_global(Vector3(side * (half.x + 0.025),
+		var contact: Vector3 = package.to_global(Vector3(side * (half.x + 0.025 - SQUEEZE_IN * squeeze),
 			minf(half.y * 0.65, 0.16), half.z * 0.72))
 		# Fingertips extend beyond the wrist. Leave room along the finger axis.
 		contact += package.global_basis.z * 0.065

@@ -256,6 +256,7 @@ func _physics_process(delta: float) -> void:
 	care.recent_hit = maxf(0.0, care.recent_hit - delta)
 	if _is_run_active() and not _consumed and _registered_for_run():
 		_simulate_cargo(delta)
+	else: PackageRescue.clear_steadying(self) # S-205: no frozen grips after the run
 	_publish_net_state()
 	# Continuous collision only while loose, or thrown about the bay: riding along with it on, a box was swept
 	# out through the shut rear doors (playtest 2026-09-27, see Vehicle.needs_sweep()).

@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_player_vfx.gd" id="14_gel_vfx"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/gel/gel_player_audio.gd" id="15_gel_audio"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_phone_prop.gd" id="16_phone_prop"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_hold_pose.gd" id="17_hold_pose"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -137,6 +138,9 @@ script = ExtResource("11_face_reactions")
 
 [node name="PlayerPhoneProp" type="Node3D" parent="."]
 script = ExtResource("16_phone_prop")
+
+[node name="PlayerHoldPose" type="Node3D" parent="."]
+script = ExtResource("17_hold_pose")
 
 [node name="GelEffects" type="Node" parent="."]
 script = ExtResource("10_gel_effects")
