@@ -15,6 +15,7 @@ extends SceneTree
 ## - with the gamepad: d-pad right raises it, RB goes to the Supplier sheet whose first plus takes the focus,
 ##   d-pad right on the plus (the right edge of the row) keeps the focus there and the clipboard raised,
 ##   d-pad left goes to the minus and d-pad down to the next row, B stows it;
+## - PlayerHeldTool.set_held() leaves a copy of another peer's player alone (only the owner writes);
 ## - busy hands: units in this peer's hands, a seat, the phone up or the build mode keep it in; raised, units
 ##   coming into the hands put it away; the build mode does not start while it is raised (ShedBuilder.busy);
 ## - the shed's supplier board is a shortcut that raises it on the Supplier sheet, and the board's close()
@@ -51,7 +52,10 @@ func _expect(cond: bool, msg: String) -> void:
 func _test_actions() -> void:
 	CompanyClipboard.ensure_actions()
 	CompanyClipboard.ensure_actions()
-	for action: StringName in [CompanyClipboard.ACTION_TOGGLE, CompanyClipboard.ACTION_PREV, CompanyClipboard.ACTION_NEXT]:
+	var actions: Array[StringName] = [
+		CompanyClipboard.ACTION_TOGGLE, CompanyClipboard.ACTION_PREV, CompanyClipboard.ACTION_NEXT,
+	]
+	for action: StringName in actions:
 		var keys: int = 0
 		var pads: int = 0
 		for event: InputEvent in InputMap.action_get_events(action):
@@ -137,6 +141,14 @@ func _test_keyboard(level: CompanyRoot, clip: CompanyClipboard) -> void:
 		"I raises it on the Stock sheet")
 	_expect(not level.player.is_processing_unhandled_input(), "...the player's input is off")
 	_expect(held.get(&"held_tool") == &"clipboard_up", "...the others see it raised (held_tool)")
+	var board: Node = held.call(&"board")
+	_expect(board == null or board.is_inside_tree(), "...its board hangs from the hand once the rig is up")
+	var copy: Node = (load("res://scripts/gameplay/player/player_held_tool.gd") as GDScript).new()
+	copy.set_multiplayer_authority(4242)
+	root.add_child(copy)
+	copy.call(&"set_held", &"clipboard_up")
+	_expect(copy.get(&"held_tool") == &"", "a copy of another peer's player is not written here")
+	copy.free()
 	_expect(level.stock_board.is_open() and not level.supplier_board.is_open(), "...only the Stock sheet draws")
 	root.push_input(_key(KEY_E))
 	_expect(clip.current_sheet() == CompanyClipboard.SHEET_SUPPLIER and level.supplier_board.is_open()

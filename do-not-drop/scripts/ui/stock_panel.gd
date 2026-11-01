@@ -20,7 +20,7 @@ class_name StockPanel
 ##
 ## Embedded (set_embedded(), D-1902) it is the Stock sheet of the clipboard (ClipboardFrame): no dark
 ## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
-## close sound; the frame asks for the focus (focus_first()).
+## close sound. Opened, it takes the focus as always.
 
 signal closed
 
@@ -49,9 +49,8 @@ func open(ctx: Dictionary) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	refresh(ctx)
 	show()
-	if embedded:
-		return
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_focus_first.call_deferred()
 
 
@@ -77,10 +76,6 @@ func set_embedded(on: bool) -> void:
 	_close_button = null
 	_build()
 
-
-## Puts the focus on the first row (on Close, or nowhere when embedded, with an empty list).
-func focus_first() -> void:
-	_focus_first()
 
 
 ## Redraws the list from `ctx`. The focus stays on the same product when it is still listed.

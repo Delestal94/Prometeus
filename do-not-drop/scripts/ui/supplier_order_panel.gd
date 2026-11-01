@@ -26,7 +26,7 @@ class_name SupplierOrderPanel
 ##
 ## Embedded (set_embedded(), D-1902) it is the Supplier sheet of the clipboard (ClipboardFrame): no dark
 ## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
-## close sound; the frame asks for the focus (focus_first()).
+## close sound. Opened, it takes the focus as always.
 
 ## The order of `lines` ([{product, qty}]) is in the calendar for the truck of `arrival_day`: right away
 ## with submit(), or when placed() says the host applied the request (D-0603.b.2).
@@ -77,9 +77,8 @@ func open(ctx: Dictionary) -> void:
 		_status_key = "UI_SUPPLIER_SENT"
 	refresh(ctx)
 	show()
-	if embedded:
-		return
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_focus_first.call_deferred()
 
 
@@ -106,10 +105,6 @@ func set_embedded(on: bool) -> void:
 	_build()
 	refresh(_ctx)
 
-
-## Puts the focus on the first row's plus (Order or Close without rows).
-func focus_first() -> void:
-	_focus_first()
 
 
 ## Redraws the rows and totals from `ctx`; the cart keeps whatever was already in it.

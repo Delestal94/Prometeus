@@ -23,8 +23,13 @@ const CLIPBOARD_COLOR: Color = Color("8a5a2b")
 ## Where the board's centre rests, in the hand bone's frame (+Y along the fingers, -Z out of the palm).
 const BOARD_IN_HAND: Vector3 = Vector3(0.0, 0.1, -0.03)
 
-## What the hand holds (NONE, CLIPBOARD or CLIPBOARD_UP); see the class doc.
-var held_tool: StringName = NONE
+## What the hand holds (NONE, CLIPBOARD or CLIPBOARD_UP); see the class doc. The synchronizer writes it
+## through this setter too, so a peer draws the board only while something is held (no work per frame
+## with an empty hand).
+var held_tool: StringName = NONE:
+	set(value):
+		held_tool = value
+		set_process(true)
 
 var _player: Player
 var _skeleton: Skeleton3D
@@ -34,6 +39,8 @@ var _board: MeshInstance3D
 
 func _ready() -> void:
 	_player = get_parent() as Player
+	# A late joiner's spawn may set held_tool before this runs.
+	set_process(is_holding())
 
 
 ## True when the hand holds something.
@@ -46,14 +53,19 @@ func board() -> MeshInstance3D:
 	return _board if _board != null and _board.visible else null
 
 
-## Owner only: what its hand holds now. Nothing changes (and nothing goes out) when it is the same.
+## Owner only: what its hand holds now. Nothing changes (and nothing goes out) when it is the same; a copy
+## of another peer's player is left alone (the owner's next delta would undo it).
 func set_held(what: StringName) -> void:
+	if is_inside_tree() and not is_multiplayer_authority():
+		return
 	if held_tool != what:
 		held_tool = what
 
 
 func _process(_delta: float) -> void:
 	update_board()
+	if not is_holding():
+		set_process(false)
 
 
 ## Builds the board the first time it is needed and shows it while something is held and the rig is free.

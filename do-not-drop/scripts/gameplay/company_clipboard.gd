@@ -12,7 +12,8 @@ extends Node
 ##
 ## Controls (§4): `company_clipboard` (I, gamepad d-pad right: only to raise it) raises and stows it;
 ## `company_clipboard_prev` / `_next` (Q / E, LB / RB) or a click on a tab change sheet; Esc (`ui_cancel`,
-## `ui_pause`) or B (`company_clipboard_stow`: this project's ui_cancel has no gamepad button) stows it. Raised, it takes those in _input before anything else: LB / RB are also
+## `ui_pause`) or B (`company_clipboard_stow`: this project's ui_cancel has no gamepad button) stows it.
+## Raised, it takes those in _input before anything else: LB / RB are also
 ## phone_toggle, phone_shutter and the gears, Esc is the pause (it stows and does not open it). The d-pad right
 ## raised is left to the sheet's focus (the right edge of a ± row stays on its plus): with the gamepad one
 ## leaves with B.
@@ -219,7 +220,7 @@ func stow() -> void:
 	_held_by = null
 
 
-## Shows `sheet` (raised): its board draws it, the others stop, its first control takes the focus.
+## Shows `sheet` (raised): its board draws it (its panel takes the focus), the others stop.
 func show_sheet(sheet: StringName) -> void:
 	if not frame.mark(sheet):
 		return
@@ -232,9 +233,6 @@ func show_sheet(sheet: StringName) -> void:
 			stock_board.show_sheet()
 		SHEET_SUPPLIER:
 			supplier_board.show_sheet()
-	var panel: Control = _panel_of(sheet)
-	if panel != null and panel.has_method(&"focus_first"):
-		panel.call_deferred(&"focus_first")
 
 
 ## Turns `step` sheets over (+1 next, -1 previous), wrapping around.
@@ -259,7 +257,8 @@ func hands_busy() -> bool:
 	if building.is_valid() and bool(building.call()):
 		return true
 	var me: int = _peer()
-	if net != null and net.inventory != null and not net.inventory.contents_at(CompanyNet.hands_location(me)).is_empty():
+	var hands: StringName = CompanyNet.hands_location(me)
+	if net != null and net.inventory != null and not net.inventory.contents_at(hands).is_empty():
 		return true
 	var grip: Node = grip_of.call() as Node if grip_of.is_valid() else null
 	return grip != null and bool(grip.call(&"is_gripping", me))
@@ -304,15 +303,6 @@ func _hide_sheets() -> void:
 		stock_board.hide_sheet()
 	if supplier_board != null:
 		supplier_board.hide_sheet()
-
-
-func _panel_of(sheet: StringName) -> Control:
-	match sheet:
-		SHEET_STOCK:
-			return stock_board.panel if stock_board != null else null
-		SHEET_SUPPLIER:
-			return supplier_board.panel if supplier_board != null else null
-	return null
 
 
 func _update_hint() -> void:
