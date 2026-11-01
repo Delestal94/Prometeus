@@ -23,6 +23,10 @@ class_name SupplierOrderPanel
 ##
 ## Gamepad first: rows are two buttons (minus, plus) in a grid of focus neighbours, then Order and
 ## Close. Every state has a mark besides its colour: "+" more, "−" less, "✓" ordered.
+##
+## Embedded (set_embedded(), D-1902) it is the Supplier sheet of the clipboard (ClipboardFrame): no dark
+## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
+## close sound. Opened, it takes the focus as always.
 
 ## The order of `lines` ([{product, qty}]) is in the calendar for the truck of `arrival_day`: right away
 ## with submit(), or when placed() says the host applied the request (D-0603.b.2).
@@ -31,6 +35,9 @@ signal closed
 
 ## Units added or removed by one press of plus / minus.
 const STEP: int = 1
+
+## A sheet of the clipboard (see the class doc); set_embedded() changes it.
+var embedded: bool = false
 
 var _ctx: Dictionary = {}
 var _rows: Dictionary = {}
@@ -70,14 +77,34 @@ func open(ctx: Dictionary) -> void:
 		_status_key = "UI_SUPPLIER_SENT"
 	refresh(ctx)
 	show()
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_focus_first.call_deferred()
 
 
 func close() -> void:
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
+
+
+## Turns the sheet mode on or off (see the class doc), rebuilding what is drawn when it changes. The cart, the
+## status line and an order awaited stay.
+func set_embedded(on: bool) -> void:
+	if embedded == on:
+		return
+	embedded = on
+	if _rows_box == null:
+		return
+	for child: Node in get_children():
+		remove_child(child)
+		child.queue_free()
+	_rows.clear()
+	_close_button = null
+	_build()
+	refresh(_ctx)
+
 
 
 ## Redraws the rows and totals from `ctx`; the cart keeps whatever was already in it.
@@ -235,23 +262,33 @@ static func reason_text(key: String, args: Array) -> String:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(UiTheme.BACKDROP, 0.86)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	var column: VBoxContainer = UiTheme.panel(center, Vector2(700, 0), 22)
-	column.add_theme_constant_override("separation", 8)
-	UiTheme.title(column, tr("UI_SUPPLIER_TITLE"), 34)
+	if not embedded:
+		var dim := ColorRect.new()
+		dim.color = Color(UiTheme.BACKDROP, 0.86)
+		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(dim)
+	var column: VBoxContainer
+	if embedded:
+		# The clipboard's frame is the card: the sheet fills it and its list takes what is left (D-1902).
+		column = VBoxContainer.new()
+		column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(column)
+	else:
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(center)
+		column = UiTheme.panel(center, Vector2(700, 0), 22)
+	column.add_theme_constant_override("separation", 6 if embedded else 8)
+	if not embedded:
+		UiTheme.title(column, tr("UI_SUPPLIER_TITLE"), 34)
 	_supplier_label = UiTheme.label(column, "", 19, UiTheme.INK, true)
 	_supplier_label.name = "Supplier"
 	_already_label = UiTheme.label(column, "", 16, UiTheme.INK)
 	_already_label.name = "Already"
-	UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
+	if not embedded:
+		UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(0, 250)
+	_scroll.custom_minimum_size = Vector2(0, 60 if embedded else 250)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true
@@ -276,6 +313,8 @@ func _build() -> void:
 	_order_button.name = "Order"
 	_order_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_order_button.pressed.connect(confirm)
+	if embedded:
+		return
 	_close_button = UiTheme.button(buttons, tr("UI_SUPPLIER_CLOSE"))
 	_close_button.name = "Close"
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -377,7 +416,7 @@ func _status_line(cart: SupplierOrderCart) -> String:
 
 
 ## Focus grid: minus and plus side by side on each row, rows top to bottom, then Order (when on)
-## and Close.
+## and Close (none embedded). The plus is the right edge of its row: right stays on it.
 func _link_focus() -> void:
 	var rows: Array[Dictionary] = []
 	for product: StringName in _product_ids(_cart()):
@@ -386,12 +425,14 @@ func _link_focus() -> void:
 	var tail: Array[Control] = []
 	if not _order_button.disabled:
 		tail.append(_order_button)
-	tail.append(_close_button)
+	if _close_button != null:
+		tail.append(_close_button)
 	for i: int in rows.size():
 		for key: String in ["less", "more"]:
 			var node: Button = rows[i][key]
 			var above: Control = rows[i - 1][key] if i > 0 else node
-			var below: Control = rows[i + 1][key] if i + 1 < rows.size() else tail[0]
+			var last: Control = tail[0] if not tail.is_empty() else node
+			var below: Control = rows[i + 1][key] if i + 1 < rows.size() else last
 			node.focus_neighbor_top = node.get_path_to(above)
 			node.focus_neighbor_bottom = node.get_path_to(below)
 			node.focus_neighbor_left = node.get_path_to(rows[i]["less"])
@@ -410,8 +451,10 @@ func _focus_first() -> void:
 	var ids: Array[StringName] = _product_ids(cart)
 	if not ids.is_empty() and _rows.has(ids[0]):
 		(_rows[ids[0]]["more"] as Button).grab_focus()
-	else:
+	elif _close_button != null:
 		_close_button.grab_focus()
+	elif not _order_button.disabled:
+		_order_button.grab_focus()
 
 
 ## The products the supplier sells that are in the catalog, in id order.
@@ -449,6 +492,6 @@ func _clear_status() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
+	if visible and not embedded and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
 		close()
 		get_viewport().set_input_as_handled()

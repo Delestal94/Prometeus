@@ -115,7 +115,9 @@ gana la última petición que llega al host.
   `spawn = true` y `replication_mode = 2` (solo al cambiar; el que entra tarde la recibe). Sube
   `PROTOCOL_VERSION` (convenciones-godot §6); `test_company_bandwidth_budget` sigue verde. `player.gd` y
   `player.tscn` son de Slatex: aviso en `docs/avisos/` en el PR de D-1902. No se reusa `anim_state`
-  (`PlayerAnimator` lo pisa cada cuadro).
+  (`PlayerAnimator` lo pisa cada cuadro). **Hecho (D-1902):** la propiedad vive en el nodo hijo
+  `PlayerHeldTool` (`PlayerHeldTool:held_tool`, `player_held_tool.gd`, que también dibuja la tabla), para no
+  pasar el límite de líneas de `player.gd`; `PROTOCOL_VERSION` 64.
 - **Nada al save ni al snapshot.** La hoja abierta se recuerda en memoria mientras dura el mundo.
 - Fuera del modo Empresa (Entrega, Endless) la tecla no hace nada.
 - **Presentación.** Los demás ven un `BoxMesh` marrón de 0,23 × 0,32 × 0,01 m en un `BoneAttachment3D` de

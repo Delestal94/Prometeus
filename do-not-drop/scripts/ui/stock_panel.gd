@@ -17,8 +17,15 @@ class_name StockPanel
 ##
 ## Gamepad first: rows are buttons in one focus column (so a long list scrolls with ui_down)
 ## ending in Close; with an empty list the focus starts on Close. ui_cancel / ui_pause close it.
+##
+## Embedded (set_embedded(), D-1902) it is the Stock sheet of the clipboard (ClipboardFrame): no dark
+## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
+## close sound. Opened, it takes the focus as always.
 
 signal closed
+
+## A sheet of the clipboard (see the class doc); set_embedded() changes it.
+var embedded: bool = false
 
 var _ctx: Dictionary = {}
 var _rows: Dictionary = {}
@@ -42,14 +49,33 @@ func open(ctx: Dictionary) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	refresh(ctx)
 	show()
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_focus_first.call_deferred()
 
 
 func close() -> void:
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
+
+
+## Turns the sheet mode on or off (see the class doc), rebuilding what is drawn when it changes.
+func set_embedded(on: bool) -> void:
+	if embedded == on:
+		return
+	embedded = on
+	if _rows_box == null:
+		return
+	for child: Node in get_children():
+		remove_child(child)
+		child.queue_free()
+	_rows.clear()
+	_order.clear()
+	_close_button = null
+	_build()
+
 
 
 ## Redraws the list from `ctx`. The focus stays on the same product when it is still listed.
@@ -116,19 +142,28 @@ func totals_text() -> String:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(UiTheme.BACKDROP, 0.86)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	var column: VBoxContainer = UiTheme.panel(center, Vector2(700, 0), 22)
-	column.add_theme_constant_override("separation", 8)
-	UiTheme.title(column, tr("UI_STOCK_TITLE"), 34)
+	if not embedded:
+		var dim := ColorRect.new()
+		dim.color = Color(UiTheme.BACKDROP, 0.86)
+		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(dim)
+	var column: VBoxContainer
+	if embedded:
+		# The clipboard's frame is the card: the sheet fills it and its list takes what is left (D-1902).
+		column = VBoxContainer.new()
+		column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(column)
+	else:
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(center)
+		column = UiTheme.panel(center, Vector2(700, 0), 22)
+	column.add_theme_constant_override("separation", 6 if embedded else 8)
+	if not embedded:
+		UiTheme.title(column, tr("UI_STOCK_TITLE"), 34)
 	UiTheme.label(column, tr("UI_STOCK_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(0, 300)
+	_scroll.custom_minimum_size = Vector2(0, 100 if embedded else 300)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true
@@ -139,9 +174,10 @@ func _build() -> void:
 	_scroll.add_child(_rows_box)
 	_totals_label = UiTheme.label(column, "", 16, UiTheme.MUTED)
 	_totals_label.name = "Totals"
-	_close_button = UiTheme.button(column, tr("UI_STOCK_CLOSE"), true)
-	_close_button.name = "Close"
-	_close_button.pressed.connect(close)
+	if not embedded:
+		_close_button = UiTheme.button(column, tr("UI_STOCK_CLOSE"), true)
+		_close_button.name = "Close"
+		_close_button.pressed.connect(close)
 	refresh(_ctx)
 
 
@@ -170,12 +206,13 @@ func _mark(row: Dictionary) -> String:
 	return tr("UI_STOCK_SHORT") % row["missing"]
 
 
-## Focus column: rows top to bottom, then Close. Horizontal moves stay put.
+## Focus column: rows top to bottom, then Close (none embedded). Horizontal moves stay put.
 func _link_focus() -> void:
 	var chain: Array[Control] = []
 	for product: StringName in _order:
 		chain.append(_rows[product])
-	chain.append(_close_button)
+	if _close_button != null:
+		chain.append(_close_button)
 	for i: int in chain.size():
 		var node: Control = chain[i]
 		node.focus_neighbor_top = node.get_path_to(chain[maxi(i - 1, 0)])
@@ -186,7 +223,8 @@ func _link_focus() -> void:
 
 func _focus_first() -> void:
 	if _order.is_empty():
-		_close_button.grab_focus()
+		if _close_button != null:
+			_close_button.grab_focus()
 		return
 	(_rows[_order[0]] as Button).grab_focus()
 	# follow_focus runs before the new rows are laid out and left a long list at its end (D-0612
@@ -210,6 +248,6 @@ func _focused_product() -> StringName:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
+	if visible and not embedded and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
 		close()
 		get_viewport().set_input_as_handled()
