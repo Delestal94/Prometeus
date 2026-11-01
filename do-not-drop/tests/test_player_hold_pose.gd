@@ -366,7 +366,7 @@ func _check_blockers(player: Player, box: DeliveryPackage) -> void:
 	await _settle(player, pose)
 
 
-func _settle(player: Player, pose: Node3D) -> void:
+func _settle(_player: Player, pose: Node3D) -> void:
 	for _i: int in 6:
 		pose.update_pose(0.1)
 		await process_frame
