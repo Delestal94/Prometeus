@@ -27,7 +27,7 @@
 | D-1917 | Traducción al inglés de todo lo nuevo | constructor-ui | medium | `loc_text` completo |
 | D-1918 | Accesibilidad: daltonismo en requisitos y estados (incluye D-0447, D-0846, fusión de D-0112) | constructor-ui | medium | captura con filtros |
 | D-1919 | ✅ Modificadores de la empresa (armado asistido, días tranquilos) de [diseno/dificultad.md](diseno/dificultad.md) §6 (D-0127) | constructor-ui | medium | los tests de dificultad.md §6 verdes; captura de la empresa nueva y del resumen |
-| D-1920 | Test de que todo texto nuevo pasa por `tr()` (incluye D-0443, D-0649, D-0845, fusión de D-0112) | escritor-tests | low | test N-805 extendido |
+| D-1920 | ✅ Test de que todo texto nuevo pasa por `tr()` (incluye D-0443, D-0649, D-0845, fusión de D-0112) | escritor-tests | low | test N-805 extendido |
 
 ## Ampliación
 

@@ -507,7 +507,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   eventos del día (D-0123, pasa a la tarea que lo construya), las pantallas de empresa nueva y "Opciones" del slot
   (D-0235 / D-1904, hechas con D-1904), y en la mesa el aviso "Relleno insuficiente" y la ayuda "Cerrar (rellena solo)" (con la ayuda
   de la mesa del HUD de la Empresa).
-- [ ] **D-1920** Test de que todo texto nuevo pasa por `tr()`.
+- [x] **D-1920** Test de que todo texto nuevo pasa por `tr()`.
+  Rama `codex/D-1920-tr-coverage`: `tests/test_tr_coverage.gd` (amplía N-805: ningún literal con palabras llega a
+  un texto en pantalla sin clave, en todo `scripts/` y `modules/`; `tr()` solo de claves; toda clave de texto de
+  `data/**/*.tres` está en las tablas; las pantallas de la Empresa se arman en inglés sin restos en castellano).
+  Cubre D-0443 (los hitos entran solos al escaneo cuando existan), D-0649 (remitos) y D-0845 (pedidos). Quedan en
+  `LEGACY` tres textos de antes: "Entrega" y "%d pts" en `leaderboard_panel.gd` y `tr("None")` en `unlock_manager.gd`.
 - [ ] **D-1923** Celular del jugador con app de pedidos y mapa.
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
 - [ ] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
