@@ -83,13 +83,34 @@ func is_sealed() -> bool:
 
 ## Tapes the box on the table shut and pays the tape (PackagingSupplies.tape). False, changing
 ## nothing, if the table has no box, it is already taped or the wallet cannot pay.
-func seal(wallet: Object) -> bool:
+## With `fill` over 0 (Armado asistido, D-1919, dificultad.md §2.1) it first pads that many free cells
+## (assisted_cells() says how many) and marks the box assisted; the wallet must cover padding and tape
+## together, so the padding's money never leaves the box open.
+func seal(wallet: Object, fill: int = 0) -> bool:
 	if box == null or box.taped or not supplies.has(StationSupplies.TAPE):
 		return false
+	if fill > 0:
+		var cost: int = PackagingSupplies.fill_cost(fill) + CompanyTuning.TAPE_COST
+		if fill > supplies.count(StationSupplies.FILL) or wallet == null or not wallet.call(&"can_afford", cost):
+			return false
+		if pad(fill, wallet) != fill:
+			return false
+		box.assisted = true
 	if not PackagingSupplies.tape(box, wallet):
 		return false
 	supplies.take(StationSupplies.TAPE)
 	return true
+
+
+## Armado asistido (D-1919, dificultad.md §2.1): how many free cells the tape would pad with `money` in the
+## wallet: the free cells, the padding on hand and what is left after the tape, the least of the three. 0
+## without a box, with it taped or with no tape on the table.
+func assisted_cells(money: int) -> int:
+	if box == null or box.taped or not supplies.has(StationSupplies.TAPE):
+		return 0
+	var free: int = box.total_cells() - box.grid.size()
+	var afford: int = maxi(money - CompanyTuning.TAPE_COST, 0) / maxi(CompanyTuning.FILL_COST_PER_CELL, 1)
+	return maxi(mini(mini(free, supplies.count(StationSupplies.FILL)), afford), 0)
 
 
 ## Pads up to `cells` free cells of the box on the table and pays them (PackagingSupplies.pad),

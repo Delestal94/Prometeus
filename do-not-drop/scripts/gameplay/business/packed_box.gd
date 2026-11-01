@@ -33,6 +33,9 @@ var reviewed_by: StringName = &""
 var review_seal: int = 0
 ## Placed products, in order: {"product": StringName, "origin": Vector3i, "cells": Vector3i}.
 var items: Array[Dictionary] = []
+## Sealed with Armado asistido (D-1919): the tape padded its free cells. It cushions no better than the quick
+## match's automatic padding (BoxToPackage.absorption: at least ASSISTED_MIN_ABSORPTION).
+var assisted: bool = false
 
 
 func _init(size: StringName = &"M") -> void:
@@ -167,6 +170,7 @@ func to_dict() -> Dictionary:
 		"note_key": String(note_key),
 		"reviewed_by": String(reviewed_by),
 		"review_seal": review_seal,
+		"assisted": assisted,
 	}
 
 
@@ -193,6 +197,7 @@ static func from_dict(d: Dictionary) -> PackedBox:
 	box.ice_packs = clampi(int(d.get("ice_packs", 0)), 0, CompanyTuning.ICE_PACKS_MAX)
 	box.gift_wrapped = bool(d.get("gift_wrapped", false))
 	box.on_side = bool(d.get("on_side", false))
+	box.assisted = bool(d.get("assisted", false))
 	var note: StringName = StringName(str(d.get("note_key", "")))
 	box.note_key = note if note in CustomerNote.KEYS else &""
 	box.reviewed_by = StringName(str(d.get("reviewed_by", "")))
