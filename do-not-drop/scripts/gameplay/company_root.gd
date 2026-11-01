@@ -236,6 +236,7 @@ func _ready() -> void:
 	_add_builder()
 	_add_stock_board()
 	CompanyDispatch.add_to(self)
+	CompanyOnboardingTracker.add_to(self)
 	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()
@@ -338,8 +339,7 @@ func _open_company_day() -> void:
 	day_cycle.open_day(_hosted_state.day)
 
 
-## The closing screen (D-0508.2) on its own layer, opened by the day's SUMMARY phase on every peer.
-## EventBus by path: this script compiles before the autoloads in the --script tests (N-919).
+## The closing screen (D-0508.2), opened by SUMMARY on every peer; EventBus by path (N-919, --script tests).
 func _add_summary_panel() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "DaySummaryLayer"

@@ -22,7 +22,8 @@ extends SceneTree
 ##   in the stage's report), then DELIVERED at a house of the fixed map with the pay in the wallet and the
 ##   ledger as order_paid, taken back by the autopilot (K-turn, avenue, the yard's leg) into the yard
 ##   with the trip closed, nothing failed or out and the player off the wheel, the day in SUMMARY with
-##   the costs of the packing in its summary and saved); no stage is
+##   the costs of the packing in its summary and saved; the first week's guide, D-1901, ticked its six day-1
+##   objectives on the way); no stage is
 ##   pending any more (PENDING stays for the next one that is); a stage run out of order fails
 ##   with a reason, and so do a stage name that does not exist and a world that is not the
 ##   company's.
@@ -102,6 +103,11 @@ func _check_pure(bot: GDScript) -> void:
 
 
 func _check_world(bot: GDScript) -> void:
+	# D-1901: the guide starts from a profile that never saw it (a run before this one may have ticked it).
+	var unlocks: Node = root.get_node_or_null(^"/root/UnlockManager")
+	if unlocks != null:
+		for id: StringName in CompanyOnboarding.KEYS:
+			(unlocks.get(&"seen_tips") as Dictionary).erase(CompanyOnboarding.tip_id(id))
 	var level: Node3D = await bot.call(&"open_world", self)
 	_expect(level is CompanyRoot, "The company world opens (got %s)" % level)
 	var reached: bool = await bot.call(&"wait_opening", self, level, 10.0)
@@ -175,12 +181,25 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 				_check_delivered(root_level, ctx, money)
 			"return":
 				_check_returned(root_level, ctx)
+				_check_onboarding(root_level)
 			"close_day":
 				_check_closed(root_level, ctx)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
 	# drive and return move the real van in real-time physics: the autopilot's leg out of the yard and 20 m of
 	# street, a K-turn there and the way back.
 	_expect(seconds < 45.0, "The stages run in a bounded time (took %.1f s)" % seconds)
+
+
+## D-1901: the first week's guide followed the bot's day 1 on the real world and ticked the whole loop.
+func _check_onboarding(level: CompanyRoot) -> void:
+	var tracker: CompanyOnboardingTracker = level.get_node_or_null(^"Onboarding") as CompanyOnboardingTracker
+	_expect(tracker != null, "The world carries the first week's guide")
+	if tracker == null:
+		return
+	tracker.refresh()
+	for id: StringName in CompanyOnboarding.DAY_ONE:
+		_expect(tracker.is_done(id), "The bot's day 1 ticked the guide's %s" % id)
+	_expect(tracker.line().is_empty(), "...and no day-1 line is left (got %s)" % [tracker.line()])
 
 
 func _check_received(level: CompanyRoot, ctx: Dictionary) -> void:

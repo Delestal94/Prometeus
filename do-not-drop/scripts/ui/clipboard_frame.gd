@@ -28,6 +28,12 @@ const PAD_NAMES: Dictionary = {
 	JOY_BUTTON_START: "Start", JOY_BUTTON_BACK: "Back",
 }
 
+## Gamepad axes the foot names (triggers and sticks: drive_accelerate is RT).
+const PAD_AXES: Dictionary = {
+	JOY_AXIS_TRIGGER_LEFT: "LT", JOY_AXIS_TRIGGER_RIGHT: "RT",
+	JOY_AXIS_LEFT_X: "L", JOY_AXIS_LEFT_Y: "L", JOY_AXIS_RIGHT_X: "R", JOY_AXIS_RIGHT_Y: "R",
+}
+
 var _order: Array[StringName] = []
 var _titles: Dictionary = {}
 var _sheets: Dictionary = {}
@@ -147,6 +153,8 @@ static func action_label(action: StringName, pad: bool) -> String:
 	if not InputMap.has_action(action):
 		return "?"
 	for event: InputEvent in InputMap.action_get_events(action):
+		if pad and event is InputEventJoypadMotion:
+			return String(PAD_AXES.get((event as InputEventJoypadMotion).axis, "?"))
 		if pad and event is InputEventJoypadButton:
 			var button: int = (event as InputEventJoypadButton).button_index
 			return String(PAD_NAMES.get(button, str(button)))
