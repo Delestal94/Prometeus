@@ -12,6 +12,8 @@
     y guarda su día 1 en ese slot. "Abrir sala para amigos" hace lo mismo con `_host_session(AUTO, COMPANY_SCENE)`.
   - `translations/strings_ui.csv`: `UI_MENU_PAGE_COMPANY`, `UI_COMPANY_SLOTS_*` y `UI_COMPANY_OPT_*` (nombre,
     descripción y chip de cada modificador).
+  - `tests/test_company_root.gd` (de Nacho): el chequeo de texto del botón "Modo Empresa" busca ahora
+    `pressed.connect(_open_company_page)` (el botón abre la página, que juega por `_play_company()`).
 - **Qué tiene que hacer Nacho:** nada. Si `CompanyRoot` deja de respetar una `CompanyState` ya prendida al arrancar
   (hoy solo carga el slot cuando está apagada), la empresa nueva del menú dejaría de llevar su nombre y sus
   modificadores: `tests/test_company_slots_menu.gd` cubre el lado del menú.

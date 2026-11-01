@@ -172,7 +172,9 @@ func _run() -> void:
 	var menu_source: String = FileAccess.get_file_as_string("res://scripts/ui/main_menu.gd")
 	_expect(menu_source.contains(SCENE) and menu_source.contains("--mode=company"),
 		"The main menu opens this scene with --mode=company")
-	_expect(menu_source.contains("pressed.connect(_play_company)"), "The Play page has a Modo Empresa button")
+	# D-1904: the button opens the company page (slots), which plays through _play_company().
+	_expect(menu_source.contains("pressed.connect(_open_company_page)") and menu_source.contains("_play_company()"),
+		"The Play page has a Modo Empresa button")
 
 	level.queue_free()
 	await process_frame
