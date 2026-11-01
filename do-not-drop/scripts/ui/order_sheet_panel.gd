@@ -6,7 +6,8 @@ class_name OrderSheetPanel
 ##
 ## Draws what OrderSheet.build() returns and nothing else, so a client shows what the host
 ## sent. Every state has a mark besides its colour ("✓" done, "○" pending, "✗" wrong), so it
-## reads without colour. A pure display: no focus, no input.
+## reads without colour. A pure display: no focus, no input; only the stamp lines take the mouse, to
+## say what their requirement asks and pays as a tooltip (CompanyTooltips, D-1908).
 
 const DONE: String = "✓"
 const PENDING: String = "○"
@@ -53,9 +54,13 @@ func refresh(sheet: Dictionary) -> void:
 		if int(extra["qty"]) > 0 and not _has_item(sheet, extra["product"]):
 			_mark(text, false, true).name = "Extra_%s" % extra["product"]
 	for req: Dictionary in sheet.get("requirements", []):
+		var tip: String = CompanyTooltips.requirement_text(CompanyTooltips.load_requirement(StringName(req["id"])))
 		for seal: Dictionary in req["seals"]:
 			var seal_name: String = _seal_name(seal["kind"])
-			_mark(tr("UI_ORDER_SHEET_SEAL") % seal_name, bool(seal["done"]), false).name = "Seal_%s" % seal["kind"]
+			var line: Label = _mark(tr("UI_ORDER_SHEET_SEAL") % seal_name, bool(seal["done"]), false)
+			line.name = "Seal_%s" % seal["kind"]
+			line.tooltip_text = tip
+			line.mouse_filter = Control.MOUSE_FILTER_PASS
 	_mark(tr("UI_ORDER_SHEET_TAPE"), bool(sheet.get("taped", false)), false).name = "Tape"
 	_mark(tr("UI_ORDER_SHEET_LABEL"), bool(sheet.get("labeled", false)), false).name = "Label"
 	var minutes: int = int(sheet.get("minutes_left", 0))

@@ -484,7 +484,11 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).
 - [ ] **D-1906** Pantalla de despacho con estilo final.
 - [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
-- [ ] **D-1908** Tooltips de productos y requisitos.
+- [x] **D-1908** Tooltips de productos y requisitos.
+  Rama `codex/D-1908-tooltips`: `scripts/ui/company_tooltips.gd` (texto de producto: tamaño, peso, frágil, frío,
+  trampa y precios; de requisito: sello, calidad mínima, plazo y paga extra), tooltip y línea de detalle con el
+  foco en las hojas Stock y Proveedor (`stock_panel.gd`, `supplier_order_panel.gd`), tooltip en los sellos de
+  `order_sheet_panel.gd`; `tests/test_company_tooltips.gd`. Pendiente: la captura (sin pantalla en esta sesión).
 - [x] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
   Rama `codex/D-1909-company-pause-menu`: `scripts/ui/company_pause_menu.gd`, `tests/test_company_pause_menu.gd`.
 - [ ] **D-1910** Escalado de UI y Steam Deck.
