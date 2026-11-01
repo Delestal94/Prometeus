@@ -4,6 +4,11 @@ extends RefCounted
 
 const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 
+## Opt-in piece meta: scale the piece's x/z offset with its bone like its size (clothing worn over the torso).
+const SHELL_META: StringName = &"gel_fit_shell"
+## Rest height of the chest bone: the torso_length stretch of a shell piece pivots there.
+const SHELL_PIVOT_Y: float = 0.84
+
 var _pieces: Array[MeshInstance3D] = []
 var _base_transforms: Dictionary = {}
 var _last_values: Dictionary = {}
@@ -52,6 +57,12 @@ func apply(proportions: GelBodyProportions) -> bool:
 		var bone: StringName = piece.get_meta(&"gel_costume_bone")
 		var factors: Vector3 = _scale_for(bone, values)
 		var origin: Vector3 = _fit_origin(base.origin, bone, values)
+		if piece.has_meta(SHELL_META):
+			# A shell piece (S-305 vest) hangs off the torso surface: its offset grows with the body.
+			origin.x = base.origin.x * factors.x
+			origin.z = base.origin.z * factors.z
+			origin.y = (SHELL_PIVOT_Y + (base.origin.y - SHELL_PIVOT_Y) * float(values[&"torso_length"])) \
+				* float(values[&"total_height"])
 		piece.transform = Transform3D(base.basis.scaled_local(factors), origin)
 	_last_values = values.duplicate(true)
 	return true

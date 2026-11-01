@@ -62,6 +62,7 @@ var _face_hair_attachments: Array[BoneAttachment3D] = []
 var _costume: Node3D
 var _costume_fitter
 var _accessory: Node3D
+var _accessory_fitter
 
 
 func _ready() -> void:
@@ -106,6 +107,8 @@ func show_proportions(proportions: GelBodyProportions) -> void:
 	_fit_face_hair(proportions)
 	if _costume_fitter != null:
 		_costume_fitter.apply(proportions)
+	if _accessory_fitter != null:
+		_accessory_fitter.apply(proportions)
 	if _gel_jiggle != null:
 		_gel_jiggle.apply_proportions(proportions)
 
@@ -144,6 +147,9 @@ func show_cosmetics(
 	if accessory_id != &"none":
 		_accessory = AccessoryLibrary.build_accessory(accessory_id)
 		gel_mannequin.add_child(_accessory)
+		_accessory_fitter = CostumeFitter.new()
+		if not _accessory_fitter.setup(_accessory, gel_mannequin):
+			_accessory_fitter = null
 	var hat_rule: int = _strongest_hat_rule(
 		CostumeCatalog.costume(costume_id).get(&"hat_rule", &"none"),
 		AccessoryCatalog.accessory(accessory_id).get(&"hat_rule", &"none") if accessory_id != &"none" else &"none"
@@ -193,6 +199,7 @@ func _clear_cosmetics() -> void:
 	if is_instance_valid(_accessory):
 		_accessory.free()
 	_accessory = null
+	_accessory_fitter = null
 
 
 func proportion_application_count() -> int:
