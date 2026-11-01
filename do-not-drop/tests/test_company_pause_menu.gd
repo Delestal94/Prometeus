@@ -135,6 +135,15 @@ func _test_phase_changes_under_menu() -> void:
 	var cycle: FakeCycle = rig.cycle
 	var menu: CompanyPauseMenu = pause.menu()
 	pause.open_menu()
+	menu.close_day_button().grab_focus()
+	menu.close_day_button().pressed.emit()
+	menu._ask(&"")
+	menu.close_day_button().grab_focus()
+	cycle.fake_phase = DayCycle.Phase.CLOSING
+	menu.refresh()
+	_expect(menu.continue_button().has_focus(), "the focus on the button that turns off moves to Continue")
+	cycle.fake_phase = DayCycle.Phase.OPERATING
+	menu.refresh()
 	menu.close_day_button().pressed.emit()
 	cycle.fake_phase = DayCycle.Phase.CLOSING
 	menu.refresh()

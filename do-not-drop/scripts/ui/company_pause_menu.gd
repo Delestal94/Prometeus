@@ -113,6 +113,9 @@ func refresh() -> void:
 	# Godot's focus moves land on a disabled button too: off, it leaves the column.
 	var focusable: bool = not _close_button.disabled
 	if focusable != (_close_button.focus_mode != Control.FOCUS_NONE):
+		# Turned off under the gamepad's focus (20:00 came): the focus moves up, not into nothing.
+		if not focusable and _close_button.has_focus():
+			_continue_button.grab_focus()
 		_close_button.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 		_link_main_focus()
 	_close_hint.text = String(state["hint"])
