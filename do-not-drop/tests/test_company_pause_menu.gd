@@ -12,6 +12,9 @@ extends SceneTree
 ## - With another peer the menu is soft (the world goes on, "MENU"); a client sees the button off with
 ##   "The host closes the day" under it and no warning.
 ## - EventBus.pause_requested still toggles the real pause and shows the menu.
+## - The day's summary closes a soft menu (it would sit over the summary and take its Esc / A).
+## - Under the menu the stock list's and build mode's keys are off, and only those it switched off
+##   come back; leaving the world from the pause leaves the cursor free for the main menu.
 
 const START_TICK: int = 1_000_000
 
@@ -51,6 +54,9 @@ func _run() -> void:
 	_test_phase_changes_under_menu()
 	_test_soft_and_client()
 	_test_pause_requested()
+	_test_summary_closes_soft_menu()
+	_test_world_keys_held()
+	_test_leaving_frees_the_mouse()
 	paused = false
 	if _failures == 0:
 		print("PASS: the company pause menu pauses alone, closes the day after asking, warns before the exits"
@@ -155,6 +161,10 @@ func _test_soft_and_client() -> void:
 	_expect(menu.close_day_button().disabled and menu.close_day_hint() == tr(DayClose.HOST_ONLY_KEY),
 		"a client: Close the day is off, \"%s\" under it" % menu.close_day_hint())
 	_expect(menu.exit_warning_text().is_empty(), "a client loses nothing by leaving: no warning")
+	var options: Node = menu.menu_button().get_parent().get_node(^"Options")
+	_expect(menu.close_day_button().focus_mode == Control.FOCUS_NONE
+		and menu.continue_button().focus_neighbor_bottom == menu.continue_button().get_path_to(options),
+		"the gamepad skips the button that is off: Continue goes down to Options")
 	menu.close_day_button().pressed.emit()
 	_expect(menu.asking() == &"" and cycle.phase() == DayCycle.Phase.OPERATING, "pressing it does nothing")
 	menu.continue_button().pressed.emit()
@@ -171,6 +181,65 @@ func _test_pause_requested() -> void:
 	root.get_node(^"EventBus").emit_signal(&"pause_requested")
 	_expect(not paused and not pause.menu_open(), "a second one resumes and hides it")
 	_free(rig)
+
+
+func _test_summary_closes_soft_menu() -> void:
+	var rig: Dictionary = _rig(DayCycle.Phase.OPERATING, true)
+	var pause: CompanySoloPause = rig.pause
+	_others = 1
+	pause.open_menu()
+	_expect(pause.menu_open() and not paused, "the host's soft menu is up with a crew")
+	root.get_node(^"EventBus").emit_signal(&"company_day_summary", 1, {})
+	_expect(not pause.menu_open(), "the day's summary closes it, so the summary gets the screen and its keys")
+	_others = 0
+	_free(rig)
+
+
+func _test_world_keys_held() -> void:
+	var world := Node.new()
+	root.add_child(world)
+	var board := StockBoard.new()
+	var builder := ShedBuilder.new()
+	world.add_child(board)
+	world.add_child(builder)
+	var clock := GameClock.new()
+	clock.ticks = func() -> int: return _tick
+	world.add_child(clock)
+	clock.start()
+	var cycle := FakeCycle.new()
+	var pause := CompanySoloPause.create(clock, cycle)
+	pause.peers_other = func() -> int: return _others
+	world.add_child(pause)
+	_expect(board.is_processing_unhandled_input() and builder.is_processing_unhandled_input(),
+		"the stock list's and the build mode's keys run in the world")
+	pause.open_menu()
+	_expect(not board.is_processing_unhandled_input() and not builder.is_processing_unhandled_input(),
+		"under the menu they are off: nothing opens under it, nothing is sold in a pause")
+	pause.close_menu()
+	_expect(board.is_processing_unhandled_input() and builder.is_processing_unhandled_input(),
+		"closing the menu turns them back on")
+	builder.set_process_unhandled_input(false)
+	pause.open_menu()
+	pause.close_menu()
+	_expect(not builder.is_processing_unhandled_input(), "one the menu did not switch off stays off")
+	paused = false
+	world.free()
+	cycle.free()
+
+
+func _test_leaving_frees_the_mouse() -> void:
+	var rig: Dictionary = _rig(DayCycle.Phase.OPERATING, true)
+	var pause: CompanySoloPause = rig.pause
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	var mouse_sticks: bool = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	_esc(pause)
+	pause.get_parent().remove_child(pause)
+	_expect(not paused, "leaving the world from the pause leaves the tree running")
+	_expect(not mouse_sticks or Input.mouse_mode == Input.MOUSE_MODE_VISIBLE,
+		"...and the cursor free for the menu, not the world's captured one")
+	root.add_child(pause)
+	_free(rig)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 func _esc(pause: CompanySoloPause) -> void:

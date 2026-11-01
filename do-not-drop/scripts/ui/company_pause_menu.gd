@@ -82,7 +82,7 @@ func close() -> void:
 	if not visible:
 		return
 	if _options != null and _options.visible:
-		_options.hide()
+		_options.call(&"close")
 	_asking = &""
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
@@ -110,6 +110,11 @@ func refresh() -> void:
 	var state: Dictionary = DayClose.button(day_cycle)
 	_close_button.text = String(state["text"])
 	_close_button.disabled = not bool(state["enabled"])
+	# Godot's focus moves land on a disabled button too: off, it leaves the column.
+	var focusable: bool = not _close_button.disabled
+	if focusable != (_close_button.focus_mode != Control.FOCUS_NONE):
+		_close_button.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
+		_link_main_focus()
 	_close_hint.text = String(state["hint"])
 	_close_hint.visible = not _close_hint.text.is_empty()
 	var warning: String = DayClose.exit_warning(day_cycle)
@@ -123,8 +128,13 @@ func refresh() -> void:
 
 
 func _process(_delta: float) -> void:
-	if visible:
-		refresh()
+	if not visible:
+		return
+	refresh()
+	# The ping wheel captures the mouse when released under a soft menu: the cursor stays free (and
+	# so the player takes no input) while the menu is up.
+	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 # --- What the tests and the gamepad read ---------------------------------------------------------
@@ -231,6 +241,10 @@ func _leave(kind: StringName) -> void:
 	# The company world marks its day interrupted as it closes (CompanyRoot): nothing to save here.
 	var net: Node = get_node_or_null(^"/root/NetworkManager")
 	if net != null and bool(net.call(&"is_online")):
+		# Offline, a client's mirror would answer as the host until the scene goes (as
+		# CompanyRoot._on_host_lost): the world stops first.
+		if tree.current_scene != null:
+			tree.current_scene.process_mode = Node.PROCESS_MODE_DISABLED
 		net.call(&"leave_session")
 	tree.change_scene_to_file.call_deferred(MAIN_MENU_SCENE)
 
@@ -292,8 +306,16 @@ func _build() -> void:
 	_confirm_no.pressed.connect(_ask.bind(&""))
 	_confirm.hide()
 
-	_link_focus([_continue_button, _close_button, _options_button, _menu_button, _quit_button])
+	_link_main_focus()
 	_link_focus([_confirm_no, _confirm_yes])
+
+
+func _link_main_focus() -> void:
+	var chain: Array[Control] = [_continue_button]
+	if _close_button.focus_mode != Control.FOCUS_NONE:
+		chain.append(_close_button)
+	chain.append_array([_options_button, _menu_button, _quit_button])
+	_link_focus(chain)
 
 
 func _open_options() -> void:
@@ -305,7 +327,7 @@ func _open_options() -> void:
 	_options.call(&"open")
 
 
-## One focus column; a disabled button is skipped by Godot's own focus moves.
+## One focus column; a disabled button leaves it through its focus_mode (refresh()).
 func _link_focus(chain: Array[Control]) -> void:
 	for i: int in chain.size():
 		var node: Control = chain[i]

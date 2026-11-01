@@ -12,3 +12,6 @@
   `UI_COMPANY_SOFT_PAUSE_BODY`.
 - **Qué tiene que hacer Nacho:** nada. `company_root.gd` no cambió. Cuando exista el HUD de la Empresa, su pausa
   puede seguir emitiendo `EventBus.pause_requested` o llamar a `open_menu()`.
+- **Mientras el menú está abierto**, `CompanySoloPause` apaga `_unhandled_input` de `StockBoard` y `ShedBuilder`
+  (sus hermanos en `CompanyRoot`) y los vuelve a prender al cerrarlo. Además cierra el menú cuando llega
+  `company_day_summary`, y al salir del mundo desde la pausa deja el cursor libre (antes volvía capturado).

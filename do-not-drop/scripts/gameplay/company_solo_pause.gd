@@ -33,6 +33,8 @@ var _paused: bool = false
 var _paused_clock: bool = false
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _menu: CompanyPauseMenu = null
+## World nodes whose keys the open menu switched off (_hold_world_keys).
+var _held: Array[Node] = []
 
 
 ## The pause of this world's `clock` and `day_cycle`, ready to add as a child.
@@ -49,19 +51,29 @@ func _ready() -> void:
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"pause_requested", toggle)
+		# The day's summary takes the screen: an open menu would sit over it and swallow its Esc / A.
+		bus.connect(&"company_day_summary", _on_day_summary)
 	var net: Node = get_node_or_null(^"/root/NetworkManager")
 	if net != null and not peers_other.is_valid():
 		net.connect(&"roster_changed", _on_roster_changed)
 
 
 ## The world stops being paused when it is left (the next scene starts running), and the pause
-## unhooks from the roster. (It names no autoload: they are reached by path, lesson N-919.)
+## unhooks from the roster. (It names no autoload: they are reached by path, lesson N-919.) Leaving is
+## always for a menu: the cursor stays free, whatever the world had before the pause.
 func _exit_tree() -> void:
+	var was_open: bool = _paused or menu_open()
 	if _paused:
 		resume()
+	elif menu_open():
+		close_menu()
+	if was_open:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null and bus.is_connected(&"pause_requested", toggle):
 		bus.disconnect(&"pause_requested", toggle)
+	if bus != null and bus.is_connected(&"company_day_summary", _on_day_summary):
+		bus.disconnect(&"company_day_summary", _on_day_summary)
 	var net: Node = get_node_or_null(^"/root/NetworkManager")
 	if net != null and net.is_connected(&"roster_changed", _on_roster_changed):
 		net.disconnect(&"roster_changed", _on_roster_changed)
@@ -87,7 +99,7 @@ func open_menu() -> void:
 	if can_pause():
 		toggle()
 		return
-	_mouse_before = Input.mouse_mode
+	_save_mouse()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_show_menu(true)
 
@@ -99,6 +111,20 @@ func close_menu() -> void:
 	elif menu_open():
 		_show_menu(false)
 		Input.mouse_mode = _mouse_before
+
+
+## Esc only reaches the pause from the world (an open panel takes it first), where the mouse is
+## captured; a free one there is the ping wheel's, which captures it again on release.
+func _save_mouse() -> void:
+	var mode: Input.MouseMode = Input.mouse_mode
+	_mouse_before = Input.MOUSE_MODE_CAPTURED if mode == Input.MOUSE_MODE_VISIBLE else mode
+
+
+## The day reached its summary under an open menu (soft: a crew's 20:00): the menu goes so the summary
+## gets the screen, its focus and its keys.
+func _on_day_summary(_day: int, _summary: Dictionary) -> void:
+	if menu_open():
+		close_menu()
 
 
 func menu_open() -> bool:
@@ -134,7 +160,7 @@ func toggle() -> bool:
 	get_tree().paused = true
 	# A soft menu already open (a peer just left) keeps the mouse it saved.
 	if not menu_open():
-		_mouse_before = Input.mouse_mode
+		_save_mouse()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_show_menu(true)
 	return true
@@ -180,6 +206,27 @@ func _show_menu(shown: bool) -> void:
 		_menu.open(_paused)
 	else:
 		_menu.close()
+	_hold_world_keys(shown)
+
+
+## The world's own keys (the stock list's I, the build mode's B and its actions) run always and sit
+## later in the tree than this pause: while the menu is up they are switched off, so nothing opens
+## under it, no piece is sold in a pause and B backs out of the menu. Only the ones it switched off
+## come back on.
+func _hold_world_keys(hold: bool) -> void:
+	if hold:
+		var parent: Node = get_parent()
+		if parent == null:
+			return
+		for node: Node in parent.get_children():
+			if (node is ShedBuilder or node is StockBoard) and node.is_processing_unhandled_input():
+				node.set_process_unhandled_input(false)
+				_held.append(node)
+		return
+	for node: Node in _held:
+		if is_instance_valid(node):
+			node.set_process_unhandled_input(true)
+	_held.clear()
 
 
 func _ensure_menu() -> void:
