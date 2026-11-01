@@ -1,6 +1,8 @@
 # Grupo 18 — Modelos 3D y arte compartido
 
 > Fase **F1-F5** (gris primero, final después) · Dueño: Nacho · Depende de: D-0147, D-0148.
+> Excepción (2026-11-01): productos, embalaje, portapapeles y clientes son de Slatex (lista en
+> `docs/tareas-slatex.md`, sección "Expansión: tareas asignadas a Slatex").
 > Todo lo marcado `*` corre en la PC (rutina `sesion-arte`). Los modelos de cada vehículo y distrito
 > están en su grupo; acá van productos, embalaje, galpón, personas y bibliotecas compartidas.
 > Cada modelo: low-poly, pivote y escala listos para Godot, revisado con `check_pivots.gd` y una captura.

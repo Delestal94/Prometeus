@@ -1,6 +1,7 @@
 # Grupo 19 — UI, tutorial, audio y efectos
 
-> Fase **F1-F5** · Dueño: Nacho · Depende de: D-0130, D-0131.
+> Fase **F1-F5** · Dueño: Slatex (2026-11-01), menos D-1930, D-1931 y D-1936 (Nacho) · Depende de: D-0130, D-0131.
+> Lista en `docs/tareas-slatex.md`, sección "Expansión: tareas asignadas a Slatex".
 > Aviso: sí (`scripts/ui/` es de Slatex). Todo texto por `tr()` (N-805); todo navegable con mando.
 
 ## Núcleo

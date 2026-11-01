@@ -122,10 +122,12 @@ Las rutinas `desarrollador` toman tareas de `detalle/` y de las tablas de grupo,
 (F0 → F5). Si una tarea no tiene detalle, primero lo escriben, en el mismo PR. No se pasan a
 `docs/tareas-nacho.md`: esa lista sigue siendo de la rutina de construcción.
 
-## Dueño: Nacho (las 1000)
+## Dueño: Nacho, menos las asignadas a Slatex
 
-Pedido del usuario (2026-10-04): **todas las tareas de esta carpeta son de Nacho**; ninguna va a
-`docs/tareas-slatex.md`. Cuando una toca archivos de Slatex se hace igual, sin esperarlo, con el aviso
+Pedido del usuario (2026-10-04): las tareas de esta carpeta son de Nacho. Excepción (pedido de Slatex,
+2026-11-01): las de la sección "Expansión: tareas asignadas a Slatex" de `docs/tareas-slatex.md` (UI,
+audio y efectos del grupo 19, y productos, embalaje, portapapeles y clientes del grupo 18) las hace él;
+las rutinas no las toman. Siguen en sus tablas y se marcan ahí al cerrarlas. Cuando una toca archivos de Slatex se hace igual, sin esperarlo, con el aviso
 en `docs/avisos/` en el mismo commit (como ya se trabajan las `S-xxx` heredadas): armado y contenido del
 paquete (`scripts/gameplay/package/`), jugador (`scripts/gameplay/player/`), UI (`scripts/ui/`) y
 progresión heredada. `run_manager.gd`, `network_manager.gd`, `event_bus.gd` y `modules/` son zona
