@@ -9,7 +9,7 @@ extends RefCounted
 ## responsibility, where the details of each sound are documented:
 ##   SynthAudioVehicle   engine layers, impact, tyre screech, horn
 ##   SynthAudioTraps     the traps' cues (chime, groan, creak, slosh, tick, hiss)
-##   SynthAudioHandling  camera shutter, tape, cardboard, tension bed
+##   SynthAudioHandling  camera shutter, tape, cardboard, clipboard clip and sheet, tension bed
 ##   SynthAudioWorld     wind, rain, birds, crickets, road, crossing bell, roller door, reverse beep
 ##   SynthAudioAnimals   dog bark, sheep bleat
 ##   SynthAudioGel       footsteps by surface and the gel body's elastic foley
@@ -237,6 +237,21 @@ static func tape_rip() -> AudioStreamWAV:
 ## A cardboard flap folding over.
 static func cardboard_flap() -> AudioStreamWAV:
 	return _cached(&"cardboard_flap", SynthAudioHandling.make_cardboard_flap)
+
+
+## The clipboard taken out and raised (D-1913).
+static func clipboard_clip_up() -> AudioStreamWAV:
+	return _cached(&"clipboard_clip_up", SynthAudioHandling.make_clipboard_clip.bind(true))
+
+
+## The clipboard put away.
+static func clipboard_clip_down() -> AudioStreamWAV:
+	return _cached(&"clipboard_clip_down", SynthAudioHandling.make_clipboard_clip.bind(false))
+
+
+## A clipboard sheet turned.
+static func clipboard_sheet() -> AudioStreamWAV:
+	return _cached(&"clipboard_sheet", SynthAudioHandling.make_clipboard_sheet)
 
 
 ## Tension bed under the music: drone and double heartbeat (ingame_music.gd).

@@ -1,7 +1,8 @@
 class_name SynthAudioHandling
 extends RefCounted
-## The generators of handling the cargo and the phone: the camera shutter, the
-## tape torn off a box, the cardboard flap, and the tension bed under the music.
+## The generators of handling the cargo, the phone and the clipboard: the camera shutter, the
+## tape torn off a box, the cardboard flap, the clipboard's clip and sheet (D-1913), and the
+## tension bed under the music.
 ## Split out of synth_audio.gd by responsibility; SynthAudio hands them out (and
 ## caches them), so callers never use this class directly.
 
@@ -104,4 +105,54 @@ static func make_tension_pulse() -> AudioStreamWAV:
 	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	stream.loop_begin = 0
 	stream.loop_end = sample_count
+	return stream
+
+
+## The clipboard's spring clip (D-1913, diseno/portapapeles.md §6): a dry metal snap with a short ring
+## and the board's knock under it. `raise` (taken out) is brighter and lighter; put away it is a tone
+## lower with more board, so the two read apart without looking.
+static func make_clipboard_clip(raise: bool) -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.14
+	var pitch: float = 1.0 if raise else 0.84
+	var board: float = 0.35 if raise else 0.6
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var snap: float = (randf() * 2.0 - 1.0) * exp(-t * 420.0)
+		var ring: float = (sin(TAU * 3150.0 * pitch * t) * 0.6 + sin(TAU * 4720.0 * pitch * t) * 0.4) * exp(-t * 70.0)
+		var knock: float = sin(TAU * 190.0 * pitch * t) * exp(-t * 38.0) * board
+		var sample: float = snap * 0.7 + ring * 0.35 + knock
+		data.encode_s16(i * 2, roundi(clampf(sample, -1.0, 1.0) * 16000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
+## A clipboard sheet flicked over (D-1913): a quick, airy paper swish, shorter and brighter than the
+## newspaper's page turn, so changing sheets several times in a row never piles up.
+static func make_clipboard_sheet() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.17
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var low: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var noise: float = randf_range(-1.0, 1.0)
+		# High-passed noise (noise minus its smoothed copy): paper, not cardboard.
+		low = lerpf(low, noise, 0.18)
+		var envelope: float = minf(t * 70.0, 1.0) * exp(-t * 22.0)
+		var flutter: float = 0.7 + 0.3 * sin(TAU * 38.0 * t)
+		var sample: float = (noise - low) * envelope * flutter
+		data.encode_s16(i * 2, roundi(clampf(sample, -1.0, 1.0) * 15000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
 	return stream

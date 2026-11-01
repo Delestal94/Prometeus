@@ -20,7 +20,7 @@
 | D-1910 | Escalado de UI y Steam Deck | constructor-ui | medium | captura a 800p |
 | D-1911 | Música del galpón (loop de trabajo, sube con la actividad) | disenador-audio | medium | loop adaptativo |
 | D-1912 | Mezcla: buses para galpón, máquinas y distritos | disenador-audio | medium | niveles medidos |
-| D-1913 | SFX de UI del portapapeles | disenador-audio | low | SFX |
+| D-1913 | ✅ SFX de UI del portapapeles | disenador-audio | low | SFX |
 | D-1914 | Efecto de pedido completado | artista-vfx | low | partículas |
 | D-1915 | Efecto de error de armado | artista-vfx | low | efecto |
 | D-1916 | Fuente y estilo visual unificado de la expansión | constructor-ui | medium | tema de Godot |
