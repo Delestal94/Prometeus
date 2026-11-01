@@ -465,7 +465,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 
 ### Grupo 19 — UI, tutorial, audio y efectos (`19-ui-audio-vfx.md`)
 
-- [ ] **D-1901** Tutorial de la primera semana: un objetivo por vez.
+- [x] **D-1901** Tutorial de la primera semana: un objetivo por vez.
+  Rama `codex/D-1901-onboarding`: `scripts/gameplay/company_onboarding.gd` (función pura),
+  `company_onboarding_tracker.gd`, `scripts/ui/company_onboarding_line.gd`, `tests/test_company_onboarding.gd`; el bot
+  del día (`test_company_bot_day`) tilda los 6 objetivos del día 1. Pendiente, esperando sistemas: las notas del
+  Jefe (`WORLD_ONBOARD_*`, con el feed de avisos del HUD de la Empresa, D-1903), los disparadores de `restock` y
+  `fill` (insumos de la mesa y `Q` de la caja solo viven en el host) y que `pack`, `deliver` y `return` sean por
+  jugador (hoy los tilda la tripulación junta: la mesa y la puerta no tienen evento por jugador).
 - [x] **D-1902** Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8).
   Rama `codex/D-1902-clipboard`: `scripts/gameplay/company_clipboard.gd`, `scripts/ui/clipboard_frame.gd`,
   `scripts/gameplay/player/player_held_tool.gd`, `tests/test_company_clipboard.gd`. La hoja Empleados espera a D-1038.
