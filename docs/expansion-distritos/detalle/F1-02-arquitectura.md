@@ -75,8 +75,10 @@ Empresa no tiene menú de pausa y D-1909 es de F5. Decisión: no se espera una t
   Hecho del lado de la lógica: `scripts/gameplay/business/day_close.gd` (`DayClose.button()` da texto, habilitado,
   pista del cliente y confirmación; `DayClose.exit_warning()` da el aviso solo en el host con el día en `OPERATING`
   o `CLOSING`) y las claves `UI_COMPANY_CLOSE_DAY*` / `UI_COMPANY_EXIT_LOSES_DAY`.
-- [→ D-1909] D-0253.a Dibujar el botón y el aviso en el menú de pausa del modo Empresa con `DayClose`, cuando exista
+- [x] D-0253.a Dibujar el botón y el aviso en el menú de pausa del modo Empresa con `DayClose`, cuando exista
   (D-1909; [decisión](../../decisiones/2026-10-22-cerrar-el-dia-antes.md)). Captura con `revisor-visual`.
+  Hecho con D-1909 (2026-11-01, rama `codex/D-1909-company-pause-menu`): `scripts/ui/company_pause_menu.gd`,
+  probado por `tests/test_company_pause_menu.gd`. La captura queda para una sesión con ventana.
 **Test** `test_day_cycle` (ampliado): `close_early()` a las 12:00 pasa a `CLOSING`, no deja entrar pedidos, espera
 una salida afuera y llega a `SUMMARY`; en `OPENING` o `SUMMARY` devuelve false; en un cliente no hace nada.
 `test_company_autosave`: después de cerrar antes, el slot queda en el día siguiente sin `interrupted`.

@@ -473,7 +473,8 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1906** Pantalla de despacho con estilo final.
 - [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
 - [ ] **D-1908** Tooltips de productos y requisitos.
-- [ ] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
+- [x] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
+  Rama `codex/D-1909-company-pause-menu`: `scripts/ui/company_pause_menu.gd`, `tests/test_company_pause_menu.gd`.
 - [ ] **D-1910** Escalado de UI y Steam Deck.
 - [ ] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
 - [ ] **D-1912** Mezcla: buses para galpón, máquinas y distritos.

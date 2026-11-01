@@ -115,6 +115,12 @@ Main Menu
   todos); solo el anfitrión puede reiniciar (un cliente que recarga su nivel se queda
   sin jugadores); si se cae el anfitrión, el cliente ve una pantalla "Sin conexión".
   **Pendiente**: el reinicio del anfitrión todavía no recarga el mundo de los clientes.
+- **Modo Empresa** (D-1909, `scripts/ui/company_pause_menu.gd`): Esc abre su menú de pausa con
+  Continuar, **Cerrar el día**, Opciones, Volver al menú y Salir. Jugando solo pausa el mundo y el reloj
+  del día; con más gente el día sigue. "Cerrar el día" lo usa solo el host con el día en curso y pide
+  confirmación; un cliente lo ve apagado con "Lo cierra el host". Mientras salir pierde el día, el aviso
+  queda sobre las dos salidas y cada una pregunta antes ("Salir igual"). Esc vuelve de una confirmación y,
+  si no hay ninguna, cierra el menú.
 - El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, el código de
   sala (8 letras, `K7QM-4TXA`; ver `scripts/ui/room_code.gd`) para pasarle a los amigos. "Unirse" acepta
   el código o la IP.

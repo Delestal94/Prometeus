@@ -14,8 +14,12 @@ extends Node
 ## already sends.
 ##
 ## Entry points: Esc (ui_pause) and EventBus.pause_requested, which the HUD emits (HudPause) once
-## the company has one. A panel that is open takes Esc first (it handles it). Until the company
-## HUD exists a plain "PAUSED" label stands in for its pause card.
+## the company has one. A panel that is open takes Esc first (it handles it).
+##
+## What shows is the company's pause menu (CompanyPauseMenu, D-1909): Esc opens it as a real pause
+## when alone (toggle) or as a soft one when not (open_menu: the world goes on, the mouse is free
+## so the player takes no input), and closes it again; inside it Esc goes back from a confirmation
+## first. A client opens the soft one too: its "Close the day" is off, the host closes the day.
 
 ## The day's clock and phases (CompanyRoot's children). day_cycle may be null.
 var clock: GameClock = null
@@ -28,7 +32,7 @@ var _paused: bool = false
 ## True when this pause stopped the clock (it was running), so only then it runs it again.
 var _paused_clock: bool = false
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
-var _label: Label = null
+var _menu: CompanyPauseMenu = null
 
 
 ## The pause of this world's `clock` and `day_cycle`, ready to add as a child.
@@ -64,9 +68,47 @@ func _exit_tree() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"ui_pause") and (_paused or can_pause()):
+	var open: bool = menu_open()
+	if not event.is_action_pressed(&"ui_pause") and not (open and event.is_action_pressed(&"ui_cancel")):
+		return
+	if open and _menu.options_open():
+		return
+	if open:
+		_menu.back()
+	else:
+		open_menu()
+	get_viewport().set_input_as_handled()
+
+
+## Esc in the world: a real pause when alone, else the menu over a world that goes on.
+func open_menu() -> void:
+	if menu_open():
+		return
+	if can_pause():
 		toggle()
-		get_viewport().set_input_as_handled()
+		return
+	_mouse_before = Input.mouse_mode
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_show_menu(true)
+
+
+## Continue / Esc: resumes a real pause, or just closes the soft menu.
+func close_menu() -> void:
+	if _paused:
+		resume()
+	elif menu_open():
+		_show_menu(false)
+		Input.mouse_mode = _mouse_before
+
+
+func menu_open() -> bool:
+	return _menu != null and _menu.is_open()
+
+
+## The menu (built on first use), for the tests.
+func menu() -> CompanyPauseMenu:
+	_ensure_menu()
+	return _menu
 
 
 ## True where the pause is real: this peer decides the clock (host or offline) and nobody else is
@@ -90,9 +132,11 @@ func toggle() -> bool:
 	_paused = true
 	_paused_clock = clock.pause()
 	get_tree().paused = true
-	_mouse_before = Input.mouse_mode
+	# A soft menu already open (a peer just left) keeps the mouse it saved.
+	if not menu_open():
+		_mouse_before = Input.mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_show_label(true)
+	_show_menu(true)
 	return true
 
 
@@ -110,7 +154,7 @@ func resume() -> void:
 		clock.resume()
 	_paused_clock = false
 	Input.mouse_mode = _mouse_before
-	_show_label(false)
+	_show_menu(false)
 
 
 ## Host: someone joined (roster_changed comes before the snapshot goes out): the pause ends here
@@ -127,16 +171,28 @@ func _others() -> int:
 	return maxi((net.get(&"peer_ids") as Array).size() - 1, 0) if net != null else 0
 
 
-func _show_label(shown: bool) -> void:
-	if _label == null:
-		if not shown:
-			return
-		var layer := CanvasLayer.new()
-		layer.layer = 90
-		add_child(layer)
-		_label = Label.new()
-		_label.text = tr("HUD_PAUSED")
-		_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		_label.add_theme_font_size_override(&"font_size", 48)
-		layer.add_child(_label)
-	_label.visible = shown
+func _show_menu(shown: bool) -> void:
+	if _menu == null and not shown:
+		return
+	_ensure_menu()
+	_menu.day_cycle = day_cycle
+	if shown:
+		_menu.open(_paused)
+	else:
+		_menu.close()
+
+
+func _ensure_menu() -> void:
+	if _menu != null:
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "PauseLayer"
+	layer.layer = 90
+	add_child(layer)
+	_menu = CompanyPauseMenu.new()
+	_menu.name = "PauseMenu"
+	_menu.day_cycle = day_cycle
+	layer.add_child(_menu)
+	_menu.resume_requested.connect(close_menu)
+	# The day goes to CLOSING: the trips have to come back, so the world runs again.
+	_menu.day_closed.connect(func(_ok: bool) -> void: close_menu())
