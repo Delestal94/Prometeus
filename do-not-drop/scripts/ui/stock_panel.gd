@@ -21,6 +21,9 @@ class_name StockPanel
 ## Embedded (set_embedded(), D-1902) it is the Stock sheet of the clipboard (ClipboardFrame): no dark
 ## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
 ## close sound. Opened, it takes the focus as always.
+##
+## Each row tells what the product is (CompanyTooltips, D-1908): as its tooltip with the mouse and, with the
+## focus on it (gamepad, keyboard), on the detail line under the list.
 
 signal closed
 
@@ -34,6 +37,8 @@ var _order: Array[StringName] = []
 var _rows_box: VBoxContainer
 var _scroll: ScrollContainer
 var _totals_label: Label
+## What the focused row's product is (D-1908).
+var _detail: Label
 var _close_button: Button
 
 
@@ -103,8 +108,11 @@ func refresh(ctx: Dictionary) -> void:
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		UiTheme.register_font_size(button, 17)
 		button.text = _row_line(row)
+		button.tooltip_text = CompanyTooltips.product_text(_ctx.get("products", {}).get(product) as ProductDefinition)
+		button.focus_entered.connect(_show_detail.bind(product))
 		_rows[product] = button
 		_order.append(product)
+	_detail.text = ""
 	var totals: Dictionary = StockView.totals(list)
 	_totals_label.text = tr("UI_STOCK_TOTALS") % [totals["units"], totals["products"]]
 	_link_focus()
@@ -134,6 +142,11 @@ func row_button(product: StringName) -> Button:
 
 func close_button() -> Button:
 	return _close_button
+
+
+## The detail line under the list: what the focused product is ("" with no row focused).
+func detail_text() -> String:
+	return _detail.text if _detail != null else ""
 
 
 ## The line under the list: total units and products.
@@ -172,6 +185,9 @@ func _build() -> void:
 	_rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows_box.add_theme_constant_override("separation", 6)
 	_scroll.add_child(_rows_box)
+	_detail = UiTheme.label(column, "", 15, UiTheme.INK)
+	_detail.name = "Detail"
+	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_totals_label = UiTheme.label(column, "", 16, UiTheme.MUTED)
 	_totals_label.name = "Totals"
 	if not embedded:
@@ -179,6 +195,12 @@ func _build() -> void:
 		_close_button.name = "Close"
 		_close_button.pressed.connect(close)
 	refresh(_ctx)
+
+
+func _show_detail(product: StringName) -> void:
+	var button: Button = _rows.get(product)
+	if _detail != null and button != null:
+		_detail.text = button.tooltip_text.replace("\n", " · ")
 
 
 ## Name and units on the first line, the units outside shelves and reception on a second one

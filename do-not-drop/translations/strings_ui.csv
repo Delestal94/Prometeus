@@ -1402,6 +1402,16 @@ UI_ORDER_SHEET_ADDRESS,%s %d,%s %d
 UI_ORDER_SHEET_ITEM,%s  %d/%d,%s  %d/%d
 UI_ORDER_SHEET_EXTRA,Sobra: %s ×%d,Extra: %s ×%d
 UI_ORDER_SHEET_SEAL,Sello: %s,Stamp: %s
+UI_TIP_PRODUCT_SIZE,Tamaño: %d×%d×%d celdas · %s kg,Size: %d×%d×%d cells · %s kg
+UI_TIP_PRODUCT_FRAGILE,"Frágil: un golpe lo rompe","Fragile: one bump breaks it"
+UI_TIP_PRODUCT_COLD,Va en frío,Keep it cold
+UI_TIP_PRODUCT_HEAT,Va caliente,Keep it hot
+UI_TIP_PRODUCT_TRAP,Trampa: %s,Trap: %s
+UI_TIP_PRODUCT_PRICES,Compra $%d · Venta $%d,Buy $%d · Sell $%d
+UI_TIP_REQ_SEAL,Pide el sello %s,Needs the %s stamp
+UI_TIP_REQ_QUALITY,Calidad de armado mínima: %d,Minimum packing quality: %d
+UI_TIP_REQ_WINDOW,Plazo: %d %% del normal,Deadline: %d%% of the usual
+UI_TIP_REQ_BONUS,Paga +%d %% si se cumple,Pays +%d%% when met
 UI_ORDER_SHEET_TAPE,Cinta,Tape
 UI_ORDER_SHEET_LABEL,Etiqueta,Label
 UI_ORDER_SHEET_LEFT,Quedan %d min,%d min left

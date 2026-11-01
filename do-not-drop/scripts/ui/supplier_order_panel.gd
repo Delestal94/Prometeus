@@ -27,6 +27,9 @@ class_name SupplierOrderPanel
 ## Embedded (set_embedded(), D-1902) it is the Supplier sheet of the clipboard (ClipboardFrame): no dark
 ## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
 ## close sound. Opened, it takes the focus as always.
+##
+## Each row tells what the product is (CompanyTooltips, D-1908): as the tooltip of its name and buttons with
+## the mouse and, with the focus on its minus or plus (gamepad, keyboard), on the detail line under the list.
 
 ## The order of `lines` ([{product, qty}]) is in the calendar for the truck of `arrival_day`: right away
 ## with submit(), or when placed() says the host applied the request (D-0603.b.2).
@@ -59,6 +62,8 @@ var _arrival_label: Label
 var _status_label: Label
 var _order_button: Button
 var _close_button: Button
+## What the focused row's product is (D-1908); a test finds it by its name, "Detail".
+var _detail: Label
 
 
 func _ready() -> void:
@@ -116,6 +121,7 @@ func refresh(ctx: Dictionary) -> void:
 		_rows_box.remove_child(child)
 		child.queue_free()
 	_rows.clear()
+	_detail.text = ""
 	var cart: SupplierOrderCart = _cart()
 	if cart != null:
 		for id: StringName in _product_ids(cart):
@@ -297,6 +303,9 @@ func _build() -> void:
 	_rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows_box.add_theme_constant_override("separation", 6)
 	_scroll.add_child(_rows_box)
+	_detail = UiTheme.label(column, "", 15, UiTheme.INK)
+	_detail.name = "Detail"
+	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_total_label = UiTheme.label(column, "", 22, UiTheme.INK, true)
 	_total_label.name = "Total"
 	_pallets_label = UiTheme.label(column, "", 16, UiTheme.MUTED)
@@ -361,6 +370,16 @@ func _add_row(product: StringName, cart: SupplierOrderCart) -> void:
 	more_btn.name = "More"
 	more_btn.pressed.connect(more.bind(product))
 	_rows[product] = {"less": less_btn, "more": more_btn, "qty": qty_label}
+	var tip: String = CompanyTooltips.product_text(cart.products.get(product) as ProductDefinition)
+	name_label.tooltip_text = tip
+	name_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	for button: Button in [less_btn, more_btn]:
+		button.tooltip_text = tip
+		button.focus_entered.connect(_show_detail.bind(tip))
+
+
+func _show_detail(tip: String) -> void:
+	_detail.text = tip.replace("\n", " · ")
 
 
 func _edit(product: StringName, delta: int) -> Dictionary:
