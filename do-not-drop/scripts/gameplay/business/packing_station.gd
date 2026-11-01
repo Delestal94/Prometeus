@@ -83,13 +83,47 @@ func is_sealed() -> bool:
 
 ## Tapes the box on the table shut and pays the tape (PackagingSupplies.tape). False, changing
 ## nothing, if the table has no box, it is already taped or the wallet cannot pay.
-func seal(wallet: Object) -> bool:
+## With `fill` over 0 (Armado asistido, D-1919, dificultad.md §2.1) it first pads that many free cells
+## (assisted_cells() says how many, assist_pad()) and marks the box assisted; the wallet must cover padding
+## and tape together, so the padding's money never leaves the box open.
+func seal(wallet: Object, fill: int = 0) -> bool:
 	if box == null or box.taped or not supplies.has(StationSupplies.TAPE):
 		return false
+	if fill > 0:
+		var cost: int = PackagingSupplies.fill_cost(fill) + CompanyTuning.TAPE_COST
+		var free: int = box.total_cells() - box.grid.size()
+		var short: bool = fill > free or fill > supplies.count(StationSupplies.FILL)
+		if short or wallet == null or not wallet.call(&"can_afford", cost):
+			return false
+		if assist_pad(fill, wallet) != fill:
+			return false
 	if not PackagingSupplies.tape(box, wallet):
 		return false
 	supplies.take(StationSupplies.TAPE)
 	return true
+
+
+## Armado asistido's padding (D-1919): pad() on `fill` cells, the box marked assisted when any was padded. A
+## review made before it stands (BoxReview.signature counts the padding the tape put in, not the packer's).
+func assist_pad(fill: int, wallet: Object) -> int:
+	var reviewed: bool = BoxReview.is_reviewed(box)
+	var padded: int = pad(fill, wallet) if fill > 0 else 0
+	if padded > 0:
+		box.assisted = true
+		if reviewed:
+			box.review_seal = BoxReview.signature(box)
+	return padded
+
+
+## Armado asistido (D-1919, dificultad.md §2.1): how many free cells the tape would pad with `money` in the
+## wallet: the free cells, the padding on hand and what is left after the tape, the least of the three. 0
+## without a box, with it taped or with no tape on the table.
+func assisted_cells(money: int) -> int:
+	if box == null or box.taped or not supplies.has(StationSupplies.TAPE):
+		return 0
+	var free: int = box.total_cells() - box.grid.size()
+	var afford: int = maxi(money - CompanyTuning.TAPE_COST, 0) / maxi(CompanyTuning.FILL_COST_PER_CELL, 1)
+	return maxi(mini(mini(free, supplies.count(StationSupplies.FILL)), afford), 0)
 
 
 ## Pads up to `cells` free cells of the box on the table and pays them (PackagingSupplies.pad),

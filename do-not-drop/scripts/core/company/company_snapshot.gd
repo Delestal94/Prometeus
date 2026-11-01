@@ -165,6 +165,10 @@ static func _box_ok(box: Dictionary) -> bool:
 		return false
 	if not (items is Array and fill is Array and stamps is Array and box.get("taped") is bool):
 		return false
+	# An open box is never assisted: only the tape pads it (D-1919).
+	var assisted: Variant = box.get("assisted", false)
+	if typeof(assisted) != TYPE_BOOL or assisted:
+		return false
 	if box["taped"] or (items as Array).size() > CompanyTableNet.MAX_ITEMS \
 			or (fill as Array).size() > CompanyTableNet.MAX_FILL \
 			or (stamps as Array).size() > BoxSeals.KINDS.size():

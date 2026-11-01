@@ -51,6 +51,8 @@ extends RefCounted
 ## no_station, out_of_reach (CompanyNet's), not_enough, hands_busy, hands_full, no_room, no_money
 ## and the REASON_* below.
 
+## The CompanyState autoload's script (no class_name): its option keys (D-1919).
+const COMPANY_STATE := preload("res://scripts/core/company/company_state.gd")
 const START: StringName = &"box_start"
 const PLACE: StringName = &"box_place"
 const TAKE_OUT: StringName = &"box_take_out"
@@ -424,6 +426,10 @@ func _check_tape(state: Object, desk: PackingStation, table: StringName,
 	if not state.can_afford(CompanyTuning.TAPE_COST):
 		return _refused(REASON_NO_MONEY)
 	var shut: PackedBox = PackedBox.from_dict(box.to_dict())
+	var filled: int = desk.assisted_cells(int(state.get(&"money"))) if assisted_packing(state) else 0
+	# The box is assisted only when the tape padded something (a box packed full by hand stays a hand box).
+	var assisted: bool = filled > 0
+	_assist_shut(shut, filled)
 	shut.taped = true
 	var order: Dictionary = _order(table)
 	if box.label_order_id == &"" or _order_id(table) != box.label_order_id:
@@ -436,13 +442,45 @@ func _check_tape(state: Object, desk: PackingStation, table: StringName,
 		return _refused(REASON_NO_TRAP)
 	var quality: float = AssemblyQuality.score(shut, order, products)
 	var id: StringName = box_of(table)
-	return _granted(SEALED, _paid(state, CompanyTuning.TAPE_COST, {
+	var cost: int = CompanyTuning.TAPE_COST + PackagingSupplies.fill_cost(filled)
+	return _granted(SEALED, _paid(state, cost, {
 		"table": table, "order": box.label_order_id, "package_id": id,
 		"node_name": StringName("Package_%s" % id),
 		"trap": main.trap_id, "trap_intensity": BoxTrap.intensity(quality),
 		"contents": box.contents(), "absorption": BoxToPackage.absorption(shut), "quality": quality,
-		"pos": station.get("spot"), "basis": Basis.IDENTITY,
+		"pos": station.get("spot"), "basis": Basis.IDENTITY, "assisted": assisted, "filled": filled,
 	}))
+
+
+## Armado asistido's fields of a box_sealed (D-1919): `assisted` a bool and `filled` the cells the host padded
+## with the tape, never more than the box's free cells or the table's padding. An old event has neither.
+static func _assist_ok(desk: PackingStation, data: Dictionary) -> bool:
+	var assisted: Variant = data.get("assisted", false)
+	var filled: Variant = data.get("filled", 0)
+	if typeof(assisted) != TYPE_BOOL or typeof(filled) != TYPE_INT or int(filled) < 0:
+		return false
+	if bool(assisted) != (int(filled) > 0):
+		return false
+	var free: int = desk.box.total_cells() - desk.box.grid.size()
+	return int(filled) <= free and int(filled) <= desk.supplies.count(StationSupplies.FILL)
+
+
+## True when the company seals with Armado asistido (CompanyState.options, D-1919).
+static func assisted_packing(state: Object) -> bool:
+	if state == null or not state.has_method(&"option"):
+		return false
+	return bool(state.call(&"option", COMPANY_STATE.OPTION_ASSISTED_PACKING))
+
+
+## The taped copy a box_sealed builds its package from, padded like the table's box will be (assist_pad()).
+static func _assist_shut(shut: PackedBox, filled: int) -> void:
+	if filled <= 0:
+		return
+	var reviewed: bool = BoxReview.is_reviewed(shut)
+	shut.fill_free_cells(filled)
+	shut.assisted = true
+	if reviewed:
+		shut.review_seal = BoxReview.signature(shut)
 
 
 ## Fills one supply of the table back to its capacity (StationSupplies.restock()), with or without a
@@ -636,7 +674,8 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 		return false
 	if not (_text_ok(order) and StringName(order) == desk.box.label_order_id and _wallet_ok(data)):
 		return false
-	if not CompanyPackages.fields_ok(data, box_id) or not packages.can_add(data["node_name"]):
+	var fits: bool = CompanyPackages.fields_ok(data, box_id) and packages.can_add(data["node_name"])
+	if not fits or not _assist_ok(desk, data):
 		return false
 	var box_at: StringName = box_location(box_id)
 	var held: Dictionary = desk.box.contents()
@@ -646,13 +685,20 @@ func _apply_sealed(state: Object, stock: Inventory, table: StringName, data: Dic
 	for product: StringName in held:
 		if stock.count(product, box_at) < int(held[product]):
 			return false
+	var filled: int = data.get("filled", 0)
 	var shut: PackedBox = PackedBox.from_dict(desk.box.to_dict())
+	_assist_shut(shut, filled)
 	shut.taped = true
 	var package: DeliveryPackage = packages.make(shut, data)
 	if packages.active() and package == null:
 		return false
-	_set_balance(state, int(data["money"]) + CompanyTuning.TAPE_COST)
-	if not desk.seal(state):
+	var fill_cost: int = PackagingSupplies.fill_cost(filled)
+	_set_balance(state, int(data["money"]) + CompanyTuning.TAPE_COST + fill_cost)
+	# The padding first, each charge with the host's minute, then the tape (dificultad.md §2.1).
+	var padded: bool = desk.assist_pad(filled, state) == filled
+	if padded:
+		_entry_minute(state, fill_cost, data["minute"])
+	if not padded or not desk.seal(state):
 		if package != null:
 			package.free()
 		return false

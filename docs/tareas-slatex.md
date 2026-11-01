@@ -492,7 +492,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1916** Fuente y estilo visual unificado de la expansión.
 - [ ] **D-1917** Traducción al inglés de todo lo nuevo.
 - [ ] **D-1918** Accesibilidad: daltonismo en requisitos y estados.
-- [ ] **D-1919** Modificadores de la empresa (armado asistido, días tranquilos).
+- [x] **D-1919** Modificadores de la empresa (armado asistido, días tranquilos).
+  Rama `codex/D-1919-company-modifiers`: `CompanyState.options` (guardado, snapshot y `list_slots()`), la cinta con
+  Armado asistido (`PackingStation.seal`, `box_sealed` con `assisted` y `filled`), `PackedBox.assisted` y absorción
+  mínima 0,75; `tests/test_company_modifiers.gd`. Pendiente, sin sistema todavía: `calm_days` en el sorteo de
+  eventos del día (D-0123, pasa a la tarea que lo construya), las pantallas de empresa nueva y "Opciones" del slot
+  (D-0235 / D-1904), y en la mesa el aviso "Relleno insuficiente" y la ayuda "Cerrar (rellena solo)" (con la ayuda
+  de la mesa del HUD de la Empresa).
 - [ ] **D-1920** Test de que todo texto nuevo pasa por `tr()`.
 - [ ] **D-1923** Celular del jugador con app de pedidos y mapa.
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).

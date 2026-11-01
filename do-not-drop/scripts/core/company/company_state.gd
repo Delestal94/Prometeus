@@ -49,8 +49,18 @@ var pallets: Dictionary = {}
 ## The live clocks are the host's ColdChainTick; it writes them here before every save. Optional in a save (a
 ## company from before D-0616.b starts with fresh ones) and never in a snapshot: a client has no clocks.
 var cold_clocks: Dictionary = {}
+## The company's modifiers (D-1919, diseno/dificultad.md §2-3): OPTION_KEYS -> bool, both off for a new company.
+## The host sets them outside a match only; a save without them loads both off.
+var options: Dictionary = {}
 
 var _active: bool = false
+
+
+## Armado asistido: the tape fills the box's free cells (PackingStation.seal, D-1919).
+const OPTION_ASSISTED_PACKING: String = "assisted_packing"
+## Días tranquilos: no day events (the day-event draw, D-0123, reads it when it exists).
+const OPTION_CALM_DAYS: String = "calm_days"
+const OPTION_KEYS: Array[String] = [OPTION_ASSISTED_PACKING, OPTION_CALM_DAYS]
 
 
 func _init() -> void:
@@ -101,6 +111,7 @@ func to_dict() -> Dictionary:
 		"supplier_calendar": supplier_calendar.duplicate(true),
 		"pallets": pallets.duplicate(true),
 		"cold_clocks": cold_clocks.duplicate(true),
+		"options": options.duplicate(),
 	}
 
 
@@ -154,8 +165,33 @@ func from_dict(data: Dictionary) -> bool:
 	var saved_clocks := ColdChain.new()
 	saved_clocks.from_dict(data.get("cold_clocks", {}))
 	cold_clocks = saved_clocks.to_dict() if saved_clocks.is_ticking() else {}
+	options = sanitize_options(data.get("options"))
 	_active = true
 	return true
+
+
+## True when the modifier `key` (OPTION_KEYS) is on.
+func option(key: String) -> bool:
+	return bool(options.get(key, false))
+
+
+## The modifiers of `raw` (a save's or a snapshot's): only OPTION_KEYS with bool values, the rest off (an
+## unknown key or a value that is not a bool is ignored). A save from before D-1919 has none: both off.
+static func sanitize_options(raw: Variant) -> Dictionary:
+	var out: Dictionary = default_options()
+	if raw is Dictionary:
+		for key: String in OPTION_KEYS:
+			var value: Variant = (raw as Dictionary).get(key)
+			if typeof(value) == TYPE_BOOL:
+				out[key] = value
+	return out
+
+
+static func default_options() -> Dictionary:
+	var out: Dictionary = {}
+	for key: String in OPTION_KEYS:
+		out[key] = false
+	return out
 
 
 ## The seed of `stream` (CompanySeed.ORDERS, SUPPLIERS) for `for_day`, or today when it is -1.
@@ -290,6 +326,7 @@ func _set_defaults() -> void:
 	supplier_calendar = SupplierSchedule.new().to_dict()
 	pallets = {}
 	cold_clocks = {}
+	options = default_options()
 	company_name = ""
 	company_seed = 0
 

@@ -87,10 +87,13 @@ static func protection(box: PackedBox) -> float:
 	return box.fill_ratio()
 
 
+## A box sealed with Armado asistido cushions at most like the quick match's automatic padding
+## (CompanyTuning.ASSISTED_MIN_ABSORPTION, D-1919): the hand-packed box still rides better.
 static func absorption(box: PackedBox) -> float:
-	return lerpf(
+	var value: float = lerpf(
 		CompanyTuning.ABSORPTION_UNPADDED, CompanyTuning.ABSORPTION_FULL_PADDING, protection(box)
 	)
+	return maxf(value, CompanyTuning.ASSISTED_MIN_ABSORPTION) if box.assisted else value
 
 
 ## More than OVERSIZED_FREE_RATIO of the whole box empty and unpadded.

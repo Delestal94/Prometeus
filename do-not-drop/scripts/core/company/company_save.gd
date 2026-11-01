@@ -31,6 +31,8 @@ extends RefCounted
 enum LoadResult { LOADED, MISSING, CORRUPT, TOO_NEW }
 
 const VERSION: int = 1
+## The CompanyState autoload's script (no class_name): its sanitize_options() reads a slot's modifiers.
+const COMPANY_STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 const SAVE_DIR: String = "user://saves/company"
 const DEFAULT_SLOT: String = "company"
 ## from version -> Callable(Dictionary) -> Dictionary returning the next version's
@@ -205,6 +207,7 @@ static func list_slots(dir: String = SAVE_DIR) -> Array[Dictionary]:
 			"money": _int_of((company as Dictionary).get("money")),
 			"saved_at": _int_of(raw.get("saved_at")),
 			"interrupted": _interrupted(raw),
+			"options": COMPANY_STATE_SCRIPT.sanitize_options((company as Dictionary).get("options")),
 			"version": version,
 		})
 	slots.sort_custom(_slot_before)

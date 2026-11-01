@@ -429,6 +429,9 @@ const QUALITY_NO_TAPE_OR_LABEL_PENALTY: float = 10.0
 ## where protection is the share of free cells that carry padding.
 const ABSORPTION_UNPADDED: float = 1.0
 const ABSORPTION_FULL_PADDING: float = 0.6
+## Armado asistido (D-1919, dificultad.md §2.1): an assisted box absorbs no better than this, the quick match's
+## automatic padding (armado-y-trampas.md: hand packing must be worth more).
+const ASSISTED_MIN_ABSORPTION: float = 0.75
 ## More free cells than this without padding adds the Balance trap (low intensity).
 const OVERSIZED_FREE_RATIO: float = 0.5
 ## Trap intensity from packing quality (D-0710, BoxTrap): 1 - quality / 100, read as low below
