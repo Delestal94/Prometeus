@@ -37,6 +37,9 @@ const SOUND_NAMES: Dictionary = {
 	&"footstep": "Pisada",
 	&"rooster_crow": "Gallo", &"morning_chirps": "Pajaritos de la mañana", &"extra_stinger": "¡Extra! del diario",
 	&"paper_rustle": "Papel de diario", &"page_turn": "Página que se da vuelta", &"mate_spit": "Escupida del mate",
+	&"clipboard_clip_up": "Broche del portapapeles (sacar)",
+	&"clipboard_clip_down": "Broche del portapapeles (guardar)",
+	&"clipboard_sheet": "Hoja del portapapeles",
 	# Not a synthesized sound: a crewmate's voice chat (VoicePlayback, N-212.2).
 	&"AudioStreamGenerator": "Voz",
 }

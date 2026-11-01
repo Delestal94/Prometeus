@@ -15,6 +15,7 @@ func _initialize() -> void:
 		SynthAudio.impact_thud, SynthAudio.tire_screech, SynthAudio.glass_chime, SynthAudio.creature_groan,
 		SynthAudio.wood_creak, SynthAudio.liquid_slosh, SynthAudio.explosive_tick, SynthAudio.hostile_hiss,
 		SynthAudio.honk_horn, SynthAudio.camera_shutter, SynthAudio.tape_rip, SynthAudio.cardboard_flap,
+		SynthAudio.clipboard_clip_up, SynthAudio.clipboard_clip_down, SynthAudio.clipboard_sheet,
 		SynthAudio.crossing_bell, SynthAudio.roller_door, SynthAudio.reverse_beep, SynthAudio.dog_bark,
 		SynthAudio.sheep_bleat, SynthAudio.doorbell_ding_dong, SynthAudio.neighbor_cheer, SynthAudio.train_horn,
 		SynthAudio.scanner_beep, SynthAudio.care_step, SynthAudio.care_error, SynthAudio.care_success,

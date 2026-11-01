@@ -494,7 +494,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1910** Escalado de UI y Steam Deck.
 - [ ] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
 - [ ] **D-1912** Mezcla: buses para galpón, máquinas y distritos.
-- [ ] **D-1913** SFX de UI del portapapeles.
+- [x] **D-1913** SFX de UI del portapapeles.
+  Rama `codex/D-1913-clipboard-sfx`: `SynthAudio.clipboard_clip_up()`, `clipboard_clip_down()` y `clipboard_sheet()`
+  (`modules/synth_audio/synth_audio_handling.gd`), tocados por `company_clipboard.gd` en el bus SFX: broche al sacar y
+  guardar, papel al cambiar de hoja; `sound_audit.gd` los lista; `tests/test_company_clipboard_sfx.gd`.
 - [ ] **D-1914** Efecto de pedido completado.
 - [ ] **D-1915** Efecto de error de armado.
 - [ ] **D-1916** Fuente y estilo visual unificado de la expansión.

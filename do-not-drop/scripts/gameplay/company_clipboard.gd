@@ -29,6 +29,10 @@ extends Node
 ## Network (§6): reading is local, as StockBoard always was; deciding goes to the host through the request the
 ## sheet already had. What the others see is `PlayerHeldTool.held_tool` on this peer's player, written here
 ## (the owner) and replicated by player.tscn. Autoloads are reached by path (lesson N-919).
+##
+## Sound (D-1913, §6): only for this peer, on the SFX bus. The clip snaps when it comes out (CUE_UP) and when it
+## is put away (CUE_DOWN), and a sheet swishes when the sheet showing changes (CUE_SHEET), never on the raise
+## itself. SynthAudio builds the three (SynthAudioHandling).
 
 const ACTION_TOGGLE: StringName = &"company_clipboard"
 const ACTION_PREV: StringName = &"company_clipboard_prev"
@@ -41,6 +45,11 @@ const SHEET_EMPLOYEES: StringName = &"employees"
 const HELD_TOOL_NODE: NodePath = ^"PlayerHeldTool"
 const HELD_UP: StringName = &"clipboard_up"
 const HELD_NONE: StringName = &""
+const CUE_UP: StringName = &"clip_up"
+const CUE_DOWN: StringName = &"clip_down"
+const CUE_SHEET: StringName = &"sheet"
+## Under the UI cues: the clipboard is in the hand, not a menu.
+const SFX_DB: float = -8.0
 
 var frame: ClipboardFrame
 var stock_board: StockBoard
@@ -64,6 +73,10 @@ var _sheet: StringName = SHEET_STOCK
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _player_off: Node = null
 var _held_by: Node = null
+## Plays the clip and the sheets (D-1913).
+var _sfx: AudioStreamPlayer
+## The last cue played (CUE_*), &"" before any: a test reads it.
+var last_cue: StringName = &""
 
 
 ## Registers the clipboard's actions (once each): keyboard and gamepad.
@@ -145,6 +158,11 @@ func _ready() -> void:
 	frame.name = "ClipboardFrame"
 	layer.add_child(frame)
 	frame.sheet_picked.connect(show_sheet)
+	_sfx = AudioStreamPlayer.new()
+	_sfx.name = "ClipboardSfx"
+	_sfx.bus = &"SFX"
+	_sfx.volume_db = SFX_DB
+	add_child(_sfx)
 	if stock_board != null and stock_board.panel != null:
 		stock_board.panel.set_embedded(true)
 		frame.add_sheet(SHEET_STOCK, tr("UI_CLIPBOARD_SHEET_STOCK"), stock_board.panel)
@@ -205,7 +223,10 @@ func raise(sheet: StringName = &"") -> bool:
 		_player_off = player
 	_set_held(player, HELD_UP)
 	frame.show()
+	# The raise snaps the clip; the sheet it opens on is not a turn.
+	_sheet = wanted
 	show_sheet(wanted)
+	_play(CUE_UP)
 	_update_hint()
 	set_process(true)
 	return true
@@ -227,22 +248,28 @@ func stow() -> void:
 	_player_off = null
 	_set_held(_held_by, HELD_NONE)
 	_held_by = null
+	_play(CUE_DOWN)
 
 
 ## Shows `sheet` (raised): its board draws it (its panel takes the focus), the others stop.
 func show_sheet(sheet: StringName) -> void:
 	if not frame.mark(sheet):
 		return
+	var turned: bool = sheet != _sheet
 	_sheet = sheet
 	if not _up:
 		return
+	if turned:
+		_play(CUE_SHEET)
 	_hide_sheets()
 	_update_hint()
 	match sheet:
 		SHEET_STOCK:
-			stock_board.show_sheet()
+			if stock_board != null:
+				stock_board.show_sheet()
 		SHEET_SUPPLIER:
-			supplier_board.show_sheet()
+			if supplier_board != null:
+				supplier_board.show_sheet()
 
 
 ## Turns `step` sheets over (+1 next, -1 previous), wrapping around.
@@ -302,6 +329,20 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _up and event.is_action_pressed(ACTION_TOGGLE) and raise():
 		get_viewport().set_input_as_handled()
+
+
+func _play(cue: StringName) -> void:
+	last_cue = cue
+	if _sfx == null or not _sfx.is_inside_tree():
+		return
+	match cue:
+		CUE_UP:
+			_sfx.stream = SynthAudio.clipboard_clip_up()
+		CUE_DOWN:
+			_sfx.stream = SynthAudio.clipboard_clip_down()
+		_:
+			_sfx.stream = SynthAudio.clipboard_sheet()
+	_sfx.play()
 
 
 func _on_day_summary(_day: int, _summary: Dictionary) -> void:
