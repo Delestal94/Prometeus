@@ -23,6 +23,7 @@ var _face_hair_attachments: Array[BoneAttachment3D] = []
 var _costume: Node3D
 var _costume_fitter
 var _accessory: Node3D
+var _accessory_fitter
 var _cosmetics_queued: bool = false
 var _face: GelFace
 
@@ -85,6 +86,8 @@ func _apply_proportions(proportions: GelBodyProportions) -> void:
 	_fit_face_hair(proportions)
 	if _costume_fitter != null:
 		_costume_fitter.apply(proportions)
+	if _accessory_fitter != null:
+		_accessory_fitter.apply(proportions)
 
 
 ## Replication applies five IDs individually. Coalesce them so one profile
@@ -119,6 +122,10 @@ func _rebuild_cosmetics() -> void:
 	if _state.accessory_id != &"none":
 		_accessory = AccessoryLibrary.build_accessory(_state.accessory_id)
 		_body.add_child(_accessory)
+		# Only worn-over-the-torso accessories (the vest) carry fitter pieces; the rest stay rigid.
+		_accessory_fitter = CostumeFitter.new()
+		if not _accessory_fitter.setup(_accessory, _body):
+			_accessory_fitter = null
 	var costume_rule: StringName = CostumeCatalog.costume(_state.costume_id).get(&"hat_rule", &"none")
 	var accessory_rule: StringName = AccessoryCatalog.accessory(_state.accessory_id).get(
 		&"hat_rule", &"none") if _state.accessory_id != &"none" else &"none"
@@ -167,3 +174,4 @@ func _clear_cosmetics() -> void:
 	if is_instance_valid(_accessory):
 		_accessory.free()
 	_accessory = null
+	_accessory_fitter = null

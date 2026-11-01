@@ -33,7 +33,7 @@ func _check_profile() -> void:
 	_expect(profile.gel_style_choices(&"gel_costume").size() == CostumeCatalog.COSTUMES.size(),
 		"all twelve costumes are progression choices")
 	_expect(profile.gel_style_choices(&"gel_accessory").size() == AccessoryCatalog.ACCESSORIES.size() + 1,
-		"all fifteen accessories plus none are progression choices")
+		"all sixteen accessories plus none are progression choices")
 	_expect(profile.select_gel_style(&"gel_hair", &"quiff"), "a starter hairstyle can be selected")
 	_expect(not profile.select_gel_style(&"gel_hair", &"long"), "a late hairstyle stays locked")
 	_unlock_all_gel_choices(profile)
@@ -73,7 +73,7 @@ func _check_panel() -> void:
 		"the style page contains five moustaches plus none")
 	_expect(panel.find_children("Costume_*", "Button", true, false).size() == 12,
 		"the style page contains every costume")
-	_expect(panel.find_children("Accessory_*", "Button", true, false).size() == 16,
+	_expect(panel.find_children("Accessory_*", "Button", true, false).size() == 17,
 		"the style page contains every accessory plus none")
 	var preview: Control = panel.find_child("CharacterPreview", true, false)
 	var rounded: Node3D = preview.get(&"mannequin")

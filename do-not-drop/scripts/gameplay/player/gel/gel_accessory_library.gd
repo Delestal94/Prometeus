@@ -37,6 +37,7 @@ static func build_accessory(requested_id: StringName) -> Node3D:
 		&"monocle": _monocle(root, primary, accent)
 		&"wristwatch": _wristwatch(root, primary, accent)
 		&"fairy_wings": _fairy_wings(root, primary, accent)
+		&"reflective_vest": _reflective_vest(root, primary, accent)
 	return root
 
 
@@ -156,6 +157,28 @@ static func _fairy_wings(root: Node3D, primary: Material, accent: Material) -> v
 	_sphere(root, "wing_core", Vector3(0.0, 1.22, 0.35), Vector3(0.16, 0.38, 0.10), accent, &"chest")
 
 
+## High-vis tabard worn over the costume torso (S-305): open sides, a V-neck gap between the front
+## panels and two silver reflective bands. It is a shell: GelCostumeFitter scales it with the chest bone
+## and its x/z offsets (gel_fit_shell), so it keeps clear of the torso at every proportion.
+static func _reflective_vest(root: Node3D, primary: Material, accent: Material) -> void:
+	var silver := _reflective_material((accent as StandardMaterial3D).albedo_color)
+	for side: float in [-1.0, 1.0]:
+		_box(root, "VestFront", Vector3(side * 0.245, 1.13, -0.33), Vector3(0.30, 0.66, 0.04), primary, &"chest")
+		_box(root, "ShoulderStrap", Vector3(side * 0.30, 1.48, -0.01), Vector3(0.12, 0.04, 0.68), primary,
+			&"chest")
+		_box(root, "VestHem", Vector3(side * 0.395, 0.83, -0.01), Vector3(0.04, 0.05, 0.66), primary,
+			&"chest")
+		for y: float in [1.02, 1.22]:
+			var label: String = "vest_stripe" if side < 0.0 and y > 1.1 else "VestStripe"
+			_box(root, label, Vector3(side * 0.245, y, -0.356), Vector3(0.30, 0.07, 0.012), silver, &"chest")
+	_box(root, "VestBack", Vector3(0.0, 1.13, 0.31), Vector3(0.80, 0.66, 0.04), primary, &"chest")
+	for y: float in [1.02, 1.22]:
+		_box(root, "VestStripe", Vector3(0.0, y, 0.336), Vector3(0.80, 0.07, 0.012), silver, &"chest")
+	for piece: Node in root.get_children():
+		piece.set_meta(&"gel_costume_bone", &"chest")
+		piece.set_meta(&"gel_fit_shell", true)
+
+
 static func _box(root: Node3D, label: String, position: Vector3, size: Vector3, material: Material,
 		bone: StringName = &"head", rotation: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
@@ -208,6 +231,13 @@ static func _piece(root: Node3D, label: String, mesh: PrimitiveMesh, position: V
 	piece.set_meta(&"gel_accessory_bone", bone)
 	root.add_child(piece)
 	return piece
+
+
+static func _reflective_material(color: Color) -> StandardMaterial3D:
+	var material := _material(color)
+	material.metallic = 0.65
+	material.roughness = 0.22
+	return material
 
 
 static func _material(color: Color, transparent: bool = false) -> StandardMaterial3D:

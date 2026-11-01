@@ -110,6 +110,7 @@ const GEL_ACCESSORY_UNLOCKS := {
 	&"scarf": &"liquid_trap", &"backpack": &"agile_van", &"headphones": &"violet_paint",
 	&"party_hat": &"vintage_van", &"snorkel": &"explosive_trap", &"monocle": &"explosive_trap",
 	&"crown": &"sky_uniform", &"wristwatch": &"hostile_trap", &"fairy_wings": &"hostile_trap",
+	&"reflective_vest": &"coral_uniform",
 }
 
 var total_score: int = 0

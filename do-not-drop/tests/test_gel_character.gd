@@ -55,11 +55,27 @@ func _run() -> void:
 	_check_live_look(player, body)
 	_check_network_contract(player)
 	await _check_ragdoll(body, state.get(&"proportions") as GelBodyProportions)
+	await _check_vest_fit(body, state)
 	player.free()
 	_cleanup_profile()
 	if _failures == 0:
 		print("PASS: complete gel customization persists, renders, fits budgets and replicates")
 	quit(_failures)
+
+
+## S-305: the replicated vest id mounts the shell accessory and the live proportions fit it.
+func _check_vest_fit(body: Node3D, state: Node) -> void:
+	state.set(&"accessory_id", &"reflective_vest")
+	await process_frame
+	await process_frame
+	var vest: Node = body.find_child("GelAccessory_reflective_vest", false, false)
+	_expect(vest != null, "the replicated vest id mounts the vest on the live body")
+	if vest == null:
+		return
+	var back: Node3D = vest.find_child("VestBack", true, false) as Node3D
+	var proportions: GelBodyProportions = state.get(&"proportions") as GelBodyProportions
+	_expect(back != null and absf(back.position.y - 1.13 * proportions.total_height) < 0.001,
+		"the live vest is fitted to the replicated body proportions")
 
 
 func _check_profile_round_trip() -> void:
