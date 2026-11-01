@@ -267,20 +267,28 @@ func _build() -> void:
 		dim.color = Color(UiTheme.BACKDROP, 0.86)
 		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	var column: VBoxContainer = UiTheme.panel(center, Vector2(700, 0), 22)
-	column.add_theme_constant_override("separation", 8)
+	var column: VBoxContainer
+	if embedded:
+		# The clipboard's frame is the card: the sheet fills it and its list takes what is left (D-1902).
+		column = VBoxContainer.new()
+		column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(column)
+	else:
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(center)
+		column = UiTheme.panel(center, Vector2(700, 0), 22)
+	column.add_theme_constant_override("separation", 6 if embedded else 8)
 	if not embedded:
 		UiTheme.title(column, tr("UI_SUPPLIER_TITLE"), 34)
 	_supplier_label = UiTheme.label(column, "", 19, UiTheme.INK, true)
 	_supplier_label.name = "Supplier"
 	_already_label = UiTheme.label(column, "", 16, UiTheme.INK)
 	_already_label.name = "Already"
-	UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
+	if not embedded:
+		UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(0, 160 if embedded else 250)
+	_scroll.custom_minimum_size = Vector2(0, 60 if embedded else 250)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true

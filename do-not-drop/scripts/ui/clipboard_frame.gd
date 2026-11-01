@@ -182,6 +182,8 @@ func _build() -> void:
 	_host.name = "Sheet"
 	_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_host.mouse_filter = Control.MOUSE_FILTER_PASS
+	# A sheet taller than the board (big text scale) is cut, never drawn over the tabs or the foot.
+	_host.clip_contents = true
 	column.add_child(_host)
 	_hint = UiTheme.label(column, "", 15, UiTheme.MUTED)
 	_hint.name = "Hint"

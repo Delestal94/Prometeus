@@ -9,14 +9,17 @@ extends SceneTree
 ## - the embedded panels: no dark backdrop, no title, no Close and no ui_cancel of their own (Esc does not close
 ##   them); set_embedded() on a built panel rebuilds it and keeps the supplier cart;
 ## - on the real root, solo, with the keyboard: I raises it on the Stock sheet (the frame shows, the
-##   player's input is off, PlayerHeldTool.held_tool is clipboard_up and the 3D board hangs from the hand), E /
+##   player's input is off, PlayerHeldTool.held_tool is clipboard_up, replicated on spawn and on change, and the
+##   3D board hangs from hand.R), E /
 ##   Q turn the sheets (wrapping) and only the sheet showing draws, Esc stows it without opening the pause (the
 ##   next Esc does open it) and I stows it too; a click on a tab changes sheet;
-## - with the gamepad: d-pad right raises it, RB goes to the Supplier sheet whose first plus takes the focus,
+## - with the gamepad: d-pad right raises it, RB goes to the Supplier sheet whose first plus takes the focus
+##   (both sheets fit the board at the base 1280x720, measured, no capture),
 ##   d-pad right on the plus (the right edge of the row) keeps the focus there and the clipboard raised,
 ##   d-pad left goes to the minus and d-pad down to the next row, B stows it;
 ## - PlayerHeldTool.set_held() leaves a copy of another peer's player alone (only the owner writes);
-## - busy hands: units in this peer's hands, a seat, the phone up or the build mode keep it in; raised, units
+## - busy hands: units in this peer's hands, a seat, the phone up, the build mode or another screen (the
+##   player's input already off) keep it in; raised, units
 ##   coming into the hands put it away; the build mode does not start while it is raised (ShedBuilder.busy);
 ## - the shed's supplier board is a shortcut that raises it on the Supplier sheet, and the board's close()
 ##   stows it; the day's summary and the pause asked for (EventBus.pause_requested) stow it; it remembers
@@ -141,8 +144,16 @@ func _test_keyboard(level: CompanyRoot, clip: CompanyClipboard) -> void:
 		"I raises it on the Stock sheet")
 	_expect(not level.player.is_processing_unhandled_input(), "...the player's input is off")
 	_expect(held.get(&"held_tool") == &"clipboard_up", "...the others see it raised (held_tool)")
-	var board: Node = held.call(&"board")
-	_expect(board == null or board.is_inside_tree(), "...its board hangs from the hand once the rig is up")
+	await process_frame
+	var board: Node3D = held.call(&"board")
+	_expect(board != null and board.get_parent() is BoneAttachment3D
+		and (board.get_parent() as BoneAttachment3D).bone_name == &"hand.R", "...its board hangs from hand.R")
+	var sync: MultiplayerSynchronizer = level.player.get_node(^"MultiplayerSynchronizer")
+	var path := NodePath("PlayerHeldTool:held_tool")
+	var config: SceneReplicationConfig = sync.replication_config
+	_expect(config.has_property(path) and config.property_get_spawn(path)
+		and config.property_get_replication_mode(path) == SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE,
+		"held_tool is replicated on spawn and on change")
 	var copy: Node = (load("res://scripts/gameplay/player/player_held_tool.gd") as GDScript).new()
 	copy.set_multiplayer_authority(4242)
 	root.add_child(copy)
@@ -194,6 +205,11 @@ func _test_gamepad(level: CompanyRoot, clip: CompanyClipboard) -> void:
 	if ids.size() < 2:
 		clip.stow()
 		return
+	var host: Control = clip.frame.sheet_host()
+	for sheet: Control in [panel, level.stock_board.panel]:
+		var need: float = (sheet.get_child(0) as Control).get_combined_minimum_size().y
+		_expect(host.size.y > 0.0 and need <= host.size.y,
+			"%s fits the board (needs %.0f px of %.0f)" % [sheet.name, need, host.size.y])
 	var plus: Button = panel.more_button(ids[0])
 	_expect(_focus() == plus, "the first plus takes the focus")
 	root.push_input(_pad(JOY_BUTTON_DPAD_RIGHT))
@@ -226,6 +242,9 @@ func _test_busy(level: CompanyRoot, clip: CompanyClipboard) -> void:
 	phone.set(&"phone_raised", true)
 	_expect(not clip.raise(), "the phone up keeps it in")
 	phone.set(&"phone_raised", false)
+	player.set_process_unhandled_input(false)
+	_expect(not clip.raise(), "another screen that took the player's input keeps it in")
+	player.set_process_unhandled_input(true)
 	_expect(clip.raise(), "free hands raise it")
 	_expect(level.builder.busy.is_valid() and bool(level.builder.busy.call()), "raised, the build mode may not start")
 	level.net.inventory.receive(&"hen", 1, hands)

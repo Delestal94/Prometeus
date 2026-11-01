@@ -10,9 +10,12 @@
   - `company_root.gd`: sin líneas nuevas; `_add_stock_board()` llama a `CompanyClipboard.attach(self, stock_board)`
     en lugar de `add_child(stock_board)`. El portapapeles envuelve `ShedBuilder.busy` (no se construye con él
     afuera).
-  - `stock_board.gd`: `sheet_mode` (deja de escuchar `company_stock`), `show_sheet()` / `hide_sheet()`.
+  - `stock_board.gd`: `sheet_mode` (deja de escuchar `company_stock`), `open_in` (su `open()` saca el
+    portapapeles en la hoja Stock), `show_sheet()` / `hide_sheet()`.
   - `supplier_board.gd`: `open_in` (el tablero del galpón saca el portapapeles en la hoja Proveedor),
     `show_sheet()` / `hide_sheet()`. Fuera del mundo Empresa (tests, otros usos) los dos se comportan igual
     que antes.
+- **Límite conocido:** el carrito agarrado solo lo sabe el host (`PickingCartGrip`), así que en un cliente no
+  frena sacar el portapapeles (el jugador queda quieto igual). Si hace falta, el agarre tendría que replicarse.
 - **Qué tiene que hacer Nacho:** nada. La hoja Empleados (D-1038) se suma con `frame.add_sheet()` y
   `set_listed()` cuando exista el hito 8; D-1004 (bajado y asignar apuntando) usa `held_tool = &"clipboard"`.

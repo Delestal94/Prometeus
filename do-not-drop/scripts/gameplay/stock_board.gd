@@ -39,6 +39,8 @@ var player_of: Callable = Callable()
 var busy: Callable = Callable()
 ## The list is the clipboard's Stock sheet (see the class doc): the key is the clipboard's.
 var sheet_mode: bool = false
+## Set by the clipboard: Callable() -> bool that raises it on the Stock sheet; open() calls it instead.
+var open_in: Callable = Callable()
 
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _player_off: Node = null
@@ -132,6 +134,8 @@ func is_open() -> bool:
 
 ## Opens the list. False when nothing owns a stock yet or the screen is taken.
 func open() -> bool:
+	if open_in.is_valid():
+		return bool(open_in.call())
 	if panel == null or net == null or is_open():
 		return false
 	if busy.is_valid() and bool(busy.call()):

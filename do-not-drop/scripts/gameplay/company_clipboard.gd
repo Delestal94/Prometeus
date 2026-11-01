@@ -54,6 +54,8 @@ var building: Callable = Callable()
 var grip_of: Callable = Callable()
 ## Returns true while the pause (or its menu) is open.
 var pause_open: Callable = Callable()
+## Returns true while the day is in its SUMMARY (the closing screen owns the screen).
+var summary_open: Callable = Callable()
 ## This peer's id; unset, the multiplayer's (a test drives it).
 var peer_id: Callable = Callable()
 
@@ -82,6 +84,7 @@ static func _ensure(action: StringName, key_code: Key, button: JoyButton) -> voi
 		InputMap.action_add_event(action, key)
 	var pad := InputEventJoypadButton.new()
 	pad.button_index = button
+	pad.device = -1
 	InputMap.action_add_event(action, pad)
 
 
@@ -108,6 +111,9 @@ static func attach(root: Node, stock: StockBoard) -> CompanyClipboard:
 		if pause == null:
 			return false
 		return bool(pause.call(&"is_paused")) or (pause.has_method(&"menu_open") and bool(pause.call(&"menu_open")))
+	clip.summary_open = func() -> bool:
+		var cycle: DayCycle = root.get(&"day_cycle") as DayCycle if is_instance_valid(root) else null
+		return cycle != null and is_instance_valid(cycle) and cycle.phase() == DayCycle.Phase.SUMMARY
 	root.add_child(clip)
 	var builder: ShedBuilder = root.get(&"builder") as ShedBuilder
 	if builder != null:
@@ -143,6 +149,7 @@ func _ready() -> void:
 		stock_board.panel.set_embedded(true)
 		frame.add_sheet(SHEET_STOCK, tr("UI_CLIPBOARD_SHEET_STOCK"), stock_board.panel)
 		stock_board.panel.closed.connect(stow)
+		stock_board.open_in = func() -> bool: return raise(SHEET_STOCK)
 	if supplier_board != null and supplier_board.panel != null:
 		supplier_board.panel.set_embedded(true)
 		frame.add_sheet(SHEET_SUPPLIER, tr("UI_CLIPBOARD_SHEET_SUPPLIER"), supplier_board.panel)
@@ -154,9 +161,11 @@ func _ready() -> void:
 		bus.connect(&"company_day_summary", _on_day_summary)
 
 
+## Leaving the world is always for a menu: the cursor stays free (as CompanySoloPause leaves it).
 func _exit_tree() -> void:
 	if _up:
 		stow()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		if bus.is_connected(&"pause_requested", stow):
@@ -185,7 +194,7 @@ func raise(sheet: StringName = &"") -> bool:
 	if _up:
 		show_sheet(wanted)
 		return true
-	if hands_busy() or _is_paused():
+	if hands_busy() or _is_paused() or _screen_taken():
 		return false
 	_up = true
 	_mouse_before = Input.mouse_mode
@@ -228,6 +237,7 @@ func show_sheet(sheet: StringName) -> void:
 	if not _up:
 		return
 	_hide_sheets()
+	_update_hint()
 	match sheet:
 		SHEET_STOCK:
 			stock_board.show_sheet()
@@ -329,6 +339,14 @@ func _peer() -> int:
 	if peer_id.is_valid():
 		return int(peer_id.call())
 	return multiplayer.get_unique_id() if is_inside_tree() and multiplayer != null else 1
+
+
+## Another screen owns it: the day's summary, or a panel that switched the player's input off (dispatch, shop).
+func _screen_taken() -> bool:
+	if summary_open.is_valid() and bool(summary_open.call()):
+		return true
+	var player: Node = _player()
+	return player != null and not player.is_processing_unhandled_input()
 
 
 func _is_paused() -> bool:
