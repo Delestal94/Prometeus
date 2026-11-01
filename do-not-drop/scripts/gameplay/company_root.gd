@@ -129,7 +129,7 @@ var player: Node3D
 var shed: CompanyShed
 ## Build mode of the shed (D-0917): keyboard, mouse and gamepad; only asks, the host decides.
 var builder: ShedBuilder
-## The stock list over the clipboard's key (D-0612.b): every peer, read only.
+## The stock list, the clipboard's Stock sheet (D-0612.b, CompanyClipboard D-1902): every peer, read only.
 var stock_board: StockBoard
 ## The supplier's truck NPC (D-0601): drawn from the calendar and the game clock on every peer.
 var supplier_truck: SupplierTruckView
@@ -774,13 +774,13 @@ func _add_builder() -> void:
 	builder.busy = func() -> bool: return supplier_board != null and supplier_board.is_open()
 
 
-## The stock list (D-0612.b): I / d-pad right opens it on any peer (StockBoard.for_company(), D-0813.1).
+## The stock list (D-0612.b, StockBoard.for_company()) as a sheet of the clipboard (D-1902): every peer.
 func _add_stock_board() -> void:
 	if net == null:
 		return
 	stock_board = StockBoard.for_company(net, supplier_schedule, func() -> Node: return player,
 		func() -> bool: return builder != null and builder.is_building())
-	add_child(stock_board)
+	CompanyClipboard.attach(self, stock_board)
 
 
 ## The crew's spawner, on every peer at the same path so the host's spawns land on each client,

@@ -121,6 +121,13 @@ Main Menu
   confirmación; un cliente lo ve apagado con "Lo cierra el host". Mientras salir pierde el día, el aviso
   queda sobre las dos salidas y cada una pregunta antes ("Salir igual"). Esc vuelve de una confirmación y,
   si no hay ninguna, cierra el menú.
+- **Portapapeles del modo Empresa** (D-1902, `scripts/gameplay/company_clipboard.gd`): `I` (cruceta
+  derecha en el mando, solo para sacarlo) lo levanta con la hoja Stock o la última que se miró; `Q` / `E`
+  (LB / RB) o un clic en la pestaña cambian de hoja (Stock, Proveedor; Empleados llega con el hito 8);
+  `Esc`, `I` o B lo guardan sin abrir la pausa. Levantado, el ratón queda libre y el jugador sin input. No sale
+  con las manos ocupadas (caja, unidades en la mano, carrito, asiento, celular, modo construcción) y se guarda
+  solo si alguna empieza, al resumen del día o al pedir la pausa. El tablero del proveedor del galpón lo saca
+  en la hoja Proveedor. El pie con las teclas sale del mapa de entradas (teclado o mando).
 - El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, el código de
   sala (8 letras, `K7QM-4TXA`; ver `scripts/ui/room_code.gd`) para pasarle a los amigos. "Unirse" acepta
   el código o la IP.

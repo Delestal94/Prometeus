@@ -25,6 +25,10 @@ extends Node
 ## ordered for tomorrow (SupplierAutoOrder.cart_preload, D-0151.3c), and the screen says how much is already ordered.
 ## Today's orders are the ones this peer saw come in since the day opened (a late joiner sees fewer and so gets a
 ## smaller suggestion, never a wrong order: the host checks it like any other).
+##
+## In the company's world the screen is the Supplier sheet of the clipboard (CompanyClipboard, D-1902): with
+## `open_in` set, open() (the shed's board, a shortcut) raises the clipboard on that sheet instead, and
+## show_sheet() / hide_sheet() draw it (embedded) with no screen of its own.
 
 ## Reason of a refusal (CompanyNet / CompanySupplierNet) -> translation key of the line under the list.
 const REASON_KEYS: Dictionary = {
@@ -48,6 +52,8 @@ var supplier_name: String = ""
 var player_of: Callable = Callable()
 ## Returns true while something else owns the screen (the build mode).
 var busy: Callable = Callable()
+## Set by the clipboard: Callable() -> bool that raises it on the Supplier sheet; open() calls it instead.
+var open_in: Callable = Callable()
 
 ## The order awaited: CompanyNet.request()'s id (0 for none), when it was sent (msec), the lines and total
 ## it was sent with, the day its truck comes, whose truck it is (a supplier id, D-0621.b) and what that
@@ -107,6 +113,8 @@ func is_pending() -> bool:
 
 ## Opens the screen. False when there is no CompanyNet, it is already open or the screen is taken.
 func open() -> bool:
+	if open_in.is_valid():
+		return bool(open_in.call())
 	if panel == null or net == null or is_open():
 		return false
 	if busy.is_valid() and bool(busy.call()):
@@ -125,6 +133,20 @@ func open() -> bool:
 func close() -> void:
 	if is_open():
 		panel.close()
+
+
+## The clipboard shows the Supplier sheet: the cart preloaded once a day, as open() does, nothing else taken.
+func show_sheet() -> void:
+	if panel == null or net == null:
+		return
+	preload_cart()
+	panel.open(context())
+
+
+## The clipboard put the Supplier sheet away (or went down). An order awaited still gets its answer.
+func hide_sheet() -> void:
+	if panel != null:
+		panel.hide()
 
 
 ## The panel's data from this peer's copy: the cart, the wallet and day of the company, the calendar,
@@ -271,6 +293,8 @@ func _my_id() -> int:
 
 
 func _on_closed() -> void:
+	if open_in.is_valid():
+		return
 	Input.mouse_mode = _mouse_before
 	if _player_off != null and is_instance_valid(_player_off):
 		_player_off.set_process_unhandled_input(true)

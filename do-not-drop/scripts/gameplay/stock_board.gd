@@ -13,6 +13,10 @@ extends Node
 ## count: nothing closes an order of that book yet (D-0815.b, D-0302), so past days' pile up there.
 ## The units already ordered from a supplier count as "on the way" when `real_calendar` (CompanyRoot sets
 ## it: since D-0603.b.2 the calendar holds only real orders, by CompanyNet on every peer).
+##
+## In the company's world the list is the Stock sheet of the clipboard (CompanyClipboard, D-1902): `sheet_mode`
+## stops this board listening to its key and show_sheet() / hide_sheet() draw the list (embedded) with no screen
+## of its own; the board stays the sheet's source of data and keeps it up to date.
 
 const ACTION_TOGGLE: StringName = &"company_stock"
 ## Events that change nothing the list shows (where a picking cart stands): no redraw for them.
@@ -33,6 +37,8 @@ var products: Dictionary = {}
 var player_of: Callable = Callable()
 ## Returns true while something else owns the screen (the build mode).
 var busy: Callable = Callable()
+## The list is the clipboard's Stock sheet (see the class doc): the key is the clipboard's.
+var sheet_mode: bool = false
 
 var _mouse_before: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _player_off: Node = null
@@ -145,6 +151,18 @@ func close() -> void:
 		panel.close()
 
 
+## The clipboard shows the Stock sheet: the list drawn from this peer's copy, nothing else taken.
+func show_sheet() -> void:
+	if panel != null:
+		panel.open(_context())
+
+
+## The clipboard put the Stock sheet away (or went down): the list stops redrawing.
+func hide_sheet() -> void:
+	if panel != null:
+		panel.hide()
+
+
 func _context() -> Dictionary:
 	var book: OrderBook = book_of.call() as OrderBook if book_of.is_valid() else null
 	var incoming: Dictionary = {}
@@ -172,6 +190,8 @@ func _on_restored(_snapshot_seq: int) -> void:
 
 
 func _on_closed() -> void:
+	if sheet_mode:
+		return
 	Input.mouse_mode = _mouse_before
 	if _player_off != null and is_instance_valid(_player_off):
 		_player_off.set_process_unhandled_input(true)
@@ -179,7 +199,7 @@ func _on_closed() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed(ACTION_TOGGLE):
+	if sheet_mode or not event.is_action_pressed(ACTION_TOGGLE):
 		return
 	if is_open():
 		close()

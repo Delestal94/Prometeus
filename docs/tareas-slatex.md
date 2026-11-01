@@ -466,7 +466,9 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 ### Grupo 19 — UI, tutorial, audio y efectos (`19-ui-audio-vfx.md`)
 
 - [ ] **D-1901** Tutorial de la primera semana: un objetivo por vez.
-- [ ] **D-1902** Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8).
+- [x] **D-1902** Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8).
+  Rama `codex/D-1902-clipboard`: `scripts/gameplay/company_clipboard.gd`, `scripts/ui/clipboard_frame.gd`,
+  `scripts/gameplay/player/player_held_tool.gd`, `tests/test_company_clipboard.gd`. La hoja Empleados espera a D-1038.
 - [ ] **D-1903** HUD del día: hora, plata, pedidos pendientes.
 - [ ] **D-1904** Menú principal con modo Empresa y slots de guardado.
 - [ ] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).

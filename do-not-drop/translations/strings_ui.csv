@@ -1547,3 +1547,7 @@ UI_COMPANY_DISTRICT_ISLAS,Islas,Islands
 UI_COMPANY_DISTRICT_MONTANA,Montaña,Mountain
 UI_COMPANY_DISTRICT_NIEVE,Nieve,Snow
 UI_COMPANY_DISTRICT_VOLCAN,Volcán,Volcano
+UI_CLIPBOARD_SHEET_STOCK,Stock,Stock
+UI_CLIPBOARD_SHEET_SUPPLIER,Proveedor,Supplier
+UI_CLIPBOARD_HINT_KEY,"%s / %s: cambiar de hoja · %s o Esc: guardar","%s / %s: change sheet · %s or Esc: put away"
+UI_CLIPBOARD_HINT_PAD,"%s / %s: cambiar de hoja · %s: guardar","%s / %s: change sheet · %s: put away"
