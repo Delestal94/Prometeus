@@ -508,7 +508,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   `order_sheet_panel.gd`; `tests/test_company_tooltips.gd`. Pendiente: la captura (sin pantalla en esta sesión).
 - [x] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
   Rama `codex/D-1909-company-pause-menu`: `scripts/ui/company_pause_menu.gd`, `tests/test_company_pause_menu.gd`.
-- [ ] **D-1910** Escalado de UI y Steam Deck.
+- [x] **D-1910** Escalado de UI y Steam Deck.
+  Rama `codex/D-1910-steam-deck`: `tests/test_ui_steam_deck.gd` arma las pantallas nuevas (cierre del día lleno,
+  pausa de la Empresa, tienda, despacho y portapapeles) a 1280x720 (el tamaño base, el más justo con
+  `stretch=expand`) y a 1280x800 (Steam Deck), con el texto a 1x y 1,5x, y comprueba que cada panel queda adentro.
+  Encontró que el cierre del día lleno medía 1031 px de alto. Ahora `DaySummaryPanel` hace scroll en el cuerpo
+  (`fit_body()`, se ajusta a la pantalla y al tamaño de texto), con el título y "Seguir" siempre a la vista. Con
+  mando, arriba y abajo hacen scroll. Pendiente: la captura a 800p (sin pantalla en esta sesión).
 - [x] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
   Rama `codex/D-1911-shed-music`: `modules/synth_audio/synth_audio_work_music.gd` (`SynthAudioWorkMusic`: cuatro
   compases a 108 BPM en tres capas del mismo largo, base, ritmo y melodía; `SynthAudio.work_music_layer()`),

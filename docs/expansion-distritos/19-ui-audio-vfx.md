@@ -17,7 +17,7 @@
 | D-1907 | Indicadores en el mundo (flecha a la estación que necesita algo) | constructor-ui | medium | captura |
 | D-1908 | ✅ Tooltips de productos y requisitos | constructor-ui | low | test |
 | D-1909 | ✅ Menú de pausa con opciones de la empresa (incluye "Cerrar el día" y el aviso de las salidas con `DayClose`, D-0253.a) | constructor-ui | low | test |
-| D-1910 | Escalado de UI y Steam Deck | constructor-ui | medium | captura a 800p |
+| D-1910 | ✅ Escalado de UI y Steam Deck | constructor-ui | medium | captura a 800p |
 | D-1911 | ✅ Música del galpón (loop de trabajo, sube con la actividad) | disenador-audio | medium | loop adaptativo |
 | D-1912 | Mezcla: buses para galpón, máquinas y distritos | disenador-audio | medium | niveles medidos |
 | D-1913 | ✅ SFX de UI del portapapeles | disenador-audio | low | SFX |
