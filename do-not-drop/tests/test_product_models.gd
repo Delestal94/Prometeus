@@ -30,6 +30,10 @@ const LOTS: Dictionary = {
 		"bicycle", "rolled_mattress", "potted_plant", "fish_tank", "guitar", "floor_lamp", "rolled_rug",
 		"armchair", "surfboard", "drum"
 	],
+	5: [
+		"coconuts", "cheese_wheel", "volcanic_souvenir", "snow_globe", "ski_pair", "fishing_net",
+		"honey_jar", "mountain_herbs", "anchor_souvenir", "wine_barrel"
+	],
 }
 
 var _failures: int = 0

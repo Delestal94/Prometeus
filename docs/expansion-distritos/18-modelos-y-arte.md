@@ -36,7 +36,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-1821 | Productos lote 5: 10 de distritos (cocos, quesos, souvenirs volcánicos) | modelador-blender* | high | 10 modelos |
+| D-1821 | ✅ Productos lote 5: 10 de distritos (cocos, quesos, souvenirs volcánicos) | modelador-blender* | high | 10 modelos |
 | D-1822 | Productos lote 6: 10 peligrosos/vivos (garrafa, fuegos, gallina, planta) | modelador-blender* | high | 10 modelos |
 | ~~D-1823~~ | ~~Máquinas finales (ver D-1141) — coordinación de estilo~~ **Fusionada en D-1843 (D-0112, [crítica](diseno/critica-alcance.md))** | director-arte | low | revisión |
 | D-1824 | Decoración del galpón (plantas, cafetera, carteles motivacionales) | modelador-blender* | medium | 10 props |
