@@ -619,7 +619,16 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   pantalla (sin pantalla en esta sesión).
 - [ ] **D-1942** Pasada de mezcla de audio completa.
 - [ ] **D-1943** Pasada de VFX para no tapar visión.
-- [ ] **D-1944** Revisión de UX copy de la expansión.
+- [x] **D-1944** Revisión de UX copy de la expansión.
+  Rama `codex/D-1944-ux-copy`: revisión de los textos de la expansión (las claves que nombran los scripts y datos
+  de la Empresa) por voseo, glosario, largo y gramática. Cambios:
+  - El cartel del galpón mediano decía "DEPÓSITO" / "WAREHOUSE", y el glosario reserva esa palabra para Partida
+    rápida: pasa a "GALPÓN GRANDE" / "BIG SHED".
+  - El feed decía "puso 3 Gallina": pasa a "puso Gallina ×3", y "Gallina: se echaron a perder 2".
+  - La confirmación de cerrar el día queda más corta.
+  - "y N productos más" empieza con mayúscula.
+  `tests/test_expansion_english.gd` suma que el castellano de la expansión use vos (sin "tienes", "puedes",
+  "elige"…) y que no llame "depósito" ni "almacén" al galpón.
 - [ ] **D-1945** Capturas de cada pantalla nueva.
 - [ ] **D-1946** Revisión de accesibilidad.
 - [x] **D-1947** Rendimiento de la UI (portapapeles sin picos).

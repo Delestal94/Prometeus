@@ -12,7 +12,9 @@ extends SceneTree
 ## - those keys keep the glossary (docs/expansion-distritos/diseno/glosario.md) for the terms
 ##   test_ui_translations does not check: a Spanish text with "sueldo", "sello", "estante", "alquiler", "flota",
 ##   "zona", "cliente", "mercadería", "turno", "día" or "cinta" says wage, stamp, shelf, rent, fleet, zone,
-##   customer, goods, shift, day or tape in English (TERM_EXCEPTIONS: another concept with the same word).
+##   customer, goods, shift, day or tape in English (TERM_EXCEPTIONS: another concept with the same word);
+## - their Spanish talks like the rest of the game, with "vos" (D-1944): none of TU_FORMS ("tienes", "puedes",
+##   "elige"...), and never calls the shed a "depósito" or an "almacén" (glosario.md: that is Partida rápida's).
 
 const TABLES: Array[String] = ["res://translations/strings_ui.csv", "res://translations/strings_world.csv"]
 ## Where the expansion's texts are named: folders read whole and single files.
@@ -37,6 +39,10 @@ const TERMS: Dictionary = {
 }
 ## Keys where the word is another concept: the conveyor belt is a "cinta" too.
 const TERM_EXCEPTIONS: Array[String] = ["WORLD_SHOP_CONVEYOR"]
+## Tú forms (the game says "tenés", "podés", "elegí").
+const TU_FORMS: String = "(?i)\\b(tienes|puedes|quieres|necesitas|debes|eres|elige|presiona|pulsa|recuerda|haz)\\b"
+## Words the glossary keeps off the shed.
+const SHED_BANNED: String = "(?i)\\b(dep[oóÓ]sito|almac[eéÉ]n)\\b"
 ## Spanish letters that an English text never has.
 const SPANISH_LETTERS: String = "áéíóúñ¿¡ÁÉÍÓÚÑ"
 
@@ -98,6 +104,10 @@ func _check_english(key: String, texts: Array) -> void:
 		if english.contains(letter):
 			_expect(false, "%s's English has no Spanish letter %s: %s" % [key, letter, english])
 			break
+	var said_es: String = String(texts[0])
+	_expect(RegEx.create_from_string(TU_FORMS).search(said_es) == null, "%s talks with vos: %s" % [key, said_es])
+	_expect(RegEx.create_from_string(SHED_BANNED).search(said_es) == null, "%s keeps the glossary's shed: %s"
+		% [key, said_es])
 	if TERM_EXCEPTIONS.has(key):
 		return
 	var spanish: String = String(texts[0]).to_lower()

@@ -61,7 +61,7 @@
 | D-1941 | Pasada de pulido de UI completa (incluye D-1934, fusión de D-0112) | pulidor-jugabilidad | high | lista cerrada |
 | D-1942 | Pasada de mezcla de audio completa | disenador-audio | medium | niveles en doc |
 | D-1943 | Pasada de VFX para no tapar visión | artista-vfx | medium | capturas |
-| D-1944 | Revisión de UX copy de la expansión (skill ux-copy) | constructor-ui | low | textos revisados |
+| D-1944 | ✅ Revisión de UX copy de la expansión (skill ux-copy) | constructor-ui | low | textos revisados |
 | D-1945 | Capturas de cada pantalla nueva | revisor-visual | low | set |
 | D-1946 | Revisión de accesibilidad | revisor-visual | medium | informe |
 | D-1947 | ✅ Rendimiento de la UI (portapapeles sin picos) | perfilador-rendimiento | low | medido |
