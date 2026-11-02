@@ -1500,6 +1500,16 @@ UI_ORDER_STARS_3,Regular,Fair
 UI_ORDER_STARS_4,Buena,Good
 UI_ORDER_STARS_5,Excelente,Excellent
 UI_FINANCE_SHOP,Tienda,Shop
+UI_FEED_ORDER_ADDED,Llegó el pedido %s,Order %s came in
+UI_FEED_ORDER_EXPIRED,Se venció el pedido %s,Order %s ran out of time
+UI_FEED_BOX_PLACED,%s puso %d %s en una caja,%s put %d %s in a box
+UI_FEED_BOX_LABELED,Caja etiquetada para el pedido %s,Box labeled for order %s
+UI_FEED_BOX_SEALED,Caja cerrada para el pedido %s,Box sealed for order %s
+UI_FEED_BOX_SEALED_BLANK,Caja cerrada sin pedido,Box sealed without an order
+UI_FEED_SUPPLIER_ORDERED,%s le pidió %d unidades al proveedor,%s ordered %d units from the supplier
+UI_FEED_SPOILED,Se echaron a perder %d %s,%d %s spoiled
+UI_FEED_TRUCK_LEFT,Se fue el camión del proveedor,The supplier truck left
+UI_FEED_SOMEONE,Alguien,Someone
 UI_SHOP_TITLE,Tienda de la empresa,Company shop
 UI_SHOP_MONEY,Caja de la empresa: %s,Company cash: %s
 UI_SHOP_ROW,"%s · $%d","%s · $%d"

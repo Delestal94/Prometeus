@@ -47,7 +47,7 @@
 | ~~D-1932~~ | ~~Efecto de "nivel subido" de empleado~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-vfx | low | efecto |
 | ~~D-1933~~ | ~~Efecto de desbloqueo de distrito~~ **Fusionada en D-0444 (D-0112, [crítica](diseno/critica-alcance.md))** | artista-vfx | medium | efecto |
 | ~~D-1934~~ | ~~Transiciones animadas entre pantallas~~ **Fusionada en D-1941 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | tweens |
-| D-1935 | Feed de eventos del galpón (quién hizo qué) | constructor-ui | medium | captura |
+| D-1935 | ✅ Feed de eventos del galpón (quién hizo qué) | constructor-ui | medium | captura |
 | D-1936 | Voz de proximidad en el galpón grande (alcance ajustado) | constructor-red | low | parámetros |
 | ~~D-1937~~ | ~~Chat de pings con íconos de negocio~~ **Fusionada en D-0332 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | test |
 | ~~D-1938~~ | ~~Atajos de teclado configurables para gestión~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | test |
