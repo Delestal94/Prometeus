@@ -709,7 +709,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Pendiente: mirarlas (sin pantalla en esta sesión) y pegarlas en las cajas (`BoxSeals`).
 - [ ] **D-1809** Conservadora, caja térmica, caja impermeable.
 - [ ] **D-1816** Portapapeles en la mano (primera persona).
-- [ ] **D-1819** Clientes NPC en la puerta (6 variantes).
+- [x] **D-1819** Clientes NPC en la puerta (6 variantes).
+  Rama `codex/D-1819-customers`: `assets/tools/build_customer_models.py` (Blender en segundo plano) arma seis clientes
+  low-poly para la puerta en `assets/models/characters/customers/`: abuela, vecino con gorra, chica con trenzas,
+  señor de bigote, nene y cocinero. Tienen colisión simple y no tienen esqueleto: la reacción de la puerta mueve
+  la figura entera. Test: `tests/test_customer_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y
+  ponerlos en las casas de los distritos.
 - [ ] **D-1821** Productos lote 5: 10 de distritos.
 - [ ] **D-1822** Productos lote 6: 10 peligrosos/vivos.
 - [ ] **D-1833** Texturas de productos (marcas ficticias graciosas).

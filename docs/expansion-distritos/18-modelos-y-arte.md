@@ -29,7 +29,7 @@
 | D-1816 | Portapapeles en la mano (primera persona) | modelador-blender* | low | modelo |
 | D-1817 | Kit de paredes del galpón por etapa | modelador-blender* | high | kit |
 | ~~D-1818~~ | ~~Empleado base (D-1018) con uniforme de la empresa~~ **Fusionada en D-1018 (D-0112, [crítica](diseno/critica-alcance.md))** | modelador-blender* | medium | modelo rigueado |
-| D-1819 | Clientes NPC en la puerta (6 variantes) | modelador-blender* | high | 6 modelos |
+| D-1819 | ✅ Clientes NPC en la puerta (6 variantes) | modelador-blender* | high | 6 modelos |
 | ~~D-1820~~ | ~~Inventario de assets actualizado con todo lo nuevo~~ **Fusionada en D-0147 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | `inventario-assets.md` |
 
 ## Ampliación
