@@ -500,7 +500,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   (`UiTheme.state_color`), escondidas sin vehículo; el texto de cada fila toma el color de su marca (elegida menta,
   libre tinta, bloqueada apagada). Test: `tests/test_company_dispatch_panel.gd` (`_test_style`). Pendiente: la
   captura (sin pantalla en esta sesión); la fuente y el tema unificados son D-1916.
-- [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
+- [x] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
+  Rama `codex/D-1907-world-indicators`: `scripts/presentation/shed_indicators.gd` (`ShedIndicators`, bajo el galpón y
+  en su grupo de overlay): una flecha que sube y baja con una línea sobre la pieza que necesita a alguien. Mesa de
+  armado con un insumo bajo: naranja, "Faltan insumos". Zona de despacho con pedidos atrasados: roja, "N
+  atrasados". Se va cuando se atiende. Lo agrega `CompanyUi`. Test: `tests/test_shed_indicators.gd` (también en el
+  galpón real). Pendiente: la captura (sin pantalla en esta sesión).
 - [x] **D-1908** Tooltips de productos y requisitos.
   Rama `codex/D-1908-tooltips`: `scripts/ui/company_tooltips.gd` (texto de producto: tamaño, peso, frágil, frío,
   trampa y precios; de requisito: sello, calidad mínima, plazo y paga extra), tooltip y línea de detalle con el

@@ -477,3 +477,5 @@ WORLD_ZONE_VOLCAN,Volcán,Volcano
 WORLD_VEHICLE_VAN_CLASSIC,Camioneta clásica,Classic van
 WORLD_VEHICLE_VAN_AGILE,Camioneta ágil,Agile van
 WORLD_VEHICLE_VAN_VINTAGE,Camioneta vintage,Vintage van
+WORLD_INDICATOR_SUPPLIES,Faltan insumos,Needs supplies
+WORLD_INDICATOR_LATE,%d atrasados,%d late
