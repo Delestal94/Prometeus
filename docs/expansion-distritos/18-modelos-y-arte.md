@@ -48,7 +48,7 @@
 | ~~D-1830~~ | ~~Retratos de clientes (D-0847)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | 18 retratos |
 | D-1831 | Arte conceptual de cada distrito (referencia para modelar) | artista-conceptual* | high | 9 imágenes |
 | D-1832 | Arte conceptual de cada vehículo | artista-conceptual* | medium | 5 imágenes |
-| D-1833 | Texturas de productos (marcas ficticias graciosas) | artista-conceptual* | medium | 30 etiquetas |
+| D-1833 | ✅ Texturas de productos (marcas ficticias graciosas) | artista-conceptual* | medium | 30 etiquetas |
 | D-1834 | Animales nuevos (cabras, delfín, cóndor) | modelador-blender* | medium | 3 modelos |
 | D-1835 | Animaciones de animales nuevos | animador* | medium | clips |
 | D-1836 | Variantes de casas de entrega por distrito (fachadas) | modelador-blender* | high | 20 fachadas |
