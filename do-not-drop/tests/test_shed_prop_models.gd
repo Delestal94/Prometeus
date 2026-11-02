@@ -31,6 +31,9 @@ const GROUPS: Dictionary = {
 		"containers/sm_container_thermal_box",
 		"containers/sm_container_waterproof_box",
 	], true],
+	"clipboard": [[
+		"handheld/sm_prop_clipboard",
+	], false],
 }
 
 var _failures: int = 0
