@@ -875,13 +875,13 @@ UI_TUT_DRIVER_CONTROL,%s  acelerar y frenar,%s  accelerate and brake
 UI_TUT_DRIVER_TITLE,Conductor,Driver
 UI_TUT_EXPLOSIVE_ACTION,Pedí el código: el conductor lo ve en el tablero; tocá las flechas que te diga.,Ask for the code: the driver sees it on the dashboard; tap the arrows they say.
 UI_TUT_EXPLOSIVE_BREAKS,Dejar que la cuenta regresiva llegue a cero.,Letting the countdown reach zero.
-UI_TUT_FRAGILE_ACTION,Amortiguá: un toque del botón justo antes de cada bache, cuando se cierra el anillo.,Cushion it: one tap of the button right before each bump, as the ring closes.
+UI_TUT_FRAGILE_ACTION,"Amortiguá: un toque del botón justo antes de cada bache, cuando se cierra el anillo.","Cushion it: one tap of the button right before each bump, as the ring closes."
 UI_TUT_FRAGILE_BREAKS,Los golpes fuertes le quitan integridad.,Heavy impacts reduce its integrity.
 UI_TUT_HOSTILE_ACTION,Leelo: mantené si está tranquilo :) y soltá si está enojado >:(,Read it: hold while it is calm :) and let go when it is angry >:(
 UI_TUT_HOSTILE_BREAKS,Tocar cuando ordena NO TOCAR o ignorar CALMÁ.,Touching it when it says DON'T TOUCH or ignoring CALM.
 UI_TUT_LEFT_CLICK,Click izq.,Left click
 UI_TUT_LEFT_STICK,Stick izq.,Left stick
-UI_TUT_LIQUID_ACTION,Fregá: alterná izquierda y derecha rápido, sin apretar nada.,Scrub: swing left and right fast, holding nothing.
+UI_TUT_LIQUID_ACTION,"Fregá: alterná izquierda y derecha rápido, sin apretar nada.","Scrub: swing left and right fast, holding nothing."
 UI_TUT_LIQUID_BREAKS,Inclinarla y dejar crecer el charco.,Tilting it and letting the puddle grow.
 UI_TUT_NEXT,Siguiente,Next
 UI_TUT_NOISY_ACTION,Abrazalo: mantené la acción para calmarlo.,Hug it: hold the action to calm it.
@@ -1351,7 +1351,7 @@ UI_FINANCE_AUTO_ORDER,Pedido automático al proveedor: %d unidades,Automatic sup
 UI_FINANCE_REASON_ORDER_PAID,Pedidos cobrados,Orders paid
 UI_FINANCE_REASON_TIP,Propinas,Tips
 UI_FINANCE_REASON_PLACEABLE_SELL,Venta de piezas del galpón,Shed pieces sold
-UI_FINANCE_REASON_SUPPLIER,Mercadería al proveedor,Supplier stock
+UI_FINANCE_REASON_SUPPLIER,Mercadería al proveedor,Goods from the supplier
 UI_FINANCE_REASON_BOXES,Cajas,Boxes
 UI_FINANCE_REASON_PACKAGING,"Embalaje (relleno, cinta, etiquetas)","Packaging (filler, tape, labels)"
 UI_FINANCE_REASON_RENT,Alquiler del galpón,Shed rent
