@@ -507,7 +507,16 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1914** Efecto de pedido completado.
 - [ ] **D-1915** Efecto de error de armado.
 - [ ] **D-1916** Fuente y estilo visual unificado de la expansión.
-- [ ] **D-1917** Traducción al inglés de todo lo nuevo.
+- [x] **D-1917** Traducción al inglés de todo lo nuevo.
+  Rama `codex/D-1917-english`: `tests/test_expansion_english.gd`. Revisa las dos tablas fila por fila, como las
+  importa Godot: tres campos, sin claves repetidas ni textos vacíos, y los mismos placeholders en español y en
+  inglés. Las claves de la expansión (335 hoy) (scripts de la Empresa y sus `data/*.tres`) no tienen letras del
+  castellano en el inglés y respetan el glosario en los términos que `test_ui_translations` no mira.
+  Arreglos que encontró:
+  - `UI_TUT_FRAGILE_ACTION` y `UI_TUT_LIQUID_ACTION` tenían una coma sin comillas: Godot partía la fila y el
+    inglés mostraba el resto del castellano.
+  - `UI_FINANCE_REASON_SUPPLIER` pasa a "Goods from the supplier" y `WORLD_PACKTUT_SEALS` a "stamps", como
+    dice el glosario.
 - [ ] **D-1918** Accesibilidad: daltonismo en requisitos y estados.
 - [x] **D-1919** Modificadores de la empresa (armado asistido, días tranquilos).
   Rama `codex/D-1919-company-modifiers`: `CompanyState.options` (guardado, snapshot y `list_slots()`), la cinta con
