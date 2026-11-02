@@ -14,3 +14,4 @@ static func add_to(root: Node) -> void:
 	ShedIndicators.add_to(root)
 	PackingVfx.add_to(root)
 	DistrictMusic.add_to(root)
+	CompanyVoice.add_to(root)

@@ -479,3 +479,5 @@ WORLD_VEHICLE_VAN_AGILE,Camioneta ágil,Agile van
 WORLD_VEHICLE_VAN_VINTAGE,Camioneta vintage,Vintage van
 WORLD_INDICATOR_SUPPLIES,Faltan insumos,Needs supplies
 WORLD_INDICATOR_LATE,%d atrasados,%d late
+WORLD_VOICE_BOSS,Jefa,Boss
+WORLD_VOICE_BOSS_DAY_OPEN,Arrancamos el día %d. ¡A trabajar!,Day %d is on. Let's get to work!
