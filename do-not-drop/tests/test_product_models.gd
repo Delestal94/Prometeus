@@ -22,6 +22,10 @@ const LOTS: Dictionary = {
 		"wine_glasses", "plate_stack", "television", "mirror", "glass_jar", "tall_vase", "chandelier",
 		"ceramic_teapot", "picture_frame", "snow_globe_glass"
 	],
+	3: [
+		"ice_cream_tub", "fish", "flowers", "butter_block", "milk_bottle", "egg_carton", "frozen_peas",
+		"strawberries", "yogurt_pack", "frozen_pizza"
+	],
 }
 
 var _failures: int = 0
