@@ -26,6 +26,11 @@ const GROUPS: Dictionary = {
 		"supplies/sm_supply_packing_paper_roll",
 		"supplies/sm_supply_foam_block",
 	], true],
+	"containers": [[
+		"containers/sm_container_cooler",
+		"containers/sm_container_thermal_box",
+		"containers/sm_container_waterproof_box",
+	], true],
 }
 
 var _failures: int = 0
