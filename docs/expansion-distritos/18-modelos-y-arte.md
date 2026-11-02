@@ -18,7 +18,7 @@
 | D-1805 | Productos lote 4: 10 grandes y raros (bici, colchón, planta, pecera) | modelador-blender* | high | 10 modelos |
 | D-1806 | Cajas S, M, L, XL abiertas y cerradas (reusar texturas de N-315) | modelador-blender* | medium | 8 mallas |
 | D-1807 | Insumos: rollo de cinta, dispensador, burbuja, papel, espuma | modelador-blender* | medium | 5 modelos |
-| D-1808 | Sellos y etiquetas como decals | artista-conceptual* | low | 8 texturas |
+| D-1808 | ✅ Sellos y etiquetas como decals | artista-conceptual* | low | 8 texturas |
 | D-1809 | Conservadora, caja térmica, caja impermeable | modelador-blender* | medium | 3 modelos |
 | D-1810 | Mesa de armado | modelador-blender* | medium | modelo |
 | D-1811 | Estanterías (rack chico y grande), heladera industrial — **rack chico hecho (2026-10-19)**: `sm_env_shed_shelf.glb` en el galpón por defecto; faltan el rack grande y la heladera | modelador-blender* | medium | 3 modelos |

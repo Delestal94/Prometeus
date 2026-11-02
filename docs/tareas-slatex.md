@@ -697,7 +697,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1805** Productos lote 4: 10 grandes y raros.
 - [ ] **D-1806** Cajas S, M, L, XL abiertas y cerradas.
 - [ ] **D-1807** Insumos: rollo de cinta, dispensador, burbuja, papel, espuma.
-- [ ] **D-1808** Sellos y etiquetas como decals.
+- [x] **D-1808** Sellos y etiquetas como decals.
+  Rama `codex/D-1808-decals`: `assets/tools/build_label_textures.py decals` dibuja con Pillow, sin generador ni
+  arte de terceros, 8 calcomanías de 256×256 en `assets/textures/decals/`: un sello por cada tipo de
+  `BoxSeals.KINDS` (frágil, no doblar, frío, regalo, pesado), "este lado arriba", la etiqueta de envío y la de
+  envío exprés. Son pictogramas sin palabras, así no hay nada que traducir. Test: `tests/test_label_textures.gd`.
+  Pendiente: mirarlas (sin pantalla en esta sesión) y pegarlas en las cajas (`BoxSeals`).
 - [ ] **D-1809** Conservadora, caja térmica, caja impermeable.
 - [ ] **D-1816** Portapapeles en la mano (primera persona).
 - [ ] **D-1819** Clientes NPC en la puerta (6 variantes).
