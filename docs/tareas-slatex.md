@@ -587,7 +587,15 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   `data/**/*.tres` está en las tablas; las pantallas de la Empresa se arman en inglés sin restos en castellano).
   Cubre D-0443 (los hitos entran solos al escaneo cuando existan), D-0649 (remitos) y D-0845 (pedidos). Quedan en
   `LEGACY` tres textos de antes: "Entrega" y "%d pts" en `leaderboard_panel.gd` y `tr("None")` en `unlock_manager.gd`.
-- [ ] **D-1923** Celular del jugador con app de pedidos y mapa.
+- [x] **D-1923** Celular del jugador con app de pedidos y mapa.
+  Rama `codex/D-1923-company-phone`: `scripts/ui/company_phone.gd` (`CompanyPhone`, lo agrega `CompanyUi`) se saca
+  con `phone_toggle` (F / LB). En el mundo Empresa no había celular: la cámara vive solo en el reparto. Tiene dos
+  apps que se cambian con Q / E o con sus pestañas:
+  - Pedidos: los abiertos con cliente, zona y minutos que quedan, o "atrasado".
+  - Mapa (`company_phone_map.gd`, incluye D-0331): las zonas a escala, los pedidos abiertos por zona y un punto
+    donde está el jugador.
+  Comparte las manos con el portapapeles (grupo `hand_tool`): sacar uno guarda el otro. Test:
+  `tests/test_company_phone.gd`. Pendiente: la captura (sin pantalla en esta sesión).
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
 - [x] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
   Rama `codex/D-1928-voices`: `modules/synth_audio/synth_audio_murmur.gd` (`SynthAudioMurmur`, accesor

@@ -1378,6 +1378,13 @@ UI_CREDITS_ART,Arte,Art
 UI_CREDITS_ART_MODELS,Modelos low-poly armados con scripts de Blender,Low-poly models built with Blender scripts
 UI_CREDITS_THANKS,Gracias,Thanks
 UI_CREDITS_THANKS_TESTERS,"A cada persona que probó el juego, se cayó y lo volvió a intentar","To everyone who played the game, fell over and tried again"
+UI_CPHONE_APP_ORDERS,Pedidos,Orders
+UI_CPHONE_APP_MAP,Mapa,Map
+UI_CPHONE_NO_ORDERS,No hay pedidos abiertos,No open orders
+UI_CPHONE_ROW,"%s · %s · %s · %s","%s · %s · %s · %s"
+UI_CPHONE_LEFT,quedan %d min,%d min left
+UI_CPHONE_LATE,atrasado,late
+UI_CPHONE_HINT,F / LB: guardar · Q / E: cambiar de app,F / LB: put away · Q / E: switch app
 UI_DAYHUD_DAY_TIME,Día %d · %s,Day %d · %s
 UI_DAYHUD_PAUSED,Pausa,Paused
 UI_DAYHUD_ORDERS,Pedidos: %d,Orders: %d
