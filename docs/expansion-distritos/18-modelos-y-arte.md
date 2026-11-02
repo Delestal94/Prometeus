@@ -65,7 +65,7 @@
 | D-1842 | Atlas de texturas de productos (menos draw calls) | artista-shaders | high | medido |
 | D-1843 | Auditoría de arte de la expansión (incluye D-1746, D-1823, fusión de D-0112) | director-arte | high | lista priorizada |
 | D-1844 | Rehacer lo marcado REHACER por D-1843 | modelador-blender* | high | lista cerrada |
-| D-1845 | Íconos de productos para UI (render automático) (incluye D-0945, fusión de D-0112) | revisor-visual | medium | 60 íconos generados por script |
+| D-1845 | ✅ Íconos de productos para UI (render automático) (incluye D-0945, fusión de D-0112) | revisor-visual | medium | 60 íconos generados por script |
 | ~~D-1846~~ | ~~Capturas de producto para Steam~~ **Fusionada en D-2031 (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-visual | low | set |
 | D-1847 | Chequeo de pivotes de todo lo nuevo | revisor-visual | low | `check_pivots` verde |
 | D-1848 | Peso de assets: texturas a 512 salvo excepción (lección N-315) | perfilador-rendimiento | medium | informe |

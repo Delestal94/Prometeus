@@ -754,4 +754,9 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1840** Animación del jugador con portapapeles y escáner.
   Saltada (2026-11-02): necesita animar el esqueleto del jugador en Blender y aprobar los clips mirándolos, y el
   escáner no existe todavía como objeto. El portapapeles ya se sostiene por código (`PlayerHeldTool`, D-1902).
-- [ ] **D-1845** Íconos de productos para UI (render automático).
+- [x] **D-1845** Íconos de productos para UI (render automático).
+  Rama `codex/D-1845-product-icons`: `assets/tools/render_product_icons.py` renderiza con Blender en segundo plano
+  (Workbench, cámara ortográfica a tres cuartos, fondo transparente, sin ventana) un ícono de 128×128 por cada
+  modelo de `assets/models/products`: los 60 de los lotes 1 a 6, en `assets/ui/icons/products/`. Test:
+  `tests/test_product_icons.gd` (cada modelo con su ícono, fondo transparente, centrado y con relleno razonable).
+  Pendiente: mirarlos (sin pantalla en esta sesión) y usarlos en las hojas del portapapeles.
