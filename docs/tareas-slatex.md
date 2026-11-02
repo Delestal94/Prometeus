@@ -548,7 +548,14 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Rama `codex/D-1915-packing-error-vfx`: `PackingVfx` suma el error de armado. Una caja cerrada debajo del nivel o
   sin la etiqueta de su pedido larga una bocanada roja chica que sube (18 partículas lentas) y una "✗" roja que
   tiembla y se apaga. Test: `tests/test_packing_vfx.gd`. Pendiente: la captura (sin pantalla en esta sesión).
-- [ ] **D-1916** Fuente y estilo visual unificado de la expansión.
+- [x] **D-1916** Fuente y estilo visual unificado de la expansión.
+  Rama `codex/D-1916-unified-style`: `UiTheme.label_3d()` pone la fuente de la marca (Lilita One) y el tamaño a un
+  texto del mundo en una línea. La usan los carteles y etiquetas del galpón (estantes, tablero del proveedor,
+  palets, cartel de afuera), la estación de despacho, los nombres de las zonas, las flechas de D-1907 y las marcas
+  de D-1914/15. El HUD del día y el feed llevan el tema compartido (`UiTheme.apply(self, false)`).
+  `tests/test_expansion_style.gd` recorre las pantallas de la Empresa y el mundo real y comprueba que ningún texto
+  cae en la fuente por defecto de Godot. Quedan afuera, por ser del juego base, el tablero del camión y los globos
+  de los vecinos. Pendiente: la captura (sin pantalla en esta sesión).
 - [x] **D-1917** Traducción al inglés de todo lo nuevo.
   Rama `codex/D-1917-english`: `tests/test_expansion_english.gd`. Revisa las dos tablas fila por fila, como las
   importa Godot: tres campos, sin claves repetidas ni textos vacíos, y los mismos placeholders en español y en

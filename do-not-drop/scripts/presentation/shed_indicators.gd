@@ -142,7 +142,7 @@ func _new_mark(uid: StringName) -> Label3D:
 	mark.no_depth_test = true
 	mark.fixed_size = false
 	mark.pixel_size = 0.006
-	mark.font_size = 64
+	UiTheme.label_3d(mark, 64)
 	mark.outline_size = 14
 	mark.outline_modulate = UiTheme.INK
 	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

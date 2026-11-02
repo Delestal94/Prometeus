@@ -623,7 +623,7 @@ func _add_zone_slab(zone: ZoneDefinition) -> void:
 	label.text = String(zone.id).to_upper()
 	# Letters about 15 m tall, 30 m up: a name to read from afar. At pixel_size 0.5 they were 128 m tall
 	# and the industrial park's, right over the shed, filled the player's view with a blurred stripe.
-	label.font_size = 256
+	UiTheme.label_3d(label, 256)
 	label.pixel_size = ZONE_LABEL_PIXEL_SIZE
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.position = Vector3(center.x, ZONE_LABEL_HEIGHT, center.z)

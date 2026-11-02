@@ -513,7 +513,7 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 	node.add_child(crate)
 	var label := Label3D.new()
 	label.name = "Label_%d" % slot
-	label.font_size = 22
+	UiTheme.label_3d(label, 22)
 	label.pixel_size = SHELF_LABEL_PIXEL
 	label.outline_size = 8
 	label.width = (slot_w - 0.04) / SHELF_LABEL_PIXEL
@@ -737,7 +737,7 @@ func _build_supplier_board() -> void:
 	var title := Label3D.new()
 	title.name = "Sign"
 	title.text = tr(SupplierBoardPoint.PROMPT_KEY)
-	title.font_size = 28
+	UiTheme.label_3d(title, 28)
 	title.pixel_size = 0.004
 	title.outline_size = 8
 	title.position = Vector3(0.0, SUPPLIER_BOARD_SIZE.y * 0.5 + 0.12, 0.0)
@@ -819,7 +819,7 @@ func _make_pallet(entry: Dictionary, at: Vector3) -> Node3D:
 	var label := Label3D.new()
 	label.name = "Label"
 	label.text = _pallet_text(entry)
-	label.font_size = 28
+	UiTheme.label_3d(label, 28)
 	label.pixel_size = 0.0035
 	label.outline_size = 8
 	label.position = Vector3(0.0, bounds.size.y + 0.2, 0.0)
