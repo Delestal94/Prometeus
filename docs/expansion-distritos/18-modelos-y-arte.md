@@ -26,7 +26,7 @@
 | D-1813 | Zorra (transpaleta) y carrito de picking | modelador-blender* | medium | 2 modelos |
 | D-1814 | Camión de proveedor NPC | modelador-blender* | high | modelo |
 | D-1815 | Impresora de pedidos y tablero | modelador-blender* | low | 2 modelos |
-| D-1816 | Portapapeles en la mano (primera persona) | modelador-blender* | low | modelo |
+| D-1816 | ✅ Portapapeles en la mano (primera persona) | modelador-blender* | low | modelo |
 | D-1817 | Kit de paredes del galpón por etapa | modelador-blender* | high | kit |
 | ~~D-1818~~ | ~~Empleado base (D-1018) con uniforme de la empresa~~ **Fusionada en D-1018 (D-0112, [crítica](diseno/critica-alcance.md))** | modelador-blender* | medium | modelo rigueado |
 | D-1819 | ✅ Clientes NPC en la puerta (6 variantes) | modelador-blender* | high | 6 modelos |
