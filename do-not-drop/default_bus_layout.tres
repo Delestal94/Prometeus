@@ -12,6 +12,13 @@ room_size = 0.9
 damping = 0.65
 wet = 0.06
 
+[sub_resource type="AudioEffectReverb" id="Reverb_shed"]
+room_size = 0.6
+damping = 0.45
+spread = 0.5
+dry = 0.9
+wet = 0.15
+
 [resource]
 bus/1/name = &"Interior"
 bus/1/solo = false
@@ -47,3 +54,23 @@ bus/5/mute = false
 bus/5/bypass_fx = false
 bus/5/volume_db = 0.0
 bus/5/send = &"Master"
+bus/6/name = &"Shed"
+bus/6/solo = false
+bus/6/mute = false
+bus/6/bypass_fx = false
+bus/6/volume_db = 0.0
+bus/6/send = &"SFX"
+bus/6/effect/0/effect = SubResource("Reverb_shed")
+bus/6/effect/0/enabled = true
+bus/7/name = &"Machines"
+bus/7/solo = false
+bus/7/mute = false
+bus/7/bypass_fx = false
+bus/7/volume_db = 0.0
+bus/7/send = &"Shed"
+bus/8/name = &"Districts"
+bus/8/solo = false
+bus/8/mute = false
+bus/8/bypass_fx = false
+bus/8/volume_db = 0.0
+bus/8/send = &"Exterior"

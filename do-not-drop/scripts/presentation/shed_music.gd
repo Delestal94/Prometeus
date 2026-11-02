@@ -12,7 +12,7 @@ extends AudioStreamPlayer
 ##   day's opening brings it back.
 ## - The "Music" bus, so the player's music volume (GameSettings) sets it; it keeps playing under the pause.
 
-const VOLUME_DB: float = -14.0
+const VOLUME_DB: float = -12.0
 const SILENT_DB: float = -60.0
 const EVENT_ENERGY: float = 0.06
 const DECAY_PER_SECOND: float = 0.015

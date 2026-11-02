@@ -285,3 +285,26 @@ Cómo debería sonar cada uno, para validar jugando (headless no reproduce audio
 Pruebas: `tests/test_more_route_segments.gd` (río y tren), `tests/test_audio_polish.gd`
 (timbre, vecino, autoelevador, arruinado/boom) y `tools/run-tests.sh sound audio synth`
 para la batería completa de audio.
+
+## Modo Empresa: buses y niveles (D-1912)
+
+Buses nuevos en `default_bus_layout.tres`, todos a 0 dB. Son perillas para la pasada de mezcla (D-1942), no un
+cambio de nivel:
+
+| Bus | Manda a | Para qué |
+|---|---|---|
+| `Shed` | `SFX` | El galpón: reverb de salón grande (`Reverb_shed`). Pasa por el volumen de efectos. |
+| `Machines` | `Shed` | Lo que anda solo en el galpón: hoy el autoelevador; después cintas y máquinas. |
+| `Districts` | `Exterior` | Ambiente y avisos propios de cada distrito (D-1929, D-1931), con la reverb de afuera. |
+
+Niveles medidos (`tests/test_company_mix.gd`: la fuente, el `volume_db` del reproductor y cada bus del camino;
+tolerancia ±2 dB, clases en `CompanyMix.TARGETS_DB`):
+
+| Sonido | Clase | Medida | Objetivo | Nivel |
+|---|---|---|---|---|
+| Portapapeles: broche y hoja | handling | 100 ms más fuertes | −31,5 dBFS | `CompanyClipboard.SFX_DB` −8 |
+| Autoelevador del galpón (motor, hidráulica) | machine | RMS del loop | −40 dBFS | `WorldMix.SHED_FORKLIFT_*` |
+| Loop de trabajo del galpón, solo la base | work music | RMS del loop | −30 dBFS | `ShedMusic.VOLUME_DB` −12 (era −14) |
+
+La música del galpón queda debajo de la radio del depósito (−24): suena todo el día. Con las tres capas sube
+unos 5 dB.
