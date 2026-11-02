@@ -488,7 +488,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   vacía), `CompanyRoot._on_day_summary` le pasa `DayCloseReport.extras()`; `tests/test_day_close_screen.gd`.
   Se llenan solos cuando existan la contratación (D-1001), los hitos (grupo 04) y los eventos del día (D-0123).
   Pendiente: la captura (sin pantalla en esta sesión).
-- [ ] **D-1906** Pantalla de despacho con estilo final.
+- [x] **D-1906** Pantalla de despacho con estilo final.
+  Rama `codex/D-1906-dispatch-style`: `DispatchBoardPanel` (`scripts/ui/dispatch_board_panel.gd`) suma dos barras de
+  carga, lugares y kg, llenas con lo elegido y del color de calma hasta `FILL_WARN` (3/4) y de aviso desde ahí
+  (`UiTheme.state_color`), escondidas sin vehículo; el texto de cada fila toma el color de su marca (elegida menta,
+  libre tinta, bloqueada apagada). Test: `tests/test_company_dispatch_panel.gd` (`_test_style`). Pendiente: la
+  captura (sin pantalla en esta sesión); la fuente y el tema unificados son D-1916.
 - [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
 - [x] **D-1908** Tooltips de productos y requisitos.
   Rama `codex/D-1908-tooltips`: `scripts/ui/company_tooltips.gd` (texto de producto: tamaño, peso, frágil, frío,

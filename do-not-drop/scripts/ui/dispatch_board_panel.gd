@@ -26,6 +26,10 @@ class_name DispatchBoardPanel
 ## Gamepad first: rows are buttons in one focus column (ui_accept picks / drops a box), then
 ## Load and Close; blocked rows stay focusable so their reason can be read. Every state has a
 ## mark besides its colour: "✓" picked, "○" free, "✗" blocked.
+##
+## Final style (D-1906): the vehicle's load shows as two bars, slots and kg, each filled with what is picked and
+## coloured by how full it is (UiTheme.state_color: calm under FILL_WARN, warning from there to full), with the
+## numbers beside them; each row's text takes its state's colour (picked mint, free ink, blocked muted).
 
 ## The host loaded `boxes` on `vehicle_id` (the zone and the trip gate already know). The world
 ## adapter replicates it to the clients.
@@ -37,6 +41,8 @@ const FREE: String = "○"
 const BLOCKED: String = "✗"
 ## Slot squares drawn at most; a vehicle with more slots shows the numbers only.
 const MAX_SLOT_MARKS: int = 12
+## Share of the vehicle picked from which a load bar turns to the warning colour.
+const FILL_WARN: float = 0.75
 
 var _ctx: Dictionary = {}
 var _selected: Array[StringName] = []
@@ -47,6 +53,8 @@ var _status_args: Array = []
 var _vehicle_label: Label
 var _capacity_label: Label
 var _slots_label: Label
+var _slots_bar: ProgressBar
+var _weight_bar: ProgressBar
 var _rows_box: VBoxContainer
 var _scroll: ScrollContainer
 var _status_label: Label
@@ -251,6 +259,12 @@ func _build() -> void:
 	_capacity_label.name = "Capacity"
 	_slots_label = UiTheme.label(column, "", 20, UiTheme.INK)
 	_slots_label.name = "Slots"
+	var bars := HBoxContainer.new()
+	bars.name = "LoadBars"
+	bars.add_theme_constant_override("separation", 14)
+	column.add_child(bars)
+	_slots_bar = _load_bar(bars, "SlotsBar")
+	_weight_bar = _load_bar(bars, "WeightBar")
 	UiTheme.label(column, tr("UI_DISPATCH_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
 	_scroll.custom_minimum_size = Vector2(0, 250)
@@ -292,10 +306,14 @@ func _update_view() -> void:
 		_vehicle_label.text = tr("UI_DISPATCH_NO_VEHICLE")
 		_capacity_label.text = ""
 		_slots_label.text = ""
+		_slots_bar.get_parent().hide()
 	else:
 		_vehicle_label.text = tr("UI_DISPATCH_VEHICLE") % _vehicle_name(vehicle)
 		_capacity_label.text = tr("UI_DISPATCH_CAPACITY") % [_selected.size(), slots, kg, max_kg]
 		_slots_label.text = _slot_marks(_selected.size(), slots)
+		_slots_bar.get_parent().show()
+		_fill_bar(_slots_bar, float(_selected.size()) / maxf(float(slots), 1.0))
+		_fill_bar(_weight_bar, kg / maxf(max_kg, 0.001))
 	for box_id: StringName in _rows:
 		var row: Button = _rows[box_id]
 		var verdict: Dictionary = _rules_verdict(box_id)
@@ -305,6 +323,8 @@ func _update_view() -> void:
 			mark = BLOCKED
 			line += "\n" + reason_text(String(verdict["key"]), verdict["args"])
 		row.text = "%s  %s" % [mark, line]
+		row.add_theme_color_override(&"font_color", row_color(mark))
+		row.add_theme_color_override(&"font_focus_color", row_color(mark))
 	_load_button.disabled = not can_confirm()
 	_load_button.text = tr("UI_DISPATCH_LOAD")
 	if not _selected.is_empty():
@@ -480,6 +500,35 @@ func _vehicle_name(vehicle: VehicleDefinition) -> String:
 
 
 ## "■ ■ □ □" for 2 of 4 slots used: the fill reads by shape, not by colour.
+## The colour of a load bar `ratio` full: calm under FILL_WARN, the warning colour from there on.
+static func fill_color(ratio: float) -> Color:
+	return UiTheme.state_color(0 if ratio < FILL_WARN else 1)
+
+
+## The colour of a row's text by its mark.
+static func row_color(mark: String) -> Color:
+	if mark == PICKED:
+		return UiTheme.MINT
+	return UiTheme.MUTED if mark == BLOCKED else UiTheme.INK
+
+
+func _load_bar(parent: Control, bar_name: String) -> ProgressBar:
+	var bar_node: ProgressBar = UiTheme.bar(parent, fill_color(0.0), 16)
+	bar_node.name = bar_name
+	bar_node.max_value = 1.0
+	bar_node.step = 0.0
+	bar_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return bar_node
+
+
+func _fill_bar(bar_node: ProgressBar, ratio: float) -> void:
+	bar_node.value = clampf(ratio, 0.0, 1.0)
+	var fill := (bar_node.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	fill.bg_color = fill_color(ratio)
+	bar_node.add_theme_stylebox_override(&"fill", fill)
+
+
 static func _slot_marks(used: int, total: int) -> String:
 	if total > MAX_SLOT_MARKS:
 		return "%d / %d" % [used, total]
