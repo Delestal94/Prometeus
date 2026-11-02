@@ -710,7 +710,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Rama `codex/D-1804-products-lot3`: `assets/tools/build_product_models.py -- 3` (Blender en segundo plano) arma diez productos fríos y perecederos: pote de helado, pescado, ramo de flores, manteca, botella de leche, maple de huevos, arvejas congeladas, frutillas, yogures y pizza congelada,
   en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
   Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
-- [ ] **D-1805** Productos lote 4: 10 grandes y raros.
+- [x] **D-1805** Productos lote 4: 10 grandes y raros.
+  Rama `codex/D-1805-products-lot4`: `assets/tools/build_product_models.py -- 4` (Blender en segundo plano) arma diez productos grandes y raros: bicicleta, colchón enrollado, planta en maceta, pecera, guitarra, lámpara de pie, alfombra enrollada, sillón, tabla de surf y bombo,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
 - [x] **D-1806** Cajas S, M, L, XL abiertas y cerradas.
   Rama `codex/D-1806-boxes`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma las cajas S, M, L y XL abiertas (cuatro paredes, piso y solapas dobladas hacia afuera) y cerradas (con su cinta), del tamaño exacto de su grilla de armado (`CompanyTuning.BOX_CELLS` × 0,2 m), con colisión de caja cerrada. Lo comprueba
   `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
