@@ -32,6 +32,9 @@ var activity: float = 0.0
 var level: float = 0.0
 ## 1 while a day runs, 0 resting; `gate` follows it.
 var gate_target: float = 1.0
+## True while the player is out of the shed, in a district with its own theme (DistrictMusic, D-1929): the loop
+## fades out as for a resting day, and back in when the player comes in.
+var away: bool = false
 var gate: float = 1.0
 var _synced: AudioStreamSynchronized
 
@@ -78,7 +81,7 @@ func on_event(_seq: int, kind: StringName, data: Dictionary) -> void:
 func advance(seconds: float) -> void:
 	activity = maxf(activity - DECAY_PER_SECOND * seconds, 0.0)
 	level = move_toward(level, activity, FOLLOW_PER_SECOND * seconds)
-	gate = move_toward(gate, gate_target, GATE_PER_SECOND * seconds)
+	gate = move_toward(gate, 0.0 if away else gate_target, GATE_PER_SECOND * seconds)
 	_apply()
 
 

@@ -17,6 +17,7 @@ extends RefCounted
 ##   SynthAudioNewspaper rooster, morning birds, "extra!" hit, paper rustle, page turn, mate spit
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
 ##   SynthAudioWorkMusic a work loop in three stems that come in with the activity
+##   SynthAudioThemeMusic nine looping place themes, each with its own tempo, mode and lead
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
 
 ## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
@@ -184,6 +185,12 @@ static func gel_dance_music(clip: StringName = &"SimpleStep") -> AudioStreamWAV:
 static func work_music_layer(layer: int) -> AudioStreamWAV:
 	var safe: int = layer if layer >= 0 and layer < SynthAudioWorkMusic.LAYERS else 0
 	return _cached(StringName("work_music_%d" % safe), SynthAudioWorkMusic.make_layer.bind(safe))
+
+
+## One of the nine place themes (SynthAudioThemeMusic.THEMES), looping; out of range gives the first.
+static func theme_music(theme: int) -> AudioStreamWAV:
+	var safe: int = theme if theme >= 0 and theme < SynthAudioThemeMusic.THEMES.size() else 0
+	return _cached(StringName("theme_music_%d" % safe), SynthAudioThemeMusic.make.bind(safe))
 
 
 ## Looping tyre screech; pitch and volume follow the wheel skid.

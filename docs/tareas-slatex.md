@@ -576,7 +576,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1923** Celular del jugador con app de pedidos y mapa.
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
 - [ ] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
-- [ ] **D-1929** Música por distrito (9 temas compuestos por código).
+- [x] **D-1929** Música por distrito (9 temas compuestos por código).
+  Rama `codex/D-1929-district-music`: `modules/synth_audio/synth_audio_theme_music.gd` (`SynthAudioThemeMusic`,
+  accesor `SynthAudio.theme_music()`) compone nueve temas, cada uno con su tempo, tonalidad, modo, timbre y
+  batería. `scripts/presentation/district_music.gd` (`DistrictMusic`, lo agrega `CompanyUi`) toca el tema de la
+  zona donde está el jugador fuera del galpón, con fundido cruzado al cruzar de zona. Dentro del galpón no suena y
+  vuelve el loop del galpón (`ShedMusic.away`). Test: `tests/test_district_music.gd`. Pendiente: escucharlos por
+  parlantes (sin audio en esta sesión).
 - [x] **D-1935** Feed de eventos del galpón (quién hizo qué).
   Rama `codex/D-1935-shed-feed`: `scripts/ui/shed_event_feed.gd` (`ShedEventFeed`: columna a la derecha con las
   últimas 5 líneas, que se apagan a los 12 s; lee `CompanyNet.event_applied` en cada par: pedido que llega o se
