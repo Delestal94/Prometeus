@@ -645,7 +645,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   página de empresas del menú y su formulario). Desde el foco con que abren, las cuatro direcciones y
   siguiente/anterior (`find_valid_focus_neighbor`, como un mando) alcanzan todo control que toma foco, y B sale.
   El celular (D-1923) y los créditos (D-1940) prueban su camino con mando en sus propios tests.
-- [ ] **D-1949** Documentar controles nuevos en `controles-y-ui.md`.
+- [x] **D-1949** Documentar controles nuevos en `controles-y-ui.md`.
+  Rama `codex/D-1949-controls-doc`: `docs/controles-y-ui.md` suma los controles nuevos del modo Empresa: celular
+  (F / LB, apps con Q / E), modo construcción, pantallas con mando (foco al abrir, B sale, scroll del cierre y de
+  los créditos) y el HUD de la Empresa con la paleta para daltonismo. El portapapeles y la pausa ya estaban.
 - [ ] **D-1950** QA de UI.
 
 ### Grupo 18 — productos, embalaje, portapapeles y clientes (`18-modelos-y-arte.md`, necesitan PC)

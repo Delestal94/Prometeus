@@ -66,5 +66,5 @@
 | D-1946 | Revisión de accesibilidad | revisor-visual | medium | informe |
 | D-1947 | ✅ Rendimiento de la UI (portapapeles sin picos) | perfilador-rendimiento | low | medido |
 | D-1948 | ✅ Test de navegación con mando de todas las pantallas nuevas | escritor-tests | high | test |
-| D-1949 | Documentar controles nuevos en `controles-y-ui.md` | documentador | low | doc |
+| D-1949 | ✅ Documentar controles nuevos en `controles-y-ui.md` | documentador | low | doc |
 | D-1950 | QA de UI | probador-qa | medium | tabla |
