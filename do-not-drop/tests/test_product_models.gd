@@ -26,6 +26,10 @@ const LOTS: Dictionary = {
 		"ice_cream_tub", "fish", "flowers", "butter_block", "milk_bottle", "egg_carton", "frozen_peas",
 		"strawberries", "yogurt_pack", "frozen_pizza"
 	],
+	4: [
+		"bicycle", "rolled_mattress", "potted_plant", "fish_tank", "guitar", "floor_lamp", "rolled_rug",
+		"armchair", "surfboard", "drum"
+	],
 }
 
 var _failures: int = 0
