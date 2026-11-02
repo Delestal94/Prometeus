@@ -723,7 +723,9 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   `BoxSeals.KINDS` (frágil, no doblar, frío, regalo, pesado), "este lado arriba", la etiqueta de envío y la de
   envío exprés. Son pictogramas sin palabras, así no hay nada que traducir. Test: `tests/test_label_textures.gd`.
   Pendiente: mirarlas (sin pantalla en esta sesión) y pegarlas en las cajas (`BoxSeals`).
-- [ ] **D-1809** Conservadora, caja térmica, caja impermeable.
+- [x] **D-1809** Conservadora, caja térmica, caja impermeable.
+  Rama `codex/D-1809-containers`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma la conservadora, la caja térmica y la caja impermeable. Lo comprueba
+  `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
 - [ ] **D-1816** Portapapeles en la mano (primera persona).
 - [x] **D-1819** Clientes NPC en la puerta (6 variantes).
   Rama `codex/D-1819-customers`: `assets/tools/build_customer_models.py` (Blender en segundo plano) arma seis clientes
