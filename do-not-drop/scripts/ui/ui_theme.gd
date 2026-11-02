@@ -107,6 +107,21 @@ static func apply(control: Control, scale_menu_text: bool = true) -> void:
 				settings.connect(&"menu_text_scale_changed", refresh)
 
 
+## True when the player asked for the colour-safe palette (GameSettings.colorblind_palette), read through `node`'s
+## tree; false without the settings (a bare test).
+static func colorblind(node: Node) -> bool:
+	if node == null or not node.is_inside_tree():
+		return false
+	var settings: Node = node.get_node_or_null(^"/root/GameSettings")
+	return settings != null and bool(settings.get(&"colorblind_palette"))
+
+
+## A state's colour (0 ok, 1 warning, 2 danger) in the palette the player chose, read through `node` (D-1918):
+## the expansion's screens and marks colour their states with this, so the Okabe-Ito palette reaches them all.
+static func status(state: int, node: Node) -> Color:
+	return state_color(state, colorblind(node))
+
+
 static func state_color(state: int, colorblind: bool = false) -> Color:
 	return (OKABE_STATE_COLORS if colorblind else STATE_COLORS)[clampi(state, 0, 2)]
 

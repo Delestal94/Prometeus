@@ -323,8 +323,8 @@ func _update_view() -> void:
 			mark = BLOCKED
 			line += "\n" + reason_text(String(verdict["key"]), verdict["args"])
 		row.text = "%s  %s" % [mark, line]
-		row.add_theme_color_override(&"font_color", row_color(mark))
-		row.add_theme_color_override(&"font_focus_color", row_color(mark))
+		row.add_theme_color_override(&"font_color", row_color(mark, UiTheme.colorblind(self)))
+		row.add_theme_color_override(&"font_focus_color", row_color(mark, UiTheme.colorblind(self)))
 	_load_button.disabled = not can_confirm()
 	_load_button.text = tr("UI_DISPATCH_LOAD")
 	if not _selected.is_empty():
@@ -501,14 +501,14 @@ func _vehicle_name(vehicle: VehicleDefinition) -> String:
 
 ## "■ ■ □ □" for 2 of 4 slots used: the fill reads by shape, not by colour.
 ## The colour of a load bar `ratio` full: calm under FILL_WARN, the warning colour from there on.
-static func fill_color(ratio: float) -> Color:
-	return UiTheme.state_color(0 if ratio < FILL_WARN else 1)
+static func fill_color(ratio: float, colorblind: bool = false) -> Color:
+	return UiTheme.state_color(0 if ratio < FILL_WARN else 1, colorblind)
 
 
 ## The colour of a row's text by its mark.
-static func row_color(mark: String) -> Color:
+static func row_color(mark: String, colorblind: bool = false) -> Color:
 	if mark == PICKED:
-		return UiTheme.MINT
+		return UiTheme.state_color(0, colorblind)
 	return UiTheme.MUTED if mark == BLOCKED else UiTheme.INK
 
 
@@ -525,7 +525,7 @@ func _load_bar(parent: Control, bar_name: String) -> ProgressBar:
 func _fill_bar(bar_node: ProgressBar, ratio: float) -> void:
 	bar_node.value = clampf(ratio, 0.0, 1.0)
 	var fill := (bar_node.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate() as StyleBoxFlat
-	fill.bg_color = fill_color(ratio)
+	fill.bg_color = fill_color(ratio, UiTheme.colorblind(self))
 	bar_node.add_theme_stylebox_override(&"fill", fill)
 
 

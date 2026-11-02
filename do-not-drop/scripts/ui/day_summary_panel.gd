@@ -135,11 +135,11 @@ func refresh(summary: Dictionary, note_lines: Array = [], auto_units: int = 0, e
 	if _day_label == null:
 		return
 	_day_label.text = tr("UI_FINANCE_DAY") % int(summary.get("day", 0))
-	_fill(_income_list, summary.get("income_by_reason", {}), int(summary.get("income", 0)), UiTheme.MINT)
-	_fill(_cost_list, summary.get("cost_by_reason", {}), int(summary.get("costs", 0)), UiTheme.RED)
+	_fill(_income_list, summary.get("income_by_reason", {}), int(summary.get("income", 0)), UiTheme.status(0, self))
+	_fill(_cost_list, summary.get("cost_by_reason", {}), int(summary.get("costs", 0)), UiTheme.status(2, self))
 	var profit: int = int(summary.get("profit", 0))
 	_profit_label.text = tr("UI_FINANCE_PROFIT") % _signed(profit)
-	_profit_label.add_theme_color_override(&"font_color", _profit_color(profit))
+	_profit_label.add_theme_color_override(&"font_color", _profit_color(profit, UiTheme.colorblind(self)))
 	_balance_label.text = tr("UI_FINANCE_BALANCE") % [money(int(summary.get("opening", 0))),
 			money(int(summary.get("closing", 0)))]
 	_truncated_label.visible = bool(summary.get("truncated", false))
@@ -374,10 +374,10 @@ static func _signed(amount: int) -> String:
 	return "+%s" % money(amount) if amount > 0 else money(amount)
 
 
-static func _profit_color(profit: int) -> Color:
+static func _profit_color(profit: int, colorblind: bool = false) -> Color:
 	if profit > 0:
-		return UiTheme.MINT
-	return UiTheme.RED if profit < 0 else UiTheme.INK
+		return UiTheme.state_color(0, colorblind)
+	return UiTheme.state_color(2, colorblind) if profit < 0 else UiTheme.INK
 
 
 ## Sizes the scrolling body to its content, or to the screen's height left by the title and the buttons when the
