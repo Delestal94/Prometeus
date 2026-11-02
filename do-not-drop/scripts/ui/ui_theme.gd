@@ -196,6 +196,13 @@ static func label(parent: Node, text: String, font_size: int, color: Color = INK
 	return node
 
 
+## A text in the world (signs, labels, marks over the shed) in the brand's display face at `font_size`, so the
+## company world reads like its screens (D-1916). One call, so a caller over its line budget does not grow.
+static func label_3d(label: Label3D, font_size: int) -> void:
+	label.font = display_font()
+	label.font_size = font_size
+
+
 ## A big display-face heading.
 static func title(parent: Node, text: String, font_size: int, color: Color = INK) -> Label:
 	return label(parent, text, font_size, color, true)

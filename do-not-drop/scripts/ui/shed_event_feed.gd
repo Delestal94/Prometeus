@@ -57,6 +57,8 @@ static func add_to(root: Node) -> ShedEventFeed:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# A HUD: the brand's theme, without the menu text scale (D-1916).
+	UiTheme.apply(self, false)
 	set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	offset_left = -FEED_WIDTH - 24.0
 	offset_right = -24.0

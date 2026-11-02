@@ -142,7 +142,7 @@ func _mark(effect: StringName) -> Label3D:
 	mark.modulate = UiTheme.RED if effect == KIND_ERROR else UiTheme.MINT
 	mark.outline_modulate = UiTheme.INK
 	mark.outline_size = 16
-	mark.font_size = 96
+	UiTheme.label_3d(mark, 96)
 	mark.pixel_size = 0.006
 	mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	mark.no_depth_test = true

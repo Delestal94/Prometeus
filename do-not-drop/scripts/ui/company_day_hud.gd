@@ -51,6 +51,8 @@ static func add_to(root: Node) -> CompanyDayHud:
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# A HUD: the brand's theme, without the menu text scale (D-1916).
+	UiTheme.apply(self, false)
 	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	offset_left = 24.0
 	offset_top = 20.0

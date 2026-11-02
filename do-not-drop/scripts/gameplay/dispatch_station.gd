@@ -52,7 +52,7 @@ static func make(uid: StringName, depth_m: float) -> DispatchStation:
 	var title := Label3D.new()
 	title.name = "Sign"
 	title.text = TranslationServer.translate(SIGN_KEY)
-	title.font_size = 28
+	UiTheme.label_3d(title, 28)
 	title.pixel_size = 0.004
 	title.outline_size = 8
 	title.position = Vector3(0.0, 0.0, BOARD_SIZE.z * 0.5 + 0.01)

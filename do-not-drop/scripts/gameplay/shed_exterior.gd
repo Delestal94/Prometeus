@@ -46,7 +46,7 @@ func _draw_sign(stage: int, floor_m: Vector2, wall_height: float, front: float) 
 	var label := Label3D.new()
 	label.name = "SignText"
 	label.text = tr(String(data["key"]))
-	label.font_size = 96
+	UiTheme.label_3d(label, 96)
 	label.pixel_size = size.y * 0.55 / 96.0
 	label.modulate = SIGN_TEXT_COLOR
 	label.outline_size = 0

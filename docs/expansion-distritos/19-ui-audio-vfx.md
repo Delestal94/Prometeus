@@ -23,7 +23,7 @@
 | D-1913 | ✅ SFX de UI del portapapeles | disenador-audio | low | SFX |
 | D-1914 | ✅ Efecto de pedido completado | artista-vfx | low | partículas |
 | D-1915 | ✅ Efecto de error de armado | artista-vfx | low | efecto |
-| D-1916 | Fuente y estilo visual unificado de la expansión | constructor-ui | medium | tema de Godot |
+| D-1916 | ✅ Fuente y estilo visual unificado de la expansión | constructor-ui | medium | tema de Godot |
 | D-1917 | ✅ Traducción al inglés de todo lo nuevo | constructor-ui | medium | `loc_text` completo |
 | D-1918 | Accesibilidad: daltonismo en requisitos y estados (incluye D-0447, D-0846, fusión de D-0112) | constructor-ui | medium | captura con filtros |
 | D-1919 | ✅ Modificadores de la empresa (armado asistido, días tranquilos) de [diseno/dificultad.md](diseno/dificultad.md) §6 (D-0127) | constructor-ui | medium | los tests de dificultad.md §6 verdes; captura de la empresa nueva y del resumen |
