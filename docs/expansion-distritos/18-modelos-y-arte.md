@@ -12,7 +12,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-1801 | Guía de estilo de modelos de la expansión (polys, paleta, texel) | director-arte | medium | sección en `direccion-visual.md` |
-| D-1802 | Productos lote 1: 10 del corte vertical (botella, libro, taza, zapatillas, lámpara…) | modelador-blender* | high | 10 modelos con colisión simple |
+| D-1802 | ✅ Productos lote 1: 10 del corte vertical (botella, libro, taza, zapatillas, lámpara…) | modelador-blender* | high | 10 modelos con colisión simple |
 | D-1803 | Productos lote 2: 10 frágiles (vidrio, cerámica, TV, espejo) | modelador-blender* | high | 10 modelos |
 | D-1804 | Productos lote 3: 10 fríos y perecederos (helado, pescado, flores) | modelador-blender* | high | 10 modelos |
 | D-1805 | Productos lote 4: 10 grandes y raros (bici, colchón, planta, pecera) | modelador-blender* | high | 10 modelos |
