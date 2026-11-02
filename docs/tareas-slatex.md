@@ -600,6 +600,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   en esta sesión) y el "quién" de etiquetar y cerrar cajas, que el evento todavía no trae (ver aviso).
 - [ ] **D-1940** Créditos actualizados.
 - [ ] **D-1941** Pasada de pulido de UI completa.
+  Rama `codex/D-1941-ui-polish` (parcial): transiciones de entrada de las pantallas de la Empresa
+  (`UiTheme.pop_in()`, incluye D-1934; `tests/test_ui_transitions.gd`) y la lista cerrada de lo comprobado en
+  [`revisar/D-1941.md`](expansion-distritos/revisar/D-1941.md). Queda abierta la parte que necesita mirar la
+  pantalla (sin pantalla en esta sesión).
 - [ ] **D-1942** Pasada de mezcla de audio completa.
 - [ ] **D-1943** Pasada de VFX para no tapar visión.
 - [ ] **D-1944** Revisión de UX copy de la expansión.

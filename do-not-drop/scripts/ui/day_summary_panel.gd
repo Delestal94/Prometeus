@@ -97,6 +97,7 @@ func open(summary: Dictionary, note_lines: Array = [], auto_units: int = 0, extr
 	refresh(summary, note_lines, auto_units, extras)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	UiTheme.pop_in(self)
 	_continue_button.grab_focus.call_deferred()
 
 

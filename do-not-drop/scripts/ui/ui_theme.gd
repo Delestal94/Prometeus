@@ -203,6 +203,27 @@ static func label_3d(label: Label3D, font_size: int) -> void:
 	label.font_size = font_size
 
 
+## Seconds a screen's card takes to come in (D-1941, with D-1934), and how small it starts.
+const POP_SECONDS: float = 0.14
+const POP_FROM_SCALE: float = 0.96
+
+
+## Brings `screen`'s card (its first PanelContainer) in: from transparent and a touch smaller to whole, over
+## POP_SECONDS. A screen calls it when it opens, beside its open sound. Returns the tween (null without a card).
+static func pop_in(screen: Control) -> Tween:
+	var cards: Array[Node] = screen.find_children("*", "PanelContainer", true, false)
+	if cards.is_empty() or not screen.is_inside_tree():
+		return null
+	var card := cards[0] as Control
+	card.pivot_offset = card.size * 0.5
+	card.modulate.a = 0.0
+	card.scale = Vector2.ONE * POP_FROM_SCALE
+	var tween: Tween = card.create_tween().set_parallel(true).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(card, ^"modulate:a", 1.0, POP_SECONDS)
+	tween.tween_property(card, ^"scale", Vector2.ONE, POP_SECONDS)
+	return tween
+
+
 ## A big display-face heading.
 static func title(parent: Node, text: String, font_size: int, color: Color = INK) -> Label:
 	return label(parent, text, font_size, color, true)
