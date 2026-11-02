@@ -15,6 +15,10 @@ const SCAN_SECONDS: float = 0.5
 const HEIGHT_M: float = 2.3
 const BOB_M: float = 0.12
 const BOB_HZ: float = 1.2
+## The arrow's text: two lines of 64 px at 4 mm (0.5 m), a sixth of the screen from 2 m, its bottom over the eyes
+## (D-1943: it was 0.77 m at 6 mm).
+const FONT_SIZE: int = 64
+const PIXEL_M: float = 0.004
 const KIND_SUPPLIES: StringName = &"supplies"
 const KIND_LATE: StringName = &"late"
 const KEY_SUPPLIES: String = "WORLD_INDICATOR_SUPPLIES"
@@ -141,8 +145,8 @@ func _new_mark(uid: StringName) -> Label3D:
 	mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	mark.no_depth_test = true
 	mark.fixed_size = false
-	mark.pixel_size = 0.006
-	UiTheme.label_3d(mark, 64)
+	mark.pixel_size = PIXEL_M
+	UiTheme.label_3d(mark, FONT_SIZE)
 	mark.outline_size = 14
 	mark.outline_modulate = UiTheme.INK
 	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

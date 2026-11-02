@@ -619,6 +619,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   pantalla (sin pantalla en esta sesión).
 - [ ] **D-1942** Pasada de mezcla de audio completa.
 - [ ] **D-1943** Pasada de VFX para no tapar visión.
+  Rama `codex/D-1943-vfx-vision` (parcial): medido desde la cámara del jugador (ojos a 1,6 m, FOV 78°). La "✓"/"✗"
+  de la mesa ocupaba el 30 % del alto de pantalla a 1,2 m y la flecha de las estaciones el 24 % a 2 m. Ahora:
+  - la marca mide 0,26 m y arranca por encima de los ojos;
+  - la flecha mide 0,5 m y su punto más bajo queda por encima de los ojos;
+  - las partículas cubren menos del 3 %.
+  Test: `tests/test_vfx_vision.gd`. Queda abierta la parte que necesita capturas (sin pantalla en esta sesión).
 - [x] **D-1944** Revisión de UX copy de la expansión.
   Rama `codex/D-1944-ux-copy`: revisión de los textos de la expansión (las claves que nombran los scripts y datos
   de la Empresa) por voseo, glosario, largo y gramática. Cambios:

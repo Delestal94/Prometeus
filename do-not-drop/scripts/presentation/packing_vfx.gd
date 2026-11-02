@@ -15,8 +15,12 @@ const EFFECT_SECONDS: float = 1.4
 const MAX_EFFECTS: int = 6
 const BURST_AMOUNT: int = 36
 const MARK_RISE_M: float = 0.6
-const MARK_HEIGHT_M: float = 1.3
+## The mark starts over the player's eyes (1.6 m) and rises, so it never sits across the view (D-1943).
+const MARK_HEIGHT_M: float = 1.9
 const ERROR_AMOUNT: int = 18
+## The mark's size: 64 px at 4 mm is 0.26 m, an eighth of the screen's height at arm's length (D-1943).
+const MARK_FONT_SIZE: int = 64
+const MARK_PIXEL_M: float = 0.004
 const SHAKE_M: float = 0.06
 const KIND_DONE: StringName = &"done"
 const KIND_ERROR: StringName = &"error"
@@ -142,8 +146,8 @@ func _mark(effect: StringName) -> Label3D:
 	mark.modulate = UiTheme.status(2 if effect == KIND_ERROR else 0, self)
 	mark.outline_modulate = UiTheme.INK
 	mark.outline_size = 16
-	UiTheme.label_3d(mark, 96)
-	mark.pixel_size = 0.006
+	UiTheme.label_3d(mark, MARK_FONT_SIZE)
+	mark.pixel_size = MARK_PIXEL_M
 	mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	mark.no_depth_test = true
 	mark.position = Vector3.UP * MARK_HEIGHT_M
