@@ -667,7 +667,14 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 
 ### Grupo 18 — productos, embalaje, portapapeles y clientes (`18-modelos-y-arte.md`, necesitan PC)
 
-- [ ] **D-1802** Productos lote 1: 10 del corte vertical.
+- [x] **D-1802** Productos lote 1: 10 del corte vertical.
+  Rama `codex/D-1802-products-lot1`: `assets/tools/build_product_models.py` arma con Blender en segundo plano
+  (`blender --background --python ... -- 1`) diez productos low-poly: botella, libro, taza, zapatillas, lámpara de
+  escritorio, tostadora, mochila, juego de mesa, auriculares y tetera. Quedan en
+  `assets/models/products/sm_product_<id>.glb`, cada uno con su caja `-colonly`, que Godot convierte en la
+  colisión simple. `tests/test_product_models.gd`: cargan, están apoyados y centrados en su base, tienen tamaño
+  real, son low-poly y tienen colisión. Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus
+  `ProductDefinition` en `data/products/` (datos de Nacho).
 - [ ] **D-1803** Productos lote 2: 10 frágiles.
 - [ ] **D-1804** Productos lote 3: 10 fríos y perecederos.
 - [ ] **D-1805** Productos lote 4: 10 grandes y raros.
