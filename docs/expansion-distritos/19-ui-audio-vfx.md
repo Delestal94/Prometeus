@@ -41,7 +41,7 @@
 | D-1926 | Tutoriales por sistema (empleados, automatización, lancha, vuelo) (incluye D-1140, fusión de D-0112) | constructor-ui | high | 4 flujos |
 | ~~D-1927~~ | ~~Consejos en pantalla de carga según distrito~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | 40 consejos |
 | D-1928 | Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas (decidido 2026-10-04: sin ElevenLabs) (incluye D-1043, fusión de D-0112) | disenador-audio | medium | murmullos por personaje en `SynthAudio`; test de que no hay archivos de voz |
-| D-1929 | Música por distrito (9 temas compuestos por código) (incluye D-0343, fusión de D-0112) | disenador-audio | high | 9 loops |
+| D-1929 | ✅ Música por distrito (9 temas compuestos por código) (incluye D-0343, fusión de D-0112) | disenador-audio | high | 9 loops |
 | D-1930 | SFX de vehículos nuevos revisados juntos | disenador-audio | medium | mezcla |
 | D-1931 | Efectos de clima por distrito (lluvia, nieve, ceniza) unificados | artista-vfx | medium | presupuesto medido |
 | ~~D-1932~~ | ~~Efecto de "nivel subido" de empleado~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-vfx | low | efecto |
