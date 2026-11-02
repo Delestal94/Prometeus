@@ -526,7 +526,14 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
 - [ ] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
 - [ ] **D-1929** Música por distrito (9 temas compuestos por código).
-- [ ] **D-1935** Feed de eventos del galpón (quién hizo qué).
+- [x] **D-1935** Feed de eventos del galpón (quién hizo qué).
+  Rama `codex/D-1935-shed-feed`: `scripts/ui/shed_event_feed.gd` (`ShedEventFeed`: columna a la derecha con las
+  últimas 5 líneas, que se apagan a los 12 s; lee `CompanyNet.event_applied` en cada par: pedido que llega o se
+  vence, unidades puestas en una caja, caja etiquetada y cerrada, pedido al proveedor, mercadería echada a perder,
+  camión del proveedor que se va; quién sale del `peer` del evento o de las manos `hands:<peer>` de donde salieron
+  las unidades, con el apodo del jugador; lo mismo repetido por el mismo jugador se suma en su línea),
+  `CompanyRoot` lo agrega (sin sumar líneas), `tests/test_shed_event_feed.gd`. Pendiente: la captura (sin pantalla
+  en esta sesión) y el "quién" de etiquetar y cerrar cajas, que el evento todavía no trae (ver aviso).
 - [ ] **D-1940** Créditos actualizados.
 - [ ] **D-1941** Pasada de pulido de UI completa.
 - [ ] **D-1942** Pasada de mezcla de audio completa.

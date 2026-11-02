@@ -2,15 +2,13 @@ class_name CompanyRoot
 extends Node3D
 ## Root scene of the "Modo Empresa" (expansion D-0214, docs/arquitectura.md section 10).
 ##
-## The first thing you can walk around in: the company's shed in the industrial park
-## and the nine zones of the continuous map drawn as flat slabs with their name,
-## all from data (data/zones/*.tres), nothing placed by hand. The shed (CompanyShed) is
-## furnished from the company's layout: a new company starts from DefaultShed (D-0911, D-0620):
-## dock and reception with the first pallets, shelves with stock, two packing tables and the
-## dispatch zone by the exit. It is a grey-box stand-in until the final models and the district
-## scenes exist; what is final here is the entry: --autostart-company (alias --mode=company) or the
-## menu's Empresa button opens this scene, the company is switched on (CompanyState) and the local
-## player stands in the shed.
+## The first thing you can walk around in: the company's shed in the industrial park and the nine zones of the
+## continuous map drawn as flat slabs with their name, all from data (data/zones/*.tres), nothing placed by hand. The
+## shed (CompanyShed) is furnished from the company's layout: a new company starts from DefaultShed (D-0911, D-0620):
+## dock and reception with the first pallets, shelves with stock, two packing tables and the dispatch zone by the
+## exit. It is a grey-box stand-in until the final models and the district scenes exist; what is final here is the
+## entry: --autostart-company (alias --mode=company) or the menu's Empresa button opens this scene, the company is
+## switched on (CompanyState) and the local player stands in the shed.
 ##
 ## Online (the D-0214 follow-up): it is one of NetworkManager.LEVEL_SCENES, so a host here (the
 ## menu's --host-company) sends every joiner to it. Each peer tells the
@@ -237,6 +235,7 @@ func _ready() -> void:
 	_add_stock_board()
 	CompanyDispatch.add_to(self)
 	CompanyOnboardingTracker.add_to(self)
+	ShedEventFeed.add_to(self)
 	_add_summary_panel()
 	_publish_presence()
 	_open_company_day.call_deferred()
