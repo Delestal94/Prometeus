@@ -675,7 +675,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   colisión simple. `tests/test_product_models.gd`: cargan, están apoyados y centrados en su base, tienen tamaño
   real, son low-poly y tienen colisión. Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus
   `ProductDefinition` en `data/products/` (datos de Nacho).
-- [ ] **D-1803** Productos lote 2: 10 frágiles.
+- [x] **D-1803** Productos lote 2: 10 frágiles.
+  Rama `codex/D-1803-products-lot2`: `assets/tools/build_product_models.py -- 2` (Blender en segundo plano) arma diez productos frágiles: copas, pila de platos, televisor, espejo, frasco, florero alto, araña de luz, tetera de cerámica, portarretratos y globo de vidrio,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
 - [ ] **D-1804** Productos lote 3: 10 fríos y perecederos.
 - [ ] **D-1805** Productos lote 4: 10 grandes y raros.
 - [ ] **D-1806** Cajas S, M, L, XL abiertas y cerradas.

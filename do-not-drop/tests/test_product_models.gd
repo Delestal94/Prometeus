@@ -15,9 +15,13 @@ const MIN_M: float = 0.01
 const MAX_M: float = 2.0
 const MAX_TRIANGLES: int = 800
 const COLLISION_SLACK_M: float = 0.02
-## lot -> product ids (lot 1 is D-1802).
+## lot -> product ids (1 D-1802, 2 D-1803, 3 D-1804, 4 D-1805, 5 D-1821, 6 D-1822).
 const LOTS: Dictionary = {
 	1: ["bottle", "book", "mug", "sneakers", "desk_lamp", "toaster", "backpack", "board_game", "headphones", "teapot"],
+	2: [
+		"wine_glasses", "plate_stack", "television", "mirror", "glass_jar", "tall_vase", "chandelier",
+		"ceramic_teapot", "picture_frame", "snow_globe_glass"
+	],
 }
 
 var _failures: int = 0
