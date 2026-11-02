@@ -4,7 +4,7 @@ extends SceneTree
 ## What the shed's forklift sounds and shows (expansion D-0606.c3: forklift_cues.gd, fed by forklift_view.gd;
 ## SynthAudio.forklift_hydraulic_loop):
 ## - with nobody on it and the forks still: no engine, no hydraulics, the beacon dark and its light off;
-## - somebody drives (any peer: it reads the book's state): the motor plays, positional on the SFX bus and audible
+## - somebody drives (any peer: it reads the book's state): the motor plays, positional on the Machines bus and audible
 ##   across the shed, and the amber beacon is lit and its light on; the pump does not play while the forks rest;
 ## - the forks going up or down (moving_at) bring the pump, a tone lower going down; it stops by itself when the
 ##   burst ends, whoever has the forklift, and the engine goes on;
@@ -68,8 +68,8 @@ func _test_cues() -> void:
 	view.refresh(pallets)
 	await _frames(3)
 	_expect(cues.engine_on() and engine.playing, "A driver: the motor plays")
-	_expect(engine.bus == &"SFX" and engine.max_distance >= 20.0 and engine.unit_size > 0.0,
-		"The motor is positional on the SFX bus and reaches across the shed")
+	_expect(engine.bus == CompanyMix.MACHINES and engine.max_distance >= 20.0 and engine.unit_size > 0.0,
+		"The motor is positional on the Machines bus (D-1912) and reaches across the shed")
 	_expect(engine.stream == SynthAudio.forklift_motor_loop(), "The motor is the electric one of the depot's forklift")
 	_expect(light.visible and cues.beacon_on() and light.light_color.r > light.light_color.b,
 		"A driver: the amber beacon is on")

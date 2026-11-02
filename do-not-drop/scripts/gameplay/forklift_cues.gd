@@ -10,7 +10,7 @@ extends Node3D
 ##   shadowless OmniLight3D reads the same and costs nothing in GL Compatibility).
 ## - While the forks go up or down: the hydraulic pump (SynthAudio.forklift_hydraulic_loop), a tone lower going
 ##   down, whoever has the forklift. No reverse beeper: the depot's already beeps and this one is driven by hand.
-## Both sounds are positional (AudioStreamPlayer3D, bus SFX like the depot forklift's), so a teammate is heard
+## Both sounds are positional (AudioStreamPlayer3D, bus Machines: CompanyMix, D-1912), so a teammate is heard
 ## fading with distance, and fade in and out in a few tenths of a second instead of starting and stopping on a click.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
@@ -177,7 +177,7 @@ func _player(player_name: String, stream: AudioStream, volume_db: float) -> Audi
 	var player := AudioStreamPlayer3D.new()
 	player.name = player_name
 	player.stream = stream
-	player.bus = &"SFX"
+	player.bus = CompanyMix.bus(CompanyMix.MACHINES)
 	player.volume_db = volume_db
 	player.unit_size = 3.0
 	player.max_distance = 25.0

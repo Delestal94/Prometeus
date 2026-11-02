@@ -516,7 +516,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   bus Music; cada evento del negocio suma actividad, que se gasta sola; entra el ritmo y después la melodía, y el
   cierre del día apaga el loop). `CompanyRoot` lo agrega (sin sumar líneas). Test: `tests/test_shed_music.gd`.
   Pendiente: escucharlo por parlantes (sin audio en esta sesión) y su nivel en la mezcla del galpón (D-1912).
-- [ ] **D-1912** Mezcla: buses para galpón, máquinas y distritos.
+- [x] **D-1912** Mezcla: buses para galpón, máquinas y distritos.
+  Rama `codex/D-1912-company-mix`: buses `Shed` (reverb de galpón, manda a SFX), `Machines` (a Shed) y `Districts`
+  (a Exterior) en `default_bus_layout.tres`, todos a 0 dB. `scripts/presentation/company_mix.gd` (`CompanyMix`:
+  bus con respaldo, camino y ganancia hasta Master, objetivos por clase). El autoelevador del galpón suena por
+  Machines. La música del galpón pasa a −12 dB para quedar en −30 dBFS. `tests/test_company_mix.gd` mide cada sonido
+  de la Empresa por su camino y la tabla quedó en `docs/audio-mundo.md`. Pendiente: escucharlo por parlantes (sin
+  audio en esta sesión).
 - [x] **D-1913** SFX de UI del portapapeles.
   Rama `codex/D-1913-clipboard-sfx`: `SynthAudio.clipboard_clip_up()`, `clipboard_clip_down()` y `clipboard_sheet()`
   (`modules/synth_audio/synth_audio_handling.gd`), tocados por `company_clipboard.gd` en el bus SFX: broche al sacar y
