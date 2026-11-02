@@ -544,7 +544,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   sobre la mesa (`CPUParticles3D` de un disparo, 36 papelitos) y un "✓" que sube y se apaga. Lee `box_sealed`
   en cada par, sin red. Cada efecto se libera a los 1,4 s y hay como mucho 6 a la vez. Test:
   `tests/test_packing_vfx.gd`. Pendiente: la captura (sin pantalla en esta sesión).
-- [ ] **D-1915** Efecto de error de armado.
+- [x] **D-1915** Efecto de error de armado.
+  Rama `codex/D-1915-packing-error-vfx`: `PackingVfx` suma el error de armado. Una caja cerrada debajo del nivel o
+  sin la etiqueta de su pedido larga una bocanada roja chica que sube (18 partículas lentas) y una "✗" roja que
+  tiembla y se apaga. Test: `tests/test_packing_vfx.gd`. Pendiente: la captura (sin pantalla en esta sesión).
 - [ ] **D-1916** Fuente y estilo visual unificado de la expansión.
 - [x] **D-1917** Traducción al inglés de todo lo nuevo.
   Rama `codex/D-1917-english`: `tests/test_expansion_english.gd`. Revisa las dos tablas fila por fila, como las
