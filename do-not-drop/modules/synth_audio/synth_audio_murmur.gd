@@ -9,6 +9,8 @@ extends RefCounted
 
 const RATE: int = 22050
 const MAX_SYLLABLES: int = 12
+## Accented vowels by code point (á é í ó ú ü), so a line in Spanish counts its syllables too.
+const ACCENTED_VOWELS: Array[int] = [0xE1, 0xE9, 0xED, 0xF3, 0xFA, 0xFC]
 const SYLLABLE_SECONDS: float = 0.11
 const LOUDEST_DB: float = -14.0
 ## voice id -> {pitch (Hz), pace (syllable length factor), wander (0-1), radio (bool)}.
@@ -29,7 +31,7 @@ static func syllables_of(text: String) -> int:
 	var count: int = 0
 	var in_vowel: bool = false
 	for letter: String in text.to_lower():
-		var vowel: bool = "aeiouáéíóúü".contains(letter)
+		var vowel: bool = "aeiou".contains(letter) or ACCENTED_VOWELS.has(letter.unicode_at(0))
 		if vowel and not in_vowel:
 			count += 1
 		in_vowel = vowel
