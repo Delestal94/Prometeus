@@ -19,6 +19,13 @@ const GROUPS: Dictionary = {
 		"boxes/sm_box_s_open", "boxes/sm_box_s_closed", "boxes/sm_box_m_open", "boxes/sm_box_m_closed",
 		"boxes/sm_box_l_open", "boxes/sm_box_l_closed", "boxes/sm_box_xl_open", "boxes/sm_box_xl_closed",
 	], true],
+	"supplies": [[
+		"supplies/sm_supply_tape_roll",
+		"supplies/sm_supply_tape_dispenser",
+		"supplies/sm_supply_bubble_wrap_roll",
+		"supplies/sm_supply_packing_paper_roll",
+		"supplies/sm_supply_foam_block",
+	], true],
 }
 
 var _failures: int = 0
