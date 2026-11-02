@@ -11,7 +11,7 @@ extends SceneTree
 ##   button so a gamepad can close it;
 ## - D-0614.c: the supplier's delivery note of the day (DeliveryNote lines) shows one row per product
 ##   that came short ("llegaron 4 de 10 (faltan 6)") or extra, none for an even one, and the section
-##   hides with no lines; broken lines are skipped and more than MAX_ROWS fold into "y N productos más";
+##   hides with no lines; broken lines are skipped and more than MAX_ROWS fold into "Y N productos más";
 ## - both languages have every finance_* key the panel and the known ledger reasons use.
 
 const PANEL: String = "res://scripts/ui/day_summary_panel.gd"
@@ -157,7 +157,7 @@ func _test_note() -> void:
 		many.append({"product": "p%02d" % i, "ordered": 5, "received": 1, "missing": 4, "extra": 0})
 	var rows: Array = panel_class.note_rows(many)
 	_expect(rows.size() == panel_class.MAX_ROWS, "12 short products fold into %d rows" % panel_class.MAX_ROWS)
-	_expect(rows[rows.size() - 1] == ["other", "y 5 productos más"],
+	_expect(rows[rows.size() - 1] == ["other", "Y 5 productos más"],
 		"the last row counts the rest: %s" % [rows[rows.size() - 1]])
 
 

@@ -1,7 +1,7 @@
 class_name ShedEventFeed
 extends Control
 ## The shed's event feed (expansion D-1935): a short column of lines on the right of the screen saying who
-## did what in the company ("Ana puso 3 Gallina en una caja", "Llegó el pedido d1_o04"). It reads the
+## did what in the company ("Ana puso Gallina ×3 en una caja", "Llegó el pedido d1_o04"). It reads the
 ## business events every peer applies (CompanyNet.event_applied), so the host and every client show the same
 ## lines, and draws nothing else: no RPC, no state.
 ##
@@ -172,13 +172,13 @@ func text_of(line: Dictionary) -> String:
 		CompanyOrdersNet.EXPIRED:
 			text = tr(KEY_ORDER_EXPIRED) % subject
 		CompanyTableNet.PLACED:
-			text = tr(KEY_BOX_PLACED) % [_who(line), qty, product]
+			text = tr(KEY_BOX_PLACED) % [_who(line), product, qty]
 		CompanyTableNet.LABELED:
 			text = tr(KEY_BOX_LABELED) % subject
 		CompanyTableNet.SEALED:
 			text = tr(KEY_BOX_SEALED) % subject if subject != "" else tr(KEY_BOX_SEALED_BLANK)
 		CompanyColdNet.SPOILED:
-			text = tr(KEY_SPOILED) % [qty, product]
+			text = tr(KEY_SPOILED) % [product, qty]
 		CompanySupplierNet.ORDERED:
 			text = tr(KEY_SUPPLIER) % [_who(line), qty]
 		CompanyPallets.DEPARTED:

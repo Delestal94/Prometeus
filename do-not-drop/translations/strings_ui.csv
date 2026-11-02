@@ -431,7 +431,7 @@ UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
 UI_COMPANY_BANKRUPT_WARNING,Cerraste en rojo: hoy llegan menos pedidos (%d %%).,You closed in the red: fewer orders today (%d%%).
 UI_COMPANY_CLOSE_DAY,Cerrar el día,Close the day
-UI_COMPANY_CLOSE_DAY_CONFIRM,"¿Cerrar el día ahora? No entran más pedidos, se espera a que vuelvan las salidas y lo que no se entregó se cobra como a las 20:00.","Close the day now? No more orders come in, the trips out come back and whatever was not delivered is charged as at 20:00."
+UI_COMPANY_CLOSE_DAY_CONFIRM,"¿Cerrar el día ahora? No entran más pedidos, las salidas vuelven y lo no entregado se cobra como a las 20:00.","Close the day now? No more orders come in, the trips come back and anything not delivered is charged as at 20:00."
 UI_COMPANY_CLOSE_DAY_HOST_ONLY,Lo cierra el host,The host closes the day
 UI_COMPANY_EXIT_LOSES_DAY,"Salir ahora pierde lo hecho desde las 08:00. Para guardarlo, cerrá el día.","Leaving now loses everything done since 08:00. To keep it, close the day."
 UI_COMPANY_EXIT_ANYWAY,Salir igual,Leave anyway
@@ -1346,7 +1346,7 @@ UI_FINANCE_CONTINUE,Seguir,Continue
 UI_FINANCE_NOTE,Remito del proveedor,Supplier delivery note
 UI_FINANCE_NOTE_SHORT,"%s: llegaron %d de %d (faltan %d)","%s: %d of %d arrived (%d short)"
 UI_FINANCE_NOTE_EXTRA,"%s: llegaron %d de %d (sobran %d)","%s: %d of %d arrived (%d extra)"
-UI_FINANCE_NOTE_MORE,y %d productos más,and %d more products
+UI_FINANCE_NOTE_MORE,Y %d productos más,And %d more products
 UI_FINANCE_AUTO_ORDER,Pedido automático al proveedor: %d unidades,Automatic supplier order: %d units
 UI_FINANCE_REASON_ORDER_PAID,Pedidos cobrados,Orders paid
 UI_FINANCE_REASON_TIP,Propinas,Tips
@@ -1505,12 +1505,12 @@ UI_ORDER_STARS_5,Excelente,Excellent
 UI_FINANCE_SHOP,Tienda,Shop
 UI_FEED_ORDER_ADDED,Llegó el pedido %s,Order %s came in
 UI_FEED_ORDER_EXPIRED,Se venció el pedido %s,Order %s ran out of time
-UI_FEED_BOX_PLACED,%s puso %d %s en una caja,%s put %d %s in a box
+UI_FEED_BOX_PLACED,%s puso %s ×%d en una caja,%s put %s ×%d in a box
 UI_FEED_BOX_LABELED,Caja etiquetada para el pedido %s,Box labeled for order %s
 UI_FEED_BOX_SEALED,Caja cerrada para el pedido %s,Box sealed for order %s
 UI_FEED_BOX_SEALED_BLANK,Caja cerrada sin pedido,Box sealed without an order
 UI_FEED_SUPPLIER_ORDERED,%s le pidió %d unidades al proveedor,%s ordered %d units from the supplier
-UI_FEED_SPOILED,Se echaron a perder %d %s,%d %s spoiled
+UI_FEED_SPOILED,"%s: se echaron a perder %d","%s: %d spoiled"
 UI_FEED_TRUCK_LEFT,Se fue el camión del proveedor,The supplier truck left
 UI_FEED_SOMEONE,Alguien,Someone
 UI_SHOP_TITLE,Tienda de la empresa,Company shop

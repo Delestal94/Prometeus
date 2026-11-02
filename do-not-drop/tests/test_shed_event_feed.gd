@@ -71,13 +71,13 @@ func _test_lines() -> void:
 	var events: Array = [
 		[CompanyOrdersNet.ADDED, {"order": {"id": "d1_o04"}}, "Llegó el pedido d1_o04"],
 		[CompanyOrdersNet.EXPIRED, {"order": "d1_o02", "minute": 600}, "Se venció el pedido d1_o02"],
-		[CompanyTableNet.PLACED, {"product": &"hen", "from": &"hands:7"}, "Ana puso 1 %s en una caja" % hen],
+		[CompanyTableNet.PLACED, {"product": &"hen", "from": &"hands:7"}, "Ana puso %s ×1 en una caja" % hen],
 		[CompanyTableNet.LABELED, {"order": &"d1_o04"}, "Caja etiquetada para el pedido d1_o04"],
 		[CompanyTableNet.SEALED, {"order": &"d1_o04"}, "Caja cerrada para el pedido d1_o04"],
 		[CompanyTableNet.SEALED, {"order": &""}, "Caja cerrada sin pedido"],
 		[CompanySupplierNet.ORDERED, {"peer": 3, "lines": [{"qty": 4}, {"qty": 6}]},
 			"Alguien le pidió 10 unidades al proveedor"],
-		[CompanyColdNet.SPOILED, {"product": &"hen", "qty": 2}, "Se echaron a perder 2 %s" % hen],
+		[CompanyColdNet.SPOILED, {"product": &"hen", "qty": 2}, "%s: se echaron a perder 2" % hen],
 		[CompanyPallets.DEPARTED, {}, "Se fue el camión del proveedor"],
 	]
 	for event: Array in events:
@@ -110,7 +110,7 @@ func _test_merge_and_limit() -> void:
 	var hen: String = PickingCartPoint.product_name(&"hen")
 	for i: int in 3:
 		feed.on_event(i, CompanyTableNet.PLACED, {"product": &"hen", "from": &"hands:7"})
-	_expect(_texts_are(feed, ["Ana puso 3 %s en una caja" % hen]),
+	_expect(_texts_are(feed, ["Ana puso %s ×3 en una caja" % hen]),
 		"three units of hen by Ana are one line (got %s)" % [feed.texts()])
 	feed.on_event(4, CompanyTableNet.PLACED, {"product": &"hen", "from": &"hands:9"})
 	_expect(feed.texts().size() == 2, "another player starts a new line")
