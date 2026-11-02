@@ -589,7 +589,15 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   `LEGACY` tres textos de antes: "Entrega" y "%d pts" en `leaderboard_panel.gd` y `tr("None")` en `unlock_manager.gd`.
 - [ ] **D-1923** Celular del jugador con app de pedidos y mapa.
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
-- [ ] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
+- [x] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
+  Rama `codex/D-1928-voices`: `modules/synth_audio/synth_audio_murmur.gd` (`SynthAudioMurmur`, accesor
+  `SynthAudio.murmur(voz, sílabas)`) arma una voz por personaje: la Jefa por radio, el Jefe del depósito, el
+  cliente y el chofer, sin archivos de voz. `scripts/presentation/company_voice.gd` (`CompanyVoice`, lo agrega
+  `CompanyUi`): `say()` muestra la línea en un globo y suena el murmullo en el bus Voice. La Jefa habla por radio,
+  con un globo abajo, y abre cada día ("Arrancamos el día N"); los demás hablan en un globo sobre su lugar.
+  Test: `tests/test_company_voice.gd`, que comprueba también que no se distribuye ningún archivo de voz.
+  Pendiente: escucharlo por parlantes (sin audio en esta sesión). Las demás líneas de la Jefa y del Jefe esperan
+  a sus sistemas (notas del tutorial, eventos del día).
 - [x] **D-1929** Música por distrito (9 temas compuestos por código).
   Rama `codex/D-1929-district-music`: `modules/synth_audio/synth_audio_theme_music.gd` (`SynthAudioThemeMusic`,
   accesor `SynthAudio.theme_music()`) compone nueve temas, cada uno con su tempo, tonalidad, modo, timbre y

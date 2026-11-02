@@ -18,6 +18,7 @@ extends RefCounted
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
 ##   SynthAudioWorkMusic a work loop in three stems that come in with the activity
 ##   SynthAudioThemeMusic nine looping place themes, each with its own tempo, mode and lead
+##   SynthAudioMurmur    wordless murmurs, one voice per character (the boss on the radio, customers...)
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
 
 ## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
@@ -370,6 +371,14 @@ static func train_chug_loop() -> AudioStreamWAV:
 
 static func scanner_beep() -> AudioStreamWAV:
 	return _cached(&"scanner_beep", _scene_builder(&"make_scanner_beep"))
+
+
+## A character's wordless murmur (SynthAudioMurmur: VOICES' boss on the radio, depot_boss, customer, driver) for a
+## line of `syllables` (SynthAudioMurmur.syllables_of(text)); an unknown voice speaks as a customer.
+static func murmur(voice: StringName, syllables: int = 4) -> AudioStreamWAV:
+	var known: StringName = voice if SynthAudioMurmur.VOICES.has(voice) else &"customer"
+	var count: int = clampi(syllables, 1, SynthAudioMurmur.MAX_SYLLABLES)
+	return _cached(StringName("murmur_%s_%d" % [known, count]), SynthAudioMurmur.make.bind(known, count))
 
 
 ## A crewmate's quick callout (N-505): babble pitched by their colour slot.
