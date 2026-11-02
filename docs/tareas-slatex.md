@@ -597,6 +597,8 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Comparte las manos con el portapapeles (grupo `hand_tool`): sacar uno guarda el otro. Test:
   `tests/test_company_phone.gd`. Pendiente: la captura (sin pantalla en esta sesión).
 - [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
+  Saltada (2026-11-02): sus cuatro sistemas no existen todavía (empleados D-1001, automatización D-1101, lancha
+  D-1301, avioneta D-1401). Cada tutorial se arma cuando llegue su sistema.
 - [x] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
   Rama `codex/D-1928-voices`: `modules/synth_audio/synth_audio_murmur.gd` (`SynthAudioMurmur`, accesor
   `SynthAudio.murmur(voz, sílabas)`) arma una voz por personaje: la Jefa por radio, el Jefe del depósito, el
@@ -661,7 +663,11 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   `tests/test_expansion_english.gd` suma que el castellano de la expansión use vos (sin "tienes", "puedes",
   "elige"…) y que no llame "depósito" ni "almacén" al galpón.
 - [ ] **D-1945** Capturas de cada pantalla nueva.
+  Sin hacer: necesita capturas y mirarlas. Esta sesión corre Godot solo `--headless`, sin pantalla. Las pantallas
+  nuevas a capturar están en `revisar/D-1941.md` y `revisar/D-1950.md`.
 - [ ] **D-1946** Revisión de accesibilidad.
+  Parcial (rama `codex/D-1946-a11y-notes`): lo comprobable por test está en
+  [`revisar/D-1946.md`](expansion-distritos/revisar/D-1946.md). Queda la revisión con capturas y con personas.
 - [x] **D-1947** Rendimiento de la UI (portapapeles sin picos).
   Rama `codex/D-1947-clipboard-perf`: medido en el mundo real, sin pantalla.
   - Antes: sacar el portapapeles costaba ~10 ms (36 ms la primera vez, con un cuadro de 174 ms) y cada cambio de
@@ -719,4 +725,6 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1822** Productos lote 6: 10 peligrosos/vivos.
 - [ ] **D-1833** Texturas de productos (marcas ficticias graciosas).
 - [ ] **D-1840** Animación del jugador con portapapeles y escáner.
+  Saltada (2026-11-02): necesita animar el esqueleto del jugador en Blender y aprobar los clips mirándolos, y el
+  escáner no existe todavía como objeto. El portapapeles ya se sostiene por código (`PlayerHeldTool`, D-1902).
 - [ ] **D-1845** Íconos de productos para UI (render automático).
