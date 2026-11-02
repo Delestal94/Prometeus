@@ -305,6 +305,8 @@ tolerancia ±2 dB, clases en `CompanyMix.TARGETS_DB`):
 | Portapapeles: broche y hoja | handling | 100 ms más fuertes | −31,5 dBFS | `CompanyClipboard.SFX_DB` −8 |
 | Autoelevador del galpón (motor, hidráulica) | machine | RMS del loop | −40 dBFS | `WorldMix.SHED_FORKLIFT_*` |
 | Loop de trabajo del galpón, solo la base | work music | RMS del loop | −30 dBFS | `ShedMusic.VOLUME_DB` −12 (era −14) |
+| Tema de cada distrito (9) | district music | RMS del loop | −24 dBFS | `DistrictMusic.VOLUME_DB` −6 (era −3; D-1942) |
+| Murmullo de cada personaje (4) | voice | 100 ms más fuertes | −20 dBFS | `CompanyVoice.VOICE_DB` −6 |
 
 La música del galpón queda debajo de la radio del depósito (−24): suena todo el día. Con las tres capas sube
 unos 5 dB.

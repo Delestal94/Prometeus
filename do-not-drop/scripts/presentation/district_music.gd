@@ -10,7 +10,7 @@ const THEME_OF: Dictionary = {
 	&"parque_industrial": 0, &"centro": 1, &"suburbio": 2, &"campo": 3, &"puerto": 4, &"islas": 5,
 	&"montana": 6, &"nieve": 7, &"volcan": 8,
 }
-const VOLUME_DB: float = -3.0
+const VOLUME_DB: float = -6.0
 const SILENT_DB: float = -60.0
 const FADE_SECONDS: float = 2.5
 const CHECK_SECONDS: float = 0.5

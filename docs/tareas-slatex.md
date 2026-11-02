@@ -625,7 +625,16 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   (`UiTheme.pop_in()`, incluye D-1934; `tests/test_ui_transitions.gd`) y la lista cerrada de lo comprobado en
   [`revisar/D-1941.md`](expansion-distritos/revisar/D-1941.md). Queda abierta la parte que necesita mirar la
   pantalla (sin pantalla en esta sesión).
-- [ ] **D-1942** Pasada de mezcla de audio completa.
+- [x] **D-1942** Pasada de mezcla de audio completa.
+  Rama `codex/D-1942-mix-pass`: pasada de mezcla sobre todo lo nuevo del modo Empresa, medida por
+  `tests/test_company_mix.gd` (fuente, `volume_db` del reproductor y cada bus del camino, ±2 dB):
+  - portapapeles −31,5;
+  - autoelevador −40;
+  - loop del galpón −30;
+  - temas de distrito −24 (bajan de −21 a −24, como la radio del depósito: `DistrictMusic.VOLUME_DB` −6);
+  - murmullos −20, debajo de las señales del mundo.
+  La tabla de niveles está en `docs/audio-mundo.md`. Pendiente: escucharlo por parlantes (sin audio en esta
+  sesión).
 - [ ] **D-1943** Pasada de VFX para no tapar visión.
 - [x] **D-1944** Revisión de UX copy de la expansión.
   Rama `codex/D-1944-ux-copy`: revisión de los textos de la expansión (las claves que nombran los scripts y datos

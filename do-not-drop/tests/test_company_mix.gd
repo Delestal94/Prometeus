@@ -8,7 +8,8 @@ extends SceneTree
 ## - each company sound, measured as test_world_audio_levels measures (stream + its player's volume_db + every bus
 ##   of its route but the player's own volume buses), lands within TOLERANCE_DB of its class: the clipboard's three
 ##   cues (handling), the shed's forklift engine and hydraulics on Machines (machine), the shed's work loop with its
-##   bed alone (work music);
+##   bed alone (work music), each of the nine district themes (district music) and each character's murmur
+##   (voice) (D-1942);
 ## - the shed's forklift plays on Machines.
 
 const LEVELS: String = "res://tests/test_world_audio_levels.gd"
@@ -72,6 +73,12 @@ func _test_levels() -> void:
 			CompanyMix.MACHINES, "machine", "rms"],
 		["shed work loop (bed)", SynthAudio.work_music_layer(0), ShedMusic.VOLUME_DB, &"Music", "work music", "rms"],
 	]
+	for voice: StringName in SynthAudioMurmur.VOICES:
+		sounds.append(["%s murmur" % voice, SynthAudio.murmur(voice, 6), CompanyVoice.VOICE_DB, &"Voice", "voice",
+			"loudest"])
+	for theme: int in SynthAudioThemeMusic.THEMES.size():
+		sounds.append(["district theme %d" % theme, SynthAudio.theme_music(theme), DistrictMusic.VOLUME_DB, &"Music",
+			"district music", "rms"])
 	for sound: Array in sounds:
 		var measured: float = levels.call(&"measure_dbfs", sound[1], sound[5])
 		var result: float = measured + float(sound[2]) + CompanyMix.route_gain_db(sound[3])
