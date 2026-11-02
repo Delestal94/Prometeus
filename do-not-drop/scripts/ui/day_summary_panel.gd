@@ -27,6 +27,11 @@ class_name DaySummaryPanel
 signal continued
 signal shop_requested
 
+## Space kept free above and below the panel, and the least the scrolling body shrinks to (D-1910).
+const FIT_MARGIN: float = 16.0
+const MIN_BODY: float = 120.0
+## How far ui_up / ui_down scroll the body.
+const SCROLL_STEP: int = 60
 ## Rows shown in each list; the rest is folded into one "other" row so the panel keeps its size.
 const MAX_ROWS: int = 8
 ## Ledger reason -> translation key. Literal keys, so the translation test sees them used.
@@ -63,6 +68,8 @@ var _wage_box: VBoxContainer
 var _wage_list: VBoxContainer
 var _tomorrow_list: VBoxContainer
 var _heard_milestones: Array[String] = []
+var _body_scroll: ScrollContainer
+var _body: VBoxContainer
 var _continue_button: Button
 var _shop_button: Button
 
@@ -72,6 +79,10 @@ func _ready() -> void:
 	UiTheme.apply(self)
 	_build()
 	hide()
+	get_viewport().size_changed.connect(_fit_body)
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	if settings != null and settings.has_signal(&"menu_text_scale_changed"):
+		settings.connect(&"menu_text_scale_changed", func(_scale: float) -> void: _fit_body.call_deferred())
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null and bus.has_signal(&"milestone_reached"):
 		bus.connect(&"milestone_reached", note_milestone)
@@ -136,6 +147,7 @@ func refresh(summary: Dictionary, note_lines: Array = [], auto_units: int = 0, e
 	_auto_label.text = tr("UI_FINANCE_AUTO_ORDER") % auto_units
 	_auto_label.visible = auto_units > 0
 	_fill_extras(summary, extras)
+	_fit_body.call_deferred()
 
 
 ## The shown name of a ledger reason: its translation, or the id itself when it has none.
@@ -216,34 +228,47 @@ func _build() -> void:
 	column.add_theme_constant_override("separation", 10)
 	UiTheme.title(column, tr("UI_FINANCE_TITLE"), 38)
 	_day_label = UiTheme.label(column, "", 17, UiTheme.MUTED)
+	# Everything between the title and the buttons scrolls when it does not fit the screen (D-1910: a day
+	# with every part at 1280x720, the Steam Deck's 1280x800, or bigger menu text).
+	_body_scroll = ScrollContainer.new()
+	_body_scroll.name = "Body"
+	_body_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(_body_scroll)
+	var body := VBoxContainer.new()
+	body.name = "Content"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 10)
+	_body_scroll.add_child(body)
+	_body = body
 	var lists := HBoxContainer.new()
 	lists.add_theme_constant_override("separation", 20)
-	column.add_child(lists)
+	body.add_child(lists)
 	_income_list = _list(lists, tr("UI_FINANCE_INCOME"), UiTheme.MINT)
 	_cost_list = _list(lists, tr("UI_FINANCE_COSTS"), UiTheme.RED)
-	_profit_label = UiTheme.label(column, "", 28, UiTheme.INK, true)
+	_profit_label = UiTheme.label(body, "", 28, UiTheme.INK, true)
 	_profit_label.name = "Profit"
-	_balance_label = UiTheme.label(column, "", 16, UiTheme.MUTED)
+	_balance_label = UiTheme.label(body, "", 16, UiTheme.MUTED)
 	_balance_label.name = "Balance"
-	_truncated_label = UiTheme.label(column, tr("UI_FINANCE_TRUNCATED"), 14, UiTheme.ORANGE)
+	_truncated_label = UiTheme.label(body, tr("UI_FINANCE_TRUNCATED"), 14, UiTheme.ORANGE)
 	_truncated_label.name = "Truncated"
 	_note_box = VBoxContainer.new()
 	_note_box.name = "Note"
 	_note_box.add_theme_constant_override("separation", 3)
-	column.add_child(_note_box)
+	body.add_child(_note_box)
 	UiTheme.tag(_note_box, tr("UI_FINANCE_NOTE"), UiTheme.ORANGE, 0.0, 15)
 	_note_list = VBoxContainer.new()
 	_note_list.add_theme_constant_override("separation", 3)
 	_note_box.add_child(_note_list)
 	_note_box.hide()
-	_auto_label = UiTheme.label(column, "", 15, UiTheme.INK)
+	_auto_label = UiTheme.label(body, "", 15, UiTheme.INK)
 	_auto_label.name = "AutoOrder"
 	_auto_label.hide()
-	_build_extras(column)
+	_build_extras(body)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
 	column.add_child(buttons)
 	_continue_button = UiTheme.button(buttons, tr("UI_FINANCE_CONTINUE"), true)
+	_continue_button.name = "Continue"
 	_continue_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_continue_button.pressed.connect(close)
 	_shop_button = UiTheme.button(buttons, tr("UI_FINANCE_SHOP"))
@@ -355,7 +380,28 @@ static func _profit_color(profit: int) -> Color:
 	return UiTheme.RED if profit < 0 else UiTheme.INK
 
 
+## Sizes the scrolling body to its content, or to the screen's height left by the title and the buttons when the
+## content is taller (D-1910). Public so a test can fit it at once.
+func fit_body() -> void:
+	_fit_body()
+
+
+func _fit_body() -> void:
+	if _body_scroll == null or not is_inside_tree():
+		return
+	var panel := _body_scroll.get_parent().get_parent() as Control
+	var chrome: float = panel.get_combined_minimum_size().y - _body_scroll.custom_minimum_size.y
+	var room: float = get_viewport_rect().size.y - FIT_MARGIN * 2.0 - chrome
+	_body_scroll.custom_minimum_size.y = minf(_body.get_combined_minimum_size().y, maxf(room, MIN_BODY))
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
+	if not visible:
+		return
+	if event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel"):
 		close()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"ui_up") or event.is_action_pressed(&"ui_down"):
+		# The body has nothing to focus: the pad scrolls it.
+		_body_scroll.scroll_vertical += SCROLL_STEP if event.is_action_pressed(&"ui_down") else -SCROLL_STEP
 		get_viewport().set_input_as_handled()
