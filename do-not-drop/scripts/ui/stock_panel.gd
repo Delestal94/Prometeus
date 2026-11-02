@@ -83,10 +83,22 @@ func set_embedded(on: bool) -> void:
 
 
 
-## Redraws the list from `ctx`. The focus stays on the same product when it is still listed.
+## Redraws the list from `ctx`. The focus stays on the same product when it is still listed. When the same
+## products are listed in the same order (most events while the clipboard is up, and turning back to this sheet),
+## only the rows' texts and the totals change: no node is rebuilt, so the sheet does not hitch (D-1947).
 func refresh(ctx: Dictionary) -> void:
 	_ctx = ctx
 	if _rows_box == null:
+		return
+	var inventory: Inventory = ctx.get("inventory")
+	var list: Array[Dictionary] = []
+	if inventory != null:
+		list = StockView.rows(inventory, ctx.get("shortages", []))
+	if _same_products(list):
+		for row: Dictionary in list:
+			(_rows[row["product"]] as Button).text = _row_line(row)
+		var kept: Dictionary = StockView.totals(list)
+		_totals_label.text = tr("UI_STOCK_TOTALS") % [kept["units"], kept["products"]]
 		return
 	var focused: StringName = _focused_product()
 	for child: Node in _rows_box.get_children():
@@ -94,10 +106,6 @@ func refresh(ctx: Dictionary) -> void:
 		child.queue_free()
 	_rows.clear()
 	_order.clear()
-	var inventory: Inventory = ctx.get("inventory")
-	var list: Array[Dictionary] = []
-	if inventory != null:
-		list = StockView.rows(inventory, ctx.get("shortages", []))
 	if list.is_empty():
 		UiTheme.label(_rows_box, tr("UI_STOCK_EMPTY"), 17, UiTheme.MUTED).name = "Empty"
 	for row: Dictionary in list:
@@ -121,6 +129,16 @@ func refresh(ctx: Dictionary) -> void:
 
 
 ## Number of products listed.
+## True when `list` names the products already drawn, in the same order (and there is at least one).
+func _same_products(list: Array[Dictionary]) -> bool:
+	if list.is_empty() or list.size() != _order.size() or _rows_box.get_child_count() != _order.size():
+		return false
+	for i: int in list.size():
+		if list[i]["product"] != _order[i]:
+			return false
+	return true
+
+
 func row_count() -> int:
 	return _order.size()
 

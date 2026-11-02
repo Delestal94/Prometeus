@@ -177,6 +177,27 @@ func _ready() -> void:
 	if bus != null:
 		bus.connect(&"pause_requested", stow)
 		bus.connect(&"company_day_summary", _on_day_summary)
+	_prewarm.call_deferred()
+
+
+## Builds and draws every sheet once, invisible, while the world loads (D-1947): the first raise then costs what
+## every other does instead of a long first frame (rows built, glyphs drawn). Nothing when raised by then.
+func _prewarm() -> void:
+	if _up or not is_inside_tree() or frame == null:
+		return
+	frame.modulate.a = 0.0
+	frame.show()
+	for board: Object in [stock_board, supplier_board]:
+		if board != null and is_instance_valid(board):
+			board.call(&"show_sheet")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_instance_valid(frame):
+		return
+	if not _up:
+		_hide_sheets()
+		frame.hide()
+	frame.modulate.a = 1.0
 
 
 ## Leaving the world is always for a menu: the cursor stays free (as CompanySoloPause leaves it).

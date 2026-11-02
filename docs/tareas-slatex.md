@@ -605,7 +605,14 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1944** Revisión de UX copy de la expansión.
 - [ ] **D-1945** Capturas de cada pantalla nueva.
 - [ ] **D-1946** Revisión de accesibilidad.
-- [ ] **D-1947** Rendimiento de la UI (portapapeles sin picos).
+- [x] **D-1947** Rendimiento de la UI (portapapeles sin picos).
+  Rama `codex/D-1947-clipboard-perf`: medido en el mundo real, sin pantalla.
+  - Antes: sacar el portapapeles costaba ~10 ms (36 ms la primera vez, con un cuadro de 174 ms) y cada cambio de
+    hoja ~11 ms, porque cada evento y cada hoja reconstruían todas las filas.
+  - Ahora: la hoja Stock reusa sus filas cuando los productos son los mismos y solo cambia textos y totales; la
+    hoja Proveedor guarda sus filas para el mismo carrito; las dos se arman invisibles mientras carga el mundo
+    (`CompanyClipboard._prewarm`). Sacarlo cuesta ~1–2 ms y cambiar de hoja menos de 1 ms.
+  Test: `tests/test_clipboard_perf.gd` (filas que no se reconstruyen, hojas precalentadas, tiempos con margen).
 - [ ] **D-1948** Test de navegación con mando de todas las pantallas nuevas.
 - [ ] **D-1949** Documentar controles nuevos en `controles-y-ui.md`.
 - [ ] **D-1950** QA de UI.
