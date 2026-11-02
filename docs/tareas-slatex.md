@@ -740,7 +740,10 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Rama `codex/D-1821-products-lot5`: `assets/tools/build_product_models.py -- 5` (Blender en segundo plano) arma diez productos de distritos: cocos, horma de queso, recuerdo volcánico, globo de nieve, par de esquíes, red de pesca, frasco de miel, hierbas de montaña, ancla de recuerdo y barril de vino,
   en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
   Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
-- [ ] **D-1822** Productos lote 6: 10 peligrosos/vivos.
+- [x] **D-1822** Productos lote 6: 10 peligrosos/vivos.
+  Rama `codex/D-1822-products-lot6`: `assets/tools/build_product_models.py -- 6` (Blender en segundo plano) arma diez productos peligrosos y vivos: garrafa, caja de fuegos artificiales, jaula con gallina, cactus, colmena, jaula de loro, pecera con tortuga, farol a kerosene, juego de química y conejera,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
 - [x] **D-1833** Texturas de productos (marcas ficticias graciosas).
   Rama `codex/D-1833-brand-labels`: `assets/tools/build_label_textures.py brands` dibuja con Pillow 30 etiquetas de
   marcas inventadas y graciosas (Vaquita Feliz, Mate Mareado, Pez Distraído, Química Ups…; ninguna real), de
