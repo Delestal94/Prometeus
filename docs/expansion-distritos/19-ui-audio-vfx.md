@@ -52,7 +52,7 @@
 | ~~D-1937~~ | ~~Chat de pings con íconos de negocio~~ **Fusionada en D-0332 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | test |
 | ~~D-1938~~ | ~~Atajos de teclado configurables para gestión~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | test |
 | ~~D-1939~~ | ~~Texto a voz de pedidos para accesibilidad (opcional)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión |
-| D-1940 | Créditos actualizados | constructor-ui | low | pantalla |
+| D-1940 | ✅ Créditos actualizados | constructor-ui | low | pantalla |
 
 ## Pulido
 

@@ -1360,6 +1360,24 @@ UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
 UI_FINANCE_REASON_TOW,Grúa,Tow truck
 UI_FINANCE_REASON_OTHER,Otros,Other
+UI_MENU_CREDITS,Créditos,Credits
+UI_MENU_PAGE_CREDITS,Créditos,Credits
+UI_CREDITS_TEAM,Hecho por,Made by
+UI_CREDITS_TEAM_NACHO,"Nacho: camión, ruta, mundo y negocio","Nacho: truck, road, world and business"
+UI_CREDITS_TEAM_SLATEX,"Slatex: jugador, paquetes, trampas, interfaz y sonido","Slatex: player, packages, traps, interface and sound"
+UI_CREDITS_ENGINE,Motor,Engine
+UI_CREDITS_ENGINE_GODOT,Godot Engine (licencia MIT),Godot Engine (MIT license)
+UI_CREDITS_ENGINE_STEAM,GodotSteam (licencia MIT),GodotSteam (MIT license)
+UI_CREDITS_FONTS,Fuentes,Fonts
+UI_CREDITS_FONTS_LIST,"Lilita One, Nunito y PT Serif","Lilita One, Nunito and PT Serif"
+UI_CREDITS_FONTS_LICENSE,SIL Open Font License 1.1,SIL Open Font License 1.1
+UI_CREDITS_SOUND,Música y sonido,Music and sound
+UI_CREDITS_SOUND_MUSIC,"Música compuesta por código, nota por nota, sin samples","Music composed in code, note by note, with no samples"
+UI_CREDITS_SOUND_SFX,"Sonidos sintetizados en el juego, sin voces grabadas","Sounds synthesized in the game, with no recorded voices"
+UI_CREDITS_ART,Arte,Art
+UI_CREDITS_ART_MODELS,Modelos low-poly armados con scripts de Blender,Low-poly models built with Blender scripts
+UI_CREDITS_THANKS,Gracias,Thanks
+UI_CREDITS_THANKS_TESTERS,"A cada persona que probó el juego, se cayó y lo volvió a intentar","To everyone who played the game, fell over and tried again"
 UI_DAYHUD_DAY_TIME,Día %d · %s,Day %d · %s
 UI_DAYHUD_PAUSED,Pausa,Paused
 UI_DAYHUD_ORDERS,Pedidos: %d,Orders: %d

@@ -79,7 +79,7 @@ void fragment() {
 }
 """
 
-enum Page { HOME, PLAY, JOIN, GARAGE, COMPANY }
+enum Page { HOME, PLAY, JOIN, GARAGE, COMPANY, CREDITS }
 const CONNECTION_ERROR_TEXT: Dictionary = {
 	"version": "UI_MENU_ERROR_VERSION",
 	"timeout": "UI_MENU_ERROR_TIMEOUT",
@@ -92,6 +92,7 @@ const PAGE_TITLES: Dictionary = {
 	Page.JOIN: "UI_MENU_PAGE_JOIN",
 	Page.GARAGE: "UI_MENU_PAGE_GARAGE",
 	Page.COMPANY: "UI_MENU_PAGE_COMPANY",
+	Page.CREDITS: "UI_MENU_PAGE_CREDITS",
 }
 ## Where "Volver" (and Esc / B) lead from each sub-page.
 const PAGE_PARENT: Dictionary = {
@@ -99,6 +100,7 @@ const PAGE_PARENT: Dictionary = {
 	Page.JOIN: Page.PLAY,
 	Page.GARAGE: Page.HOME,
 	Page.COMPANY: Page.PLAY,
+	Page.CREDITS: Page.GARAGE,
 }
 
 var _status_label: Label
@@ -413,7 +415,16 @@ func _build_garage_page(column: VBoxContainer) -> Dictionary:
 	var leaderboard_button: Button = _button(garage, tr("UI_RECORDS"), false)
 	leaderboard_button.pressed.connect(_open_leaderboard)
 	_entry_buttons.append(leaderboard_button)
+	var credits_button: Button = _button(garage, tr("UI_MENU_CREDITS"), false)
+	credits_button.name = "Credits"
+	credits_button.pressed.connect(_show_page.bind(Page.CREDITS))
+	_entry_buttons.append(credits_button)
 	_back_button(garage)
+	# D-1940: the credits, a page under the garage; its "Volver" is the focus (the lines take none).
+	var credits: VBoxContainer = _add_page(column, Page.CREDITS)
+	credits.add_child(CreditsPage.new())
+	_back_button(credits)
+	_page_focus[Page.CREDITS] = _entry_buttons.back()
 	return {"cosmetics": cosmetics_button, "progress": progress_button, "leaderboard": leaderboard_button}
 
 
