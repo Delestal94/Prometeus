@@ -613,7 +613,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
     hoja Proveedor guarda sus filas para el mismo carrito; las dos se arman invisibles mientras carga el mundo
     (`CompanyClipboard._prewarm`). Sacarlo cuesta ~1–2 ms y cambiar de hoja menos de 1 ms.
   Test: `tests/test_clipboard_perf.gd` (filas que no se reconstruyen, hojas precalentadas, tiempos con margen).
-- [ ] **D-1948** Test de navegación con mando de todas las pantallas nuevas.
+- [x] **D-1948** Test de navegación con mando de todas las pantallas nuevas.
+  Rama `codex/D-1948-gamepad-nav`: `tests/test_gamepad_nav_screens.gd` abre cada pantalla nueva de la Empresa
+  (cierre del día, pausa, tienda, despacho con cajas y una bloqueada, hojas Stock y Proveedor del portapapeles,
+  página de empresas del menú y su formulario). Desde el foco con que abren, las cuatro direcciones y
+  siguiente/anterior (`find_valid_focus_neighbor`, como un mando) alcanzan todo control que toma foco, y B sale.
+  El celular (D-1923) y los créditos (D-1940) prueban su camino con mando en sus propios tests.
 - [ ] **D-1949** Documentar controles nuevos en `controles-y-ui.md`.
 - [ ] **D-1950** QA de UI.
 
