@@ -1,11 +1,9 @@
 class_name CompanyUi
 extends RefCounted
-## The company world's on-screen pieces, added in one call from CompanyRoot (so the root, past its line
-## budget, N-985, grows by one line for all of them): the shed's event feed (D-1935), the day's HUD (D-1903),
-## the arrows over the stations that need someone (D-1907) and the packing table's effects (D-1914).
-## budget, N-985, grows by one line for all of them): the shed's event feed (D-1935), the day's HUD (D-1903)
-## the arrows over the stations that need someone (D-1907) and the music by district (D-1929).
-## A new piece of the company's screen joins here, not in CompanyRoot.
+## The company world's on-screen and presentation pieces (the day's HUD, the shed's feed, the arrows over the
+## stations, the packing effects, the phone, the voices, the music by district...), added in one call from
+## CompanyRoot, so the root (past its line budget, N-985) grows by one line for all of them. A new piece joins
+## here, not in CompanyRoot; each piece's own script says what it is.
 
 
 static func add_to(root: Node) -> void:
@@ -15,3 +13,4 @@ static func add_to(root: Node) -> void:
 	PackingVfx.add_to(root)
 	DistrictMusic.add_to(root)
 	CompanyVoice.add_to(root)
+	CompanyPhone.add_to(root)

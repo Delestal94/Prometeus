@@ -149,6 +149,8 @@ static func _child_of(root: Node, class_id: StringName) -> Node:
 
 func _ready() -> void:
 	ensure_actions()
+	# A hand tool with the phone (D-1923): raising one puts the other away (CompanyPhone.HAND_TOOL_GROUP).
+	add_to_group(&"hand_tool")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process(false)
 	var layer := CanvasLayer.new()
@@ -217,6 +219,11 @@ func is_up() -> bool:
 	return _up
 
 
+## The hand tools' common question (group "hand_tool"): the same as is_up().
+func is_open() -> bool:
+	return _up
+
+
 ## The sheet showing (or that shows next time it is raised).
 func current_sheet() -> StringName:
 	return _sheet
@@ -233,6 +240,10 @@ func raise(sheet: StringName = &"") -> bool:
 	if _up:
 		show_sheet(wanted)
 		return true
+	# The other hand tool goes first: up, it holds the player's input, which would read as a screen taken.
+	for tool: Node in get_tree().get_nodes_in_group(&"hand_tool"):
+		if tool != self and tool.has_method(&"stow"):
+			tool.call(&"stow")
 	if hands_busy() or _is_paused() or _screen_taken():
 		return false
 	_up = true

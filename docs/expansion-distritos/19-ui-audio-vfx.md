@@ -35,7 +35,7 @@
 |---|---|---|---|---|
 | ~~D-1921~~ | ~~Radio del galpón con estaciones (música, noticias graciosas)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | disenador-audio | medium | 3 estaciones |
 | ~~D-1922~~ | ~~Noticias del diario del día siguiente con eventos de la empresa (N-606)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | diario con titulares de negocio |
-| D-1923 | Celular del jugador con app de pedidos y mapa (incluye D-0331, fusión de D-0112) | constructor-ui | high | test |
+| D-1923 | ✅ Celular del jugador con app de pedidos y mapa (incluye D-0331, fusión de D-0112) | constructor-ui | high | test |
 | ~~D-1924~~ | ~~Pantalla de estadísticas (D-0431)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | captura |
 | ~~D-1925~~ | ~~Pantalla de personalización de la empresa~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | captura |
 | D-1926 | Tutoriales por sistema (empleados, automatización, lancha, vuelo) (incluye D-1140, fusión de D-0112) | constructor-ui | high | 4 flujos |
