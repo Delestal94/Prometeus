@@ -705,7 +705,9 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [ ] **D-1803** Productos lote 2: 10 frágiles.
 - [ ] **D-1804** Productos lote 3: 10 fríos y perecederos.
 - [ ] **D-1805** Productos lote 4: 10 grandes y raros.
-- [ ] **D-1806** Cajas S, M, L, XL abiertas y cerradas.
+- [x] **D-1806** Cajas S, M, L, XL abiertas y cerradas.
+  Rama `codex/D-1806-boxes`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma las cajas S, M, L y XL abiertas (cuatro paredes, piso y solapas dobladas hacia afuera) y cerradas (con su cinta), del tamaño exacto de su grilla de armado (`CompanyTuning.BOX_CELLS` × 0,2 m), con colisión de caja cerrada. Lo comprueba
+  `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
 - [ ] **D-1807** Insumos: rollo de cinta, dispensador, burbuja, papel, espuma.
 - [x] **D-1808** Sellos y etiquetas como decals.
   Rama `codex/D-1808-decals`: `assets/tools/build_label_textures.py decals` dibuja con Pillow, sin generador ni
