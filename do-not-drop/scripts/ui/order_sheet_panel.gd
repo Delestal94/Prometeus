@@ -66,7 +66,7 @@ func refresh(sheet: Dictionary) -> void:
 	var minutes: int = int(sheet.get("minutes_left", 0))
 	var late: bool = bool(sheet.get("late", false))
 	var time_text: String = tr("UI_ORDER_SHEET_LATE") % -minutes if late else tr("UI_ORDER_SHEET_LEFT") % minutes
-	UiTheme.label(_column, time_text, 15, UiTheme.RED if late else UiTheme.INK).name = "Time"
+	UiTheme.label(_column, time_text, 15, UiTheme.status(2, self) if late else UiTheme.INK).name = "Time"
 	UiTheme.label(_column, tr("UI_ORDER_SHEET_PAY") % int(sheet.get("pay", 0)), 16, UiTheme.INK, true).name = "Pay"
 	var ready: bool = bool(sheet.get("ready", false))
 	var verdict: String = tr("UI_ORDER_SHEET_READY") if ready else tr("UI_ORDER_SHEET_NOT_READY")
@@ -76,7 +76,7 @@ func refresh(sheet: Dictionary) -> void:
 ## A line with its mark in front and the colour that matches it.
 func _mark(text: String, done: bool, wrong: bool) -> Label:
 	var glyph: String = WRONG if wrong else (DONE if done else PENDING)
-	var color: Color = UiTheme.RED if wrong else (UiTheme.MINT if done else UiTheme.INK)
+	var color: Color = UiTheme.status(2, self) if wrong else (UiTheme.status(0, self) if done else UiTheme.INK)
 	return UiTheme.label(_column, "%s  %s" % [glyph, text], 16, color)
 
 

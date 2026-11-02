@@ -127,8 +127,8 @@ func _burst(effect: StringName) -> CPUParticles3D:
 	quad.material = material
 	burst.mesh = quad
 	var colors := Gradient.new()
-	colors.colors = PackedColorArray([UiTheme.RED, UiTheme.ORANGE, UiTheme.INK] if error
-		else [UiTheme.MINT, UiTheme.YELLOW, UiTheme.WHITE])
+	colors.colors = PackedColorArray([UiTheme.status(2, self), UiTheme.status(1, self), UiTheme.INK] if error
+		else [UiTheme.status(0, self), UiTheme.YELLOW, UiTheme.WHITE])
 	colors.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
 	burst.color_initial_ramp = colors
 	burst.emitting = true
@@ -139,7 +139,7 @@ func _mark(effect: StringName) -> Label3D:
 	var mark := Label3D.new()
 	mark.name = "Mark"
 	mark.text = ERROR_MARK if effect == KIND_ERROR else DONE_MARK
-	mark.modulate = UiTheme.RED if effect == KIND_ERROR else UiTheme.MINT
+	mark.modulate = UiTheme.status(2 if effect == KIND_ERROR else 0, self)
 	mark.outline_modulate = UiTheme.INK
 	mark.outline_size = 16
 	UiTheme.label_3d(mark, 96)

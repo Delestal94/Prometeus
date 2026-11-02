@@ -117,7 +117,7 @@ func refresh() -> void:
 		var spot: Vector3 = spot_of.call(uid)
 		mark.position = Vector3(spot.x, HEIGHT_M, spot.z)
 		mark.text = "%s\n%s" % [line_of(need), ARROW]
-		mark.modulate = UiTheme.ORANGE if need["kind"] == KIND_SUPPLIES else UiTheme.RED
+		mark.modulate = UiTheme.status(1 if need["kind"] == KIND_SUPPLIES else 2, self)
 
 
 ## The arrow's line in the current language.

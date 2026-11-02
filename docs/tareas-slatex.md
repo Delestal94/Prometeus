@@ -566,7 +566,14 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
     inglés mostraba el resto del castellano.
   - `UI_FINANCE_REASON_SUPPLIER` pasa a "Goods from the supplier" y `WORLD_PACKTUT_SEALS` a "stamps", como
     dice el glosario.
-- [ ] **D-1918** Accesibilidad: daltonismo en requisitos y estados.
+- [x] **D-1918** Accesibilidad: daltonismo en requisitos y estados.
+  Rama `codex/D-1918-colorblind`: `UiTheme.status(estado, nodo)` y `UiTheme.colorblind(nodo)` toman la paleta que
+  eligió el jugador (`GameSettings.colorblind_palette`). La usan los estados de la expansión: HUD del día (plata en
+  rojo, pedidos atrasados), cierre del día (ingresos, costos, ganancia), despacho (barras, filas elegidas), hoja de
+  pedido (plazo, renglones), flechas de las estaciones y marcas de la mesa. `tests/test_colorblind_states.gd`
+  simula deuteranopía y protanopía (Machado 2009) sobre la paleta segura y comprueba que cada pantalla usa
+  Okabe-Ito con la opción activa, sin tocar el archivo de ajustes. Pendiente: la captura con filtros (sin pantalla
+  en esta sesión).
 - [x] **D-1919** Modificadores de la empresa (armado asistido, días tranquilos).
   Rama `codex/D-1919-company-modifiers`: `CompanyState.options` (guardado, snapshot y `list_slots()`), la cinta con
   Armado asistido (`PackingStation.seal`, `box_sealed` con `assisted` y `filled`), `PackedBox.assisted` y absorción

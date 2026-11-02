@@ -84,11 +84,11 @@ func refresh() -> void:
 	_time_label.text = time_text(float(minute_of.call()), int(day_of.call()), bool(paused_of.call()))
 	var money: int = int(money_of.call())
 	_money_label.text = DaySummaryPanel.money(money)
-	_money_label.add_theme_color_override(&"font_color", UiTheme.RED if money < 0 else UiTheme.INK)
+	_money_label.add_theme_color_override(&"font_color", UiTheme.status(2, self) if money < 0 else UiTheme.INK)
 	var orders: Array = orders_of.call()
 	_orders_label.text = tr(KEY_ORDERS) % orders.size()
 	var late: bool = late_count(orders, float(minute_of.call())) > 0
-	_orders_label.add_theme_color_override(&"font_color", UiTheme.ORANGE if late else UiTheme.INK)
+	_orders_label.add_theme_color_override(&"font_color", UiTheme.status(1, self) if late else UiTheme.INK)
 
 
 func texts() -> Array[String]:
