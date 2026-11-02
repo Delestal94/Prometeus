@@ -363,7 +363,7 @@ func _event_bus() -> Node:
 func _on_day_summary(day: int, summary: Dictionary) -> void:
 	if summary_panel != null and not _host_gone:
 		summary_panel.open(summary, net.pallets.note.discrepancies(day) if net != null else [],
-			net.supplier.auto_units(day) if net != null else 0)
+			net.supplier.auto_units(day) if net != null else 0, DayCloseReport.extras(net, day))
 
 
 ## The next day opened (the host pressed continue): every copy of the closing screen goes away.

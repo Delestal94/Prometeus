@@ -481,7 +481,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   empresas con día, plata, fecha y un chip por modificador, "Abrir sala para amigos", empresa nueva con nombre y
   modificadores, "Opciones" y "Borrar" del slot), `main_menu.gd` (página `COMPANY`), `CompanySave.write_options()`,
   `tests/test_company_slots_menu.gd`. Pendiente: la captura de la página (sin pantalla en esta sesión).
-- [ ] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).
+- [x] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).
+  Rama `codex/D-1905-day-close`: `scripts/ui/day_close_report.gd` (`DayCloseReport`: nombres de los motivos
+  `milestone:<id>` "Hito: …", `day_event:<id>` "Evento: …" y `wages`; filas de sueldos por empleado; hitos del día;
+  líneas "Mañana:"), `DaySummaryPanel` suma "Hitos del día", "Sueldos pagados" y "Mañana:" (cada parte se esconde
+  vacía), `CompanyRoot._on_day_summary` le pasa `DayCloseReport.extras()`; `tests/test_day_close_screen.gd`.
+  Se llenan solos cuando existan la contratación (D-1001), los hitos (grupo 04) y los eventos del día (D-0123).
+  Pendiente: la captura (sin pantalla en esta sesión).
 - [ ] **D-1906** Pantalla de despacho con estilo final.
 - [ ] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
 - [x] **D-1908** Tooltips de productos y requisitos.

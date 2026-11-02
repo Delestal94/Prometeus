@@ -17,6 +17,12 @@ class_name DaySummaryPanel
 ## The company's shop (D-0511.2) opens from here: a "Shop" button beside Continue, off until the world that
 ## hosts the screen turns it on (set_shop_available()); it only emits `shop_requested`, CompanyShopScreen opens
 ## the shop over this panel.
+##
+## D-1905: under the money, side by side, the milestones of the day and the wages paid (one row per employee and
+## their total), and one "Mañana:" line per day event announced for tomorrow; each part hides when it is empty.
+## The rows come from DayCloseReport, which also names the prefixed ledger reasons (`milestone:<id>`,
+## `day_event:<id>`). The milestones heard during the day (EventBus.milestone_reached, by path: N-919) join the
+## ones the ledger paid, and are forgotten when the screen closes.
 
 signal continued
 signal shop_requested
@@ -36,6 +42,7 @@ const REASON_KEYS: Dictionary = {
 	"warehouse_expand": "UI_FINANCE_REASON_WAREHOUSE_EXPAND",
 	"penalty": "UI_FINANCE_REASON_PENALTY",
 	"tow": "UI_FINANCE_REASON_TOW",
+	"wages": "UI_FINANCE_REASON_WAGES",
 	"other": "UI_FINANCE_REASON_OTHER",
 }
 const OTHER_REASON: String = "other"
@@ -49,6 +56,13 @@ var _truncated_label: Label
 var _note_box: VBoxContainer
 var _note_list: VBoxContainer
 var _auto_label: Label
+var _extras_box: HBoxContainer
+var _milestone_box: VBoxContainer
+var _milestone_list: VBoxContainer
+var _wage_box: VBoxContainer
+var _wage_list: VBoxContainer
+var _tomorrow_list: VBoxContainer
+var _heard_milestones: Array[String] = []
 var _continue_button: Button
 var _shop_button: Button
 
@@ -58,14 +72,18 @@ func _ready() -> void:
 	UiTheme.apply(self)
 	_build()
 	hide()
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and bus.has_signal(&"milestone_reached"):
+		bus.connect(&"milestone_reached", note_milestone)
 
 
 ## Shows the closing screen for `summary` (DaySummary.build()'s shape) and the day's delivery note
 ## lines (DeliveryNote.discrepancies(): {product, ordered, received, missing, extra}), and takes focus.
-## `auto_units` is what the automatic supplier order of the close brought (0: none).
-func open(summary: Dictionary, note_lines: Array = [], auto_units: int = 0) -> void:
+## `auto_units` is what the automatic supplier order of the close brought (0: none); `extras` is
+## DayCloseReport.extras() ({employees, tomorrow}).
+func open(summary: Dictionary, note_lines: Array = [], auto_units: int = 0, extras: Dictionary = {}) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	refresh(summary, note_lines, auto_units)
+	refresh(summary, note_lines, auto_units, extras)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_continue_button.grab_focus.call_deferred()
@@ -74,7 +92,14 @@ func open(summary: Dictionary, note_lines: Array = [], auto_units: int = 0) -> v
 func close() -> void:
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
+	_heard_milestones.clear()
 	continued.emit()
+
+
+## A milestone reached during the day: listed on the next closing screen.
+func note_milestone(milestone_id: StringName) -> void:
+	if milestone_id != &"" and not _heard_milestones.has(String(milestone_id)):
+		_heard_milestones.append(String(milestone_id))
 
 
 ## Shows or hides the Shop button (the shop is a screen of the Company world, not of this panel).
@@ -95,7 +120,7 @@ func focus_default() -> void:
 
 
 ## Redraws the panel from `summary`, `note_lines` and `auto_units`. A missing key counts as zero / empty.
-func refresh(summary: Dictionary, note_lines: Array = [], auto_units: int = 0) -> void:
+func refresh(summary: Dictionary, note_lines: Array = [], auto_units: int = 0, extras: Dictionary = {}) -> void:
 	if _day_label == null:
 		return
 	_day_label.text = tr("UI_FINANCE_DAY") % int(summary.get("day", 0))
@@ -110,10 +135,14 @@ func refresh(summary: Dictionary, note_lines: Array = [], auto_units: int = 0) -
 	_fill_note(note_lines)
 	_auto_label.text = tr("UI_FINANCE_AUTO_ORDER") % auto_units
 	_auto_label.visible = auto_units > 0
+	_fill_extras(summary, extras)
 
 
 ## The shown name of a ledger reason: its translation, or the id itself when it has none.
 static func reason_name(reason: String) -> String:
+	var prefixed: String = DayCloseReport.reason_name(reason)
+	if prefixed != "":
+		return prefixed
 	var key: String = String(REASON_KEYS.get(reason, ""))
 	if key.is_empty():
 		return reason
@@ -210,6 +239,7 @@ func _build() -> void:
 	_auto_label = UiTheme.label(column, "", 15, UiTheme.INK)
 	_auto_label.name = "AutoOrder"
 	_auto_label.hide()
+	_build_extras(column)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)
 	column.add_child(buttons)
@@ -252,6 +282,55 @@ func _fill(list: VBoxContainer, by_reason: Variant, total: int, color: Color) ->
 		UiTheme.label(row, money(int(entry[1])), 16, color, true).name = "Amount"
 	var total_label: Label = UiTheme.label(list, tr("UI_FINANCE_TOTAL") % money(total), 16, color, true)
 	total_label.name = "Total"
+
+
+func _build_extras(column: VBoxContainer) -> void:
+	_extras_box = HBoxContainer.new()
+	_extras_box.name = "Extras"
+	_extras_box.add_theme_constant_override("separation", 20)
+	column.add_child(_extras_box)
+	_milestone_list = _list(_extras_box, tr("UI_DAYCLOSE_MILESTONES"), UiTheme.YELLOW)
+	_milestone_box = _milestone_list.get_parent() as VBoxContainer
+	_milestone_box.name = "Milestones"
+	_wage_list = _list(_extras_box, tr("UI_DAYCLOSE_WAGES"), UiTheme.ORANGE)
+	_wage_box = _wage_list.get_parent() as VBoxContainer
+	_wage_box.name = "Wages"
+	_tomorrow_list = VBoxContainer.new()
+	_tomorrow_list.name = "Tomorrow"
+	_tomorrow_list.add_theme_constant_override("separation", 3)
+	column.add_child(_tomorrow_list)
+
+
+func _fill_extras(summary: Dictionary, extras: Dictionary) -> void:
+	for list: VBoxContainer in [_milestone_list, _wage_list, _tomorrow_list]:
+		for child: Node in list.get_children():
+			list.remove_child(child)
+			child.queue_free()
+	var reached: Array[String] = DayCloseReport.milestones(summary, _heard_milestones)
+	for id: String in reached:
+		var label: Label = UiTheme.label(_milestone_list, DayCloseReport.milestone_name(id), 16, UiTheme.INK)
+		label.name = "Milestone_%s" % id
+		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var employees: Variant = extras.get("employees", [])
+	var wages: Array = DayCloseReport.wage_rows(employees if employees is Array else [])
+	for i: int in wages.size():
+		var row := HBoxContainer.new()
+		row.name = "Wage_%d" % i
+		_wage_list.add_child(row)
+		var name_label: Label = UiTheme.label(row, String(wages[i][0]), 16)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		UiTheme.label(row, money(int(wages[i][1])), 16, UiTheme.ORANGE, true).name = "Amount"
+	if not wages.is_empty():
+		var total: String = tr("UI_FINANCE_TOTAL") % money(DayCloseReport.wages_total(wages))
+		UiTheme.label(_wage_list, total, 16, UiTheme.ORANGE, true).name = "Total"
+	_milestone_box.visible = not reached.is_empty()
+	_wage_box.visible = not wages.is_empty()
+	_extras_box.visible = _milestone_box.visible or _wage_box.visible
+	var tomorrow: Variant = extras.get("tomorrow", [])
+	for line: String in DayCloseReport.tomorrow_lines(tomorrow if tomorrow is Array else []):
+		UiTheme.label(_tomorrow_list, line, 15, UiTheme.INK).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tomorrow_list.visible = _tomorrow_list.get_child_count() > 0
 
 
 func _fill_note(note_lines: Array) -> void:
