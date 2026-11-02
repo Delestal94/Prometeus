@@ -475,7 +475,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [x] **D-1902** Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8).
   Rama `codex/D-1902-clipboard`: `scripts/gameplay/company_clipboard.gd`, `scripts/ui/clipboard_frame.gd`,
   `scripts/gameplay/player/player_held_tool.gd`, `tests/test_company_clipboard.gd`. La hoja Empleados espera a D-1038.
-- [ ] **D-1903** HUD del día: hora, plata, pedidos pendientes.
+- [x] **D-1903** HUD del día: hora, plata, pedidos pendientes.
+  Rama `codex/D-1903-day-hud`: `scripts/ui/company_day_hud.gd` (`CompanyDayHud`: arriba a la izquierda,
+  "Día 3 · 10:45" o "Pausa" con el reloj parado, la plata, en rojo si es negativa, y "Pedidos: N", en naranja
+  si alguno está atrasado; lee el reloj, la empresa y el libro de pedidos de cada par, sin red).
+  `scripts/ui/company_ui.gd` (`CompanyUi.add_to()`, desde `CompanyRoot`, agrega el feed y el HUD: las piezas
+  nuevas de la pantalla de la Empresa se suman ahí). Test: `tests/test_company_day_hud.gd`.
+  Pendiente: la captura (sin pantalla en esta sesión) y el ícono por evento del día, que espera a D-0123.
 - [x] **D-1904** Menú principal con modo Empresa y slots de guardado.
   Rama `codex/D-1904-company-slots`: `scripts/ui/company_slots_page.gd` (página "Modo Empresa" del menú: lista de
   empresas con día, plata, fecha y un chip por modificador, "Abrir sala para amigos", empresa nueva con nombre y

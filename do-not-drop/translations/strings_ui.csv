@@ -1360,6 +1360,9 @@ UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
 UI_FINANCE_REASON_TOW,Grúa,Tow truck
 UI_FINANCE_REASON_OTHER,Otros,Other
+UI_DAYHUD_DAY_TIME,Día %d · %s,Day %d · %s
+UI_DAYHUD_PAUSED,Pausa,Paused
+UI_DAYHUD_ORDERS,Pedidos: %d,Orders: %d
 UI_FINANCE_REASON_WAGES,Sueldos,Wages
 UI_DAYCLOSE_MILESTONES,Hitos del día,Milestones today
 UI_DAYCLOSE_WAGES,Sueldos pagados,Wages paid
