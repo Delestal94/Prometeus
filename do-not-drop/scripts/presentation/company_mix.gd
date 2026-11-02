@@ -14,6 +14,10 @@ extends RefCounted
 ##   machine    loop RMS        -40 dBFS    the shed's forklift (WorldMix's machine class)
 ##   work music loop RMS        -30 dBFS    the shed's work loop with its bed alone (under the depot radio's -24:
 ##                                          it plays all day; the full three stems sum about 5 dB more)
+##   district music loop RMS   -24 dBFS    each district's theme out of the shed (D-1929), as loud as the depot radio
+##                                          (D-1942: it was -21 at first, over the radio)
+##   voice      loudest 100 ms  -20 dBFS    the characters' murmurs (D-1928), under the world's -18 signals as the
+##                                          crew's babble is
 
 const SHED: StringName = &"Shed"
 const MACHINES: StringName = &"Machines"
@@ -21,7 +25,8 @@ const DISTRICTS: StringName = &"Districts"
 const TOLERANCE_DB: float = 2.0
 ## Buses whose volume is a player's option (GameSettings.apply_bus_volume).
 const PLAYER_BUSES: Array[StringName] = [&"Master", &"Music", &"SFX", &"Voice"]
-const TARGETS_DB: Dictionary = {"handling": -31.5, "machine": -40.0, "work music": -30.0}
+const TARGETS_DB: Dictionary = {"handling": -31.5, "machine": -40.0, "work music": -30.0, "district music": -24.0,
+	"voice": -20.0}
 
 
 ## `wanted` when the layout has it; else the bus it sends to in the layout (Machines -> Shed -> SFX, Districts ->
