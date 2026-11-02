@@ -66,6 +66,7 @@ func open(ctx: Dictionary) -> void:
 	refresh(ctx)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	UiTheme.pop_in(self)
 	_focus_first.call_deferred()
 
 
