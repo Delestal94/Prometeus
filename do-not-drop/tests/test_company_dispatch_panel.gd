@@ -20,7 +20,10 @@ extends SceneTree
 ##   the first vehicle and the overflow to the second, emits `loaded` once per vehicle, is hidden with one
 ##   vehicle and off on a client;
 ## - both languages have every key the board uses (strings_ui.csv, and strings_world.csv for the
-##   reasons that come from the world, like WORLD_DISPATCH_FAR_LIMIT).
+##   reasons that come from the world, like WORLD_DISPATCH_FAR_LIMIT);
+## - final style (D-1906): two load bars, slots and kg, filled with what is picked (0 to 1), calm colour under
+##   FILL_WARN and the warning colour from there, hidden with no vehicle; each row's text takes its mark's colour
+##   (picked mint, free ink, blocked muted).
 
 const ZONE_DIR: String = "res://data/zones/"
 const HEN: String = "res://data/products/hen.tres"
@@ -52,9 +55,49 @@ func _run() -> void:
 	await _test_client_and_empty()
 	await _test_far_cap()
 	await _test_bay()
+	await _test_style()
 	if _failures == 0:
 		print("PASS: dispatch board loads the 2 picked boxes on the vehicle and the third waits")
 	quit(_failures)
+
+
+func _test_style() -> void:
+	var ctx: Dictionary = _ctx({&"o1": &"centro", &"o2": &"islas", &"o3": &"centro", &"o4": &"centro"}, _van(4, 12.0))
+	var panel: DispatchBoardPanel = await _panel(ctx)
+	var slots := panel.find_child("SlotsBar", true, false) as ProgressBar
+	var weight := panel.find_child("WeightBar", true, false) as ProgressBar
+	_expect(slots != null and weight != null and slots.get_parent().visible, "the two load bars show")
+	if slots == null or weight == null:
+		panel.queue_free()
+		return
+	_expect(slots.value == 0.0 and weight.value == 0.0, "nothing picked: empty bars")
+	panel.toggle(&"box_o1")
+	_expect(is_equal_approx(slots.value, 0.25) and is_equal_approx(weight.value, 0.25), "one box: a quarter full")
+	_expect(_fill_of(slots) == UiTheme.state_color(0), "a quarter is the calm colour")
+	panel.toggle(&"box_o3")
+	panel.toggle(&"box_o4")
+	_expect(is_equal_approx(slots.value, 0.75) and is_equal_approx(weight.value, 0.75), "three boxes: 3/4")
+	_expect(_fill_of(slots) == UiTheme.state_color(1) and _fill_of(weight) == UiTheme.state_color(1),
+		"from FILL_WARN on the bars warn")
+	_expect(_font_of(panel.row_button(&"box_o1")) == UiTheme.MINT, "a picked row is mint")
+	_expect(_font_of(panel.row_button(&"box_o2")) == UiTheme.MUTED, "a blocked row is muted")
+	panel.toggle(&"box_o4")
+	_expect(_font_of(panel.row_button(&"box_o4")) == UiTheme.INK, "a free row is ink")
+	_expect(DispatchBoardPanel.fill_color(0.74) == UiTheme.state_color(0)
+		and DispatchBoardPanel.fill_color(1.0) == UiTheme.state_color(1), "fill colour by share")
+	ctx["vehicle"] = null
+	panel.refresh(ctx)
+	_expect(not slots.get_parent().visible, "no vehicle: no bars")
+	panel.queue_free()
+	await process_frame
+
+
+func _fill_of(bar_node: ProgressBar) -> Color:
+	return (bar_node.get_theme_stylebox(&"fill") as StyleBoxFlat).bg_color
+
+
+func _font_of(button: Button) -> Color:
+	return button.get_theme_color(&"font_color")
 
 
 func _expect(cond: bool, msg: String) -> void:
