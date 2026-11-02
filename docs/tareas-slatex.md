@@ -598,7 +598,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   las unidades, con el apodo del jugador; lo mismo repetido por el mismo jugador se suma en su línea),
   `CompanyRoot` lo agrega (sin sumar líneas), `tests/test_shed_event_feed.gd`. Pendiente: la captura (sin pantalla
   en esta sesión) y el "quién" de etiquetar y cerrar cajas, que el evento todavía no trae (ver aviso).
-- [ ] **D-1940** Créditos actualizados.
+- [x] **D-1940** Créditos actualizados.
+  Rama `codex/D-1940-credits`: no había pantalla de créditos. `scripts/ui/credits_page.gd` (`CreditsPage`) es una
+  página del menú principal (Garaje > Créditos, "Volver" y Esc vuelven) con equipo, motor (Godot Engine y
+  GodotSteam, MIT), fuentes (Lilita One, Nunito y PT Serif, OFL 1.1), música y sonido hechos por código, modelos
+  armados con scripts de Blender y agradecimientos. Todo por clave, en los dos idiomas; arriba y abajo hacen
+  scroll. Test: `tests/test_credits_page.gd` (también comprueba que lo que dice está en el repositorio).
+  Pendiente: la captura (sin pantalla en esta sesión) y sumar nombres si hay colaboradores externos.
 - [ ] **D-1941** Pasada de pulido de UI completa.
   Rama `codex/D-1941-ui-polish` (parcial): transiciones de entrada de las pantallas de la Empresa
   (`UiTheme.pop_in()`, incluye D-1934; `tests/test_ui_transitions.gd`) y la lista cerrada de lo comprobado en
