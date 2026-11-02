@@ -14,7 +14,7 @@
 | D-1904 | ✅ Menú principal con modo Empresa y slots de guardado | constructor-ui | high | test de flujo |
 | D-1905 | ✅ Pantalla de cierre del día (resumen, hitos, sueldos) | constructor-ui | high | captura |
 | D-1906 | ✅ Pantalla de despacho (D-0303) con estilo final | constructor-ui | medium | captura |
-| D-1907 | Indicadores en el mundo (flecha a la estación que necesita algo) | constructor-ui | medium | captura |
+| D-1907 | ✅ Indicadores en el mundo (flecha a la estación que necesita algo) | constructor-ui | medium | captura |
 | D-1908 | ✅ Tooltips de productos y requisitos | constructor-ui | low | test |
 | D-1909 | ✅ Menú de pausa con opciones de la empresa (incluye "Cerrar el día" y el aviso de las salidas con `DayClose`, D-0253.a) | constructor-ui | low | test |
 | D-1910 | Escalado de UI y Steam Deck | constructor-ui | medium | captura a 800p |
