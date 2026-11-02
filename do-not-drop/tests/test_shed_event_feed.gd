@@ -10,7 +10,7 @@ extends SceneTree
 ## - the same player putting the same product in a box again adds up on the last line;
 ## - at most MAX_LINES lines, the oldest goes; a line fades out at the end and goes after LINE_SECONDS;
 ## - the feed never takes the mouse; add_to() puts it on its own layer and follows CompanyNet.event_applied;
-##   CompanyRoot adds it;
+##   CompanyRoot adds it (through CompanyUi);
 ## - both languages have every key.
 
 const KEYS: Array[String] = [
@@ -155,8 +155,10 @@ func _test_add_to() -> void:
 
 
 func _test_root_wiring() -> void:
-	var source: String = FileAccess.get_file_as_string("res://scripts/gameplay/company_root.gd")
-	_expect(source.contains("ShedEventFeed.add_to(self)"), "CompanyRoot adds the feed")
+	var root_source: String = FileAccess.get_file_as_string("res://scripts/gameplay/company_root.gd")
+	var ui_source: String = FileAccess.get_file_as_string("res://scripts/ui/company_ui.gd")
+	_expect(root_source.contains("CompanyUi.add_to(self)") and ui_source.contains("ShedEventFeed.add_to(root)"),
+		"CompanyRoot adds the feed (through CompanyUi)")
 
 
 func _texts_are(feed: ShedEventFeed, expected: Array) -> bool:

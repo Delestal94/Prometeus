@@ -234,7 +234,7 @@ func _ready() -> void:
 	_add_stock_board()
 	CompanyDispatch.add_to(self)
 	CompanyOnboardingTracker.add_to(self)
-	ShedEventFeed.add_to(self)
+	CompanyUi.add_to(self)
 	_add_summary_panel()
 	ShedMusic.add_to(self)
 	_publish_presence()
