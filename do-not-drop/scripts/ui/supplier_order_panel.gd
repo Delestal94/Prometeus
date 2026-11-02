@@ -40,6 +40,8 @@ signal closed
 const STEP: int = 1
 
 ## A sheet of the clipboard (see the class doc); set_embedded() changes it.
+## What the rows were built for: [cart instance id, its product ids] (D-1947).
+var _built_for: Array = []
 var embedded: bool = false
 
 var _ctx: Dictionary = {}
@@ -106,6 +108,7 @@ func set_embedded(on: bool) -> void:
 		remove_child(child)
 		child.queue_free()
 	_rows.clear()
+	_built_for = []
 	_close_button = null
 	_build()
 	refresh(_ctx)
@@ -117,6 +120,14 @@ func refresh(ctx: Dictionary) -> void:
 	_ctx = ctx
 	if _rows_box == null:
 		return
+	# The same cart with the same products: the rows stay (no rebuild, no hitch: D-1947), only the view updates.
+	var cart_now: SupplierOrderCart = _cart()
+	var built: Array = [cart_now.get_instance_id(), _product_ids(cart_now)] if cart_now != null else []
+	var kept: bool = not built.is_empty() and built == _built_for and not _rows.is_empty()
+	if kept and _rows_box.get_child_count() == _rows.size():
+		_update_view()
+		return
+	_built_for = built
 	for child: Node in _rows_box.get_children():
 		_rows_box.remove_child(child)
 		child.queue_free()
