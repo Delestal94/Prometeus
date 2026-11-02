@@ -1360,6 +1360,12 @@ UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
 UI_FINANCE_REASON_TOW,Grúa,Tow truck
 UI_FINANCE_REASON_OTHER,Otros,Other
+UI_FINANCE_REASON_WAGES,Sueldos,Wages
+UI_DAYCLOSE_MILESTONES,Hitos del día,Milestones today
+UI_DAYCLOSE_WAGES,Sueldos pagados,Wages paid
+UI_DAYCLOSE_TOMORROW,Mañana: %s,Tomorrow: %s
+UI_DAYCLOSE_REASON_MILESTONE,Hito: %s,Milestone: %s
+UI_DAYCLOSE_REASON_EVENT,Evento: %s,Event: %s
 UI_OPT_BIND_KEY_TIP,Tecla,Key
 UI_OPT_BIND_PAD_TIP,Botón o stick del mando,Gamepad button or stick
 UI_OPT_PRESS_PAD,Botón…,Button…
