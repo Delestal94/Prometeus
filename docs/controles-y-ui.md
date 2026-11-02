@@ -128,6 +128,23 @@ Main Menu
   con las manos ocupadas (caja, unidades en la mano, carrito, asiento, celular, modo construcción) y se guarda
   solo si alguna empieza, al resumen del día o al pedir la pausa. El tablero del proveedor del galpón lo saca
   en la hoja Proveedor. El pie con las teclas sale del mapa de entradas (teclado o mando).
+- **Celular del modo Empresa** (D-1923, `scripts/ui/company_phone.gd`): `F` (LB) lo saca y lo guarda. Tiene
+  dos apps: **Pedidos** (los abiertos, con cliente, zona y minutos que quedan, o "atrasado") y **Mapa** (las
+  zonas a escala, cuántos pedidos van a cada una y dónde estás). Se cambia de app con `Q` / `E` (LB / RB) o con
+  sus pestañas, y `Esc` o B lo guardan. Comparte las manos con el portapapeles: sacar uno guarda el otro.
+  No sale con las manos ocupadas ni en modo construcción.
+- **Modo construcción del galpón** (`scripts/gameplay/shed_builder.gd`): `B` (Back) entra y sale; `Enter` (A)
+  pone o agarra una pieza; `F` (X) la gira; `Q` / `E` (LB / RB) eligen la pieza; `Supr` (R3) vende;
+  `RePág` / `AvPág` (gatillos) acercan y alejan; `Retroceso` (B) cancela.
+- **Pantallas de la Empresa con mando** (D-1948, `tests/test_gamepad_nav_screens.gd`): el cierre del día, la
+  pausa, la tienda, el despacho, las hojas del portapapeles y la página de empresas del menú abren con el foco
+  puesto. La cruceta o el stick recorren todo, A elige y B sale. En el cierre del día (D-1910), arriba y abajo
+  hacen scroll del cuerpo cuando no entra en la pantalla. En los créditos (Garaje > Créditos, D-1940), arriba y
+  abajo hacen scroll de la lista.
+- **HUD del modo Empresa**: arriba a la izquierda el día y la hora (o "Pausa"), la plata (en rojo si es
+  negativa) y los pedidos abiertos (en naranja si hay atrasados) (D-1903). A la derecha, el feed de quién hizo
+  qué (D-1935). En el galpón, una flecha sobre la mesa que necesita insumos o la zona de despacho con atrasos
+  (D-1907). Con "Paleta para daltonismo" activa, los estados usan la paleta Okabe-Ito (D-1918).
 - El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, el código de
   sala (8 letras, `K7QM-4TXA`; ver `scripts/ui/room_code.gd`) para pasarle a los amigos. "Unirse" acepta
   el código o la IP.
