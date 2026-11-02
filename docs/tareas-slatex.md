@@ -663,7 +663,11 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Rama `codex/D-1949-controls-doc`: `docs/controles-y-ui.md` suma los controles nuevos del modo Empresa: celular
   (F / LB, apps con Q / E), modo construcción, pantallas con mando (foco al abrir, B sale, scroll del cierre y de
   los créditos) y el HUD de la Empresa con la paleta para daltonismo. El portapapeles y la pausa ya estaban.
-- [ ] **D-1950** QA de UI.
+- [x] **D-1950** QA de UI.
+  Rama `codex/D-1950-ui-qa`: `tests/test_company_ui_qa.gd` arranca el mundo real de la Empresa y recorre portapapeles,
+  celular, pausa, despacho y cierre del día. Un `Logger` propio junta los errores paso por paso, y el test comprueba
+  que vuelve el input del jugador. La tabla y los hallazgos de la tanda están en
+  [`revisar/D-1950.md`](expansion-distritos/revisar/D-1950.md). Sin errores.
 
 ### Grupo 18 — productos, embalaje, portapapeles y clientes (`18-modelos-y-arte.md`, necesitan PC)
 
