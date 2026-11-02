@@ -538,7 +538,12 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   Rama `codex/D-1913-clipboard-sfx`: `SynthAudio.clipboard_clip_up()`, `clipboard_clip_down()` y `clipboard_sheet()`
   (`modules/synth_audio/synth_audio_handling.gd`), tocados por `company_clipboard.gd` en el bus SFX: broche al sacar y
   guardar, papel al cambiar de hoja; `sound_audit.gd` los lista; `tests/test_company_clipboard_sfx.gd`.
-- [ ] **D-1914** Efecto de pedido completado.
+- [x] **D-1914** Efecto de pedido completado.
+  Rama `codex/D-1914-order-done-vfx`: `scripts/presentation/packing_vfx.gd` (`PackingVfx`, lo agrega `CompanyUi`):
+  una caja cerrada para su pedido y bien armada (intensidad de trampa bajo `TRAP_INTENSITY_MID`) larga confeti
+  sobre la mesa (`CPUParticles3D` de un disparo, 36 papelitos) y un "✓" que sube y se apaga. Lee `box_sealed`
+  en cada par, sin red. Cada efecto se libera a los 1,4 s y hay como mucho 6 a la vez. Test:
+  `tests/test_packing_vfx.gd`. Pendiente: la captura (sin pantalla en esta sesión).
 - [ ] **D-1915** Efecto de error de armado.
 - [ ] **D-1916** Fuente y estilo visual unificado de la expansión.
 - [x] **D-1917** Traducción al inglés de todo lo nuevo.
