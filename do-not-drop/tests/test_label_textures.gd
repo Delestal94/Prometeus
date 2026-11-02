@@ -5,7 +5,7 @@ extends SceneTree
 ## assets/tools/build_label_textures.py with Pillow):
 ## - the decals (D-1808): one per seal of BoxSeals.KINDS plus "this side up", the shipping and the express label,
 ##   256 x 256, a sticker on a transparent ground (corners clear, centre solid), no two alike;
-## - the brand labels (D-1833, when listed): 512 x 256, no two alike.
+## - the brand labels (D-1833): thirty made-up brands, 512 x 256, no two alike.
 ## Their look still needs a person.
 
 const DECAL_DIR: String = "res://assets/textures/decals/"
@@ -14,7 +14,13 @@ const DECALS: Array[String] = [
 	"seal_fragile", "seal_no_bend", "seal_cold", "seal_gift", "seal_heavy", "seal_this_side_up", "label_shipping",
 	"label_express",
 ]
-const BRANDS: Array[String] = []
+const BRANDS: Array[String] = [
+	"ancla_marinera", "burbujin", "cactus_abrazo", "chispazo", "cinta_pegote", "coco_loco", "conejo_saltarin",
+	"dona_gallina", "el_tano_lacteos", "esqui_patinazo", "fragil_y_feliz", "fuegos_chispita", "galpon_gourmet",
+	"garrafa_tranquila", "helados_glaciar", "libros_bostezo", "loro_charlatan", "mate_mareado",
+	"miel_de_la_siesta", "mochila_andariega", "pan_de_ayer", "pez_distraido", "queso_agujerito", "quimica_ups",
+	"tazon_gigante", "torta_tembleque", "tostadas_tio_rulo", "vaquita_feliz", "volcan_souvenir", "zapatilla_veloz"
+]
 
 var _failures: int = 0
 
@@ -22,6 +28,7 @@ var _failures: int = 0
 func _initialize() -> void:
 	for kind: StringName in BoxSeals.KINDS:
 		_expect(DECALS.has("seal_%s" % kind), "seal %s has its decal" % kind)
+	_expect(BRANDS.size() == 30, "thirty brand labels (%d)" % BRANDS.size())
 	var seen: Dictionary = {}
 	for decal: String in DECALS:
 		var image: Image = _image(DECAL_DIR + "tx_decal_%s_256.png" % decal)

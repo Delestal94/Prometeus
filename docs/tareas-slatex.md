@@ -733,7 +733,11 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
   ponerlos en las casas de los distritos.
 - [ ] **D-1821** Productos lote 5: 10 de distritos.
 - [ ] **D-1822** Productos lote 6: 10 peligrosos/vivos.
-- [ ] **D-1833** Texturas de productos (marcas ficticias graciosas).
+- [x] **D-1833** Texturas de productos (marcas ficticias graciosas).
+  Rama `codex/D-1833-brand-labels`: `assets/tools/build_label_textures.py brands` dibuja con Pillow 30 etiquetas de
+  marcas inventadas y graciosas (Vaquita Feliz, Mate Mareado, Pez Distraído, Química Ups…; ninguna real), de
+  512×256 en `assets/textures/brands/`: banda de color, nombre en Lilita One y un emblema. Test:
+  `tests/test_label_textures.gd`. Pendiente: mirarlas (sin pantalla en esta sesión) y ponerlas en los productos.
 - [ ] **D-1840** Animación del jugador con portapapeles y escáner.
   Saltada (2026-11-02): necesita animar el esqueleto del jugador en Blender y aprobar los clips mirándolos, y el
   escáner no existe todavía como objeto. El portapapeles ya se sostiene por código (`PlayerHeldTool`, D-1902).
