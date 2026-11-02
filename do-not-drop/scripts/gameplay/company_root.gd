@@ -162,9 +162,8 @@ var cells: CompanyCells
 var interest: CompanyInterest
 ## World/Packages: where every peer puts the package a sealed box becomes (D-0715.b).
 var packages: Node3D
-## Host: the slot and folder the company is loaded from when the world comes up without one,
-## and whose opening a cut day marks interrupted (save_interrupted_day()). A test points them at a folder
-## of its own before adding the root.
+## Host: the slot and folder the company is loaded from when the world comes up without one, and whose opening a cut
+## day marks interrupted (save_interrupted_day()). A test points them at a folder of its own before adding the root.
 var save_slot: String = CompanySave.DEFAULT_SLOT
 var save_dir: String = CompanySave.SAVE_DIR
 ## The arguments CompanyDevFlags reads on the host when the world comes up (--company-day=, --district=,
@@ -237,6 +236,7 @@ func _ready() -> void:
 	CompanyOnboardingTracker.add_to(self)
 	ShedEventFeed.add_to(self)
 	_add_summary_panel()
+	ShedMusic.add_to(self)
 	_publish_presence()
 	_open_company_day.call_deferred()
 	_report_level_ready.call_deferred()

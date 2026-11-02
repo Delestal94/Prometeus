@@ -498,7 +498,13 @@ D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboa
 - [x] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
   Rama `codex/D-1909-company-pause-menu`: `scripts/ui/company_pause_menu.gd`, `tests/test_company_pause_menu.gd`.
 - [ ] **D-1910** Escalado de UI y Steam Deck.
-- [ ] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
+- [x] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
+  Rama `codex/D-1911-shed-music`: `modules/synth_audio/synth_audio_work_music.gd` (`SynthAudioWorkMusic`: cuatro
+  compases a 108 BPM en tres capas del mismo largo, base, ritmo y melodía; `SynthAudio.work_music_layer()`),
+  `scripts/presentation/shed_music.gd` (`ShedMusic`: las capas en sincronía en un `AudioStreamSynchronized` por el
+  bus Music; cada evento del negocio suma actividad, que se gasta sola; entra el ritmo y después la melodía, y el
+  cierre del día apaga el loop). `CompanyRoot` lo agrega (sin sumar líneas). Test: `tests/test_shed_music.gd`.
+  Pendiente: escucharlo por parlantes (sin audio en esta sesión) y su nivel en la mezcla del galpón (D-1912).
 - [ ] **D-1912** Mezcla: buses para galpón, máquinas y distritos.
 - [x] **D-1913** SFX de UI del portapapeles.
   Rama `codex/D-1913-clipboard-sfx`: `SynthAudio.clipboard_clip_up()`, `clipboard_clip_down()` y `clipboard_sheet()`

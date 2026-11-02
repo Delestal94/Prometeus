@@ -16,6 +16,7 @@ extends RefCounted
 ##   SynthAudioGelPerformance  gelatinous voices and one short loop per dance
 ##   SynthAudioNewspaper rooster, morning birds, "extra!" hit, paper rustle, page turn, mate spit
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
+##   SynthAudioWorkMusic a work loop in three stems that come in with the activity
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
 
 ## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
@@ -176,6 +177,13 @@ static func gel_dance_music(clip: StringName = &"SimpleStep") -> AudioStreamWAV:
 	var safe_clip: StringName = clip if GelPerformance.DANCE_CLIPS.has(clip) else &"SimpleStep"
 	var key := StringName("gel_dance_music_%s" % safe_clip)
 	return _cached(key, GelPerformance.make_dance_music.bind(safe_clip))
+
+
+## One stem of the layered work loop (SynthAudioWorkMusic: 0 bed, 1 groove, 2 lead), all the same length so they
+## play in sync; an unknown layer gives the bed.
+static func work_music_layer(layer: int) -> AudioStreamWAV:
+	var safe: int = layer if layer >= 0 and layer < SynthAudioWorkMusic.LAYERS else 0
+	return _cached(StringName("work_music_%d" % safe), SynthAudioWorkMusic.make_layer.bind(safe))
 
 
 ## Looping tyre screech; pitch and volume follow the wheel skid.
