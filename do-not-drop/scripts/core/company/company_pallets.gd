@@ -117,6 +117,11 @@ static func station_for(kind: StringName) -> StringName:
 	return FORK_STATION if kind == FORK_ACT else STATION
 
 
+## The id of the pallet slot of deck `level` of the shelf `uid` (D-0606.b).
+static func rack_slot(uid: StringName, level: int) -> StringName:
+	return StringName("%s-%d" % [uid, level])
+
+
 ## {pallet} of a jack_pick request, the id of one pallet; {} otherwise.
 static func pick_ask(data: Dictionary) -> Dictionary:
 	var pallet: Variant = data.get("pallet")
@@ -449,9 +454,19 @@ func put_snapshot(value: Variant) -> bool:
 	return true
 
 
+## Whether a pallet stands on a slot of the shelf `uid`: the shelf then can't be sold (CompanyNet), or the pallet would
+## stay on a slot the shed no longer has, undrawn and out of reach.
+func on_rack_of(uid: StringName) -> bool:
+	for id: StringName in book.ids_at(PalletJack.AT_RACK):
+		var slot: String = String(book.places[id]["slot"])
+		if slot.rsplit("-", true, 1)[0] == String(uid):
+			return true
+	return false
+
+
 ## The book as the company's save keeps it (D-0605.c): to_dict() in plain JSON values, `jack_at` and the
 ## forklift's `at` as [x, z] (JSON writes a Vector2 as text), the forklift's driver as nobody (the peer that drove
-## it is gone when the save loads).
+## it is gone when the save loads) and its forks still, at the height they reached.
 func to_save() -> Dictionary:
 	var data: Dictionary = to_dict()
 	if jack_at is Vector2:
@@ -463,6 +478,7 @@ func to_save() -> Dictionary:
 		if fork_at is Vector2:
 			part["at"] = [(fork_at as Vector2).x, (fork_at as Vector2).y]
 		part["driver"] = 0
+		part["dir"] = 0
 		data["forklift"] = part
 	return data
 
