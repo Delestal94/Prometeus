@@ -91,7 +91,7 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 **Hecho cuando:** el test pasa con 6 cajas de calidad conocida.
 
 ### D-0710 · Calidad → trampa y su intensidad — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[~] Parcial (2026-11-04, lote local)** — D-0710.b hecho: el nivel elige la severidad de la trampa (`CompanyTuning.TRAP_SEVERITY_*` 1 / 1,1 / 1,25, `ITrapBehavior.severity`, `PackageRescue.trap_config`) y `sim_trap_balance -- --levels` da más roturas en alto en 7 de 7 (`test_box_trap_levels`); falta D-0710.c, que la caja floja sume Equilibrio de verdad.
+**[~] Parcial (2026-11-04, lote local)** — D-0710.b hecho: el nivel elige la severidad de la trampa (`CompanyTuning.TRAP_SEVERITY_*` 1 / 1,1 / 1,25, `ITrapBehavior.severity`, `PackageRescue.trap_config`) y `sim_trap_balance -- --levels` da más roturas en alto en 7 de 7 (`test_box_trap_levels`). Eso se cumple en el arnés: en el juego todavía no daña nada, porque las cajas con plan viven en el mundo Empresa y ahí no corre `RunManager` (D-0710.d). Falta además D-0710.c, que la caja floja sume Equilibrio de verdad.
 Antes (revisión D-0140, 2026-10-22, volvió a ◐ desde hecha el 2026-10-12): `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
 **Depende de:** D-0709 (`AssemblyQuality`), D-0213 (`BoxToPackage`), D-0109
 **Qué:** la trampa que viaja sigue siendo la del producto más difícil; el armado solo mueve la intensidad (`diseno/armado-y-trampas.md` §5). Números en `CompanyTuning` (`TRAP_INTENSITY_MID` 0,1, `TRAP_INTENSITY_HIGH` 0,25, `TRAP_LOOSE_BOX_INTENSITY` 0,3).
@@ -106,9 +106,18 @@ Antes (revisión D-0140, 2026-10-22, volvió a ◐ desde hecha el 2026-10-12): `
   `META_LOOSE_BOX` suma Equilibrio con el mismo mecanismo de trampa extra (el de flota, que tampoco existe todavía).
   Hoy el metadato se escribe y nadie lo lee: el paquete tiene un solo comportamiento de trampa, y una segunda toca
   cuidado, HUD, pistas e integridad.
+- [ ] **D-0710.d** (sale de la revisión de D-0710.b, 2026-11-07; `constructor-trampas`, high, aviso a Slatex: paquete)
+  Las trampas corren en las salidas de la empresa. Hoy los planes de trampa solo nacen en el mundo Empresa
+  (`CompanyPackages.make`) y ese mundo no arranca `RunManager` (`revisar/D-0119.md`): con `is_running` en falso
+  `PackageImpacts.apply_impact` y `PackageRunShake.jolt` salen enseguida y `package.gd` no llama a `_simulate_cargo`,
+  y `CompanyTrips._on_returned` no le pasa `broken_boxes` a `trip.close`. Que `_is_run_active` y `_registered_for_run`
+  acepten una caja en un `Trip` en curso (ojo: `PackageHandling` también congela con `_is_run_active`) y que las
+  rotas lleguen a `trip.close`. Test de integración sin `RunManager` activo: el mismo golpe le saca más a una caja
+  armada en alto que a una en bajo, y la que se rompe llega al cierre del viaje.
 **Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo; (D-0710.b) `sim_trap_balance` muestra
-más roturas en `high` que en `low` en ≥ 5 de las 7 trampas; y (D-0710.c) una caja floja con otra trampa también
-pide contrapesar.
+más roturas en `high` que en `low` en ≥ 5 de las 7 trampas; (D-0710.c) una caja floja con otra trampa también
+pide contrapesar; y (D-0710.d) en una salida de la empresa, sin `RunManager` activo, la severidad daña la caja de
+verdad.
 
 
 ### D-0711 · Caja armada sigue siendo `DeliveryPackage` — A · Sonnet 5.5 · xhigh · Aviso: no · F1

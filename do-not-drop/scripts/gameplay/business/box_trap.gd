@@ -6,7 +6,7 @@ extends RefCounted
 ## it changes how hard it hits (docs/expansion-distritos/diseno/armado-y-trampas.md §5):
 ## intensity = 1 - quality / QUALITY_MAX, so a perfect box rides at the trap's lowest level and a
 ## ruined one at its highest. Each level is a severity (CompanyTuning.TRAP_SEVERITY_*, D-0710.b) the
-## package hands its trap (DeliveryPackage.trap_config, ITrapBehavior.severity): low is the trap as it
+## package hands its trap (PackageRescue.trap_config, ITrapBehavior.severity): low is the trap as it
 ## is, mid and high scale the harm it does. A box that is mostly air (BoxToPackage.is_loose) also
 ## carries a low Balance trap on top; that one is data only for now (the package has a single trap
 ## behavior).
@@ -15,14 +15,17 @@ const LEVEL_LOW: StringName = &"low"
 const LEVEL_MID: StringName = &"mid"
 const LEVEL_HIGH: StringName = &"high"
 const LOOSE_TRAP_ID: StringName = &"balance"
+## intensity() rounds to this: 1 - 90 / 100 alone is 0.09999999999999998, which would read as low and not as the
+## TRAP_INTENSITY_MID a box at quality 90 is.
+const INTENSITY_STEP: float = 0.0001
 
 
 ## 0 for a perfect box, 1 for a worthless one.
 static func intensity(quality: float) -> float:
-	return clampf(1.0 - quality / CompanyTuning.QUALITY_MAX, 0.0, 1.0)
+	return snappedf(clampf(1.0 - quality / CompanyTuning.QUALITY_MAX, 0.0, 1.0), INTENSITY_STEP)
 
 
-## low / mid / high, by CompanyTuning.TRAP_INTENSITY_MID and TRAP_INTENSITY_HIGH.
+## low below CompanyTuning.TRAP_INTENSITY_MID, mid from it, high from TRAP_INTENSITY_HIGH.
 static func level(trap_intensity: float) -> StringName:
 	if trap_intensity >= CompanyTuning.TRAP_INTENSITY_HIGH:
 		return LEVEL_HIGH
