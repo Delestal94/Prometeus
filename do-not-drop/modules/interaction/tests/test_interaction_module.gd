@@ -8,7 +8,8 @@ extends SceneTree
 ## seat is this one, its prompt goes quiet then, the driver's seat hands
 ## the wheel to the boarder and asks their peer to board, a closed door
 ## keeps them out, the game's hooks can refuse and are told of boarding
-## and release, and release_occupant() takes the wheel back.
+## and release, and release_occupant() takes the wheel back, as vacate() does
+## with no peer asking.
 
 var _failures: int = 0
 
@@ -128,6 +129,16 @@ func _run() -> void:
 	_expect(seat.occupant == null and vehicle.driver_peer_id == 0 and not vehicle.controls_enabled
 		and vehicle.controls == [[0.0, 0.0, true]], "Releasing the driver takes the wheel back and brakes")
 	_expect(seat.released_peers == [1], "The game's hook is told who left")
+	seat.occupant = player
+	vehicle.driver_peer_id = 1
+	vehicle.controls_enabled = true
+	vehicle.controls.clear()
+	seat.vacate()
+	_expect(seat.occupant == null and vehicle.driver_peer_id == 0 and not vehicle.controls_enabled
+		and vehicle.controls == [[0.0, 0.0, true]] and seat.released_peers == [1, 1],
+		"vacate() lets the occupant go on the host's own word, wheel and hook included")
+	seat.vacate()
+	_expect(seat.released_peers == [1, 1], "...and an empty seat has nobody to tell")
 	scene.queue_free()
 	await process_frame
 	if _failures == 0:

@@ -30,11 +30,12 @@ extends Node3D
 ## to nothing.
 ##
 ## How a client knows the fleet: the host's snapshot, whose company part is the host's CompanyState (fleet and
-## stage). The client builds its vehicles when the snapshot is in (CompanyNet.company_state_restored), only the
-## missing ones, and then tells the host which it has (_have_fleet, on this node: it has no synchronizer and is
-## on every peer from the world's _ready). Rule 10 of red-autoridad.md: on the host each vehicle's synchronizer
-## starts invisible to every peer (a visibility filter, on top of CompanyInterest's flags, rule 11) and opens to a
-## peer, vehicle by vehicle, only once that peer said it has it (ack()) and its world is up (is_peer_ready()). The
+## stage). The client frees the vehicles the fleet no longer holds and builds the missing ones when the snapshot is
+## in (CompanyNet.company_state_restored; prune(), build()), and then tells the host all it has (_have_fleet, on this
+## node: it has no synchronizer and is on every peer from the world's _ready). Rule 10 of red-autoridad.md: on the
+## host each vehicle's synchronizer starts invisible to every peer (a visibility filter, on top of CompanyInterest's
+## flags, rule 11) and opens to a peer, vehicle by vehicle, only once that peer said it has it (ack()) and its world
+## is up (is_peer_ready()). The
 ## node's own word is the only safe one, as for CompanyPackages: a snapshot may not go out (too big) or not apply
 ## there (a part it refuses), and a synchronizer that reaches a peer before its node exists is never resolved
 ## there (package.gd's _enter_tree note). A vehicle built later on the host stays closed to a peer until that
@@ -45,15 +46,23 @@ extends Node3D
 ## the fleet then builds the new one on each (_on_event(), build() adds only the missing), a client telling the host
 ## it has it (tell_host()) so its synchronizer opens. The shop refuses the vehicle past PLAYON_SLOTS (CompanyShop).
 ##
-## Not here yet: selling one (D-0528 is postponed) and CompanyTrips.forget() for one that leaves mid-day. Closing
-## the world frees them all, which is no vehicle leaving: the day is saved as it stood (D-2005). Nothing here names
-## an autoload (lesson N-919).
+## Leaving mid-session (N-990): prune() retires what the fleet no longer holds, the host first, then each client as
+## the news reaches it, so no pose is ever sent for a vehicle a client has freed. The host empties it (seats, wheel,
+## racks), closes it to every peer and says so (vehicle_retired: CompanyRoot closes its trip, CompanyTrips.forget());
+## a player seated in it gets up while the seat is still there on their own peer. Nothing shrinks a fleet yet: selling
+## one (D-0528, postponed) has to call prune() on every peer from _on_event(), the event (or a snapshot) being what
+## reaches the clients, and give fleet entries an identity: names are by position (node_names()), so taking the first
+## of two equal vans out of the fleet retires the second. Closing the world frees them all, which is no vehicle
+## leaving: the day is saved as it stood (D-2005). Nothing here names an autoload (lesson N-919).
 
 const FleetCargo = preload("res://scripts/gameplay/fleet/fleet_cargo.gd")
 
 ## Host: `vehicle_id` fell out of the world and was put back in the playon (recover_fallen()): CompanyRoot closes
 ## its trip (CompanyTrips.forget()), so the day never waits for a vehicle that is not out.
 signal vehicle_recovered(vehicle_id: StringName)
+## Host: `vehicle_id` left the fleet (prune()), emptied and closed to every peer, about to go: CompanyRoot closes its
+## trip (CompanyTrips.forget()).
+signal vehicle_retired(vehicle_id: StringName)
 
 ## This node's name under World, the same on every peer.
 const NODE_NAME: String = "Vehicles"
@@ -137,10 +146,10 @@ func build(company: Object) -> int:
 	return added
 
 
-## Host: `peer` has the vehicles `names` (its _have_fleet, after building them), so their synchronizers reach it
-## from now on (rule 10); CompanyInterest still decides by distance. Refused, changing nothing (false), unless
-## `peer` is connected with its world up (the session's is_peer_ready()) and `names` holds 1 to MAX_VEHICLES
-## names of vehicles here, each short (RpcGuard.text_ok()).
+## Host: `peer` has the vehicles `names` and no others (its _have_fleet, after building them), so exactly the
+## synchronizers of those reach it from now on (rule 10); CompanyInterest still decides by distance. Refused, changing
+## nothing (false), unless `peer` is connected with its world up (the session's is_peer_ready()) and `names` holds 1
+## to MAX_VEHICLES names, each short (RpcGuard.text_ok()), of at least one vehicle here.
 func ack(peer: int, names: PackedStringArray) -> bool:
 	if not _host or not is_inside_tree() or not multiplayer.get_peers().has(peer):
 		return false
@@ -149,17 +158,15 @@ func ack(peer: int, names: PackedStringArray) -> bool:
 	if names.is_empty() or names.size() > MAX_VEHICLES:
 		return false
 	# A fleet that changed mid-session: open the vehicles both sides know and ignore the rest, instead of refusing
-	# the whole list (N-990). Nothing known at all is still a refusal.
-	var known: Array[String] = []
+	# the whole list (N-990). Nothing known at all is still a refusal. The list is all the peer has (tell_host()), so
+	# it replaces the last one: a vehicle it stopped naming closes.
+	var known: Dictionary = {}
 	for node_name: String in names:
 		if RpcGuard.text_ok(node_name) and vehicle(node_name) != null:
-			known.append(node_name)
+			known[node_name] = true
 	if known.is_empty():
 		return false
-	var had: Dictionary = _opened.get(peer, {})
-	for node_name: String in known:
-		had[node_name] = true
-	_opened[peer] = had
+	_opened[peer] = known
 	_refresh(peer)
 	return true
 
@@ -202,19 +209,20 @@ func is_open_to(peer: int, node_name: String) -> bool:
 	return (_opened.get(peer, {}) as Dictionary).has(node_name)
 
 
-## The vehicle named `node_name` (a vehicle id, node_names()), or null.
+## The vehicle named `node_name` (a vehicle id, node_names()), or null. Only its exact name: a peer's ack comes here
+## and a NodePath has aliases ("./van", "van:a", "../Vehicles/van").
 func vehicle(node_name: String) -> Node3D:
 	var found := get_node_or_null(NodePath(node_name)) as Node3D
-	return found if found != null and found.is_in_group(CompanyTrips.VEHICLE_GROUP) else null
+	var named: bool = found != null and String(found.name) == node_name
+	return found if named and found.is_in_group(CompanyTrips.VEHICLE_GROUP) else null
 
 
 ## The vehicles here, in the order they were built. Not every child: the van drops its loose cargo clutter
-## (cargo_clutter.gd, local scenery that is never replicated) next to itself, and one prune() just freed is gone
-## already (tell_host() right after it must not name it).
+## (cargo_clutter.gd, local scenery that is never replicated) next to itself.
 func vehicles() -> Array[Node3D]:
 	var found: Array[Node3D] = []
 	for child: Node in get_children():
-		if child is Node3D and child.is_in_group(CompanyTrips.VEHICLE_GROUP) and not child.is_queued_for_deletion():
+		if child is Node3D and child.is_in_group(CompanyTrips.VEHICLE_GROUP):
 			found.append(child as Node3D)
 	return found
 
@@ -452,16 +460,17 @@ func _on_event(_seq: int, kind: StringName, data: Dictionary) -> void:
 		tell_host()
 
 
-## Client: the host's snapshot is in, its company in this peer's CompanyState: the vehicles it lacks, then the
-## host is told which it has (tell_host()).
+## Client: the host's snapshot is in, its company in this peer's CompanyState: the vehicles the fleet no longer holds
+## go (prune()), the ones it lacks are built, then the host is told all it has (tell_host()).
 func _on_snapshot(_snapshot_seq: int) -> void:
 	prune(net.company)
 	build(net.company)
 	tell_host()
 
 
-## Client: frees the vehicles the fleet no longer holds (a fleet that changed mid-session), so no ghost vehicle stays
-## that the host never sends poses for. Returns how many were freed.
+## Every peer: the vehicles `company`'s fleet no longer holds (a fleet that changed mid-session) are retired, so no
+## ghost stays that nobody sends poses for or that a peer lacks. The host's turn comes first, before the news goes out
+## to the clients: a client that frees one the host still sends logs an error per pose. Returns how many went.
 func prune(company: Object) -> int:
 	if company == null or not is_inside_tree():
 		return 0
@@ -472,9 +481,49 @@ func prune(company: Object) -> int:
 	var freed: int = 0
 	for body: Node3D in vehicles():
 		if not wanted.has(String(body.name)):
-			body.queue_free()
+			_retire(body)
 			freed += 1
 	return freed
+
+
+## `body` leaves this peer's world. Out of the tree at once, its name free: a held shop_bought applied right after the
+## snapshot that pruned it can bring the same name back (build()), and tell_host() must not name it.
+func _retire(body: Node3D) -> void:
+	_stand_up_here(body)
+	if _host:
+		_empty(body)
+		var node_name := String(body.name)
+		# Rule 10: rebuilt under this name it stays closed to a peer until that peer acks the new one.
+		for opened: Dictionary in _opened.values():
+			opened.erase(node_name)
+		vehicle_retired.emit(StringName(node_name))
+	remove_child(body)
+	body.queue_free()
+
+
+## The players of this peer seated in `body` get up while their seat is here: they land beside it with their own
+## camera back. A client doesn't tell the host: the host emptied the vehicle first (_empty()) and that seat is gone
+## there, so an RPC to it would be an engine error.
+func _stand_up_here(body: Node3D) -> void:
+	for node: Node in get_tree().get_nodes_in_group(Interactable.player_group):
+		var rider := node as Player
+		if rider == null or not rider.is_local() or rider.seat_node_path.is_empty():
+			continue
+		var seat: Node = rider.get_node_or_null(rider.seat_node_path)
+		if seat != null and body.is_ancestor_of(seat):
+			rider.leave_seat(_host)
+
+
+## Host: nobody holds on to `body` any more: every seat let go, the wheel free, the boxes on its racks loose.
+func _empty(body: Node3D) -> void:
+	for seat: Node in body.find_children("*", "SeatPoint", true, false):
+		(seat as SeatPoint).vacate()
+	release_wheel(body)
+	for mount: Node in body.find_children("*", "Area3D", true, false):
+		var held: Variant = mount.get(&"occupied_by") if &"occupied_by" in mount else null
+		if typeof(held) == TYPE_OBJECT and is_instance_valid(held) and held is DeliveryPackage:
+			(held as DeliveryPackage).release_mount()
+			(held as DeliveryPackage).freeze = false
 
 
 ## Client: tells the host every vehicle it has (_have_fleet), so their synchronizers may reach it. Nothing when it

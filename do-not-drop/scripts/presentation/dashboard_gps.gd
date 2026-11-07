@@ -80,6 +80,8 @@ func _process(delta: float) -> void:
 
 ## Reads the truck and the road and redraws. Public so tests needn't wait.
 func refresh() -> void:
+	if not is_inside_tree():
+		return  # The deferred one of _ready(), for a van that left the fleet in the frame it was built in.
 	var truck := _truck()
 	var route := _route()
 	if truck == null:

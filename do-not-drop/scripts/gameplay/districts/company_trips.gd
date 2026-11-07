@@ -173,7 +173,7 @@ func closed_trips() -> Array[Trip]:
 ## A vehicle left the world mid-day (sold, towed, freed): the gate forgets it, its staged cargo is dropped and
 ## it no longer counts as out: a trip it had closes as if it came back (what wasn't delivered fails,
 ## trip_closed) and one out refused is back (refused_returned), so the day never waits for a vehicle that
-## isn't there. Nothing calls it yet (CompanyFleet frees none mid-day); the world closing is no vehicle leaving.
+## isn't there. CompanyRoot calls it for one CompanyFleet recovered or retired; the world closing is no vehicle leaving.
 func forget(vehicle_id: StringName) -> void:
 	if gate != null:
 		gate.forget(vehicle_id)

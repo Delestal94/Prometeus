@@ -682,9 +682,10 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 
 ## Seats are a temporary safe spot, not a lock-in. Leaving restores the
 ## on-foot controller at the seat's location, so passengers can react to
-## loose cargo while the van is moving.
-func leave_seat() -> void:
-	_seat_pose_component.leave_seat()
+## loose cargo while the van is moving. `tell_host` false: the host let the
+## seat go already (its vehicle left the fleet, CompanyFleet.prune()).
+func leave_seat(tell_host: bool = true) -> void:
+	_seat_pose_component.leave_seat(tell_host)
 
 
 ## Where to stand when getting up: the seat's own "ExitPoint" if it has one

@@ -203,11 +203,12 @@ func apply_tend_package(package_path: NodePath) -> void:
 		player._show_first_trap_tip(player.tended_package)
 
 
-func leave_seat() -> void:
+func leave_seat(tell_host: bool = true) -> void:
 	if not player._seated:
 		return
 	var seat: Node3D = player.get_node_or_null(player.seat_node_path) as Node3D
-	release_seat_occupant(seat)
+	if tell_host:
+		release_seat_occupant(seat)
 	if seat != null:
 		player.global_position = seat_exit_position(seat)
 		player.reset_physics_interpolation()
