@@ -144,10 +144,12 @@ func _test_no_running_seated_or_on_a_moving_truck(level: Node) -> void:
 	_expect(sprint.wants_run(forward), "Without the cap the sprint is a run again")
 	player.set_meta(Sprint.PACE_CAP_META, 2.2)
 	_expect(not sprint.wants_run(forward) and not sprint.can_run(), "With a pace cap nobody runs")
+	_expect(not sprint.can_jump(), "... nor jumps")
 	var capped: float = sprint.ground_speed(forward)
 	_expect(is_equal_approx(capped, 2.2), "The capped ground speed is the cap, not 6 or 3.6 (got %s)" % capped)
 	player.remove_meta(Sprint.PACE_CAP_META)
 	_expect(is_equal_approx(sprint.ground_speed(forward), 6.0), "Taking the cap off gives the run back")
+	_expect(sprint.can_jump(), "... and the jump")
 
 
 # --- Steps shake the box -----------------------------------------------------------------------

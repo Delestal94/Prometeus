@@ -22,7 +22,7 @@ const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
 ## A vehicle-like thing (the depot forklift) sets this meta on the player it carries: the pace cap in m/s. While
-## it is there nobody runs, and walking is slowed to the cap.
+## it is there nobody runs or jumps, and walking is slowed to the cap.
 const PACE_CAP_META: StringName = &"pace_cap"
 ## Ground speeds, m/s. Walking is Player.WALK_SPEED (3.6).
 const RUN_SPEED: float = 6.0
@@ -131,6 +131,11 @@ func can_run() -> bool:
 	if player.has_meta(PACE_CAP_META):
 		return false
 	return not on_moving_truck()
+
+
+## False while something carries the crew member (PACE_CAP_META): a forklift does not jump.
+func can_jump() -> bool:
+	return player == null or not player.has_meta(PACE_CAP_META)
 
 
 ## Standing on a truck that is going somewhere: the floor is not theirs to run on.
