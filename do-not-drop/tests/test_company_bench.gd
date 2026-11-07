@@ -20,13 +20,16 @@ extends SceneTree
 ## - the budget (D-2012): frame_stats() gives FPS (average, 1 % low), frame times and the peak of the draw
 ##   calls, with its prefix; walk_part() splits the walk into the loop and the door look, centro_frames()
 ##   keeps the drive's frames in Barrio Centro; awake_count() counts only bodies awake and not frozen;
-##   quality_level() reads the preset, medium by default; budget_report() marks each row ok or OVER, a floor
-##   for the FPS and a ceiling for the rest, and n/a for a stage that did not run; the table of
-##   docs/rendimiento-pc.md says the same numbers as BUDGET and its first row has been measured;
-## - the bench saves in a temp folder, never in the game's company slot, and CI runs it as an
-##   informational step.
+##   quality_level() reads the preset, medium by default, and refuses a misspelt one instead of reading low;
+##   budget_report() marks each row ok or OVER, a floor for the FPS and a ceiling for the rest, n/a for a stage
+##   that did not run, and every line of a run off the budget's preset or resolution; merge_drive() gives a skipped
+##   drive only its status, none of its keys; the table of docs/rendimiento-pc.md says the same numbers as BUDGET,
+##   its first row has been measured and the series keeps every budget key, as pc-build is told to;
+## - _run() applies the preset and reads the shed's numbers before the drive; the bench saves in a temp folder,
+##   never in the game's company slot, and CI runs it as an informational step.
 
-const BENCH := preload("res://tests/bench_company.gd")
+const BENCH_SOURCE: String = "res://tests/bench_company.gd"
+const BENCH := preload(BENCH_SOURCE)
 const SAMPLES: int = 601
 ## The camera stays at least this far from every wall of the shed, meters.
 const WALL_MARGIN: float = 1.0
@@ -34,11 +37,16 @@ const REQUIRED_KEYS: Array[String] = [
 	"objects", "nodes", "draw_calls", "physics_bodies", "frame_ms_p50", "frame_ms_p95", "memory_static_kb",
 	"drive", "drive_frames", "drive_frame_ms_p50", "drive_frame_ms_p95", "drive_draw_calls", "drive_objects",
 	"drive_metres", "quality", "fps_avg", "fps_low_1pct", "draw_calls_peak", "physics_active", "drive_nodes",
-	"drive_physics_active", "centro_frames", "centro_fps_avg", "inside_draw_calls_peak", "door_draw_calls_peak",
+	"drive_physics_active", "drive_object_count", "drive_memory_static_kb", "centro_frames", "centro_fps_avg",
+	"inside_draw_calls_peak", "door_draw_calls_peak",
 ]
 ## Where the budget's table lives, from the project folder, and the rows that have a number.
 const BUDGET_DOC: String = "../docs/rendimiento-pc.md"
+const PC_BUILD_DOC: String = "../.claude/rutinas/pc-build.md"
+const WORKFLOW: String = "../.github/workflows/tests.yml"
 const SITUATIONS: Dictionary = {"shed": "Galpón por defecto", "centro": "Manejando por Centro"}
+## The doc's heading of the series pc-build keeps, one row per run.
+const SERIES: String = "Serie del presupuesto"
 
 var _failures: int = 0
 
@@ -55,6 +63,7 @@ func _run() -> void:
 	_check_chase_pose()
 	_check_steering()
 	_check_drive_stats()
+	_check_merge_drive()
 	_check_frame_stats()
 	_check_walk_parts()
 	_check_awake_count()
@@ -264,6 +273,24 @@ func _check_drive_stats() -> void:
 		"The drive's status comes before its numbers")
 
 
+func _check_merge_drive() -> void:
+	var tree: Dictionary = {"drive_nodes": 9, "drive_physics_bodies": 9, "drive_physics_active": 9}
+	var skipped: Dictionary = {"status": "not_available: no van", "frames": [] as Array[Dictionary], "metres": 0.0}
+	var stats: Dictionary = {"nodes": 5, "physics_active": 2}
+	BENCH.merge_drive(stats, skipped, tree)
+	_expect(stats.keys().size() == 3 and stats.get("drive") == skipped.status,
+		"A skipped drive adds its status and no number of its own (%s)" % stats)
+	var lines: PackedStringArray = BENCH.summary_lines(stats)
+	_expect("BENCH_COMPANY drive_nodes=n/a" in lines and "BENCH_COMPANY drive_physics_active=n/a" in lines,
+		"...so the tree's drive_ keys print n/a, not the shed's numbers")
+	var frames: Array[Dictionary] = [{"ms": 1.0, "draws": 2.0, "objects": 3.0, "in_centro": true}]
+	var driven: Dictionary = {}
+	BENCH.merge_drive(driven, {"status": "ok", "frames": frames, "metres": 12.0}, tree)
+	_expect(driven.get("drive") == "ok" and driven.get("drive_nodes") == 9 and driven.get("drive_frames") == 1
+		and driven.get("centro_frames") == 1 and driven.get("drive_metres") == 12.0,
+		"A drive that ran adds its frames, the tree and Centro (%s)" % driven)
+
+
 func _check_frame_stats() -> void:
 	_expect(BENCH.frame_stats([] as Array[Dictionary], "x_").is_empty(), "No frames, no keys (they print n/a)")
 	var frames: Array[Dictionary] = []
@@ -316,6 +343,8 @@ func _check_quality() -> void:
 		and BENCH.quality_level("high") == WorldQuality.Level.HIGH, "The presets are read by name")
 	_expect(BENCH.quality_level("2") == WorldQuality.Level.HIGH and BENCH.quality_level("9") == WorldQuality.Level.HIGH,
 		"...or by number, clamped")
+	for misspelt: String in ["medum", "", "1.5"]:
+		_expect(BENCH.quality_level(misspelt) == -1, "'%s' is no preset, not the low one" % misspelt)
 
 
 ## Stats that meet every row of the budget, right at its limits.
@@ -345,13 +374,38 @@ func _check_budget() -> void:
 	var without: Dictionary = BENCH.budget_report(skipped)
 	_expect(without.over == 0 and "BENCH_COMPANY_BUDGET centro centro_fps_avg=n/a >=75 n/a" in without.lines,
 		"A drive that never reached Centro is n/a, not over (%s)" % without)
+	_check_budget_setup()
 
 
-## The numbers of the table are the bench's, and its first row has what was measured.
+## The budget holds on the medium preset at 1920x1080: any other run says so on every line.
+func _check_budget_setup() -> void:
+	var stats: Dictionary = _stats_on_limits()
+	stats["quality"] = BENCH.DEFAULT_QUALITY
+	stats["resolution"] = BENCH.BUDGET_RESOLUTION
+	_expect(BENCH.budget_off_setup(stats) == "" and BENCH.budget_report(stats).mark == "",
+		"The budget's own setup has no mark")
+	stats["quality"] = "low"
+	var off: String = BENCH.budget_off_setup(stats)
+	_expect(off == "quality=low", "Another preset is off (%s)" % off)
+	stats["resolution"] = "1280x720"
+	var report: Dictionary = BENCH.budget_report(stats)
+	_expect("quality=low" in report.mark and "resolution=1280x720" in report.mark, "...and another size (%s)" % report)
+	for line: String in report.lines:
+		_expect(line.ends_with(report.mark) and not line.ends_with(" ok") and not line.ends_with(" OVER"),
+			"A run off the setup has no bare ok or OVER (%s)" % line)
+
+
+## A file of the repo around the project, checked to be there: an empty one would switch its checks off.
+func _repo_file(path: String) -> String:
+	var text: String = FileAccess.get_file_as_string(ProjectSettings.globalize_path("res://") + path)
+	_expect(not text.is_empty(), "%s is where this test reads it" % path)
+	return text
+
+
+## The numbers of the table are the bench's, its first row has what was measured, and the series that the
+## "(perf)" rule compares against has a column for every row of the budget, and pc-build is told to fill them.
 func _check_budget_doc() -> void:
-	var doc: String = FileAccess.get_file_as_string(ProjectSettings.globalize_path("res://") + BUDGET_DOC)
-	if doc.is_empty():
-		return
+	var doc: String = _repo_file(BUDGET_DOC)
 	var limits: Dictionary = {}
 	for row: Dictionary in BENCH.BUDGET:
 		limits["%s %s" % [row.situation, row.key]] = roundi(row.get("min", row.get("max")))
@@ -363,19 +417,30 @@ func _check_budget_doc() -> void:
 	_expect("| Galpón grande lleno | ≥ 60 | — | — | — |" in doc,
 		"The big shed's row, which D-0947 measures, is there")
 	_expect(("| %s (medido) |" % SITUATIONS.shed) in doc, "The first row has a measured number")
+	var routine: String = _repo_file(PC_BUILD_DOC)
+	var series: int = doc.find(SERIES)
+	var header: String = doc.substr(series, doc.find("|---", series) - series) if series >= 0 else ""
+	_expect(SERIES in routine, "pc-build fills the budget's series (%s)" % SERIES)
+	for row: Dictionary in BENCH.BUDGET:
+		_expect(("`%s`" % row.key) in header, "The series has a column for %s" % row.key)
+		_expect(("`%s`" % row.key) in routine, "pc-build records %s whether it fits or not" % row.key)
 
 
-## What the file promises: a skipped drive stage says so with its reason, a temp save folder, and the
-## step in CI that never fails the job.
+## What the file promises: a skipped drive stage says so with its reason, the medium preset, the shed read before
+## the drive (it streams cells in, and the budget's row would count them), a temp save folder, and the step in CI
+## that never fails the job.
 func _check_wiring() -> void:
 	_expect(BENCH.DRIVE_NOT_AVAILABLE.begins_with("drive: not_available") and BENCH.VAN_ID != &"",
 		"A skipped drive stage says it is not available (and the reason follows it)")
 	_expect(BENCH.SAVE_DIR != CompanySave.SAVE_DIR and BENCH.SAVE_DIR.begins_with("user://"),
 		"The bench saves in a folder of its own, not the game's company slot (%s)" % BENCH.SAVE_DIR)
-	var workflow_path: String = ProjectSettings.globalize_path("res://") + "../.github/workflows/tests.yml"
-	var workflow: String = FileAccess.get_file_as_string(workflow_path)
-	if workflow.is_empty():
-		return
+	var source: String = FileAccess.get_file_as_string(BENCH_SOURCE)
+	var start: int = source.find("func _run() -> void:")
+	var body: String = source.substr(start, source.find("\nfunc ", start + 1) - start) if start >= 0 else ""
+	_expect("WorldQuality.apply(self, quality)" in body, "_run() applies the preset it reports")
+	_expect(body.contains("_collect(") and body.find("_collect(") < body.find("_stage_drive("),
+		"_run() reads the shed's numbers before the drive")
+	var workflow: String = _repo_file(WORKFLOW)
 	var step: int = workflow.find("bench_company.gd")
 	_expect(step > 0 and workflow.find("|| true", step) > step,
 		"CI runs bench_company.gd as an informational step (|| true)")

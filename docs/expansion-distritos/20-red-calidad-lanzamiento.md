@@ -19,7 +19,7 @@
 | D-2009 | ✅ Steam: lobby con nombre de empresa y día | constructor-red | medium | test en build |
 | D-2010 | ✅ Guardado en la nube del save de empresa (D-0237) (incluye D-0237, fusión de D-0112) | constructor-red | medium | probado en build |
 | D-2011 | ✅ Benchmark del modo Empresa (`bench_company`) en CI | perfilador-rendimiento | high | paso de CI con número |
-| D-2012 | ✅ Presupuesto de FPS por distrito y galpón | perfilador-rendimiento | medium | tabla en `rendimiento-pc.md` |
+| D-2012 | ◐ (falta la primera corrida de pc-build) Presupuesto de FPS por distrito y galpón | perfilador-rendimiento | medium | tabla en `rendimiento-pc.md` |
 | D-2013 | Leak check de un día completo y de 10 días | perfilador-rendimiento | high | sin huérfanos (como S-908) |
 | D-2014 | ✅ Tests de la expansión entran en `run-tests.sh` por filtro (`company`, `district`, `fleet`) | escritor-tests | low | filtros funcionan |
 | D-2015 | ✅ Tests afectados en el hook `pre-push` para carpetas nuevas | escritor-tests | low | hook los detecta |

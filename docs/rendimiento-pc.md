@@ -238,7 +238,8 @@ Con la GPU de la PC de arriba (RTX 4060 Ti) y el preset **medio** (`WorldQuality
 Los PRs de la expansión que bajen más de 10 % la situación que tocan llevan "(perf)" en el título y una tarea.
 
 **Cómo se mide:** `tests/bench_company.gd`, con ventana. El preset medio es su valor por defecto; imprime una línea
-`BENCH_COMPANY_BUDGET` por cada límite y `BENCH_COMPANY_BUDGET_OVER <n>`. `pc-build` lo corre cada día.
+`BENCH_COMPANY_BUDGET` por cada límite y `BENCH_COMPANY_BUDGET_OVER <n>`. `pc-build` lo corre en cada pasada y anota
+los valores en la [serie](#serie-del-presupuesto).
 
 ```
 <godot> --path do-not-drop --resolution 1920x1080 --windowed --script res://tests/bench_company.gd -- --seconds=30
@@ -252,13 +253,18 @@ Los PRs de la expansión que bajen más de 10 % la situación que tocan llevan "
 - **Nodos:** `OBJECT_NODE_COUNT` al terminar la vuelta, antes de manejar.
 - **Galpón grande lleno:** no lo mide este bench, abre el galpón inicial. Lo mide D-0947.
 - **Manejando por Centro:** los frames del manejo con la van dentro de `data/zones/centro.tres` (`centro_*`).
-- CI corre el mismo bench por software y solo informa: los FPS no valen ahí, los conteos son los mismos.
+- **Otro preset u otra resolución:** las líneas salen igual, cada una con `(off budget setup: ...)`, y no cuentan para
+  la tabla. Un `--quality` que no es preset corta con código 2.
+- CI corre el mismo bench por software y solo informa: los FPS no valen ahí. Nodos y cuerpos dan lo mismo (comprobado
+  sin ventana). Los draw calls no están comprobados: sin ventana leen 0, CI no fija `--resolution` (sale 1280×720, y sus
+  líneas salen marcadas) y a los pocos FPS del render por software el pico puede perderse la vista peor. D-2012.3
+  compara el log de CI con la PC antes de usarlo.
 
 ### Primera medición, 2026-11-07
 
 **Commit:** `origin/main` `b61e3802` más el bench de esta tarea. Tres corridas de 30 s por etapa. **PC ocupada:**
 había otros 2 a 6 procesos de Godot de otros carriles y la CPU entre 17 y 48 %, así que los FPS son un piso y van con
-su rango; `pc-build` da la serie limpia. Los nodos, los cuerpos y el pico de draw calls no se mueven entre corridas
+su rango. Se midió a mano con el comando de arriba: `pc-build` todavía no corrió (D-2012.4). Los nodos, los cuerpos y el pico de draw calls no se mueven entre corridas
 (± 2); el promedio de draw calls sí, porque pesa por frame y depende de cuánto tarda cada vista.
 
 | Situación | FPS prom. | FPS 1 % bajo | Draw calls prom. / pico | Cuerpos activos (de todos) | Nodos | Resultado |
@@ -268,7 +274,8 @@ su rango; `pc-build` da la serie limpia. Los nodos, los cuerpos y el pico de dra
 | Manejando por Centro | 140-165 | 79-88 | 2.072 / 2.656 | 3 (996) | 16.420 | FPS entra |
 
 Sin ventana (`--headless`, `-- --cpu-only`): 15.210 nodos, 930 cuerpos, 2 activos, los mismos 554 m manejados y
-~6,9 ms por frame en las dos etapas, muy parejo (p50 6,9 / p95 7,5); son solo scripts y física.
+~6,9 ms por frame en las dos etapas, muy parejo (p50 6,9 / p95 7,5). Eso no es un costo: coincide con los 6.900 µs de
+`low_processor_mode_sleep_usec` del proyecto, la espera por frame del motor cuando no tiene ventana que dibujar.
 
 **Sobra FPS y sobran conteos.** La RTX 4060 Ti lo mueve holgado, pero el presupuesto de conteos es el que cuida a una
 PC más floja, y está pasado más del doble. De dónde sale, de un censo de la escena en el arranque:
@@ -299,6 +306,16 @@ cuadrado desde la celda del galpón):
 
 Lo que falta para entrar en el presupuesto queda en D-2012.1 a D-2012.3
 (`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`).
+
+### Serie del presupuesto
+
+Una fila por corrida de `pc-build`, con los valores de las líneas `BENCH_COMPANY_BUDGET` aunque todos entren: contra
+esto se comparan el 10 % de "(perf)" y las caídas de la rutina. La primera fila es la medición de arriba, a mano; en
+`fps_avg` y `centro_fps_avg` va su rango.
+
+| Fecha | Commit | `fps_avg` | `centro_fps_avg` | `draw_calls_peak` | `physics_active` | `nodes` | Notas |
+|---|---|---|---|---|---|---|---|
+| 2026-11-07 | `b61e3802` + bench | 186-248 | 140-165 | 5.632 | 2 | 15.210 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
 
 ## Ancho de banda del modo Empresa (D-2002)
 

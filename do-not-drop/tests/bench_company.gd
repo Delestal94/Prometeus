@@ -17,10 +17,12 @@ extends SceneTree
 ## `inside_` and `door_` for the walk's two parts, the loop and the look out of the door),
 ## then `BENCH_COMPANY_BUDGET <situation> <key>=<value> <limit> ok|OVER` against the budget of
 ## docs/rendimiento-pc.md (D-2012, BUDGET) and a final `BENCH_COMPANY_OK`. Over budget is reported, not a
-## failure. It quits by itself; a hard wall-clock timeout ends it with `BENCH_COMPANY_TIMEOUT` (exit code 3) if
-## the world never comes up or a frame never returns.
+## failure; the budget holds on the medium preset at 1920x1080, and a run on anything else marks those lines
+## `(off budget setup: ...)`. It quits by itself; a hard wall-clock timeout ends it with `BENCH_COMPANY_TIMEOUT`
+## (exit code 3) if the world never comes up or a frame never returns.
 ## Optional user args: -- --seconds=30 (per stage) --hard=<seconds> (the hard timeout)
-## --quality=low|medium|high (or 0|1|2, the graphics preset; the budget is set on medium, the default).
+## --quality=low|medium|high (or 0|1|2, the graphics preset; the budget is set on medium, the default; anything
+## else stops it with exit code 2).
 ## With --headless and -- --cpu-only it measures scripts + physics alone (draw_calls reads 0, no budget).
 ## The company saves into a temp folder (user://bench_company), never the game's slot.
 ## The camera paths and the summary format are static functions (camera_pose(), chase_pose(), summary_lines()),
@@ -35,7 +37,8 @@ const SUMMARY_KEYS: Array[String] = [
 	"nodes", "draw_calls", "draw_calls_peak", "physics_bodies", "physics_active", "fps_avg", "fps_low_1pct",
 	"frame_ms_p50", "frame_ms_p95", "memory_static_kb", "drive", "drive_frames", "drive_fps_avg",
 	"drive_fps_low_1pct", "drive_frame_ms_p50", "drive_frame_ms_p95", "drive_draw_calls", "drive_draw_calls_peak",
-	"drive_objects", "drive_nodes", "drive_physics_bodies", "drive_physics_active", "drive_metres",
+	"drive_objects", "drive_nodes", "drive_physics_bodies", "drive_physics_active", "drive_object_count",
+	"drive_memory_static_kb", "drive_metres",
 	"centro_frames", "centro_fps_avg", "centro_fps_low_1pct", "centro_frame_ms_p50", "centro_frame_ms_p95",
 	"centro_draw_calls", "centro_draw_calls_peak", "centro_objects",
 	"inside_frames", "inside_fps_avg", "inside_fps_low_1pct", "inside_frame_ms_p50", "inside_frame_ms_p95",
@@ -55,8 +58,9 @@ const BUDGET: Array[Dictionary] = [
 	{"situation": "shed", "key": "nodes", "max": 6000.0},
 	{"situation": "centro", "key": "centro_fps_avg", "min": 75.0},
 ]
-## The preset the budget is set on.
+## The preset and the resolution the budget is set on.
 const DEFAULT_QUALITY: String = "medium"
+const BUDGET_RESOLUTION: String = "1920x1080"
 const QUALITY_NAMES: Array[String] = ["low", "medium", "high"]
 ## The zone whose frames are the `centro_` keys: the van is inside its bounds.
 const CENTRO_ZONE: String = "res://data/zones/centro.tres"
@@ -204,10 +208,13 @@ static func percentile(sorted_values: Array[float], q: float) -> float:
 	return sorted_values[clampi(int(q * sorted_values.size()), 0, sorted_values.size() - 1)]
 
 
-## The preset named by `text` (a name of QUALITY_NAMES or its number), as a WorldQuality.Level.
+## The preset named by `text` (a name of QUALITY_NAMES or its number), as a WorldQuality.Level; -1 if it is
+## neither: int("medum") would read as 0, the low preset, and the run would look like a valid one.
 static func quality_level(text: String) -> int:
 	var by_name: int = QUALITY_NAMES.find(text.to_lower())
-	return by_name if by_name >= 0 else clampi(int(text), 0, QUALITY_NAMES.size() - 1)
+	if by_name >= 0:
+		return by_name
+	return clampi(text.to_int(), 0, QUALITY_NAMES.size() - 1) if text.is_valid_int() else -1
 
 
 ## One `BENCH_COMPANY key=value` line per SUMMARY_KEYS entry, in order ("n/a" for a missing one).
@@ -221,10 +228,13 @@ static func summary_lines(stats: Dictionary) -> PackedStringArray:
 
 
 ## One `BENCH_COMPANY_BUDGET` line per BUDGET row, and how many are over: {"lines": [...], "over": n}. A key
-## with no number (a stage that was skipped, or that never reached Centro) prints n/a and is not over.
+## with no number (a stage that was skipped, or that never reached Centro) prints n/a and is not over. A run off
+## the budget's setup keeps its lines, each marked (the same mark in "mark"): its ok and OVER are not the budget's.
 static func budget_report(stats: Dictionary) -> Dictionary:
 	var lines := PackedStringArray()
 	var over: int = 0
+	var off: String = budget_off_setup(stats)
+	var mark: String = "" if off.is_empty() else " (off budget setup: %s)" % off
 	for row: Dictionary in BUDGET:
 		var value: Variant = stats.get(row.key)
 		var is_floor: bool = row.has("min")
@@ -236,9 +246,19 @@ static func budget_report(stats: Dictionary) -> Dictionary:
 			verdict = "ok" if inside else "OVER"
 			over += 0 if inside else 1
 			shown = "%.2f" % value if value is float else str(value)
-		lines.append("%s_BUDGET %s %s=%s %s%d %s" % [
-			PREFIX, row.situation, row.key, shown, ">=" if is_floor else "<=", roundi(limit), verdict])
-	return {"lines": lines, "over": over}
+		lines.append("%s_BUDGET %s %s=%s %s%d %s%s" % [
+			PREFIX, row.situation, row.key, shown, ">=" if is_floor else "<=", roundi(limit), verdict, mark])
+	return {"lines": lines, "over": over, "mark": mark}
+
+
+## What of this run is not how the budget is measured, "" if nothing: the preset and the resolution.
+static func budget_off_setup(stats: Dictionary) -> String:
+	var off := PackedStringArray()
+	for pair: Array in [["quality", DEFAULT_QUALITY], ["resolution", BUDGET_RESOLUTION]]:
+		var value: String = str(stats.get(pair[0], pair[1]))
+		if value != pair[1]:
+			off.append("%s=%s" % [pair[0], value])
+	return ", ".join(off)
 
 
 ## The numbers of a stage's frames, each key after `prefix`: frame times, FPS (average and 1 % low, which is
@@ -280,6 +300,19 @@ static func drive_stats(frames: Array[Dictionary], metres: float) -> Dictionary:
 	var stats: Dictionary = frame_stats(frames, "drive_")
 	stats["drive_metres"] = metres
 	return stats
+
+
+## Folds the drive stage's result into the summary's `stats`; `tree` is _tree_stats() of the world it left. A
+## skipped stage has no frames and adds only its status: its keys print n/a, even the tree's, which would be
+## numbers of the shed under a drive_ name (and physics_active, the walk's peak).
+static func merge_drive(stats: Dictionary, drive: Dictionary, tree: Dictionary) -> void:
+	stats["drive"] = drive.status
+	var frames: Array[Dictionary] = drive.frames
+	if frames.is_empty():
+		return
+	stats.merge(drive_stats(frames, float(drive.metres)))
+	stats.merge(tree)
+	stats.merge(frame_stats(centro_frames(frames), "centro_"))
 
 
 ## The walk's frames of one part: the loop inside, or from WALK_FRACTION on, the look out of the door.
@@ -329,6 +362,10 @@ func _run() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
 	var quality: int = quality_level(_arg("quality", DEFAULT_QUALITY))
+	if quality < 0:
+		push_error("bench_company: unknown --quality=%s (low, medium, high or 0..2)." % _arg("quality", ""))
+		quit(2)
+		return
 	WorldQuality.apply(self, quality)
 	var seconds: float = maxf(float(_arg("seconds", str(DEFAULT_SECONDS))), 0.5)
 	_hard_seconds = float(_arg("hard", str(seconds * 2.0 + 45.0)))
@@ -348,10 +385,7 @@ func _run() -> void:
 	if _finished:
 		return
 
-	stats.merge(drive_stats(drive.frames, float(drive.metres)))
-	stats.merge(_tree_stats(level, "drive_"))
-	stats.merge(frame_stats(centro_frames(drive.frames), "centro_"))
-	stats["drive"] = drive.status
+	merge_drive(stats, drive, _tree_stats(level, "drive_"))
 	stats["quality"] = QUALITY_NAMES[quality]
 	_close_world(level)
 	if walk.is_empty():
@@ -364,7 +398,7 @@ func _run() -> void:
 		var budget: Dictionary = budget_report(stats)
 		for line: String in budget.lines:
 			print(line)
-		print("%s_BUDGET_OVER %d" % [PREFIX, budget.over])
+		print("%s_BUDGET_OVER %d%s" % [PREFIX, budget.over, budget.mark])
 	print("%s_OK" % PREFIX)
 	_finished = true
 	quit()
@@ -521,6 +555,8 @@ func _tree_stats(level: Node, prefix: String) -> Dictionary:
 		prefix + "nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
 		prefix + "physics_bodies": level.find_children("*", "PhysicsBody3D", true, false).size(),
 		prefix + "physics_active": _awake_peak,
+		prefix + "object_count": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		prefix + "memory_static_kb": roundi(Performance.get_monitor(Performance.MEMORY_STATIC) / 1024.0),
 	}
 
 
@@ -532,8 +568,6 @@ func _collect(frames: Array[Dictionary], level: Node, seconds: float, build_ms: 
 		"render_scale": root.scaling_3d_scale,
 		"seconds": seconds,
 		"build_ms": build_ms,
-		"object_count": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
-		"memory_static_kb": roundi(Performance.get_monitor(Performance.MEMORY_STATIC) / 1024.0),
 	}
 	stats.merge(frame_stats(frames, ""))
 	stats.merge(frame_stats(walk_part(frames, seconds, false), "inside_"))

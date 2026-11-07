@@ -31,8 +31,10 @@ el día que se quiere jugar con amigos. La lanza el Programador de tareas
    semilla que la última fila de `docs/rendimiento-pc.md`. Tomá ms por frame (promedio, p95, p99), FPS
    promedio y 1 % más bajo, draw calls, costo de física por tick y memoria al final. Una vez por
    semana (lunes) sumá la pasada con el preset bajo de N-205. Después, `tests/bench_company.gd` con ventana, 30 s,
-   contra el presupuesto de D-2012 (`docs/rendimiento-pc.md`, comando ahí): anotá los `BENCH_COMPANY_BUDGET` en OVER
-   en la columna Notas de la fila.
+   contra el presupuesto de D-2012 (`docs/rendimiento-pc.md`, comando ahí): de las líneas `BENCH_COMPANY_BUDGET` tomá
+   `fps_avg`, `centro_fps_avg`, `draw_calls_peak`, `physics_active` y `nodes`, entren o no (van a la serie, sección 3),
+   y anotá los OVER en la columna Notas de la fila. Si una línea dice `off budget setup`, el comando estuvo mal:
+   repetilo antes de anotar.
 3. **`revisor-visual`**, con GPU real: `render_depot.gd`, `render_route_dressing.gd`,
    `render_rail_tunnel.gd` y `render_main_menu.gd` (o sus equivalentes si cambiaron de nombre). Solo
    lo que en la nube no se ve: sombras que faltan o parpadean, luces quemadas, niebla o noche ilegibles,
@@ -45,10 +47,16 @@ Cerrá Godot y el `.exe` después de cada pasada.
 - **`docs/rendimiento-pc.md`** (crealo si no existe, con la PC anotada arriba: GPU, CPU, resolución):
   una fila por corrida en la tabla — fecha, commit, build OK/falla y tamaño, FPS reparto y Endless
   (promedio / 1 % bajo), p99 ms, draw calls, memoria. Es la serie que muestra tendencias.
+- **Serie del presupuesto** (`docs/rendimiento-pc.md`): una fila por corrida con los cinco valores de `bench_company`,
+  aunque todos entren o la PC esté ocupada (eso va en Notas). La primera corrida con la PC libre reemplaza además, en
+  "Primera medición", los números de `Galpón por defecto (medido)` y `Manejando por Centro`, saca el aviso de PC
+  ocupada y cierra D-2012.4 (marca del detalle y tabla de grupo).
 - **Hallazgos** → **`planificador-tareas`** en `tareas-nacho.md`, con `Origen: PC build AAAA-MM-DD`:
   - la build no exporta o el smoke test falla → sección "QA — bugs abiertos", gravedad "bloquea";
   - FPS promedio o 1 % bajo que cae más de 10 % respecto del promedio de las últimas 5 filas, o p99 que
     pasa de 33 ms → tarea con los números y los commits entre la fila buena y esta;
+  - `fps_avg` o `centro_fps_avg` que cae más de 10 %, o un conteo que sube más de 10 %, respecto del promedio de las
+    últimas 5 filas de la serie del presupuesto (o las que haya) → lo mismo, "(perf)" en el título;
   - problemas de luz o sombra de `revisor-visual` → tarea "necesita PC" (la toma la sesión de arte).
 - Rama `rutina/pc-AAAA-MM-DD`, PR `docs: PC build and performance AAAA-MM-DD` con auto-merge. Cuerpo:
   la fila de hoy, la comparación con la anterior y las tareas creadas. La fila se sube todos los días
