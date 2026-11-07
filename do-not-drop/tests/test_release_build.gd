@@ -9,6 +9,9 @@ extends SceneTree
 ##   exports by name, and keeps tests/ and .blend files out of the build.
 ## - The workflow exports exactly those preset names and stamps the version with
 ##   tools/export/stamp_version.py.
+## - D-2019: no path the game names is left out of a build unless it is debug-only and looked for first
+##   (DEBUG_ONLY_PATHS); tools/export/probe_company.gd compiles, and the PC build routine runs the smoke
+##   (tools/export/smoke-company.sh).
 ## - D-2019 (expansion): every preset exports all resources and its exclude_filter leaves in
 ##   everything the Modo Empresa loads at run time (the data/ registries, company_root.tscn and
 ##   the company scripts), matched like Godot does: the path from res:// or the bare file name.
@@ -24,12 +27,22 @@ const COMPANY_PATHS: Array[String] = [
 	"scripts/gameplay/supplier_truck_view.gd", "scripts/core/company", "scripts/gameplay/business",
 	"scripts/gameplay/districts", "scripts/gameplay/fleet",
 ]
+## Left out by the presets and still named by the game: each is debug-only and looked for first (see
+## _check_excluded_paths()). A new line here needs the same two guards.
+const DEBUG_ONLY_PATHS: Array[String] = ["scripts/tools/trailer_camera.gd", "scripts/tools/capture_mode.gd"]
+## Where the game names its files.
+const GAME_FOLDERS: Array[String] = ["scripts", "scenes", "modules", "data"]
+## The smoke of an exported build (D-2019): it lives outside res://, so neither the lint nor the editor hook see it.
+const SMOKE_SCRIPT: String = "../tools/export/smoke-company.sh"
+const SMOKE_PROBE: String = "../tools/export/probe_company.gd"
+const PC_ROUTINE: String = "../.claude/rutinas/pc-build.md"
 const EXPECTED_PRESETS: Dictionary = {
 	"Windows Desktop": "../builds/windows/TakeMyPackage.exe",
 	"Linux": "../builds/linux/TakeMyPackage.x86_64",
 }
 
 var _failures: int = 0
+var _named: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -65,6 +78,7 @@ func _run() -> void:
 		var filter: String = str(presets.get_value(section, "exclude_filter", ""))
 		_expect(str(presets.get_value(section, "export_filter", "")) == "all_resources",
 			"Preset '%s' exports all resources (D-2019)" % name)
+		_check_excluded_paths(name, filter)
 		var excluded: Array[String] = _excluded(_company_files(), filter)
 		_expect(excluded.is_empty(),
 			"Preset '%s' keeps the Modo Empresa in the build (excluded: %s)" % [name, excluded])
@@ -86,9 +100,53 @@ func _run() -> void:
 	_expect(workflow.contains("stamp_version.py") and workflow.contains("gh release upload"),
 		"The release job stamps the version and attaches the zips to the release")
 
+	_check_smoke(repo)
+
 	if _failures == 0:
 		print("PASS: release presets, workflow and menu version line up")
 	quit(_failures)
+
+
+## A path the game names and the build leaves out only fails in the build. Whatever a preset drops must be on
+## DEBUG_ONLY_PATHS, and whoever names it asks OS.is_debug_build() and ResourceLoader.exists() first.
+func _check_excluded_paths(preset: String, filter: String) -> void:
+	var named: Dictionary = _named_paths()
+	var paths: Array[String] = []
+	paths.assign(named.keys())
+	for path: String in _excluded(paths, filter):
+		_expect(DEBUG_ONLY_PATHS.has(path),
+			"Preset '%s' leaves out %s, which %s needs" % [preset, path, named[path]])
+		var code: String = FileAccess.get_file_as_string("res://" + str(named[path]))
+		_expect(code.contains("OS.is_debug_build() and ResourceLoader.exists("),
+			"%s only reaches %s in a debug build, once it knows it is there" % [named[path], path])
+
+
+## path from res:// -> the first game file (res://-relative) that names it. A build's own folders of tools and
+## tests may name each other: they are left out too, or never load.
+func _named_paths() -> Dictionary:
+	if not _named.is_empty():
+		return _named
+	var files: Array[String] = []
+	for folder: String in GAME_FOLDERS:
+		_collect(folder, files)
+	var quoted: RegEx = RegEx.create_from_string("res://([^\"'\\s]+\\.[A-Za-z0-9]+)\"")
+	for file: String in files:
+		if file.get_extension() not in ["gd", "tscn", "tres"] or file.begins_with("scripts/tools/") \
+				or file.begins_with("scenes/tools/") or file.contains("/tests/"):
+			continue
+		for found: RegExMatch in quoted.search_all(FileAccess.get_file_as_string("res://" + file)):
+			if not _named.has(found.get_string(1)):
+				_named[found.get_string(1)] = file
+	_expect(_named.size() > 100, "The game's res:// paths are found (%d)" % _named.size())
+	return _named
+
+
+func _check_smoke(repo: String) -> void:
+	_expect(FileAccess.file_exists(repo.path_join(SMOKE_SCRIPT)), "tools/export/smoke-company.sh is in the repo")
+	var probe: GDScript = load(repo.path_join(SMOKE_PROBE)) as GDScript
+	_expect(probe != null and probe.can_instantiate(), "tools/export/probe_company.gd compiles")
+	var routine: String = FileAccess.get_file_as_string(repo.path_join(PC_ROUTINE))
+	_expect(routine.contains("tools/export/smoke-company.sh"), "The PC build routine runs the smoke of the build")
 
 
 ## Every file under COMPANY_PATHS (res://-relative), minus the editor's .uid/.import companions.

@@ -20,9 +20,11 @@ el día que se quiere jugar con amigos. La lanza el Programador de tareas
 1. **`empaquetador-release`**, pedido explícito de build de prueba (el hito M5 sigue en pausa, pero
    esta build no se publica): pasos 3 a 6 de su checklist (export release de "Windows Desktop" a
    `builds/windows/`, dependencias de Steam, smoke test del `.exe`, tamaño y archivos que no deberían
-   estar). El smoke son dos arranques: el de siempre (al menú) y uno en **modo Empresa** (D-2019:
-   `TakeMyPackage.exe --headless -- --mode=company`, 60 s, sin `SCRIPT ERROR` ni `ERROR` en el log);
-   la fila de `docs/rendimiento-pc.md` dice "Empresa OK" o la falla. Sin notas de versión, sin tags, sin subir nada (el repo es público: una build subida la baja
+   estar). El smoke es `GODOT=<editor> tools/export/smoke-company.sh builds/windows` (D-2019): los dos
+   arranques (al menú y en **modo Empresa**, unos 55 s, sin `SCRIPT ERROR` ni `ERROR` en el log) y la sonda
+   que mira adentro del `.pck` si el mundo levantó con sus catálogos llenos. Su última línea va a la fila de
+   `docs/rendimiento-pc.md`: "Empresa OK" o la falla. No la cambies por `timeout` a mano: matar el `.exe`
+   llena el log de `ERROR: BUG` que no son del juego, y `--log-file` no ve lo que se loguea al cerrar. Sin notas de versión, sin tags, sin subir nada (el repo es público: una build subida la baja
    cualquiera). La carpeta de la build lleva la versión de `git describe --tags --always` (el tren de
    releases etiqueta `main` cada lunes), así una regresión se acota entre dos builds con nombre.
    Conservá solo las 3 builds más nuevas en `builds/` (está ignorada por git).
