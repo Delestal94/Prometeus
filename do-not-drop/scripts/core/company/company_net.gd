@@ -628,10 +628,11 @@ func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringNam
 
 
 ## Host: a build request (D-0910), checked by CompanyLayoutNet (only the host's own goes through),
-## and its one event published. A packing table holding a box is not sold (not_empty, D-0715).
+## and its one event published. A packing table with a box (D-0715) or a shelf with a pallet (D-0606): not_empty.
 func _build(peer: int, kind: StringName, data: Dictionary) -> StringName:
 	var ask: Dictionary = build.check(company, inventory, kind, data, peer == multiplayer.get_unique_id())
-	if ask["reason"] == &"" and kind == CompanyLayoutNet.SELL and table.has_box(ask["data"]["uid"]):
+	var sold: StringName = ask["data"]["uid"] if ask["reason"] == &"" and kind == CompanyLayoutNet.SELL else &""
+	if sold != &"" and (table.has_box(sold) or pallets.on_rack_of(sold)):
 		return CompanyLayoutNet.REASON_NOT_EMPTY
 	return _grant(ask)
 
