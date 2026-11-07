@@ -13,7 +13,8 @@ extends SceneTree
 ##   with its rear doors out of the shed and its nose away from it, sitting on the ground; no trip started
 ##   (trips_out() 0); the interest tracks its synchronizer and the host's cells anchor on it. build() with a
 ##   two-van fleet adds only the missing one, van_classic_2, parked beside it; prune() with the fleet back to one
-##   van frees it (no longer listed by vehicles()) and keeps the first, and frees nothing when nothing changed.
+##   van frees it (no longer listed by vehicles(), its name free in the same frame) and keeps the first, and frees
+##   nothing when nothing changed. A fleet that changes mid-session in full: test_company_fleet_changes (N-990).
 ## - A van bought mid-day (shop_bought through CompanyNet) is built at once beside the starting van, drivable and
 ##   inside the gate (D-0302.2.b.5); CompanyShop keeps the starting van in the fleet and refuses a vehicle past
 ##   the playon's PLAYON_SLOTS.
@@ -30,9 +31,10 @@ extends SceneTree
 ##   World/Vehicles/van_classic from the host's snapshot, a frozen copy it doesn't own. Until the client acks
 ##   it (its ack held back here, as if its snapshot had failed) the host's synchronizer stays closed to it and
 ##   no update arrives; an ack naming only unknown vehicles, too many, none, or from a peer that isn't there is
-##   refused, also over the _have_fleet RPC; one naming a known and an unknown vehicle opens the known one only
-##   (N-990). After the real ack (CompanyFleet.tell_host()) the copy receives
-##   the host's updates, is shown, stands where the host's van does and follows it when it moves.
+##   refused, also over the _have_fleet RPC, and so is one that only aliases a vehicle (NodePath spellings of its
+##   name); one naming a known and an unknown vehicle opens the known one only (N-990). After the real ack
+##   (CompanyFleet.tell_host()) the copy receives the host's updates, is shown, stands where the host's van does and
+##   follows it when it moves.
 ## - vehicle.gd: out of a run the parked van relays no vehicle_telemetry to the client; during one it does,
 ##   and it stops once the run ends.
 ## - The client's player takes the wheel (the seat's interact() on the host) and the client leaves: the host
@@ -276,6 +278,13 @@ func _check_second_van(level: CompanyRoot, fleet: CompanyFleet) -> void:
 	_expect(freed == 1 and listed.size() == 1 and listed[0] == first,
 		"prune() with a one-van fleet frees van_classic_2 only (freed %d, listed %d)" % [freed, listed.size()])
 	_expect(fleet.prune(one) == 0 and fleet.build(one) == 0, "...and with nothing changed, neither frees nor builds")
+	# A held shop_bought applied right after the snapshot that pruned it brings the name back in the same frame.
+	var again: Node = (load(STATE_SCRIPT) as GDScript).new()
+	again.set(&"fleet", [{"vehicle": &"van"}, {"vehicle": &"van"}] as Array[Dictionary])
+	_expect(not fleet.has_node(^"van_classic_2") and fleet.build(again) == 1 and fleet.vehicle("van_classic_2") != null,
+		"...its name is free at once: the same fleet back in the same frame builds it again")
+	fleet.prune(one)
+	again.free()
 	one.free()
 	await physics_frame
 	_expect(fleet.get_node_or_null(^"van_classic_2") == null and fleet.vehicle("van_classic") != null,
@@ -515,6 +524,17 @@ func _check_bad_acks(host_fleet: CompanyFleet, client_fleet: CompanyFleet, clien
 	client_fleet.rpc_id(1, &"_have_fleet", many)
 	await _seconds(0.3)
 	_expect(not host_fleet.is_open_to(client_id, "van_classic"), "...and so is a bad _have_fleet from the client")
+	# NodePath spellings of the van: each resolves to it, none is its name, and none may fill the peer's list.
+	var aliases := PackedStringArray(["./van_classic", "van_classic:a1", "../Vehicles/van_classic"])
+	_expect(host_fleet.vehicle("./van_classic") == null and not host_fleet.ack(client_id, aliases)
+		and not host_fleet.is_open_to(client_id, "van_classic") and not host_fleet.is_open_to(client_id, aliases[0]),
+		"An ack with only aliases of a vehicle is refused")
+	aliases.append("van_classic")
+	var opened_aliases: bool = host_fleet.ack(client_id, aliases)
+	_expect(opened_aliases and host_fleet.is_open_to(client_id, "van_classic")
+		and not host_fleet.is_open_to(client_id, "van_classic:a1") and not host_fleet.is_open_to(client_id, aliases[0])
+		and not host_fleet.is_open_to(client_id, aliases[2]), "...and beside the real name, they are not kept")
+	host_fleet.close_to(client_id)
 	# A fleet that changed mid-session (N-990): the known vehicle opens, the unknown one is ignored.
 	_expect(host_fleet.ack(client_id, PackedStringArray(["van_classic", "nope"]))
 		and host_fleet.is_open_to(client_id, "van_classic") and not host_fleet.is_open_to(client_id, "nope"),

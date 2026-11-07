@@ -182,6 +182,24 @@ func release_occupant(peer_id: int) -> void:
 	if is_instance_valid(occupant) and int(occupant.get_multiplayer_authority()) == peer_id:
 		occupant = null
 	_on_released(peer_id)
+	_give_back_wheel(peer_id)
+
+
+## Host, on its own word: the seat is going away with its vehicle, so whoever
+## sits here is let go as release_occupant() does. No peer asked, so none of
+## its checks apply, and it works in the middle of another peer's RPC too.
+## The player gets up on their own peer.
+func vacate() -> void:
+	if not is_instance_valid(occupant):
+		occupant = null
+		return
+	var peer_id: int = int(occupant.get_multiplayer_authority())
+	occupant = null
+	_on_released(peer_id)
+	_give_back_wheel(peer_id)
+
+
+func _give_back_wheel(peer_id: int) -> void:
 	if role != &"driver":
 		return
 	var vehicle: Node = get_node_or_null(vehicle_path)
