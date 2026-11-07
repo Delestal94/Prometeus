@@ -85,13 +85,18 @@ Verificación de las cuentas (por si el test las rehace): ejemplo 3: `absorption
 trampa se comporta como hoy en su nivel más bajo; con `Q`=0, en el más alto. D-0710 la ajusta con
 `sim_trap_balance`; este documento fija solo la dirección (más calidad, menos intensidad).
 
-Cómo quedó (D-0710.b, 2026-11-04): la intensidad da el nivel (bajo hasta 0,1, medio hasta 0,25, alto desde ahí) y
+Cómo quedó (D-0710.b, 2026-11-04): la intensidad da el nivel (bajo por debajo de 0,1, medio desde 0,1, alto desde
+0,25: Q 90 ya es medio y Q 75 ya es alto) y
 cada nivel una **severidad** (`CompanyTuning.TRAP_SEVERITY_*`: 1, 1,1 y 1,25) que el paquete le pasa a la trampa
 (`ITrapBehavior.severity`). Cada trampa multiplica por ella el daño que hace (golpes, derrame, enojo, peso, mecha y
 tiempo hasta volcar o escaparse), nunca lo que hace la respuesta correcta; ningún `.tres` cambia. Medido en
 `do-not-drop/tests/sim_data/levels_report.md` (`sim_trap_balance.gd -- --levels`); decisión en
 [2026-11-04-severidad-de-trampas.md](../../decisiones/2026-11-04-severidad-de-trampas.md). La trampa extra de la caja
 floja (Equilibrio 0,3) sigue siendo dato del plan: D-0710.c.
+
+**Límite actual:** la severidad queda en la trampa pero una salida de la empresa todavía no la ejercita. Esas cajas
+solo existen en el mundo Empresa, que no arranca `RunManager`, y golpes, pasos y `_simulate_cargo` piden
+`RunManager.is_running`; tampoco llegan cajas rotas a `trip.close`. Hasta D-0710.d lo medido es el arnés.
 
 ## Decisiones tomadas
 

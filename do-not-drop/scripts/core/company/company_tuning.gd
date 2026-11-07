@@ -445,10 +445,12 @@ const TRAP_INTENSITY_HIGH: float = 0.25
 const TRAP_LOOSE_BOX_INTENSITY: float = 0.3
 ## How hard the trap hits at each level (D-0710.b, ITrapBehavior.severity): every behavior scales the harm it
 ## does by it (hits, leaks, anger, growth, a shorter fuse or tipping time), never what the right answer does.
-## Low is the trap as it is today (armado-y-trampas.md §5). Measured with `sim_trap_balance.gd -- --levels`
-## (tests/sim_data/levels_report.md): at 1.25 the clumsy loses 4 to 46 points more boxes than at low in each of
-## the 7 traps, and the expert keeps every one but Fragile's (a crash nobody can cushion); 1.5 sent Hostile and
-## Fragile to 96-100 % for the clumsy (docs/decisiones/2026-11-04-severidad-de-trampas.md).
+## Low is the trap as it is today (armado-y-trampas.md §5). Measured with `sim_trap_balance.gd -- --levels
+## --trials=10` (tests/sim_data/levels_report.md: 10 repetitions, though LEVEL_TRIALS is 20): at 1.25 the clumsy
+## loses 8 to 46 points more boxes than at low in 6 of the 7 traps and the same in Fragile (50 %), where the expert
+## is the one who loses more, 2 to 20 % (a crash nobody can cushion); elsewhere the expert loses 2 % at most
+## (Noisy). Hostile sends the clumsy to 100 % at 1.25 too, so what rules out 1.5 is Fragile's 96 % for the clumsy
+## (docs/decisiones/2026-11-04-severidad-de-trampas.md).
 const TRAP_SEVERITY_LOW: float = 1.0
 const TRAP_SEVERITY_MID: float = 1.1
 const TRAP_SEVERITY_HIGH: float = 1.25

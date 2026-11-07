@@ -150,10 +150,6 @@ static func apply_external_damage(p: DeliveryPackage, amount: float, ruin_cause_
 ## How far ahead (s) a box looks for a bump the road announces: a little
 ## beyond the trap's own warning, so the trap decides when to show it.
 const ROAD_LOOKAHEAD: float = 1.2
-## What a trap that draws something (the bomb's code) rolls it from: the
-## session seed and the box, so the same session deals the same code to the
-## same box, and each box its own. 0 without a seeded session (solo): the
-## trap then draws from the clock.
 ## A box packed in the company's warehouse carries its trap plan under this meta (BoxToPackage.META_TRAP_PLAN,
 ## D-0710), set before the box enters the tree: its "severity" is how hard the packing lets the trap hit.
 const TRAP_PLAN_META: StringName = &"trap_plan"
@@ -170,6 +166,10 @@ static func trap_config(p: DeliveryPackage) -> Dictionary:
 	return config
 
 
+## What a trap that draws something (the bomb's code) rolls it from: the
+## session seed and the box, so the same session deals the same code to the
+## same box, and each box its own. 0 without a seeded session (solo): the
+## trap then draws from the clock.
 static func roll_seed(p: DeliveryPackage) -> int:
 	# world_seed is declared by network_manager.gd, not by NetSession: the handle's type.
 	var network := PackageAutoloads.network(p) as NETWORK_MANAGER
