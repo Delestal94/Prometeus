@@ -304,8 +304,51 @@ cuadrado desde la celda del galpón):
 | Al frente y a la derecha, hacia Centro | 4.967 | 2.259 |
 | Adentro, hacia el fondo | 808 | 808 |
 
-Lo que falta para entrar en el presupuesto queda en D-2012.1 a D-2012.3
+Lo que falta para entrar en el presupuesto queda en D-2012.2 y D-2012.3
 (`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`).
+
+### Celdas fijas lejanas, 2026-11-07 (D-2012.1)
+
+Una celda fijada pasado `CELL_LOAD_RADIUS` de toda ancla queda estacionada: conserva nodos y colisión, no se dibuja
+y muestra su impostor. Vuelve a dibujarse al entrar en ese radio y, una vez dibujada, aguanta hasta
+`CELL_UNLOAD_RADIUS`, igual que la carga de una celda común.
+
+**Commit:** `origin/main` `96e0cb55` más este cambio. Cuatro corridas de 30 s por etapa después del cambio y tres
+antes, intercaladas, con el comando de arriba. **PC ocupada** por otros carriles: la tercera corrida de después
+bajó en todas las etapas, también en el manejo que este cambio no toca, y es el piso de cada rango.
+
+| Medida | Antes | Después |
+|---|---|---|
+| `draw_calls_peak` (vuelta por el galpón) | 5.630-5.633 | **2.588-2.590** |
+| `draw_calls` (promedio de la vuelta) | 1.966-1.994 | 977-1.014 |
+| `door_draw_calls` (promedio por la puerta) | 4.779-4.794 | 1.024-1.052 |
+| `door_fps_avg` / `door_fps_low_1pct` | 97-104 / 48-68 | 180-270 / 90-138 |
+| `fps_avg` / `fps_low_1pct` | 159-167 / 51-70 | 153-233 / 68-97 |
+| `centro_fps_avg` | 96-106 | 75-110 |
+| `centro_draw_calls_peak` | 2.654-2.656 | 2.655-2.656 |
+| `nodes` | 15.203 | 15.225 |
+| `physics_active` | 2 | 2 |
+
+Por vista, con `tests/render_company_far.gd` (preset medio, 1280×720), el mismo script sobre el código de antes y
+de después:
+
+| Vista | Draw calls antes | Después |
+|---|---|---|
+| Por la puerta, al frente | 4.707 | 965 |
+| Al frente y a la izquierda | 4.794 | 977 |
+| Al frente y a la derecha, hacia Centro | 4.967 | 2.267 |
+| Adentro, hacia el fondo | 794 | 794 |
+| En la avenida a 640 m, hacia Centro | 1.118 | 1.121 |
+| En la avenida a 640 m, hacia el galpón | 4.087 | 2.496 |
+
+- **Sigue OVER:** el pico de 2.588 es la vista hacia Centro, que está dentro del radio y se dibuja. Manejando por
+  Centro no cambia nada por lo mismo. Es D-2012.2: bajarlo es agrupar las mallas, no esconder celdas.
+- **Se ve igual:** comparando las capturas de antes y después, cambia como mucho el 0,02 % de los píxeles, en la
+  línea del horizonte (postes y objetos lejanos).
+- **Lo que suma:** 22 nodos (dos por cada uno de los 11 impostores nuevos). Prender las 19 celdas estacionadas de una
+  vez costó 2,3 ms y apagarlas 1,9 ms; una sola, 0,7 ms como mucho. Cruzar un borde cambia unas pocas.
+- **Son 19 y no las 24 del experimento:** la van estacionada en el patio es un ancla del host, en la celda al norte
+  del galpón. Las celdas a 3 de ella siguen dibujadas por la histéresis.
 
 ### Serie del presupuesto
 
@@ -316,6 +359,7 @@ esto se comparan el 10 % de "(perf)" y las caídas de la rutina. La primera fila
 | Fecha | Commit | `fps_avg` | `centro_fps_avg` | `draw_calls_peak` | `physics_active` | `nodes` | Notas |
 |---|---|---|---|---|---|---|---|
 | 2026-11-07 | `b61e3802` + bench | 186-248 | 140-165 | 5.632 | 2 | 15.210 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
+| 2026-11-07 | `96e0cb55` + D-2012.1 | 153-233 | 75-110 | 2.590 | 2 | 15.225 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
 
 ## Ancho de banda del modo Empresa (D-2002)
 
