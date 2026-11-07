@@ -14,6 +14,7 @@
 
 ### D-0936 · Exterior del galpón que cambia con la etapa (cartel, playón) — B · Sonnet 5.5 · medium · Aviso: no · F2
 **[x] Hecho (2026-10-22, PR pendiente)** — `ShedExteriorPlan` (datos) y `ShedExterior` (dibujo): 4 variantes de cartel y playón, una por etapa.
+**[x] Arte (2026-11-07, PR pendiente)** — modelos de cartel, marcas del playón y farol (`build_depot_props.py`, grupo `shed_exterior`).
 **Depende de:** D-0905 (etapas del galpón)
 **Qué:** lo de afuera del galpón crece con la etapa, así se ve que la empresa creció antes de entrar.
 - **Cartel** sobre el muro de la dársena (cara a +Z, hacia el patio), con el nombre de la etapa (`WORLD_SHED_SIGN_*`): galpón, depósito, centro de distribución, centro logístico. Ancho 4 / 6 / 8 / 11 m, nunca más que el muro.
@@ -22,4 +23,4 @@
 - `CompanyShed.rebuild()` cuelga un `Exterior` por redibujo, así sigue la etapa en todos los peers sin red nueva (la etapa ya viaja con `shed_expanded` y el snapshot).
 **Test** `test_shed_exterior`: una variante por etapa con su clave traducida; cartel, playón y faroles solo crecen; el cartel cabe en su muro; faroles dentro del ancho y fuera del carril del camión; el dibujo no tiene colisión; un redibujo deja un solo `Exterior` y sigue la etapa.
 **Hecho cuando:** 4 variantes (cumplido; las capturas por etapa son D-0946).
-Decisión: placeholder gris hecho por código (cajas y `Label3D`); el cartel y el playón de verdad están en `arte-pendiente/D-0936.md`.
+Decisión: el cartel, las marcas del playón y el farol son modelos; la losa sigue siendo una caja por código (mide siempre lo que dice el plan, con el detalle de hormigón hasta la etapa 2 y de asfalto desde la 3) y el nombre sigue siendo un `Label3D` que se ajusta al área libre de cada cartel.
