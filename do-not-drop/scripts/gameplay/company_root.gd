@@ -287,7 +287,8 @@ func _add_net(state: COMPANY_STATE) -> void:
 		for refusal: Dictionary in report["refused"]:
 			push_warning("CompanyRoot: the default shed left out %s (%s)" % [refusal["uid"], refusal["reason"]])
 	# The slot always holds an opening (D-0251): one without a save gets this day's, before the dev
-	# flags (they never reach the disk). A newer build's file counts as a save: never written over.
+	# flags, so neither this opening nor a day cut short writes them (a closed day saves what is in
+	# play, flags too: guardado.md §4). A newer build's file counts as a save: never written over.
 	if not CompanySave.exists(save_slot, save_dir):
 		if not CompanySave.save(state, save_slot, save_dir):
 			push_warning("CompanyRoot: opening of day %d not saved to %s" % [state.day, save_dir])

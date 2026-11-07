@@ -106,7 +106,7 @@ unidad del stock queda en un lugar sin estación.
 | Avisos y feed de pedidos, alertas de stock | El feed arranca vacío; las alertas se recalculan del stock |
 | Lo que tiene cada uno en la mano (`held_tool`, portapapeles) | Nada en la mano (portapapeles §3: no va al save) |
 | Interés de red y celdas del mapa | Se arman según dónde está la tripulación |
-| Flags de desarrollo (`--money=`, `--company-day=`, D-0238) | Se aplican después de cargar y **pisan** lo guardado. Es a propósito: son para tests y capturas |
+| Flags de desarrollo (`--money=`, `--company-day=`, D-0238) | Se aplican después de cargar y **pisan** lo guardado. Es a propósito: son para tests y capturas. Una apertura nueva y un corte no los escriben; un cierre guarda lo que está en juego, flags incluidos |
 
 **Del jugador, no de la empresa.** Lo que aprende cada persona se guarda en su perfil (`unlock_profile`), no en el
 slot: `seen_tips` (onboarding §4), las opciones y las teclas. Jugar en la empresa de otro marca los consejos que

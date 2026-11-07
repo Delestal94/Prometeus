@@ -4,7 +4,7 @@
 > [F0-02-arquitectura.md](F0-02-arquitectura.md).
 
 ### D-0251 · Un día cortado vuelve a su apertura — A · Opus 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-11-04, lote local)** — el código ya estaba (PR #678, 7fa155d8: apertura del día 1 antes de los flags, `CompanySave.mark_interrupted()`); `test_company_autosave` suma ahora los flags de desarrollo fuera del slot, los palets de la apertura y `was_interrupted()` tras cargar.
+**[x] Hecho (2026-11-04, lote local)** — el código ya estaba (PR #678, 7fa155d8: apertura del día 1 antes de los flags, `CompanySave.mark_interrupted()`); `test_company_autosave` suma ahora los flags de desarrollo fuera del slot, los palets de la apertura y `was_interrupted()` tras cargar. Revisión 2026-11-07: el menú de empresas muestra el chip "Día cortado" (`CompanySlotsPage._add_row`, `test_company_slots_menu`) y `test_company_autosave` prueba `mark_interrupted()` directo (`saved_at` intacto, slot vacío, solo `.bak`).
 **Depende de:** D-0134 (diseño), D-0236, D-2005
 **Qué:** [guardado.md](../diseno/guardado.md), reglas 1 y 2. Solo en el host (también jugando solo):
 - [x] D-0251.1 **Crear la empresa guarda su apertura del día 1.** En `CompanyRoot`, cuando `load_into` no cargó nada
@@ -17,6 +17,10 @@
 - [x] D-0251.3 Comentarios de `company_save.gd` (encabezado y `load_into`: "what happened after it is kept" pasa a
   "the day's opening, nothing of the cut day") y de `company_root.gd`. El resumen local del cliente (D-2005) no
   cambia: muestra lo que vio.
+- Decisión: no sube `CompanySave.VERSION`. Las claves no cambian de significado para el lector; solo cambia cuándo se
+  escribe (regla 5 de guardado.md).
+- Decisión: al salir del mundo el host recarga la empresa del slot también después de un cierre (salir en el
+  resumen). Si no, volver a entrar en la misma sesión jugaría otra vez el día cerrado y lo cobraría dos veces.
 **Test** `test_company_autosave` (ampliado): una empresa nueva deja su slot del día 1 sin los flags de desarrollo;
 abrir el día, cobrar un pedido (`earn`), mover unidades a una mano, salir a mitad de día y cargar devuelve la plata,
 el `ledger`, el stock y `pallets` de la apertura, con `was_interrupted()` en true. Salir en `SUMMARY` sigue guardando

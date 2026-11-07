@@ -15,9 +15,11 @@ extends SceneTree
 ##   before the dev flags: with --money= the company plays with it and the slot keeps STARTING_MONEY;
 ## - leaving mid-day writes nothing of the day (D-0251): with money earned and charged, units moved and
 ##   held and the pallet jack pushed, the slot is that opening (day 1, STARTING_MONEY, an empty ledger,
-##   the stock and pallets as it opened) marked interrupted (D-2005); loading it gives the same, with
-##   was_interrupted() still true, and so does the company in play once its world is gone;
-##   save_closed_day() outside SUMMARY saves nothing.
+##   the stock and pallets as it opened) marked interrupted (D-2005), its saved_at untouched; loading it
+##   gives the same, with was_interrupted() still true, and so does the company in play once its world
+##   is gone; save_closed_day() outside SUMMARY saves nothing.
+## - CompanySave.mark_interrupted() itself: only the key changes, saved_at and company stay; an empty
+##   slot gives false and creates no file; a slot with only its .bak gets its opening back, marked.
 ## - D-0253: the host closes day 1 early from OPERATING (DayClose.close()): with no trip out the next
 ##   poll is SUMMARY, the clock still before 20:00, and the slot is day 2's opening, not interrupted,
 ##   with the day's money; leaving afterwards keeps that close.
@@ -29,10 +31,13 @@ const SLOT: String = "auto"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 ## Real msec the DayCycle reads: far past the OPENING's few seconds.
 const LATER_MSEC: int = 60_000
-## The --money= dev flag the mid-day check comes up with: in play, never in the slot (D-0251).
+## The --money= dev flag the mid-day check comes up with: an opening and a cut day do not write it
+## (D-0251); a closed day would, it saves what is in play (guardado.md §4).
 const DEV_MONEY: int = 99_999
 ## Where the mid-day check pushes the pallet jack (shed frame, metres): nothing a cut day did reaches the slot.
 const MOVED_JACK: Vector2 = Vector2(1.5, -2.0)
+## saved_at planted in the slot: a write at any moment of this run would give another one.
+const OLD_SAVED_AT: int = 1_000_000
 
 var _failures: int = 0
 
@@ -55,6 +60,7 @@ func _run() -> void:
 	await _check_close_and_kill()
 	await _check_leave_in_summary()
 	await _check_leave_mid_day()
+	_check_mark_interrupted()
 	await _check_close_early()
 	await _check_buy_in_summary()
 	RpcGuard.reset()
@@ -145,6 +151,7 @@ func _check_leave_mid_day() -> void:
 		"A new company's slot holds day 1's opening without the dev flags: money %s saved, %s in play"
 		% [opening.get("money"), state.get(&"money")])
 	var opening_pallets: Dictionary = opening.get("pallets", {})
+	_plant_saved_at(SLOT)
 	host.day_cycle.ticks = func() -> int: return Time.get_ticks_msec() + LATER_MSEC
 	host.day_cycle.poll()
 	_expect(host.day_cycle.phase() == DayCycle.Phase.OPERATING,
@@ -164,6 +171,8 @@ func _check_leave_mid_day() -> void:
 		"Leaving mid-day marks day 1 interrupted (D-2005) (got day %s)" % company.get("day"))
 	_expect(company == opening,
 		"...and writes nothing of it: the company in the slot is the opening, untouched (D-0251)")
+	_expect(int(raw.get("saved_at", 0)) == OLD_SAVED_AT,
+		"...and saved_at stays, it sorts the menu's slots (got %s)" % raw.get("saved_at"))
 	var loaded: Node = _new_state()
 	CompanySave.load_into(loaded, SLOT, DIR)
 	var loaded_stock: Inventory = loaded.call(&"stock")
@@ -184,6 +193,37 @@ func _check_leave_mid_day() -> void:
 	loaded.free()
 	state.free()
 	_clean()
+
+
+## CompanySave.mark_interrupted() by itself (D-0251.2), without a world.
+func _check_mark_interrupted() -> void:
+	var empty_path: String = CompanySave.path_for("empty", DIR)
+	_expect(not CompanySave.mark_interrupted("empty", DIR), "An empty slot has nothing to mark")
+	_expect(not FileAccess.file_exists(empty_path) and not FileAccess.file_exists(empty_path + ".bak"),
+		"...and marking it creates no file")
+
+	var state: Node = _new_state()
+	state.call(&"new_company", "Mark SRL")
+	_expect(CompanySave.save(state, "whole", DIR), "A slot to mark")
+	_plant_saved_at("whole")
+	var whole: Dictionary = _raw("whole")
+	_expect(CompanySave.mark_interrupted("whole", DIR), "A saved slot is marked")
+	var marked: Dictionary = _raw("whole")
+	_expect(CompanySave.was_interrupted("whole", DIR) and marked.get("company") == whole.get("company")
+		and int(marked.get("saved_at", 0)) == OLD_SAVED_AT,
+		"...and only the key changes: company and saved_at stay (got saved_at %s)" % marked.get("saved_at"))
+
+	_expect(CompanySave.save(state, "bak", DIR), "A slot for the .bak")
+	_plant_saved_at("bak")
+	var bak_company: Variant = _raw("bak").get("company")
+	var bak_path: String = CompanySave.path_for("bak", DIR)
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(bak_path),
+		ProjectSettings.globalize_path(bak_path + ".bak"))
+	_expect(CompanySave.mark_interrupted("bak", DIR), "With only its .bak left, the slot is marked from it")
+	_expect(FileAccess.file_exists(bak_path) and CompanySave.was_interrupted("bak", DIR)
+		and _raw("bak").get("company") == bak_company and int(_raw("bak").get("saved_at", 0)) == OLD_SAVED_AT,
+		"...and the file is back, with the .bak's company and saved_at")
+	state.queue_free()
 
 
 func _check_close_early() -> void:
@@ -269,6 +309,13 @@ func _kill(host: LiveDayRoot) -> void:
 	await process_frame
 
 
+## Rewrites the slot's saved_at as if it had been saved long ago.
+func _plant_saved_at(slot: String) -> void:
+	var raw: Dictionary = _raw(slot)
+	raw["saved_at"] = OLD_SAVED_AT
+	_expect(SafeJson.write(CompanySave.path_for(slot, DIR), raw), "saved_at planted in %s" % slot)
+
+
 ## A CompanyState of its own (not the autoload), in the tree so its facts reach EventBus.
 func _new_state() -> Node:
 	var state: Node = (load(STATE_SCRIPT) as GDScript).new()
@@ -277,8 +324,8 @@ func _new_state() -> Node:
 	return state
 
 
-func _raw() -> Dictionary:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(CompanySave.path_for(SLOT, DIR)))
+func _raw(slot: String = SLOT) -> Dictionary:
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(CompanySave.path_for(slot, DIR)))
 	return raw if raw is Dictionary else {}
 
 
