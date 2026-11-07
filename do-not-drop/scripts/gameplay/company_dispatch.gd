@@ -14,16 +14,18 @@ extends Node
 ##   open), so DispatchZone would never see a live box; when it is, nothing here changes;
 ## - the vehicle: the first of the fleet (CompanyFleet) that is in the yard, not out and with nothing staged
 ##   (CompanyTrips.has_cargo(): stage_cargo() replaces what was staged), with the numbers of its
-##   VehicleDefinition (cargo_slots, cargo_kg) and its name (WORLD_VEHICLE_*);
+##   VehicleDefinition (cargo_kg; cargo_slots only as far as its rack has room, a box that came back from a trip
+##   takes one up, DispatchRack.with_free_slots()) and its name (WORLD_VEHICLE_*);
 ## - the rules: DispatchRules over the catalog's zones and gates and the company's gate state.
 ##
 ## Only the host loads (S3): "Load" is DispatchBoardPanel.confirm() -> DispatchZone.load_boxes() ->
-## CompanyTrips.stage_cargo(). A client sees the same list from its own copy of the packages and the book
-## but with Load off and the reason. The boxes it loads are remembered here (_loaded) so they leave the list
-## although they still lie in the zone; the clients don't know it (open: D-0310.c replicates the zone with
-## box_dispatched / box_undispatched, row 17 of red-autoridad.md, and D-0717.b carries the boxes to the
-## vehicle's PackageMountPoints, row 18). Meanwhile the host's trip book learns the loaded orders (_bridge())
-## so the trip can start when the vehicle crosses the gate.
+## CompanyTrips.stage_cargo(), and then the boxes go on the vehicle's rack (DispatchRack.store(), D-0717.b): they
+## leave the zone on every peer, through the packages' own synchronizers (row 18 of red-autoridad.md, no event). A
+## client sees the same list from its own copy of the packages and the book but with Load off and the reason. The
+## host remembers what it loaded (_loaded): a box taken back down leaves the cargo, when the board reads it
+## (scan()) or when the vehicle crosses the gate (CompanyTrips.left_behind), so nothing goes out on paper only. The
+## host's trip book learns the loaded orders (_bridge()) so the trip can start when the vehicle crosses the gate;
+## then CompanyTripsView takes them out in the shared book, on every peer (D-0302.2.b.3).
 ##
 ## While the board is open the mouse is free and the local player's input is off; closing gives both back.
 ## No RPC and no random roll here: nothing is placed or decided apart from the host's own loading.
@@ -99,6 +101,8 @@ static func add_to(root: Node) -> CompanyDispatch:
 		builder.busy = func() -> bool:
 			return dispatch.is_open() or (before.is_valid() and bool(before.call()))
 	root.add_child(dispatch)
+	if dispatch.trips != null:
+		dispatch.trips.left_behind = dispatch.left_behind
 	var bus: Node = root.get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"depot_station_opened", dispatch._on_station_opened)
@@ -162,7 +166,7 @@ func can_act() -> bool:
 func context() -> Dictionary:
 	var zone: DispatchZone = scan()
 	var body: Node3D = available_vehicle()
-	var vehicle: VehicleDefinition = definition_of(body)
+	var vehicle: VehicleDefinition = DispatchRack.with_free_slots(definition_of(body), body)
 	var company: Object = net.company if net != null else null
 	var owned: Dictionary = {}
 	var opened: Array = []
@@ -183,7 +187,8 @@ func context() -> Dictionary:
 
 ## Reads the packages under World/Packages and returns the zone of the sealed boxes at rest inside the area,
 ## oldest first (the order they were put in the world). Fills the book copy, the weights and the orders of
-## those boxes. Boxes this peer loaded are left out; ones whose package is gone are forgotten.
+## those boxes. Boxes this peer loaded are left out while they ride; one taken down again leaves the cargo and
+## counts as any other; ones whose package is gone are forgotten.
 func scan() -> DispatchZone:
 	var zone := DispatchZone.new(area_of(shed))
 	_kg.clear()
@@ -195,9 +200,12 @@ func scan() -> DispatchZone:
 			if package == null:
 				continue
 			live[package.package_id] = true
-			if _loaded.has(package.package_id) or not zone.contains(package.global_position):
-				continue
-			_read_box(zone, package)
+			if _loaded.has(package.package_id):
+				if package.is_aboard():
+					continue
+				_take_off(package.package_id)
+			if zone.contains(package.global_position):
+				_read_box(zone, package)
 	for box_id: Variant in _loaded.keys():
 		if not live.has(box_id):
 			_loaded.erase(box_id)
@@ -228,7 +236,8 @@ func bay_vehicles(first: Node3D, first_def: VehicleDefinition) -> Array:
 	for body: Node3D in fleet.vehicles():
 		if bay.size() >= DispatchBay.MAX_VEHICLES:
 			break
-		var def: VehicleDefinition = first_def if body == first else definition_of(body)
+		var def: VehicleDefinition = first_def if body == first \
+			else DispatchRack.with_free_slots(definition_of(body), body)
 		if def == null or not _in_bay(body):
 			continue
 		bay.append({"id": StringName(body.name), "def": def})
@@ -341,17 +350,38 @@ func _weight_of(package: DeliveryPackage) -> float:
 	return BoxScale.real_kg(box, products)
 
 
-## The panel loaded `boxes` (the host): they leave the list although they lie in the zone, and the host's trip
-## book learns their orders.
-func _on_loaded(_vehicle_id: StringName, boxes: Array[StringName]) -> void:
+## Host: true when `box_id`, loaded by the board, is not riding any more (CompanyTrips.left_behind, at the gate): its
+## package is gone, or in hands or on the ground. A box this board did not load has no say here.
+func left_behind(box_id: StringName) -> bool:
+	if not _loaded.has(box_id):
+		return false
+	var package: DeliveryPackage = DispatchRack.package_of(packages, box_id)
+	return package == null or not package.is_aboard()
+
+
+## The panel loaded `boxes` on `vehicle_id` (the host): they go on its rack and the host's trip book learns their
+## orders. One with no place there (its package went, the rack filled up meanwhile) leaves the cargo and waits.
+func _on_loaded(vehicle_id: StringName, boxes: Array[StringName]) -> void:
+	var body: Node3D = fleet.vehicle(String(vehicle_id)) if fleet != null and is_instance_valid(fleet) else null
+	var placed: Array[StringName] = DispatchRack.store(body, packages, boxes)
 	for box_id: StringName in boxes:
-		_loaded[box_id] = true
-	_bridge(boxes)
+		if placed.has(box_id):
+			_loaded[box_id] = true
+		elif trips != null:
+			trips.unstage_box(box_id)
+	_bridge(placed)
 
 
-## Stop-gap until the trips share the order book (rows 17, 19 and 20 of red-autoridad.md, D-0302.2.b.3):
-## CompanyTrips keeps its own book, empty in the live game, so a trip would not know the orders it carries.
-## The loaded orders are copied there as PACKED with their box (the shared book is not written).
+## A box this peer loaded is off the rack: it no longer counts as cargo.
+func _take_off(box_id: StringName) -> void:
+	_loaded.erase(box_id)
+	if trips != null:
+		trips.unstage_box(box_id)
+
+
+## CompanyTrips keeps its own book (the door settles on it, D-2016.2), empty in the live game, so a trip would not
+## know the orders it carries: the loaded orders are copied there as PACKED with their box. The shared book follows
+## the trip's events (CompanyTripsView); it is not written here.
 func _bridge(boxes: Array[StringName]) -> void:
 	if trips == null or net == null:
 		return
