@@ -44,6 +44,9 @@ const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_thro
 ## The script the NetworkManager autoload runs, as a type (N-224.4): world_seed
 ## lives there, not in NetSession, so a rename fails to compile here.
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
+## The group of the two stop lines: painted like a lane line, but the line to stop at before the train.
+## A group and not a name, because the second box of one name loses it when it joins the tree.
+const STOP_LINE_GROUP: StringName = &"crossing_stop_line"
 const APPROACH_TRIGGER: float = 55.0
 ## A truck this close to the tracks as the train clears waited for it.
 const WAIT_RANGE: float = 35.0
@@ -143,8 +146,11 @@ func _build() -> void:
 			Vector3(side * PORTAL_X, 0.0, track_z), 0.0 if side > 0.0 else PI))
 		if portal != null:
 			portal.set_meta(&"rigid", true)
-	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(1.5, 0.03, track_z + 5.5), MARKING)
-	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(-1.5, 0.03, track_z - 5.5), MARKING)
+	for stop_line: Node3D in [
+		_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(1.5, 0.03, track_z + 5.5), MARKING),
+		_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(-1.5, 0.03, track_z - 5.5), MARKING),
+	]:
+		stop_line.add_to_group(STOP_LINE_GROUP)
 	for side: float in [-1.0, 1.0]:
 		_build_signal(Vector3(side * 5.6, 0.0, track_z + side * 3.2), side)
 	_build_train()
