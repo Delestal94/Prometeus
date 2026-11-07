@@ -38,6 +38,10 @@ signal supplier_board_opened
 const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
 const LINTEL_BOTTOM: float = 3.0
+## How far the colliders that stand on the floor go on under it (m, root_in_floor()), and how close to the floor their
+## foot has to be to count.
+const FLOOR_ROOT_M: float = 1.0
+const FLOOR_LEVEL_SLACK_M: float = 0.02
 const FLOOR_COLOR: Color = Color(0.42, 0.42, 0.44)
 ## Warehouse slab (D-0911 "Suelo del galpón"): tx_detail_concrete_512 has one saw-cut joint per axis
 ## on its border, so with one repetition every FLOOR_SLAB_M metres the joints fall on world multiples
@@ -237,6 +241,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 		live_uids[uid] = true
 		_build_piece(kit, uid, def, piece, furniture)
 	kit.commit("Batch")
+	root_in_floor(kit.body as Node3D)
 	for uid: Variant in stations.keys():
 		if not live_uids.has(uid):
 			stations.erase(uid)
@@ -319,6 +324,21 @@ static func solid_box(box_name: String, size: Vector3, center: Vector3, color: C
 	return body
 
 
+## Roots the box colliders under `body` that stand on the shed's floor FLOOR_ROOT_M into the ground (only the
+## colliders: nothing drawn changes). A box stopped against a collider that ends at floor level has its shortest way out
+## under it: forks swung into a wall in one tick (ForkliftBody) would drag the whole driver into the floor instead of
+## out of the wall.
+static func root_in_floor(body: Node3D) -> void:
+	for child: Node in body.get_children():
+		var shape := child as CollisionShape3D
+		if shape == null or not (shape.shape is BoxShape3D):
+			continue
+		var box := shape.shape as BoxShape3D
+		if absf(body.position.y + shape.position.y - box.size.y * 0.5) < FLOOR_LEVEL_SLACK_M:
+			box.size.y += FLOOR_ROOT_M
+			shape.position.y -= FLOOR_ROOT_M * 0.5
+
+
 # --- Shell: floor, walls with the two gates open ---
 
 
@@ -352,6 +372,9 @@ func _build_shell() -> void:
 		wall_material()))
 	shell.add_child(solid_box("WallRight", side, Vector3(half.x + WALL_THICKNESS * 0.5, y, 0.0), WALL_COLOR,
 		wall_material()))
+	for wall: Node in shell.get_children():
+		if wall.name != &"Floor":
+			root_in_floor(wall as Node3D)
 
 
 ## A wall along X at depth `z` from x0 to x1 with a gap `gap` (x range): two pieces and a lintel.
@@ -816,6 +839,7 @@ func _make_pallet(entry: Dictionary, at: Vector3) -> Node3D:
 	shape.shape = box_shape
 	shape.position = bounds.get_center()
 	body.add_child(shape)
+	root_in_floor(body)
 	var label := Label3D.new()
 	label.name = "Label"
 	label.text = _pallet_text(entry)

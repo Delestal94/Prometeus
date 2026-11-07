@@ -161,6 +161,7 @@ func _build() -> void:
 	shape.shape = box_shape
 	shape.position = Vector3(0.0, DECK_TOP * 0.5, 0.0)
 	body.add_child(shape)
+	CompanyShed.root_in_floor(body)
 	add_child(body)
 	load_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_LOAD, Vector3(0.1, 0.7, 0.0), 0.45)
 	push_point = PickingCartPoint.make(cart.id, PickingCartPoint.ACTION_GRIP,

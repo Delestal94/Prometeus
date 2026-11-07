@@ -75,6 +75,10 @@ var _drawn_driver: int = 0
 var _local_driving: bool = false
 var _sent_dir: int = 0
 var _sent_msec: int = 0
+## The way the forks were going when they met something (-1, 1; 0: they did not) and the height they stay at until
+## the host's answer to the stop comes back (the local driver's).
+var _brake_dir: int = 0
+var _brake_at: float = 0.0
 ## The last request whose refusal the prompt shows (work, leave) and its act; -1 while it is being asked.
 var _shown_rid: int = 0
 var _shown_act: StringName = &""
@@ -116,7 +120,7 @@ func refresh(pallets: CompanyPallets) -> void:
 		var parked: Vector2 = state.at if state.at is Vector2 else _home
 		position = Vector3(parked.x, 0.0, parked.y)
 		rotation.y = state.yaw if state.at is Vector2 else rotation.y
-	_carriage.position.y = state.height_at(Time.get_ticks_msec())
+	_carriage.position.y = _height_to_draw(state, Time.get_ticks_msec())
 	_fit_driver_body()
 	_sync_local_driving()
 	_cue(state, Time.get_ticks_msec())
@@ -160,11 +164,22 @@ func _process(_delta: float) -> void:
 			_sync_local_driving()
 		if _local_driving:
 			_steer_mast(now)
-	_carriage.position.y = state.height_at(now)
+	_carriage.position.y = _height_to_draw(state, now)
 	_fit_driver_body()
 	_cue(state, now)
 	if state.driver == 0 and not state.moving_at(now):
 		set_process(false)
+
+
+## The height of the forks to draw at `now`: the state's, or where they met something while the host's answer to the
+## stop that asked for (_steer_mast()) is on its way.
+func _height_to_draw(state: CompanyForklift, now: int) -> float:
+	var height: float = state.height_at(now)
+	if _brake_dir != 0 and (state.mast_dir != _brake_dir or not state.moving_at(now)):
+		_brake_dir = 0
+	if _brake_dir == 0:
+		return height
+	return minf(height, _brake_at) if _brake_dir > 0 else maxf(height, _brake_at)
 
 
 ## The sounds and the beacon (ForkliftCues): somebody drives, and which way the forks go.
@@ -298,13 +313,22 @@ func _set_override(player: Node) -> void:
 ## The mast keys: a request when the direction changes, and again while it is held; none while it is held against
 ## the end of the mast the forks reached, nor a stop for forks that are still already (this peer's burst is over, so
 ## the host's is too). A stop says the height drawn here (`at_height`): the host leaves the forks where the driver
-## let go of the key, not a round trip further.
+## let go of the key, not a round trip further. Forks about to run into something (ForkliftBody.mast_blocked()) count
+## as let go there, whatever the key says: only this peer sees them, and pushed in they would lift the driver's body.
 func _steer_mast(now: int) -> void:
 	var dir: int = 0
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED or not keys_need_capture:
 		dir = int(signf(Input.get_axis(&"forklift_mast_down", &"forklift_mast_up")))
 	var drawn: float = fork_height()
-	if dir == 0 and _sent_dir != 0 and not _pallets.forklift.moving_at(now):
+	var moving: bool = _pallets.forklift.moving_at(now)
+	var going: int = dir if dir != 0 else (_pallets.forklift.mast_dir if moving else 0)
+	if going != 0 and ForkliftBody.mast_blocked(_driver_node, drawn, _carried_id != &"", going):
+		dir = 0
+		if _brake_dir != going:
+			_brake_dir = going
+			_brake_at = drawn
+			_sent_dir = going
+	if dir == 0 and _sent_dir != 0 and not moving:
 		_sent_dir = 0
 		return
 	var at_end: bool = (dir > 0 and drawn >= CompanyTuning.FORKLIFT_MAX_LIFT_M - CompanyForklift.END_M) \

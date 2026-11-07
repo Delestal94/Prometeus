@@ -49,7 +49,7 @@ static func on_foot_step(p: Player, delta: float) -> void:
 	if p.is_on_floor():
 		# Keep the body snapped to slopes when walking, but preserve a newly
 		# requested jump impulse instead of immediately overwriting it.
-		if Input.is_action_just_pressed(&"jump"):
+		if Input.is_action_just_pressed(&"jump") and p._sprint.can_jump():
 			p.velocity.y = Player.JUMP_VELOCITY
 			p.animator.play_one_shot(Player.ANIM_JUMP, Player.JUMP_ANIM_LOCK_MS)
 		else:

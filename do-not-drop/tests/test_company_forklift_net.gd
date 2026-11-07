@@ -7,6 +7,8 @@ extends SceneTree
 ## - the host puts the client on the forklift (PalletJackUse with the client's peer id, as CompanyRoot does when the
 ##   client uses the seat): the client's view takes the keys (the interact override), the host's does not, and the
 ##   client's player is marked `driving`;
+## - each peer puts the forklift's boxes on the driver's player by itself (ForkliftBody, D-0606.c4): the host, where it
+##   is another peer's player, and the client, where it is its own;
 ## - the client's mast key: held, the forks rise on both peers with its requests; let go, the host stops them at the
 ##   height the client drew (the stop's at_height, within what the forks cover in the client's ENet round trip:
 ##   CompanyForklift.stop_height()), and both peers agree;
@@ -45,8 +47,8 @@ class Peer:
 	var restored: Array[int] = []
 
 
-## The client's player: a body in the group, with its peer, hands and reach.
-class FakePlayer extends Node3D:
+## The client's player: a body in the group, with its peer, hands and reach. Both peers share it in this one process.
+class FakePlayer extends CharacterBody3D:
 	var carried_package: Variant = null
 
 	func reach_origin() -> Vector3:
@@ -149,6 +151,16 @@ func _play(client: ENetMultiplayerPeer) -> void:
 		and not host_view.is_local_driving() and _driver.has_meta(&"interact_override")
 		and _driver.has_meta(ForkliftView.DRIVING_META),
 		"The client drives on both peers: its view has the keys, the host's does not, its player is marked")
+
+	# The boxes, each peer's own doing: the body is one here, so one view at a time is left to put them.
+	for pair: Array in [[view, "the host, on another peer's player"], [host_view, "the client, on its own player"]]:
+		var quiet: ForkliftView = pair[0]
+		quiet.set_process(false)
+		ForkliftBody.detach(_driver)
+		await process_frame
+		await process_frame
+		_expect(ForkliftBody.is_on(_driver), "The forklift's boxes are put on by %s" % pair[1])
+		quiet.set_process(true)
 
 	# The mast, by the client's key: up for a while, then let go right after one of its requests came back.
 	view.keys_need_capture = false
