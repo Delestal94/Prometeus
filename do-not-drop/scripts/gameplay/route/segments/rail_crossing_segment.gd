@@ -143,8 +143,9 @@ func _build() -> void:
 			Vector3(side * PORTAL_X, 0.0, track_z), 0.0 if side > 0.0 else PI))
 		if portal != null:
 			portal.set_meta(&"rigid", true)
-	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(1.5, 0.03, track_z + 5.5), MARKING)
-	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(-1.5, 0.03, track_z - 5.5), MARKING)
+	# Two names: a second box of one name loses it, and StreetSurface finds these by name.
+	_box("CrossingStopLineNear", Vector3(6.0, 0.02, 0.35), Vector3(1.5, 0.03, track_z + 5.5), MARKING)
+	_box("CrossingStopLineFar", Vector3(6.0, 0.02, 0.35), Vector3(-1.5, 0.03, track_z - 5.5), MARKING)
 	for side: float in [-1.0, 1.0]:
 		_build_signal(Vector3(side * 5.6, 0.0, track_z + side * 3.2), side)
 	_build_train()

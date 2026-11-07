@@ -12,10 +12,23 @@ extends RefCounted
 ## - The verge: every box in RouteSegment.SHOULDER (the `Ground` under the roadway) gets the grass.
 ## - Lane lines (StraightSegment's EdgeMarking / CenterMarking, CurveSegment's EdgeLine: every mesh in
 ##   RouteSegment.MARKING or the centre line's grey) only on asphalt: on gravel, dirt and cobble they are
-##   hidden. By colour, not by name: a piece's second line of the same name is renamed by Godot.
-## Only what is drawn changes: the boxes, their collision and their size stay (the roadway is still the
-## 12 m box Centro's sidewalks are laid against, CentroDecor.ROADWAY_HALF_WIDTH). One ShaderMaterial per
-## surface for the whole map, shared by every piece (material()).
+##   hidden. By colour, not by name: a piece's second line of the same name is renamed by Godot. What is
+##   not a lane line stays on every surface: a rail crossing's CrossingStopLine, the line to stop at
+##   before the train (KEPT_LINES).
+## Where two streets cross their boxes overlap with the same top: each surface is drawn a few millimetres
+## over the one below it (LIFT, the shader's `lift`), so the crossing shows one of them, asphalt over
+## cobble over gravel over dirt, instead of a flickering wedge of both. Only the drawing moves.
+##
+## The boxes, their collision and their size stay (the roadway is still the 12 m box Centro's sidewalks
+## are laid against, CentroDecor.ROADWAY_HALF_WIDTH). One ShaderMaterial per surface for the whole map,
+## shared by every piece (material()).
+##
+## What a street looks like is what it does (the D-0304 review): the grip follows the drawn surface. A
+## piece of a street that is loose (GRIP) gets a GripArea over its visible roadway, so a gravel street's
+## curve holds like its gravel patches and a dirt track's straight like dirt; a GravelSegment and a
+## MudSegment bring their own. A bridge's deck is not the street's surface: it has no area. The bodies of
+## the roadway and the verge carry the same fact for a runner: AUDIO_META (the footsteps,
+## GelPlayerAudio._surface_from_collider) and ROUGHNESS_META (the trip, PlayerSprint.ground_roughness).
 
 const SHADER: Shader = preload("res://shaders/street_surface.gdshader")
 const DETAIL_FORMAT: String = "res://assets/textures/detail/tx_detail_%s_512.png"
@@ -30,6 +43,27 @@ const FALLBACK: StringName = &"asphalt"
 const MARKED: Array[StringName] = [&"asphalt"]
 ## The colours a piece paints its lane lines with: RouteSegment.MARKING and StraightSegment's centre line.
 const LINE_COLOURS: Array[Color] = [RouteSegment.MARKING, Color("8c9994")]
+## Lines painted in those colours that are not lane lines: they stay on every surface.
+const KEPT_LINES: Array[String] = ["CrossingStopLine"]
+## How far over the box's top each surface is drawn (m): where two streets cross, the higher one shows. With
+## the shader's lift_by_heading on top it stays under the lowest lane line (StraightSegment's CenterMarking
+## starts 2.2 cm over the road); the verge's box is well under the roadway already.
+const LIFT: Dictionary = {&"asphalt": 0.016, &"cobble": 0.012, &"gravel": 0.008, &"dirt": 0.004}
+## wheel_friction_slip on a street whose surface is loose (the wheels' own 3.5 elsewhere). Gravel is
+## GravelSegment.reduced_friction_slip; packed earth holds better than that and than a mud pit (1.2).
+const GRIP: Dictionary = {&"gravel": 1.1, &"dirt": 1.6}
+## The name of the GripArea on a piece.
+const GRIP_NODE: StringName = &"SurfaceGrip"
+## Metadata of a roadway or verge body: the footsteps' surface (GelSounds.SURFACE_NAMES).
+const AUDIO_META: StringName = &"gel_audio_surface"
+## Metadata of a roadway or verge body: how rough it is underfoot, on Route.ground_roughness()'s scale.
+const ROUGHNESS_META: StringName = &"ground_roughness"
+## Each surface's [AUDIO_META, ROUGHNESS_META]. Setts are hard underfoot and a little uneven; the synth has
+## no footstep of their own, so they sound like the road.
+const UNDERFOOT: Dictionary = {
+	&"asphalt": [&"road", 0.0], &"cobble": [&"road", 0.1], &"gravel": [&"gravel", 1.0], &"dirt": [&"soft", 0.5],
+	&"verge": [&"soft", 0.25],
+}
 ## The detail maps the shader reads, by uniform prefix (<name>_detail).
 const DETAILS: Array[String] = ["asphalt", "gravel", "earth", "stone", "grass"]
 
@@ -43,6 +77,7 @@ static func material(surface: StringName) -> ShaderMaterial:
 		var made := ShaderMaterial.new()
 		made.shader = SHADER
 		made.set_shader_parameter(&"surface", VERGE_INDEX if key == VERGE else int(SURFACES[key]))
+		made.set_shader_parameter(&"lift", float(LIFT.get(key, 0.0)))
 		for detail: String in DETAILS:
 			var path: String = DETAIL_FORMAT % detail
 			if ResourceLoader.exists(path):
@@ -82,6 +117,7 @@ static func apply(segment: RouteSegment, street_surface: StringName) -> Dictiona
 	var verge: ShaderMaterial = material(VERGE)
 	var marked: bool = MARKED.has(surface)
 	var done: Dictionary = {"road": 0, "verge": 0, "lines_hidden": 0}
+	var roadway: Array[MeshInstance3D] = []
 	var pending: Array[Node] = [segment]
 	while not pending.is_empty():
 		var node: Node = pending.pop_back()
@@ -93,16 +129,50 @@ static func apply(segment: RouteSegment, street_surface: StringName) -> Dictiona
 		if colour == RouteSegment.ROAD or colour == GravelSegment.GRAVEL:
 			mesh.material_override = road
 			done.road += 1
+			# A hidden box is only collision: what is drawn there (a bridge's deck) is not this surface.
+			if mesh.visible:
+				roadway.append(mesh)
+				_tag_underfoot(mesh.get_parent(), surface)
 		elif colour == RouteSegment.SHOULDER:
 			mesh.material_override = verge
 			done.verge += 1
-		elif not marked and LINE_COLOURS.has(colour) and mesh.visible:
+			_tag_underfoot(mesh.get_parent(), VERGE)
+		elif not marked and is_line(mesh) and mesh.visible:
 			mesh.visible = false
 			done.lines_hidden += 1
+	if segment is MudSegment:
+		_tag_underfoot(segment.get_node_or_null(^"Road"), &"dirt")
+	_add_grip(segment, surface, roadway)
 	return done
 
 
-## True for a mesh painted as a lane line (LINE_COLOURS).
+## True for a mesh painted as a lane line (LINE_COLOURS, not KEPT_LINES).
 static func is_line(mesh: MeshInstance3D) -> bool:
 	var paint := mesh.material_override as StandardMaterial3D
-	return paint != null and LINE_COLOURS.has(paint.albedo_color)
+	if paint == null or not LINE_COLOURS.has(paint.albedo_color):
+		return false
+	return not KEPT_LINES.any(func(kept: String) -> bool: return kept in String(mesh.get_parent().name))
+
+
+## Tells whoever stands on `body` what it is (see UNDERFOOT).
+static func _tag_underfoot(body: Node, surface: StringName) -> void:
+	if body is StaticBody3D:
+		body.set_meta(AUDIO_META, UNDERFOOT[surface][0])
+		body.set_meta(ROUGHNESS_META, UNDERFOOT[surface][1])
+
+
+## A GripArea over `roadway` when the piece's surface is loose. A GravelSegment and a MudSegment have their own.
+static func _add_grip(segment: RouteSegment, surface: StringName, roadway: Array[MeshInstance3D]) -> void:
+	if not GRIP.has(surface) or roadway.is_empty() or segment is GravelSegment or segment is MudSegment:
+		return
+	if segment.get_node_or_null(NodePath(GRIP_NODE)) != null:
+		return
+	var area := GripArea.new()
+	area.name = GRIP_NODE
+	area.slip = GRIP[surface]
+	segment.add_child(area)
+	var to_piece: Transform3D = segment.global_transform.affine_inverse()
+	for mesh: MeshInstance3D in roadway:
+		var size: Vector3 = (mesh.mesh as BoxMesh).size
+		var top: Transform3D = mesh.global_transform.translated_local(Vector3.UP * size.y * 0.5)
+		area.add_box(to_piece * top, Vector2(size.x, size.z))

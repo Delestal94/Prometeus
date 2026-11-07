@@ -200,6 +200,23 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/runtime-audit/render-gel-legibility.log"
           test "$(find "$RUNNER_TEMP/runtime-audit/captures" -type f -name 's311_69_*.png' | wc -l)" -eq 7
 
+      # D-0304: the street shader only compiles with a real renderer, never in the headless tests.
+      - name: Compile the street shader
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          XDG_DATA_HOME: ${{ runner.temp }}/godot-userdata
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          log="$RUNNER_TEMP/runtime-audit/render-company-edges.log"
+          timeout 240 xvfb-run -a "$GODOT" --path do-not-drop --audio-driver Dummy --resolution 1280x720 \
+            --script res://tests/render_company_edges.gd 2>&1 | tee "$log"
+          if grep -q "SHADER ERROR" "$log"; then
+            echo "::error::a shader does not compile, see render-company-edges.log"
+            exit 1
+          fi
+          find "$XDG_DATA_HOME" -type f -name 'render_company_edge_junction_*.png' -exec cp {} "$RUNNER_TEMP/runtime-audit/captures/" \;
+
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"

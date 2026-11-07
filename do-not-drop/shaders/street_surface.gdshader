@@ -5,8 +5,11 @@ render_mode diffuse_burley;
 // lays, drawn by the street's surface instead of RouteSegment's flat colour boxes (N-323). StreetSurface
 // (scripts/gameplay/districts/street_surface.gd) makes one material per surface and puts it on the boxes.
 // Everything that is grain or pattern is read in world space, so it runs on across the joints between
-// pieces and between a curve's chords, and two boxes that overlap there draw the same colour (no flicker).
-// The box's own x (0 on the centre line, +-6 at the edges of the 12 m roadway) places the wheel tracks.
+// pieces and between a curve's chords. The box's own x (0 on the centre line, +-6 at the edges of the 12 m
+// roadway) places the wheel tracks, the edges and the crown, and that does differ between two boxes: so
+// that where they overlap (a crossing, a curve's chords) they never share a depth, each is drawn a few
+// millimetres off the box's top: `lift` by surface, the priority at a crossing, and a little more the
+// more it runs east-west, which tells apart two streets of one surface (one has to win, steadily).
 // Palette: route_terrain.gdshader's asphalt, gravel, earth and grass, so a street of the company world
 // reads as the same road as the delivery run's.
 
@@ -17,6 +20,11 @@ uniform int surface : hint_range(0, 4) = 0;
 uniform float half_width : hint_range(1.0, 12.0) = 6.0;
 // Where the wheels run, from the centre of each lane (m): a van's track is about 1.8 m.
 uniform float track_offset : hint_range(0.3, 1.5) = 0.85;
+// How far over the box the surface is drawn (m), StreetSurface.LIFT. Never the collision.
+uniform float lift : hint_range(0.0, 0.02) = 0.0;
+// Added to `lift` for a street along the world's x axis, nothing for one along z. Less than the step
+// between two surfaces' lifts, or it would change which shows.
+uniform float lift_by_heading : hint_range(0.0, 0.004) = 0.003;
 
 group_uniforms detail;
 // Greyscale grain maps (art/tools/make_detail_textures.py), the terrain's: white (no-op) when missing.
@@ -61,6 +69,10 @@ float wheel_tracks(float x, float wobble) {
 }
 
 void vertex() {
+	// Not the verge: it reads no `lateral`, two of its boxes draw the same.
+	if (surface != 4) {
+		VERTEX.y += lift + lift_by_heading * abs(MODEL_MATRIX[2].x);
+	}
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	lateral = VERTEX.x;
 	facing_up = (MODEL_NORMAL_MATRIX * NORMAL).y;
@@ -111,7 +123,8 @@ vec3 dirt(vec2 p, float broad, float grain) {
 }
 
 vec3 cobble(vec2 p, float broad, float grain) {
-	vec2 q = p / sett_size;
+	vec2 grid = p / sett_size;
+	vec2 q = grid;
 	float row = floor(q.y);
 	q.x += mod(row, 2.0) * 0.5;
 	vec2 cell = floor(q);
@@ -133,7 +146,8 @@ vec3 cobble(vec2 p, float broad, float grain) {
 	// take about 2 * joint * (1 / width + 1 / depth) of the street), so they do not shimmer.
 	float joints = clamp(2.0 * joint * (1.0 / sett_size.x + 1.0 / sett_size.y), 0.0, 1.0);
 	vec3 average = mix(mix(dark, light, 0.5) * 0.93 * grain_map, mortar, joints);
-	float far = smoothstep(0.12, 0.75, max(fwidth(q.x), fwidth(q.y)));
+	// Off `grid`, not `q`: q.x jumps half a stone between rows, a huge derivative along that line.
+	float far = smoothstep(0.12, 0.75, max(fwidth(grid.x), fwidth(grid.y)));
 	colour = mix(colour, average, far);
 	// The wheels polish it a little.
 	return colour * (1.0 + wheel_tracks(lateral, broad * 0.15) * 0.05);
