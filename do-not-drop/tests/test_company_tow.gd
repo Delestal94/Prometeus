@@ -17,11 +17,15 @@ extends SceneTree
 ##   WORLD_TOW_NOT_YOURS); after the tow nobody has the wheel (no driver, controls off).
 ## - The request, trip_tow through CompanyNet: it ends in the same tow (the host's own request is a peer's), a refusal
 ##   comes back as request_rejected with the key, a vehicle that is not a short id is bad_data.
+## - The tow and the recovery bring the bay along (D-0307.1.f): a box on the rack and one loose on the bay's floor
+##   end up in the van in the playon, still, a box that fell off stays on the road and gives its mount back, and the
+##   board offers the van with the mounts it really has. A van that falls through the world keeps its cargo the same
+##   way.
 ## - The offer's text (WORLD_TOW_OFFER, the price in it) and the day summary's line for reason `tow`.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const DIR: String = "user://test_company_tow"
-const HEN: Resource = preload("res://data/products/hen.tres")
+const HEN: ProductDefinition = preload("res://data/products/hen.tres")
 const VAN: StringName = &"van_classic"
 
 var _failures: int = 0
@@ -182,6 +186,7 @@ func _check_world(state: Node) -> void:
 	_expect(_rejected.size() == 5 and _rejected.slice(2).all(func(r: Array) -> bool:
 		return r[1] == CompanyTowNet.REASON_BAD_DATA),
 		"A vehicle that is not a short id is bad_data (%s)" % [_rejected])
+	await _check_cargo(level, tow, van, state)
 	_free(level)
 
 
@@ -198,6 +203,81 @@ func _go_out(level: CompanyRoot, van: Node3D, order: StringName, box: StringName
 		van.global_position = Vector3(at.x, van.global_position.y, at.z)
 		await physics_frame
 		await physics_frame
+
+
+## A sealed box, in the packages of `level`, with the id `box_<order>`.
+func _box(level: CompanyRoot, order: StringName) -> DeliveryPackage:
+	var box := PackedBox.new(&"M")
+	box.place(HEN, Vector3i.ZERO)
+	box.taped = true
+	box.label_order_id = order
+	var package: DeliveryPackage = BoxToPackage.build(box, {&"hen": HEN})
+	level.packages.add_child(package)
+	return package
+
+
+## Moves `van` flat to `to`, as driving there would, with the boxes that ride on it. `height`: its new height, when
+## given.
+func _carry(van: Node3D, riding: Array[DeliveryPackage], to: Vector3, height: float = INF) -> void:
+	var local: Array[Vector3] = []
+	for package: DeliveryPackage in riding:
+		local.append(van.to_local(package.global_position))
+	van.global_position = Vector3(to.x, van.global_position.y if height == INF else height, to.z)
+	for index: int in riding.size():
+		riding[index].global_position = van.to_global(local[index])
+		riding[index].linear_velocity = Vector3.ZERO
+		riding[index].reset_physics_interpolation()
+
+
+## Whether `package` is in `van`'s bay and at rest, or close to it.
+func _at_rest_in(van: Node3D, package: DeliveryPackage) -> bool:
+	return bool(van.call(&"carries", package.global_position)) and package.linear_velocity.length() < 1.0
+
+
+## A van out with a box on the rack, one on the floor of the bay and one that fell on the road, towed; then it falls.
+func _check_cargo(level: CompanyRoot, tow: CompanyTow, van: Node3D, state: Node) -> void:
+	await _go_out(level, van, &"o_c", &"box_c")
+	state.earn(CompanyTuning.TOW_COST, &"order_paid")
+	var on_rack: DeliveryPackage = _box(level, &"rack")
+	var on_floor: DeliveryPackage = _box(level, &"floor")
+	var fell: DeliveryPackage = _box(level, &"fell")
+	var boxes: Array[StringName] = [on_rack.package_id, on_floor.package_id, fell.package_id]
+	_expect(DispatchRack.store(van, level.packages, boxes) == boxes, "Setup: the three boxes are on the rack")
+	on_floor.release_mount()
+	on_floor.global_position = van.to_global(Vector3(0.0, 0.4, 2.0))
+	await physics_frame
+	var riding: Array[DeliveryPackage] = [on_rack, on_floor]
+	fell.freeze = true
+	var road: Vector3 = fell.global_position
+	_carry(van, riding, van.global_position - level.shed.global_basis.z * 120.0)
+	for _tick: int in range(30):
+		await physics_frame
+	_expect(fell.is_loaded, "Setup: the box that stayed on the road still says it is loaded")
+	tow.set_broken(VAN, true)
+	_expect(bool(tow.tow(VAN)["ok"]), "The van with its cargo is towed")
+	for _tick: int in range(120):
+		await physics_frame
+	var home: Transform3D = CompanyFleet.park_transform(level.shed, level.net.company, 0)
+	_expect(van.global_position.distance_to(home.origin) < 0.2, "The van is in its place in the playon")
+	_expect(_at_rest_in(van, on_rack) and on_rack.is_loaded and on_rack.current_mount != null
+		and on_rack.current_mount.get(&"occupied_by") == on_rack,
+		"The box on the rack came with it (box %s, van %s)" % [on_rack.global_position, van.global_position])
+	_expect(_at_rest_in(van, on_floor), "...and the one on the floor (box %s)" % on_floor.global_position)
+	_expect(not fell.is_loaded and fell.global_position.distance_to(road) < 0.5,
+		"The box that fell stays on the road, off its mount (%s)" % fell.global_position)
+	_expect(DispatchRack.free_mounts(van).size() == 6, "One mount taken: the others are back (%d free)"
+		% DispatchRack.free_mounts(van).size())
+	var offered: VehicleDefinition = (level.get_node(^"Dispatch") as CompanyDispatch).context()["vehicle"]
+	_expect(offered != null and offered.cargo_slots == 6, "The board offers the van with those six")
+
+	# Through a hole in the ground, the boxes falling with it: back in the playon together.
+	_carry(van, riding, van.global_position, CompanyFleet.FALL_Y_M - 5.0)
+	for _tick: int in range(60):
+		await physics_frame
+	_expect(van.global_position.distance_to(home.origin) < 0.2, "The fallen van is back in the playon")
+	_expect(_at_rest_in(van, on_rack) and on_rack.is_loaded,
+		"...with the box on the rack (%s)" % on_rack.global_position)
+	_expect(_at_rest_in(van, on_floor), "...and the one on the floor (%s)" % on_floor.global_position)
 
 
 ## The offer's text carries the price; the day summary names reason `tow`.

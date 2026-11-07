@@ -45,6 +45,9 @@ extends SceneTree
 ##   with a hand-over and plays it out of physics; shown during the hand-over (the client's player
 ##   goes, so its next look shows everything), it stays at layer 0 / mask 0 (CompanyInterest doesn't
 ##   give a consumed box its loose layers back), and both copies go when the hand-over ends.
+## - D-0302.2.b.3: a box the host puts on a rack (DispatchRack.store(), what the board's "Load" does) has no event
+##   of its own: the client's copy says it is loaded through its synchronizer, the client's board stops listing it,
+##   and it is listed again once a hand takes it down.
 ## D-0318.1 (the host's package frozen in a cell that isn't loaded) is test_company_root's.
 
 const PORT: int = 24675
@@ -75,6 +78,14 @@ class Peer:
 	var made: Dictionary = {}
 	## {node name: synchronized signals its synchronizer fired here}.
 	var synced: Dictionary = {}
+
+
+## The vehicle of a rack: whatever is on it rides.
+class RackBody:
+	extends Node3D
+
+	func carries(_world_point: Vector3, _margin: float = 0.0) -> bool:
+		return true
 
 
 ## A session that says it is an online host: PackageHandling.consume() broadcasts _remote_consume only for
@@ -349,6 +360,7 @@ func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 	_expect(await _wait_for(func() -> bool: return int(_client.synced.get(&"Package_box_1", 0)) > 0),
 		"The client's copy gets the host's updates (its synchronizer resolved: %d)"
 		% int(_client.synced.get(&"Package_box_1", 0)))
+	await _check_on_rack(mine)
 	await _check_held_seal(client_id)
 	await _check_late_join(late, mine, client_id)
 	await _check_far_consume(mine, client_id)
@@ -363,6 +375,46 @@ func _play(client: ENetMultiplayerPeer, late: ENetMultiplayerPeer) -> void:
 	_expect(_host.packages.get_child_count() == 1 and reached.is_empty(),
 		"Once the client left none of the host's packages (box_1 and box_2 consumed) reaches it (still: %s)"
 		% [reached])
+
+
+## D-0302.2.b.3: the client's board reads its own copy of a box the host loaded. `mine` ends where and as it was.
+func _check_on_rack(mine: DeliveryPackage) -> void:
+	var copy := _client.packages.get_node(^"Package_box_1") as DeliveryPackage
+	var board := CompanyDispatch.new()
+	_client.side.add_child(board)
+	var order: Dictionary = Order.make(&"rack_order", "Bea", &"campo", &"campo_house_3",
+		[{"product": &"hen", "qty": 1}], 0, {})
+	board._view.add(order)
+	copy.set_meta(BoxToPackage.META_ORDER_ID, &"rack_order")
+	var area := AABB(copy.global_position - Vector3.ONE, Vector3.ONE * 2.0)
+	var read: Callable = func() -> Array[StringName]:
+		var zone := DispatchZone.new(area)
+		copy.linear_velocity = Vector3.ZERO  # Nothing to rest on in this test.
+		board._read_box(zone, copy)
+		return zone.boxes()
+	_expect(read.call() == ([&"box_1"] as Array[StringName]), "The client's board lists the box lying in the zone")
+	var body := RackBody.new()
+	body.name = "Rack"
+	_host.side.add_child(body)
+	var marker := Marker3D.new()
+	body.add_child(marker)
+	marker.global_transform = mine.global_transform
+	var point: Node = DeliveryPackage.MountPoint.new()
+	point.add_to_group(DispatchRack.MOUNT_GROUP)
+	marker.add_child(point)
+	var frozen: bool = mine.freeze
+	var box: Array[StringName] = [&"box_1"]
+	_expect(DispatchRack.store(body, _host.packages, box) == box, "The host puts the box on the rack")
+	_expect(await _wait_for(func() -> bool: return copy.is_loaded and copy.is_aboard()),
+		"The client's copy says it is loaded, with no event of its own")
+	_expect((read.call() as Array).is_empty(), "...so the client's board drops it from the list")
+	mine.release_mount()
+	mine.freeze = frozen
+	_expect(await _wait_for(func() -> bool: return not copy.is_loaded), "Taken down, the client's copy says so")
+	_expect(read.call() == ([&"box_1"] as Array[StringName]), "...and the client's board lists it again")
+	copy.remove_meta(BoxToPackage.META_ORDER_ID)
+	board.free()
+	body.free()
 
 
 ## The auditor's case (B1): a client waiting for a snapshot holds the box_sealed that reaches it; the
