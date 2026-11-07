@@ -998,8 +998,8 @@ def tow_crane():
 # =============================================================================
 
 PALETTE.update({
-    # The grey box's cab orange (supplier_truck_view.gd CAB_COLOR) so the truck
-    # still reads the same from the yard; the box in a warm off-white with the
+    # The cab in the orange of the grey box it replaced, so the truck still
+    # reads the same from the yard; the box in a warm off-white with the
     # supplier's teal band and yellow parcel emblem.
     "supplier_cab": srgb("c7732a"), "supplier_box": srgb("e6e2d6"),
     "supplier_trim": srgb("9aa3a3"), "supplier_dark": srgb("2b2f33"),

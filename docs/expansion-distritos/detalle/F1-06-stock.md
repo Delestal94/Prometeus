@@ -5,7 +5,7 @@
 > cuando le toque a un carril. Números de [supuestos.md](supuestos.md).
 
 ### D-0601 · Camión de proveedor NPC que entra al patio, se estaciona en la dársena y espera — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-21, PR pendiente)** — `SupplierTruck` (`scripts/gameplay/business/supplier_truck.gd`: trayectoria por minuto) y `SupplierTruckView` (`scripts/gameplay/supplier_truck_view.gd`: caja gris que la dibuja), cableado en `CompanyRoot`; `test_supplier_truck` (10 corridas). Arte real en [arte-pendiente/D-0601.md](../arte-pendiente/D-0601.md).
+**[x] Hecho (2026-10-21, PR pendiente)** — `SupplierTruck` (`scripts/gameplay/business/supplier_truck.gd`: trayectoria por minuto) y `SupplierTruckView` (`scripts/gameplay/supplier_truck_view.gd`: caja gris que la dibuja), cableado en `CompanyRoot`; `test_supplier_truck` (10 corridas). Modelo final conectado (2026-11-07, PR pendiente): `_build_body()` usa `sm_vehicle_supplier_truck.glb` (D-1814) con su persiana.
 **Depende de:** D-0602 (`SupplierSchedule`: 08:30 llega, espera 3 h), D-0905 (`WarehouseStages.dock_rect` / `gate_rects`), D-0219 (`GameClock`)
 **Qué:** el camión que trae lo pedido, visible en el patio. Es una función del reloj, no un actor con estado:
 - `SupplierTruck.pose(schedule, day, minute, stage)` (`RefCounted`, solo estáticos, sin nodos ni azar) da
@@ -21,8 +21,10 @@
   `SUPPLIER_DRIVE_OUT_MIN`; un minuto de juego son 1,5 s reales). Frena al llegar y arranca suave al irse.
   Sin entrega ese día (`none`) no hay camión. Todos los números (tamaño 2,4 × 3,2 × 6,4 m, radio, retroceso,
   tramo recto, holgura) en `CompanyTuning`.
-- `SupplierTruckView` (`Node3D`, hermano del galpón porque `CompanyShed.rebuild()` libera a sus hijos): camión de
-  cajas primitivas con la paleta del depósito; cada cuadro llama a `pose()` con `GameClock.minute_now()` y
+- `SupplierTruckView` (`Node3D`, hermano del galpón porque `CompanyShed.rebuild()` libera a sus hijos): el modelo
+  `sm_vehicle_supplier_truck.glb`, sin colisión (como las cajas primitivas a las que reemplazó). La persiana trasera
+  `RearDoor` va baja en la ruta, sube en el primer minuto de la espera y baja en el último
+  (`SupplierTruckView.door_opening(minute)`, solo el reloj: sin RPC); cada cuadro llama a `pose()` con `GameClock.minute_now()` y
   `CompanyState.day` y se oculta si no hay camión. **Cero RPC:** los clientes derivan la pose del mismo reloj
   (ancla del host) y del mismo calendario; no hay nada que decida el host.
 - Hasta que D-0603 meta pedidos reales, `CompanyRoot._seed_stand_in_calendar()` pone el primer pedido del

@@ -388,7 +388,7 @@ const SUPPLIER_DOCK_BAYS: int = 1
 ## Older days fold into per-product missing totals, so the note (in every save and snapshot) stops growing with
 ## the days played. Decision: docs/decisiones/2026-11-04-save-50-dias.md.
 const DELIVERY_NOTE_DAYS_KEPT: int = 14
-## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
+## The truck NPC's drive (D-0601, SupplierTruck): size in meters (width, height, length),
 ## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
 ## turn radius, how far it reverses in a straight line, the straight run before the turn, and the
 ## game minutes it takes to drive in (it is parked at SUPPLIER_ARRIVAL_MIN) and to drive out (it
