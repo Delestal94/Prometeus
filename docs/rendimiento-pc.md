@@ -224,6 +224,52 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 8. Poner `--via-loader` en la corrida diaria de `pc-build` (o sumar una segunda serie) para que "frames de más de 33 ms"
    mida lo que ve el jugador; el cambio es de la rutina, no se tocó.
 
+## Memoria en Endless larga (N-980.3), 2026-11-07
+
+Comprueba que la sonda ya no crece sola (N-980.1) y que el juego tampoco. Commit base `d739fd5`, con ventana a
+1920×1080, Alto, semilla 4242, con la PC compartida con otras corridas (por eso los FPS de acá no se comparan):
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --windowed --script res://tests/bench_drive.gd -- --endless --seconds=1000 --seed=4242 --memory-every=20
+```
+
+`--memory-every` imprime una línea `BENCH memory` cada N segundos y no guarda nada en la sonda. Los bytes privados del
+proceso se muestrearon desde afuera cada 10 s (`PrivateMemorySize64` de `Get-Process`).
+
+**Criterio, fijado antes de correr:** de 60 s a 400 s, pendiente (mínimos cuadrados) de memoria estática y de bytes
+privados de 0,045 MiB/s o menos (un décimo de los 0,45 MiB/s de la sonda vieja), orphans en 0, y nodos y recursos sin
+crecer más de 5 % entre el tercio medio y el último. **Resultado: cumple, pero no a la primera.**
+
+| Corrida | Estática MiB/s (60-400) | Privados MiB/s (60-400) | Privados MiB/s (60-1000) | Nodos/s (60-1000) | Objetos/s (60-1000) | `buffer_mem` final | ¿Cumple? |
+|---|---|---|---|---|---|---|---|
+| A, 400 s, sin el arreglo | 0,005 | **0,141** | no llegó | no llegó | no llegó | 61,6 MiB | **No**: escalón de +42 MiB de la foto de prensa |
+| B, 1000 s, sin el arreglo | 0,005 | 0,044 | **0,064** | **0,108** | **0,584** | 75,6 MiB | Al límite en 400 s; a 1000 s se ve la deriva |
+| C, 1000 s, con el arreglo | 0,003 | 0,014 | 0,008 | 0,020 | 0,037 | 61,6 MiB | **Sí** |
+
+B y C recorrieron lo mismo (18.310 m, 46 rescates). La corrida A falló y se dejó el criterio como estaba: por eso se
+corrió más larga y se buscó qué crecía, en vez de dar por buena la que pasó justo.
+
+- **Lo que crecía era del juego, no de la sonda.** Un censo por grupo de nodos dio `GPUParticles3D` sueltos bajo el
+  nivel (15, 37, 53 y 72 a los 200, 400, 600 y 800 s): los `ImpactDebris` de cada golpe fuerte, que nunca se liberaban
+  (`vehicle_effects.gd`). Un `GPUParticles3D` nace emitiendo, y encender un one-shot que ya emite cancela `finished`.
+  Arreglado con `emitting = false` antes de encenderlo; test `test_impact_debris_freed` (falla sin el arreglo).
+- **Corrida C:** bytes privados de 1.118,5 MiB a los 400 s y 1.119,0 a los 1000 s; recursos clavados en 6.081 y orphans
+  en 0 en todos los puntos. La estática sigue subiendo 0,002 MiB/s, 8 MiB por hora; de eso, ~0,0012 MiB/s es la sonda
+  (el `PackedFloat32Array` de ms por frame, 4 bytes por frame a ~300 FPS). Lo demás no se investigó.
+- **Sin medir: la foto de prensa.** En la corrida A la primera `PressPhotoLens` trajo un tirón de 1.054 ms a los 289 s y
+  +42 MiB de privados que no se devolvieron. B y C no sacaron ninguna foto, así que el arreglo no se probó con foto, y no
+  se sabe si cada foto suma lo mismo o solo la primera. `NewsPhotographer` saca como mucho 6 por partida, una por tipo,
+  y el lente se libera, así que está acotado por diseño; el peor caso serían ~250 MiB si cada una sumara 42.
+
+| Corrida C, t (s) | Estática MiB | Video MiB | Privados MiB | Objetos | Nodos | Recursos | Orphans |
+|---|---|---|---|---|---|---|---|
+| 60 | 261,84 | 265,00 | 1.106,8 | 13.993 | 3.104 | 6.081 | 0 |
+| 200 | 262,10 | 264,74 | 1.104,3 | 13.957 | 3.070 | 6.081 | 0 |
+| 400 | 262,51 | 264,60 | 1.118,5 | 13.865 | 3.013 | 6.081 | 0 |
+| 600 | 263,44 | 265,65 | 1.118,6 | 14.074 | 3.167 | 6.081 | 0 |
+| 800 | 263,51 | 265,70 | 1.118,3 | 14.079 | 3.153 | 6.081 | 0 |
+| 1000 | 264,15 | 265,30 | 1.119,0 | 14.044 | 3.129 | 6.081 | 0 |
+
 ## Presupuesto del modo Empresa (D-2012)
 
 Con la GPU de la PC de arriba (RTX 4060 Ti) y el preset **medio** (`WorldQuality`, escala 0,9, MSAA 2x), a
