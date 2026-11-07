@@ -22,6 +22,7 @@ const LAMP_POST_OFFSET: float = 0.3
 const LAMP_POOL_COLOR: Color = Color(0.20, 0.15, 0.08)
 const LAMP_POOL_SIZE: float = 4.4
 const LAMP_POOL_REACH: float = 1.1
+## Height of the pool itself, not over the lamp's foot: it has to clear the yard's paint and the road.
 const LAMP_POOL_HEIGHT: float = 0.02
 
 
@@ -71,20 +72,22 @@ func _draw_yard(stage: int, floor_m: Vector2, front: float) -> void:
 	var data: Dictionary = ShedExteriorPlan.variant(stage)
 	var depth: float = ShedExteriorPlan.yard_depth(stage)
 	var centre_z: float = front + depth * 0.5
+	# The wall stands at y = 0, over the slab: a slab cut at the wall's face would leave a slit of bare ground under it.
+	var under_wall: float = CompanyShed.WALL_THICKNESS
 	var slab := BoxMesh.new()
-	slab.size = Vector3(floor_m.x + 2.0 * CompanyShed.WALL_THICKNESS, SLAB_THICKNESS, depth)
+	slab.size = Vector3(floor_m.x + 2.0 * CompanyShed.WALL_THICKNESS, SLAB_THICKNESS, depth + under_wall)
 	slab.material = DepotKit.detailed(data["yard_color"], data["detail"], CompanyShed.FLOOR_SLAB_M)
 	var yard := MeshInstance3D.new()
 	yard.name = "Yard"
 	yard.mesh = slab
-	yard.position = Vector3(0.0, SLAB_TOP - SLAB_THICKNESS * 0.5, centre_z)
+	yard.position = Vector3(0.0, SLAB_TOP - SLAB_THICKNESS * 0.5, centre_z - under_wall * 0.5)
 	yard.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(yard)
 	var marks := _model("YardMarks", "sm_env_shed_yard_%s" % data["model"], Vector3(0.0, 0.0, centre_z))
 	marks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(marks)
 	for x: float in ShedExteriorPlan.lamp_xs(stage, floor_m.x):
-		_add_lamp(Vector3(x, 0.0, front + LAMP_POST_OFFSET))
+		_add_lamp(Vector3(x, SLAB_TOP, front + LAMP_POST_OFFSET))
 
 
 func _add_lamp(at: Vector3) -> void:
@@ -98,7 +101,7 @@ func _add_lamp(at: Vector3) -> void:
 	var pool := MeshInstance3D.new()
 	pool.name = "LampPool"
 	pool.mesh = plane
-	pool.position = at + Vector3(0.0, LAMP_POOL_HEIGHT, LAMP_POOL_REACH)
+	pool.position = Vector3(at.x, LAMP_POOL_HEIGHT, at.z + LAMP_POOL_REACH)
 	pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(pool, true)
 

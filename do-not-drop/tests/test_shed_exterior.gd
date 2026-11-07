@@ -7,16 +7,22 @@ extends SceneTree
 ## - the lamp posts come in pairs inside the floor width and clear of the truck's lane;
 ## - ShedExterior draws sign, yard and lamps with no collision, and CompanyShed.rebuild() hangs one
 ##   exterior that follows the stage (a bigger stage gives a wider sign and a deeper yard);
-## - the art (arte-pendiente D-0936, build_depot_props.py group shed_exterior): each sign model loads and measures
-##   the plan's width x height x 0.25 with its pivot at the centre of the base, on top of the wall; the name stays
-##   on the sign in both languages, also on a floor narrower than the sign; the yard's paint stays on the slab and
-##   off the road that comes in at the dock; the lamp is 3.2 m on its base, with a glowing head, and every model
-##   is within the prop budget.
+## - the art (D-0936, build_depot_props.py group shed_exterior): each sign model loads and measures the plan's
+##   width x height x 0.25 with its pivot at the centre of the base, on top of the wall, behind the plane of its name;
+##   the name stays on the sign in both languages, also on a floor narrower than the sign; the yard's paint stays on
+##   the slab and off the road that comes in at the dock; no two materials of a sign or a yard share a plane where
+##   they overlap (they would flicker); the slab runs on under the dock wall, so no bare ground shows at its foot, and
+##   the lamps stand on it; the lamp is 3.2 m on its base, with a glowing head, and every model is within the prop
+##   budget.
 
 const MAX_TRIS: int = 500
 ## The map's first road, over the bigger yards: the paint keeps out of its top (y = 0 and the slab is under it).
 const ROAD_HALF_X: float = 6.0
 const ROAD_START_Z: float = 11.0
+## Faces closer than this along their normal draw as one plane (a depth buffer can't be asked for less).
+const SAME_PLANE: float = 0.0003
+## Overlap (m2) between two materials on one plane that a model may have: only what rounding leaves on a shared edge.
+const OVERLAP_ALLOWED: float = 0.0001
 
 var _failures: int = 0
 
@@ -66,10 +72,14 @@ func _run() -> void:
 			depths.append((yard.mesh as BoxMesh).size.z)
 			_expect(is_equal_approx(board.position.y, CompanyShed.WALL_HEIGHT),
 				"stage %d: the sign stands on the wall" % stage)
+			var floor_z: float = WarehouseStages.floor_size_m(stage).y * 0.5
 			var yard_start: float = yard.position.z - (yard.mesh as BoxMesh).size.z * 0.5
-			_expect(yard_start >= WarehouseStages.floor_size_m(stage).y * 0.5,
-				"stage %d: the yard starts at the dock wall" % stage)
+			var yard_end: float = yard.position.z + (yard.mesh as BoxMesh).size.z * 0.5
+			_expect(_near(yard_start, floor_z), "stage %d: the slab starts under the dock wall, at the floor" % stage)
+			_expect(_near(yard_end, floor_z + CompanyShed.WALL_THICKNESS + ShedExteriorPlan.yard_depth(stage)),
+				"stage %d: the slab ends at the plan's depth from the wall" % stage)
 			_check_sign_model(stage, board)
+			_check_sign_stands_behind_name(stage, exterior, board)
 			_check_yard_marks(stage, exterior, yard)
 		_check_lamps(stage, exterior)
 		exterior.free()
@@ -117,11 +127,22 @@ func _check_sign_model(stage: int, board: MeshInstance3D) -> void:
 		"stage %d: the sign model measures the plan" % stage)
 	_expect(_near(box.size.z, ShedExterior.SIGN_DEPTH), "stage %d: the sign is %.2f deep" % [stage, box.size.z])
 	_expect(_near(box.position.y, 0.0), "stage %d: the sign's pivot is on its base" % stage)
-	_expect(_near(box.get_center().x, 0.0) and _near(box.get_center().z, 0.0),
+	_expect(_near(box.get_center().x, 0.0) and absf(box.get_center().z) < 0.002,
 		"stage %d: the sign's pivot is centred" % stage)
 	_expect(Rect2(-wanted * Vector2(0.5, 0.0), wanted).encloses(data["text"]),
 		"stage %d: the name's area is on the sign" % stage)
 	_expect(_tris(board.mesh) <= MAX_TRIS, "stage %d: sign within budget (%d)" % [stage, _tris(board.mesh)])
+	var overlap: float = _fighting_area(board.mesh, Vector3.AXIS_Z)
+	_expect(overlap < OVERLAP_ALLOWED, "stage %d: the sign's materials share a plane over %.4f m2" % [stage, overlap])
+
+
+## The name's Label3D floats in front of everything on the sign, its mark included.
+func _check_sign_stands_behind_name(stage: int, exterior: Node, board: MeshInstance3D) -> void:
+	var label := exterior.get_node_or_null(^"SignText") as Label3D
+	if label == null:
+		return
+	var gap: float = label.position.z - board.position.z - board.mesh.get_aabb().end.z
+	_expect(gap >= 0.005, "stage %d: the name stands clear of the sign (%.3f m)" % [stage, gap])
 
 
 ## The paint lies between the slab and the road's top, inside the slab, and off the road.
@@ -131,20 +152,24 @@ func _check_yard_marks(stage: int, exterior: Node, yard: MeshInstance3D) -> void
 	if marks == null or marks.mesh == null:
 		return
 	var slab: Vector3 = (yard.mesh as BoxMesh).size
+	var depth: float = ShedExteriorPlan.yard_depth(stage)
 	var box: AABB = marks.mesh.get_aabb()
 	_expect(box.position.y > ShedExterior.SLAB_TOP and box.end.y < 0.0,
 		"stage %d: the paint is on the slab, under the road" % stage)
 	_expect(absf(box.position.x) <= slab.x * 0.5 + 0.06 and box.end.x <= slab.x * 0.5 + 0.06,
 		"stage %d: the paint keeps to the slab's width" % stage)
-	_expect(box.position.z >= -slab.z * 0.5 - 0.01 and box.end.z <= slab.z * 0.5 + 0.01,
-		"stage %d: the paint keeps to the slab's depth" % stage)
-	_expect(_near(marks.position.z, yard.position.z), "stage %d: the marks' pivot is the slab's centre" % stage)
+	_expect(box.position.z >= -depth * 0.5 - 0.01 and box.end.z <= depth * 0.5 + 0.01,
+		"stage %d: the paint keeps to the open yard's depth" % stage)
+	var wall_face: float = WarehouseStages.floor_size_m(stage).y * 0.5 + CompanyShed.WALL_THICKNESS
+	_expect(_near(marks.position.z, wall_face + depth * 0.5), "stage %d: the marks' pivot is the yard's centre" % stage)
 	for point: Vector3 in marks.mesh.get_faces():
 		var at: Vector3 = point + marks.position
 		if absf(at.x) < ROAD_HALF_X and at.z > ROAD_START_Z:
 			_expect(false, "stage %d: paint on the road at %s" % [stage, at])
 			break
 	_expect(_tris(marks.mesh) <= MAX_TRIS, "stage %d: marks within budget (%d)" % [stage, _tris(marks.mesh)])
+	var overlap: float = _fighting_area(marks.mesh, Vector3.AXIS_Y)
+	_expect(overlap < OVERLAP_ALLOWED, "stage %d: two colours of paint overlap over %.4f m2" % [stage, overlap])
 
 
 func _check_lamps(stage: int, exterior: Node) -> void:
@@ -156,6 +181,8 @@ func _check_lamps(stage: int, exterior: Node) -> void:
 	_expect(posts.size() == wanted and heads.size() == wanted, "stage %d: a post and a head per lamp" % stage)
 	for post: MeshInstance3D in posts:
 		var box: AABB = post.mesh.get_aabb()
+		_expect(is_equal_approx(post.position.y, ShedExterior.SLAB_TOP),
+			"stage %d: the lamp stands on the slab" % stage)
 		_expect(_near(box.position.y, 0.0) and _near(box.end.y, ShedExterior.LAMP_HEIGHT),
 			"the lamp is 3.2 m on its base")
 		_expect(_near(box.position.x + box.size.x * 0.5, 0.0) and _near(box.position.z, -0.2),
@@ -188,6 +215,57 @@ func _check_sign_text() -> void:
 					"stage %d: the sign fits a %.1f m wall" % [stage, floor_x])
 				exterior.free()
 	TranslationServer.set_locale(locale)
+
+
+## Area (m2) where faces of two surfaces (materials) overlap on one plane, among those looking toward +`axis`.
+func _fighting_area(mesh: Mesh, axis: int) -> float:
+	var faces: Array[Array] = []
+	for surface: int in mesh.get_surface_count():
+		faces.append(_faces_toward(mesh, surface, axis))
+	var total: float = 0.0
+	for a: int in faces.size():
+		for b: int in range(a + 1, faces.size()):
+			for one: Dictionary in faces[a]:
+				for other: Dictionary in faces[b]:
+					if absf(float(one["plane"]) - float(other["plane"])) < SAME_PLANE \
+							and (one["box"] as Rect2).intersects(other["box"]):
+						total += _shared_area(one["points"], other["points"])
+	return total
+
+
+## The triangles of a surface that look toward +`axis`, flattened on the other two axes: plane, points and bounds.
+func _faces_toward(mesh: Mesh, surface: int, axis: int) -> Array[Dictionary]:
+	var arrays: Array = mesh.surface_get_arrays(surface)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var indices := PackedInt32Array()
+	if arrays[Mesh.ARRAY_INDEX] != null:
+		indices = arrays[Mesh.ARRAY_INDEX]
+	var count: int = indices.size() if not indices.is_empty() else vertices.size()
+	var across: int = Vector3.AXIS_Y if axis == Vector3.AXIS_Z else Vector3.AXIS_Z
+	var found: Array[Dictionary] = []
+	for i: int in range(0, count, 3):
+		var corners: Array[int] = [i, i + 1, i + 2]
+		if not indices.is_empty():
+			corners = [indices[i], indices[i + 1], indices[i + 2]]
+		if normals[corners[0]][axis] < 0.9:
+			continue
+		var points := PackedVector2Array()
+		var bounds := Rect2()
+		for corner: int in corners:
+			var point := Vector2(vertices[corner].x, vertices[corner][across])
+			bounds = Rect2(point, Vector2.ZERO) if points.is_empty() else bounds.expand(point)
+			points.append(point)
+		found.append({"plane": vertices[corners[0]][axis], "points": points, "box": bounds})
+	return found
+
+
+func _shared_area(one: PackedVector2Array, other: PackedVector2Array) -> float:
+	var area: float = 0.0
+	for shape: PackedVector2Array in Geometry2D.intersect_polygons(one, other):
+		for i: int in shape.size():
+			area += shape[i].cross(shape[(i + 1) % shape.size()]) * 0.5
+	return absf(area)
 
 
 func _near(a: float, b: float) -> bool:

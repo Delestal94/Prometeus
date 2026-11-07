@@ -79,7 +79,7 @@ company shed. Pivot at the centre of the base, the name's face toward +Z:
   sm_env_shed_sign_{small,medium,large,logistics}.glb: tin sheet on brackets, board on posts,
     light box on skids, pylon with a lit band. 4 x 0.9, 6 x 1.2, 8 x 1.6, 11 x 2 m, 0.25 deep.
   sm_env_shed_yard_{small,medium,large,logistics}.glb: only the paint and the drains of the yard
-    (one-sided, on top of the slab the script draws), origin at the slab's centre.
+    (one-sided, on top of the slab the script draws), origin at the centre of the open yard.
   sm_env_shed_lamp_post.glb and sm_env_shed_lamp_head.glb: the 3.2 m lamp and its glass.
 
 Pass names after "--" to rebuild only some of them:
@@ -2585,6 +2585,9 @@ YARD_PAINT_Y = -0.008
 SHED_YARDS = [("small", 12.0, 8.0, 2.5), ("medium", 18.0, 12.0, 4.5), ("large", 24.0, 16.0, 6.5),
               ("logistics", 32.0, 20.0, 8.5)]
 SHED_WALL = 0.3
+# A yard's slot drains run across it this far from its south edge, this wide each way.
+SLOT_DRAIN_SOUTH = 0.45
+SLOT_DRAIN_HALF = 0.17
 # The map's first road comes in at the dock, 12 m wide, from z = 11 on, with its top over the slab: it covers that
 # part of the bigger yards, so nothing is painted there.
 ROAD_HALF_X = 6.1
@@ -2633,7 +2636,8 @@ def shed_sign_small():
     panel("Rust", [(1.62, 0.13), (1.98, 0.13), (1.98, 0.42), (1.86, 0.3), (1.72, 0.27)], SIGN_FRONT - 0.012, SIGN_FRONT,
           "shed_rust")
     panel("Rust", [(-1.98, 0.74), (-1.98, 0.87), (-1.7, 0.87), (-1.82, 0.78)], SIGN_FRONT - 0.012, SIGN_FRONT, "shed_rust")
-    _brand_box("Brand", -1.55, 0.5, 0.5, SIGN_FRONT - 0.012 - SIGN_PAINT * 2)
+    # Between the ribs at -1.8 and -1.2, and its coats end on the sign's front: none shares a plane with tin or rib.
+    _brand_box("Brand", -1.5, 0.5, 0.48, SIGN_FRONT - SIGN_PAINT * 3)
     done("sm_env_shed_sign_small.glb")
 
 
@@ -2661,8 +2665,10 @@ def shed_sign_large():
     """Stage 3: 8.0 x 1.6 x 0.25, a light box on the roof, on skids. The face glows."""
     clear()
     _glowing(mat("shed_sign_large"), 0.9)
+    # The face sits three coats behind the sign's front, so the mark on it ends right there.
+    face = SIGN_FRONT - SIGN_PAINT * 3
     box("Housing", (0, 0.86, -0.02), (8.0, 1.48, 0.21), "housing", 0.02)
-    box("Face", (0, 0.86, SIGN_FRONT - 0.03), (7.78, 1.26, 0.03), "shed_sign_large")
+    box("Face", (0, 0.86, face - 0.015), (7.78, 1.26, 0.03), "shed_sign_large")
     box("LipTop", (0, 1.57, SIGN_FRONT - 0.04), (8.0, 0.06, 0.08), "steel_light")
     box("LipBottom", (0, 0.15, SIGN_FRONT - 0.04), (8.0, 0.06, 0.08), "steel_light")
     for x in (-2.8, 0.0, 2.8):
@@ -2670,7 +2676,6 @@ def shed_sign_large():
         box("Leg", (x, 0.08, -0.02), (0.12, 0.1, 0.12), "steel")
     for sx in (-1.0, 1.0):
         box("LipEnd", (sx * 3.97, 0.86, SIGN_FRONT - 0.04), (0.06, 1.42, 0.08), "steel_light")
-    face = SIGN_FRONT - 0.015
     _brand_box("Brand", -3.2, 0.86, 0.8, face)
     _brand_tape("BrandTape", -2.62, 3.72, 0.37, 0.13, face)
     done("sm_env_shed_sign_large.glb")
@@ -2682,19 +2687,20 @@ def shed_sign_logistics():
     clear()
     _glowing(mat("shed_sign_logistics"), 0.9)
     pylon_x = -4.6
+    # The faces sit three coats behind the sign's front, so the mark on them ends right there.
+    face = SIGN_FRONT - SIGN_PAINT * 3
     box("Pylon", (pylon_x, 1.0, -0.02), (1.8, 2.0, 0.21), "housing", 0.03)
-    box("PylonFace", (pylon_x, 1.05, SIGN_FRONT - 0.03), (1.56, 1.76, 0.03), "paper")
+    box("PylonFace", (pylon_x, 1.05, face - 0.015), (1.56, 1.76, 0.03), "paper")
     box("PylonFoot", (pylon_x, 0.06, SIGN_FRONT - 0.04), (1.8, 0.12, 0.08), "steel_light")
     box("PylonCap", (pylon_x, 1.97, SIGN_FRONT - 0.04), (1.8, 0.06, 0.08), "shed_tape")
     box("Band", (1.0, 1.1, -0.02), (9.0, 1.3, 0.21), "housing", 0.02)
-    box("Face", (1.0, 1.1, SIGN_FRONT - 0.03), (8.82, 1.12, 0.03), "shed_sign_logistics")
+    box("Face", (1.0, 1.1, face - 0.015), (8.82, 1.12, 0.03), "shed_sign_logistics")
     box("LipTop", (1.0, 1.73, SIGN_FRONT - 0.04), (9.0, 0.06, 0.08), "steel_light")
     box("LipBottom", (1.0, 0.47, SIGN_FRONT - 0.04), (9.0, 0.06, 0.08), "steel_light")
     box("LipEnd", (5.47, 1.1, SIGN_FRONT - 0.04), (0.06, 1.3, 0.08), "steel_light")
     for x in (0.0, 4.6):
         box("Strut", (x, 0.23, -0.02), (0.16, 0.46, 0.14), "steel")
         box("Plate", (x, 0.015, 0), (0.36, 0.03, 0.25), "steel")
-    face = SIGN_FRONT - 0.015
     _brand_box("Brand", pylon_x, 1.2, 0.96, face)
     panel("PylonTape", _tape_outline(pylon_x - 0.68, pylon_x + 0.68, 0.42, 0.16), face, face + SIGN_PAINT, "shed_tape")
     done("sm_env_shed_sign_logistics.glb")
@@ -2716,7 +2722,7 @@ def _flat(name, points, material):
 
 
 class _YardPaint:
-    """The paint of one yard, origin at the slab's centre, north (the wall) on -z. A strip that reaches the road
+    """The paint of one yard, origin at the open yard's centre, north (the wall) on -z. A strip that reaches the road
     stops at it, and what falls on the road is left out."""
 
     def __init__(self, depth, front):
@@ -2755,8 +2761,8 @@ class _YardPaint:
 
     def slot_drain(self, name, x0, x1, z):
         """A slot drain across the yard's fall: steel bars and dark slots side by side, flush."""
-        self.strip(name + "Frame", x0 - 0.05, x1 + 0.05, z - 0.17, z - 0.13, "yard_steel")
-        self.strip(name + "Frame", x0 - 0.05, x1 + 0.05, z + 0.13, z + 0.17, "yard_steel")
+        self.strip(name + "Frame", x0 - 0.05, x1 + 0.05, z - SLOT_DRAIN_HALF, z - 0.13, "yard_steel")
+        self.strip(name + "Frame", x0 - 0.05, x1 + 0.05, z + 0.13, z + SLOT_DRAIN_HALF, "yard_steel")
         x = x0
         while x < x1 - 1e-3:
             self.strip(name + "Bar", x, x + 0.08, z - 0.13, z + 0.13, "yard_steel")
@@ -2778,7 +2784,8 @@ class _YardPaint:
 def _shed_yard(index):
     """The marks of one stage's yard, on a slab of floor + 2 walls by the plan's depth (the slab is ShedExterior's):
     the dock's hatching and guide lines, parking ticks and arrows on the wings, gullies or slot drains, the three
-    lanes from stage 3 (the grey box's stripes) and the asphalt's tar joints."""
+    lanes from stage 3 (the grey box's stripes) and the asphalt's tar joints. Everything lies on one plane, so no
+    colour may cross another: a lane stops short of the drain, a joint is cut by it, the arrows keep off the joints."""
     clear()
     suffix, floor_x, floor_z, depth = SHED_YARDS[index]
     width = floor_x + SHED_WALL * 2.0
@@ -2786,7 +2793,9 @@ def _shed_yard(index):
     north, south = -depth / 2.0, depth / 2.0
     wing = width / 2.0
     # Nothing stands in front of the gate: hatching on the floor, a guide line each side for the truck backing in.
-    paint.hatch("DockHatch", -2.2, 2.2, north, north + min(1.0, depth * 0.4), "yard_yellow")
+    hatch_end = north + min(1.0, depth * 0.4)
+    paint.hatch("DockHatch", -2.2, 2.2, north, hatch_end, "yard_yellow")
+    drain_z = south - SLOT_DRAIN_SOUTH
     if index == 0:
         paint.gully("Gully", 4.8, 0.3)
         paint.gully("Gully", -4.8, 0.3)
@@ -2794,7 +2803,7 @@ def _shed_yard(index):
         paint.strip("DockGuide", sx * 2.6 - 0.05, sx * 2.6 + 0.05, north, south - 0.3, "yard_white")
         lo, hi = ROAD_HALF_X + 0.3, wing - 0.5
         if index >= 1 and hi > lo + 1.0:
-            paint.slot_drain("SlotDrain", lo if sx > 0 else -hi, hi if sx > 0 else -lo, south - 0.45)
+            paint.slot_drain("SlotDrain", lo if sx > 0 else -hi, hi if sx > 0 else -lo, drain_z)
         if index >= 1:
             # Parking bays against the wall, 3 m apart.
             x = 4.2
@@ -2803,19 +2812,24 @@ def _shed_yard(index):
                 x += 3.0
         if index >= 2:
             lane = sx * width / 3.0
-            paint.strip("Lane", lane - 0.09, lane + 0.09, north + 0.5, south - 0.5, "yard_yellow")
-            paint.arrow("LaneArrow", lane + 1.6, south - 2.2, 1.8, "yard_white")
-            paint.arrow("LaneArrow", lane - 1.6, south - 2.2, 1.8, "yard_white")
+            paint.strip("Lane", lane - 0.09, lane + 0.09, north + 0.5, south - 0.7, "yard_yellow")
+            paint.arrow("LaneArrow", lane + 1.8, south - 2.2, 1.8, "yard_white")
+            paint.arrow("LaneArrow", lane - 1.8, south - 2.2, 1.8, "yard_white")
             # Sealed joints of the asphalt, every 6 m from the road out.
             x = 6.0
             while x < wing - 0.2:
-                paint.strip("Joint", sx * x - 0.02, sx * x + 0.02, north, south, "yard_tar")
+                if lo - 0.05 <= x <= hi + 0.05:
+                    paint.strip("Joint", sx * x - 0.02, sx * x + 0.02, north, drain_z - SLOT_DRAIN_HALF, "yard_tar")
+                    paint.strip("Joint", sx * x - 0.02, sx * x + 0.02, drain_z + SLOT_DRAIN_HALF, south, "yard_tar")
+                else:
+                    paint.strip("Joint", sx * x - 0.02, sx * x + 0.02, north, south, "yard_tar")
                 x += 6.0
         if index == 3:
             paint.hatch("WingHatch", wing - 2.6 if sx > 0 else -wing + 0.4, wing - 0.4 if sx > 0 else -wing + 2.6,
                         north + 2.8, north + 4.4, "yard_yellow")
     if index >= 2:
-        paint.strip("Lane", -0.09, 0.09, north + 0.5, south - 0.5, "yard_yellow")
+        # From past the hatching; on the last stage the road takes what would be left, and there is no middle lane.
+        paint.strip("Lane", -0.09, 0.09, hatch_end, south - 0.5, "yard_yellow")
     done("sm_env_shed_yard_%s.glb" % suffix)
 
 

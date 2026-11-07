@@ -17,7 +17,7 @@
 **[x] Arte (2026-11-07, PR pendiente)** — modelos de cartel, marcas del playón y farol (`build_depot_props.py`, grupo `shed_exterior`).
 **Depende de:** D-0905 (etapas del galpón)
 **Qué:** lo de afuera del galpón crece con la etapa, así se ve que la empresa creció antes de entrar.
-- **Cartel** sobre el muro de la dársena (cara a +Z, hacia el patio), con el nombre de la etapa (`WORLD_SHED_SIGN_*`): galpón, depósito, centro de distribución, centro logístico. Ancho 4 / 6 / 8 / 11 m, nunca más que el muro.
+- **Cartel** sobre el muro de la dársena (cara a +Z, hacia el patio), con el nombre de la etapa (`WORLD_SHED_SIGN_*`): galpón, galpón grande, centro de distribución, centro logístico. Ancho 4 / 6 / 8 / 11 m, nunca más que el muro.
 - **Playón** (losa sin colisión) delante de la dársena: 2,5 / 4,5 / 6,5 / 8,5 m de fondo, más oscuro y pavimentado cuanto más grande; carriles pintados desde la etapa 3.
 - **Faroles** en pares a los dos lados del portón de la dársena (0 / 2 / 4 / 6), nunca a menos de 3,5 m del eje, que es por donde retrocede el camión del proveedor.
 - `CompanyShed.rebuild()` cuelga un `Exterior` por redibujo, así sigue la etapa en todos los peers sin red nueva (la etapa ya viaja con `shed_expanded` y el snapshot).
