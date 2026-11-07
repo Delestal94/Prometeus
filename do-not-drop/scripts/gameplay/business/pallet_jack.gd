@@ -141,7 +141,18 @@ func left_on_bed() -> Array[Dictionary]:
 	return left
 
 
-## Takes a pallet off the yard (opened and emptied: Pallet.is_depleted). Not while it is on the jack.
+## The pallets on the floor or on a rack with no units left in `inventory`, sorted. Those were received when they
+## were set down, so an empty one ran out; the stock says so, not the pallet's state: units leave a sealed pallet too
+## (cold units that rot, CompanyColdNet). On the bed nothing was received yet, and the jack holds on to its pallet.
+func emptied_ids(inventory: Inventory) -> Array[StringName]:
+	var found: Array[StringName] = []
+	for id: StringName in ids_at(AT_FLOOR) + ids_at(AT_RACK):
+		if inventory.contents_at(Pallet.location(id)).is_empty():
+			found.append(id)
+	return found
+
+
+## Takes a pallet off the yard (its units ran out: emptied_ids()). Not while it is on the jack.
 func remove(id: StringName) -> bool:
 	if not places.has(id) or places[id]["at"] == AT_JACK:
 		return false
