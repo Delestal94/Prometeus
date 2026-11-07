@@ -32,6 +32,17 @@ extends Node
 ## stays staged. Only one fed through track(), with no node to hold (or with hold_at_gate off), still
 ## crosses: it starts no trip (departure_refused) but counts as out until it crosses back in
 ## (trips_out(), so the day waits for it too; refused_returned when it does).
+##
+## Once the day is closed (day_open false: CLOSING or SUMMARY, D-0851) nobody starts a trip: departure_verdict() says
+## DAY_CLOSED. A vehicle that crosses anyway is refused like the one over the cap, but it does not count in trips_out():
+## the day never waits for it (only a trip that really left holds the summary); it is out until it is back
+## (refused_returned), so it is never refused twice, and if it is still out when the next day opens it counts again.
+## What was loaded and did not leave doesn't outlive the day (rule 7 of clientes.md): with SUMMARY the vehicle lets its
+## cargo go (drop_staged(), OrderDayClose.wire()), its orders are closed here as they are in the shared book, nothing
+## starts a trip with them the next day and the board sees that vehicle free (cargo_dropped, CompanyDispatch).
+##
+## A delivery is timed with the shed's clock, the one its order's window ran on (delivery_minute(), rule 4 of
+## clientes.md), not with minute(): whoever settles at a door (D-0340) passes that minute to OrderSettlement.settle.
 
 signal trip_started(trip: Trip)
 signal trip_closed(trip: Trip, failed: Array[StringName])
@@ -45,11 +56,15 @@ signal refused_returned(vehicle_id: StringName)
 ## every held_notice_msec per vehicle and driver, however many ticks it pushes against the gate (a new driver
 ## is told at once).
 signal departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
+## The cargo staged on `vehicle_id` came off without leaving (drop_staged()): `boxes` are nobody's load any more.
+signal cargo_dropped(vehicle_id: StringName, boxes: Array[StringName])
 
 ## The group of the vehicles the gate watches.
 const VEHICLE_GROUP: StringName = &"company_vehicle"
 ## Translation key (strings_world.csv) of the refusal: "%d vehicles are already out".
 const FAR_LIMIT: String = "WORLD_DISPATCH_FAR_LIMIT"
+## Translation key (strings_ui.csv) of the refusal after the day closed: "The day is over: no more trips out".
+const DAY_CLOSED: String = "UI_COMPANY_GATE_DAY_CLOSED"
 ## Most orders, and most boxes, one vehicle's cargo keeps (stage_cargo()), far over any vehicle's
 ## load: what one trip event may carry (CompanyTripsView.MAX_ITEMS). DispatchZone hands no more.
 const MAX_CARGO: int = 64
@@ -60,6 +75,10 @@ var book: OrderBook = OrderBook.new()
 var gate: TripGate
 ## Game minute for the trip's times, Callable() -> int. Unset: 0.
 var minute_now: Callable = Callable()
+## Is the day open to leave, Callable() -> bool (DayCycle.is_day_closed() reversed, D-0851). Unset: always.
+var day_open: Callable = Callable()
+## The shed's minute, Callable() -> float (DayCycle.shed_minute(), D-0851). Unset: minute().
+var shed_minute_now: Callable = Callable()
 ## Most vehicles out at once.
 var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
 ## Hold at the gate a vehicle that may not leave (D-0316.2); off, it crosses refused and counts as out.
@@ -71,6 +90,8 @@ var _staged: Dictionary = {}
 var _active: Dictionary = {}
 ## vehicle id -> true: crossed outward while refused, out without a trip until it is back.
 var _refused_out: Dictionary = {}
+## vehicle id -> true: crossed outward after the day closed (DAY_CLOSED): out, but the day doesn't wait for it.
+var _night_out: Dictionary = {}
 var _closed: Array[Trip] = []
 var _next_id: int = 1
 ## vehicle id -> its global_position the last tick it stood inside the gate (where a hold puts it back).
@@ -120,6 +141,22 @@ func stage_cargo(vehicle_id: StringName, orders: Array[StringName], boxes: Array
 	_staged[vehicle_id] = {"orders": kept_orders, "boxes": kept_boxes}
 
 
+## Host, the day is over (SUMMARY, OrderDayClose.wire()): every vehicle lets go what it was loaded with and never left
+## with, each order closed in this node's book as the day closed it in the shared one (no order goes on to the next
+## day; there is nothing to pay or charge here, CompanyOrdersNet did). The boxes stay where they lie. Returns how many
+## vehicles were unloaded, each told with cargo_dropped.
+func drop_staged() -> int:
+	var vehicles: Array = _staged.keys()
+	for vehicle_id: StringName in vehicles:
+		var cargo: Dictionary = _staged[vehicle_id]
+		_staged.erase(vehicle_id)
+		for order_id: StringName in cargo["orders"]:
+			if not book.cancel(order_id):
+				book.mark_failed(order_id)
+		cargo_dropped.emit(vehicle_id, cargo["boxes"] as Array[StringName])
+	return vehicles.size()
+
+
 ## An id a trip event may carry: not empty, at most MAX_ID_LENGTH characters.
 static func id_fits(id: StringName) -> bool:
 	return id != &"" and String(id).length() <= MAX_ID_LENGTH
@@ -143,14 +180,15 @@ func trip_of(vehicle_id: StringName) -> Trip:
 	return _active.get(vehicle_id)
 
 
-## Vehicles out: those with a trip out and those that left while refused (what DayCycle waits for).
+## Vehicles out: those with a trip out and those that left while refused for the cap (what DayCycle waits for).
+## One that left after the day closed (DAY_CLOSED) is not counted while the day is closed: no customer waits for it.
 func trips_out() -> int:
-	return _active.size() + _refused_out.size()
+	return _active.size() + _refused_out.size() + (_night_out.size() if _day_is_open() else 0)
 
 
 ## Whether `vehicle_id` is out (with its trip, or without one because it was refused).
 func is_out(vehicle_id: StringName) -> bool:
-	return _active.has(vehicle_id) or _refused_out.has(vehicle_id)
+	return _active.has(vehicle_id) or _refused_out.has(vehicle_id) or _night_out.has(vehicle_id)
 
 
 ## Whether the dispatch zone staged cargo on `vehicle_id` that has not left yet (stage_cargo() would replace it).
@@ -158,12 +196,33 @@ func has_cargo(vehicle_id: StringName) -> bool:
 	return _staged.has(vehicle_id)
 
 
-## May `vehicle_id` leave now? {ok, key, args} as DispatchRules answers: not ok, with FAR_LIMIT and
-## [far_max], while `far_max` other vehicles are out. A vehicle already out is never refused.
+## Whether a vehicle carries `order_id` right now, out on a trip or loaded and yet to leave: the order book every peer
+## shares doesn't say so until the trips are events (CompanyOrdersNet.abandon() leaves such an order alone).
+func carries(order_id: StringName) -> bool:
+	for trip: Trip in _active.values():
+		if order_id in trip.order_ids:
+			return true
+	for cargo: Dictionary in _staged.values():
+		if order_id in cargo["orders"]:
+			return true
+	return false
+
+
+## May `vehicle_id` leave now? {ok, key, args} as DispatchRules answers: not ok, with DAY_CLOSED once the day
+## is closed (day_open), or with FAR_LIMIT and [far_max] while `far_max` other vehicles are out. A vehicle already
+## out is never refused.
 func departure_verdict(vehicle_id: StringName) -> Dictionary:
-	if is_out(vehicle_id) or trips_out() < far_max:
+	if is_out(vehicle_id):
+		return {"ok": true, "key": "", "args": []}
+	if not _day_is_open():
+		return {"ok": false, "key": DAY_CLOSED, "args": []}
+	if trips_out() < far_max:
 		return {"ok": true, "key": "", "args": []}
 	return {"ok": false, "key": FAR_LIMIT, "args": [far_max]}
+
+
+func _day_is_open() -> bool:
+	return not day_open.is_valid() or bool(day_open.call())
 
 
 func closed_trips() -> Array[Trip]:
@@ -283,7 +342,10 @@ func _on_departed(vehicle_id: StringName) -> void:
 		return
 	var verdict: Dictionary = departure_verdict(vehicle_id)
 	if not verdict["ok"]:
-		_refused_out[vehicle_id] = true
+		if verdict["key"] == DAY_CLOSED:
+			_night_out[vehicle_id] = true
+		else:
+			_refused_out[vehicle_id] = true
 		departure_refused.emit(vehicle_id, verdict)
 		return
 	var cargo: Dictionary = _staged[vehicle_id]
@@ -298,7 +360,8 @@ func _on_departed(vehicle_id: StringName) -> void:
 
 
 func _on_returned(vehicle_id: StringName) -> void:
-	if _refused_out.erase(vehicle_id):
+	var was_refused: bool = _refused_out.erase(vehicle_id)
+	if _night_out.erase(vehicle_id) or was_refused:
 		refused_returned.emit(vehicle_id)
 	var trip: Trip = _active.get(vehicle_id)
 	if trip == null:
@@ -313,3 +376,9 @@ func _on_returned(vehicle_id: StringName) -> void:
 ## refusal or a refused vehicle's return is published with (CompanyTripsView).
 func minute() -> int:
 	return int(minute_now.call()) if minute_now.is_valid() else 0
+
+
+## The game minute a delivery happens at now: the shed's (shed_minute_now), which stands still while the shed is
+## frozen, as the order's window did; with nothing to ask, minute().
+func delivery_minute() -> int:
+	return floori(float(shed_minute_now.call())) if shed_minute_now.is_valid() else minute()

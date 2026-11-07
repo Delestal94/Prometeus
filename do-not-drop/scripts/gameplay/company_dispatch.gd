@@ -99,6 +99,8 @@ static func add_to(root: Node) -> CompanyDispatch:
 		builder.busy = func() -> bool:
 			return dispatch.is_open() or (before.is_valid() and bool(before.call()))
 	root.add_child(dispatch)
+	if dispatch.trips != null:
+		dispatch.trips.cargo_dropped.connect(dispatch._on_cargo_dropped)
 	var bus: Node = root.get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"depot_station_opened", dispatch._on_station_opened)
@@ -158,6 +160,11 @@ func can_act() -> bool:
 	return trips != null and net != null and net.is_host()
 
 
+## True once the day is closed to leaving (D-0851): the board says so on every peer, also where there are no trips.
+func day_closed() -> bool:
+	return net != null and net.day_cycle != null and net.day_cycle.is_day_closed()
+
+
 ## The board's data from this peer's world (see the class doc); reads the zone first.
 func context() -> Dictionary:
 	var zone: DispatchZone = scan()
@@ -177,7 +184,7 @@ func context() -> Dictionary:
 		"vehicle": vehicle, "vehicle_name": vehicle_name(vehicle), "box_kg": _kg.duplicate(),
 		"bay": bay_vehicles(body, vehicle), "zones": _zones_by_id(), "gates": _gates_by_id(), "owned": owned,
 		"opened_gates": opened,
-		"can_act": can_act(),
+		"can_act": can_act(), "day_closed": day_closed(),
 	}
 
 
@@ -307,11 +314,11 @@ func _process(delta: float) -> void:
 		panel.refresh(ctx)
 
 
-## What changes what the board draws: the boxes waiting, the vehicle and how many are out.
+## What changes what the board draws: the boxes waiting, the vehicle, how many are out, who acts and the day closing.
 func _signature_of(ctx: Dictionary) -> String:
 	var zone: DispatchZone = ctx["zone"]
 	var out: int = trips.trips_out() if trips != null else (trips_view.trips_out() if trips_view != null else 0)
-	return "%s|%s|%d|%s" % [zone.boxes(), ctx["vehicle_id"], out, ctx["can_act"]]
+	return "%s|%s|%d|%s|%s" % [zone.boxes(), ctx["vehicle_id"], out, ctx["can_act"], ctx["day_closed"]]
 
 
 ## One package in the area: the zone takes it when it is closed, still and its order waits for a box.
@@ -347,6 +354,13 @@ func _on_loaded(_vehicle_id: StringName, boxes: Array[StringName]) -> void:
 	for box_id: StringName in boxes:
 		_loaded[box_id] = true
 	_bridge(boxes)
+
+
+## The host's vehicle let go of `boxes` without leaving (CompanyTrips.drop_staged()): they are no load any more, so
+## scan() reads them like any other box in the zone (the day that closed them left their orders closed: none is listed).
+func _on_cargo_dropped(_vehicle_id: StringName, boxes: Array[StringName]) -> void:
+	for box_id: StringName in boxes:
+		_loaded.erase(box_id)
 
 
 ## Stop-gap until the trips share the order book (rows 17, 19 and 20 of red-autoridad.md, D-0302.2.b.3):

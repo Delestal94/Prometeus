@@ -207,20 +207,31 @@ Decisión: fundirla, como recomendó la revisión del 2026-10-19 (`docs/auditori
 **Test** `test_order_templates`: datos sin problemas, 40 por zona con tarifa, mezcla de tamaños y caprichos, `to_order` válido, y el validador atrapa 9 clases de error.
 **Hecho cuando:** `.tres` validados.
 
-### D-0851 · Cierre del día para los pedidos — A · Opus 5.5 · medium · Aviso: no · F1
+### D-0851 · Cierre del día para los pedidos — A · Opus 5.5 · medium · Aviso: sí (protocolo 66) · F1
+**[x] Hecho (2026-11-07, PR pendiente, reemplaza a #706)** — `order_closed` (protocolo 66), `OrderDayClose`, `CompanyTrips.day_open` / `DAY_CLOSED` / `delivery_minute()`, el cierre en `DayCycle`, `abandon()` en el reloj de pedidos, el motivo en el portón y el tablero; `test_company_day_close_orders`. La llamada de la puerta y la entrega en el libro compartido son de D-0340 / D-0815.b.
 **Depende de:** D-0136 (diseño), D-0807, D-0813.1, D-0253, D-0302
 **Qué:** las reglas 2, 4, 6, 7, 8 y 10 de [clientes.md](../diseno/clientes.md), en el host y con un evento de pedido nuevo.
-- [ ] D-0851.1 `CompanyTrips.day_open` (`Callable`, como `minute_now`): en `CLOSING` `departure_verdict` niega con
+- [x] D-0851.1 `CompanyTrips.day_open` (`Callable`, como `minute_now`): en `CLOSING` `departure_verdict` niega con
   `DAY_CLOSED` y el texto `UI_COMPANY_GATE_DAY_CLOSED`; un vehículo que cruza rechazado en `CLOSING` no cuenta
   para que el día pase a `SUMMARY`.
-- [ ] D-0851.2 `CompanyDayOrders.poll` sigue en `CLOSING` sin sumar pedidos: publica `order_expired` y el abandono
+- [x] D-0851.2 `CompanyDayOrders.poll` sigue en `CLOSING` sin sumar pedidos: publica `order_expired` y el abandono
   (D-0807) con `shed_minute()`.
-- [ ] D-0851.3 `OrderBook.close_day(early: bool)`: lo `late` → `failed` (`OrderPenalties.abandoned`), lo que está en
+- [x] D-0851.3 `OrderBook.close_day(early: bool)`: lo `late` → `failed` (`OrderPenalties.abandoned`), lo que está en
   ventana → `cancelled` sin costo (con `early`, también `failed`). Evento de cierre en `CompanyOrdersNet`
   (validado como los demás, regla 5); la reputación la aplica solo el host. `DayCycle.poll` lo llama en `CLOSING`
   cuando `trips_out() == 0`, y pasa a `SUMMARY` en el poll siguiente.
-- [ ] D-0851.4 Al entregar, `mark_delivered` recibe `floori(shed_minute())` (con D-0815.b, que engancha la puerta);
+- [x] D-0851.4 (2026-11-07) Al entregar, `mark_delivered` recibe `floori(shed_minute())`: `CompanyTrips.delivery_minute()`, que usa el bot y tiene que usar la puerta (D-0340, D-0815.b, todavía sin enganchar);
   el aviso de las 20:00 suma `UI_COMPANY_DAY_CLOSING_ROAD` ("Los clientes reciben solo lo que ya está en camino").
+- Decisión: `OrderBook.close_day(early)` de la subtarea es `OrderDayClose.close_day(book, minuto, early)` (y `closing_plan()` / `abandoned()`, que no tocan el libro): `OrderBook` ya está en el máximo de 20 métodos públicos de gdlint. El host publica un `order_closed {order, state}` por id; los peers aplican con `mark_failed()` / `cancel()`.
+- Decisión: `order_closed` no lleva `minute` ni reputación; la reputación (`OrderPenalties.abandoned`, −3) la suma el host al publicar y el cliente la ve con el próximo snapshot (el test pide que solo cambie en el host). `PROTOCOL_VERSION` 66.
+- Decisión: el abandono (D-0807) queda enganchado en el mundo para todo el día (`OPENING`, `OPERATING` y `CLOSING`), no solo en `CLOSING`, desde `CompanyDayOrders.poll()` y no desde `CompanyOrdersNet.poll()` (así el test de D-0813 no cambia); no abandona lo que `CompanyTrips.carries()` dice que va en una salida, porque el libro compartido todavía no se entera de que un pedido salió.
+- Decisión: el pedido que vuelve sin entregarse (`trip_closed`) se falla (−3) al volver (`CompanyOrdersNet.fail_returned()`, enganchado en `CompanyRoot`), no al cierre; el cierre solo ve lo que sigue vivo. Un vehículo que cruza de noche queda en `_night_out`: no se le niega dos veces, `refused_returned` al volver y no cuenta en `trips_out()`.
+- Decisión: `DayCycle` cierra con el minuto del galpón (`floori(shed_minute())`), tarda un `poll` más antes de `SUMMARY` solo si cerró algo, e intenta hasta 3 veces (`MAX_CLOSE_TRIES`) antes de seguir con un error, para que un libro trabado no frene el día. `early` es de `close_early()` y se limpia en cada apertura.
+- Decisión: `DAY_CLOSED` en el portón (`hold_at_gate`, D-0316.2, que #706 no conocía): el vehículo cargado se frena y su conductor oye el motivo; `_held_here` no cambia de firma, viaja `DAY_CLOSED_CAP` (−1) en lugar del tope. En un cliente, sin `trips`, el tablero lo sabe por `day_closed` del contexto.
+- Decisión: `carries()` cuenta también lo cargado que no salió, y la camioneta de `_night_out` vuelve a contar en `trips_out()` con el día abierto (hallazgos de `auditor-red`).
+- Decisión (revisión del 2026-11-07): lo cargado que no salió baja con `SUMMARY` (`CompanyTrips.drop_staged()`, enganchado en `OrderDayClose.wire()`), no a las 20:00: mientras haya otra salida afuera el vehículo sigue frenado y `carries()` lo protege del abandono. `cargo_dropped` libera las cajas en `CompanyDispatch._loaded`. Es solo del host y no sube el protocolo.
+- Decisión: no se tapa el pedido entregado en `CompanyTrips.book` y abierto en el compartido; solo lo alcanzan los bots y el arreglo es el evento de entrega de D-0815.b.
+- Abierto: hasta D-0340 no se entrega en el juego real, así que toda salida cuesta −3 por pedido al volver ([revisar](../revisar/D-0851.md)); el `HUD` del cliente no ve la reputación nueva hasta el snapshot.
 **Test** `test_company_day_close_orders`: un día que cierra a las 20:00 con un pedido vencido, uno en ventana, uno
 que vence durante `CLOSING` y uno que volvió sin entregarse da `failed` −3, `cancelled` 0, `failed` −3 y −3; el
 mismo día cerrado antes da todo `failed`; un vehículo que sale después de las 20:00 es rechazado y el resumen no

@@ -329,7 +329,7 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
-	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle))
+	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle, OrderDayClose.out(trips)))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -761,6 +761,7 @@ func _add_trips() -> void:
 	add_child(trips)
 	trips.use_gate(CompanyFleet.trip_gate(shed, net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	OrderDayClose.wire(trips, net, day_cycle)
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
 
