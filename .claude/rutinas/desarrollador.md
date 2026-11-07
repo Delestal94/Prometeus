@@ -123,3 +123,5 @@ van al cuerpo del PR, para la auditoría.
    - las decisiones tomadas;
    - el link a `revisar/<ID>.md` si existe.
 3. Si un PR de otro carril cambió algo que tu tarea usa, rebase antes de pedir el merge.
+4. Si tu PR baja más de 10 % una situación del presupuesto de D-2012 (contra la "Serie del presupuesto" de
+   `docs/rendimiento-pc.md`), lleva "(perf)" en el título y una tarea.

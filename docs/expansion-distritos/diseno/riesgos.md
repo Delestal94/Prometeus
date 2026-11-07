@@ -369,10 +369,10 @@ P3: vigilar.
 1. ~~**Partir `CompanyNet` (R-16).**~~ Ya tiene tarea: D-0254. Propuesta original para el grupo 02: `constructor-red`, esfuerzo medium. Hecho
    cuando `company_net.gd` baja de 800 líneas, `PROTOCOL_VERSION` no cambia y `tools/run-tests.sh company`
    sigue en verde.
-2. **Compuerta de conteos en CI (R-08, R-09).** `bench_company` imprime `nodes`, `objects`, `draw_calls` y
-   `physics_bodies`, que no dependen de la velocidad de la GPU. Propuesta: sumarlo a D-2012, y que el paso
-   falle si se pasan los topes de `corte-vertical.md` §4 (≤ 900 draw calls, ≤ 400 cuerpos, ≤ 6000 nodos).
-   Los FPS siguen siendo informativos.
+2. ~~**Compuerta de conteos en CI (R-08, R-09).**~~ Ya tiene tarea: D-2012.3, cuando D-2012.1 y D-2012.2 bajen los
+   conteos. `bench_company` imprime `nodes`, `objects`, `draw_calls` y `physics_bodies`, que no dependen de la
+   velocidad de la GPU. Propuesta original: que el paso falle si se pasan los topes de `corte-vertical.md` §4
+   (≤ 900 draw calls, ≤ 400 cuerpos, ≤ 6000 nodos). Los FPS siguen siendo informativos.
 3. **Regla de versión del save (R-04).** Propuesta: un test que guarde la lista de claves de
    `CompanyState.to_dict()` por versión y falle si cambian sin que suba `CompanySave.VERSION`.
 4. **Tope del mapa en código (R-12).** La decisión del mapa continuo lo pone en `world_tuning.gd`, que no
