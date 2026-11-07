@@ -24,7 +24,7 @@
 | D-1811 | Estanterías (rack chico y grande), heladera industrial — **rack chico hecho (2026-10-19)**: `sm_env_shed_shelf.glb` en el galpón por defecto; faltan el rack grande y la heladera | modelador-blender* | medium | 3 modelos |
 | D-1812 | Palet con cajas de proveedor (variantes) | modelador-blender* | medium | 4 variantes |
 | D-1813 | Zorra (transpaleta) y carrito de picking | modelador-blender* | medium | 2 modelos |
-| D-1814 | Camión de proveedor NPC | modelador-blender* | high | modelo |
+| D-1814 | ✅ Camión de proveedor NPC | modelador-blender* | high | modelo |
 | D-1815 | Impresora de pedidos y tablero | modelador-blender* | low | 2 modelos |
 | D-1816 | ✅ Portapapeles en la mano (primera persona) | modelador-blender* | low | modelo |
 | D-1817 | Kit de paredes del galpón por etapa | modelador-blender* | high | kit |

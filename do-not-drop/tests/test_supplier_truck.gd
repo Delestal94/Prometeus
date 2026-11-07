@@ -12,7 +12,12 @@ extends SceneTree
 ## - during the whole drive no corner of the truck touches the shed's floor, its walls or the dock's
 ##   floor cells (the fixed area nothing can cover), and it never jumps (continuous position and yaw);
 ## - it is deterministic: the same inputs give the same pose, with a fresh calendar too;
-## - the node that draws it (SupplierTruckView) follows the pose and hides when there is no truck.
+## - the node that draws it (SupplierTruckView) follows the pose and hides when there is no truck;
+## - it draws the model sm_vehicle_supplier_truck.glb, no primitive left: the size of
+##   CompanyTuning.SUPPLIER_TRUCK_SIZE_M, narrower than the dock's gap, nose to -Z, wheels on the floor, the
+##   lamps that glow at night, and nothing but the shutter where the bed's twelve pallets stand;
+## - its rear shutter is shut on the road, rolls up in the first minutes of the wait, clears the tallest
+##   stack of pallets, and rolls down before it leaves, with its top edge fixed under the header.
 
 const STEP: float = 0.25
 const FINE_STEP: float = 0.05
@@ -20,6 +25,11 @@ const FINE_STEP: float = 0.05
 ## about 35 m in 6 minutes with an ease-out of twice the mean speed.
 const MAX_JUMP_M: float = 1.0
 const MAX_YAW_JUMP: float = 0.35
+## What a model's part sticks out of the truck's footprint (m): grab handle, badge, tail lights.
+const MODEL_TRIM_M: float = 0.1
+## The model's width with its mirrors (m).
+const MODEL_MIRRORS_WIDTH_M: float = 3.0
+const MODEL_PARTS: Array[String] = ["Cab", "CargoBox", "Wheels", "Light", "TailLights", "RearDoor"]
 
 ## {day, stage, qty}: ten runs.
 const RUNS: Array[Dictionary] = [
@@ -49,6 +59,8 @@ func _run() -> void:
 	_test_no_delivery_day()
 	_test_determinism()
 	_test_view()
+	_test_model()
+	_test_rear_door()
 	quit(_failures)
 
 
@@ -210,4 +222,109 @@ func _test_view() -> void:
 	view.minute_now = Callable()
 	view.refresh()
 	_expect(not view.visible, "the view hides without a clock")
+	view.free()
+
+
+## The AABB of `mesh` in the frame of `body` (the truck's own: nose to -Z, wheels on y = 0).
+func _bounds_in(body: Node3D, mesh: MeshInstance3D) -> AABB:
+	return (body.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
+
+
+func _test_model() -> void:
+	var size: Vector3 = CompanyTuning.SUPPLIER_TRUCK_SIZE_M
+	var view := SupplierTruckView.new()
+	root.add_child(view)
+	var body: Node3D = view.get_node(^"Body")
+	var meshes: Array[Node] = body.find_children("*", "MeshInstance3D", true, false)
+	_expect(not meshes.is_empty(), "the body has the model's meshes")
+	var bounds := AABB()
+	var parts: Array[String] = []
+	var tris: int = 0
+	for node: Node in meshes:
+		var mesh := node as MeshInstance3D
+		parts.append(String(mesh.name))
+		_expect(not mesh.mesh is PrimitiveMesh, "%s comes from the model, not from a primitive" % mesh.name)
+		tris += mesh.mesh.get_faces().size() / 3
+		var part: AABB = _bounds_in(body, mesh)
+		bounds = part if bounds.size == Vector3.ZERO else bounds.merge(part)
+	for part: String in MODEL_PARTS:
+		_expect(parts.has(part), "the model has its %s" % part)
+	_expect(tris < 3000, "low-poly: under 3k triangles (%d)" % tris)
+	var gate: Vector2 = SupplierTruck.gate_span_x(0)
+	_expect(bounds.size.x <= MODEL_MIRRORS_WIDTH_M and bounds.size.x < gate.y - gate.x,
+		"mirrors and all it is narrower than the dock's gap (%.2f m)" % bounds.size.x)
+	var box: AABB = _bounds_in(body, body.find_child("CargoBox", true, false) as MeshInstance3D)
+	_expect(absf(box.size.x - size.x) <= MODEL_TRIM_M, "the box has the truck's width (%.2f m)" % box.size.x)
+	_expect(is_equal_approx(bounds.position.y, 0.0), "the wheels stand on the floor (%.3f)" % bounds.position.y)
+	_expect(absf(bounds.end.y - size.y) <= MODEL_TRIM_M, "it has the truck's height (%.2f m)" % bounds.end.y)
+	var half: float = size.z * 0.5
+	_expect(absf(bounds.position.z + half) <= MODEL_TRIM_M and absf(bounds.end.z - half) <= MODEL_TRIM_M,
+		"it has the truck's length around its middle (%.2f to %.2f)" % [bounds.position.z, bounds.end.z])
+	var cab: AABB = _bounds_in(body, body.find_child("Cab", true, false) as MeshInstance3D)
+	var tail: AABB = _bounds_in(body, body.find_child("TailLights", true, false) as MeshInstance3D)
+	_expect(cab.get_center().z < 0.0 and tail.get_center().z > 0.0, "the cab is at -Z and the rear at +Z")
+	# Nothing of the truck but its shutter stands where the bed's pallets go.
+	var stack := AABB()
+	var turned := Vector3(CompanyTuning.PALLET_FOOTPRINT_M.y, PalletBox.height(), CompanyTuning.PALLET_FOOTPRINT_M.x)
+	for rank: int in SupplierTruckView.BED_SLOTS:
+		var at: Vector3 = SupplierTruckView.bed_slot(rank)
+		var slot := AABB(at - Vector3(turned.x, 0.0, turned.z) * 0.5, turned)
+		stack = slot if rank == 0 else stack.merge(slot)
+	var inside: int = 0
+	for node: Node in meshes:
+		var mesh := node as MeshInstance3D
+		if mesh.name == "RearDoor":
+			continue
+		var to_body: Transform3D = body.global_transform.affine_inverse() * mesh.global_transform
+		for corner: Vector3 in mesh.mesh.get_faces():
+			if stack.grow(-0.005).has_point(to_body * corner):
+				inside += 1
+	_expect(inside == 0, "the bed is hollow where the pallets go (%d corners inside)" % inside)
+	view.free()
+	var glowing := SupplierTruckView.MODEL.instantiate() as Node3D
+	LowpolyMaterials.apply(glowing)
+	LowpolyMaterials.set_night_level(1.0)
+	_expect(LowpolyMaterials.light_up(glowing, SupplierTruckView.NIGHT_LIGHTS) > 0, "its lamps light up at night")
+	LowpolyMaterials.set_night_level(0.0)
+	glowing.free()
+
+
+func _test_rear_door() -> void:
+	var arrival: float = float(SupplierSchedule.arrival_minute())
+	var departure: float = float(SupplierSchedule.departure_minute())
+	var roll: float = SupplierTruckView.REAR_DOOR_ROLL_MIN
+	_expect(SupplierTruckView.door_opening(arrival - 1.0) == 0.0, "the shutter is shut driving in")
+	_expect(SupplierTruckView.door_opening(arrival) == 0.0, "it is still shut as the truck parks")
+	_expect(is_equal_approx(SupplierTruckView.door_opening(arrival + roll * 0.5), 0.5), "it rolls up gradually")
+	_expect(SupplierTruckView.door_opening(arrival + roll) == 1.0, "it is open after the first minute of the wait")
+	_expect(SupplierTruckView.door_opening(departure - roll) == 1.0, "it stays open until the last minute")
+	_expect(SupplierTruckView.door_opening(departure) == 0.0, "it is shut when the truck leaves")
+	_expect(SupplierTruckView.door_opening(departure + 1.0) == 0.0, "it stays shut driving out")
+	var s: SupplierSchedule = _schedule_for(2, 10)
+	var company := FakeCompany.new()
+	company.day = 2
+	var view := SupplierTruckView.new()
+	view.schedule = s
+	view.company = company
+	var minute: Array[float] = [arrival - 2.0]
+	view.minute_now = func() -> float: return minute[0]
+	root.add_child(view)
+	var body: Node3D = view.get_node(^"Body")
+	var door := body.find_child("RearDoor", true, false) as MeshInstance3D
+	var top: float = _bounds_in(body, door).end.y
+	view.refresh()
+	var shut: AABB = _bounds_in(body, door)
+	_expect(is_equal_approx(door.scale.y, 1.0), "the view's shutter is shut driving in")
+	_expect(shut.position.y <= SupplierTruckView.CARGO_FLOOR + SupplierTruckView.BED_WALL + 0.01,
+		"shut, it reaches the bed's floor (%.2f)" % shut.position.y)
+	minute[0] = arrival + 30.0
+	view.refresh()
+	var rolled: AABB = _bounds_in(body, door)
+	var last: Vector3 = SupplierTruckView.bed_slot(SupplierTruckView.BED_SLOTS - 1)
+	_expect(rolled.position.y >= last.y + PalletBox.height(),
+		"rolled up it clears the top pallets (%.2f over %.2f)" % [rolled.position.y, last.y + PalletBox.height()])
+	_expect(is_equal_approx(rolled.end.y, top), "its top edge stays under the header")
+	minute[0] = departure + 1.0
+	view.refresh()
+	_expect(is_equal_approx(door.scale.y, 1.0), "the view's shutter is shut again driving out")
 	view.free()
