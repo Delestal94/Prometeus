@@ -10,7 +10,9 @@ extends Node3D
 ## Whatever is ready is instanced and added in slices of `slice_msec` per
 ## frame, so crossing a border never costs one big frame. Cells that are not
 ## loaded but near get `impostor_for.call(cell) -> Node3D` (default: a flat
-## one-piece block).
+## one-piece block). So do the pinned cells no anchor is near (`grid` parks
+## them): they stay in the tree with their collision and are hidden, so they
+## cost nothing to draw.
 ##
 ## A cell's content is authored in world coordinates (the streamer does not move it).
 ##
@@ -154,6 +156,10 @@ func _apply(changes: Dictionary) -> void:
 		_unload(cell)
 	for cell: Vector2i in changes["load"]:
 		_request(cell)
+	for cell: Vector2i in changes["park"]:
+		_show_cell(cell, false)
+	for cell: Vector2i in changes["wake"]:
+		_show_cell(cell, true)
 
 
 func _request(cell: Vector2i) -> void:
@@ -193,9 +199,11 @@ func _instance_ready() -> void:
 		var t0 := Time.get_ticks_usec()
 		var node: Node3D = _make_cell(cell, item.get("scene"))
 		if node != null:
+			node.visible = not grid.is_parked(cell)
 			add_child(node)
 		_nodes[cell] = node
-		_remove_impostor(cell)
+		if not grid.is_parked(cell):
+			_remove_impostor(cell)
 		longest_step_usec = maxi(longest_step_usec, Time.get_ticks_usec() - t0)
 		cell_loaded.emit(cell, node)
 		if Time.get_ticks_usec() - start >= budget:
@@ -218,6 +226,13 @@ func _unload(cell: Vector2i) -> void:
 		remove_child(node)
 		node.queue_free()
 	cell_unloaded.emit(cell)
+
+
+## Draws a loaded cell or stops drawing it. A cell still on its way takes this from the grid when it arrives.
+func _show_cell(cell: Vector2i, drawn: bool) -> void:
+	var node: Node3D = _nodes.get(cell)
+	if node != null:
+		node.visible = drawn
 
 
 func _sync_impostors() -> void:

@@ -46,7 +46,8 @@ o `FAILED`.
 - **Carga en hilo** con `ResourceLoader.load_threaded_request`. La instanciación se reparte en rebanadas
   de ≤ 4 ms por frame, como `Depot.BUILD_SLICE_MSEC`, para no repetir N-917.
 - **Las celdas lejanas** muestran un impostor liviano (malla de una pieza). El galpón y las calles
-  principales nunca se descargan.
+  principales nunca se descargan; pasado el radio de carga de toda ancla conservan su colisión, no se dibujan y
+  también muestran el impostor (D-2012.1).
 - **Adaptador** en `scripts/gameplay/districts/company_cells.gd`.
 **Test del módulo:** con 3 anclas falsas moviéndose, el set de celdas cargadas es el esperado en cada
 paso, y una celda nunca se carga y descarga en el mismo segundo.
