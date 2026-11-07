@@ -212,7 +212,8 @@ func _build_options() -> void:
 	_back(page)
 
 
-## One row per slot: "Jugar" with the name and the day's numbers, then chips and the two actions.
+## One row per slot: "Jugar" with the name and the day's numbers, then chips (a day cut short, D-0251, and
+## the modifiers on) and the two actions.
 func _add_row(entry: Dictionary) -> void:
 	var slot: String = entry["slot"]
 	var row := VBoxContainer.new()
@@ -227,6 +228,12 @@ func _add_row(entry: Dictionary) -> void:
 	play.add_theme_font_size_override("font_size", 17)
 	play.disabled = too_new
 	play.pressed.connect(play_slot.bind(slot))
+	# A newer build's file is not ours to read: "Guardada con una versión más nueva" is all it says.
+	# On a line of its own: next to both modifiers and the two actions it would push the card off screen.
+	var interrupted: bool = bool(entry["interrupted"]) and not too_new
+	if interrupted:
+		var cut: Label = UiTheme.chip(row, tr("UI_COMPANY_SLOTS_INTERRUPTED"), UiTheme.ORANGE, 13)
+		cut.get_parent().name = "Chip_interrupted"
 	var actions := HBoxContainer.new()
 	actions.name = "Actions"
 	actions.add_theme_constant_override("separation", 8)
@@ -238,7 +245,10 @@ func _add_row(entry: Dictionary) -> void:
 			chip.get_parent().name = "Chip_%s" % key
 			on.append(tr(OPTION_TEXT[key][0]))
 	# The chips are small: the button says them in full when it has the focus (and on hover).
-	play.tooltip_text = ", ".join(on)
+	var said: PackedStringArray = [tr("UI_COMPANY_SLOTS_INTERRUPTED_HINT")] if interrupted else []
+	if not on.is_empty():
+		said.append(", ".join(on))
+	play.tooltip_text = "\n".join(said)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(spacer)

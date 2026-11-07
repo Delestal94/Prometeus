@@ -446,6 +446,8 @@ UI_COMPANY_SLOTS_NEW,Nueva empresa,New company
 UI_COMPANY_SLOTS_EMPTY,Todavía no hay ninguna empresa guardada.,No company saved yet.
 UI_COMPANY_SLOTS_DETAILS,Día %d · $%d · %s,Day %d · $%d · %s
 UI_COMPANY_SLOTS_TOO_NEW,Guardada con una versión más nueva,Saved by a newer version
+UI_COMPANY_SLOTS_INTERRUPTED,Día cortado,Day cut short
+UI_COMPANY_SLOTS_INTERRUPTED_HINT,El día se cortó: vuelve a jugarse desde las 08:00.,The day was cut short: it plays again from 08:00.
 UI_COMPANY_SLOTS_DELETE,Borrar,Delete
 UI_COMPANY_SLOTS_DELETE_CONFIRM,¿Seguro? Borrar,Sure? Delete
 UI_COMPANY_SLOTS_NAME,Nombre de la empresa,Company name

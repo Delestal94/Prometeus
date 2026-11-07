@@ -4,7 +4,9 @@ extends SceneTree
 ## The main menu's Modo Empresa page (D-1904, scripts/ui/company_slots_page.gd), as a flow:
 ## - the list shows one row per saved company (CompanySave.list_slots()) with its name, day, money
 ##   and a chip per modifier on (D-1919), the full names in the "Jugar" tooltip; a save from a newer
-##   build is listed with "Jugar" and "Opciones" disabled; an empty folder says so;
+##   build is listed with "Jugar" and "Opciones" disabled; an empty folder says so; a day cut short
+##   (D-0251) shows the "Día cortado" chip and says so in the tooltip, and with it on a row with every
+##   modifier the card stays on screen; a newer build's file shows no such chip;
 ## - "Jugar" on a row asks for that slot, solo or, with "Abrir sala para amigos", hosting, and leaves
 ##   CompanyState off so the company world loads the slot;
 ## - "Nueva empresa" -> name and modifiers (off by default) -> "Crear y jugar" asks for a free slot
@@ -72,20 +74,21 @@ func _test_empty_folder(state: Node) -> void:
 	page.free()
 
 
-## Alfa (day 3, $1250, assisted packing), Beta (day 7, $90) and a save from a newer build.
+## Alfa (day 3, $1250, assisted packing, a day cut short), Beta (day 7, $90) and a save from a newer build.
 func _seed(state: Node) -> void:
 	state.new_company("Alfa")
 	state.day = 3
 	state.money = 1250
 	state.options = {"assisted_packing": true, "calm_days": false}
 	_expect(CompanySave.save(state, "company", DIR), "Alfa saved")
+	_expect(CompanySave.mark_interrupted("company", DIR), "Alfa's day cut short")
 	state.new_company("Beta")
 	state.day = 7
 	state.money = 90
 	state.options = {"assisted_packing": false, "calm_days": false}
 	_expect(CompanySave.save(state, "company_2", DIR), "Beta saved")
 	var future := FileAccess.open(CompanySave.path_for("future", DIR), FileAccess.WRITE)
-	future.store_string(JSON.stringify({"version": CompanySave.VERSION + 1, "saved_at": 5,
+	future.store_string(JSON.stringify({"version": CompanySave.VERSION + 1, "saved_at": 5, "interrupted": true,
 		"company": {"company_name": "Del futuro", "day": 40}}))
 	future.close()
 	state.reset()
@@ -102,13 +105,20 @@ func _test_list(page: CompanySlotsPage) -> void:
 		"Alfa shows a chip for Armado asistido")
 	_expect(alfa != null and alfa.get_parent().find_child("Chip_calm_days", true, false) == null,
 		"Alfa shows no chip for a modifier that is off")
-	_expect(alfa != null and alfa.tooltip_text == tr("UI_COMPANY_OPT_ASSISTED_PACKING"),
+	_expect(alfa != null and alfa.tooltip_text.contains(tr("UI_COMPANY_OPT_ASSISTED_PACKING")),
 		"Alfa's button names its modifiers in full")
+	_expect(alfa != null and alfa.get_parent().find_child("Chip_interrupted", true, false) != null,
+		"Alfa's day was cut short: its row says so with a chip (D-0251)")
+	_expect(alfa != null and alfa.tooltip_text.contains(tr("UI_COMPANY_SLOTS_INTERRUPTED_HINT")),
+		"...and the button says the day plays again from its opening")
 	var beta: Button = page.play_button("company_2")
 	_expect(beta != null and beta.get_parent().find_child("Chip_*", true, false) == null, "Beta has no chips")
+	_expect(beta != null and beta.tooltip_text.is_empty(), "Beta's button has nothing to add")
 	var future: Button = page.play_button("future")
 	_expect(future != null and future.disabled and future.text.contains(tr("UI_COMPANY_SLOTS_TOO_NEW")),
 		"a newer build's save is listed, disabled")
+	_expect(future != null and future.get_parent().find_child("Chip_interrupted", true, false) == null
+		and future.tooltip_text.is_empty(), "a newer build's interrupted key is not read as ours")
 	var future_options := future.get_parent().find_child("Options", true, false) as Button if future else null
 	_expect(future_options != null and future_options.disabled, "its Opciones is disabled too")
 	var empty := page.find_child("ViewList", true, false).find_child("Empty", true, false) as Label
@@ -205,6 +215,10 @@ func _test_main_menu(state: Node) -> void:
 	for i: int in 3:
 		state.new_company("Extra %d" % i)
 		CompanySave.save(state, "extra_%d" % i, DIR)
+	state.new_company("Con todo")
+	state.options = {"assisted_packing": true, "calm_days": true}
+	CompanySave.save(state, "extra_0", DIR)
+	CompanySave.mark_interrupted("extra_0", DIR)
 	state.reset()
 	root.size = Vector2i(1280, 720)
 	var network: Node = root.get_node(^"/root/NetworkManager")
@@ -236,6 +250,10 @@ func _test_main_menu(state: Node) -> void:
 	var card: Control = menu.get(&"_card")
 	var bottom: float = card.get_global_rect().end.y
 	_expect(bottom <= 720.0, "the card with five companies fits 720p (bottom at %.0f)" % bottom)
+	var card_rect: Rect2 = card.get_global_rect()
+	_expect(card_rect.position.x >= 0.0 and card_rect.end.x <= 1280.0,
+		"a day cut short with every modifier keeps the card on screen (%.0f to %.0f)"
+		% [card_rect.position.x, card_rect.end.x])
 	var back := InputEventAction.new()
 	back.action = &"ui_cancel"
 	back.pressed = true
