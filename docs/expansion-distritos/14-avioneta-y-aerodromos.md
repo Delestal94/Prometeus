@@ -52,7 +52,7 @@
 | ~~D-1437~~ | ~~Hangar en el aeródromo~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | escena |
 | ~~D-1438~~ | ~~Mapa del mundo visto desde el aire (los distritos conectados)~~ **Fusionada en D-1411 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-tramos | high | captura |
 | ~~D-1439~~ | ~~Entregas aéreas a otras ciudades fuera del mapa (simuladas)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | sim |
-| D-1440 | Piloto NPC para salidas automáticas | constructor-negocio | low | sim |
+| D-1440 | Piloto NPC para salidas automáticas — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): solo cajas sin trampa fuerte a distritos dominados, media paga (regla de D-1027); al final del grupo** | constructor-negocio | low | sim |
 
 ## Pulido
 

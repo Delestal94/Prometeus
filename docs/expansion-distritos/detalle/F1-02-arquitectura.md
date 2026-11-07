@@ -4,16 +4,17 @@
 > [F0-02-arquitectura.md](F0-02-arquitectura.md).
 
 ### D-0251 · Un día cortado vuelve a su apertura — A · Opus 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-11-04, lote local)** — el código ya estaba (PR #678, 7fa155d8: apertura del día 1 antes de los flags, `CompanySave.mark_interrupted()`); `test_company_autosave` suma ahora los flags de desarrollo fuera del slot, los palets de la apertura y `was_interrupted()` tras cargar.
 **Depende de:** D-0134 (diseño), D-0236, D-2005
 **Qué:** [guardado.md](../diseno/guardado.md), reglas 1 y 2. Solo en el host (también jugando solo):
-- [ ] D-0251.1 **Crear la empresa guarda su apertura del día 1.** En `CompanyRoot`, cuando `load_into` no cargó nada
+- [x] D-0251.1 **Crear la empresa guarda su apertura del día 1.** En `CompanyRoot`, cuando `load_into` no cargó nada
   y se llama a `new_company()`: guardar el slot después de `DefaultShed` y **antes** de `CompanyDevFlags.apply`
   (con el stock y `pallets` como los deja un save). Un slot con un save de una build más nueva no se pisa (como hoy).
-- [ ] D-0251.2 **Un corte no escribe la empresa.** `save_interrupted_day()` deja de escribir `to_dict()`: solo marca
+- [x] D-0251.2 **Un corte no escribe la empresa.** `save_interrupted_day()` deja de escribir `to_dict()`: solo marca
   `interrupted: true` en el archivo que ya está (nueva `CompanySave.mark_interrupted(slot, dir)`, que lee el JSON,
   cambia la clave y lo escribe por `SafeJson`, sin tocar `company` ni `saved_at`). Sin archivo, no hace nada.
   `load_into` sigue poniendo el reloj en `DAY_START_MIN` (el archivo ya está a esa hora).
-- [ ] D-0251.3 Comentarios de `company_save.gd` (encabezado y `load_into`: "what happened after it is kept" pasa a
+- [x] D-0251.3 Comentarios de `company_save.gd` (encabezado y `load_into`: "what happened after it is kept" pasa a
   "the day's opening, nothing of the cut day") y de `company_root.gd`. El resumen local del cliente (D-2005) no
   cambia: muestra lo que vio.
 **Test** `test_company_autosave` (ampliado): una empresa nueva deja su slot del día 1 sin los flags de desarrollo;

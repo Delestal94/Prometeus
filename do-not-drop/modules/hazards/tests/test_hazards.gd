@@ -6,7 +6,9 @@ extends SceneTree
 ## with its own integrity from the params; its name travels as the name key
 ## (or the display name); content is picked deterministically per object
 ## id; ITrapBehavior's damage() clamps and reports the real loss, milestones
-## are queued once and taken once, and its hint renders through LocText.
+## are queued once and taken once, and its hint renders through LocText;
+## its severity is 1 unless the config says otherwise, clamped to SEVERITY_MAX,
+## and back to 1 when set up again without it.
 
 var _failures: int = 0
 
@@ -51,6 +53,17 @@ func _initialize() -> void:
 	_expect(is_equal_approx(one.integrity_max, 40.0) and is_equal_approx(one.integrity, 40.0),
 		"Setup takes the params' integrity")
 	_expect(one.get_state() == ITrapBehavior.TrapState.OK, "A fresh hazard is fine")
+	_expect(is_equal_approx(one.severity, 1.0),
+		"Without a severity it hits as its params say (got %.2f)" % one.severity)
+	var harsh: ITrapBehavior = definition.create_behavior()
+	harsh.on_setup(null, {"severity": 1.5})
+	_expect(is_equal_approx(harsh.severity, 1.5), "Setup takes the severity (got %.2f)" % harsh.severity)
+	harsh.on_setup(null, {"severity": 99.0})
+	_expect(is_equal_approx(harsh.severity, ITrapBehavior.SEVERITY_MAX),
+		"A severity past the top is clamped (got %.2f)" % harsh.severity)
+	harsh.on_setup(null, {})
+	_expect(is_equal_approx(harsh.severity, 1.0), "Setting up again without one goes back to 1 (got %.2f)"
+		% harsh.severity)
 	var lost: float = one.on_impact(15.0)
 	_expect(is_equal_approx(lost, 30.0) and is_equal_approx(one.integrity, 10.0),
 		"An impact costs integrity by the params (lost %.1f)" % lost)

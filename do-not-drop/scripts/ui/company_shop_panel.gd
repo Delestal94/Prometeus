@@ -155,7 +155,7 @@ static func kind_name(kind: StringName) -> String:
 
 
 static func money(amount: int) -> String:
-	return "$%d" % amount if amount >= 0 else "-$%d" % -amount
+	return MoneyText.format(amount)
 
 
 ## Translated "key % args", tolerant of a key that takes fewer or more values than it was given.

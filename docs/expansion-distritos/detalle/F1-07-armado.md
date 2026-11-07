@@ -91,15 +91,24 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 **Hecho cuando:** el test pasa con 6 cajas de calidad conocida.
 
 ### D-0710 · Calidad → trampa y su intensidad — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[~] Parcial (revisión D-0140, 2026-10-22: falta D-0710.b, que las trampas lean la intensidad)** — antes marcada hecha (2026-10-12): `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
+**[~] Parcial (2026-11-04, lote local)** — D-0710.b hecho: el nivel elige la severidad de la trampa (`CompanyTuning.TRAP_SEVERITY_*` 1 / 1,1 / 1,25, `ITrapBehavior.severity`, `PackageRescue.trap_config`) y `sim_trap_balance -- --levels` da más roturas en alto en 7 de 7 (`test_box_trap_levels`); falta D-0710.c, que la caja floja sume Equilibrio de verdad.
+Antes (revisión D-0140, 2026-10-22, volvió a ◐ desde hecha el 2026-10-12): `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
 **Depende de:** D-0709 (`AssemblyQuality`), D-0213 (`BoxToPackage`), D-0109
 **Qué:** la trampa que viaja sigue siendo la del producto más difícil; el armado solo mueve la intensidad (`diseno/armado-y-trampas.md` §5). Números en `CompanyTuning` (`TRAP_INTENSITY_MID` 0,1, `TRAP_INTENSITY_HIGH` 0,25, `TRAP_LOOSE_BOX_INTENSITY` 0,3).
-- [ ] **D-0710.b** (revisión D-0140; `constructor-trampas`, high, aviso a Slatex: comportamientos de trampa) Los
+- [x] **D-0710.b** (revisión D-0140; `constructor-trampas`, high, aviso a Slatex: comportamientos de trampa) Los
   comportamientos leen `META_TRAP_PLAN`: el nivel low/mid/high elige la variante de dificultad que el `.tres` de la
-  trampa ya tiene (sin parámetros nuevos por trampa) y `META_LOOSE_BOX` suma Equilibrio con el mismo mecanismo de
-  trampa extra. Hoy los dos metadatos se escriben y nadie los lee: el armado solo cambia `impact_absorption`.
-**Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo; y (D-0710.b) `sim_trap_balance` muestra
-más roturas en `high` que en `low` en ≥ 5 de las 7 trampas.
+  trampa ya tiene (sin parámetros nuevos por trampa). **Hecho (2026-11-04, lote local):** no había variantes en los
+  `.tres`; la variante es una severidad por nivel (`BoxTrap.severity`, guardada en el plan) que el paquete le da a la
+  trampa al armarla (`PackageRescue.trap_config`, también al reparar) y cada comportamiento multiplica por ella su
+  daño, nunca la respuesta. Decisión en `docs/decisiones/2026-11-04-severidad-de-trampas.md`; números medidos en
+  `tests/sim_data/levels_report.md`; aviso `docs/avisos/2026-11-04-d0710b-severidad-de-trampas.md`.
+- [ ] **D-0710.c** (sale de D-0710.b; `constructor-trampas`, high, aviso a Slatex: paquete y cuidado)
+  `META_LOOSE_BOX` suma Equilibrio con el mismo mecanismo de trampa extra (el de flota, que tampoco existe todavía).
+  Hoy el metadato se escribe y nadie lo lee: el paquete tiene un solo comportamiento de trampa, y una segunda toca
+  cuidado, HUD, pistas e integridad.
+**Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo; (D-0710.b) `sim_trap_balance` muestra
+más roturas en `high` que en `low` en ≥ 5 de las 7 trampas; y (D-0710.c) una caja floja con otra trampa también
+pide contrapesar.
 
 
 ### D-0711 · Caja armada sigue siendo `DeliveryPackage` — A · Sonnet 5.5 · xhigh · Aviso: no · F1

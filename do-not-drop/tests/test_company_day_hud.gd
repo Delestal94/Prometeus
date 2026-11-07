@@ -3,7 +3,7 @@ extends SceneTree
 ##
 ## The company day's HUD (expansion D-1903, with D-0519), checked on its labels (no screenshot):
 ## - "Día 3 · 10:45" from the clock's minute (wrapping past midnight) and "Pausa" while the clock is stopped;
-## - the money as "$1250", red when the company is in the red;
+## - the money as "$1.250" (the language's separator, D-0546), red when the company is in the red;
 ## - "Pedidos: N" for the open orders, orange when one is past its due_min;
 ## - it redraws on its own every REFRESH_SECONDS and never takes the mouse;
 ## - add_to() reads a root's clock and net (company day and money, the order book's open orders), on its layer;
@@ -93,7 +93,8 @@ func _test_values() -> void:
 	root.add_child(hud)
 	await process_frame
 	_expect(hud.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the HUD lets the mouse through")
-	_expect(Array(hud.texts()) == ["Día 3 · 08:00", "$1250", "Pedidos: 2"], "the three values (got %s)" % [hud.texts()])
+	_expect(Array(hud.texts()) == ["Día 3 · 08:00", "$1.250", "Pedidos: 2"],
+		"the three values (got %s)" % [hud.texts()])
 	var orders_label := hud.find_child("Orders", true, false) as Label
 	_expect(orders_label.get_theme_color(&"font_color") == UiTheme.INK, "no late order: ink")
 	minute[0] = 610.0

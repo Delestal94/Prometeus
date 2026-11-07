@@ -11,7 +11,7 @@ extends RefCounted
 ##   protection = padded share of the free cells (1 when products fill the box);
 ## - metadata: META_PACKED_BOX (to_dict()), META_ORDER_ID and, when more than
 ##   OVERSIZED_FREE_RATIO of the box is empty without padding, META_LOOSE_BOX;
-##   given an order, also META_TRAP_PLAN (BoxTrap.plan, D-0710).
+##   given an order, also META_TRAP_PLAN (BoxTrap.plan, D-0710), whose severity the trap rides at.
 ## Adds only: no signature of package.gd or package_content.gd changes. The
 ## UnlockManager script is preloaded, never named (lesson N-919).
 
@@ -23,7 +23,8 @@ const TRAP_PATH: String = "res://data/traps/%s.tres"
 const META_PACKED_BOX: StringName = &"packed_box"
 const META_ORDER_ID: StringName = &"order_id"
 const META_LOOSE_BOX: StringName = &"loose_box"
-const META_TRAP_PLAN: StringName = &"trap_plan"
+## The package reads its severity from here when it sets its trap up (D-0710.b).
+const META_TRAP_PLAN: StringName = PackageRescue.TRAP_PLAN_META
 
 
 ## A new, not yet added DeliveryPackage for the box, or null if the box holds no

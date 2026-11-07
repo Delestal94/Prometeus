@@ -232,6 +232,11 @@ En las fusiones no se pierde nada: el trabajo pasa a la tarea destino, que suma 
 
 Estas tareas rozan algo que nombró el usuario. La recomendación es posponerlas, pero la decisión es suya (issue `decide-usuario`).
 
+> **Decidida el 2026-11-04 (D-0113, por delegación del usuario):** no se tacha ninguna; se construyen en la versión
+> mínima de la columna "Recomendación" y al final de su grupo; las de F2, en la primera actualización del Early Access.
+> "Sin trampa" se lee como "sin trampa fuerte en distritos dominados" (todos los productos tienen trampa).
+> Ver [2026-11-04-recortes-zona-gris](../../decisiones/2026-11-04-recortes-zona-gris.md).
+
 | IDs | Qué es | Recomendación | Por qué no se tacha |
 |---|---|---|---|
 | D-1027, D-1028, D-1037, D-1239, D-1440 | Repartidor, choferes y piloto NPC; empleados especializados por zona | Posponer (§3.2) o reducir a pedidos sin trampa con media paga | Son "empleados" |
@@ -309,6 +314,10 @@ Estas tareas no las nombró el usuario, pero le dan algo que hacer al que no man
 6. **Dominio de Slatex.** El armado y las trampas (grupo 07) y la UI (grupo 19) tocan sus carpetas. Se hacen con aviso, pero pueden chocar con su lista (S-311).
 
 ## 6. Preguntas abiertas (solo las contesta el equipo)
+
+> 2026-11-04 ([D-0113](../../decisiones/2026-11-04-recortes-zona-gris.md)): contestadas la 1 (opción A como orden de
+> construcción, con la zona gris de F2 en la primera actualización; la fecha y la página siguen del usuario), la 4 (versión mínima) y la 5 (vale solo para el juego base).
+> La 2 es D-2033 y la 3 es del usuario.
 
 1. **¿Qué parte de la expansión entra al Early Access del 2027-03-12?**
    - Opción A, recomendada: F0-F2 completos (Centro, Suburbio, Campo, bici, carrito, empleados, cintas, hitos) y F3-F4 como actualizaciones gratuitas de Early Access, que `plan-desarrollo.md` ya prevé.

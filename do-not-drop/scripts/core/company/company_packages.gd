@@ -10,7 +10,8 @@ extends RefCounted
 ## anything changes, builds the package from the taped box this peer still holds (make():
 ## BoxToPackage.build) and, once the box is off the table, puts it in the world (put()). Where the
 ## event says so the host's word wins: node name and package id, trap, absorption, and quality and
-## intensity in BoxToPackage.META_TRAP_PLAN (the plan BoxTrap would give, with the host's numbers).
+## intensity in BoxToPackage.META_TRAP_PLAN (the plan BoxTrap would give, with the host's numbers, and
+## the severity of that intensity's level, which the host's trap rides at: D-0710.b).
 ##
 ## The packages go under `parent`, the same path on every peer, so each one's MultiplayerSynchronizer
 ## pairs up with the host's. Unset (the tables alone in a test, a world not up yet) nothing is built
@@ -126,10 +127,11 @@ func make(box: PackedBox, data: Dictionary) -> DeliveryPackage:
 	package.trap_definition = trap
 	package.impact_absorption = float(data["absorption"])
 	var plan: Dictionary = BoxTrap.plan(box, {})
+	var level: StringName = BoxTrap.level(float(data["trap_intensity"]))
 	plan.merge({
 		"trap_id": trap.id, "quality": float(data["quality"]),
 		"intensity": float(data["trap_intensity"]),
-		"level": BoxTrap.level(float(data["trap_intensity"])), "absorption": float(data["absorption"]),
+		"level": level, "severity": BoxTrap.severity(level), "absorption": float(data["absorption"]),
 	}, true)
 	package.set_meta(BoxToPackage.META_TRAP_PLAN, plan)
 	var at := Transform3D(data["basis"] as Basis, data["pos"] as Vector3)

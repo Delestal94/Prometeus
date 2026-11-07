@@ -76,8 +76,10 @@ func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_S
 ## `world_seed` deals the Campo's animals and events (EdgeEvents, D-0315); their
 ## nodes are built only with `spawn_events`. `keep_clear` is a ground rectangle no roadway is laid
 ## inside (the shed's: the streets that start at its middle start at its edge, D-0314.a).
+## The streets' materials (StreetSurface, D-0304.1b) are made here, so the first cell does not pay for them.
 func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false,
 		keep_clear: Rect2 = Rect2()) -> EdgeCellContent:
+	StreetSurface.warm()
 	var decor := CentroDecor.new(graph, HouseMap.load_default(), grid.cell_size)
 	var content := EdgeCellContent.new(graph, grid.cell_size, world_seed, spawn_events, decor, keep_clear)
 	_graph_content = content

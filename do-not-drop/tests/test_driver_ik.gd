@@ -1,5 +1,6 @@
 extends SceneTree
-## The seated driver's visible arms must reach the real wheel targets.
+## The seated driver's visible arms must reach the real wheel targets, measured on a parked truck that stands
+## still (N-987.2), and the horn moves the right hand off the rim and back.
 
 var _failures := 0
 
@@ -12,8 +13,17 @@ func _initialize() -> void:
 	var seat: Node3D = vehicle.get_node(^"CabinInterior/DriverEyePoint")
 	var camera: Node = seat.get_node(^"FirstPersonCamera")
 	player.call(&"board_seat", camera.get_path(), seat.get_path())
-	for _i: int in range(20):
+	# Measure on a truck that stands still (N-987.2): with no ground here it used to fall the whole test, and a
+	# wheel that moves between the solve and the read leaves a bigger wrist gap the slower the machine (0.085 m on
+	# CI). Parked (vehicle.gd park(): frozen, as a driverless van that stopped), then a wait until it is still.
+	vehicle.call(&"park")
+	var body_3d := vehicle as RigidBody3D
+	for _i: int in range(600):
 		await physics_frame
+		if _i >= 20 and (body_3d == null or body_3d.linear_velocity.length() < 0.05):
+			break
+	_expect(body_3d != null and body_3d.linear_velocity.length() < 0.05,
+		"The truck stands still before the wrists are measured")
 	var body: Node = player.get_node(^"BodyVisual")
 	var skeleton := _find_skeleton(body)
 	_expect(skeleton != null, "Driver has a skeleton")
@@ -39,8 +49,8 @@ func _initialize() -> void:
 				wrists[bone_name] = skeleton.to_global(skeleton.get_bone_global_pose(bone).origin)
 				var shoulder: int = skeleton.get_bone_parent(skeleton.get_bone_parent(bone))
 				shoulders[bone_name] = skeleton.to_global(skeleton.get_bone_global_pose(shoulder).origin)
-				# Same instant as the wrist: the truck falls in this test, so a
-				# physics tick between capture and check moves the wheel ~7 cm.
+				# Same instant as the wrist, so nothing that moves the wheel
+				# between capture and check counts.
 				targets[bone_name] = (vehicle.find_child(pair[1], true, false) as Node3D).global_position
 	skeleton.skeleton_updated.connect(capture)
 	for _i: int in range(3):

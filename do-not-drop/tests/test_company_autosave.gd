@@ -11,11 +11,13 @@ extends SceneTree
 ##   from the opening without what day 2 earned;
 ## - leaving during the summary keeps that close (day 2, not interrupted) instead of saving day 1
 ##   interrupted, which would play the closed day again;
-## - a company the root comes up with and no save in the slot gets its opening saved at once (D-0251);
+## - a company the root comes up with and no save in the slot gets its opening saved at once (D-0251),
+##   before the dev flags: with --money= the company plays with it and the slot keeps STARTING_MONEY;
 ## - leaving mid-day writes nothing of the day (D-0251): with money earned and charged, units moved and
-##   held, the slot is that opening (day 1, STARTING_MONEY, an empty ledger, the stock as it opened)
-##   marked interrupted (D-2005); loading it gives the same, and so does the company in play once its
-##   world is gone; save_closed_day() outside SUMMARY saves nothing.
+##   held and the pallet jack pushed, the slot is that opening (day 1, STARTING_MONEY, an empty ledger,
+##   the stock and pallets as it opened) marked interrupted (D-2005); loading it gives the same, with
+##   was_interrupted() still true, and so does the company in play once its world is gone;
+##   save_closed_day() outside SUMMARY saves nothing.
 ## - D-0253: the host closes day 1 early from OPERATING (DayClose.close()): with no trip out the next
 ##   poll is SUMMARY, the clock still before 20:00, and the slot is day 2's opening, not interrupted,
 ##   with the day's money; leaving afterwards keeps that close.
@@ -27,6 +29,10 @@ const SLOT: String = "auto"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 ## Real msec the DayCycle reads: far past the OPENING's few seconds.
 const LATER_MSEC: int = 60_000
+## The --money= dev flag the mid-day check comes up with: in play, never in the slot (D-0251).
+const DEV_MONEY: int = 99_999
+## Where the mid-day check pushes the pallet jack (shed frame, metres): nothing a cut day did reaches the slot.
+const MOVED_JACK: Vector2 = Vector2(1.5, -2.0)
 
 var _failures: int = 0
 
@@ -132,8 +138,13 @@ func _check_leave_mid_day() -> void:
 	var stock: Inventory = state.call(&"stock")
 	stock.receive(&"hen", 5, &"dock")
 	state.call(&"store_stock", stock)
-	var host: LiveDayRoot = await _enter(state)
+	var host: LiveDayRoot = await _enter(state, PackedStringArray(["--money=%d" % DEV_MONEY]))
 	var opening: Dictionary = _raw().get("company", {})
+	_expect(int(state.get(&"money")) == DEV_MONEY and int(opening.get("money", 0)) == CompanyTuning.STARTING_MONEY
+		and int(opening.get("day", 0)) == 1 and not CompanySave.was_interrupted(SLOT, DIR),
+		"A new company's slot holds day 1's opening without the dev flags: money %s saved, %s in play"
+		% [opening.get("money"), state.get(&"money")])
+	var opening_pallets: Dictionary = opening.get("pallets", {})
 	host.day_cycle.ticks = func() -> int: return Time.get_ticks_msec() + LATER_MSEC
 	host.day_cycle.poll()
 	_expect(host.day_cycle.phase() == DayCycle.Phase.OPERATING,
@@ -142,6 +153,9 @@ func _check_leave_mid_day() -> void:
 	state.call(&"charge", 60, &"rent")
 	host.net.inventory.move(&"hen", 2, &"dock", &"hands:1")
 	host.net.inventory.move(&"hen", 1, &"dock", &"box:b1")
+	host.net.pallets.jack_at = MOVED_JACK
+	_expect(host.net.pallets.to_save().has("jack_at") and not opening_pallets.has("jack_at"),
+		"Mid-day the jack was pushed, which a save of the live pallets would keep")
 	_expect(not host.save_closed_day(), "save_closed_day() mid-day saves nothing")
 	await _leave(host)
 	var raw: Dictionary = _raw()
@@ -160,6 +174,10 @@ func _check_leave_mid_day() -> void:
 		% [loaded.get(&"money"), loaded.get(&"ledger")])
 	_expect(loaded_stock.count(&"hen", &"dock") == 5 and loaded_stock.total_units() == 5,
 		"...and the opening's stock: the 5 hens on the dock (got %s)" % [loaded_stock.to_dict()])
+	var loaded_pallets: Dictionary = loaded.get(&"pallets")
+	_expect(not loaded_pallets.has("jack_at") and loaded_pallets.keys().size() == opening_pallets.keys().size(),
+		"...and the opening's pallets, without the jack pushed mid-day (got %s)" % [loaded_pallets])
+	_expect(CompanySave.was_interrupted(SLOT, DIR), "...and was_interrupted() is still true after loading")
 	_expect(int(state.get(&"money")) == CompanyTuning.STARTING_MONEY and int(state.get(&"day")) == 1
 		and (state.get(&"ledger") as Array).size() == (opening.get("ledger", []) as Array).size(),
 		"The company in play went back to that opening when its world went (money %s)" % state.get(&"money"))
@@ -225,9 +243,11 @@ func _close_day(host: LiveDayRoot) -> void:
 	host.day_cycle.poll()
 
 
-func _enter(state: Node) -> LiveDayRoot:
+## `args` are the dev flags the host applies when it comes up (CompanyDevFlags, D-0238); none by default.
+func _enter(state: Node, args: PackedStringArray = PackedStringArray()) -> LiveDayRoot:
 	var host := LiveDayRoot.new()
 	host.company_state = state
+	host.dev_args = args
 	host.save_slot = SLOT
 	host.save_dir = DIR
 	root.add_child(host)

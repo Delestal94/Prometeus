@@ -8,7 +8,11 @@ extends SceneTree
 ## - an exact delivery registers nothing, and checking a day again replaces its record;
 ## - a surplus is recorded as extra, not as missing;
 ## - totals per product across days; invalid days record nothing;
-## - the JSON round trip returns the same record and a malformed save loads clean.
+## - the JSON round trip returns the same record and a malformed save loads clean;
+## - only the last CompanyTuning.DELIVERY_NOTE_DAYS_KEPT days stay line by line (D-2026.2): older
+##   days fold into per-product missing totals, so missing_totals() still adds every day, the
+##   trim survives JSON, a note from before D-2026.2 with every day is trimmed on load, an exact
+##   day trims nothing and malformed older totals are skipped.
 
 var _failures: int = 0
 
@@ -24,6 +28,7 @@ func _run() -> void:
 	_test_extra()
 	_test_totals_and_invalid_day()
 	_test_round_trip()
+	_test_trim()
 	quit(_failures)
 
 
@@ -132,3 +137,39 @@ func _test_round_trip() -> void:
 		DeliveryNote.from_dict({"records": 3}).days_with_shortfall().is_empty(),
 		"records of the wrong type load empty"
 	)
+
+
+func _test_trim() -> void:
+	var kept: int = CompanyTuning.DELIVERY_NOTE_DAYS_KEPT
+	var days: int = kept + 16
+	var note := DeliveryNote.new()
+	var old_form: Dictionary = {}
+	for day: int in range(1, days + 1):
+		note.check(day, {&"hen": 10, &"cup": 2}, {&"hen": 7})
+		old_form[str(day)] = [{"product": "cup", "ordered": 2, "received": 0},
+			{"product": "hen", "ordered": 10, "received": 7}]
+	var recent: Array[int] = []
+	for day: int in range(days - kept + 1, days + 1):
+		recent.append(day)
+	_expect(note.days_kept() == kept, "%d days kept line by line (got %d)" % [kept, note.days_kept()])
+	_expect(note.days_with_shortfall() == recent, "the last %d days are the kept ones (got %s)"
+		% [kept, note.days_with_shortfall()])
+	var totals: Dictionary = {&"hen": 3 * days, &"cup": 2 * days}
+	_expect(note.missing_totals() == totals, "totals still add every day (got %s)" % [note.missing_totals()])
+	_expect(note.discrepancies(1).is_empty() and note.discrepancies(days).size() == 2,
+		"an old day has no lines left, the newest keeps its two")
+	var again := DeliveryNote.from_dict(JSON.parse_string(JSON.stringify(note.to_dict())))
+	_expect(JSON.stringify(again.to_dict()) == JSON.stringify(note.to_dict()),
+		"the trimmed note survives JSON (got %s)" % [again.to_dict()])
+	_expect(again.missing_totals() == totals and again.days_with_shortfall() == recent,
+		"... with its older totals and its kept days")
+	var before: DeliveryNote = DeliveryNote.from_dict({"records": old_form})
+	_expect(before.days_kept() == kept and before.missing_totals() == totals,
+		"a note from before D-2026.2 with %d days loads trimmed, totals intact (got %d days, %s)"
+		% [days, before.days_kept(), before.missing_totals()])
+	note.check(days + 1, {&"hen": 4}, {&"hen": 4})
+	_expect(note.days_with_shortfall() == recent, "an exact day trims nothing")
+	var junk := DeliveryNote.from_dict(
+		{"older_missing": {"": 3, "hen": "x", "cup": -1, "lamp": 2.0, "vase": NAN}, "records": {}})
+	_expect(junk.missing_totals() == {&"lamp": 2}, "malformed older totals are skipped (got %s)"
+		% [junk.missing_totals()])

@@ -41,7 +41,7 @@
 | ~~D-1823~~ | ~~Máquinas finales (ver D-1141) — coordinación de estilo~~ **Fusionada en D-1843 (D-0112, [crítica](diseno/critica-alcance.md))** | director-arte | low | revisión |
 | D-1824 | Decoración del galpón (plantas, cafetera, carteles motivacionales) | modelador-blender* | medium | 10 props |
 | D-1825 | Vestuario y comedor de empleados | modelador-blender* | medium | 6 props |
-| D-1826 | Oficina del jefe | modelador-blender* | medium | kit |
+| D-1826 | Oficina del jefe — **al final de la cola de la PC ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)); se usa como sala cerrada de decorado del galpón por defecto mientras D-0924 esté pospuesta** | modelador-blender* | medium | kit |
 | D-1827 | Cartel exterior de la empresa por etapa | modelador-blender* | low | 4 variantes |
 | ~~D-1828~~ | ~~Logo de la empresa (editable por el jugador)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | plantillas |
 | ~~D-1829~~ | ~~Uniformes por rango~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | low | texturas |
@@ -49,8 +49,8 @@
 | D-1831 | Arte conceptual de cada distrito (referencia para modelar) | artista-conceptual* | high | 9 imágenes |
 | D-1832 | Arte conceptual de cada vehículo | artista-conceptual* | medium | 5 imágenes |
 | D-1833 | ✅ Texturas de productos (marcas ficticias graciosas) | artista-conceptual* | medium | 30 etiquetas |
-| D-1834 | Animales nuevos (cabras, delfín, cóndor) | modelador-blender* | medium | 3 modelos |
-| D-1835 | Animaciones de animales nuevos | animador* | medium | clips |
+| D-1834 | Animales nuevos (cabras, delfín, cóndor) — **al final de la cola de la PC ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)); fauna de ambiente sin colisión ni peligro mientras D-1324 y D-1626 estén pospuestas** | modelador-blender* | medium | 3 modelos |
+| D-1835 | Animaciones de animales nuevos — **al final de la cola de la PC ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md))** | animador* | medium | clips |
 | D-1836 | Variantes de casas de entrega por distrito (fachadas) | modelador-blender* | high | 20 fachadas |
 | D-1837 | Carteles de calle y de distrito | modelador-blender* | low | kit |
 | D-1838 | Props de venta: kiosco, puesto de feria, cabina | modelador-blender* | low | 5 props |

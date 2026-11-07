@@ -6,8 +6,8 @@ extends SceneTree
 ## row 15 and rule 10):
 ## - solo, with a parent for the packages: taping box_1 puts Package_box_1 there, once, at the
 ##   table's spot with the event's basis, package id box_1, the event's trap, absorption, and quality
-##   and trap intensity in BoxToPackage.META_TRAP_PLAN; without a parent box_sealed applies the same
-##   and builds nothing;
+##   and trap intensity in BoxToPackage.META_TRAP_PLAN, and its trap set up at the severity of that
+##   intensity's level (D-0710.b); without a parent box_sealed applies the same and builds nothing;
 ## - a box_sealed whose package fields don't fit is not applied and changes nothing (tables, stock,
 ##   wallet, no drift, no node): pos NaN, infinite, out of the world or not a Vector3; basis NaN,
 ##   flattened or not a Basis; quality 101, -1, NaN or text; an unknown trap, a path, another case,
@@ -160,6 +160,11 @@ func _check_solo() -> void:
 			and package.get_meta(BoxToPackage.META_ORDER_ID, &"") == &"o1",
 			"...with the event's trap %s, absorption %.2f, quality %.1f and intensity %.2f (plan %s)"
 			% [data["trap"], data["absorption"], data["quality"], data["trap_intensity"], plan])
+		var severity: float = BoxTrap.severity(BoxTrap.level(float(data["trap_intensity"])))
+		var rides: float = package.trap_behavior.severity if package.trap_behavior != null else -1.0
+		_expect(is_equal_approx(plan.get("severity", -1.0), severity) and is_equal_approx(rides, severity),
+			"...and its trap rides at that intensity's level's severity %.2f (plan %s, trap %.2f, D-0710.b)"
+			% [severity, plan.get("severity"), rides])
 	_check_solo_refusals(net, heard, holder)
 	var plain := CompanyTableNet.new()
 	_expect(not plain.packages.active() and plain.packages.make(PackedBox.new(&"S"), {}) == null,

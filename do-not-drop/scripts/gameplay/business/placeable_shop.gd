@@ -14,12 +14,25 @@ const REASON_SELL: StringName = &"placeable_sell"
 const DEFINITIONS_DIR: String = "res://data/placeables/"
 
 
+## Definitions already loaded, by id. The grid checks (BuildPlacement, WalkReachability, and
+## BuildLayoutSave.sanitize() on every load) ask for a piece's definition thousands of times;
+## ResourceLoader.exists() goes to the disk each time, which made loading a full shed take
+## seconds (D-2026). The files are read-only data, so the first load is kept.
+static var _loaded: Dictionary = {}
+
+
 ## The definition with this id, or null when there is no such object.
 static func definition(id: StringName) -> PlaceableDefinition:
+	var known: Variant = _loaded.get(id)
+	if known != null:
+		return known
 	var path: String = "%s%s.tres" % [DEFINITIONS_DIR, id]
 	if id == &"" or not ResourceLoader.exists(path):
 		return null
-	return load(path) as PlaceableDefinition
+	var def: PlaceableDefinition = load(path) as PlaceableDefinition
+	if def != null:
+		_loaded[id] = def
+	return def
 
 
 ## Pays the price and adds the piece to the layout. Returns false, changing nothing, when the

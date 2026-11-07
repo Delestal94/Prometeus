@@ -84,14 +84,15 @@ la tabla de cada distrito de [distritos.md](../diseno/distritos.md) con la semil
 **Hecho cuando:** el bot llega al Volcán en simulación con la semilla de CI y la curva queda anotada.
 
 ### D-2026 · Save de 50 días — B · Opus 5.5 · medium · Aviso: no · F5
+**[x] Hecho (2026-11-04, lote local)** — `test_company_save_50_days`: 143 KB y 0,27 s de carga (peor de 3); el remito guarda 14 días (`DELIVERY_NOTE_DAYS_KEPT`) y `PlaceableShop.definition` cachea (la carga tardaba 15 s).
 **Depende de:** D-0206 (save de empresa), D-0236 (guardado al cerrar el día)
 **Qué:** un save de 50 días con todo lo que crece con el tiempo: historial de días (resúmenes), libro
 de pedidos con los cerrados, disposición del galpón con todas las estaciones, stock lleno y bultos en el
 piso. Medir tamaño y tiempo de `CompanySave.save()` / `load_into()`.
-- [ ] **D-2026.1** Generador del save (en el test, sin jugar): estado sintético con los máximos de
+- [x] **D-2026.1** Generador del save (en el test, sin jugar): estado sintético con los máximos de
   `CompanyTuning` (`ORDERS_MAX_PER_DAY`, la etapa mayor de `WAREHOUSE_STAGE_MAX_PIECES`, todos los
   productos) repetido 50 días.
-- [ ] **D-2026.2** Si el historial crece sin techo, recortarlo: el save guarda los últimos N días
+- [x] **D-2026.2** Si el historial crece sin techo, recortarlo: el save guarda los últimos N días
   completos y de los anteriores solo los totales (N en `CompanyTuning`, decisión documentada).
 **Test** `test_company_save_50_days`: el save de 50 días pesa < 2 MB, `load_into()` tarda < 2 s (medido
 con `Time.get_ticks_usec`, el peor de 3) y cargar → guardar → cargar da el mismo `to_dict()`; un save de 100

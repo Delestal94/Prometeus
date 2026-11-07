@@ -35,7 +35,8 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	super.on_setup(package, config)
 	_puzzle_time_limit = float(config.get("puzzle_time_limit", 8.0))
 	_sequence_length = int(config.get("sequence_length", 4))
-	_growth_step = float(config.get("weight_growth_rate", 0.15))
+	# Severity (D-0710): once the time is up it grows faster; the sequence that secures it is the same.
+	_growth_step = float(config.get("weight_growth_rate", 0.15)) * severity
 	_growth_interval = maxf(float(config.get("weight_growth_interval", 2.0)), 0.05)
 	_fail_multiplier = maxf(float(config.get("weight_fail_threshold", 2.5)), 1.01)
 	_at_risk_multiplier = float(config.get("weight_at_risk_threshold", 1.5))

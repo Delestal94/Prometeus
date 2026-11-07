@@ -164,7 +164,7 @@ static func reason_name(reason: String) -> String:
 
 
 static func money(amount: int) -> String:
-	return "$%d" % amount if amount >= 0 else "-$%d" % -amount
+	return MoneyText.format(amount)
 
 
 ## Rows of one list: the reasons biggest first, at most MAX_ROWS, the rest folded into one

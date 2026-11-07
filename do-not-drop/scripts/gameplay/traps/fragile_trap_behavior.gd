@@ -55,8 +55,9 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	super.on_setup(package, config)
 	_threshold_light = float(config.get("impact_threshold_light", 3.0))
 	_threshold_heavy = float(config.get("impact_threshold_heavy", 7.0))
-	_damage_light = float(config.get("impact_damage_light", 10.0))
-	_damage_heavy = float(config.get("impact_damage_heavy", 35.0))
+	# Severity (D-0710): every hit and every running step costs more; the cushion is the same tap.
+	_damage_light = float(config.get("impact_damage_light", 10.0)) * severity
+	_damage_heavy = float(config.get("impact_damage_heavy", 35.0)) * severity
 	_at_risk_at = float(config.get("at_risk_at", 40.0))
 	_ruined_at = float(config.get("ruined_at", 0.0))
 	_cushion_window = maxf(float(config.get("cushion_window", 0.35)), 0.01)
@@ -65,7 +66,7 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	_warn_lead = maxf(float(config.get("warn_lead", 0.7)), _cushion_window)
 	_bump_safe_speed = maxf(float(config.get("bump_safe_speed", 9.7)), 0.0)
 	_bump_jolt_per_speed = maxf(float(config.get("bump_jolt_per_speed", 1.8)), 0.0)
-	_run_step_damage = maxf(float(config.get("run_step_damage", 1.4)), 0.0)
+	_run_step_damage = maxf(float(config.get("run_step_damage", 1.4)), 0.0) * severity
 	_cushion_left = 0.0
 	_cooldown_left = 0.0
 	_warn_left = 0.0

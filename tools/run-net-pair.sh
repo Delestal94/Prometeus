@@ -43,13 +43,30 @@ run() {
 	fi
 }
 
+# Waits (up to $3 s) until $1 has a line matching $2: the host is up, instead of a fixed sleep.
+wait_for_log() {
+	local i
+	for ((i = 0; i < $3 * 10; i++)); do
+		grep -q "$2" "$1" 2>/dev/null && return 0
+		sleep 0.1
+	done
+	return 1
+}
+
 if [ "$MODE" = company ]; then
 	run --host-company --slot=net_pair >"$WORK/host.log" 2>&1 &
 else
 	run --host >"$WORK/host.log" 2>&1 &
 fi
 HOST_PID=$!
-sleep 2
+# The client starts once the host is ready (N-987.3), not after a fixed sleep: the delivery host once its level is
+# up (net_pair.gd's 80 s wait for the players starts after that load), the company host once its room is open (the menu
+# hosts, then loads the world as the game does). Up to 90 s; past that the client starts anyway and the host's
+# own waits report what went wrong.
+if [ "$MODE" = company ]; then READY='NETLOG role=host session ready'; else READY='NETLOG role=host level loaded'; fi
+HOST_START=$SECONDS
+wait_for_log "$WORK/host.log" "$READY" 90 || echo "run-net-pair: the host printed no '$READY' line in 90 s"
+echo "run-net-pair: client started $((SECONDS - HOST_START)) s after the host"
 if [ "$MODE" = company ]; then
 	run --join=127.0.0.1 >"$WORK/client.log" 2>&1 &
 else

@@ -20,8 +20,9 @@ func on_setup(_package: Node, config: Dictionary) -> void:
 	super.on_setup(_package, config)
 	command_seconds = float(config.get("command_seconds", 2.8))
 	_correct_decay = float(config.get("correct_decay", 13.0))
-	_wrong_gain = float(config.get("wrong_gain", 22.0))
-	_passive_gain = float(config.get("passive_gain", 3.5))
+	# Severity (D-0710): a wrong answer, a hit and a running step anger it more; the right one calms it the same.
+	_wrong_gain = float(config.get("wrong_gain", 22.0)) * severity
+	_passive_gain = float(config.get("passive_gain", 3.5)) * severity
 	_calm_strength_required = maxf(float(config.get("calm_strength_required", 1.0)), 0.1)
 	aggression = 0.0
 	command_calm = true
@@ -57,14 +58,14 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 ## Every running step irritates it a little (N-115).
 func on_carried_step(strength: float) -> float:
 	if get_state() != TrapState.RUINED:
-		aggression = minf(integrity_max, aggression + RUN_STEP_AGGRESSION * strength)
+		aggression = minf(integrity_max, aggression + RUN_STEP_AGGRESSION * strength * severity)
 		_sync_integrity()
 	return 0.0
 
 
 func on_impact(delta_velocity: float) -> float:
 	if delta_velocity >= 5.0:
-		aggression = minf(integrity_max, aggression + 12.0)
+		aggression = minf(integrity_max, aggression + 12.0 * severity)
 	_sync_integrity()
 	return 0.0
 

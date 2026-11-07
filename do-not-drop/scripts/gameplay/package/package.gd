@@ -321,7 +321,7 @@ func initialize_trap() -> void:
 	trap_behavior = trap_definition.create_behavior() as ITrapBehavior
 	if trap_behavior == null:
 		return
-	var config: Dictionary = trap_definition.params.duplicate(true)
+	var config: Dictionary = PackageRescue.trap_config(self)
 	config["roll_seed"] = PackageRescue.roll_seed(self)
 	trap_behavior.on_setup(self, config)
 	_road_jolted = -1

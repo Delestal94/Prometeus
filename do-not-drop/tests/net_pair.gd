@@ -150,7 +150,7 @@ func _load_level() -> void:
 
 func _run_host() -> void:
 	if not await _wait_until(func() -> bool:
-		return _level != null and get_tree().get_nodes_in_group(&"player").size() >= 2):
+		return _level != null and get_tree().get_nodes_in_group(&"player").size() >= 2, TIMEOUT_SECONDS * 2.0):
 		await _finish(false, "timed out waiting for both spawned players")
 		return
 	_client_peer_id = int(get_tree().root.multiplayer.get_peers()[0])
