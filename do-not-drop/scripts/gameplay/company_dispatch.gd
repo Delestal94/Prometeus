@@ -22,8 +22,11 @@ extends Node
 ## CompanyTrips.stage_cargo(), and then the boxes go on the vehicle's rack (DispatchRack.store(), D-0717.b): they
 ## leave the zone on every peer, through the packages' own synchronizers (row 18 of red-autoridad.md, no event). A
 ## client sees the same list from its own copy of the packages and the book but with Load off and the reason. The
-## host remembers what it loaded (_loaded): a box taken back down leaves the cargo, when the board reads it
-## (scan()) or when the vehicle crosses the gate (CompanyTrips.left_behind), so nothing goes out on paper only. The
+## host remembers what it loaded and on which vehicle (_loaded): a box that vehicle no longer carries (taken down,
+## fallen off, moved to another vehicle: DispatchRack.rides(), not is_loaded, which never notices a fall) leaves the
+## cargo, when the board reads it (scan()) or when the vehicle crosses the gate (CompanyTrips.left_behind), so nothing
+## goes out on paper only. A mount left holding a box that fell is let go when the board reads it and when the
+## vehicle's trip closes. A box a hand puts in a bay is not cargo: only "Load" stages (revisar/D-0302.2.b.3.md). The
 ## host's trip book learns the loaded orders (_bridge()) so the trip can start when the vehicle crosses the gate;
 ## then CompanyTripsView takes them out in the shared book, on every peer (D-0302.2.b.3).
 ##
@@ -65,7 +68,7 @@ var _view: OrderBook
 ## their package lives (the order of a box that was picked on a board a moment ago).
 var _kg: Dictionary = {}
 var _order_of: Dictionary = {}
-## box id -> true: loaded by this peer (the host) although they still lie in the zone.
+## box id -> the vehicle id this peer (the host) loaded it on.
 var _loaded: Dictionary = {}
 var _signature: String = ""
 var _since_scan: float = 0.0
@@ -103,6 +106,7 @@ static func add_to(root: Node) -> CompanyDispatch:
 	root.add_child(dispatch)
 	if dispatch.trips != null:
 		dispatch.trips.left_behind = dispatch.left_behind
+		dispatch.trips.trip_closed.connect(dispatch._on_trip_closed)
 	var bus: Node = root.get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"depot_station_opened", dispatch._on_station_opened)
@@ -187,11 +191,12 @@ func context() -> Dictionary:
 
 ## Reads the packages under World/Packages and returns the zone of the sealed boxes at rest inside the area,
 ## oldest first (the order they were put in the world). Fills the book copy, the weights and the orders of
-## those boxes. Boxes this peer loaded are left out while they ride; one taken down again leaves the cargo and
-## counts as any other; ones whose package is gone are forgotten.
+## those boxes. Boxes this peer loaded are left out while their vehicle carries them; one it doesn't leaves the cargo
+## and counts as any other; ones whose package is gone are forgotten.
 func scan() -> DispatchZone:
 	var zone := DispatchZone.new(area_of(shed))
 	_kg.clear()
+	_release_strays()
 	_view.from_dict(net.orders.book.to_dict() if net != null else {})
 	var live: Dictionary = {}
 	if zone.area.has_surface() and packages != null and is_instance_valid(packages):
@@ -201,7 +206,7 @@ func scan() -> DispatchZone:
 				continue
 			live[package.package_id] = true
 			if _loaded.has(package.package_id):
-				if package.is_aboard():
+				if not left_behind(_loaded[package.package_id], package.package_id):
 					continue
 				_take_off(package.package_id)
 			if zone.contains(package.global_position):
@@ -316,11 +321,14 @@ func _process(delta: float) -> void:
 		panel.refresh(ctx)
 
 
-## What changes what the board draws: the boxes waiting, the vehicle and how many are out.
+## What changes what the board draws: the boxes waiting, the vehicle, its room and how many are out.
 func _signature_of(ctx: Dictionary) -> String:
 	var zone: DispatchZone = ctx["zone"]
 	var out: int = trips.trips_out() if trips != null else (trips_view.trips_out() if trips_view != null else 0)
-	return "%s|%s|%d|%s" % [zone.boxes(), ctx["vehicle_id"], out, ctx["can_act"]]
+	var slots: Array[int] = [(ctx["vehicle"] as VehicleDefinition).cargo_slots if ctx["vehicle"] != null else 0]
+	for entry: Dictionary in ctx["bay"]:
+		slots.append((entry["def"] as VehicleDefinition).cargo_slots)
+	return "%s|%s|%s|%d|%s" % [zone.boxes(), ctx["vehicle_id"], slots, out, ctx["can_act"]]
 
 
 ## One package in the area: the zone takes it when it is closed, still and its order waits for a box.
@@ -350,33 +358,53 @@ func _weight_of(package: DeliveryPackage) -> float:
 	return BoxScale.real_kg(box, products)
 
 
-## Host: true when `box_id`, loaded by the board, is not riding any more (CompanyTrips.left_behind, at the gate): its
-## package is gone, or in hands or on the ground. A box this board did not load has no say here.
-func left_behind(box_id: StringName) -> bool:
+## Host: true when `box_id`, loaded by the board, is not in `vehicle_id`'s bay (CompanyTrips.left_behind, at the gate):
+## its package is gone, or it lies or is held anywhere else, another vehicle's rack too. A box this board did not load
+## has no say here.
+func left_behind(vehicle_id: StringName, box_id: StringName) -> bool:
 	if not _loaded.has(box_id):
 		return false
-	var package: DeliveryPackage = DispatchRack.package_of(packages, box_id)
-	return package == null or not package.is_aboard()
+	var body: Node3D = fleet.vehicle(String(vehicle_id)) if fleet != null and is_instance_valid(fleet) else null
+	return not DispatchRack.rides(body, DispatchRack.package_of(packages, box_id))
 
 
 ## The panel loaded `boxes` on `vehicle_id` (the host): they go on its rack and the host's trip book learns their
-## orders. One with no place there (its package went, the rack filled up meanwhile) leaves the cargo and waits.
+## orders. One with no place there (its package went, it is in hands, the rack filled up meanwhile) leaves the cargo
+## and waits, and the board's line counts only what went (left_out()).
 func _on_loaded(vehicle_id: StringName, boxes: Array[StringName]) -> void:
 	var body: Node3D = fleet.vehicle(String(vehicle_id)) if fleet != null and is_instance_valid(fleet) else null
 	var placed: Array[StringName] = DispatchRack.store(body, packages, boxes)
 	for box_id: StringName in boxes:
 		if placed.has(box_id):
-			_loaded[box_id] = true
+			_loaded[box_id] = vehicle_id
 		elif trips != null:
 			trips.unstage_box(box_id)
 	_bridge(placed)
+	if panel != null:
+		panel.left_out(boxes.size() - placed.size())
 
 
-## A box this peer loaded is off the rack: it no longer counts as cargo.
+## A box this peer loaded is not on its vehicle: it no longer counts as cargo.
 func _take_off(box_id: StringName) -> void:
 	_loaded.erase(box_id)
 	if trips != null:
 		trips.unstage_box(box_id)
+
+
+## Host, each read: the mounts of the vehicles here let go the boxes that fell off them. One out on a trip keeps
+## them until the trip closes (_on_trip_closed()).
+func _release_strays() -> void:
+	if not can_act() or fleet == null or not is_instance_valid(fleet):
+		return
+	for body: Node3D in fleet.vehicles():
+		if not trips.is_out(StringName(body.name)):
+			DispatchRack.release_strays(body)
+
+
+## Host: the trip is over, so a box it lost on the way frees its mount for whoever comes next.
+func _on_trip_closed(trip: Trip, _failed: Array[StringName]) -> void:
+	if fleet != null and is_instance_valid(fleet):
+		DispatchRack.release_strays(fleet.vehicle(String(trip.vehicle_id)))
 
 
 ## CompanyTrips keeps its own book (the door settles on it, D-2016.2), empty in the live game, so a trip would not

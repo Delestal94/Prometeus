@@ -171,10 +171,9 @@ func _check_taken_down(level: CompanyRoot, dispatch: CompanyDispatch) -> void:
 		"...and left the cargo with its order (got %s)" % [staged])
 	# Staged again and not aboard, with nobody reading the board: the gate is what leaves it out.
 	level.trips.stage_cargo(VAN, [&"o1", &"o3"] as Array[StringName], [&"box_o1", &"box_o3"] as Array[StringName])
-	dispatch._loaded[&"box_o3"] = true
-	_expect(dispatch.left_behind(&"box_o3") and not dispatch.left_behind(&"box_o1"),
-		"left_behind() names the staged box that is not aboard")
-	_expect(not dispatch.left_behind(&"box_never_loaded"), "...and has no say on a box the board did not load")
+	dispatch._loaded[&"box_o3"] = VAN
+	_expect(dispatch.left_behind(VAN, &"box_o3") and not dispatch.left_behind(VAN, &"box_o1"),
+		"left_behind() names the staged box that is not in the bay")
 
 
 func _check_leaves(level: CompanyRoot, van: VehicleBody3D) -> void:

@@ -13,8 +13,11 @@ salía vacía y el pedido seguía abierto en el libro compartido, porque `Compan
    `store()` que usan las manos. No hay evento nuevo: el sincronizador de cada caja ya lleva el estante.
 2. **Una caja en el estante de la flota no se congela.** Congelada hasta "el arranque de la corrida" quedaba en el aire,
    porque en el mundo de la empresa no hay corrida.
-3. **Solo sale lo que está arriba.** Una caja que alguien baja deja la carga con su pedido, al leer el tablero o en el
-   portón (`CompanyTrips.left_behind`), así no falla un pedido cuya caja nunca se fue.
+3. **Solo sale lo que va en la bahía.** Una caja que su vehículo ya no lleva (la bajaron, se cayó, pasó a otro) deja la
+   carga con su pedido, al leer el tablero o en el portón (`CompanyTrips.left_behind`), así no falla un pedido cuya caja
+   nunca se fue. Se mira el vehículo real (`DispatchRack.rides()`): `is_loaded` no se entera de que una caja se cayó, y
+   desde esta tarea las cajas del estante viajan sueltas. La grúa y la recuperación llevan la bahía con el vehículo
+   (`DispatchRack.haul()`) y un casillero con una caja que se cayó vuelve a estar libre.
 4. **El libro compartido sigue a `trip_started` y `trip_closed`** en `CompanyTripsView.apply_trip()`, en cada peer, con el
    mismo orden de eventos. Sin evento nuevo ni cambio de protocolo.
 5. **D-0302.2.b.6 pasa a D-0528** (post-lanzamiento): vender es lo único que saca un vehículo a mitad de día.

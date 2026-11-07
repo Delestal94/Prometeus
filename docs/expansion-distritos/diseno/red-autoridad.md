@@ -498,8 +498,8 @@ voto es D-0518.b).
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
     plata (D-0910), junto con el reloj de D-0807.b;
- - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
-    poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
+ - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras solo cierre pedidos del libro compartido una salida fallada (D-0302; las filas de arriba), la
+    poda no suelta los entregados y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
     sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
 
 ## 11. Lo construido (D-0715.b): el paquete de la caja encintada

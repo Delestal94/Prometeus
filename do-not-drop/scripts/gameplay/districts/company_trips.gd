@@ -19,7 +19,7 @@ extends Node
 ## (CompanyNet.orders.book, D-0813), until what it does to it (mark_out, close) goes out as events
 ## (rows 17, 19 and 20 of red-autoridad.md); the shared one follows the trips through their events
 ## (CompanyTripsView, D-0302.2.b.3). Boxes are only ids here; where they ride is the vehicle's business
-## (the board puts them on its rack, DispatchRack): `left_behind` says which of the staged ones stayed off it,
+## (the board puts them on its rack, DispatchRack): `left_behind` says which of the staged ones it doesn't carry,
 ## and those don't leave (unstage_box()).
 ##
 ## At most `far_max` vehicles are out at once (D-0316, CompanyTuning.VEHICLES_FAR_MAX): a vehicle
@@ -66,7 +66,8 @@ var minute_now: Callable = Callable()
 var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
 ## Hold at the gate a vehicle that may not leave (D-0316.2); off, it crosses refused and counts as out.
 var hold_at_gate: bool = true
-## Whether a staged box is off its vehicle's rack, Callable(box_id: StringName) -> bool (CompanyDispatch). Unset: none.
+## Whether a vehicle doesn't carry a box staged on it, Callable(vehicle_id: StringName, box_id: StringName) -> bool
+## (CompanyDispatch). Unset: it carries them all.
 var left_behind: Callable = Callable()
 ## Real milliseconds between two departure_held of the same vehicle.
 var held_notice_msec: int = roundi(CompanyTuning.GATE_HELD_NOTICE_REAL_SECONDS * 1000.0)
@@ -124,8 +125,8 @@ func stage_cargo(vehicle_id: StringName, orders: Array[StringName], boxes: Array
 	_staged[vehicle_id] = {"orders": kept_orders, "boxes": kept_boxes}
 
 
-## Takes `box_id` and its order (the same place in the lists) off the cargo staged on any vehicle: it is not on the
-## rack any more. A vehicle left with nothing has nothing staged, and goes back to the board's list. False when no
+## Takes `box_id` and its order (the same place in the lists) off the cargo staged on any vehicle: it is not in the
+## bay any more. A vehicle left with nothing has nothing staged, and goes back to the board's list. False when no
 ## staged cargo has it.
 func unstage_box(box_id: StringName) -> bool:
 	for vehicle_id: StringName in _staged:
@@ -302,13 +303,13 @@ static func _live_state(body: Node3D) -> PhysicsDirectBodyState3D:
 	return PhysicsServer3D.body_get_direct_state(rigid.get_rid())
 
 
-## Unstages what `left_behind` says stayed off `vehicle_id`'s rack, so a box taken back down before leaving doesn't go
-## out on paper: its order keeps waiting, it doesn't fail on the way back.
+## Unstages what `left_behind` says `vehicle_id` doesn't carry, so a box taken down or fallen off before leaving doesn't
+## go out on paper: its order keeps waiting, it doesn't fail on the way back.
 func _drop_left_behind(vehicle_id: StringName) -> void:
 	if not left_behind.is_valid() or not _staged.has(vehicle_id):
 		return
 	for box_id: StringName in (_staged[vehicle_id]["boxes"] as Array).duplicate():
-		if bool(left_behind.call(box_id)):
+		if bool(left_behind.call(vehicle_id, box_id)):
 			unstage_box(box_id)
 
 
