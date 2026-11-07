@@ -10,8 +10,8 @@ extends Node
 ## (follow()) and publishes each fact as a host event (CompanyNet.publish(): its own rule, no client
 ## asks for it), applied here first and then on every ready peer, in seq order with the rest:
 ##   trip_started  {trip, vehicle, orders, boxes, minute}  a vehicle with cargo crossed the gate out
-##   trip_refused  {vehicle, minute}                       one crossed out with VEHICLES_FAR_MAX out:
-##                                                         no trip starts, but it counts as out
+##   trip_refused  {vehicle, minute}                       one crossed out with VEHICLES_FAR_MAX out or after
+##                                                         the day closed: no trip starts, it counts as out
 ##   trip_closed   {trip, vehicle, failed, minute}         it crossed back in. `trip` is "" (and
 ##                                                         `failed` empty) for one out refused
 ## Ids are text up to MAX_ID_LENGTH, `orders`, `boxes` and `failed` lists of them (up to MAX_ITEMS;
@@ -225,8 +225,8 @@ func _on_trip_closed(trip: Trip, failed: Array[StringName]) -> void:
 	})
 
 
-## Host: `vehicle_id` left while VEHICLES_FAR_MAX were out (CompanyTrips.departure_refused). The
-## reason is always the cap (CompanyTrips.FAR_LIMIT): a peer that shows it reads it from there.
+## Host: `vehicle_id` left while it may not (CompanyTrips.departure_refused): VEHICLES_FAR_MAX were out or the day was
+## closed (D-0851). The reason does not travel: no peer shows it (the driver of a held vehicle hears it, _held_here).
 func _on_departure_refused(vehicle_id: StringName, _reason: Dictionary) -> void:
 	_publish(REFUSED, {"vehicle": vehicle_id, "minute": _source_minute()})
 
@@ -248,7 +248,8 @@ func _on_departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
 		_held_here.rpc_id(driver, String(vehicle_id), cap)
 
 
-## The driver's peer, from the host: the vehicle it drives was held at the gate with `cap` vehicles out.
+## The driver's peer, from the host: the vehicle it drives was held at the gate with `cap` vehicles out, or because the
+## day closed (`cap` DAY_CLOSED_CAP).
 @rpc("authority", "call_remote", "reliable")
 func _held_here(vehicle: String, cap: int) -> void:
 	if not RpcGuard.from_host(self) or not _id_ok(vehicle) or cap < DAY_CLOSED_CAP or cap > MAX_OUT:

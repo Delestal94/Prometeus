@@ -37,6 +37,9 @@ extends Node
 ## DAY_CLOSED. A vehicle that crosses anyway is refused like the one over the cap, but it does not count in trips_out():
 ## the day never waits for it (only a trip that really left holds the summary); it is out until it is back
 ## (refused_returned), so it is never refused twice, and if it is still out when the next day opens it counts again.
+## What was loaded and did not leave doesn't outlive the day (rule 7 of clientes.md): with SUMMARY the vehicle lets its
+## cargo go (drop_staged(), OrderDayClose.wire()), its orders are closed here as they are in the shared book, nothing
+## starts a trip with them the next day and the board sees that vehicle free (cargo_dropped, CompanyDispatch).
 ##
 ## A delivery is timed with the shed's clock, the one its order's window ran on (delivery_minute(), rule 4 of
 ## clientes.md), not with minute(): whoever settles at a door (D-0340) passes that minute to OrderSettlement.settle.
@@ -53,6 +56,8 @@ signal refused_returned(vehicle_id: StringName)
 ## every held_notice_msec per vehicle and driver, however many ticks it pushes against the gate (a new driver
 ## is told at once).
 signal departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
+## The cargo staged on `vehicle_id` came off without leaving (drop_staged()): `boxes` are nobody's load any more.
+signal cargo_dropped(vehicle_id: StringName, boxes: Array[StringName])
 
 ## The group of the vehicles the gate watches.
 const VEHICLE_GROUP: StringName = &"company_vehicle"
@@ -134,6 +139,22 @@ func stage_cargo(vehicle_id: StringName, orders: Array[StringName], boxes: Array
 			% [vehicle_id, kept_orders.size(), orders.size(), kept_boxes.size(), boxes.size(), MAX_CARGO,
 				MAX_ID_LENGTH])
 	_staged[vehicle_id] = {"orders": kept_orders, "boxes": kept_boxes}
+
+
+## Host, the day is over (SUMMARY, OrderDayClose.wire()): every vehicle lets go what it was loaded with and never left
+## with, each order closed in this node's book as the day closed it in the shared one (no order goes on to the next
+## day; there is nothing to pay or charge here, CompanyOrdersNet did). The boxes stay where they lie. Returns how many
+## vehicles were unloaded, each told with cargo_dropped.
+func drop_staged() -> int:
+	var vehicles: Array = _staged.keys()
+	for vehicle_id: StringName in vehicles:
+		var cargo: Dictionary = _staged[vehicle_id]
+		_staged.erase(vehicle_id)
+		for order_id: StringName in cargo["orders"]:
+			if not book.cancel(order_id):
+				book.mark_failed(order_id)
+		cargo_dropped.emit(vehicle_id, cargo["boxes"] as Array[StringName])
+	return vehicles.size()
 
 
 ## An id a trip event may carry: not empty, at most MAX_ID_LENGTH characters.

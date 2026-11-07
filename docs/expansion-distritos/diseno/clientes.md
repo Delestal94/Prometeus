@@ -61,6 +61,8 @@ Lo que ya estaba decidido y no se toca:
      tripulación;
    - uno que salió y volvió sin entregarse ya lo cerró la salida (`Trip.close` → `failed`): cuesta lo mismo que
      un vencido (−3), lo cobra D-0851 si la salida no lo hizo;
+   - lo cargado en un vehículo que no salió baja con `SUMMARY` (`CompanyTrips.drop_staged()`): ni viaje al otro día ni vehículo
+     ocupado;
    - la caja armada para un pedido que no se entregó ya va al bulto de devolución al guardar
      ([guardado.md](guardado.md) §3, D-0252): no hace falta nada más.
    Con esto ningún pedido pasa al día siguiente: hoy `prune_closed()` de la apertura deja en el libro los que no
@@ -100,7 +102,7 @@ Lo que ya estaba decidido y no se toca:
 | Negar la salida en `CLOSING` y no esperar a la rechazada (regla 2) | D-0851 | `CompanyTrips.departure_verdict` + `day_open` |
 | Tardanza con la hora del galpón al entregar (regla 4) | D-0851 (con D-0815.b, que engancha la puerta) | `CompanyTrips.delivery_minute()`, para quien llame a `mark_delivered` |
 | Vencer y abandonar en `CLOSING` (regla 6) | D-0851 | `CompanyDayOrders.poll` |
-| Resolver lo no entregado al cierre y al cierre anticipado (reglas 7 y 8) | D-0851 | `OrderBook.close_day(early)` + evento de cierre en `CompanyOrdersNet` + `DayCycle.poll` en `CLOSING` |
+| Resolver lo no entregado al cierre y al cierre anticipado (reglas 7 y 8) | D-0851 | `CompanyOrdersNet.close_day()` (decide `OrderDayClose.closing_plan()`) + evento `order_closed` + `DayCycle.poll` en `CLOSING`; lo cargado que no salió baja con `SUMMARY` (`CompanyTrips.drop_staged()`) |
 | Texto del aviso de las 20:00 (regla 9) | D-0851 | aviso de `company_day_closing` |
 | Verse de noche (regla 3) | D-0325 | `WorldMood` |
 

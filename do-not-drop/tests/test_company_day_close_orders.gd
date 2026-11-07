@@ -23,10 +23,17 @@ extends SceneTree
 ##   it late), an order loaded on a vehicle that hasn't left is not given up on, a vehicle that left at night and
 ##   is still out counts again when the next day opens, a held vehicle's driver is told the day closed, not the
 ##   cap (CompanyTripsView), and a book that won't close retries spaced out, then lets the summary go;
+## - what was loaded and never left (rule 7): the vehicle stays loaded and held through CLOSING, comes off with SUMMARY
+##   (cargo_dropped, its orders closed in the trips' book, carries() false, the late one too), and on the next day it
+##   crosses and comes back with no trip and no reputation lost;
+## - a customer gives up in CLOSING too (rule 6): a late order costs its -3 while the last vehicle is out, not at
+##   the close;
 ## - the book events: order_closed with a bad shape (unknown order, closed one, `delivered` or `open` as state, a
 ##   missing or extra key, cancelling a late order) is refused by the host without spending a seq;
 ## - a host and a client as ENet peers: the same close reaches the client as events, both books end equal, the
-##   reputation changes on the host only, and the client can't close, abandon or publish anything.
+##   reputation changes on the host only, and the client can't close, abandon or publish anything; a driver held
+##   because the day closed (_held_here with DAY_CLOSED_CAP) reads why on the client, and its brake holds on.
+## The real CompanyRoot's wiring of all this is test_company_day_close_world.
 ## Expected in the log: CompanyNet's error for each event the host refuses to publish ("could not apply its
 ## own"), Godot's for the forged _apply_event ("RPC '_apply_event' is not allowed"), DayCycle's "would not close".
 
@@ -51,6 +58,7 @@ class Peer:
 	var side: Node
 	var net: CompanyNet
 	var state: Node
+	var view: CompanyTripsView
 	var kinds: Array[StringName] = []
 	var refusals: Array = []
 
@@ -88,6 +96,8 @@ func _run() -> void:
 	_check_delivery_minute()
 	_check_staged_and_night_out()
 	_check_held_for_the_night()
+	_check_left_loaded()
+	_check_abandon_in_closing()
 	_check_stuck_close()
 	_check_event_shapes()
 	await _check_network()
@@ -422,6 +432,92 @@ func _check_held_for_the_night() -> void:
 	world.side.free()
 
 
+## A vehicle loaded before 20:00 that never left: it stays held and loaded while the day closes, and SUMMARY unloads it.
+func _check_left_loaded() -> void:
+	var world: World = _new_world("Cargado SRL", 1000)
+	var net: CompanyNet = world.net
+	var trips: CompanyTrips = world.trips
+	var dropped: Array = []
+	trips.cargo_dropped.connect(func(vehicle: StringName, boxes: Array[StringName]) -> void:
+		dropped.append([vehicle, boxes]))
+	_open_day(world)
+	var window: Dictionary = _order(&"d1_a", 480, 1300)
+	var late: Dictionary = _order(&"d1_b", 480, 700)
+	var away: Dictionary = _order(&"d1_c", 480, 1300)
+	net.orders.plan([window, late, away])
+	_tick(world, 1150)
+	_stage(world, &"van_1", window, &"box_a")
+	_stage(world, &"van_2", late, &"box_b")
+	world.trips.book.expire(701)
+	_stage(world, &"van_3", away, &"box_c")
+	trips.track(&"van_3", Vector3(0, 0, -2))
+	trips.track(&"van_3", Vector3(0, 0, -6))
+	_expect(trips.trips_out() == 1 and trips.book.state_of(&"d1_b") == Order.STATE_LATE,
+		"Two vehicles are loaded in the yard, a third is out with its order")
+	_tick(world, 1201)
+	_expect(world.cycle.phase() == DayCycle.Phase.CLOSING and trips.has_cargo(&"van_1") and trips.carries(&"d1_a")
+		and not trips.departure_verdict(&"van_1")["ok"] and dropped.is_empty(),
+		"While the day closes the vehicle stays loaded and may not leave")
+	_tick(world, 1250, false)
+	trips.track(&"van_3", Vector3(0, 0, -2))
+	world.cycle.poll()
+	_expect(net.orders.book.state_of(&"d1_a") == Order.STATE_CANCELLED and trips.has_cargo(&"van_1"),
+		"The shared book closes its order with the last vehicle back (got %s)" % net.orders.book.state_of(&"d1_a"))
+	world.cycle.poll()
+	_expect(world.cycle.phase() == DayCycle.Phase.SUMMARY and not trips.has_cargo(&"van_1")
+		and not trips.has_cargo(&"van_2") and not trips.carries(&"d1_a") and not trips.carries(&"d1_b"),
+		"With SUMMARY the vehicles let their cargo go (phase %s)" % world.cycle.phase_name())
+	_expect(dropped == [[&"van_1", [&"box_a"] as Array[StringName]], [&"van_2", [&"box_b"] as Array[StringName]]],
+		"...and say which boxes came off (got %s)" % [dropped])
+	_expect(trips.book.state_of(&"d1_a") == Order.STATE_CANCELLED
+		and trips.book.state_of(&"d1_b") == Order.STATE_FAILED,
+		"...their orders closed in the trips' book too, the late one failed (got %s, %s)"
+		% [trips.book.state_of(&"d1_a"), trips.book.state_of(&"d1_b")])
+	_expect(trips.drop_staged() == 0 and dropped.size() == 2, "...and a second drop finds nothing")
+	_expect(world.cycle.next_day() and world.net.orders.book.size() == 0, "Day 2 opens with an empty book")
+	var rep: float = _reputation(world)
+	var closed: int = trips.closed_trips().size()
+	trips.track(&"van_1", Vector3(0, 0, -2))
+	trips.track(&"van_1", Vector3(0, 0, -6))
+	_expect(trips.trip_of(&"van_1") == null and trips.trips_out() == 0 and not trips.is_out(&"van_1"),
+		"On day 2 the vehicle crosses with no trip: nothing is left of the day before")
+	trips.track(&"van_1", Vector3(0, 0, -2))
+	_expect(trips.closed_trips().size() == closed and is_equal_approx(_reputation(world), rep),
+		"...and comes back with nothing to close, no reputation lost")
+	world.side.free()
+
+
+## `vehicle_id` loaded with `order`, as the dispatch board does it: the trips' book learns the order, packed.
+func _stage(world: World, vehicle_id: StringName, order: Dictionary, box_id: StringName) -> void:
+	world.trips.book.add(order)
+	world.trips.book.mark_packed(order["id"], box_id)
+	world.trips.stage_cargo(vehicle_id, [order["id"] as StringName], [box_id])
+
+
+## Rule 6: in CLOSING, with the last vehicle out, a customer still gives up on a late order: the close hasn't run yet.
+func _check_abandon_in_closing() -> void:
+	var world: World = _new_world("Cansado SRL", 1000)
+	var book: OrderBook = world.net.orders.book
+	_open_day(world)
+	var road: Dictionary = _order(&"d1_road", 480, 1300)
+	world.net.orders.plan([_order(&"d1_late", 480, 960), road])
+	_tick(world, 961)
+	_stage(world, &"van_1", road, &"box_r")
+	world.trips.track(&"van_1", Vector3(0, 0, -2))
+	world.trips.track(&"van_1", Vector3(0, 0, -6))
+	_tick(world, 960 + CompanyTuning.ORDER_ABANDON_MIN)
+	_expect(world.cycle.phase() == DayCycle.Phase.CLOSING and book.state_of(&"d1_late") == Order.STATE_LATE,
+		"At 20:00 the day closes with the order still late, a vehicle out (got %s)" % world.cycle.phase_name())
+	var before: float = _reputation(world)
+	_tick(world, 960 + CompanyTuning.ORDER_ABANDON_MIN + 1)
+	_expect(book.state_of(&"d1_late") == Order.STATE_FAILED and world.trips.trips_out() == 1
+		and book.state_of(&"d1_road") == Order.STATE_OPEN
+		and is_equal_approx(_reputation(world), before + ABANDONED_COST),
+		"A minute later the customer gives up in CLOSING, -3, before the close (state %s, reputation %.1f to %.1f)"
+		% [book.state_of(&"d1_late"), before, _reputation(world)])
+	world.side.free()
+
+
 ## An order whose close can't go out (its id doesn't fit an event): the tries are RETRY_MSEC apart and after
 ## MAX_CLOSE_TRIES the summary goes on.
 func _check_stuck_close() -> void:
@@ -578,6 +674,25 @@ func _play_network() -> void:
 	_client.net.orders.put_snapshot({"orders": [], "now_min": 0})
 	_expect(_host.net.send_snapshot(id) and await _wait_for(_same_book),
 		"A snapshot brings the closed orders to a peer that missed them")
+	await _check_held_on_the_client(id)
+
+
+## The host holds a vehicle a client drives after the day closed: over _held_here the client reads why, and its brake,
+## with no cap to compare, only lets go with the time.
+func _check_held_on_the_client(client_id: int) -> void:
+	var brake := CompanyGateBrake.new()
+	_client.side.add_child(brake)
+	brake.attach(_client.view)
+	var told: Array = []
+	_client.view.departure_held.connect(func(vehicle: StringName, text: String) -> void: told.append([vehicle, text]))
+	var reason: Dictionary = {"ok": false, "key": CompanyTrips.DAY_CLOSED, "args": []}
+	_host.view._on_departure_held(&"van_1", reason, client_id)
+	var heard: bool = await _wait_for(func() -> bool: return not told.is_empty())
+	_expect(heard and told == [[&"van_1", tr(CompanyTrips.DAY_CLOSED)]],
+		"The client's driver reads that the day closed (got %s)" % [told])
+	_expect(brake.is_braking(&"van_1"), "...its copy is braked")
+	brake._let_go(Time.get_ticks_msec())
+	_expect(brake.is_braking(&"van_1"), "...and no number of vehicles out lets the brake go early")
 
 
 # --- Helpers ---
@@ -681,6 +796,10 @@ func _add_net(peer: Peer) -> void:
 	peer.net.name = "CompanyNet"
 	peer.net.company = peer.state
 	peer.side.add_child(peer.net)
+	peer.view = CompanyTripsView.new()
+	peer.view.name = "TripsView"
+	peer.side.add_child(peer.view)
+	peer.view.attach(peer.net)
 	peer.net.event_applied.connect(func(_seq: int, kind: StringName, _data: Dictionary) -> void:
 		peer.kinds.append(kind))
 	peer.net.request_rejected.connect(func(rid: int, reason: StringName) -> void:

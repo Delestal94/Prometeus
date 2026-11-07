@@ -499,9 +499,8 @@ voto es D-0518.b).
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
   - ~~el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio~~: hecho en D-0851 (§17), `order_closed`; la
     reputación la escribe solo el host (no viaja absoluta como la plata);
- - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras nada cierre pedidos del libro compartido (las filas de arriba), la
-    poda no suelta nada y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
-    sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
+ - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Desde D-0851 el cierre del día cierra todo lo que queda
+    y la poda del `OPENING` vacía el libro, así que ya no se llena entre días (el tope de 256 solo frena un día: `poll()` espera).
 
 ## 11. Lo construido (D-0715.b): el paquete de la caja encintada
 
@@ -743,6 +742,10 @@ voto es D-0518.b).
   `refused_returned` al volver) pero con el día cerrado no cuenta en `trips_out()`, así que no traba el resumen; con el día
   abierto otra vez, sí. La vista de salidas ve un `trip_refused` y un `trip_closed` sin viaje como con el tope. El tablero de
   un cliente, sin `trips`, lo sabe por `day_closed` del contexto.
+- **Lo cargado que no salió.** Sigue cargado y frenado durante `CLOSING`; con `SUMMARY` lo suelta `CompanyTrips.drop_staged()`
+  (`OrderDayClose.wire()`, sobre `event_applied` del `day_phase`): cierra esos pedidos en `CompanyTrips.book` y `cargo_dropped` le
+  devuelve las cajas a `CompanyDispatch`. Solo host, nada viaja: lo cargado nunca fue un evento. Así ningún pedido pasa al día
+  siguiente como salida fantasma y el vehículo vuelve a estar disponible en el tablero.
 - **Hora de la entrega.** `CompanyTrips.delivery_minute()` es el minuto del galpón (`shed_minute_now`, regla 4 de
   [clientes.md](clientes.md)), el que tiene que pasar quien entregue.
 - **Pendiente:** el libro compartido no se entera aún de que un pedido salió o se entregó (filas 15, 17, 19 y 20 de este

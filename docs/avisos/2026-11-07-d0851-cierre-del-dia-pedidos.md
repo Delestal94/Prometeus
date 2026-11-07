@@ -27,6 +27,8 @@
 - **Reputación en un cliente:** llega con el próximo snapshot (no hay evento de reputación). Si el HUD del cliente la
   muestra, hay que replicarla (tarea aparte).
 - `DayCycle` tarda un `poll` más de `CLOSING` a `SUMMARY` si cerró algún pedido.
+- Lo cargado en un vehículo que no salió baja con `SUMMARY` (`CompanyTrips.drop_staged()`, señal `cargo_dropped`): solo host, sin
+  evento.
 - Contrato: `docs/expansion-distritos/diseno/red-autoridad.md`, fila "Un pedido termina sin entrega" y §17. Tests:
-  `test_company_day_close_orders` (nuevo), `test_company_orders_world`, `test_company_solo_assists`, `test_company_bot_day` y
+  `test_company_day_close_orders` y `test_company_day_close_world` (nuevos), `test_company_orders_world`, `test_company_solo_assists`, `test_company_bot_day` y
   `test_company_dispatch_panel` ajustados.

@@ -3,9 +3,10 @@ extends RefCounted
 ## What becomes of the orders nobody delivered when the company day ends (expansion D-0851; rules 6 to 8 of
 ## docs/expansion-distritos/diseno/clientes.md).
 ##
-## Pure functions over an OrderBook: no node, no autoload, no UI, and none of them changes the book
-## except close_day(). The host decides with abandoned() and closing_plan(), publishes one order_closed
-## event per id (CompanyOrdersNet) and every peer applies it with the book's own mark_failed() / cancel();
+## Pure functions over an OrderBook (no node, no autoload, no UI, and none of them changes the book except
+## close_day()), plus the two hooks that plug the close into the host's world (wire(), out()). The host decides
+## with abandoned() and closing_plan(), publishes one order_closed event per id (CompanyOrdersNet) and every peer
+## applies it with the book's own mark_failed() / cancel();
 ## close_day() is the same thing for a book with no network (a test, a tool). What a failed order costs
 ## is OrderPenalties.abandoned() (-3 reputation, pays 0); a cancelled one costs nothing.
 ##
@@ -58,12 +59,16 @@ static func close_day(book: OrderBook, now_min: int, early: bool) -> Dictionary:
 
 
 ## The day's closing hooks on the host's trips: departures are denied once the day is closed, a delivery is timed
-## with the shed's clock and an order a vehicle brings back undelivered fails (D-0851).
+## with the shed's clock, an order a vehicle brings back undelivered fails and, with SUMMARY, what was loaded and
+## never left comes off its vehicle (D-0851).
 static func wire(trips: CompanyTrips, net: CompanyNet, day_cycle: DayCycle) -> void:
 	trips.day_open = func() -> bool: return not day_cycle.is_day_closed()
 	trips.shed_minute_now = day_cycle.shed_minute
 	trips.trip_closed.connect(func(_trip: Trip, failed: Array[StringName]) -> void:
 		net.orders.fail_returned(net, failed))
+	net.event_applied.connect(func(_seq: int, kind: StringName, _data: Dictionary) -> void:
+		if kind == CompanyNet.DAY_PHASE and day_cycle.phase() == DayCycle.Phase.SUMMARY:
+			trips.drop_staged())
 
 
 ## Whether a vehicle carries the order, for `abandon`; a client has no trips and carries nothing.
