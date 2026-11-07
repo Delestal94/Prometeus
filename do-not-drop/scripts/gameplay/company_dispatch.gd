@@ -158,6 +158,11 @@ func can_act() -> bool:
 	return trips != null and net != null and net.is_host()
 
 
+## True once the day is closed to leaving (D-0851): the board says so on every peer, also where there are no trips.
+func day_closed() -> bool:
+	return net != null and net.day_cycle != null and net.day_cycle.is_day_closed()
+
+
 ## The board's data from this peer's world (see the class doc); reads the zone first.
 func context() -> Dictionary:
 	var zone: DispatchZone = scan()
@@ -177,7 +182,7 @@ func context() -> Dictionary:
 		"vehicle": vehicle, "vehicle_name": vehicle_name(vehicle), "box_kg": _kg.duplicate(),
 		"bay": bay_vehicles(body, vehicle), "zones": _zones_by_id(), "gates": _gates_by_id(), "owned": owned,
 		"opened_gates": opened,
-		"can_act": can_act(),
+		"can_act": can_act(), "day_closed": day_closed(),
 	}
 
 
@@ -311,7 +316,7 @@ func _process(delta: float) -> void:
 func _signature_of(ctx: Dictionary) -> String:
 	var zone: DispatchZone = ctx["zone"]
 	var out: int = trips.trips_out() if trips != null else (trips_view.trips_out() if trips_view != null else 0)
-	return "%s|%s|%d|%s" % [zone.boxes(), ctx["vehicle_id"], out, ctx["can_act"]]
+	return "%s|%s|%d|%s|%s" % [zone.boxes(), ctx["vehicle_id"], out, ctx["can_act"], ctx["day_closed"]]
 
 
 ## One package in the area: the zone takes it when it is closed, still and its order waits for a box.

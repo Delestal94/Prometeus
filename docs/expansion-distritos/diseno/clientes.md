@@ -98,7 +98,7 @@ Lo que ya estaba decidido y no se toca:
 | Qué | Tarea | Dónde |
 |---|---|---|
 | Negar la salida en `CLOSING` y no esperar a la rechazada (regla 2) | D-0851 | `CompanyTrips.departure_verdict` + `day_open` |
-| Tardanza con la hora del galpón al entregar (regla 4) | D-0851 (con D-0815.b, que engancha la puerta) | quien llame a `mark_delivered` |
+| Tardanza con la hora del galpón al entregar (regla 4) | D-0851 (con D-0815.b, que engancha la puerta) | `CompanyTrips.delivery_minute()`, para quien llame a `mark_delivered` |
 | Vencer y abandonar en `CLOSING` (regla 6) | D-0851 | `CompanyDayOrders.poll` |
 | Resolver lo no entregado al cierre y al cierre anticipado (reglas 7 y 8) | D-0851 | `OrderBook.close_day(early)` + evento de cierre en `CompanyOrdersNet` + `DayCycle.poll` en `CLOSING` |
 | Texto del aviso de las 20:00 (regla 9) | D-0851 | aviso de `company_day_closing` |

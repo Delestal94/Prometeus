@@ -63,6 +63,9 @@ const SNAPSHOT_KEY: String = "trips"
 ## Most vehicles a snapshot may carry out at once (rule 5): VEHICLES_FAR_MAX trips plus every
 ## refused vehicle, far over any fleet.
 const MAX_OUT: int = 32
+## What travels in place of the cap when a vehicle was held because the day closed (D-0851): no cap to say, and a
+## client's brake (CompanyGateBrake) never lets go for fewer vehicles out.
+const DAY_CLOSED_CAP: int = -1
 ## Most orders, boxes or failed orders an event or an entry may carry: what CompanyTrips keeps.
 const MAX_ITEMS: int = CompanyTrips.MAX_CARGO
 const MAX_ID_LENGTH: int = CompanyTrips.MAX_ID_LENGTH
@@ -229,10 +232,13 @@ func _on_departure_refused(vehicle_id: StringName, _reason: Dictionary) -> void:
 
 
 ## Host: `vehicle_id` was held at the gate (CompanyTrips.departure_held): its driver is told why, the
-## host itself at once, a client through _held_here. The reason is always the cap: its value travels.
+## host itself at once, a client through _held_here. The reason is the cap, its value travels; or the day closed
+## (CompanyTrips.DAY_CLOSED, no cap to say: DAY_CLOSED_CAP travels instead, D-0851).
 func _on_departure_held(vehicle_id: StringName, reason: Dictionary, driver: int) -> void:
 	var args: Array = reason.get("args", [])
 	var cap: int = clampi(int(args[0]) if not args.is_empty() and args[0] is int else 0, 0, MAX_OUT)
+	if reason.get("key", "") == CompanyTrips.DAY_CLOSED:
+		cap = DAY_CLOSED_CAP
 	if driver <= 0 or not is_host() or not _id_ok(String(vehicle_id)):
 		return
 	var link: MultiplayerPeer = multiplayer.multiplayer_peer if is_inside_tree() else null
@@ -245,14 +251,14 @@ func _on_departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
 ## The driver's peer, from the host: the vehicle it drives was held at the gate with `cap` vehicles out.
 @rpc("authority", "call_remote", "reliable")
 func _held_here(vehicle: String, cap: int) -> void:
-	if not RpcGuard.from_host(self) or not _id_ok(vehicle) or cap < 0 or cap > MAX_OUT:
+	if not RpcGuard.from_host(self) or not _id_ok(vehicle) or cap < DAY_CLOSED_CAP or cap > MAX_OUT:
 		return
 	_tell_held(StringName(vehicle), cap)
 
 
 ## This peer drives `vehicle_id`, held at the gate: departure_held (and held_at_gate) and the reason as a HUD notice.
 func _tell_held(vehicle_id: StringName, cap: int) -> void:
-	var text: String = tr(CompanyTrips.FAR_LIMIT)
+	var text: String = tr(CompanyTrips.DAY_CLOSED if cap == DAY_CLOSED_CAP else CompanyTrips.FAR_LIMIT)
 	if text.count("%") == 1:
 		text = text % cap
 	departure_held.emit(vehicle_id, text)
