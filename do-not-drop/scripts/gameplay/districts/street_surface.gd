@@ -13,8 +13,8 @@ extends RefCounted
 ## - Lane lines (StraightSegment's EdgeMarking / CenterMarking, CurveSegment's EdgeLine: every mesh in
 ##   RouteSegment.MARKING or the centre line's grey) only on asphalt: on gravel, dirt and cobble they are
 ##   hidden. By colour, not by name: a piece's second line of the same name is renamed by Godot. What is
-##   not a lane line stays on every surface: a rail crossing's CrossingStopLine, the line to stop at
-##   before the train (KEPT_LINES).
+##   not a lane line stays on every surface: a rail crossing's stop lines, the line to stop at before
+##   the train (RailCrossingSegment.STOP_LINE_GROUP).
 ## Where two streets cross their boxes overlap with the same top: each surface is drawn a few millimetres
 ## over the one below it (LIFT, the shader's `lift`), so the crossing shows one of them, asphalt over
 ## cobble over gravel over dirt, instead of a flickering wedge of both. Only the drawing moves.
@@ -43,8 +43,6 @@ const FALLBACK: StringName = &"asphalt"
 const MARKED: Array[StringName] = [&"asphalt"]
 ## The colours a piece paints its lane lines with: RouteSegment.MARKING and StraightSegment's centre line.
 const LINE_COLOURS: Array[Color] = [RouteSegment.MARKING, Color("8c9994")]
-## Lines painted in those colours that are not lane lines: they stay on every surface.
-const KEPT_LINES: Array[String] = ["CrossingStopLine"]
 ## How far over the box's top each surface is drawn (m): where two streets cross, the higher one shows. With
 ## the shader's lift_by_heading on top it stays under the lowest lane line (StraightSegment's CenterMarking
 ## starts 2.2 cm over the road); the verge's box is well under the roadway already.
@@ -146,12 +144,12 @@ static func apply(segment: RouteSegment, street_surface: StringName) -> Dictiona
 	return done
 
 
-## True for a mesh painted as a lane line (LINE_COLOURS, not KEPT_LINES).
+## True for a mesh painted as a lane line (LINE_COLOURS, and not a rail crossing's stop line).
 static func is_line(mesh: MeshInstance3D) -> bool:
 	var paint := mesh.material_override as StandardMaterial3D
 	if paint == null or not LINE_COLOURS.has(paint.albedo_color):
 		return false
-	return not KEPT_LINES.any(func(kept: String) -> bool: return kept in String(mesh.get_parent().name))
+	return not mesh.get_parent().is_in_group(RailCrossingSegment.STOP_LINE_GROUP)
 
 
 ## Tells whoever stands on `body` what it is (see UNDERFOOT).

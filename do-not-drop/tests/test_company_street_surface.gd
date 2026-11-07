@@ -21,7 +21,7 @@ extends SceneTree
 ##   `lift`), asphalt over cobble over gravel over dirt, by more than the shader's lift_by_heading, and
 ##   all of it stays under the lowest lane line, so a crossing shows one surface and the lines still show.
 ##   tests/render_company_edges.gd's `junction` views are how it looks; this is what keeps it so.
-## - chacra_8's rail crossing keeps its two CrossingStopLine on gravel: they are not lane lines.
+## - chacra_8's rail crossing keeps its two stop lines (STOP_LINE_GROUP) on gravel: they are not lane lines.
 ## - The grip follows the drawn surface: every piece of a gravel or dirt street has a GripArea of the
 ##   surface's slip (gravel's is GravelSegment's) except a GravelSegment and a MudSegment, which bring their
 ##   own, and a bridge, whose deck is not the street's; asphalt and cobble have none. A vehicle on the last
@@ -231,7 +231,7 @@ func _check_stop_lines(graph: RoadGraph) -> void:
 		if segment is RailCrossingSegment:
 			crossings += 1
 		for mesh: MeshInstance3D in _meshes(segment):
-			if "CrossingStopLine" in String(mesh.get_parent().name) and mesh.is_visible_in_tree():
+			if mesh.get_parent().is_in_group(RailCrossingSegment.STOP_LINE_GROUP) and mesh.is_visible_in_tree():
 				shown += 1
 	_expect(crossings > 0 and shown == crossings * 2,
 		"Each of chacra_8's %d rail crossings shows both its stop lines on gravel (got %d)" % [crossings, shown])
