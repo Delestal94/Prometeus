@@ -20,6 +20,24 @@ func reach_origin() -> Vector3:
 	return player.global_position
 
 
+## One physics tick in a seat, after the menu case has returned (on foot: Movement.on_foot_step): the prompt and
+## the lid hint, the box on this player's lap, and helping a neighbour once their own box is ruined.
+func seated_step() -> void:
+	var tended: DeliveryPackage = player.tended_package
+	var candidate: DeliveryPackage = (player._cargo_care.assist_candidate() if tended != null
+			and tended.run_state() == ITrapBehavior.TrapState.RUINED else null)
+	var interaction: Node = player._interaction_component
+	interaction.publish_prompt(
+			candidate.assist_prompt() if candidate != null and player.assisted_package == null else "")
+	interaction.publish_lid_hint(player._lid_target())
+	if player.carried_package != null:
+		player._carry_component.update_carried_package()
+	if player.assisted_package != null:
+		player._cargo_care.update_assisting()
+	elif candidate != null and Input.is_action_just_pressed(&"interact"):
+		candidate.rpc_id(1, &"request_assist")
+
+
 func gather_package_input() -> Dictionary:
 	# A seated passenger is not walking, so the movement actions can also feed
 	# directional trap sequences while the primary action steadies the package.
