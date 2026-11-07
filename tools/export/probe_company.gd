@@ -4,8 +4,8 @@ extends SceneTree
 ##
 ## Looks inside an exported build's .pck: a release template ignores --script, so the same engine version's
 ## editor binary mounts the pack. It proves what a quiet log cannot: the menu takes --mode=company as the exe
-## does, the company world really comes up (crew, shed, day open) and every registry read by listing a folder
-## is full. A listing is what breaks in an export (x.tres.remap instead of x.tres), and an empty one only shows
+## does, the company world really comes up (crew, shed, day open) and the registries that use DirAccess are
+## full. A listing is what breaks in an export (x.tres.remap instead of x.tres), and an empty one only shows
 ## as a shed with nothing to buy. Prints "COMPANY_PROBE OK" and exits 0, or names what failed and exits 1.
 ## The editor binary has no GodotSteam library for the pack: that one error happens before this runs, and the
 ## exe's own boot is what covers the extension.
@@ -16,8 +16,11 @@ const LOAD_TIMEOUT_MSEC: int = 90000
 const SETTLE_FRAMES: int = 120
 ## Under this many, a registry lost files on the way to the build (a folder in the source has at least these).
 const MIN_ZONES: int = 9
-## Left out by the presets: seen here, the exclude_filter stopped working.
+## Left out by the presets: seen here, the exclude_filter stopped working. A script in a pack is x.gdc plus
+## x.gd.remap, so FileAccess.file_exists() says false for every script: only ResourceLoader can tell.
 const MUST_NOT_SHIP: String = "res://tests/test_release_build.gd"
+## The control of that look: a script that does ship has to be seen by it.
+const MUST_SHIP: String = "res://scripts/core/company/company_save.gd"
 
 var _failures: int = 0
 var _catcher := ErrorCatcher.new()
@@ -43,7 +46,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_expect(not FileAccess.file_exists(MUST_NOT_SHIP), "tests/ is left out of the pack")
+	_expect(ResourceLoader.exists(MUST_SHIP), "A compiled script of the pack can be seen (%s)" % MUST_SHIP)
+	_expect(not ResourceLoader.exists(MUST_NOT_SHIP), "tests/ is left out of the pack (%s)" % MUST_NOT_SHIP)
 	_expect(change_scene_to_file(MENU_SCENE) == OK, "The menu loads from the pack")
 	var level: Node = await _wait_for_world()
 	_expect(level != null, "--mode=company reaches the company world (at %s)" % current_scene)
@@ -79,7 +83,7 @@ func _check_world(level: Node) -> void:
 	_expect(level.get(&"day_cycle") != null, "The day's cycle is up")
 
 
-## Every registry that lists a folder of res://data: a name lost to the export comes back empty, not as an error.
+## The registries that use DirAccess on res://data: a name lost to the export comes back empty, not as an error.
 func _check_registries() -> void:
 	var catalog: RefCounted = _global(&"CompanyCatalog").call(&"load_all")
 	_expect(catalog.get(&"errors").is_empty(), "The catalog reads clean (got %s)" % [catalog.get(&"errors")])
@@ -87,6 +91,7 @@ func _check_registries() -> void:
 		_expect(not catalog.call(&"all", kind).is_empty(), "The catalog has %s" % kind)
 	_expect(not _global(&"CompanyShop").call(&"items").is_empty(), "The company shop has items")
 	_expect(not _global(&"EmployeeLevels").call(&"levels").is_empty(), "There are employee levels")
+	_expect(not _global(&"OrderTemplateCheck").call(&"load_sets").is_empty(), "There are order templates")
 	_expect(not _global(&"BuildCursor").call(&"all_definitions").is_empty(), "There are placeable objects")
 
 

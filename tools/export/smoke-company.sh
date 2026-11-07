@@ -2,23 +2,32 @@
 # Smoke test of an exported build (D-2019): the two boots of the PC build routine, then a look inside the
 # pack. Last line: "Empresa OK", or "Empresa FALLA: <why>" (the routine copies it to docs/rendimiento-pc.md).
 #
-#   GODOT=<editor binary> tools/export/smoke-company.sh [builds/windows]
+#   GODOT=<editor binary> tools/export/smoke-company.sh [folder of the build, builds/windows if left out]
 #
 # Each boot ends itself with --quit-after: killing the exe with `timeout` makes the engine log dozens of
 # "ERROR: BUG: Unreferenced static string" on its way out (Windows), so "no ERROR in the log" could never
 # pass. `timeout` stays only as the guard against a hang. A quiet log proves little by itself, so the boot
 # must also write the company's save, and tools/export/probe_company.gd must find the world up inside the
 # pack. Runs on a user folder of its own: the real saves are never read or touched.
+#
+# The boots run with --verbose for one line of the log: "Resource still in use: <what>" is how to tell the menu
+# music's race at exit (see errors_in) from a real leak, and only the music is forgiven.
 set -u
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-BUILD="$(cd "${1:-$ROOT/builds/windows}" && pwd)" || exit 2
+BUILD="${1:-$ROOT/builds/windows}"
+if [ ! -d "$BUILD" ]; then
+	echo "Empresa FALLA: no existe la carpeta de la build ($BUILD)"
+	exit 2
+fi
+BUILD="$(cd "$BUILD" && pwd)"
 # ~55 s of the running game, headless. A boot that ends earlier than the load only fails, it never passes.
 COMPANY_FRAMES=6000
 MENU_FRAMES=300
 GUARD_SECONDS=150
-BOOT_TRIES=3
 ERRORS='SCRIPT ERROR|ERROR|Failed to load|Cannot open|Parse Error'
+EXIT_LEAK='ERROR: [0-9]+ resources still in use at exit'
+MENU_TRACK='mus_menu_loop\.ogg'
 
 fail() {
 	echo "Empresa FALLA: $1"
@@ -38,21 +47,27 @@ export APPDATA XDG_DATA_HOME
 APPDATA="$(native "$WORK")"
 XDG_DATA_HOME="$WORK"
 
-# Up to BOOT_TRIES: a real problem fails every one of them. The menu's music can be caught mid-mix as the
-# engine closes ("1 resources still in use at exit", AudioServer's playback of mus_menu_loop.ogg, 5 of 8 boots
-# on a used user folder): an engine race at exit, nothing the game holds.
+# The errors of a boot's log. Leaving from the menu, the music can be caught mid-mix as the engine closes (half
+# of the boots, all of them under --verbose): AudioServer keeps the stopped playback until it mixes again, and
+# the log ends in "1 resources still in use at exit". An engine race, nothing the game holds and nothing a player
+# sees, so that line goes only when the track is all the engine names. Anything else still in use keeps it.
+errors_in() {
+	if grep 'Resource still in use:' "$1" | grep -qv "$MENU_TRACK"; then
+		grep -E "$ERRORS" "$1"
+	else
+		grep -E "$ERRORS" "$1" | grep -vE "$EXIT_LEAK"
+	fi
+}
+
 boot() {
-	local name="$1" status try
+	local name="$1" status found
 	shift
-	for ((try = 1; try <= BOOT_TRIES; try++)); do
-		timeout "$GUARD_SECONDS" "$EXE" --headless "$@" >"$WORK/$name.log" 2>&1
-		status=$?
-		if [ "$status" -eq 0 ] && ! grep -qE "$ERRORS" "$WORK/$name.log"; then
-			return 0
-		fi
-	done
-	grep -E "$ERRORS" "$WORK/$name.log" | head -5
-	fail "el arranque '$name' falló $BOOT_TRIES veces (la última con $status)"
+	timeout "$GUARD_SECONDS" "$EXE" --headless --verbose "$@" >"$WORK/$name.log" 2>&1
+	status=$?
+	found="$(errors_in "$WORK/$name.log")"
+	[ "$status" -eq 0 ] && [ -z "$found" ] && return 0
+	echo "$found" | head -5
+	fail "el arranque '$name' falló (salió con $status)"
 }
 
 boot menu --quit-after "$MENU_FRAMES"

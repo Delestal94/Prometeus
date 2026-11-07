@@ -20,7 +20,7 @@ el día que se quiere jugar con amigos. La lanza el Programador de tareas
 1. **`empaquetador-release`**, pedido explícito de build de prueba (el hito M5 sigue en pausa, pero
    esta build no se publica): pasos 3 a 6 de su checklist (export release de "Windows Desktop" a
    `builds/windows/`, dependencias de Steam, smoke test del `.exe`, tamaño y archivos que no deberían
-   estar). El smoke es `GODOT=<editor> tools/export/smoke-company.sh builds/windows` (D-2019): los dos
+   estar). El smoke es `GODOT=<editor> tools/export/smoke-company.sh <carpeta de la build>` (D-2019), la que acabás de exportar: los dos
    arranques (al menú y en **modo Empresa**, unos 55 s, sin `SCRIPT ERROR` ni `ERROR` en el log) y la sonda
    que mira adentro del `.pck` si el mundo levantó con sus catálogos llenos. Su última línea va a la fila de
    `docs/rendimiento-pc.md`: "Empresa OK" o la falla. No la cambies por `timeout` a mano: matar el `.exe`
