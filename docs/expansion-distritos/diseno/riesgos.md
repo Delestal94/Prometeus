@@ -358,7 +358,7 @@ P3: vigilar.
 - **Qué puede salir mal:** `bot_company_day` termina en `BOT_OK` aunque la puerta, el alquiler y la red los simula él:
   llama `OrderSettlement.settle` por su cuenta, arma una caja y corre solo en el host. Si con eso se declara cerrado
   el corte, F2 arranca sobre un día que en el juego real no cobra.
-- **Evidencia:** fuera de `tests/` no hay llamadas a `OrderSettlement.settle` ni a `FixedCosts.settle`;
+- **Evidencia:** fuera de `tests/` no hay llamadas a `OrderSettlement.settle` (el alquiler ya lo cobra el juego, D-0509.b);
   encabezado de `tests/bot_company_day.gd` ("None of that is replicated to clients yet").
 - **Mitigación:** D-2016.4 (`BOT_STUB` bloquea `BOT_OK`) y la compuerta F1 → F2 atada a D-2016 en
   `.claude/rutinas/desarrollador.md` §2.
