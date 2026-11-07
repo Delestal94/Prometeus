@@ -40,10 +40,11 @@ func on_setup(_package: Node, config: Dictionary) -> void:
 	super.on_setup(_package, config)
 	_safe_angle = float(config.get("safe_angle", 10.0))
 	_danger_angle = float(config.get("danger_angle", 24.0))
-	_leak_per_second = float(config.get("leak_per_second", 7.0))
-	_surge_per_second = float(config.get("surge_per_second", 24.0))
+	# Severity (D-0710): a tilt, a hit and a running step spill more; each swing of the scrub dries the same.
+	_leak_per_second = float(config.get("leak_per_second", 7.0)) * severity
+	_surge_per_second = float(config.get("surge_per_second", 24.0)) * severity
 	_impact_threshold = float(config.get("impact_threshold", 4.0))
-	_impact_spill = float(config.get("impact_spill", 18.0))
+	_impact_spill = float(config.get("impact_spill", 18.0)) * severity
 	_scrub_amount = float(config.get("scrub_amount", 2.0))
 	_scrub_gap = maxf(float(config.get("scrub_gap", 0.08)), 0.0)
 	_integrity_loss_per_spill = float(config.get("integrity_loss_per_spill", 0.23))
@@ -103,7 +104,7 @@ func _scrub(direction: StringName) -> void:
 func on_carried_step(strength: float) -> float:
 	if get_state() == TrapState.RUINED:
 		return 0.0
-	spill_amount = minf(integrity_max, spill_amount + RUN_STEP_SPILL * strength)
+	spill_amount = minf(integrity_max, spill_amount + RUN_STEP_SPILL * strength * severity)
 	return 0.0
 
 

@@ -1223,7 +1223,8 @@ def bramble():
 # read pale, lighter than the lawn; 0.085/0.18/0.04 went tone on tone with it
 # (lost at night and at 10 m); now olive, its value between the two. The
 # palette's cyan-ish "fern" (0.08/0.34/0.13) is left alone (the small fern
-# moved to these two olives in N-331.10). LowpolyMaterials keys
+# moved to these olives in N-331.10; its upright fronds have their own
+# "fern.small_young" since N-331.11). LowpolyMaterials keys
 # both as "fern" (it cuts at the first dot): foliage detail and the autumn
 # tint still apply, and the albedo gets x1.16 there (DETAIL_GAIN).
 FERN_TALL = (0.13, 0.20, 0.03, 1)
@@ -1317,8 +1318,76 @@ def tall_fern_cluster():
 # from above they overlap into a continuous herringbone instead of the loose
 # arrowheads the tall cluster shows at 0.95-1.15; the fold is shallower
 # (0.2) so the two halves of a frond shade closer.
-FERN_REACH = (1.4, 1.6)
-FERN_FOLD = 0.2
+#
+# N-331.11 (director-arte, 2026-10-19): up close those leaflets still read as
+# a pile of loose triangles -- each one touched its frond only along the
+# midrib. Now every frond is one joined blade (_joined_frond): a strip down
+# the frond, a third of the teeth's width, that narrows to the stipe and the
+# tip, and one tooth per span and side hung off its edge, the tip swept
+# 1.1-1.3 spans forward (a hooked, pointed tooth). The margin is serrated
+# (notch, tooth, notch) but nothing in it is detached. No midrib vertex, so no
+# V fold: the teeth hang a little below the strip instead. 20 tris a frond,
+# 11 fronds, 220 tris, 1.21 x 1.21 m, 0.54 m tall. A first pass with a wider
+# strip (0.42) and teeth ending at the next station read as kale or oak
+# leaves. The upright fronds' colour went from "fern.tall_young" to their own
+# "fern.small_young" 0.14/0.22/0.035 (less yellow against the lawn); the tall
+# cluster keeps its two olives. LowpolyMaterials' "fern" grain went 1.0 -> 2.0
+# m per repeat in the same pass (its cells read as hexagons on these fronds).
+FERN_SMALL_YOUNG = (0.14, 0.22, 0.035, 1)
+# Tooth half-width per span (stipe to tip); the stipe span has no tooth.
+FERN_TEETH = (0.0, 0.85, 1.0, 0.92, 0.72, 0.45)
+# Strip half-width as a share of the wider neighbouring tooth.
+FERN_BLADE = 0.3
+
+
+def _joined_frond(bm, slot, root, heading, length, half_width, lift, droop, rng, teeth=FERN_TEETH, blade=FERN_BLADE):
+    """One fern frond as a single connected blade: a strip along the arc
+    (rising at `lift`, bending down by `droop` per quarter) that starts at
+    `root` and closes at the tip, with one triangular tooth per span and side
+    on its edge. 2 * spans - 2 strip tris plus 2 per toothed span."""
+    ch, sh = math.cos(heading), math.sin(heading)
+    side = Vector((-sh, ch, 0.0))
+    spans = len(teeth)
+    seg = [0.12] + [0.88 / (spans - 1)] * (spans - 1)
+    angles = [lift - droop * 3.0 * j / (spans - 1) for j in range(spans)]
+    spine = [Vector(root)]
+    for s, a in zip(seg, angles):
+        spine.append(spine[-1] + Vector((ch * math.cos(a), sh * math.cos(a), math.sin(a))) * length * s)
+    ups = [Vector((-ch * math.sin(a), -sh * math.sin(a), math.cos(a))) for a in angles]
+    # Strip edges per station: one shared vertex at the root and at the tip.
+    root_v = bm.verts.new(spine[0])
+    tip_v = bm.verts.new(spine[-1])
+    left, right = [root_v], [root_v]
+    for j in range(1, spans):
+        b = max(teeth[j - 1], teeth[j]) * blade * half_width
+        left.append(bm.verts.new(spine[j] + side * b))
+        right.append(bm.verts.new(spine[j] - side * b))
+    left.append(tip_v)
+    right.append(tip_v)
+
+    def face(verts, up):
+        f = bm.faces.new(verts)
+        f.normal_update()
+        if f.normal.dot(up) < 0.0:
+            f.normal_flip()
+        f.material_index = slot
+
+    for j in range(spans):
+        up = ups[j]
+        if j == 0:
+            face((root_v, left[1], right[1]), up)
+        elif j == spans - 1:
+            face((left[j], tip_v, right[j]), up)
+        else:
+            face((left[j], left[j + 1], right[j + 1]), up)
+            face((left[j], right[j + 1], right[j]), up)
+        if teeth[j] <= 0.0:
+            continue
+        for s, edge in ((1.0, left), (-1.0, right)):
+            w = teeth[j] * half_width * rng.uniform(0.88, 1.1)
+            sweep = rng.uniform(1.1, 1.3)
+            tooth = bm.verts.new(spine[j].lerp(spine[j + 1], sweep) + side * (s * w) - up * (w * 0.2))
+            face((edge[j], edge[j + 1], tooth), up)
 
 
 def fern(count=11, seed=8):
@@ -1327,7 +1396,7 @@ def fern(count=11, seed=8):
     obj = bpy.data.objects.new("Fern", mesh)
     bpy.context.collection.objects.link(obj)
     mesh.materials.append(_double_sided("fern", "tall", FERN_TALL))
-    mesh.materials.append(_double_sided("fern", "tall_young", FERN_TALL_YOUNG))
+    mesh.materials.append(_double_sided("fern", "small_young", FERN_SMALL_YOUNG))
     bm = bmesh.new()
     rng = random.Random(seed)
     start = rng.uniform(0.0, math.tau)
@@ -1337,8 +1406,7 @@ def fern(count=11, seed=8):
             lift, droop, length, slot = rng.uniform(0.6, 0.75), rng.uniform(0.22, 0.28), 0.56, 0
         else:       # upright
             lift, droop, length, slot = rng.uniform(1.1, 1.22), rng.uniform(0.26, 0.3), 0.8, 1
-        _pinnate_frond(bm, slot, (0.0, 0.0, 0.0), heading, length * rng.uniform(0.92, 1.08), 0.15, lift, droop, rng,
-                       fold=FERN_FOLD, reach=FERN_REACH)
+        _joined_frond(bm, slot, (0.0, 0.0, 0.0), heading, length * rng.uniform(0.92, 1.08), 0.17, lift, droop, rng)
     bm.to_mesh(mesh)
     bm.free()
 

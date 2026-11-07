@@ -10,8 +10,9 @@ extends RoadNetwork
 ## node and street lies in is its `area`. An edge's `segments` are the kinds of
 ## piece (SEGMENT_SCRIPTS) that go along it, in order, repeated to fill its length.
 ##
-## EdgePieces lays the pieces along each curve. Not done yet (subtasks of D-0304 in
-## detalle/F1-03-distritos.md): the road mesh per edge and the bot's autopilot.
+## EdgePieces lays the pieces along each curve, EdgeCellContent hands them to the world
+## cells and StreetSurface draws them with the street's surface; the GPS (RoadNavigator)
+## and the bot's autopilot (tests/bot_company_van.gd) follow its routes.
 
 const DATA_PATH: String = "res://data/world/road_graph.tres"
 ## Where every trip starts: the shed's gate.

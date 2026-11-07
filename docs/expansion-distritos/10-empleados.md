@@ -39,8 +39,8 @@
 | ~~D-1024~~ | ~~Renuncia por moral baja~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | ~~D-1025~~ | ~~Necesidades: comedor, vestuario (D-0923)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
 | ~~D-1026~~ | ~~Turnos (mañana/tarde)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
-| D-1027 | Empleado repartidor NPC que hace entregas fáciles solo (simulado, sin escena) | constructor-negocio | high | sim: entrega con tasa de éxito por stat |
-| D-1028 | Choferes NPC para vehículos (salidas automáticas a distritos dominados) | constructor-negocio | high | sim |
+| D-1027 | Empleado repartidor NPC que hace entregas fáciles solo (simulado, sin escena) — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): solo cajas sin trampa fuerte (`NPC_MAX_TRAP_DIFFICULTY`) a distritos dominados (`NPC_MIN_DISTRICT_REPUTATION`), media paga (`NPC_TRIP_PAY_FACTOR`); al final del grupo, en la primera actualización del Early Access** | constructor-negocio | high | sim: entrega con tasa de éxito por stat |
+| D-1028 | Choferes NPC para vehículos (salidas automáticas a distritos dominados) — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): solo cajas sin trampa fuerte a distritos dominados, media paga (regla de D-1027); al final del grupo, en la primera actualización del Early Access** | constructor-negocio | high | sim |
 | D-1029 | Supervisor que reasigna empleados según cuellos de botella | constructor-negocio | high | sim mejora throughput |
 | D-1030 | Rasgos graciosos (torpe, apurado, perfeccionista) (incluye D-1031, fusión de D-0112) | constructor-negocio | low | 8 rasgos |
 | ~~D-1031~~ | ~~Accidentes de empleados (tira una caja) con consecuencias~~ **Fusionada en D-1030 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | evento |
@@ -49,7 +49,7 @@
 | D-1034 | Nombres y caras variados (reusar `face_catalog.gd`) | constructor-negocio | low | 50 combinaciones |
 | D-1035 | Diálogos/burbujas de empleados | documentador | low | 80 líneas traducibles |
 | ~~D-1036~~ | ~~Huelga/evento de empleados~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | evento |
-| D-1037 | Empleados especializados por distrito (lanchero, piloto) | constructor-negocio | medium | test |
+| D-1037 | Empleados especializados por distrito (lanchero, piloto) — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): sus salidas siguen la regla de D-1027 (sin trampa fuerte, distrito dominado, media paga); al final del grupo, en la primera actualización del Early Access** | constructor-negocio | medium | test |
 | D-1038 | Vista de plantilla en el portapapeles | constructor-ui | medium | captura |
 | ~~D-1039~~ | ~~Empleados ayudan a un jugador caído (rescate)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-1040 | LOD de empleados lejanos (animación reducida) | perfilador-rendimiento | medium | medido |

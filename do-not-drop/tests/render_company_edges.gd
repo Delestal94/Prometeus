@@ -7,13 +7,14 @@ extends SceneTree
 ## built the way a world cell builds them (EdgePieces.build, one RouteSegment per
 ## piece along the Bezier), lit like the level: an asphalt avenue in Centro
 ## (avenida_este_1, with a speed bump), a gravel road in Campo (camino_campo_3:
-## curves, s-curve and the narrow bridge) and a dirt farm track (chacra_1, mud first).
+## curves, s-curve and the narrow bridge), a dirt farm track (chacra_1, mud first) and a cobbled street
+## of Centro (calle_v_640_m384), each drawn with its street's surface (StreetSurface, D-0304.1b).
 ## Views per street: the driver's eye at its start, a 3/4 view from above the
 ## middle, an almost top-down view of the middle stretch and a close look at the
 ## first joint between two pieces (gaps, steps or kinks show there).
 
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
-const STREETS: Array[StringName] = [&"avenida_este_1", &"camino_campo_3", &"chacra_1"]
+const STREETS: Array[StringName] = [&"avenida_este_1", &"camino_campo_3", &"chacra_1", &"calle_v_640_m384"]
 
 var _camera: Camera3D
 

@@ -100,9 +100,15 @@ func _initialize() -> void:
 		_network.set(&"world_house_count", _crew_houses())
 		_network.set(&"world_seed", _seed_with_crossing())
 	var deadline: int = Time.get_ticks_msec() + TIMEOUT_MSEC
+	var counted_from_load: bool = false
 	while Time.get_ticks_msec() < deadline:
 		root.multiplayer.poll()
 		await process_frame
+		# The host's wait for the crew counts from its level load (N-987.3): run-net-trio.sh starts the clients
+		# only once it printed "level loaded", so a slow load must not eat into their time.
+		if _host and _level != null and not counted_from_load:
+			counted_from_load = true
+			deadline = Time.get_ticks_msec() + TIMEOUT_MSEC
 		if _level != null and get_nodes_in_group(&"player").size() >= PLAYERS:
 			await _report()
 			return

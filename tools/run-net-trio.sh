@@ -38,13 +38,27 @@ fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
+# Waits (up to $3 s) until $1 has a line matching $2: the host is up, instead of a fixed sleep.
+wait_for_log() {
+	local i
+	for ((i = 0; i < $3 * 10; i++)); do
+		grep -q "$2" "$1" 2>/dev/null && return 0
+		sleep 0.1
+	done
+	return 1
+}
+
 run() {
 	timeout 120 "$GODOT_BIN" --headless --path "$PROJECT" --script res://tests/net_trio.gd -- "$@"
 }
 
 run --host >"$WORK/host.log" 2>&1 &
 HOST_PID=$!
-sleep 2
+# The clients start once the host's level is up (N-987.3), not after a fixed sleep; the host's 60 s wait for
+# the three players counts from that load (net_trio.gd), so a slow one takes no time from them.
+HOST_START=$SECONDS
+wait_for_log "$WORK/host.log" 'NETLOG role=host level loaded' 90 || echo "run-net-trio: the host printed no 'level loaded' line in 90 s"
+echo "run-net-trio: first client started $((SECONDS - HOST_START)) s after the host"
 run --client --name=a >"$WORK/a.log" 2>&1 &
 A_PID=$!
 sleep "$LATE"

@@ -9,18 +9,18 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-0101 | ✅ Documento de visión de la expansión: bucle del día, crecimiento, distritos, flota, qué se mantiene del juego actual | documentador | high | `diseno/vision.md` existe, enlazado desde el README y `definicion-proyecto.md` |
-| D-0102 | ✅ Modo Empresa es el juego principal; Entrega y Endless quedan como "Partida rápida" (incluye D-0128, fusión de D-0112) | — | — | decidido (decidido 2026-10-04, `docs/decisiones/2026-10-04-expansion-decisiones-delegadas.md`) |
-| D-0103 | ✅ Carrito = eléctrico tipo golf; la zorra es herramienta del galpón | — | — | decidido |
+| D-0102 | ✅ Modo Empresa es el juego principal; Entrega y Endless quedan como "Partida rápida" (incluye D-0128, fusión de D-0112) | — | — | decidido (2026-10-04, cerrado 2026-11-04: `docs/decisiones/2026-11-04-modo-empresa.md`) |
+| D-0103 | ✅ Carrito = eléctrico tipo golf; la zorra es herramienta del galpón | — | — | decidido (`docs/decisiones/2026-11-04-carrito.md`) |
 | D-0104 | ✅ Un solo mapa continuo que se desbloquea (usuario; `docs/decisiones/2026-10-04-mapa-continuo.md`) | — | — | decidido |
-| D-0105 | ✅ Reloj de 08:00 a 20:00, 90 s reales por hora de juego | — | — | decidido |
-| D-0106 | ✅ Sin nadie ni empleados, el galpón se congela; con empleados sigue | — | — | decidido |
+| D-0105 | ✅ Reloj de 08:00 a 20:00, 90 s reales por hora de juego | — | — | decidido (`docs/decisiones/2026-11-04-duracion-del-dia.md`) |
+| D-0106 | ✅ Sin nadie ni empleados, el galpón se congela; con empleados sigue | — | — | decidido (`docs/decisiones/2026-11-04-galpon-vacio.md`) |
 | D-0107 | ✅ Análisis de *Schedule I* (gestión de empleados, portapapeles, automatización por estaciones, crecimiento) y qué tomar y qué no | critico-diseno | high | `diseno/referencia-schedule-1.md` con lista "tomamos / no tomamos" |
 | D-0108 | ✅ Análisis de referencias de armado y logística (Box Packing, Mini Motorways, Shapez, Overcooked, Totally Reliable Delivery Service) | critico-diseno | high | `diseno/referencias-logistica.md` |
 | D-0109 | ✅ Regla de diseño "lo que armás es la trampa": tabla producto × embalaje × trampa resultante | constructor-trampas | high | `diseno/armado-y-trampas.md` con la tabla completa para las 7 trampas actuales |
 | D-0110 | ✅ Definir cómo se reparte la tripulación de 1-8 en el día (galpón vs. ruta) y qué hace cada uno solo, en dupla y con 8 | critico-diseno | high | `diseno/roles-tripulacion.md` con tablas por cantidad de jugadores |
 | D-0111 | ✅ Definir el corte vertical F1 exacto (contenido, pantallas, qué queda gris) y su criterio de cierre medible | planificador-tareas | high | `diseno/corte-vertical.md` con lista cerrada y benchmark de cierre |
 | D-0112 | ✅ Pasada de `critico-diseno` a toda la expansión contra la capacidad del equipo; recortes propuestos | critico-diseno | high | informe en `diseno/critica-alcance.md` con lista de recortes |
-| D-0113 | ✅ Recortes los aplica D-0112, sin tocar nada de lo que nombró el usuario | — | — | decidido |
+| D-0113 | ✅ Recortes los aplica D-0112, sin tocar nada de lo que nombró el usuario; la zona gris se construye en versión mínima al final de su grupo y el Early Access sigue la opción A | — | — | decidido (`docs/decisiones/2026-11-04-recortes-zona-gris.md`, issue #470) |
 | D-0114 | ✅ Tabla de distritos definitiva (orden, vehículo, peligros, desbloqueo, cantidad de casas, largo de ruta en minutos) | critico-diseno | medium | `diseno/distritos.md` reemplaza la tabla del README |
 | D-0115 | ✅ Tabla de vehículos definitiva (asientos, carga, velocidad, quién maneja, qué trampa amplifica) | critico-diseno | medium | `diseno/flota.md` |
 | D-0116 | ✅ Catálogo inicial de productos: 40 productos con tamaño, peso, fragilidad, temperatura, precio y distrito | constructor-progresion | medium | `diseno/catalogo-productos.md` con los 40 |

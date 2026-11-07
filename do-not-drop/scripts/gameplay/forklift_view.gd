@@ -17,6 +17,8 @@ extends Node3D
 ## Controls of the local driver: the interact key takes / leaves a pallet (PlayerInteraction's
 ## `interact_override`), forklift_mast_up / forklift_mast_down raise and lower the forks, package_drop gets off.
 ## On every peer the driver's player carries the meta `driving` (DRIVING_META) while it drives: nobody hands it a box.
+## It also carries the forklift's volume as collision (ForkliftBody, D-0606.c4: the rear, the mast and the forks at
+## their height, with their pallet), so it bumps as a forklift and not as a capsule with forks that go through shelves.
 ## The host lets the forklift go when its driver leaves (CompanyNet, on peer_removed); here there is only a safety net
 ## for a driver's player that is gone without that (GONE_SECONDS).
 
@@ -115,6 +117,7 @@ func refresh(pallets: CompanyPallets) -> void:
 		position = Vector3(parked.x, 0.0, parked.y)
 		rotation.y = state.yaw if state.at is Vector2 else rotation.y
 	_carriage.position.y = state.height_at(Time.get_ticks_msec())
+	_fit_driver_body()
 	_sync_local_driving()
 	_cue(state, Time.get_ticks_msec())
 	set_process(state.driver != 0 or state.moving_at(Time.get_ticks_msec()))
@@ -158,6 +161,7 @@ func _process(_delta: float) -> void:
 		if _local_driving:
 			_steer_mast(now)
 	_carriage.position.y = state.height_at(now)
+	_fit_driver_body()
 	_cue(state, now)
 	if state.driver == 0 and not state.moving_at(now):
 		set_process(false)
@@ -198,17 +202,27 @@ func _driver() -> Node3D:
 	return null
 
 
-## The driver's player carries DRIVING_META while it drives, on every peer (and loses it after).
+## The driver's player carries DRIVING_META and the forklift's volume (ForkliftBody) while it drives, on every peer
+## (and loses them after).
 func _set_driver_node(node: Node3D) -> void:
 	if node == _driver_node:
 		return
-	if is_instance_valid(_driver_node) and _driver_node.has_meta(DRIVING_META):
-		_driver_node.remove_meta(DRIVING_META)
-		_driver_node.remove_meta(PlayerSprint.PACE_CAP_META)
+	if is_instance_valid(_driver_node):
+		ForkliftBody.detach(_driver_node)
+		if _driver_node.has_meta(DRIVING_META):
+			_driver_node.remove_meta(DRIVING_META)
+			_driver_node.remove_meta(PlayerSprint.PACE_CAP_META)
 	_driver_node = node
 	if node != null:
 		node.set_meta(DRIVING_META, true)
 		node.set_meta(PlayerSprint.PACE_CAP_META, CompanyTuning.FORKLIFT_DRIVE_SPEED_MPS)
+		_fit_driver_body()
+
+
+## The driver's boxes follow the forks as drawn here and the pallet on them.
+func _fit_driver_body() -> void:
+	if is_instance_valid(_driver_node) and _carriage != null:
+		ForkliftBody.attach(_driver_node, _carriage.position.y, _carried_id != &"")
 
 
 ## Puts the forklift under the driver's player, facing where it faces. False while that player is not here.

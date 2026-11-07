@@ -6,7 +6,8 @@ extends Control
 ## order book (OrderBook.open_orders()). No RPC and no state of its own; it redraws REFRESH_SECONDS apart.
 ##
 ## - Time: "Día 3 · 10:45", "Pausa" while the clock is stopped (the coop pause, the frozen shed).
-## - Money: "$1250", red when the company is in the red (Bankruptcy's line is the opening notice, D-0510).
+## - Money: "$1.250" (MoneyText, the language's separator), red when the company is in the red (Bankruptcy's
+##   line is the opening notice, D-0510).
 ## - Orders: "Pedidos: 4" (open orders), orange when one is late (minute past its `due_min`).
 ## Each value comes through a Callable so a test, or a world without some part, can feed it.
 

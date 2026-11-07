@@ -64,7 +64,7 @@
 | D-0543 | Que ninguna estrategia degenerada (solo un distrito) gane siempre | pulidor-jugabilidad | high | sim con 4 estrategias |
 | D-0544 | Sonido de caja registradora al cobrar | disenador-audio | low | SFX en `SynthAudio` |
 | D-0545 | Animación de números al cobrar | constructor-ui | low | tween |
-| D-0546 | Moneda con formato localizado | constructor-ui | low | test con 2 locales |
+| ✅ D-0546 | Moneda con formato localizado | constructor-ui | low | test con 2 locales |
 | D-0547 | Explicar penalidades en el resumen (por qué perdiste plata) | constructor-ui | medium | cada penalidad con texto |
 | D-0548 | Documentar el modelo económico final | documentador | low | `docs/economia-y-contramedidas.md` actualizado |
 | D-0549 | Test de regresión de la economía (CSV de referencia) | escritor-tests | medium | `test_economy_golden` |

@@ -34,7 +34,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-1121 | Robot de picking que toma productos de estantes según pedido | constructor-negocio | xhigh | test: arma lista de picking |
-| D-1122 | Brazo robótico armador (mete productos en la caja) | constructor-negocio | xhigh | test |
+| D-1122 | Brazo robótico armador (mete productos en la caja) — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): calidad tope 70 (`ROBOT_PACK_MAX_QUALITY`); al final del grupo, en la primera actualización del Early Access** | constructor-negocio | xhigh | test |
 | D-1123 | AGV (vehículo autónomo) que lleva palets | constructor-negocio | high | test |
 | ~~D-1124~~ | ~~Paletizadora para salidas grandes~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
 | ~~D-1125~~ | ~~Envolvedora de film~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
@@ -51,7 +51,7 @@
 | ~~D-1136~~ | ~~Modo "turbo": ver la línea funcionar acelerada~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | test |
 | D-1137 | Cajas que se caen de la cinta si va muy rápido (física de verdad) | constructor-negocio | medium | test |
 | D-1138 | Trampas activas en la cinta (explosiva que explota en el galpón) (incluye D-0933, fusión de D-0112) | constructor-trampas | medium | evento |
-| D-1139 | Empleado técnico que repara máquinas | constructor-negocio | low | rol |
+| D-1139 | Empleado técnico que repara máquinas — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): solo mantenimiento preventivo (menos averías y costo de D-0527); los atascos y averías en vivo siguen siendo del jugador (D-1113); al final del grupo, en la primera actualización del Early Access** | constructor-negocio | low | rol |
 | ~~D-1140~~ | ~~Tutorial de automatización~~ **Fusionada en D-1926 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | flujo guiado |
 
 ## Pulido

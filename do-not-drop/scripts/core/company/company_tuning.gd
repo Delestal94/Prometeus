@@ -384,6 +384,10 @@ const SUPPLIER_WAIT_MIN: int = 180
 ## Docks the shed has for supplier trucks (D-0621.c.a, DockQueue): trucks that overlap in time queue for one.
 ## D-0640 (a second dock) raises it.
 const SUPPLIER_DOCK_BAYS: int = 1
+## Days of supplier deliveries the delivery note keeps line by line (D-2026.2, DeliveryNote): the last two weeks.
+## Older days fold into per-product missing totals, so the note (in every save and snapshot) stops growing with
+## the days played. Decision: docs/decisiones/2026-11-04-save-50-dias.md.
+const DELIVERY_NOTE_DAYS_KEPT: int = 14
 ## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
 ## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
 ## turn radius, how far it reverses in a straight line, the straight run before the turn, and the
@@ -439,3 +443,12 @@ const OVERSIZED_FREE_RATIO: float = 0.5
 const TRAP_INTENSITY_MID: float = 0.1
 const TRAP_INTENSITY_HIGH: float = 0.25
 const TRAP_LOOSE_BOX_INTENSITY: float = 0.3
+## How hard the trap hits at each level (D-0710.b, ITrapBehavior.severity): every behavior scales the harm it
+## does by it (hits, leaks, anger, growth, a shorter fuse or tipping time), never what the right answer does.
+## Low is the trap as it is today (armado-y-trampas.md §5). Measured with `sim_trap_balance.gd -- --levels`
+## (tests/sim_data/levels_report.md): at 1.25 the clumsy loses 4 to 46 points more boxes than at low in each of
+## the 7 traps, and the expert keeps every one but Fragile's (a crash nobody can cushion); 1.5 sent Hostile and
+## Fragile to 96-100 % for the clumsy (docs/decisiones/2026-11-04-severidad-de-trampas.md).
+const TRAP_SEVERITY_LOW: float = 1.0
+const TRAP_SEVERITY_MID: float = 1.1
+const TRAP_SEVERITY_HIGH: float = 1.25

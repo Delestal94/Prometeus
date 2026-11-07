@@ -13,7 +13,7 @@
 > --abiertas` (o `--seccion "QA"`); el panel también las muestra. Un PR que cierra una tarea solo toca su
 > archivo; `python tools/tareas.py revisar` (en CI) rechaza una tarea escrita acá adentro.
 >
-> **Lo terminado se archiva** en `docs/tareas/hechas/` (lo mueve `tools/archivar-tareas.py` en el
+> **Lo terminado se archiva** en docs/tareas/hechas/ (lo mueve `tools/archivar-tareas.py` en el
 > mantenimiento semanal); lo de antes del 2026-10-04, en [`tareas-nacho-archivo.md`](tareas-nacho-archivo.md).
 > Un ID que no está en `docs/tareas/` está hecho: buscalo con `grep -r`, sin leer los archivos enteros.
 

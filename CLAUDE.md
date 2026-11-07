@@ -98,6 +98,8 @@ Antes de tocar código:
 
 Seguí la skill `cerrar-cambio` (y `nuevo-test` para escribir el test). En resumen:
 
+- Doc nuevo en `docs/*.md`: sumarlo a `docs/README.md`; doc que ya no vale: borrarlo. `python tools/check_docs.py`
+  (CI y pre-push) falla con docs huérfanos, links rotos o rutas inexistentes.
 - Test nuevo o ampliado para lo que se cambió, con su descripción en el encabezado del test
   (`tools/list-tests.sh` arma el índice; no hay lista a mano que mantener).
 - Actualizar la tarea en su archivo `docs/tareas/<ID>.md` (una por archivo, `docs/tareas/README.md`; nunca

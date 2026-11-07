@@ -1910,7 +1910,7 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 - [x] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
   kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
   del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.
-  **Hecho (2026-10-01), rama `arte/N-110.1-service-station`:** 6 GLB `sm_env_service_*` (`tools/build_service_station.py`,
+  **Hecho (2026-10-01), rama `arte/N-110.1-service-station`:** 6 GLB `sm_env_service_*` (`do-not-drop/assets/tools/build_service_station.py`,
   ~5.900 tris en total) conectados en `service_stop.gd` con `DepotKit.model()`; colisiones, mostrador, textos y brillos
   siguen en código, el cartel "KIOSCO" pasó a una marquesina sobre el frente y el pallet de cajones quedó al lado (no
   encima) del punto del cosmético. Captura `tests/render_service_stop.gd` (entrega y Endless, 5 vistas cada uno).

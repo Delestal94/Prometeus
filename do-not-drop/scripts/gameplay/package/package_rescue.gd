@@ -154,6 +154,22 @@ const ROAD_LOOKAHEAD: float = 1.2
 ## session seed and the box, so the same session deals the same code to the
 ## same box, and each box its own. 0 without a seeded session (solo): the
 ## trap then draws from the clock.
+## A box packed in the company's warehouse carries its trap plan under this meta (BoxToPackage.META_TRAP_PLAN,
+## D-0710), set before the box enters the tree: its "severity" is how hard the packing lets the trap hit.
+const TRAP_PLAN_META: StringName = &"trap_plan"
+
+
+## What the box's trap is set up with (DeliveryPackage.initialize_trap(), and again when it is repaired): its
+## definition's params and, from its trap plan, the severity (ITrapBehavior.severity, D-0710.b). Without a plan
+## the trap rides at 1, its own numbers.
+static func trap_config(p: DeliveryPackage) -> Dictionary:
+	var config: Dictionary = p.trap_definition.params.duplicate(true)
+	var plan: Variant = p.get_meta(TRAP_PLAN_META, {})
+	if plan is Dictionary and (plan as Dictionary).has("severity"):
+		config["severity"] = float((plan as Dictionary)["severity"])
+	return config
+
+
 static func roll_seed(p: DeliveryPackage) -> int:
 	# world_seed is declared by network_manager.gd, not by NetSession: the handle's type.
 	var network := PackageAutoloads.network(p) as NETWORK_MANAGER
@@ -339,7 +355,8 @@ static func complete_care_tool(p: DeliveryPackage, tool: StringName) -> void:
 		p._parasite_damage = 0.0
 		p.contents_spilled = false
 		p.salvage_state = {}
-		p.trap_behavior.on_setup(p, p.trap_definition.params.duplicate(true))
+		# The packing is the same box: a repaired one keeps its severity (D-0710).
+		p.trap_behavior.on_setup(p, trap_config(p))
 		# A neutralized explosive is inert, not a new bomb with a fresh timer.
 		var bomb := p.trap_behavior as ExplosiveTrapBehavior
 		if p._trap_kind() == &"explosive" and bomb != null:

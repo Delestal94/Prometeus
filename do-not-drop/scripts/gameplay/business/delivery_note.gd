@@ -10,9 +10,17 @@ extends RefCounted
 ##
 ## A line is {product, ordered, received, missing, extra}. missing is what the truck
 ## did not unload (left on the bed, D-0618, or never loaded); extra is a surplus.
+##
+## Only the last CompanyTuning.DELIVERY_NOTE_DAYS_KEPT days are kept line by line, counted
+## back from the newest day on record (D-2026.2): an older day folds into per-product
+## missing totals (`older_missing`), so missing_totals() still adds every day while the
+## note, which goes in every save and snapshot, stops growing with the days played. The
+## trim depends only on the records, so every peer applying the same checks agrees.
 
 ## Day -> Array of lines that were not exact (only the discrepancies are kept).
 var _records: Dictionary = {}
+## Product -> units missing on the days already folded out of _records.
+var _older_missing: Dictionary = {}
 
 
 ## Units per product held by the pallets whose id is in received_ids. Pallets that are
@@ -92,6 +100,7 @@ func check(day: int, ordered: Dictionary, received: Dictionary) -> Array[Diction
 		_records.erase(day)
 	else:
 		_records[day] = off
+	_trim()
 	return lines
 
 
@@ -103,7 +112,7 @@ func discrepancies(day: int) -> Array[Dictionary]:
 	return out
 
 
-## Days with a recorded discrepancy, ascending.
+## Days with a recorded discrepancy, ascending (only the days still kept line by line).
 func days_with_shortfall() -> Array[int]:
 	var out: Array[int] = []
 	for day: int in _records:
@@ -115,9 +124,9 @@ func days_with_shortfall() -> Array[int]:
 	return out
 
 
-## Units still missing from all recorded days, per product.
+## Units still missing from all recorded days, per product (the folded older days too).
 func missing_totals() -> Dictionary:
-	var out: Dictionary = {}
+	var out: Dictionary = _older_missing.duplicate()
 	for day: int in _records:
 		for line: Dictionary in _records[day]:
 			if int(line["missing"]) > 0:
@@ -142,13 +151,29 @@ func to_dict() -> Dictionary:
 				)
 			)
 		out[str(day)] = lines
-	return {"records": out}
+	var older: Dictionary = {}
+	for product: StringName in _older_missing:
+		older[String(product)] = int(_older_missing[product])
+	return {"records": out, "older_missing": older}
+
+
+## How many days are kept line by line (at most CompanyTuning.DELIVERY_NOTE_DAYS_KEPT).
+func days_kept() -> int:
+	return _records.size()
 
 
 ## Tolerates malformed data: bad days and lines are skipped; missing and extra are
-## recomputed from ordered and received.
+## recomputed from ordered and received. A note from before D-2026.2 (no "older_missing")
+## loads with no older totals, and one holding more days than are kept is trimmed.
 static func from_dict(data: Dictionary) -> DeliveryNote:
 	var note := DeliveryNote.new()
+	var older: Variant = data.get("older_missing", {})
+	if older is Dictionary:
+		for product: Variant in older:
+			var units: Variant = (older as Dictionary)[product]
+			var is_number: bool = typeof(units) == TYPE_INT or typeof(units) == TYPE_FLOAT
+			if str(product) != "" and is_number and float(units) < 1e15 and int(units) >= 1:
+				note._older_missing[StringName(str(product))] = int(units)
 	var raw: Variant = data.get("records", {})
 	if not raw is Dictionary:
 		return note
@@ -171,3 +196,21 @@ static func from_dict(data: Dictionary) -> DeliveryNote:
 			received[product] = int(d.get("received", 0))
 		note.check(day, ordered, received)
 	return note
+
+
+## Folds every day more than DELIVERY_NOTE_DAYS_KEPT before the newest recorded one into
+## _older_missing and drops its lines (D-2026.2).
+func _trim() -> void:
+	var newest: int = 0
+	for day: int in _records:
+		newest = maxi(newest, day)
+	var keep_after: int = newest - CompanyTuning.DELIVERY_NOTE_DAYS_KEPT
+	for day: int in _records.keys():
+		if day > keep_after:
+			continue
+		for line: Dictionary in _records[day]:
+			var missing: int = int(line["missing"])
+			if missing > 0:
+				var product: StringName = line["product"]
+				_older_missing[product] = int(_older_missing.get(product, 0)) + missing
+		_records.erase(day)

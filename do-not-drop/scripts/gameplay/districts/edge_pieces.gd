@@ -26,7 +26,8 @@ static var _lengths: Dictionary = {}
 
 ## The pieces of one street, in order: { kind, start (m along the street), length,
 ## position (Vector2 on the ground), yaw (radians, for a Basis(UP, yaw)), turn_deg
-## (curves only) }. Empty for a street that is not in the graph or lists no pieces.
+## (curves only), surface (the street's RoadEdge.surface, what build_piece() draws it with) }.
+## Empty for a street that is not in the graph or lists no pieces.
 ##
 ## With `keep_clear` (a ground rectangle, D-0314.a: the shed's) a street that starts inside it
 ## starts at the point where it leaves it, so no roadway is laid under the shed's floor and walls.
@@ -73,7 +74,8 @@ static func build(graph: RoadGraph, edge_id: StringName, parent: Node3D) -> Arra
 	return built
 
 
-## One piece of a plan() as a RouteSegment, placed in world space, not yet in the tree.
+## One piece of a plan() as a RouteSegment, placed in world space, not yet in the tree. It is drawn
+## with its street's surface (StreetSurface, D-0304.1b) once it builds itself.
 static func build_piece(piece: Dictionary) -> RouteSegment:
 	var segment: RouteSegment = (RoadGraph.SEGMENT_SCRIPTS[piece.kind] as GDScript).new() as RouteSegment
 	segment.length = piece.length
@@ -81,6 +83,7 @@ static func build_piece(piece: Dictionary) -> RouteSegment:
 		(segment as CurveSegment).turn_deg = piece.turn_deg
 	var ground: Vector2 = piece.position
 	segment.transform = Transform3D(Basis(Vector3.UP, piece.yaw), Vector3(ground.x, 0.0, ground.y))
+	StreetSurface.dress(segment, piece.get("surface", StreetSurface.FALLBACK))
 	return segment
 
 
@@ -108,6 +111,7 @@ static func _piece(graph: RoadGraph, edge_id: StringName, kind: StringName, at: 
 	var piece: Dictionary = {
 		"kind": kind, "start": at, "length": span, "advance": span,
 		"position": start, "yaw": atan2(-facing.x, -facing.y), "turn_deg": 0.0,
+		"surface": graph.edge_by_id(edge_id).surface,
 	}
 	if BENDING.has(kind):
 		# The piece advances by the length it is built with, and the turn is the one the street

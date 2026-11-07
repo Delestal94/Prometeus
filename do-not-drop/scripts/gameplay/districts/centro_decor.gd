@@ -14,7 +14,8 @@ extends RefCounted
 
 const ZONE: StringName = &"centro"
 ## Half the roadway RouteSegment really draws: StraightSegment's Road box is 12 m wide, whatever
-## RoadEdge.width says (the surface per edge is D-0304.1b). test_company_centro keeps the two equal.
+## RoadEdge.width says (StreetSurface, D-0304.1b, paints it by surface but keeps the box). test_company_centro
+## keeps the two equal.
 const ROADWAY_HALF_WIDTH: float = 6.0
 const SIDEWALK_WIDTH: float = 2.0
 ## Over the roadway's top (y = 0); a curb a van can drive up if it has to.

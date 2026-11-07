@@ -134,5 +134,5 @@ Combinando todos los patrones, el perfil de proyecto con más antecedentes de é
 
 ## Próximos pasos
 1. Con estos patrones, definir concretamente género/alcance/motor para tu proyecto (siguiente documento: `docs/definicion-proyecto.md`).
-2. Ir armando un `docs/requerimientos.md` a medida que tomemos decisiones concretas.
+2. Ir armando un `docs/requerimientos-tecnicos.md` a medida que tomemos decisiones concretas.
 3. (Opcional) Profundizar en 2-3 casos específicos (ej. Balatro o Lethal Company) con un análisis de diseño más detallado, si te sirve como inspiración directa.

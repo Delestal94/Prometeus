@@ -148,11 +148,16 @@ func ack(peer: int, names: PackedStringArray) -> bool:
 		return false
 	if names.is_empty() or names.size() > MAX_VEHICLES:
 		return false
+	# A fleet that changed mid-session: open the vehicles both sides know and ignore the rest, instead of refusing
+	# the whole list (N-990). Nothing known at all is still a refusal.
+	var known: Array[String] = []
 	for node_name: String in names:
-		if not RpcGuard.text_ok(node_name) or vehicle(node_name) == null:
-			return false
+		if RpcGuard.text_ok(node_name) and vehicle(node_name) != null:
+			known.append(node_name)
+	if known.is_empty():
+		return false
 	var had: Dictionary = _opened.get(peer, {})
-	for node_name: String in names:
+	for node_name: String in known:
 		had[node_name] = true
 	_opened[peer] = had
 	_refresh(peer)
@@ -204,11 +209,12 @@ func vehicle(node_name: String) -> Node3D:
 
 
 ## The vehicles here, in the order they were built. Not every child: the van drops its loose cargo clutter
-## (cargo_clutter.gd, local scenery that is never replicated) next to itself.
+## (cargo_clutter.gd, local scenery that is never replicated) next to itself, and one prune() just freed is gone
+## already (tell_host() right after it must not name it).
 func vehicles() -> Array[Node3D]:
 	var found: Array[Node3D] = []
 	for child: Node in get_children():
-		if child is Node3D and child.is_in_group(CompanyTrips.VEHICLE_GROUP):
+		if child is Node3D and child.is_in_group(CompanyTrips.VEHICLE_GROUP) and not child.is_queued_for_deletion():
 			found.append(child as Node3D)
 	return found
 
@@ -449,8 +455,26 @@ func _on_event(_seq: int, kind: StringName, data: Dictionary) -> void:
 ## Client: the host's snapshot is in, its company in this peer's CompanyState: the vehicles it lacks, then the
 ## host is told which it has (tell_host()).
 func _on_snapshot(_snapshot_seq: int) -> void:
+	prune(net.company)
 	build(net.company)
 	tell_host()
+
+
+## Client: frees the vehicles the fleet no longer holds (a fleet that changed mid-session), so no ghost vehicle stays
+## that the host never sends poses for. Returns how many were freed.
+func prune(company: Object) -> int:
+	if company == null or not is_inside_tree():
+		return 0
+	if catalog == null:
+		catalog = CompanyCatalog.load_all()
+	var fleet: Variant = company.get(&"fleet")
+	var wanted: Array[String] = node_names(vehicle_ids(fleet if fleet is Array else [], catalog))
+	var freed: int = 0
+	for body: Node3D in vehicles():
+		if not wanted.has(String(body.name)):
+			body.queue_free()
+			freed += 1
+	return freed
 
 
 ## Client: tells the host every vehicle it has (_have_fleet), so their synchronizers may reach it. Nothing when it

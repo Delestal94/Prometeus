@@ -64,7 +64,7 @@ Todo vive en `CompanyState.to_dict()`, dentro de `user://saves/company/<slot>.js
 | `layout`, `warehouse_stage` | Piezas del galpón con su `uid` y etapa del piso | `BuildLayoutSave.sanitize` descarta lo que no entra |
 | `inventory` | Stock por producto y lugar | Al guardar, las manos pasan al piso. D-0252 normaliza el resto (§3) |
 | `supplier_calendar` | Pedidos al proveedor y qué día llegan | La factura ya se cobró al pedir |
-| `pallets` | Palets del proveedor, zorra, autoelevador, remito, `departed_day` | `departed_day` evita que el camión entregue dos veces lo mismo |
+| `pallets` | Palets del proveedor, zorra, autoelevador, remito, `departed_day` | `departed_day` evita que el camión entregue dos veces lo mismo. El remito guarda 14 días línea por línea y de los anteriores solo los faltantes (D-2026) |
 
 Por venir, cada uno en su tarea y con su prueba de ida y vuelta: `day_events` (el plan de mañana, sorteado al
 cerrar, eventos-del-dia §2.2), `options` (los modificadores de dificultad, D-1919), máquinas y su contenido

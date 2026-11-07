@@ -43,8 +43,10 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	super.on_setup(package, config)
 	_angle_ok_max = float(config.get("angle_ok_max", 15.0))
 	_angle_at_risk_max = float(config.get("angle_at_risk_max", 30.0))
-	_fail_seconds = float(config.get("angle_fail_seconds", 1.5))
-	_damage_per_second = float(config.get("damage_per_second_at_risk", 20.0))
+	# Severity (D-0710): it bleeds faster past the safe angle and tips over sooner past the danger one;
+	# the push that levels it is the same.
+	_fail_seconds = float(config.get("angle_fail_seconds", 1.5)) / severity
+	_damage_per_second = float(config.get("damage_per_second_at_risk", 20.0)) * severity
 	_correction_degrees_per_second = float(config.get("correction_strength", 20.0))
 	tilt_degrees = 0.0
 	tilt_side = 0.0
@@ -95,7 +97,7 @@ func on_carried_step(strength: float) -> float:
 	if get_state() == TrapState.RUINED:
 		return 0.0
 	_run_tilt = minf(_run_tilt + RUN_TILT_PER_STEP * strength, _angle_at_risk_max - 6.0)
-	return damage(0.4 * strength)
+	return damage(0.4 * strength * severity)
 
 
 func get_state() -> int:

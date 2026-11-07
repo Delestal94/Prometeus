@@ -38,7 +38,7 @@
 | D-2023 | Bot de 8 jugadores simulados para pruebas de carga | constructor-red | high | corre en CI nocturno |
 | D-2024 | Bot de jugador solo que juega 20 días (D-0126) | constructor-progresion | high | termina sin quiebra ni bloqueos |
 | D-2025 | Bot que juega la campaña completa acelerada | constructor-progresion | high | llega al Volcán en sim |
-| D-2026 | Test de save de 50 días (tamaño y tiempo de carga) | escritor-tests | medium | < 2 s de carga |
+| D-2026 | ✅ Test de save de 50 días (tamaño y tiempo de carga) | escritor-tests | medium | < 2 s de carga |
 | D-2027 | Fuzz de acciones en red (agarrar/soltar al mismo tiempo) (incluye D-0646, fusión de D-0112) | escritor-tests | high | test sin duplicados |
 | ~~D-2028~~ | ~~Steam: logros (D-0440)~~ **Fusionada en D-0440 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | logros en build |
 | ~~D-2029~~ | ~~Steam: Remote Play Together en el galpón~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | probado |

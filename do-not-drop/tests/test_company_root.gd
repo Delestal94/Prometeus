@@ -277,13 +277,14 @@ func _check_shop_screen(level: CompanyRoot, state: Node) -> void:
 	_expect(shop.visible and not summary.is_processing_unhandled_input(),
 		"The Shop button opens the shop over the closing screen, which stops listening to ui_cancel")
 	var money_label: Label = shop.find_child("Money", true, false) as Label
-	_expect(money_label != null and money_label.text.contains("$5000"), "The shop shows the company's cash")
+	_expect(money_label != null and money_label.text.contains(MoneyText.format(5000)),
+		"The shop shows the company's cash")
 	var host_line: Label = shop.find_child("HostOnly", true, false) as Label
 	_expect(host_line != null and not host_line.visible, "Solo is the host: no only-the-host line")
 	shop.buy(&"upgrade_1")
 	_expect((state.get(&"equipment") as Array).has(&"upgrade_1") and int(state.get(&"money")) == 4550,
 		"Buy goes through CompanyNet: the host bought the machine (money %s)" % state.get(&"money"))
-	_expect(money_label.text.contains("$4550") and shop.buy_button(&"upgrade_1").disabled
+	_expect(money_label.text.contains(MoneyText.format(4550)) and shop.buy_button(&"upgrade_1").disabled
 		and shop.status_text().contains(CompanyShopPanel.item_name(CompanyShop.find(&"upgrade_1"))),
 		"...and the shop follows the event: cash, owned row and the status line (%s)" % shop.status_text())
 	_expect(level.shed.stage == 0, "A machine doesn't redraw the shed")

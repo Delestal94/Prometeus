@@ -26,11 +26,15 @@ extends SceneTree
 ## - a holder on a client walks with the cart on open floor for 3 s, the host seeing them late (the pose
 ##   cushion) and their peer getting the host's steps late (the round trip): walking and running on a LAN and
 ##   walking over a Steam-like link, towards a corner of the deck, the cart's deck as their own peer has it
-##   never stops them, at most one step per interval, and the cart is still ahead and held at the end.
+##   never stops them, at most one step per interval, and the cart is still ahead and held at the end;
+## - the task's "done when" under the held push: the cart walks those 9 s loaded with CART_MAX_UNITS (6) units of
+##   two products, and after each walk, mid-slide and once the look has settled, on both peers, the six are still
+##   on it: none taken or lost, six cubes on the deck and inside its rails, in the same slots as before.
 ## The single push, the ENet pair and two carts: test_company_picking_cart_world / _net.
 
 const CART: StringName = &"cart_1"
 const HEN: StringName = &"hen"
+const LAMP: StringName = &"antique_lamp"
 const EPS: float = 0.001
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 const SPRINT := preload("res://scripts/gameplay/player/player_sprint.gd")
@@ -314,7 +318,11 @@ func _test_grip() -> void:
 	# Against the shelves: blocked, a notice, a pause, the grip stays.
 	await _push_into_wall(view)
 
-	# Walking with it on a client, the host seeing them late and their peer getting the steps late.
+	# Walking with it on a client, the host seeing them late and their peer getting the steps late, the cart full.
+	# The ticks above ran with no frame between them, so the look is still rolling after the node: let it settle.
+	await create_timer(PickingCartView.SLIDE_SECONDS + 0.15).timeout
+	_load_six(view)
+	var units_before: int = _net.inventory.total_units()
 	_walk(Player.WALK_SPEED, 0.1, 0.01, 0.02, "LAN, walking")
 	_walk(SPRINT.RUN_SPEED, 0.1, 0.01, 0.02, "LAN, running")
 	_walk(Player.WALK_SPEED, 0.2, 0.08, 0.16, "Steam-like link, walking")
@@ -326,6 +334,12 @@ func _test_grip() -> void:
 	_expect(here != null and here.position.is_equal_approx(view.position),
 		"The other peer draws the cart where it ended (%s vs %s)"
 		% [here.position if here != null else null, view.position])
+	_check_six(view, _net.inventory, "after the walks, settled", true)
+	if here != null:
+		_check_six(here, _mirror.inventory, "after the walks, settled, on the other peer", true)
+	_expect(_net.inventory.total_units() == units_before and _mirror.inventory.to_dict() == _net.inventory.to_dict(),
+		"The walks created or lost no unit and both peers hold the same stock (%d, was %d)"
+		% [_net.inventory.total_units(), units_before])
 
 	for node: Node in [_grip, _mirror_shed, _mirror, _shed, _net]:
 		node.free()
@@ -467,10 +481,59 @@ func _walk(speed: float, view_lag: float, event_lag: float, round_trip: float, l
 	_expect(_grip.is_gripping(1) and ahead > _corner_touch()
 		and seen.global_position.is_equal_approx(view.global_position),
 		"%s: the cart is still held and ahead of them, the same on both peers (%.2f m ahead)" % [label, ahead])
+	# Mid-slide: the look may still be rolling behind the node, so the cubes are checked on the deck they ride.
+	_check_six(view, _net.inventory, label + ", mid-slide", false)
+	_check_six(seen, _mirror.inventory, label + ", mid-slide, on the other peer", false)
 	_grip.release(1)
 	_event_lag = 0.0
 	_grip.lag_of = func(_peer: int) -> float: return 0.0
 	_net.stations = shed_stations
+
+
+## Loads 4 hens and then 2 lamps from peer 1's hands with the platform's point, as a player would: the cart is
+## full (CART_MAX_UNITS) and both peers draw six cubes sorted by product.
+func _load_six(view: PickingCartView) -> void:
+	var hands: StringName = CompanyNet.hands_location(1)
+	_feet = view.global_position + Vector3(-0.8, 0.0, 0.0)
+	var standing: Vector3 = (_feet as Vector3) + Vector3.UP * 1.5
+	for batch: Array in [[HEN, 4], [LAMP, 2]]:
+		_net.inventory.receive(batch[0], batch[1], hands)
+		_mirror.inventory.receive(batch[0], batch[1], hands)
+		var result: StringName = PickingCartUse.use(_net, view, PickingCartPoint.ACTION_LOAD, 1, standing)
+		_expect(result == PickingCartUse.RESULT_LOADED, "%d x %s go on the cart before the walks (%s)"
+			% [batch[1], batch[0], result])
+	_expect(_net.inventory.contents_at(hands).is_empty(), "The hands are empty again, so the grip keeps holding")
+	_check_six(view, _net.inventory, "loaded, before the walks", true)
+	var seen: PickingCartView = _mirror_shed.cart_views.get(CART) as PickingCartView
+	if seen != null:
+		_check_six(seen, _mirror.inventory, "loaded, before the walks, on the other peer", true)
+
+
+## The cart still carries its six units: CART_MAX_UNITS in `stock` at its location, six cubes drawn in slot order
+## (lamps, then hens) at their slots, on the deck and inside the rails. `settled`: measured in the cart's own frame
+## (the look has stopped sliding); otherwise in the frame of the look they ride, the deck's.
+func _check_six(view: PickingCartView, stock: Inventory, when: String, settled: bool) -> void:
+	var on_cart: StringName = view.cart.location()
+	_expect(view.cart.count(stock) == CompanyTuning.CART_MAX_UNITS and stock.count(HEN, on_cart) == 4
+		and stock.count(LAMP, on_cart) == 2, "Six units on the cart %s: 4 hens and 2 lamps (%s)"
+		% [when, view.cart.contents(stock)])
+	_expect(view.slot_products() == [LAMP, LAMP, HEN, HEN, HEN, HEN],
+		"The six cubes keep their slots %s (%s)" % [when, view.slot_products()])
+	var units: Array[MeshInstance3D] = view.shown_units()
+	_expect(units.size() == CompanyTuning.CART_MAX_UNITS, "Six cubes are drawn %s (%d)" % [when, units.size()])
+	var half: float = PickingCartView.UNIT_SIZE * 0.5
+	for slot: int in units.size():
+		var unit: MeshInstance3D = units[slot]
+		var frame: Vector3 = view.to_local(unit.global_position) if settled else unit.position
+		_expect(unit.get_parent() != null and unit.get_parent().get_node_or_null(^"Platform") != null,
+			"Cube %d rides with the deck %s" % [slot, when])
+		_expect(frame.is_equal_approx(PickingCartView.slot_centre(slot)),
+			"Cube %d is still at its slot %s (%s, wanted %s)" % [slot, when, frame, PickingCartView.slot_centre(slot)])
+		_expect(frame.y - half >= PickingCartView.DECK_TOP - EPS and frame.y < PickingCartView.HEIGHT,
+			"Cube %d is on the deck, not under it, %s (y %.3f)" % [slot, when, frame.y])
+		_expect(absf(frame.x) + half <= PickingCartView.LENGTH * 0.5 + EPS
+			and absf(frame.z) + half <= PickingCartView.WIDTH * 0.5 + EPS,
+			"Cube %d is inside the rails %s (%s)" % [slot, when, frame])
 
 
 ## The host's events that reached the other peer by `now`, in order.

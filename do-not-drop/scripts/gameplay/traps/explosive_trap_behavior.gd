@@ -35,9 +35,11 @@ var _code_reader: StringName = READER_DRIVER
 ## the clock when there is none.
 func on_setup(_package: Node, config: Dictionary) -> void:
 	super.on_setup(_package, config)
-	_countdown_total = float(config.get("countdown_seconds", 14.0))
+	# Severity (D-0710): a shorter fuse, and a wrong key, a hit or a running step burn more of it; the
+	# code is as long.
+	_countdown_total = float(config.get("countdown_seconds", 14.0)) / severity
 	seconds_left = _countdown_total
-	_mistake_penalty = float(config.get("mistake_penalty", 1.5))
+	_mistake_penalty = float(config.get("mistake_penalty", 1.5)) * severity
 	_code_length = clampi(int(config.get("code_length", 3)), 2, 6)
 	var roll_seed: int = int(config.get("roll_seed", 0))
 	if roll_seed != 0:
@@ -71,14 +73,14 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 ## Running with a bomb in the arms: each step shaves a little off the fuse (N-115).
 func on_carried_step(strength: float) -> float:
 	if not _defused and seconds_left > 0.0:
-		seconds_left = maxf(0.0, seconds_left - RUN_STEP_FUSE * strength)
+		seconds_left = maxf(0.0, seconds_left - RUN_STEP_FUSE * strength * severity)
 		_sync_integrity()
 	return 0.0
 
 
 func on_impact(delta_velocity: float) -> float:
 	if delta_velocity >= 7.0 and not _defused:
-		seconds_left = maxf(0.0, seconds_left - 0.8)
+		seconds_left = maxf(0.0, seconds_left - 0.8 * severity)
 	_sync_integrity()
 	return 0.0
 

@@ -20,14 +20,25 @@ extends Resource
 
 enum TrapState { OK, AT_RISK, RUINED }
 
+## The range config "severity" is kept in.
+const SEVERITY_MIN: float = 0.1
+const SEVERITY_MAX: float = 4.0
+
 var integrity: float = 100.0
 var integrity_max: float = 100.0
+## How hard this hazard hits this object (config "severity", 1 by default: the params as they are).
+## Every behavior scales by it the harm it does -- what being ignored, answered wrong or shaken costs,
+## and how long it waits before giving up -- and never what answering it right does: a harsher hazard
+## asks for the same gesture, sooner and more often. The game sets it per object (how well the box
+## was packed, say); the hazard itself has no new params for it.
+var severity: float = 1.0
 var _milestones: Array[StringName] = []
 
 
 func on_setup(_package: Node, config: Dictionary) -> void:
 	integrity_max = maxf(float(config.get("integrity_max", 100.0)), 1.0)
 	integrity = integrity_max
+	severity = clampf(float(config.get("severity", 1.0)), SEVERITY_MIN, SEVERITY_MAX)
 	_milestones.clear()
 
 

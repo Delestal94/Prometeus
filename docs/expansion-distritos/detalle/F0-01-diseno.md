@@ -16,7 +16,8 @@ un tycoon de planillas: siempre hay una caja en las manos).
 **Hecho cuando:** el documento existe, está enlazado y cada distrito/vehículo mencionado coincide con la
 tabla del README.
 
-### D-0102 · ⏸ decide el usuario: modo Empresa aparte o reemplazo — A · Opus 5.5 · low · Aviso: no · F0
+### ~~D-0102 · decide el usuario: modo Empresa aparte o reemplazo~~ **[x] Decidido (2026-11-04)**
+**[x] Hecho (2026-11-04, sin PR)** — por delegación del usuario: opción (a), modo Empresa al lado de Entrega y Endless; pasa a primer botón cuando cierre el corte (D-2016) y las otras dos quedan como "Partida rápida" sin cambios. Ver [`docs/decisiones/2026-11-04-modo-empresa.md`](../../decisiones/2026-11-04-modo-empresa.md) y [`revisar/D-0102.md`](../revisar/D-0102.md).
 **Depende de:** —
 **Qué:** issue `decide-usuario` con tres opciones: (a) modo Empresa nuevo al lado de Entrega y Endless
 (**recomendado**, S1), (b) reemplaza Entrega y deja Endless, (c) reemplaza todo. Pros y contras de cada
@@ -24,7 +25,8 @@ una, en cantidad de tests que cambian y en riesgo de perder lo jugable.
 **Hecho cuando:** el issue está abierto. Cuando el usuario responda: decisión en
 `docs/decisiones/AAAA-MM-DD-modo-empresa.md` y S1 actualizado.
 
-### D-0103 · ⏸ decide el usuario: qué es el "carrito" — B · Opus 5.5 · low · Aviso: no · F0
+### ~~D-0103 · decide el usuario: qué es el "carrito"~~ **[x] Decidido (2026-11-04)**
+**[x] Hecho (2026-11-04, sin PR)** — por delegación del usuario: carrito eléctrico tipo golf (4 asientos, caja abierta, batería); la zorra es herramienta del galpón. D-1221 a D-1229 quedan como están. Ver [`docs/decisiones/2026-11-04-carrito.md`](../../decisiones/2026-11-04-carrito.md).
 **Depende de:** —
 **Qué:** issue con opciones: carrito eléctrico tipo golf (S7, **recomendado**), zorra de mano empujada a
 pie, o los dos. Con un párrafo por opción sobre qué juego genera en coop.
@@ -34,13 +36,15 @@ pie, o los dos. Con un párrafo por opción sobre qué juego genera en coop.
 El usuario eligió **un solo mapa continuo** que se desbloquea. Ver `docs/decisiones/2026-10-04-mapa-continuo.md`.
 No se abre issue.
 
-### D-0105 · ⏸ decide el usuario: duración del día — A · Opus 5.5 · low · Aviso: no · F0
+### ~~D-0105 · decide el usuario: duración del día~~ **[x] Decidido (2026-11-04)**
+**[x] Hecho (2026-11-04, sin PR)** — por delegación del usuario: S3 (08:00 a 20:00, 1 h = 90 s, día de 18 min; el cierre espera la salida en curso), que ya es el código. Ver [`docs/decisiones/2026-11-04-duracion-del-dia.md`](../../decisiones/2026-11-04-duracion-del-dia.md).
 **Depende de:** —
 **Qué:** issue con la propuesta S3 (08-20 h, 90 s por hora = 18 min) y dos alternativas: día por cantidad
 de pedidos (sin reloj), y día de 12 min.
 **Hecho cuando:** el issue está abierto.
 
-### D-0106 · ⏸ decide el usuario: galpón vacío — B · Opus 5.5 · low · Aviso: no · F0
+### ~~D-0106 · decide el usuario: galpón vacío~~ **[x] Decidido (2026-11-04)**
+**[x] Hecho (2026-11-04, sin PR)** — por delegación del usuario: S4 (sin nadie y sin empleados el galpón se congela; con empleados sigue). Falta contar empleados en `crew_in_shed`: [`revisar/D-0106.md`](../revisar/D-0106.md). Ver [`docs/decisiones/2026-11-04-galpon-vacio.md`](../../decisiones/2026-11-04-galpon-vacio.md).
 **Depende de:** —
 **Qué:** issue con la propuesta S4 (se congela sin empleados) y dos alternativas: sigue corriendo y los
 proveedores se van, o el host tiene que dejar a alguien.
@@ -111,7 +115,8 @@ salida a Barrio Centro, volver y cerrar el día con ganancia > 0, sin `ERROR`/`S
 - recortes propuestos, con lista de IDs para cada uno.
 **Hecho cuando:** el informe existe y D-0113 tiene su issue.
 
-### D-0113 · ⏸ decide el usuario: recortes de D-0112 — A · Opus 5.5 · low · Aviso: no · F0
+### ~~D-0113 · decide el usuario: recortes de D-0112~~ **[x] Decidido (2026-11-04)**
+**[x] Hecho (2026-11-04, sin PR; issue #470)** — por delegación del usuario: no se tacha ninguna de las 10 de la zona gris; se construyen en versión mínima al final de su grupo (NPC solo con cajas sin trampa fuerte a distritos dominados y media paga, brazo con `Q` tope 70, técnico solo preventivo, modelos al final de la cola de la PC). Early Access: F0-F2 al lanzamiento sin la zona gris (que llega en la primera actualización) y F3-F4 como actualizaciones (fecha y página siguen del usuario). Ver [`docs/decisiones/2026-11-04-recortes-zona-gris.md`](../../decisiones/2026-11-04-recortes-zona-gris.md) y [`revisar/D-0113.md`](../revisar/D-0113.md).
 **Depende de:** D-0112
 **Qué:** un issue `decide-usuario` con cada recorte como casilla. Con la respuesta, tachar (`~~D-XXXX~~`)
 en las tablas de grupo lo que se recorte.

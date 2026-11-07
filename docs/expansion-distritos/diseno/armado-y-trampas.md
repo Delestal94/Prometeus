@@ -79,11 +79,19 @@ Todos con cinta y etiqueta puestas, salvo donde se aclare. Los repite `test_comp
 Verificación de las cuentas (por si el test las rehace): ejemplo 3: `absorption = 1 − 0,4 × 0,5263 = 0,7895`
 (se redondea a 3 decimales: 0,789); ejemplo 4: `1 − 0,4 × 0,5 = 0,8`.
 
-## 5. Intensidad de la trampa en el viaje (propuesta para D-0710)
+## 5. Intensidad de la trampa en el viaje (D-0710)
 
 `intensidad = clamp(1 − Q/100, 0, 1)` sumada al piso de la dificultad base del `.tres`: con `Q`=100 la
 trampa se comporta como hoy en su nivel más bajo; con `Q`=0, en el más alto. D-0710 la ajusta con
 `sim_trap_balance`; este documento fija solo la dirección (más calidad, menos intensidad).
+
+Cómo quedó (D-0710.b, 2026-11-04): la intensidad da el nivel (bajo hasta 0,1, medio hasta 0,25, alto desde ahí) y
+cada nivel una **severidad** (`CompanyTuning.TRAP_SEVERITY_*`: 1, 1,1 y 1,25) que el paquete le pasa a la trampa
+(`ITrapBehavior.severity`). Cada trampa multiplica por ella el daño que hace (golpes, derrame, enojo, peso, mecha y
+tiempo hasta volcar o escaparse), nunca lo que hace la respuesta correcta; ningún `.tres` cambia. Medido en
+`do-not-drop/tests/sim_data/levels_report.md` (`sim_trap_balance.gd -- --levels`); decisión en
+[2026-11-04-severidad-de-trampas.md](../../decisiones/2026-11-04-severidad-de-trampas.md). La trampa extra de la caja
+floja (Equilibrio 0,3) sigue siendo dato del plan: D-0710.c.
 
 ## Decisiones tomadas
 
