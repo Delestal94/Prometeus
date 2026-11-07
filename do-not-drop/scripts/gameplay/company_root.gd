@@ -220,6 +220,8 @@ func _ready() -> void:
 	_add_shed()
 	ColdChainTick.add_to(self, net, day_cycle, shed, business_tick)
 	_add_supplier_truck()
+	# After the supplier's hook: the automatic order reads the wallet before the rent (D-0509.b).
+	FixedCostsHook.attach(self, net)
 	_add_cells()
 	_add_packages()
 	_add_interest()
