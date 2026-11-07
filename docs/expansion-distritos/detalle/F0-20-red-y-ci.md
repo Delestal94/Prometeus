@@ -133,6 +133,7 @@ no está hecha, anotar la ruta en su tarea.
 **Hecho cuando:** CI imprime los números en un PR y la PC los puede repetir.
 
 ### D-2012 · Presupuesto de rendimiento — A · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-11-07, PR pendiente)** — La tabla está en `docs/rendimiento-pc.md` con la primera fila medida con ventana (preset medio, RTX 4060 Ti): FPS 186-248 y 2 cuerpos activos entran, **5.632 draw calls de pico y 15.210 nodos no**; Centro 140-165 FPS entra. `bench_company` suma `--quality` (medio por defecto), FPS, picos, cuerpos despiertos, las partes de la vuelta, `centro_*` y `BENCH_COMPANY_BUDGET`; los conteos del galpón se toman antes de manejar. `pc-build` lo corre. Lo que falta para cumplir el presupuesto: D-2012.1 a D-2012.3. Revisar: [`revisar/D-2012.md`](../revisar/D-2012.md).
 **Depende de:** D-2011
 **Qué:** tabla en `docs/rendimiento-pc.md`, con la GPU de la PC y el preset medio:
 
@@ -143,6 +144,10 @@ no está hecha, anotar la ruta en su tarea.
 | Manejando por Centro | ≥ 75 | — | — | — |
 
 Las PRs de la expansión que bajen más de 10 % la situación que tocan llevan "(perf)" y una tarea.
+- [x] **D-2012.0** Tabla, primera medición y `BENCH_COMPANY_BUDGET`.
+- [ ] **D-2012.1** Draw calls: las celdas fijadas más allá de `CELL_LOAD_RADIUS` no se dibujan (quedan su colisión y sus nodos) y muestran su impostor. Ocultarlas bajó la vista por la puerta de 4.707 a 959 draw calls; hacia Centro quedan 2.259, que es D-2012.2. Toca `modules/world_cells` (zona compartida) y cambia lo que se ve de lejos: con `revisor-visual`.
+- [ ] **D-2012.2** Nodos: bajar los 15.210 del galpón a ≤ 6000. Lo principal es `camino_*` (5.670 nodos, 4.313 mallas) y cada pieza de calle (37 nodos, 17 mallas, `RouteSegment`): hornear o agrupar por celda, como `DressingBatcher` en las rutas. Si no alcanza, `corte-vertical.md` manda: se recorta decorado de Centro, no el bucle.
+- [ ] **D-2012.3** Compuerta de conteos en CI (riesgos R-08, R-09), cuando D-2012.1 y D-2012.2 entren: el paso falla con `BENCH_COMPANY_BUDGET` en OVER de draw calls, cuerpos o nodos. Los FPS siguen informando. Hoy fallaría en todos los PRs.
 **Hecho cuando:** la tabla está y la primera fila tiene un número medido por `pc-build`.
 
 ### D-2013 · Sin fugas en un día y en diez — A · Opus 5.5 · high · Aviso: no · F0

@@ -224,6 +224,82 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 8. Poner `--via-loader` en la corrida diaria de `pc-build` (o sumar una segunda serie) para que "frames de más de 33 ms"
    mida lo que ve el jugador; el cambio es de la rutina, no se tocó.
 
+## Presupuesto del modo Empresa (D-2012)
+
+Con la GPU de la PC de arriba (RTX 4060 Ti) y el preset **medio** (`WorldQuality`, escala 0,9, MSAA 2x), a
+1920×1080 en ventana:
+
+| Situación | FPS | Draw calls | Cuerpos físicos activos | Nodos |
+|---|---|---|---|---|
+| Galpón por defecto | ≥ 90 | ≤ 900 | ≤ 400 | ≤ 6000 |
+| Galpón grande lleno | ≥ 60 | — | — | — |
+| Manejando por Centro | ≥ 75 | — | — | — |
+
+Los PRs de la expansión que bajen más de 10 % la situación que tocan llevan "(perf)" en el título y una tarea.
+
+**Cómo se mide:** `tests/bench_company.gd`, con ventana. El preset medio es su valor por defecto; imprime una línea
+`BENCH_COMPANY_BUDGET` por cada límite y `BENCH_COMPANY_BUDGET_OVER <n>`. `pc-build` lo corre cada día.
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --windowed --script res://tests/bench_company.gd -- --seconds=30
+```
+
+- **FPS:** promedio de la etapa, frames / tiempo total (no la mediana). 1 % bajo = 1000 / p99 ms, como en la serie.
+- **Draw calls:** el **pico** de la vuelta por el galpón, no el promedio, que esconde lo peor: mirar afuera por la
+  puerta, que también pasa al volver hacia el spawn. Incluye la pasada de sombras.
+- **Cuerpos físicos activos:** `RigidBody3D` (la van incluida) despiertos y sin congelar, pico muestreado una vez por
+  segundo. Los monitores `PHYSICS_3D_*` leen 0 con Jolt. `physics_bodies` son todos, también los estáticos.
+- **Nodos:** `OBJECT_NODE_COUNT` al terminar la vuelta, antes de manejar.
+- **Galpón grande lleno:** no lo mide este bench, abre el galpón inicial. Lo mide D-0947.
+- **Manejando por Centro:** los frames del manejo con la van dentro de `data/zones/centro.tres` (`centro_*`).
+- CI corre el mismo bench por software y solo informa: los FPS no valen ahí, los conteos son los mismos.
+
+### Primera medición, 2026-11-07
+
+**Commit:** `origin/main` `b61e3802` más el bench de esta tarea. Tres corridas de 30 s por etapa. **PC ocupada:**
+había otros 2 a 6 procesos de Godot de otros carriles y la CPU entre 17 y 48 %, así que los FPS son un piso y van con
+su rango; `pc-build` da la serie limpia. Los nodos, los cuerpos y el pico de draw calls no se mueven entre corridas
+(± 2); el promedio de draw calls sí, porque pesa por frame y depende de cuánto tarda cada vista.
+
+| Situación | FPS prom. | FPS 1 % bajo | Draw calls prom. / pico | Cuerpos activos (de todos) | Nodos | Resultado |
+|---|---|---|---|---|---|---|
+| Galpón por defecto (medido) | 186-248 | 77-105 | 2.079 / **5.632** | 2 (930) | **15.210** | FPS y cuerpos entran; **draw calls y nodos no** |
+| Mirando afuera por la puerta (parte de la anterior) | 117-162 | 75-105 | 4.795 / 5.498 | | | |
+| Manejando por Centro | 140-165 | 79-88 | 2.072 / 2.656 | 3 (996) | 16.420 | FPS entra |
+
+Sin ventana (`--headless`, `-- --cpu-only`): 15.210 nodos, 930 cuerpos, 2 activos, los mismos 554 m manejados y
+~6,9 ms por frame en las dos etapas, muy parejo (p50 6,9 / p95 7,5); son solo scripts y física.
+
+**Sobra FPS y sobran conteos.** La RTX 4060 Ti lo mueve holgado, pero el presupuesto de conteos es el que cuida a una
+PC más floja, y está pasado más del doble. De dónde sale, de un censo de la escena en el arranque:
+
+| Qué | Piezas | Nodos | Mallas | Cuerpos |
+|---|---|---|---|---|
+| `camino_*` (dos piezas, de 774 nodos cada una) | 76 | 5.670 | 4.313 | 325 |
+| `calle_*` | 117 | 3.859 | 1.710 | 308 |
+| `Centro` (decorado) | 9 | 1.619 | 793 | 54 |
+| `avenida_*` | 37 | 1.260 | 634 | 87 |
+| `chacra_*` | 33 | 970 | 431 | 99 |
+| `pasaje_*` | 12 | 372 | 168 | 24 |
+
+`World` (el galpón, la van y el jugador) son ~930 nodos: los otros 14.000 son `WorldCells`. Es por D-0303: las calles
+principales se fijan y sus celdas quedan cargadas para siempre, aunque estén a 1,5 km (`CompanyCells.pin_fixed_cells`,
+`pin_streets`): desde el galpón hay 49 celdas cargadas, 24 más allá del radio de carga. La cámara ve hasta 4.000 m
+(el valor por defecto de `Camera3D`, también en el jugador) y no hay oclusión, así que por la puerta se dibujan todas.
+
+Experimento, sin subir: ocultando (`visible = false`) esas 24 celdas (`CELL_LOAD_RADIUS` = 2, contado en
+cuadrado desde la celda del galpón):
+
+| Vista desde la puerta | Draw calls antes | Después |
+|---|---|---|
+| Al frente (+Z) | 4.707 | 959 |
+| Al frente y a la izquierda | 4.794 | 969 |
+| Al frente y a la derecha, hacia Centro | 4.967 | 2.259 |
+| Adentro, hacia el fondo | 808 | 808 |
+
+Lo que falta para entrar en el presupuesto queda en D-2012.1 a D-2012.3
+(`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`).
+
 ## Ancho de banda del modo Empresa (D-2002)
 
 **Fecha:** 2026-10-22 (D-2002.5: la caja en la mano no manda su pose). **Commit:** base `origin/main` `1905b0dd`

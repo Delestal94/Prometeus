@@ -30,7 +30,9 @@ el día que se quiere jugar con amigos. La lanza el Programador de tareas
    (sin `--headless`, ver README → Rendimiento), 150 s en reparto y 150 s en Endless, con la misma
    semilla que la última fila de `docs/rendimiento-pc.md`. Tomá ms por frame (promedio, p95, p99), FPS
    promedio y 1 % más bajo, draw calls, costo de física por tick y memoria al final. Una vez por
-   semana (lunes) sumá la pasada con el preset bajo de N-205.
+   semana (lunes) sumá la pasada con el preset bajo de N-205. Después, `tests/bench_company.gd` con ventana, 30 s,
+   contra el presupuesto de D-2012 (`docs/rendimiento-pc.md`, comando ahí): anotá los `BENCH_COMPANY_BUDGET` en OVER
+   en la columna Notas de la fila.
 3. **`revisor-visual`**, con GPU real: `render_depot.gd`, `render_route_dressing.gd`,
    `render_rail_tunnel.gd` y `render_main_menu.gd` (o sus equivalentes si cambiaron de nombre). Solo
    lo que en la nube no se ve: sombras que faltan o parpadean, luces quemadas, niebla o noche ilegibles,

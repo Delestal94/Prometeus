@@ -17,6 +17,12 @@ extends SceneTree
 ##   Avenida Este (drive_target(), steer_toward()) is 0 straight ahead, right for a target on the right,
 ##   left for the left, clamped, and finite at any heading; drive_stats() folds the stage's frames into
 ##   the summary's drive_* keys (and gives none when the stage was skipped, so they print n/a);
+## - the budget (D-2012): frame_stats() gives FPS (average, 1 % low), frame times and the peak of the draw
+##   calls, with its prefix; walk_part() splits the walk into the loop and the door look, centro_frames()
+##   keeps the drive's frames in Barrio Centro; awake_count() counts only bodies awake and not frozen;
+##   quality_level() reads the preset, medium by default; budget_report() marks each row ok or OVER, a floor
+##   for the FPS and a ceiling for the rest, and n/a for a stage that did not run; the table of
+##   docs/rendimiento-pc.md says the same numbers as BUDGET and its first row has been measured;
 ## - the bench saves in a temp folder, never in the game's company slot, and CI runs it as an
 ##   informational step.
 
@@ -27,8 +33,12 @@ const WALL_MARGIN: float = 1.0
 const REQUIRED_KEYS: Array[String] = [
 	"objects", "nodes", "draw_calls", "physics_bodies", "frame_ms_p50", "frame_ms_p95", "memory_static_kb",
 	"drive", "drive_frames", "drive_frame_ms_p50", "drive_frame_ms_p95", "drive_draw_calls", "drive_objects",
-	"drive_metres",
+	"drive_metres", "quality", "fps_avg", "fps_low_1pct", "draw_calls_peak", "physics_active", "drive_nodes",
+	"drive_physics_active", "centro_frames", "centro_fps_avg", "inside_draw_calls_peak", "door_draw_calls_peak",
 ]
+## Where the budget's table lives, from the project folder, and the rows that have a number.
+const BUDGET_DOC: String = "../docs/rendimiento-pc.md"
+const SITUATIONS: Dictionary = {"shed": "Galpón por defecto", "centro": "Manejando por Centro"}
 
 var _failures: int = 0
 
@@ -45,6 +55,12 @@ func _run() -> void:
 	_check_chase_pose()
 	_check_steering()
 	_check_drive_stats()
+	_check_frame_stats()
+	_check_walk_parts()
+	_check_awake_count()
+	_check_quality()
+	_check_budget()
+	_check_budget_doc()
 	_check_wiring()
 	if _failures == 0:
 		print("PASS: company bench path is fixed and inside the shed, the chase camera follows the van,"
@@ -246,6 +262,107 @@ func _check_drive_stats() -> void:
 		and "BENCH_COMPANY drive_frame_ms_p50=51.00" in lines, "...and they print as BENCH_COMPANY drive_* lines")
 	_expect(BENCH.SUMMARY_KEYS.find("drive") < BENCH.SUMMARY_KEYS.find("drive_frames"),
 		"The drive's status comes before its numbers")
+
+
+func _check_frame_stats() -> void:
+	_expect(BENCH.frame_stats([] as Array[Dictionary], "x_").is_empty(), "No frames, no keys (they print n/a)")
+	var frames: Array[Dictionary] = []
+	for index: int in range(100):
+		frames.append({"ms": float(index + 1), "draws": 10.0 + index, "objects": 20.0})
+	var stats: Dictionary = BENCH.frame_stats(frames, "x_")
+	_expect(stats.get("x_frames") == 100, "The frames are counted, under the prefix (%s)" % stats)
+	_expect(is_equal_approx(float(stats.get("x_fps_avg", 0.0)), 100.0 * 1000.0 / 5050.0),
+		"The average FPS is frames over the total time, not the mean of each frame's FPS")
+	_expect(is_equal_approx(float(stats.get("x_fps_low_1pct", 0.0)), 1000.0 / 100.0),
+		"The 1 %% low is 1000 / p99 ms, as docs/rendimiento-pc.md defines it")
+	_expect(stats.get("x_draw_calls_peak") == 109 and stats.get("x_draw_calls") == 60,
+		"The peak of the draw calls is apart from their average")
+	var plain: Dictionary = BENCH.frame_stats(frames, "")
+	_expect(plain.has("fps_avg") and plain.has("frames"), "With no prefix the keys are the walk's own")
+
+
+func _check_walk_parts() -> void:
+	var frames: Array[Dictionary] = []
+	for index: int in range(300):
+		frames.append({"t": index * 0.1, "ms": 1.0, "draws": 0.0, "objects": 0.0})
+	var inside: Array[Dictionary] = BENCH.walk_part(frames, 30.0, false)
+	var door: Array[Dictionary] = BENCH.walk_part(frames, 30.0, true)
+	_expect(inside.size() + door.size() == frames.size(), "Every frame of the walk is in one part")
+	_expect(inside.size() == 240 and door.size() == 60,
+		"They split at WALK_FRACTION (%d, %d)" % [inside.size(), door.size()])
+	_expect(float(door[0].t) >= 30.0 * BENCH.WALK_FRACTION, "The door part is the end of the stage")
+	var drive: Array[Dictionary] = [{"in_centro": false}, {"in_centro": true}, {}, {"in_centro": true}]
+	_expect(BENCH.centro_frames(drive).size() == 2, "centro_frames() keeps only the frames inside Centro")
+
+
+func _check_awake_count() -> void:
+	var awake := RigidBody3D.new()
+	var sleeping := RigidBody3D.new()
+	sleeping.sleeping = true
+	var frozen := RigidBody3D.new()
+	frozen.freeze = true
+	var bodies: Array[RigidBody3D] = [awake, sleeping, frozen]
+	_expect(BENCH.awake_count(bodies) == 1,
+		"Only a body awake and not frozen counts as active (%d)" % BENCH.awake_count(bodies))
+	for body: RigidBody3D in bodies:
+		body.free()
+	_expect(BENCH.awake_count(bodies) == 0, "A body freed since the list was made is not counted, nor does it crash")
+
+
+func _check_quality() -> void:
+	_expect(BENCH.DEFAULT_QUALITY == "medium", "The budget is set on the medium preset, the bench's default")
+	_expect(BENCH.quality_level("medium") == WorldQuality.Level.MEDIUM
+		and BENCH.quality_level("LOW") == WorldQuality.Level.LOW
+		and BENCH.quality_level("high") == WorldQuality.Level.HIGH, "The presets are read by name")
+	_expect(BENCH.quality_level("2") == WorldQuality.Level.HIGH and BENCH.quality_level("9") == WorldQuality.Level.HIGH,
+		"...or by number, clamped")
+
+
+## Stats that meet every row of the budget, right at its limits.
+func _stats_on_limits() -> Dictionary:
+	var stats: Dictionary = {}
+	for row: Dictionary in BENCH.BUDGET:
+		stats[row.key] = row.min if row.has("min") else int(row.max)
+	return stats
+
+
+func _check_budget() -> void:
+	var report: Dictionary = BENCH.budget_report(_stats_on_limits())
+	_expect(report.over == 0 and report.lines.size() == BENCH.BUDGET.size(),
+		"Right on the limits nothing is over (%s)" % report)
+	for line: String in report.lines:
+		_expect(line.begins_with("BENCH_COMPANY_BUDGET ") and line.ends_with(" ok"),
+			"A row inside prints ok (%s)" % line)
+	for row: Dictionary in BENCH.BUDGET:
+		_expect(row.key in BENCH.SUMMARY_KEYS, "The budget caps a key the summary prints (%s)" % row.key)
+		var stats: Dictionary = _stats_on_limits()
+		stats[row.key] = row.min - 1.0 if row.has("min") else int(row.max) + 1
+		var worse: Dictionary = BENCH.budget_report(stats)
+		_expect(worse.over == 1, "Past the limit of %s the report says one over (%s)" % [row.key, worse])
+		_expect(" %s=" % row.key in " ".join(worse.lines) and " OVER" in " ".join(worse.lines), "...and which one")
+	var skipped: Dictionary = _stats_on_limits()
+	skipped.erase("centro_fps_avg")
+	var without: Dictionary = BENCH.budget_report(skipped)
+	_expect(without.over == 0 and "BENCH_COMPANY_BUDGET centro centro_fps_avg=n/a >=75 n/a" in without.lines,
+		"A drive that never reached Centro is n/a, not over (%s)" % without)
+
+
+## The numbers of the table are the bench's, and its first row has what was measured.
+func _check_budget_doc() -> void:
+	var doc: String = FileAccess.get_file_as_string(ProjectSettings.globalize_path("res://") + BUDGET_DOC)
+	if doc.is_empty():
+		return
+	var limits: Dictionary = {}
+	for row: Dictionary in BENCH.BUDGET:
+		limits["%s %s" % [row.situation, row.key]] = roundi(row.get("min", row.get("max")))
+	var first_row: String = "| %s | ≥ %d | ≤ %d | ≤ %d | ≤ %d |" % [SITUATIONS.shed, limits["shed fps_avg"],
+		limits["shed draw_calls_peak"], limits["shed physics_active"], limits["shed nodes"]]
+	_expect(first_row in doc, "The table's first row has the bench's numbers (%s)" % first_row)
+	_expect(("| %s | ≥ %d | — | — | — |" % [SITUATIONS.centro, limits["centro centro_fps_avg"]]) in doc,
+		"The table's Centro row has the bench's number")
+	_expect("| Galpón grande lleno | ≥ 60 | — | — | — |" in doc,
+		"The big shed's row, which D-0947 measures, is there")
+	_expect(("| %s (medido) |" % SITUATIONS.shed) in doc, "The first row has a measured number")
 
 
 ## What the file promises: a skipped drive stage says so with its reason, a temp save folder, and the
