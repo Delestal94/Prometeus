@@ -29,6 +29,8 @@ check('--title "Rutina de PC caída: $Rutina"' in text, "the issue title carries
 check("'^Rutina de PC .*: {0}$' -f $Rutina" in text, "the issue is looked up by title and routine")
 check("--title 'Rutina de PC caída'" not in text, "no single shared title left")
 check("--jq '.[0].number'" not in text, "no 'first open issue' lookup (it closed the other routine's issue)")
+# CI only has pwsh 7, where this works: under 5.1 the array stays whole and every open issue matches (N-973.5).
+check("@($json | ConvertFrom-Json)" not in text, "ConvertFrom-Json goes through a variable (5.1 does not enumerate it)")
 check("usage limit" in text and "rate.?limit" in text and "quota" in text, "quota pattern exists")
 check("Cupo del plan agotado (regla 13)" in text, "quota is reported as such")
 check("Select-Object -Last 10" in text, "the last 10 log lines go to the issue")
