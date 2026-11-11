@@ -35,8 +35,8 @@ extends Node
 ## here changes, as long as the domain already has its branch for that direction and its call takes `kind`. This
 ## file still changes for a new domain (its lists in the four constants below and its branches), for a domain's first
 ## request (Trips, Orders, Wallet, Cold) or first event (Packages, Tow) and for a second kind of a domain whose call
-## here takes no `kind` (requests: Packages, Carts, Supplier, Shop, Tow; events: Units, Carts, Supplier, Wallet, Shop, Cold).
-## test_company_net_domains fails if a kind has no branch.
+## here takes no `kind` (requests: Packages, Carts, Supplier, Shop, Tow; events: Units, Carts, Supplier, Wallet,
+## Shop, Cold). test_company_net_domains fails if a kind has no branch.
 ##
 ## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its `pos` (a drop, or
 ## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
