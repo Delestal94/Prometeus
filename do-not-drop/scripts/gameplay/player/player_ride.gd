@@ -2,14 +2,29 @@ extends RefCounted
 ## Riding in the truck and where the other peers see a player (N-225.5), split out of player.gd: finding the
 ## truck, being carried along by it, publishing the owner's pose (in the truck's space while aboard) and putting
 ## everyone else's copy of the player where the owner says. The state (`_riding`, `_ride_last_transform`,
-## `_vehicle`, `net_position`, `net_in_vehicle`) and the masks stay on the Player, which keeps thin wrappers for
-## what tests and the other player components call.
+## `_vehicle`, `net_position`, `net_in_vehicle`, `net_vehicle`) and the masks stay on the Player, which keeps thin
+## wrappers for what tests and the other player components call.
+##
+## With several vehicles (a fleet, D-0302.2.b.4) the owner picks the one it is aboard (VehiclePick.pick) and says
+## which with the pose (`net_vehicle`, D-0302.2.b.4.b); everyone else's copy goes on that one (VehiclePick.told).
+## Its buffered poses are all drawn on the newest one named: stepping from one bay to another passes through the
+## world's space for longer than the buffer's cushion, so only a jump straight between two overlapping bays would
+## draw up to that cushion (NetPoseSmoother.MAX_DELAY) of the old bay's poses on the new one.
 ##
 ## The truck's `carries` is asked by name on purpose (vehicle.gd has no class name and tests put plain-Node
 ## fakes with `carries` in the "vehicle" group). The session is typed (NetSession: pose_net_sim()).
 
 
 static func find_vehicle(p: Player) -> Node3D:
+	# Among several vehicles (a fleet) the owner picks the one it is aboard; the copies on other peers take the
+	# one the owner names with its pose (net_vehicle). One vehicle: the group's first, as always.
+	if p.is_inside_tree() and p.get_tree().get_node_count_in_group(&"vehicle") > 1:
+		if p.is_local():
+			p._vehicle = VehiclePick.pick(p.get_tree(), p._vehicle, p.global_position,
+					Player.RIDE_MARGIN if p._riding or p.net_in_vehicle else 0.0)
+		else:
+			p._vehicle = VehiclePick.told(p.get_tree(), p._vehicle, p.net_vehicle)
+		return p._vehicle
 	if not is_instance_valid(p._vehicle) and p.is_inside_tree():
 		var found: Node = p.get_tree().get_first_node_in_group(&"vehicle")
 		p._vehicle = found as Node3D if found != null and found.has_method(&"carries") else null
@@ -160,6 +175,7 @@ static func publish_net_state(p: Player) -> void:
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", p.global_position,
 			Player.RIDE_MARGIN if p.net_in_vehicle else 0.0))
 	p.net_in_vehicle = riding
+	p.net_vehicle = VehiclePick.index_of(p.get_tree(), vehicle) if riding else -1
 	p.net_position = vehicle.to_local(p.global_position) if riding else p.global_position
 	p.net_yaw = angle_difference(yaw_of(vehicle.global_basis), yaw_of(p.global_basis)) if riding \
 			else yaw_of(p.global_basis)
@@ -177,13 +193,22 @@ static func set_on_foot_pose_rate(p: Player, rate_hz: float) -> void:
 	apply_pose_rate(p)
 
 
-## How often the owner sends its pose: on foot, the rate a world asked for; riding a vehicle or
-## seated, player.tscn's own again. Nothing to do while no world changed it (Delivery and Endless
-## never do).
+## How many poses a second the owner sends seated (D-2002.4): a world whose seats ride slowly asks
+## for fewer (the company's vehicles: CompanyRoot.join_crew()); 0 puts player.tscn's own back. In the
+## meta &"seated_pose_rate", as set_on_foot_pose_rate().
+static func set_seated_pose_rate(p: Player, rate_hz: float) -> void:
+	p.set_meta(&"seated_pose_rate", maxf(rate_hz, 0.0))
+	apply_pose_rate(p)
+
+
+## How often the owner sends its pose: on foot, the rate a world asked for; seated, the seated one
+## it asked for; standing in a vehicle's bay (or with no rate asked), player.tscn's own again.
+## Nothing to do while no world changed it (Delivery and Endless never do).
 static func apply_pose_rate(p: Player) -> void:
 	var on_foot_rate: float = float(p.get_meta(&"on_foot_pose_rate", 0.0))
+	var seated_rate: float = float(p.get_meta(&"seated_pose_rate", 0.0))
 	var scene_interval: float = float(p.get_meta(&"scene_pose_interval", -1.0))
-	if on_foot_rate <= 0.0 and scene_interval < 0.0:
+	if on_foot_rate <= 0.0 and seated_rate <= 0.0 and scene_interval < 0.0:
 		return
 	var sync := p.get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	if sync == null:
@@ -192,7 +217,10 @@ static func apply_pose_rate(p: Player) -> void:
 		scene_interval = sync.replication_interval
 		p.set_meta(&"scene_pose_interval", scene_interval)
 	var wanted: float = scene_interval
-	if on_foot_rate > 0.0 and not p.net_in_vehicle and p.seat_node_path.is_empty():
+	if not p.seat_node_path.is_empty():
+		if seated_rate > 0.0:
+			wanted = pose_interval(seated_rate)
+	elif on_foot_rate > 0.0 and not p.net_in_vehicle:
 		wanted = pose_interval(on_foot_rate)
 	if not is_equal_approx(sync.replication_interval, wanted):
 		sync.replication_interval = wanted

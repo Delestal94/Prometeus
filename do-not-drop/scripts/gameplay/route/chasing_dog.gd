@@ -108,6 +108,7 @@ func _physics_process(delta: float) -> void:
 			if vehicle != null and _flat(vehicle.global_position - dog.global_position).length() < NOTICE_DISTANCE:
 				state = State.CHASING
 				dog.run()
+				_tell_newspaper([])
 		State.CHASING:
 			if vehicle == null:
 				_give_up()
@@ -138,7 +139,16 @@ func _physics_process(delta: float) -> void:
 func _on_horn_honked(_peer_id: int) -> void:
 	var vehicle := _vehicle() as Node3D
 	if state == State.CHASING and vehicle != null and _flat(vehicle.global_position - dog.global_position).length() < WildlifeCrossing.HORN_SCARE_DISTANCE:
+		_tell_newspaper(["honked"])
 		_give_up()
+
+
+## The run's chronicle may print it (N-606.4b). By name and has_signal, like
+## the horn above: a test may swap the EventBus for a plain Node.
+func _tell_newspaper(tags: Array) -> void:
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and bus.has_signal(&"roadside_moment"):
+		bus.emit_signal(&"roadside_moment", &"dog_chase", tags)
 
 
 func _give_up() -> void:

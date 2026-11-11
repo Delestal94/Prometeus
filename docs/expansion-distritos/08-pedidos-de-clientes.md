@@ -15,25 +15,26 @@
 | D-0806 | ✅ Requisitos: frágil, frío, regalo, urgente, pesado, "no doblar" | constructor-progresion | medium | 6 requisitos en `.tres` con test |
 | ✅ D-0807 | Vencimiento del pedido y penalidad por tardanza | constructor-progresion | medium | test |
 | ✅ D-0808 | Asignar pedido a una caja (la hoja va con la caja) | constructor-negocio | medium | test |
-| D-0809 | Asignar caja a salida/vehículo | constructor-negocio | medium | test |
+| ✅ D-0809 | ~~Asignar caja a salida/vehículo~~ **Fusionada en D-0716 y D-0717 (revisión 2026-10-19)** | constructor-negocio | medium | test |
 | ~~D-0810~~ | ~~Cancelación del cliente (evento raro)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
-| D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
-| D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
-| D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
-| D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
-| D-0815 | Pedido completado → cobro y reputación | constructor-progresion | medium | test |
-| D-0816 | Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
-| D-0817 | Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
+| ✅ D-0811 | Pedidos imposibles hoy (falta stock) quedan en espera | constructor-progresion | medium | test |
+| ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
+| ✅ D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
+| ✅ D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
+| ✅ D-0815 | Pedido completado → cobro y reputación | constructor-progresion | medium | test |
+| ✅ D-0816 | Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
+| ✅ D-0817 | Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
 | ~~D-0818~~ | ~~Firma del cliente en el celular/remito~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-jugador | low | gesto |
 | ~~D-0819~~ | ~~Cliente ausente: dejar en buzón, vecino o volver~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test de las 3 opciones |
-| D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |
+| ✅ D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |
+| D-0851 | Cierre del día para los pedidos ([clientes.md](diseno/clientes.md)): no se sale después de las 20:00, tardanza con la hora del galpón, se vence en `CLOSING` y lo no entregado se cancela o falla | constructor-progresion | medium | `test_company_day_close_orders` |
 
 ## Ampliación
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | ~~D-0821~~ | ~~Clientes recurrentes con nombre y personalidad (D-0122)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | 18 clientes |
-| D-0822 | Cartas/mensajes de clientes con pedidos raros y humor | documentador | low | 60 textos traducibles |
+| ✅ D-0822 | Cartas/mensajes de clientes con pedidos raros y humor | documentador | low | 60 textos traducibles |
 | ~~D-0823~~ | ~~Pedidos encadenados (historias de cliente en 3 entregas)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | 5 cadenas |
 | ~~D-0824~~ | ~~Pedidos corporativos por volumen (ver D-0424)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test |
 | ~~D-0825~~ | ~~Pedidos con horario estricto (tienda que abre a las 9)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
@@ -49,9 +50,9 @@
 | ~~D-0835~~ | ~~Pedido de emergencia (medicamento) con bonus alto~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | ~~D-0836~~ | ~~Pedidos que eligen vehículo (solo bici por zona peatonal)~~ **Fusionada en D-1202 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
 | ~~D-0837~~ | ~~Filtros y orden en el tablero de pedidos~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | test de UI |
-| D-0838 | Prioridad marcada por el jugador | constructor-ui | low | test |
+| D-0838 | Prioridad marcada por el jugador en el tablero de pedidos de la pared, compartida, con petición al host ([portapapeles](diseno/portapapeles.md) §1) | constructor-ui | low | test |
 | ~~D-0839~~ | ~~Estadística de satisfacción por cliente~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | dato guardado |
-| D-0840 | Generador de nombres de clientes localizado | constructor-progresion | low | lista |
+| ✅ D-0840 | Generador de nombres de clientes localizado | constructor-progresion | low | lista |
 
 ## Pulido
 

@@ -34,7 +34,9 @@ const DETAIL: Dictionary = {
 	"leaf": ["foliage", 0.9],
 	"leaf_dark": ["foliage", 0.9],
 	"leaf_light": ["foliage", 0.9],
-	"fern": ["foliage", 1.0],
+	# Coarser on the ferns (N-331.11): at 1.0 m the foliage cells showed as a
+	# hexagon grid on their narrow fronds.
+	"fern": ["foliage", 2.0],
 	"grass": ["grass", 1.0],
 	"hay": ["grass", 0.8],
 }

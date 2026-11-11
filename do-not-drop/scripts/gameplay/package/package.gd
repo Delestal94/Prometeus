@@ -10,6 +10,10 @@ extends RigidBody3D
 ## This script keeps the RPCs (each one checks the request and resolves the sender before delegating; the
 ## helpers check the sender against the carrier) and thin wrappers.
 
+## Emitted by consume() before the removal is broadcast, so whatever hides this box from some peers
+## (CompanyInterest.release(), D-0316.3) can stop first: an RPC on a box hidden from a peer skips it.
+signal consuming
+
 @export var package_id: StringName = &"fragile_01"
 @export var trap_definition: TrapDefinition = preload("res://data/traps/fragile.tres")
 @export_range(0.0, 5.0, 0.05) var spawn_grace_time: float = 1.25
@@ -30,6 +34,9 @@ const ASSIST_REACH: float = 1.5
 ## An impact at least this hard (m/s) briefly interrupts tool work.
 const HARD_HIT_SPEED: float = 6.0
 const CareModel = preload("res://scripts/gameplay/package/package_care.gd")
+## The shelf or bay slot a box sits in (no class name; package_rescue.gd preloads it too): current_mount_path's setter
+## reads whose it is before letting it go.
+const MountPoint = preload("res://scripts/gameplay/interaction/package_mount_point.gd")
 var care = CareModel.new()
 var care_state: Dictionary = {}:
 	set(value):
@@ -63,10 +70,14 @@ var is_loaded: bool = false
 var current_mount: Node = null
 ## Replicate shelf occupancy as well as the box transform: clients use it
 ## to decide whether they may board, tend cargo or place another box.
+## The mount it leaves is freed only while it is still this box's: on a client another box may have taken it
+## meanwhile (this one's copy hidden far away and the slot let go, CompanyInterest, D-0316.2), and its update
+## then emptied a slot that box sits in.
 var current_mount_path: NodePath = NodePath():
 	set(value):
-		if is_instance_valid(current_mount) and &"occupied_by" in current_mount:
-			current_mount.set(&"occupied_by", null)
+		var left: MountPoint = current_mount as MountPoint if is_instance_valid(current_mount) else null
+		if left != null and left.occupied_by == self:
+			left.occupied_by = null
 		current_mount_path = value
 		current_mount = get_node_or_null(value) if not value.is_empty() and is_inside_tree() else null
 		if current_mount != null and &"occupied_by" in current_mount:
@@ -103,15 +114,17 @@ var net_transform: Transform3D = Transform3D.IDENTITY:
 		net_transform = value
 		_has_net_state = true
 var net_in_vehicle: bool = false
+## Which vehicle that space is (D-0302.2.b.4.b: VehiclePick.index_of(), -1 none), replicated with the pose.
+var net_vehicle: int = -1
 ## N-217 (PackageNetPose): the host's clock for this pose (NetPoseSmoother.clock_ms()); and, while a player on
-## foot holds the box, who (carrier_peer_id, 0 otherwise) and where in their body's space (hold_offset), so every
-## other peer draws it in the hands of the body it draws. carrier_peer_id goes on change, with is_held (the same
-## reliable delta); hold_offset with every pose (it moves with the camera), IDENTITY while nobody holds it.
+## foot holds the box, who (carrier_peer_id, 0 otherwise), so every other peer draws it in the hands of the body it
+## draws (where that player's PlayerCarry holds it). carrier_peer_id goes on change, with is_held (the same reliable
+## delta). Held that way the pose goes only every NetRestThrottle.muted_interval (D-2002.5, _publish_net_state()).
 var net_time: int = 0
 var carrier_peer_id: int = 0
-var hold_offset: Transform3D = Transform3D.IDENTITY
 var _has_net_state: bool = false
 var _net_view := PackageNetPose.new()
+var _rest_throttle: NetRestThrottle = null
 var _vehicle: Node3D = null
 ## Host: the carrier's latest hold pose, in the truck's space when aboard. Re-applied every tick against the
 ## host's own truck, so a box carried in the moving bay rides with it between the carrier's updates.
@@ -122,6 +135,7 @@ var _carry_in_vehicle: bool = false
 const PREDICTION_FRAMES: int = 2
 var _predicted_pose: Transform3D = Transform3D.IDENTITY
 var _predicted_in_vehicle: bool = false
+var _predicted_vehicle: Node3D = null
 var _predicted_frame: int = -100
 ## Host: the peer whose seat looks after this box (seat_point.gd), the only
 ## one whose trap input counts, and how long since their last sample.
@@ -140,9 +154,9 @@ var _milestone_counts: Dictionary = {}
 ## Host: the last announced bump this box already felt (RoadImpacts id, -1
 ## none), so crossing one counts once.
 var _road_jolted: int = -1
-## Host: what the last published cushion state looked like (bump announced,
-## tap shielding, hits saved, taps), so a change goes out at once instead of
-## waiting for the next 0.1 s publish.
+## Host: what the last published care looked like where the hands answer to it (the cushion, a
+## sequence's step, a gesture's side: PackageRescue.care_signature()), so a change goes out at once
+## instead of waiting for the next care publish (`PackageRescue.care_publish_interval()`).
 var _cushion_signature: int = 0
 ## Stale trap input is dropped after this long: a passenger who paused, or
 ## tabbed out, holding "steady" would otherwise keep the trap calm forever.
@@ -150,6 +164,10 @@ const TENDER_INPUT_TIMEOUT: float = 0.25
 ## Handed over at a door: on a client the network stops placing it, the
 ## hand-over plays out and it goes.
 var _consumed: bool = false
+## Read-only view of _consumed for code outside the package (CompanyInterest, D-0316.3).
+var consumed: bool:
+	get:
+		return _consumed
 ## How far past the cargo bay's edge a box already aboard still counts as
 ## aboard (see Vehicle.carries()).
 const RIDE_MARGIN: float = 0.4
@@ -210,6 +228,7 @@ func _ready() -> void:
 		# physics ticks on top of that only made it trail behind.
 		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
 		$MultiplayerSynchronizer.synchronized.connect(func() -> void: _net_view.push(self))
+	_rest_throttle = get_node_or_null(^"NetRestThrottle") as NetRestThrottle
 	initialize_trap()
 	_salvage_view = preload("res://scripts/gameplay/package/package_salvage.gd").new()
 	_salvage_view.name = "PackageSalvage"
@@ -237,6 +256,7 @@ func _physics_process(delta: float) -> void:
 	care.recent_hit = maxf(0.0, care.recent_hit - delta)
 	if _is_run_active() and not _consumed and _registered_for_run():
 		_simulate_cargo(delta)
+	else: PackageRescue.clear_steadying(self) # S-205: no frozen grips after the run
 	_publish_net_state()
 	# Continuous collision only while loose, or thrown about the bay: riding along with it on, a box was swept
 	# out through the shut rear doors (playtest 2026-09-27, see Vehicle.needs_sweep()).
@@ -257,12 +277,13 @@ func _process(delta: float) -> void:
 ## The carrier's own client, every physics tick next to submit_carry_transform: draw the box in its hands now
 ## instead of when the host's copy comes back. Over Steam it trailed the carrier by the whole round trip
 ## (playtest 2026-09-29). The host still decides where the box is; this only lasts while the carrier keeps
-## calling it.
-func predict_carry(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
+## calling it. `vehicle`: the one whose space `in_vehicle` means (the carrier's own; null: this box's).
+func predict_carry(carry_transform: Transform3D, in_vehicle: bool = false, vehicle: Node3D = null) -> void:
 	if is_multiplayer_authority():
 		return
 	_predicted_pose = carry_transform
 	_predicted_in_vehicle = in_vehicle
+	_predicted_vehicle = vehicle
 	_predicted_frame = Engine.get_physics_frames()
 
 
@@ -274,11 +295,21 @@ func _publish_net_state() -> void:
 	# between the truck's space and the world's every other frame.
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if net_in_vehicle else 0.0))
 	net_in_vehicle = riding
+	net_vehicle = VehiclePick.index_of(get_tree(), vehicle) if riding else -1
 	net_transform = vehicle.global_transform.affine_inverse() * global_transform if riding else global_transform
 	net_time = NetPoseSmoother.clock_ms()
+	# In the hands of a player on foot every other peer draws it on them: its pose is muted until let go (D-2002.5).
+	if is_instance_valid(_rest_throttle):
+		_rest_throttle.set_muted(PackageNetPose.muted(self))
 
 
 func _find_vehicle() -> Node3D:
+	# Among several vehicles (a fleet, D-0302.2.b.4) the box's owner picks the one that carries it; a copy takes the
+	# one the owner names with its pose (net_vehicle, D-0302.2.b.4.b).
+	if is_inside_tree() and get_tree().get_node_count_in_group(&"vehicle") > 1:
+		_vehicle = VehiclePick.pick(get_tree(), _vehicle, global_position, RIDE_MARGIN if net_in_vehicle else 0.0) \
+				if is_multiplayer_authority() else VehiclePick.told(get_tree(), _vehicle, net_vehicle)
+		return _vehicle
 	if not is_instance_valid(_vehicle) and is_inside_tree():
 		var found: Node = get_tree().get_first_node_in_group(&"vehicle")
 		_vehicle = found as Node3D if found != null and found.has_method(&"carries") else null
@@ -290,7 +321,7 @@ func initialize_trap() -> void:
 	trap_behavior = trap_definition.create_behavior() as ITrapBehavior
 	if trap_behavior == null:
 		return
-	var config: Dictionary = trap_definition.params.duplicate(true)
+	var config: Dictionary = PackageRescue.trap_config(self)
 	config["roll_seed"] = PackageRescue.roll_seed(self)
 	trap_behavior.on_setup(self, config)
 	_road_jolted = -1
@@ -508,13 +539,11 @@ func _player_for_peer(peer_id: int) -> Node:
 ## Whoever is carrying this package (on foot, not yet mounted) calls this every physics frame instead of
 ## setting global_transform directly -- the package is host-authoritative, so only the host's copy moving is
 ## real; everyone else, carrier included, sees it through the MultiplayerSynchronizer. `in_vehicle`: the pose
-## is in the truck's space (see PackageHandling.accept_carry()).
-## `in_hands`: the same pose in the carrier's body space (hold_offset, N-217).
+## is in the truck's space (see PackageHandling.accept_carry()), `vehicle` which one (VehiclePick.index_of()).
 @rpc("any_peer", "call_local", "unreliable_ordered")
-func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false, in_hands := Transform3D()) -> void:
-	if is_multiplayer_authority() and RpcGuard.finite_transform(carry_transform) \
-			and RpcGuard.finite_transform(in_hands):
-		PackageHandling.accept_carry(self, multiplayer.get_remote_sender_id(), carry_transform, in_vehicle, in_hands)
+func submit_carry_transform(carry: Transform3D, in_vehicle := false, vehicle := -1) -> void:
+	if is_multiplayer_authority() and RpcGuard.finite_transform(carry):
+		PackageHandling.accept_carry(self, multiplayer.get_remote_sender_id(), carry, in_vehicle, vehicle)
 
 
 func set_held(held: bool) -> void:
@@ -539,11 +568,11 @@ func request_transfer(recipient_path: NodePath) -> void:
 
 ## Put the box back on the floor: see PackageHandling.drop(). Critical (RpcGuard): a lost one leaves hands full.
 @rpc("any_peer", "call_local", "reliable")
-func request_drop(drop_transform: Transform3D, in_vehicle: bool = false) -> void:
+func request_drop(drop_transform: Transform3D, in_vehicle: bool = false, vehicle: int = -1) -> void:
 	if not is_multiplayer_authority() or not is_held or not RpcGuard.finite_transform(drop_transform):
 		return
 	if RpcGuard.allow_critical_request(self):
-		PackageHandling.drop(self, multiplayer.get_remote_sender_id(), drop_transform, in_vehicle)
+		PackageHandling.drop(self, multiplayer.get_remote_sender_id(), drop_transform, in_vehicle, vehicle)
 
 
 func _ride_along_if_aboard() -> void:

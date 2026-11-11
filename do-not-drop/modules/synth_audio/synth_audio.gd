@@ -9,15 +9,23 @@ extends RefCounted
 ## responsibility, where the details of each sound are documented:
 ##   SynthAudioVehicle   engine layers, impact, tyre screech, horn
 ##   SynthAudioTraps     the traps' cues (chime, groan, creak, slosh, tick, hiss)
-##   SynthAudioHandling  camera shutter, tape, cardboard, tension bed
+##   SynthAudioHandling  camera shutter, tape, cardboard, clipboard clip and sheet, tension bed
 ##   SynthAudioWorld     wind, rain, birds, crickets, road, crossing bell, roller door, reverse beep
 ##   SynthAudioAnimals   dog bark, sheep bleat
+##   SynthAudioGel       footsteps by surface and the gel body's elastic foley
+##   SynthAudioGelPerformance  gelatinous voices and one short loop per dance
+##   SynthAudioNewspaper rooster, morning birds, "extra!" hit, paper rustle, page turn, mate spit
 ##   SynthAudioScenes    doorbell, cheer, comic stingers, forklift, river, train, scanner, callout
+##   SynthAudioWorkMusic a work loop in three stems that come in with the activity
+##   SynthAudioThemeMusic nine looping place themes, each with its own tempo, mode and lead
+##   SynthAudioMurmur    wordless murmurs, one voice per character (the boss on the radio, customers...)
 ##   SynthAudioCare      the care panel's cues      SynthAudioDsp  the shared tools (seam, levels)
 
 ## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
 ## shared: a stream is read-only data, and every AudioStreamPlayer keeps its own playback of it.
 static var _cache: Dictionary = {}
+const GelSounds = preload("res://modules/synth_audio/synth_audio_gel.gd")
+const GelPerformance = preload("res://modules/synth_audio/synth_audio_gel_performance.gd")
 const SCENE_SOUNDS_FILE: String = "synth_audio_scenes.gd"
 static var _scene_sounds_script: Script
 
@@ -120,6 +128,72 @@ static func impact_thud() -> AudioStreamWAV:
 	return _cached(&"impact_thud", SynthAudioVehicle.make_impact_thud)
 
 
+## Gel-character foley, built by SynthAudioGel.
+
+
+static func gel_footstep(surface: int = GelSounds.Surface.ROAD) -> AudioStreamWAV:
+	var safe_surface: int = clampi(surface, GelSounds.Surface.ROAD, GelSounds.Surface.SOFT)
+	var key := StringName("gel_footstep_%s" % GelSounds.surface_name(safe_surface))
+	return _cached(key, GelSounds.make_footstep.bind(safe_surface))
+
+
+static func gel_jump() -> AudioStreamWAV:
+	return _cached(&"gel_jump", GelSounds.make_jump)
+
+
+static func gel_landing() -> AudioStreamWAV:
+	return _cached(&"gel_landing", GelSounds.make_landing)
+
+
+static func gel_bounce() -> AudioStreamWAV:
+	return _cached(&"gel_bounce", GelSounds.make_bounce)
+
+
+static func gel_hit() -> AudioStreamWAV:
+	return _cached(&"gel_hit", GelSounds.make_hit)
+
+
+static func gel_stretch() -> AudioStreamWAV:
+	return _cached(&"gel_stretch", GelSounds.make_stretch)
+
+
+static func gel_melt() -> AudioStreamWAV:
+	return _cached(&"gel_melt", GelSounds.make_melt)
+
+
+static func gel_reassemble() -> AudioStreamWAV:
+	return _cached(&"gel_reassemble", GelSounds.make_reassemble)
+
+
+## The S-402 wordless voice with a wet chorus and little bubble transients,
+## reserved for the gel's reactions (ping callouts keep their drier voice).
+static func gel_voice(color_slot: int = 0, syllables: int = 3) -> AudioStreamWAV:
+	var slot: int = posmod(color_slot, 8)
+	var count: int = clampi(syllables, 1, 5)
+	var key := StringName("gel_voice_%d_%d" % [slot, count])
+	return _cached(key, GelPerformance.make_gel_voice.bind(slot, count))
+
+
+## A compact, looping musical identity for each of the eight original dances.
+static func gel_dance_music(clip: StringName = &"SimpleStep") -> AudioStreamWAV:
+	var safe_clip: StringName = clip if GelPerformance.DANCE_CLIPS.has(clip) else &"SimpleStep"
+	var key := StringName("gel_dance_music_%s" % safe_clip)
+	return _cached(key, GelPerformance.make_dance_music.bind(safe_clip))
+
+
+## One stem of the layered work loop (SynthAudioWorkMusic: 0 bed, 1 groove, 2 lead), all the same length so they
+## play in sync; an unknown layer gives the bed.
+static func work_music_layer(layer: int) -> AudioStreamWAV:
+	var safe: int = layer if layer >= 0 and layer < SynthAudioWorkMusic.LAYERS else 0
+	return _cached(StringName("work_music_%d" % safe), SynthAudioWorkMusic.make_layer.bind(safe))
+
+
+## One of the nine place themes (SynthAudioThemeMusic.THEMES), looping; out of range gives the first.
+static func theme_music(theme: int) -> AudioStreamWAV:
+	var safe: int = theme if theme >= 0 and theme < SynthAudioThemeMusic.THEMES.size() else 0
+	return _cached(StringName("theme_music_%d" % safe), SynthAudioThemeMusic.make.bind(safe))
+
+
 ## Looping tyre screech; pitch and volume follow the wheel skid.
 static func tire_screech() -> AudioStreamWAV:
 	return _cached(&"tire_screech", SynthAudioVehicle.make_tire_screech)
@@ -179,6 +253,21 @@ static func tape_rip() -> AudioStreamWAV:
 ## A cardboard flap folding over.
 static func cardboard_flap() -> AudioStreamWAV:
 	return _cached(&"cardboard_flap", SynthAudioHandling.make_cardboard_flap)
+
+
+## The clipboard taken out and raised (D-1913).
+static func clipboard_clip_up() -> AudioStreamWAV:
+	return _cached(&"clipboard_clip_up", SynthAudioHandling.make_clipboard_clip.bind(true))
+
+
+## The clipboard put away.
+static func clipboard_clip_down() -> AudioStreamWAV:
+	return _cached(&"clipboard_clip_down", SynthAudioHandling.make_clipboard_clip.bind(false))
+
+
+## A clipboard sheet turned.
+static func clipboard_sheet() -> AudioStreamWAV:
+	return _cached(&"clipboard_sheet", SynthAudioHandling.make_clipboard_sheet)
 
 
 ## Tension bed under the music: drone and double heartbeat (ingame_music.gd).
@@ -263,6 +352,11 @@ static func forklift_motor_loop() -> AudioStreamWAV:
 	return _cached(&"forklift_motor_loop", _scene_builder(&"make_forklift_motor_loop"))
 
 
+## The shed forklift's hydraulics while its forks move (forklift_cues.gd).
+static func forklift_hydraulic_loop() -> AudioStreamWAV:
+	return _cached(&"forklift_hydraulic_loop", _scene_builder(&"make_forklift_hydraulic_loop"))
+
+
 static func river_flow_loop() -> AudioStreamWAV:
 	return _cached(&"river_flow_loop", _scene_builder(&"make_river_flow_loop"))
 
@@ -277,6 +371,14 @@ static func train_chug_loop() -> AudioStreamWAV:
 
 static func scanner_beep() -> AudioStreamWAV:
 	return _cached(&"scanner_beep", _scene_builder(&"make_scanner_beep"))
+
+
+## A character's wordless murmur (SynthAudioMurmur: VOICES' boss on the radio, depot_boss, customer, driver) for a
+## line of `syllables` (SynthAudioMurmur.syllables_of(text)); an unknown voice speaks as a customer.
+static func murmur(voice: StringName, syllables: int = 4) -> AudioStreamWAV:
+	var known: StringName = voice if SynthAudioMurmur.VOICES.has(voice) else &"customer"
+	var count: int = clampi(syllables, 1, SynthAudioMurmur.MAX_SYLLABLES)
+	return _cached(StringName("murmur_%s_%d" % [known, count]), SynthAudioMurmur.make.bind(known, count))
 
 
 ## A crewmate's quick callout (N-505): babble pitched by their colour slot.
@@ -308,3 +410,36 @@ static func care_whoosh() -> AudioStreamWAV:
 
 static func care_tick() -> AudioStreamWAV:
 	return _cached(&"care_tick", SynthAudioCare.make_care_tick)
+
+
+## The next-day newspaper scene's sounds (N-606.4a, newspaper_director.gd), built by SynthAudioNewspaper.
+
+
+## The morning rooster that opens the scene.
+static func rooster_crow() -> AudioStreamWAV:
+	return _cached(&"rooster_crow", SynthAudioNewspaper.make_rooster_crow)
+
+
+## The little birds that answer the rooster.
+static func morning_chirps() -> AudioStreamWAV:
+	return _cached(&"morning_chirps", SynthAudioNewspaper.make_morning_chirps)
+
+
+## "Extra, extra!" and the brass hit on the front-page headline.
+static func extra_stinger() -> AudioStreamWAV:
+	return _cached(&"extra_stinger", SynthAudioNewspaper.make_extra_stinger)
+
+
+## The paper being unfolded (and lowered).
+static func paper_rustle() -> AudioStreamWAV:
+	return _cached(&"paper_rustle", SynthAudioNewspaper.make_paper_rustle)
+
+
+## A page turned.
+static func page_turn() -> AudioStreamWAV:
+	return _cached(&"page_turn", SynthAudioNewspaper.make_page_turn)
+
+
+## The Boss's spit-take.
+static func mate_spit() -> AudioStreamWAV:
+	return _cached(&"mate_spit", SynthAudioNewspaper.make_mate_spit)

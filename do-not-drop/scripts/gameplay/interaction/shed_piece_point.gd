@@ -1,9 +1,10 @@
 class_name ShedPiecePoint
 extends Interactable
-## The spot where a player uses a piece of the company's shed (expansion D-0914): a shelf, a packing
-## table or the dispatch zone. CompanyShed hangs one per piece of CompanyState.layout every time it
-## draws, so a piece the crew placed, moved or turned is used exactly like one of the default layout:
-## same probe, same prompt, same reach, same host-side interact() (Interactable).
+## The spot where a player uses a piece of the company's shed (expansion D-0914): a shelf or a packing
+## table (the dispatch zone has a DispatchStation instead, D-0310.b). CompanyShed hangs one per piece of
+## CompanyState.layout every time it draws, so a piece the crew placed, moved or turned is used exactly
+## like one of the default layout: same probe, same prompt, same reach, same host-side interact()
+## (Interactable).
 ##
 ## It stands in front of the piece, one step out of its footprint, where the walkable floor is: the
 ## piece's own collider is solid, so a point inside it could not be seen (Player.within_reach) nor
@@ -18,7 +19,6 @@ const REACH_RADIUS: float = 0.8
 const PROMPT_KEYS: Dictionary = {
 	&"storage": "WORLD_SHED_USE_SHELF",
 	&"assembly": "WORLD_SHED_USE_TABLE",
-	&"dispatch": "WORLD_SHED_USE_DISPATCH",
 }
 
 var uid: StringName = &""
@@ -26,14 +26,13 @@ var role: StringName = &""
 
 
 ## A point for `uid`'s piece, in the piece's own frame (the shed puts it under the same transform as
-## the model, so the front is +Z): `depth` is the footprint's depth in metres. Dispatch is painted
-## on the floor and does not block walking: its point stands in the middle of it.
+## the model, so the front is +Z): `depth` is the footprint's depth in metres.
 static func make(piece_uid: StringName, piece_role: StringName, depth: float) -> ShedPiecePoint:
 	var point := ShedPiecePoint.new()
 	point.name = "Use_%s" % piece_uid
 	point.uid = piece_uid
 	point.role = piece_role
-	point.position = Vector3(0.0, 1.0, 0.0 if piece_role == &"dispatch" else depth * 0.5 + STEP_OUT)
+	point.position = Vector3(0.0, 1.0, depth * 0.5 + STEP_OUT)
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = REACH_RADIUS

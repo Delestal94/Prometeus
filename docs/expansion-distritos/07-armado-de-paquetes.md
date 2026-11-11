@@ -19,7 +19,7 @@
 | ✅ D-0707 | Etiqueta de envío impresa con dirección del pedido (reusa `package_shipping_label.gd`) | constructor-negocio | medium | etiqueta muestra calle y número del pedido |
 | ✅ D-0708 | Sellos (FRÁGIL, ESTE LADO ARRIBA, FRÍO) | constructor-negocio | medium | sello queda en la caja y la puerta lo valida |
 | ✅ D-0709 | Cálculo de calidad del armado (contenido correcto, hueco, protección, sellos) 0-100 | constructor-negocio | high | test con 6 cajas de calidad conocida |
-| ✅ D-0710 | Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
+| D-0710 | ◐ (D-0710.b hecho: el nivel elige la severidad de la trampa; falta D-0710.c, la caja floja suma Equilibrio, y D-0710.d, que eso corra en las salidas de la empresa; ver detalle) Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
 | ✅ D-0711 | Caja armada sigue siendo `DeliveryPackage`: se lleva, se cuida y se entrega como hoy | constructor-trampas | xhigh | tests de paquete actuales verdes |
 | ✅ D-0712 | Error de contenido (falta un producto o sobra) detectable al cerrar o en la puerta | constructor-negocio | medium | test de los dos momentos |
 | ✅ D-0713 | Balanza de control: peso esperado vs. real | constructor-negocio | medium | test |
@@ -35,20 +35,20 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0721 | Conservadora con hielo para productos fríos | constructor-negocio | medium | test: frío dura N min en la ruta |
+| ✅ D-0721 | Conservadora con hielo para productos fríos | constructor-negocio | medium | test: frío dura N min en la ruta |
 | D-0722 | Caja térmica para Volcán (calor) (incluye D-1717, fusión de D-0112) | constructor-negocio | medium | test |
-| D-0723 | Envoltorio de regalo (pedido de regalo paga más) | constructor-negocio | medium | test |
+| ✅ D-0723 | Envoltorio de regalo (pedido de regalo paga más) | constructor-negocio | medium | test |
 | D-0724 | Caja impermeable para Islas (agua salpica) | constructor-negocio | medium | test |
 | D-0725 | Paracaídas acoplado para lanzamientos desde la avioneta | constructor-negocio | high | ver D-1420 |
-| D-0726 | Productos que no se pueden juntar (químicos con comida) | constructor-negocio | medium | regla con test |
-| D-0727 | Productos con orientación (líquidos de pie) | constructor-negocio | medium | test |
+| ✅ D-0726 | Productos que no se pueden juntar (químicos con comida) | constructor-negocio | medium | regla con test |
+| ✅ D-0727 | Productos con orientación (líquidos de pie) | constructor-negocio | medium | test |
 | ~~D-0728~~ | ~~Caja a medida (más cara, encaje perfecto)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
-| D-0729 | Pedidos multi-caja (un pedido en 2-3 cajas) | constructor-negocio | high | test |
+| ✅ D-0729 | Pedidos multi-caja (un pedido en 2-3 cajas) | constructor-negocio | high | test |
 | ~~D-0730~~ | ~~Paquetes sin caja (bici, colchón) con film y esquineros~~ **Fusionada en D-0626 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | test |
-| D-0731 | Mensaje escrito a mano del cliente (`package_scribble.gd`) | constructor-negocio | low | dibujo/firma en la caja |
-| D-0732 | Etiquetas de colores por distrito | constructor-negocio | low | test |
+| ✅ D-0731 | Mensaje escrito a mano del cliente (`package_scribble.gd`) | constructor-negocio | low | dibujo/firma en la caja |
+| ✅ D-0732 | Etiquetas de colores por distrito | constructor-negocio | low | test |
 | ~~D-0733~~ | ~~Armado con temporizador para pedidos urgentes~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
-| D-0734 | Control de calidad por otro jugador (abrir y revisar antes de cerrar) | constructor-negocio | medium | test |
+| ✅ D-0734 | Control de calidad por otro jugador (abrir y revisar antes de cerrar) | constructor-negocio | medium | test |
 | ~~D-0735~~ | ~~Contenido sorpresa: el pedido dice "algo para mi abuela" (interpretación)~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | critico-diseno | low | decisión |
 | ~~D-0736~~ | ~~Trampa nueva que nace del armado: "Mal cerrada" (la tapa se abre con los saltos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | high | trampa con test y feedback |
 | ~~D-0737~~ | ~~Trampa nueva: "Sobrecargada" (fondo que cede si se lleva mal)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | high | idem |

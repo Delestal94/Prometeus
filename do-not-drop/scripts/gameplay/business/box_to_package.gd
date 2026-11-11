@@ -11,7 +11,7 @@ extends RefCounted
 ##   protection = padded share of the free cells (1 when products fill the box);
 ## - metadata: META_PACKED_BOX (to_dict()), META_ORDER_ID and, when more than
 ##   OVERSIZED_FREE_RATIO of the box is empty without padding, META_LOOSE_BOX;
-##   given an order, also META_TRAP_PLAN (BoxTrap.plan, D-0710).
+##   given an order, also META_TRAP_PLAN (BoxTrap.plan, D-0710), whose severity the trap rides at.
 ## Adds only: no signature of package.gd or package_content.gd changes. The
 ## UnlockManager script is preloaded, never named (lesson N-919).
 
@@ -23,7 +23,8 @@ const TRAP_PATH: String = "res://data/traps/%s.tres"
 const META_PACKED_BOX: StringName = &"packed_box"
 const META_ORDER_ID: StringName = &"order_id"
 const META_LOOSE_BOX: StringName = &"loose_box"
-const META_TRAP_PLAN: StringName = &"trap_plan"
+## The package reads its severity from here when it sets its trap up (D-0710.b).
+const META_TRAP_PLAN: StringName = PackageRescue.TRAP_PLAN_META
 
 
 ## A new, not yet added DeliveryPackage for the box, or null if the box holds no
@@ -42,6 +43,7 @@ static func build(
 	package.trap_definition = trap
 	package.content = main.content
 	package.impact_absorption = absorption(box)
+	tune(package)
 	if box.label_order_id != &"":
 		package.package_id = StringName("box_%s" % box.label_order_id)
 		package.name = "Package_box_%s" % box.label_order_id
@@ -52,6 +54,12 @@ static func build(
 	if not order.is_empty():
 		package.set_meta(META_TRAP_PLAN, BoxTrap.plan(box, order, products))
 	return package
+
+
+## What the company's world changes in a box it builds (D-2002.4, the bandwidth of a trip out): its
+## care_state goes out every CompanyTuning.CARE_PUBLISH_SEC instead of the delivery's 0.1 s.
+static func tune(package: DeliveryPackage) -> void:
+	package.set_meta(PackageRescue.CARE_PUBLISH_META, CompanyTuning.CARE_PUBLISH_SEC)
 
 
 ## The product whose trap rides: the hardest one in the box, or null if none is known.
@@ -80,10 +88,13 @@ static func protection(box: PackedBox) -> float:
 	return box.fill_ratio()
 
 
+## A box sealed with Armado asistido cushions at most like the quick match's automatic padding
+## (CompanyTuning.ASSISTED_MIN_ABSORPTION, D-1919): the hand-packed box still rides better.
 static func absorption(box: PackedBox) -> float:
-	return lerpf(
+	var value: float = lerpf(
 		CompanyTuning.ABSORPTION_UNPADDED, CompanyTuning.ABSORPTION_FULL_PADDING, protection(box)
 	)
+	return maxf(value, CompanyTuning.ASSISTED_MIN_ABSORPTION) if box.assisted else value
 
 
 ## More than OVERSIZED_FREE_RATIO of the whole box empty and unpadded.

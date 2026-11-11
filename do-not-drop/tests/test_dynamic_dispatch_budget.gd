@@ -218,7 +218,7 @@ const BUDGETS: Dictionary = {
 	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 5, "root": 4},
 	# The level crossing (N-224.4) reaches the session through NETWORK_MANAGER (world_seed, is_online,
 	# is_host; below). The one /root/ lookup is that null-safe accessor (_network()).
-	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# The delivery level is typed: the route and the truck through their scripts
 	# (route.gd and vehicle.gd by preload, no class name), the houses as
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
@@ -379,7 +379,7 @@ const BUDGETS: Dictionary = {
 	"res://scripts/presentation/sound_audit.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The village dog (N-224.4) drives its model as the wildlife_animal.gd type (run, idle, steered,
 	# ground_speed). Only the /root/ lookup of EventBus is left, by name because a test may swap it for a Node.
-	"res://scripts/gameplay/route/chasing_dog.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	"res://scripts/gameplay/route/chasing_dog.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# The endless road (N-224.4): the station as ServiceStop / ServiceStopSegment (warm_models, stop, in_bay)
 	# and the seed through NETWORK_MANAGER. The one /root/ is the null-safe NetworkManager lookup.
 	"res://scripts/gameplay/route/route_streamer.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
@@ -425,8 +425,9 @@ const BUDGETS: Dictionary = {
 	# lookup and NetworkManager, kept as a NetSession: its steam_presence (D-2009) and, on a client, its
 	# session_failed (D-2005: a handshake that times out or is refused ends the session with no
 	# server_disconnected). Naming the NetworkManager autoload instead would break the --script tests that
-	# compile this class before the autoloads exist (N-919).
-	"res://scripts/gameplay/company_root.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
+	# compile this class before the autoloads exist (N-919). The third is EventBus (D-0508.3, one helper,
+	# _event_bus()): the day summary signals, connected by path for the same reason.
+	"res://scripts/gameplay/company_root.gd": {"call": 0, "callv": 0, "get": 0, "root": 3},
 	# The crew list (N-224.4) reads the truck's driver_peer_id through vehicle.gd by preload (no class name; what is
 	# not a truck is skipped). Three .get left in build_entries(): the players' cosmetic_id, carried_package and
 	# tended_package, because test_crew_panel stands in plain nodes with those properties and `as Player` would

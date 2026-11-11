@@ -50,8 +50,26 @@ TURN_PERIOD = .8
 DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Stroll': GAITS['Stroll']['period'], 'Run': GAITS['Run']['period'], 'Jump': 1.6,
              'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0,
-             'TurnInPlace': TURN_PERIOD}
-LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace')
+             'TurnInPlace': TURN_PERIOD, 'CarryWalk': GAITS['Walk']['period'],
+             'ThrowPackage': 1.0, 'DropPackage': .9, 'Drive': 2.0,
+             'EnterTruck': 1.2, 'ExitTruck': 1.2, 'RingDoorbell': 1.1,
+             'Stumble': 1.2, 'Slip': 1.3, 'Pushed': .9, 'BoxHit': .8,
+             'Scared': 1.0, 'Dizzy': 2.4, 'ShakeOffWater': 1.8,
+             'Wave': 2.2, 'Clap': 2.4, 'Facepalm': 2.2, 'Shrug': 2.0,
+             'Point': 2.0, 'ThumbsUp': 2.0, 'MeltAndReturn': 3.0,
+             'ShakeLikeDog': 1.8, 'Pancake': 2.4, 'GumStretch': 2.8,
+             'BallBounce': 2.4, 'SplitAndJoin': 3.2, 'ColdShiver': 2.0,
+             'Inflate': 2.8, 'InspectHand': 3.4, 'BlowBubble': 3.2,
+             'IdleBounce': 2.6, 'SimpleStep': 2.4, 'Robot': 2.4,
+             'Disco': 2.8, 'FloorWorm': 3.2, 'Headbang': 1.6,
+             'VictoryDance': 2.8, 'Defeat': 3.0, 'Flan': 2.4, 'Conga': 2.4}
+PURE_GEL_CLIPS = ('Pancake', 'GumStretch', 'BallBounce', 'SplitAndJoin',
+                  'ColdShiver', 'Inflate', 'Flan', 'IdleBounce')
+DANCE_CLIPS = ('SimpleStep', 'Robot', 'Disco', 'FloorWorm', 'Headbang',
+               'VictoryDance', 'Flan', 'Conga')
+RESULT_CLIPS = ('Defeat',)
+LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace',
+           'CarryWalk', 'Drive') + DANCE_CLIPS + RESULT_CLIPS
 
 # Foot geometry, relative to the ankle (IK target) at rest.
 BALL = Vector((0, -.245, -.227))   # ball of the foot on the ground
@@ -100,6 +118,28 @@ def blend(p, q, f):
         out[k] = lerp(p.get(k, NEUTRAL[k]), q.get(k, NEUTRAL[k]), f)
     return out
 
+def polish_action_curves(action):
+    """Keep dense authored samples smooth without allowing Bezier overshoot.
+
+    The clips are sampled at 60 Hz so the exact authored pose still exists on
+    every frame. Auto-clamped handles only soften the sub-frame path between
+    those samples; unlike free handles they cannot introduce a new extremum
+    that sinks a planted foot or flips an IK pole.
+    """
+    curve_count = 0
+    key_count = 0
+    for layer in action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                for curve in bag.fcurves:
+                    curve_count += 1
+                    for key in curve.keyframe_points:
+                        key.interpolation = 'BEZIER'
+                        key.handle_left_type = 'AUTO_CLAMPED'
+                        key.handle_right_type = 'AUTO_CLAMPED'
+                        key_count += 1
+    return {'curves': curve_count, 'keyframes': key_count}
+
 # --- pose parameters ------------------------------------------------------------
 # Angles in degrees, about world axes at rest: +pitch leans forward, +roll
 # tilts toward the character's left, +yaw turns toward the character's left.
@@ -119,7 +159,9 @@ NEUTRAL = dict(
     c_pitch=0., c_roll=0., c_yaw=0.,
     h_pitch=0., h_roll=0., h_yaw=0.,
     by=0., bz=0., bs=0.,
+    s_scale=(1., 1., 1.), c_scale=(1., 1., 1.), h_scale=(1., 1., 1.),
     armL=HANG, armR=HANG,
+    thumbL=5., thumbR=5.,
     ikL=0., ikR=0., handL=(1.115, -.035, 1.47), handR=(-1.115, -.035, 1.47),
     hrotL=(0., 78., 0.), hrotR=(0., -78., 0.),
     footL=(0., 0., 0., 0.), footR=(0., 0., 0., 0.), groundL=1., groundR=1.,
@@ -161,7 +203,7 @@ class Poser:
         m = Euler(tuple(rad(a) for a in rot)).to_matrix()
         self.fkm(name, m, Vector(position)-self.rest[name].translation)
 
-    def arm(self, side, a):
+    def arm(self, side, a, thumb=5.):
         lower, swing, bend, twist, ext, shrug = a
         s = 1 if side == 'L' else -1
         self.fkm('clavicle.'+side, R('Y', -s*shrug))
@@ -169,7 +211,7 @@ class Poser:
         self.fkm('upper_arm.'+side, R('X', -swing) @ R('Y', s*lower) @ R('X', ext))
         # twist turns the forearm about its own axis (- brings the thumb up).
         self.fkm('forearm.'+side, R('Z', -s*bend) @ R('X', s*twist))
-        self.fkm('thumb.'+side, R('Z', s*5))
+        self.fkm('thumb.'+side, R('Z', s*thumb))
 
     def foot(self, side, f, ground, toe):
         x, y, z, roll = f
@@ -185,14 +227,15 @@ class Poser:
     def apply(self, P):
         q = dict(NEUTRAL); q.update(P)
         self.reset()
-        self.fk('pelvis', q['p_pitch'], q['p_roll'], q['p_yaw'], loc=(q['px'], q['py'], q['pz']))
-        self.fk('spine', q['s_pitch'], q['s_roll'], q['s_yaw'])
-        self.fk('chest', q['c_pitch'], q['c_roll'], q['c_yaw'])
-        self.fk('head', q['h_pitch'], q['h_roll'], q['h_yaw'])
+        self.fk('pelvis', q['p_pitch'], q['p_roll'], q['p_yaw'],
+                loc=(q['px'], q['py'], q['pz']))
+        self.fk('spine', q['s_pitch'], q['s_roll'], q['s_yaw'], scale=q['s_scale'])
+        self.fk('chest', q['c_pitch'], q['c_roll'], q['c_yaw'], scale=q['c_scale'])
+        self.fk('head', q['h_pitch'], q['h_roll'], q['h_yaw'], scale=q['h_scale'])
         self.fkm('belly', None, loc=(0, q['by'], q['bz']),
                  scale=(1+q['bs'], 1, 1+q['bs']*.7))
         for side in 'LR':
-            self.arm(side, q['arm'+side])
+            self.arm(side, q['arm'+side], q['thumb'+side])
             self.rig['IK_brazo.'+side] = q['ik'+side]
             s = 1 if side == 'L' else -1
             self.ik('CTRL_hand_IK.'+side, q['hand'+side], q['hrot'+side])
@@ -381,13 +424,13 @@ def jump(t):
             bz=keys(t, [(0, -.02), (.4, .012), (.84, .02)]),
         )
     # Touchdown: the air pose hands over to Idle's first frame while the
-    # impact adds a squash, and the heavy head, tummy and arms keep going.
+    # skeleton compresses into a landing pose and the head and arms keep
+    # going. Gel squash and secondary wobble are runtime physics layers.
     air = jump(.84)
     base = blend(air, rest, smooth(.9, 1.06, t))
     u = clamp01((t-.9)/.1)
     squash = 1-(1-u)**3 if t < 1. else keys(t, [(1., 1.), (1.2, .26), (1.42, .04), (1.6, 0.)])
     head_nod = ramped(t, .93, 1., 2.6, 5.5)
-    belly_jig = ramped(t, .92, 1., 4.2, 6.5)
     arm_swing = ramped(t, 1.0, 1., 1.8, 4.)
     P = dict(base)
     P.update(
@@ -395,8 +438,6 @@ def jump(t):
         py=base['py']+.06*squash,
         s_pitch=base['s_pitch']+15*squash, c_pitch=base['c_pitch']+6*squash,
         h_pitch=base['h_pitch']-4*squash+9*head_nod,
-        bz=base['bz']-.065*belly_jig, by=base['by']-.02*belly_jig,
-        bs=base['bs']+.06*squash+.02*belly_jig,
         footL=lerp(base['footL'], (.03, 0., 0., 0.), squash),
         footR=lerp(base['footR'], (-.03, 0., 0., 0.), squash),
         groundL=1., groundR=1., toeL=0., toeR=0.,
@@ -430,17 +471,18 @@ def pickup(t):
     c = pickup_timing(t)
     look, rise, down, lift = c['look'], c['rise'], c['down'], c['lift']
     effort, settle, hug = c['effort'], c['settle'], c['hug']
-    wobble = effort*math.sin(TAU*3.2*(t-.5))
+    # One deliberate weight transfer and overshoot, not a repeating wobble:
+    # SpringBoneSimulator3D owns all jelly motion on top of this acting pose.
+    load_shift = keys(t, [(0., 0.), (.42, 0.), (.82, 1.), (1.18, -.28), (1.48, 0.), (1.6, 0.)])
     P = dict(rest)
     P.update(
         pz=rest['pz']+.025*rise-.43*down-.03*settle,
         py=.16*down,                                  # hips back: a squat, not a stoop
         s_pitch=rest['s_pitch']+24*down-6*effort*lift, c_pitch=rest['c_pitch']+8*down-3*effort,
-        s_roll=rest['s_roll']+1.8*wobble, c_roll=rest['c_roll']-1.2*wobble,
+        s_roll=rest['s_roll']+2.4*load_shift, c_roll=rest['c_roll']-1.5*load_shift,
         h_pitch=rest['h_pitch']+14*look*(1-lift)-10*down*(1-lift)-4*effort+2*settle,
         h_roll=rest['h_roll']+keys(t, [(0, 0.), (.3, -4.), (.9, 3.), (1.6, 0.)]),
         h_yaw=rest['h_yaw']*(1-look),
-        by=rest['by']-.02*down, bz=rest['bz']-.02*down-.02*settle,
     )
     # Hands on arcs: out and down around the tummy to the box's sides, a
     # squeeze, then the box comes in toward the chest before going up.
@@ -478,7 +520,7 @@ def pickup_high(t):
     c = pickup_timing(t)
     look, rise, down, lift = c['look'], c['rise'], c['down'], c['lift']
     effort, settle, hug = c['effort'], c['settle'], c['hug']
-    wobble = effort*math.sin(TAU*3.2*(t-.5))
+    load_shift = keys(t, [(0., 0.), (.42, 0.), (.82, 1.), (1.18, -.22), (1.48, 0.), (1.6, 0.)])
     P = dict(rest)
     P.update(
         # A small dip, weight a little back as the arms reach forward.
@@ -487,11 +529,10 @@ def pickup_high(t):
         # Leans from the waist toward the box, then back a touch under the
         # weight as it comes in to the chest.
         s_pitch=rest['s_pitch']+9*down-5*effort*lift, c_pitch=rest['c_pitch']+4*down-2*effort,
-        s_roll=rest['s_roll']+1.*wobble, c_roll=rest['c_roll']-.7*wobble,
+        s_roll=rest['s_roll']+1.4*load_shift, c_roll=rest['c_roll']-.9*load_shift,
         h_pitch=rest['h_pitch']+9*look*(1-lift)-3*down*(1-lift)-2*effort+2*settle,
         h_roll=rest['h_roll']+keys(t, [(0, 0.), (.3, -3.), (.9, 2.), (1.6, 0.)]),
         h_yaw=rest['h_yaw']*(1-look),
-        by=rest['by']-.01*down, bz=rest['bz']-.01*down-.015*settle,
     )
     reach = c['reach']
     for side, s in (('L', 1), ('R', -1)):
@@ -597,6 +638,805 @@ def sit(t):
         P['pole'+side] = (s*1.7, -.5, .9)   # elbows out and forward: the arm wraps the tummy
     return P
 
+
+# --- gameplay clips ------------------------------------------------------------
+
+def _carry_arms(P, bob=0., reach=1.):
+    """Keep both wrists on the box while the lower body supplies motion.
+
+    CarryPose replaces these authored targets with the real package in game;
+    the clip remains useful in previews and gives that runtime IK a stable,
+    already bent starting pose.
+    """
+    rest = IDLE0
+    for side, s in (('L', 1), ('R', -1)):
+        start, rot0 = HANDS0[side]
+        P['hand'+side] = lerp(start, (s*PICKUP_WIDTH, -.95, 1.97+bob), reach)
+        P['hrot'+side] = lerp(rot0, (-55., 0., -s*75.), reach)
+        P['pole'+side] = (s*1.55, -.65, 1.25)
+        P['ik'+side] = reach
+        P['arm'+side] = tuple(rest['arm'+side][:5]) + (2.*reach,)
+    return P
+
+
+def carry_walk(t):
+    """Quick carrying gait: planted feet from Walk, quiet chest, fixed box."""
+    P = gait('Walk', t)
+    p = (t/GAITS['Walk']['period']) % 1.
+    step = math.cos(2*TAU*p)
+    # A carried box damps twist and makes the body lean under its weight.
+    P.update(
+        s_pitch=P['s_pitch']+5., c_pitch=P['c_pitch']+2.,
+        p_yaw=P['p_yaw']*.3, s_yaw=P['s_yaw']*.2, c_yaw=P['c_yaw']*.15,
+        h_yaw=P['h_yaw']*.35, by=P['by']-.012, bz=P['bz']-.018,
+    )
+    return _carry_arms(P, -.012*step)
+
+
+def throw_package(t):
+    """Two-handed shove: anticipation, release in front, then recover."""
+    rest = IDLE0
+    prepare = keys(t, [(0., 0.), (.2, 1.), (.32, 1.), (.48, 0.)])
+    release = keys(t, [(0., 0.), (.22, 0.), (.45, 1.), (.58, 1.), (.82, 0.), (1., 0.)])
+    follow = keys(t, [(0., 0.), (.48, 0.), (.62, 1.), (.78, -.3), (1., 0.)])
+    recover = smooth(.58, 1., t)
+    P = dict(rest)
+    P.update(
+        py=-.10*prepare+.08*release, pz=rest['pz']-.08*prepare+.035*release,
+        s_pitch=rest['s_pitch']-8.*prepare+13.*release+3.*follow,
+        c_pitch=rest['c_pitch']-5.*prepare+8.*release+4.*follow,
+        h_pitch=rest['h_pitch']+5.*prepare-7.*release-6.*follow,
+        c_yaw=rest['c_yaw']+2.5*follow,
+        footL=(0., .08*prepare, 0., 8.*prepare),
+        footR=(0., -.08*prepare, 0., 0.),
+    )
+    _carry_arms(P, 0., 1.-recover)
+    for side, s in (('L', 1), ('R', -1)):
+        if recover < 1.:
+            target = (s*(PICKUP_WIDTH+.04*release), -(.95+.42*release),
+                      1.97+.08*release)
+            P['hand'+side] = lerp(P['hand'+side], target, release)
+    return blend(P, rest, smooth(.82, 1., t))
+
+
+def drop_package(t):
+    """Lower the box clear of the tummy, release it, and open the hands."""
+    rest = IDLE0
+    lower = keys(t, [(0., 0.), (.18, 0.), (.55, 1.), (.66, 1.), (.9, 0.)])
+    release = smooth(.58, .9, t)
+    P = dict(rest)
+    P.update(
+        py=.08*lower, pz=rest['pz']-.10*lower,
+        s_pitch=rest['s_pitch']+11.*lower, c_pitch=rest['c_pitch']+4.*lower,
+        h_pitch=rest['h_pitch']+8.*lower,
+        by=rest['by']-.012*lower, bz=rest['bz']-.018*lower,
+    )
+    _carry_arms(P, -.26*lower, 1.-release)
+    return blend(P, rest, release)
+
+
+def drive(t):
+    """Seated driving base; runtime IK attaches hands to wheel and feet to pedals."""
+    P = sit(t*2.)
+    w = TAU*t/2.
+    steer = math.sin(w)
+    press = (1.-math.cos(w))/2.
+    left_foot, right_foot = P['footL'], P['footR']
+    P.update(
+        s_pitch=-7.+1.5*press, c_pitch=-2., h_pitch=-2.+1.2*press,
+        h_yaw=3.*steer, p_roll=1.2*steer, c_roll=-1.5*steer,
+        # Keep the deformation-safe seated leg shape, then press the right
+        # pedal with a small ankle translation. S-311.80 supplies the truck's
+        # exact pedal target, just as its existing runtime IK does for hands.
+        footL=(left_foot[0]+.03, left_foot[1]-.04, left_foot[2], left_foot[3]),
+        footR=(right_foot[0]-.03, right_foot[1]-.06*press,
+               right_foot[2]+.025*press, right_foot[3]-5.*press),
+        groundL=0., groundR=0., toeL=0., toeR=0.,
+    )
+    return P
+
+
+def enter_truck(t):
+    """Step up, turn into the cab and settle into the driving pose."""
+    rest = IDLE0
+    end = drive(0.)
+    u = smooth(0., 1.2, t)
+    P = blend(rest, end, u)
+    step = math.sin(math.pi*u)
+    P.update(
+        px=P['px']-.16*step, py=P['py']-.12*step, pz=P['pz']+.18*step,
+        p_yaw=P.get('p_yaw', 0.)-20.*step, s_roll=P.get('s_roll', 0.)+6.*step,
+        h_yaw=P['h_yaw']+10.*step,
+    )
+    return P
+
+
+def exit_truck(t):
+    """Reverse the cab climb and finish exactly in the standing idle pose."""
+    return enter_truck(1.2-clamp01(t/1.2)*1.2)
+
+
+def ring_doorbell(t):
+    """Reach around the tummy with the right hand, press, return to Idle."""
+    rest = IDLE0
+    reach = keys(t, [(0., 0.), (.18, 0.), (.46, 1.), (.67, 1.), (1.02, 0.), (1.1, 0.)])
+    press = keys(t, [(0., 0.), (.48, 0.), (.56, 1.), (.64, 0.), (1.1, 0.)])
+    P = dict(rest)
+    P.update(
+        px=rest['px']-.035*reach, s_pitch=rest['s_pitch']+5.*reach,
+        s_roll=rest['s_roll']+3.*reach, c_yaw=rest['c_yaw']-8.*reach,
+        h_pitch=rest['h_pitch']-3.*reach, h_yaw=rest['h_yaw']-10.*reach,
+    )
+    # FK keeps the thickest body safe: the elbow travels outside the belly
+    # instead of an IK wrist taking the shortest path through it.
+    button_arm = (35., 68.+5.*press, 48.-8.*press, -24., 48., 5.)
+    P['armR'] = lerp(rest['armR'], button_arm, reach)
+    return P
+
+
+# --- reaction clips ------------------------------------------------------------
+
+def stumble(t):
+    """Catch a forward trip with one hurried step and wide balancing arms."""
+    rest = IDLE0
+    lurch = keys(t, [(0., 0.), (.12, 1.), (.48, .72), (.9, 0.), (1.2, 0.)])
+    step = math.sin(math.pi*smooth(.04, .78, t))
+    P = dict(rest)
+    P.update(
+        py=rest['py']-.22*lurch, pz=rest['pz']-.12*lurch,
+        p_pitch=rest['p_pitch']+5.*lurch, p_roll=rest['p_roll']-5.*lurch,
+        s_pitch=rest['s_pitch']+22.*lurch, s_roll=rest['s_roll']+5.*lurch,
+        c_pitch=rest['c_pitch']+8.*lurch,
+        h_pitch=rest['h_pitch']-13.*lurch, h_roll=rest['h_roll']-4.*lurch,
+        by=rest['by']-.025*lurch, bz=rest['bz']-.04*lurch,
+        footL=(.05*step, -.30*step, .13*step, -7.*step), groundL=1.-step,
+    )
+    P['armL'] = lerp(rest['armL'], (30., 36., 44., -18., 28., 5.), lurch)
+    P['armR'] = lerp(rest['armR'], (34., 25., 50., 18., 30., 4.), lurch)
+    return blend(P, rest, smooth(.9, 1.2, t))
+
+
+def slip(t):
+    """One foot shoots forward while the torso and arms save a backward fall."""
+    rest = IDLE0
+    skid = keys(t, [(0., 0.), (.14, 1.), (.58, .9), (1.0, 0.), (1.3, 0.)])
+    foot = math.sin(math.pi*smooth(.03, .92, t))
+    P = dict(rest)
+    P.update(
+        py=rest['py']+.20*skid, pz=rest['pz']-.13*skid,
+        p_pitch=rest['p_pitch']-7.*skid, p_roll=rest['p_roll']+4.*skid,
+        s_pitch=rest['s_pitch']-17.*skid, s_roll=rest['s_roll']-4.*skid,
+        c_pitch=rest['c_pitch']-8.*skid,
+        h_pitch=rest['h_pitch']+10.*skid, h_roll=rest['h_roll']+4.*skid,
+        by=rest['by']+.02*skid, bz=rest['bz']-.025*skid,
+        footR=(-.04*foot, -.36*foot, .16*foot, -12.*foot), groundR=1.-foot,
+        footL=(.02*skid, .07*skid, 0., 0.),
+    )
+    P['armL'] = lerp(rest['armL'], (28., -20., 38., -12., 32., 5.), skid)
+    P['armR'] = lerp(rest['armR'], (26., -30., 44., 12., 34., 6.), skid)
+    return blend(P, rest, smooth(1., 1.3, t))
+
+
+def pushed(t):
+    """A shove from the right displaces the body left before it regains balance."""
+    rest = IDLE0
+    hit = keys(t, [(0., 0.), (.08, 1.), (.38, .7), (.7, 0.), (.9, 0.)])
+    brace = math.sin(math.pi*smooth(.03, .68, t))
+    P = dict(rest)
+    P.update(
+        px=rest['px']+.24*hit, pz=rest['pz']-.07*hit,
+        p_roll=rest['p_roll']-16.*hit, p_yaw=rest['p_yaw']-5.*hit,
+        s_roll=rest['s_roll']-11.*hit, s_yaw=rest['s_yaw']+7.*hit,
+        c_roll=rest['c_roll']+6.*hit,
+        h_roll=rest['h_roll']+12.*hit, h_yaw=rest['h_yaw']+5.*hit,
+        footL=(.14*brace, -.03*brace, .08*brace, 0.), groundL=1.-brace,
+        footR=(-.03*hit, .02*hit, 0., 0.),
+    )
+    P['armL'] = lerp(rest['armL'], (34., -22., 38., -10., 28., 4.), hit)
+    P['armR'] = lerp(rest['armR'], (44., 32., 54., 18., 24., 5.), hit)
+    return blend(P, rest, smooth(.7, .9, t))
+
+
+def box_hit(t):
+    """A box to the upper body produces a compact, asymmetric protective flinch."""
+    rest = IDLE0
+    recoil = keys(t, [(0., 0.), (.06, 1.), (.32, .72), (.58, 0.), (.8, 0.)])
+    P = dict(rest)
+    P.update(
+        py=rest['py']+.08*recoil, pz=rest['pz']-.08*recoil,
+        p_pitch=rest['p_pitch']-4.*recoil, p_roll=rest['p_roll']+5.*recoil,
+        s_pitch=rest['s_pitch']-10.*recoil, s_roll=rest['s_roll']-6.*recoil,
+        c_pitch=rest['c_pitch']-7.*recoil, c_yaw=rest['c_yaw']+6.*recoil,
+        h_pitch=rest['h_pitch']+15.*recoil, h_roll=rest['h_roll']-8.*recoil,
+        by=rest['by']+.018*recoil, bz=rest['bz']-.03*recoil,
+    )
+    P['armL'] = lerp(rest['armL'], (22., 52., 78., -28., 42., 8.), recoil)
+    P['armR'] = lerp(rest['armR'], (30., 38., 68., 24., 38., 7.), recoil)
+    return blend(P, rest, smooth(.58, .8, t))
+
+
+def scared(t):
+    """An explosive surprise: duck, shoulders up, hands high, then recover."""
+    rest = IDLE0
+    fright = keys(t, [(0., 0.), (.07, 1.), (.42, .86), (.72, 0.), (1., 0.)])
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.18*fright, py=rest['py']+.05*fright,
+        p_pitch=rest['p_pitch']+5.*fright,
+        s_pitch=rest['s_pitch']+10.*fright, c_pitch=rest['c_pitch']-5.*fright,
+        h_pitch=rest['h_pitch']-12.*fright, h_roll=rest['h_roll']+3.*fright,
+        by=rest['by']-.02*fright, bz=rest['bz']-.035*fright,
+        bs=rest['bs']+.025*fright,
+        footL=(.04*fright, .04*fright, 0., 0.),
+        footR=(-.04*fright, .04*fright, 0., 0.),
+    )
+    P['armL'] = lerp(rest['armL'], (18., 50., 66., -22., 42., 12.), fright)
+    P['armR'] = lerp(rest['armR'], (20., 44., 72., 22., 44., 12.), fright)
+    return blend(P, rest, smooth(.72, 1., t))
+
+
+def dizzy(t):
+    """Two slow, increasingly damped sways with the head lagging the body."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.22, 1.), (1.65, 1.), (2.4, 0.)])
+    wave = math.sin(TAU*t/.9)
+    lag = math.sin(TAU*t/.9-.85)
+    P = dict(rest)
+    P.update(
+        px=rest['px']+.06*wave*envelope, py=rest['py']+.025*lag*envelope,
+        p_roll=rest['p_roll']-6.*wave*envelope,
+        s_roll=rest['s_roll']+10.*wave*envelope,
+        c_roll=rest['c_roll']-6.*lag*envelope,
+        h_roll=rest['h_roll']+15.*lag*envelope,
+        h_yaw=rest['h_yaw']+12.*wave*envelope,
+        h_pitch=rest['h_pitch']+4.*lag*envelope,
+        by=rest['by']+.012*lag*envelope, bz=rest['bz']-.018*wave*envelope,
+    )
+    P['armL'] = lerp(rest['armL'], (40., -10.+8.*wave, 32., -8., 25., 3.), envelope)
+    P['armR'] = lerp(rest['armR'], (42., 6.-8.*wave, 36., 8., 26., 3.), envelope)
+    return blend(P, rest, smooth(2.05, 2.4, t))
+
+
+def shake_off_water(t):
+    """Dog-like whole-body shake with planted feet and loose, trailing arms."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.16, 1.), (1.42, 1.), (1.8, 0.)])
+    shake = math.sin(TAU*5.*t)*envelope
+    trail = math.sin(TAU*5.*t-.8)*envelope
+    P = dict(rest)
+    P.update(
+        p_yaw=rest['p_yaw']+7.*shake, p_roll=rest['p_roll']+2.5*trail,
+        s_yaw=rest['s_yaw']-13.*shake, s_roll=rest['s_roll']-4.*trail,
+        c_yaw=rest['c_yaw']+16.*trail, c_roll=rest['c_roll']+5.*shake,
+        h_yaw=rest['h_yaw']-22.*shake, h_roll=rest['h_roll']-7.*trail,
+        by=rest['by']+.018*trail, bz=rest['bz']-.012*abs(shake),
+        bs=rest['bs']+.018*abs(shake),
+    )
+    P['armL'] = lerp(rest['armL'], (38., 5.+10.*trail, 34., -10., 26., 3.), envelope)
+    P['armR'] = lerp(rest['armR'], (40., 5.-10.*trail, 36., 10., 28., 3.), envelope)
+    return blend(P, rest, smooth(1.55, 1.8, t))
+
+
+# --- emote clips ---------------------------------------------------------------
+
+def wave(t):
+    """Raise one hand, greet with three loose waves, and settle to Idle."""
+    rest = IDLE0
+    show = keys(t, [(0., 0.), (.28, 1.), (1.72, 1.), (2.2, 0.)])
+    oscillation = math.sin(TAU*2.25*max(0., t-.28))*show
+    P = dict(rest)
+    P.update(
+        s_roll=rest['s_roll']-3.*show, c_yaw=rest['c_yaw']-5.*show,
+        h_yaw=rest['h_yaw']-9.*show, h_roll=rest['h_roll']+3.*show,
+    )
+    P['armR'] = lerp(rest['armR'],
+                     (20., 37.+8.*oscillation, 94.+12.*oscillation,
+                      12., 42., 8.), show)
+    return blend(P, rest, smooth(1.72, 2.2, t))
+
+
+def clap(t):
+    """Bring both hands together for three broad, readable claps."""
+    rest = IDLE0
+    show = keys(t, [(0., 0.), (.3, 1.), (1.96, 1.), (2.4, 0.)])
+    beat = (1.-math.cos(TAU*1.8*max(0., t-.3)))*.5*show
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.025*beat, s_pitch=rest['s_pitch']+3.*show,
+        h_pitch=rest['h_pitch']-5.*show,
+    )
+    # FK stays on Jump's already certified overhead Y arc. The upper arms and
+    # elbows pulse inward without an IK solver folding either chain.
+    P['armL'] = lerp(rest['armL'],
+                     (-28.-10.*beat, 14., 30.+6.*beat, 0., 0., 8.), show)
+    P['armR'] = lerp(rest['armR'],
+                     (-28.-10.*beat, 14., 30.+6.*beat, 0., 0., 8.), show)
+    return blend(P, rest, smooth(1.96, 2.4, t))
+
+
+def facepalm(t):
+    """Pause, cover the face with one hand, and slump in disbelief."""
+    rest = IDLE0
+    cover = keys(t, [(0., 0.), (.36, 1.), (1.55, 1.), (2.2, 0.)])
+    P = dict(rest)
+    P.update(
+        py=rest['py']+.035*cover, pz=rest['pz']-.06*cover,
+        s_pitch=rest['s_pitch']+10.*cover, c_pitch=rest['c_pitch']+8.*cover,
+        c_yaw=rest['c_yaw']-5.*cover, h_pitch=rest['h_pitch']+20.*cover,
+        h_roll=rest['h_roll']-10.*cover, h_yaw=rest['h_yaw']-8.*cover,
+    )
+    P['armR'] = lerp(rest['armR'], (20., 44., 72., 22., 44., 12.), cover)
+    P['armL'] = lerp(rest['armL'], (63., 1., 26., -5., 18., 1.), cover)
+    return blend(P, rest, smooth(1.55, 2.2, t))
+
+
+def shrug(t):
+    """Lift shoulders and open both hands in a clear 'who knows?' pose."""
+    rest = IDLE0
+    hold = keys(t, [(0., 0.), (.3, 1.), (1.38, 1.), (2., 0.)])
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.035*hold, s_pitch=rest['s_pitch']-3.*hold,
+        c_roll=rest['c_roll']+2.*hold, h_roll=rest['h_roll']+8.*hold,
+        h_yaw=rest['h_yaw']-5.*hold,
+    )
+    P['armL'] = lerp(rest['armL'], (38., 22., 72., -38., 48., 15.), hold)
+    P['armR'] = lerp(rest['armR'], (38., 22., 72., 38., 48., 15.), hold)
+    P['thumbL'] = lerp(rest['thumbL'], 24., hold)
+    P['thumbR'] = lerp(rest['thumbR'], 24., hold)
+    return blend(P, rest, smooth(1.38, 2., t))
+
+
+def point(t):
+    """Turn toward and decisively point forward with the right arm."""
+    rest = IDLE0
+    show = keys(t, [(0., 0.), (.3, 1.), (1.42, 1.), (2., 0.)])
+    accent = spring(t, .3, 5., 3.2, 7.)*show
+    P = dict(rest)
+    P.update(
+        p_yaw=rest['p_yaw']-4.*show, s_yaw=rest['s_yaw']-8.*show,
+        c_yaw=rest['c_yaw']-10.*show, h_yaw=rest['h_yaw']-15.*show,
+        h_pitch=rest['h_pitch']-3.*show,
+    )
+    P['armR'] = lerp(rest['armR'],
+                     (69., 82.+accent, 8., 4., 42., 5.), show)
+    P['armL'] = lerp(rest['armL'], (57., -3., 28., -8., 19., 1.), show)
+    P['thumbR'] = lerp(rest['thumbR'], -18., show)
+    return blend(P, rest, smooth(1.42, 2., t))
+
+
+def thumbs_up(t):
+    """Present one fist beside the face with an unmistakably raised thumb."""
+    rest = IDLE0
+    show = keys(t, [(0., 0.), (.3, 1.), (1.4, 1.), (2., 0.)])
+    nod = math.sin(math.pi*smooth(.35, .9, t))*show
+    P = dict(rest)
+    P.update(
+        c_yaw=rest['c_yaw']-5.*show, h_yaw=rest['h_yaw']-8.*show,
+        h_pitch=rest['h_pitch']+5.*nod,
+    )
+    P['armR'] = lerp(rest['armR'], (20., 44., 72., 22., 44., 12.), show)
+    P['thumbR'] = lerp(rest['thumbR'], 24., show)
+    return blend(P, rest, smooth(1.4, 2., t))
+
+
+def melt_and_return(t):
+    """Collapse into a low gelatinous puddle pose, wobble, then reform."""
+    rest = IDLE0
+    melt = keys(t, [(0., 0.), (.62, 1.), (1.72, 1.), (3., 0.)])
+    wobble = math.sin(TAU*2.4*max(0., t-.5))*melt*smooth(.5, .75, t)
+    P = dict(rest)
+    P.update(
+        py=rest['py']+.06*melt, pz=rest['pz']-.75*melt,
+        p_pitch=rest['p_pitch']+5.*melt, p_roll=rest['p_roll']+3.*wobble,
+        s_pitch=rest['s_pitch']+6.*melt, s_roll=rest['s_roll']-6.*wobble,
+        c_pitch=rest['c_pitch']+3.*melt, c_roll=rest['c_roll']+5.*wobble,
+        h_pitch=rest['h_pitch']-8.*melt, h_roll=rest['h_roll']-5.*wobble,
+        by=rest['by']-.06*melt, bz=rest['bz']-.04*melt, bs=rest['bs']+.05*melt,
+        footL=(.12*melt, -.04*melt, -.75*melt, -5.*melt),
+        footR=(-.12*melt, -.04*melt, -.75*melt, -5.*melt),
+        groundL=1.-melt, groundR=1.-melt,
+    )
+    P['armL'] = lerp(rest['armL'], (82., -20., 18., -18., 10., 0.), melt)
+    P['armR'] = lerp(rest['armR'], (82., -12., 24., 18., 12., 0.), melt)
+    return blend(P, rest, smooth(1.72, 3., t))
+
+
+def shake_like_dog(t):
+    """A playful nose-to-tail shake, stronger and springier than a hit reaction."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.18, 1.), (1.38, 1.), (1.8, 0.)])
+    shake = math.sin(TAU*6.2*t)*envelope
+    trail = math.sin(TAU*6.2*t-1.05)*envelope
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.04*abs(shake), p_yaw=rest['p_yaw']+10.*shake,
+        p_roll=rest['p_roll']+4.*trail, s_yaw=rest['s_yaw']-18.*shake,
+        s_roll=rest['s_roll']-7.*trail, c_yaw=rest['c_yaw']+22.*trail,
+        c_roll=rest['c_roll']+8.*shake, h_yaw=rest['h_yaw']-30.*shake,
+        h_roll=rest['h_roll']-11.*trail, by=rest['by']+.025*trail,
+        bz=rest['bz']-.018*abs(shake), bs=rest['bs']+.025*abs(shake),
+    )
+    P['armL'] = lerp(rest['armL'],
+                     (42., 7.+14.*trail, 39., -14., 30., 4.), envelope)
+    P['armR'] = lerp(rest['armR'],
+                     (43., 7.-14.*trail, 41., 14., 31., 4.), envelope)
+    return blend(P, rest, smooth(1.5, 1.8, t))
+
+
+# --- pure gelatin clips ---------------------------------------------------------
+
+def pancake(t):
+    """Squash the body into a wide, low pancake and spring upright."""
+    rest = IDLE0
+    flat = keys(t, [(0., 0.), (.48, 1.), (1.35, 1.), (2.4, 0.)])
+    wobble = math.sin(TAU*2.2*max(0., t-.42))*flat*.04
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.08*flat,
+        s_scale=(1.+.18*flat, 1.-.20*flat, 1.+.12*flat),
+        c_scale=(1.+.18*flat, 1.-.18*flat, 1.+.12*flat),
+        h_scale=(1.+.24*flat, 1.-.20*flat, 1.+.15*flat),
+        p_roll=rest['p_roll']+3.*wobble, c_roll=rest['c_roll']-4.*wobble,
+        by=rest['by']-.05*flat, bz=rest['bz']-.05*flat, bs=rest['bs']+.08*flat,
+    )
+    P['armL'] = lerp(rest['armL'], (24., -6., 18., -8., 15., 0.), flat)
+    P['armR'] = lerp(rest['armR'], (24., -6., 18., 8., 15., 0.), flat)
+    return blend(P, rest, smooth(1.82, 2.4, t))
+
+
+def gum_stretch(t):
+    """Pull the character tall and thin like warm chewing gum."""
+    rest = IDLE0
+    stretch = keys(t, [(0., 0.), (.58, 1.), (1.65, 1.), (2.8, 0.)])
+    sway = math.sin(TAU*1.25*max(0., t-.5))*stretch
+    P = dict(rest)
+    P.update(
+        s_scale=(1.-.13*stretch, 1.+.18*stretch, 1.-.13*stretch),
+        c_scale=(1.-.10*stretch, 1.+.13*stretch, 1.-.10*stretch),
+        h_scale=(1.-.08*stretch, 1.+.14*stretch, 1.-.08*stretch),
+        p_roll=rest['p_roll']+1.5*sway, h_roll=rest['h_roll']-3.*sway,
+        by=rest['by']-.025*stretch, bs=rest['bs']-.06*stretch,
+    )
+    P['armL'] = lerp(rest['armL'], (10., 5., 16., -5., 16., 5.), stretch)
+    P['armR'] = lerp(rest['armR'], (10., 5., 16., 5., 16., 5.), stretch)
+    return blend(P, rest, smooth(2.0, 2.8, t))
+
+
+def ball_bounce(t):
+    """Compress, bounce three times like a rubber ball, and settle."""
+    rest = IDLE0
+    envelope = keys(t, [(0., 0.), (.18, 1.), (1.55, .65), (2.05, .3), (2.4, 0.)])
+    phase = max(0., t-.18)/.58
+    arc = abs(math.sin(math.pi*phase))*envelope
+    impact = (1.-abs(math.sin(math.pi*phase)))**6*envelope
+    height = .46*arc
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']+height-.05*impact,
+        s_scale=(1.+.07*impact, 1.-.06*impact, 1.+.07*impact),
+        c_scale=(1.+.06*impact, 1.-.05*impact, 1.+.06*impact),
+        h_scale=(1.+.05*impact, 1.-.04*impact, 1.+.05*impact),
+        by=rest['by']-.025*impact, bs=rest['bs']+.06*impact,
+        footL=(0., 0., height, 0.), footR=(0., 0., height, 0.),
+        groundL=1.-arc, groundR=1.-arc,
+    )
+    P['armL'] = lerp(rest['armL'], (42., -8., 26., -6., 18., 1.), arc)
+    P['armR'] = lerp(rest['armR'], (42., -8., 26., 6., 18., 1.), arc)
+    return blend(P, rest, smooth(2.05, 2.4, t))
+
+
+def split_and_join(t):
+    """Pull upper and lower halves apart, hover, then snap back together."""
+    rest = IDLE0
+    split = keys(t, [(0., 0.), (.62, 1.), (1.72, 1.), (2.75, 0.), (3.2, 0.)])
+    tremor = math.sin(TAU*2.8*max(0., t-.55))*split
+    reunion = spring(t, 2.42, .035, 3.2, 5.5)
+    P = dict(rest)
+    P.update(
+        px=rest['px']-.08*split+reunion, pz=rest['pz']-.06*split,
+        p_roll=rest['p_roll']-3.*split,
+        s_roll=rest['s_roll']+4.*split+1.5*tremor,
+        c_roll=rest['c_roll']-3.*split-1.2*tremor,
+        h_roll=rest['h_roll']+2.*split,
+        by=rest['by']-.03*split, bz=rest['bz']+.02*split,
+    )
+    P['armL'] = lerp(rest['armL'], (34., -7., 25., -8., 20., 3.), split)
+    P['armR'] = lerp(rest['armR'], (34., -7., 25., 8., 20., 3.), split)
+    return blend(P, rest, smooth(2.75, 3.2, t))
+
+
+def cold_shiver(t):
+    """Contract and vibrate rapidly as if the gel were freezing."""
+    rest = IDLE0
+    cold = keys(t, [(0., 0.), (.18, 1.), (1.52, 1.), (2., 0.)])
+    shiver = math.sin(TAU*8.5*t)*cold
+    echo = math.sin(TAU*8.5*t-.9)*cold
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.035*cold, p_yaw=rest['p_yaw']+3.*shiver,
+        s_yaw=rest['s_yaw']-7.*shiver, s_roll=rest['s_roll']+3.*echo,
+        c_yaw=rest['c_yaw']+9.*echo, c_roll=rest['c_roll']-4.*shiver,
+        h_yaw=rest['h_yaw']-12.*shiver, h_roll=rest['h_roll']+5.*echo,
+        by=rest['by']+.015*echo, bs=rest['bs']+.025*abs(shiver),
+    )
+    P['armL'] = lerp(rest['armL'], (45., 17.+8.*echo, 48., -14., 24., 9.), cold)
+    P['armR'] = lerp(rest['armR'], (45., 17.-8.*echo, 48., 14., 24., 9.), cold)
+    return blend(P, rest, smooth(1.52, 2., t))
+
+
+def inflate(t):
+    """Swallow air, inflate into a round balloon, wobble, and deflate."""
+    rest = IDLE0
+    full = keys(t, [(0., 0.), (.72, 1.), (1.72, 1.), (2.8, 0.)])
+    wobble = math.sin(TAU*2.1*max(0., t-.65))*full
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']+.025*full,
+        s_scale=(1.+.10*full, 1.+.035*full, 1.+.10*full),
+        c_scale=(1.+.11*full, 1.+.035*full, 1.+.11*full),
+        h_scale=(1.+.08*full, 1.+.025*full, 1.+.08*full),
+        p_roll=rest['p_roll']+1.5*wobble, c_roll=rest['c_roll']-2.*wobble,
+        h_roll=rest['h_roll']+2.5*wobble,
+        by=rest['by']-.045*full, bz=rest['bz']+.01*full, bs=rest['bs']+.18*full,
+    )
+    P['armL'] = lerp(rest['armL'], (38., -5., 20., -8., 20., 3.), full)
+    P['armR'] = lerp(rest['armR'], (38., -5., 20., 8., 20., 3.), full)
+    return blend(P, rest, smooth(2.0, 2.8, t))
+
+
+# --- long idles ----------------------------------------------------------------
+
+def inspect_hand(t):
+    """Notice the translucent hand, turn it over twice, then relax."""
+    rest = IDLE0
+    show = keys(t, [(0., 0.), (.48, 1.), (2.72, 1.), (3.4, 0.)])
+    turn = math.sin(TAU*1.05*max(0., t-.45))*show
+    P = dict(rest)
+    P.update(
+        p_yaw=rest['p_yaw']+3.*show,
+        s_yaw=rest['s_yaw']+7.*show, c_yaw=rest['c_yaw']+12.*show,
+        h_pitch=rest['h_pitch']+8.*show, h_yaw=rest['h_yaw']+24.*show,
+        h_roll=rest['h_roll']-4.*show,
+    )
+    P['armL'] = lerp(rest['armL'],
+                     (18., 38.+5.*turn, 74.+10.*turn, -28., 48., 12.), show)
+    P['armR'] = lerp(rest['armR'], (54., 5., 32., 10., 22., 2.), show)
+    P['thumbL'] = lerp(rest['thumbL'], 18.+7.*turn, show)
+    return blend(P, rest, smooth(2.72, 3.4, t))
+
+
+def blow_bubble(t):
+    """Cup both hands at the mouth and gently blow a floating gel bubble."""
+    rest = IDLE0
+    cup = keys(t, [(0., 0.), (.48, 1.), (2.45, 1.), (3.2, 0.)])
+    breath = smooth(.62, 1.15, t)*(1.-smooth(2.15, 2.55, t))*cup
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']-.025*cup, s_pitch=rest['s_pitch']+4.*cup,
+        c_pitch=rest['c_pitch']+7.*cup, h_pitch=rest['h_pitch']-9.*cup,
+        by=rest['by']-.025*breath, bz=rest['bz']+.012*breath,
+        bs=rest['bs']+.045*breath,
+    )
+    P['armL'] = lerp(rest['armL'], (8., 33., 88., -34., 52., 14.), cup)
+    P['armR'] = lerp(rest['armR'], (8., 33., 88., 34., 52., 14.), cup)
+    P['thumbL'] = lerp(rest['thumbL'], 22., cup)
+    P['thumbR'] = lerp(rest['thumbR'], 22., cup)
+    return blend(P, rest, smooth(2.45, 3.2, t))
+
+
+def idle_bounce(t):
+    """Two soft hops in place, with a gelatin squash on each landing."""
+    rest = IDLE0
+    active = keys(t, [(0., 0.), (.25, 1.), (2.05, 1.), (2.6, 0.)])
+    phase = max(0., t-.25)/.82
+    arc = abs(math.sin(math.pi*phase))*active
+    impact = (1.-abs(math.sin(math.pi*phase)))**7*active
+    height = .28*arc
+    P = dict(rest)
+    P.update(
+        pz=rest['pz']+height-.045*impact,
+        s_scale=(1.+.045*impact, 1.-.04*impact, 1.+.045*impact),
+        c_scale=(1.+.04*impact, 1.-.035*impact, 1.+.04*impact),
+        h_scale=(1.+.03*impact, 1.-.025*impact, 1.+.03*impact),
+        by=rest['by']-.018*impact, bs=rest['bs']+.04*impact,
+        footL=(0., 0., height, 0.), footR=(0., 0., height, 0.),
+        groundL=1.-arc, groundR=1.-arc,
+    )
+    P['armL'] = lerp(rest['armL'], (40., -7., 30., -8., 20., 2.), arc)
+    P['armR'] = lerp(rest['armR'], (40., -7., 30., 8., 20., 2.), arc)
+    return blend(P, rest, smooth(2.05, 2.6, t))
+
+
+# --- original dance loops ------------------------------------------------------
+
+def simple_step(t):
+    """An easy side-to-side two-step with loose opposing arm swings."""
+    a = TAU*t/DURATIONS['SimpleStep']
+    side = math.sin(a)
+    bounce = .5-.5*math.cos(2.*a)
+    lift_l = max(0., side)**2
+    lift_r = max(0., -side)**2
+    return dict(
+        px=.11*side, pz=-.055-.045*bounce, p_roll=-6.*side,
+        p_yaw=3.*math.sin(2.*a), s_roll=4.*side,
+        c_roll=-3.*side, c_yaw=-4.*math.sin(2.*a),
+        h_roll=2.*side, h_yaw=4.*math.sin(a-.35),
+        by=.012*math.sin(a-.7), bz=-.018*bounce,
+        armL=(48., 12.-22.*side, 34., -10., 25., 2.),
+        armR=(48., 12.+22.*side, 34., 10., 25., 2.),
+        footL=(.10*lift_l, -.04*side, .12*lift_l, 0.),
+        footR=(-.10*lift_r, .04*side, .12*lift_r, 0.),
+        groundL=1.-lift_l, groundR=1.-lift_r,
+    )
+
+
+def robot(t):
+    """Angular locks and alternating elbows, deliberately mechanical."""
+    a = TAU*t/DURATIONS['Robot']
+    square = math.sin(a)**3
+    counter = math.sin(2.*a)**3
+    return dict(
+        px=.045*square, pz=-.08-.025*abs(counter),
+        p_roll=-4.*square, p_yaw=8.*counter,
+        s_pitch=4.*counter, s_roll=5.*square, s_yaw=-12.*counter,
+        c_pitch=-5.*counter, c_roll=-4.*square, c_yaw=15.*counter,
+        h_pitch=7.*counter, h_roll=4.*square, h_yaw=-18.*counter,
+        by=.012*square, bz=-.016*abs(counter),
+        armL=(32.+12.*counter, 22.+28.*square, 82.-18.*counter,
+              -25., 36., 7.),
+        armR=(32.-12.*counter, 22.-28.*square, 82.+18.*counter,
+              25., 36., 7.),
+        footL=(0., -.035*square, .035*max(0., square), 0.),
+        footR=(0., .035*square, .035*max(0., -square), 0.),
+        groundL=1.-max(0., square), groundR=1.-max(0., -square),
+    )
+
+
+def disco(t):
+    """A broad hip groove with alternating diagonal pointing arms."""
+    a = TAU*t/DURATIONS['Disco']
+    side = math.sin(a)
+    pulse = .5-.5*math.cos(2.*a)
+    left_up = .5+.5*side
+    right_up = 1.-left_up
+    return dict(
+        px=.12*side, pz=-.055-.035*pulse, p_roll=-9.*side,
+        p_yaw=6.*math.sin(2.*a), s_roll=7.*side, s_yaw=-8.*side,
+        c_roll=-5.*side, c_yaw=11.*side,
+        h_roll=5.*side, h_yaw=-13.*side,
+        by=.02*math.sin(a-.55), bz=-.02*pulse,
+        armL=lerp((58., -24., 38., -12., 22., 2.),
+                  (-20., 36., 18., -8., 18., 10.), left_up),
+        armR=lerp((58., -24., 38., 12., 22., 2.),
+                  (-20., 36., 18., 8., 18., 10.), right_up),
+        footL=(.06*max(0., side), -.035*side, .07*max(0., side), 0.),
+        footR=(-.06*max(0., -side), .035*side, .07*max(0., -side), 0.),
+        groundL=1.-max(0., side), groundR=1.-max(0., -side),
+    )
+
+
+def floor_worm(t):
+    """A low travelling body wave, authored for the gel rather than copied."""
+    a = TAU*t/DURATIONS['FloorWorm']
+    wave = math.sin(a)
+    follow = math.sin(a-.9)
+    tail = math.sin(a-1.8)
+    return dict(
+        py=.035*math.sin(2.*a), pz=-.59+.07*wave,
+        p_pitch=18.+10.*wave, p_roll=4.*tail,
+        s_pitch=-24.*follow, s_roll=-5.*tail,
+        c_pitch=28.*tail, c_roll=5.*wave,
+        h_pitch=-18.*math.sin(a-2.55), h_roll=-6.*follow,
+        by=-.05*follow, bz=.035*tail, bs=.045*(.5+.5*wave),
+        armL=(72., -24.+10.*follow, 28., -18., 12., 0.),
+        armR=(72., -18.-10.*follow, 34., 18., 14., 0.),
+        footL=(.08, .04*tail, -.48+.08*max(0., tail), -8.*wave),
+        footR=(-.08, -.04*tail, -.48+.08*max(0., -tail), 8.*wave),
+        groundL=0., groundR=0.,
+    )
+
+
+def headbang(t):
+    """A planted heavy beat: torso drives first and the head follows hard."""
+    a = TAU*t/DURATIONS['Headbang']
+    beat = .5-.5*math.cos(2.*a)
+    side = math.sin(a)
+    return dict(
+        pz=-.10-.10*beat, p_pitch=7.+8.*beat, p_roll=3.*side,
+        s_pitch=10.+16.*beat, s_roll=-3.*side,
+        c_pitch=7.+12.*beat, c_roll=4.*side,
+        h_pitch=-10.+48.*beat, h_roll=-5.*side,
+        by=.02*side, bz=-.045*beat, bs=.025*beat,
+        armL=(58., -12.+8.*side, 48., -18., 24., 2.),
+        armR=(58., -12.-8.*side, 48., 18., 24., 2.),
+        footL=(.035, 0., 0., 0.), footR=(-.035, 0., 0., 0.),
+    )
+
+
+def victory_dance(t):
+    """Alternating celebratory hops with an open, readable overhead V."""
+    a = TAU*t/DURATIONS['VictoryDance']
+    hop = max(0., math.sin(2.*a))**1.5
+    side = math.sin(a)
+    height = .18*hop
+    return dict(
+        px=.07*side, pz=-.055+height, p_roll=-5.*side,
+        p_yaw=4.*math.sin(2.*a), s_pitch=-4.*hop, s_roll=4.*side,
+        c_pitch=-5.*hop, c_roll=-3.*side,
+        h_pitch=-7.*hop, h_roll=4.*side, h_yaw=-5.*side,
+        by=-.018*hop, bz=.018*hop,
+        armL=(-26., 22.+8.*side, 28., -12., 18., 11.),
+        armR=(-26., 22.-8.*side, 28., 12., 18., 11.),
+        footL=(.07*side, 0., height, 0.),
+        footR=(.07*side, 0., height, 0.),
+        groundL=1.-hop, groundR=1.-hop,
+    )
+
+
+def defeat(t):
+    """A quiet looping loss pose: dropped chest, heavy head and a soft sway."""
+    a = TAU*t/DURATIONS['Defeat']
+    breath = .5+.5*math.cos(a)
+    sway = math.sin(a)
+    return dict(
+        px=.018*sway, pz=-.14-.018*breath, p_pitch=7., p_roll=2.5*sway,
+        s_pitch=13.+2.*breath, s_roll=-2.*sway,
+        c_pitch=15.+2.*breath, c_roll=2.5*sway,
+        h_pitch=29.+3.*breath, h_roll=-4.*sway, h_yaw=3.*sway,
+        by=-.012*sway, bz=-.018*breath,
+        armL=(66., -5.+3.*sway, 13., -8., 10., -4.),
+        armR=(66., -5.-3.*sway, 13., 8., 10., -4.),
+        footL=(.025, 0., 0., 0.), footR=(-.025, 0., 0., 0.),
+    )
+
+
+def flan(t):
+    """The whole gel ripples in a soft delayed wave from pelvis to head."""
+    a = TAU*t/DURATIONS['Flan']
+    pelvis = math.sin(a)
+    spine = math.sin(a-.55)
+    chest = math.sin(a-1.1)
+    head = math.sin(a-1.65)
+    return dict(
+        px=.045*pelvis, pz=-.065-.025*(.5+.5*math.cos(2.*a)),
+        p_roll=8.*pelvis, p_yaw=4.*spine,
+        s_roll=-12.*spine, s_yaw=-5.*chest,
+        c_roll=14.*chest, c_yaw=6.*head,
+        h_roll=-16.*head, h_yaw=-7.*pelvis,
+        s_scale=(1.+.045*spine, 1.-.035*spine, 1.+.045*spine),
+        c_scale=(1.+.055*chest, 1.-.04*chest, 1.+.055*chest),
+        h_scale=(1.+.04*head, 1.-.03*head, 1.+.04*head),
+        by=.035*chest, bz=.025*head, bs=.055*(.5+.5*spine),
+        armL=(46., 8.-16.*chest, 34., -12., 26., 4.),
+        armR=(46., 8.+16.*chest, 34., 12., 26., 4.),
+        footL=(.025*pelvis, 0., .025*max(0., pelvis), 0.),
+        footR=(.025*pelvis, 0., .025*max(0., -pelvis), 0.),
+        groundL=1.-max(0., pelvis), groundR=1.-max(0., -pelvis),
+    )
+
+
+def conga(t):
+    """A compact travelling conga step whose shared loop phase can align a crew."""
+    a = TAU*t/DURATIONS['Conga']
+    side = math.sin(a)
+    step_l = max(0., side)**2
+    step_r = max(0., -side)**2
+    bounce = .5-.5*math.cos(2.*a)
+    return dict(
+        px=.07*side, py=.025*math.sin(2.*a), pz=-.07-.04*bounce,
+        p_roll=-7.*side, p_yaw=8.*math.sin(2.*a),
+        s_pitch=4., s_roll=5.*side, s_yaw=-7.*math.sin(2.*a),
+        c_roll=-4.*side, c_yaw=9.*math.sin(2.*a),
+        h_pitch=-3., h_roll=3.*side, h_yaw=-8.*math.sin(2.*a),
+        by=.018*math.sin(a-.7), bz=-.02*bounce,
+        armL=(50., -18.-12.*side, 58., -16., 28., 3.),
+        armR=(50., -18.+12.*side, 58., 16., 28., 3.),
+        footL=(.08*step_l, -.09*side, .11*step_l, 0.),
+        footR=(-.08*step_r, .09*side, .11*step_r, 0.),
+        groundL=1.-step_l, groundR=1.-step_r,
+    )
+
 # --- build ----------------------------------------------------------------------
 
 def build(rig):
@@ -616,7 +1456,23 @@ def build(rig):
     clips = {'Idle': idle, 'Walk': lambda t: gait('Walk', t), 'Stroll': lambda t: gait('Stroll', t),
              'Run': lambda t: gait('Run', t),
              'Jump': jump, 'PickUpPackage': pickup, 'PickUpHigh': pickup_high, 'Sit': sit,
-             'TurnInPlace': turn_in_place}
+             'TurnInPlace': turn_in_place, 'CarryWalk': carry_walk,
+             'ThrowPackage': throw_package, 'DropPackage': drop_package, 'Drive': drive,
+             'EnterTruck': enter_truck, 'ExitTruck': exit_truck,
+             'RingDoorbell': ring_doorbell, 'Stumble': stumble, 'Slip': slip,
+             'Pushed': pushed, 'BoxHit': box_hit, 'Scared': scared, 'Dizzy': dizzy,
+             'ShakeOffWater': shake_off_water, 'Wave': wave, 'Clap': clap,
+             'Facepalm': facepalm, 'Shrug': shrug, 'Point': point,
+             'ThumbsUp': thumbs_up, 'MeltAndReturn': melt_and_return,
+             'ShakeLikeDog': shake_like_dog, 'Pancake': pancake,
+             'GumStretch': gum_stretch, 'BallBounce': ball_bounce,
+             'SplitAndJoin': split_and_join, 'ColdShiver': cold_shiver,
+             'Inflate': inflate, 'InspectHand': inspect_hand,
+             'BlowBubble': blow_bubble, 'IdleBounce': idle_bounce,
+             'SimpleStep': simple_step, 'Robot': robot,
+             'Disco': disco, 'FloorWorm': floor_worm, 'Headbang': headbang,
+             'VictoryDance': victory_dance, 'Defeat': defeat,
+             'Flan': flan, 'Conga': conga}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action
@@ -634,13 +1490,9 @@ def build(rig):
                 rig.keyframe_insert('["IK_brazo.%s"]' % side, frame=frame)
                 rig.keyframe_insert('["IK_pierna.%s"]' % side, frame=frame)
         action.frame_range = (0, last); action.use_frame_range = True
-        # Dense sampling preserves authored velocities; Bezier overshoot can
-        # otherwise sink toes between samples or overshoot knee pole targets.
-        for layer in action.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    for curve in bag.fcurves:
-                        for key in curve.keyframe_points: key.interpolation = 'LINEAR'
+        # Dense samples preserve the authored arcs; clamped handles smooth the
+        # sub-frame path without the overshoot of unrestricted Bezier curves.
+        polish_action_curves(action)
     rig.animation_data.action = bpy.data.actions['Idle']
     poser.apply(idle(0.))
     return DURATIONS

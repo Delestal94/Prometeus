@@ -383,6 +383,8 @@ CompanyState   (autoload, persistente)   plata, día, reloj, reputación, bloque
   la página Jugar). La escena raíz es `company_root.tscn` (`CompanyRoot`; `CompanyWorld` cuando exista), al
   final de `NetworkManager.LEVEL_SCENES`: el host spawnea un jugador por peer por `World/PlayerSpawner`
   cuando su mundo avisa `level_ready()`.
+- Flags de desarrollo (D-0238, `CompanyDevFlags`): `--company-day=<n>`, `--district=<zona>` y `--money=<n>`,
+  aplicados por el host al levantar el mundo, antes del snapshot; `CompanyRoot.dev_args` para los tests.
 
 ### 10.2 Autoridad (quién manda en cada estado)
 

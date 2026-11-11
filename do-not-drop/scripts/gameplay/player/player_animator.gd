@@ -6,9 +6,12 @@ extends RefCounted
 ##   a one-shot (Jump, PickUpPackage) that locks it for a moment -- and the
 ##   jump's sampled time. Player replicates both through its
 ##   MultiplayerSynchronizer; nothing here is synced on its own.
-## - Playback (every peer): turns the replicated anim_state into the clip
-##   that actually plays -- the gait for the speed, the pickup blend for the
-##   box's height -- keeping the step phase across gait changes.
+## - Clip choice (owning peer only): turns that state into the exact clip --
+##   the gait for the speed, the pickup blend for the box's height -- and
+##   publishes anim_clip through Player's MultiplayerSynchronizer.
+## - Playback (every peer): plays only replicated anim_clip, keeping the step
+##   phase across gait changes. Remote copies never infer a clip from local
+##   carried-package timing or their own gait hysteresis.
 ##
 ## Only reads and writes the Player's public state.
 
@@ -41,11 +44,58 @@ const TURN_STEP_ABOVE: float = 1.5
 const TURN_STEP_BELOW: float = 0.8
 const TURN_RATE_SMOOTHING: float = 10.0
 const GelMotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
+const EmoteCatalogData = preload("res://scripts/core/emote_catalog.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
+const ANIM_DRIVE: StringName = &"Drive"
+const ANIM_CARRY_WALK: StringName = &"CarryWalk"
+const ANIM_STUMBLE: StringName = &"Stumble"
+const ANIM_BOX_HIT: StringName = &"BoxHit"
+const ANIM_CONGA: StringName = &"Conga"
+const ANIM_VICTORY: StringName = &"VictoryDance"
+const ANIM_DEFEAT: StringName = &"Defeat"
+const EMOTE_CLIPS: Array[StringName] = [
+	&"Wave", &"Clap", &"Facepalm", &"Shrug", &"Point", &"ThumbsUp",
+	&"MeltAndReturn", &"ShakeLikeDog",
+]
+const DANCE_CLIPS: Array[StringName] = [
+	&"SimpleStep", &"Robot", &"Disco", &"FloorWorm", &"Headbang",
+	&"VictoryDance", &"Flan", ANIM_CONGA,
+]
+const LONG_IDLE_CLIPS: Array[StringName] = [&"InspectHand", &"BlowBubble", &"IdleBounce"]
+const RESULT_CLIPS: Array[StringName] = [ANIM_VICTORY, ANIM_DEFEAT]
+const LONG_IDLE_DURATIONS: Dictionary = {
+	&"InspectHand": 3.4,
+	&"BlowBubble": 3.2,
+	&"IdleBounce": 2.6,
+}
+const LONG_IDLE_DELAY_SECONDS: float = 15.0
+## Players already replicate the selected clip. Conga only needs a shared
+## presentation phase on each peer so nearby dancers visibly step together.
+const CONGA_SYNC_RADIUS: float = 4.0
+const STUMBLE_ANIM_LOCK_MS: int = 1050
+const BOX_HIT_ANIM_LOCK_MS: int = 650
 ## Under this ground speed (m/s) the player stands (Idle), over it walks.
 const IDLE_BELOW_SPEED: float = 0.3
 ## Clips that loop (the glTF importer drops Blender's loop flag).
 const LOOPING: Array[StringName] = [
-	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, Player.ANIM_SIT, Player.ANIM_TURN]
+	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN,
+	ANIM_CARRY_WALK, Player.ANIM_SIT, ANIM_DRIVE, Player.ANIM_TURN,
+] + DANCE_CLIPS + [ANIM_DEFEAT]
+const GAIT_CLIPS: Array[StringName] = [
+	Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, ANIM_CARRY_WALK]
+const REACTION_CLIPS: Array[StringName] = [
+	ANIM_STUMBLE, &"Slip", &"Pushed", ANIM_BOX_HIT,
+	&"Scared", &"Dizzy", &"ShakeOffWater"]
+## Cross-fades are short into impacts, slower while settling out, and phase
+## preserving between gaits. Keeping the policy here makes every peer apply
+## the same authored timing to the replicated state.
+const GAIT_BLEND: float = 0.12
+const LOCOMOTION_BLEND: float = 0.18
+const TURN_BLEND: float = 0.20
+const ONE_SHOT_BLEND: float = 0.14
+const REACTION_IN_BLEND: float = 0.06
+const REACTION_OUT_BLEND: float = 0.18
+const SEAT_BLEND: float = 0.24
 
 ## The character's AnimationPlayer; null for a model without one (state still runs).
 var anim_player: AnimationPlayer
@@ -64,21 +114,30 @@ var _turn_yaw: float = 0.0
 var _anim_lock_until_msec: int = 0
 var _jump_airborne: bool = false
 var _jump_landing_elapsed: float = -1.0
-## Visual stride only. Delgada and the current rounded player stay at 1.0;
-## the gel appearance supplies its replicated leg-length factor.
+## Replicated presentation factor. The authored IK targets retain their
+## horizontal stride at every value; GelMotionFit therefore keeps gait tempo
+## tied to ground speed while the longer/shorter leg rests change reach.
 var _leg_length_factor: float = 1.0
+var _long_idle_elapsed: float = 0.0
+var _long_idle_index: int = 0
+var _idle_bubble: MeshInstance3D
 
 
 func _init(player: Player, animation_player: AnimationPlayer, face: Node) -> void:
 	_player = player
 	_face = face
 	anim_player = animation_player
+	var gel_state := _player.get_node_or_null(^"GelProportions") as PlayerGelProportionSync
+	if gel_state != null:
+		_fit_to_proportions(gel_state.proportions)
+		gel_state.proportions_changed.connect(_fit_to_proportions)
 	if anim_player == null:
 		return
 	for loop_clip: StringName in LOOPING:
 		if anim_player.has_animation(loop_clip):
 			anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 	anim_player.play(Player.ANIM_IDLE)
+	_build_idle_bubble()
 
 
 # --- State (owning peer) --------------------------------------------------------
@@ -93,6 +152,21 @@ func add_look_yaw(yaw: float) -> void:
 ## writes (and re-replicates) anim_state when the target state changes.
 func update_movement(ground_speed: float, pickup_elapsed: float) -> void:
 	measure_turn_rate(_player.get_physics_process_delta_time())
+	# Results own the character until the scene restarts. Movement still runs
+	# behind the card, but it must not replace the visible win/loss reaction.
+	if _player.anim_state in RESULT_CLIPS:
+		return
+	var active_motion: bool = ground_speed > IDLE_BELOW_SPEED or _player.turn_rate > TURN_STEP_BELOW
+	if active_motion:
+		note_activity()
+	var long_idle_eligible: bool = not active_motion and _player.is_on_floor() \
+			and _player.seat_node_path.is_empty() and not is_instance_valid(_player.carried_package)
+	if update_long_idle(_player.get_physics_process_delta_time(), long_idle_eligible):
+		return
+	# Emotes are deliberate standing poses. Moving cancels them immediately
+	# instead of sliding the character around on a planted full-body pose.
+	if _player.anim_state in EMOTE_CLIPS and ground_speed > IDLE_BELOW_SPEED:
+		_anim_lock_until_msec = 0
 	# An interrupted pickup must not make a moving player slide on its
 	# planted crouch. The package lift and hand contact continue independently.
 	if _player.anim_state == Player.ANIM_PICKUP and ground_speed > 0.3 and pickup_elapsed > 0.16:
@@ -143,6 +217,69 @@ func play_one_shot(clip: StringName, lock_ms: int) -> void:
 		_player.jump_anim_time = 0.0
 
 
+func play_emote(clip: StringName) -> bool:
+	if clip not in EMOTE_CLIPS or anim_player == null or not anim_player.has_animation(clip):
+		return false
+	# Seated presentation deliberately resolves to Sit/Drive; accepting an
+	# emote there would replicate a choice that nobody can see.
+	if not _player.seat_node_path.is_empty():
+		return false
+	play_one_shot(clip, EmoteCatalogData.lock_msec(clip))
+	return true
+
+
+## Results are decided locally on every peer. Each owner publishes its own
+## reaction through the existing anim_state / anim_clip properties, so no
+## results-only RPC or remote state inference is needed.
+func play_result(success: bool) -> bool:
+	var clip: StringName = result_clip(success)
+	if anim_player == null or not anim_player.has_animation(clip):
+		return false
+	_long_idle_elapsed = 0.0
+	_anim_lock_until_msec = 0
+	_player.anim_state = clip
+	return true
+
+
+static func result_clip(success: bool) -> StringName:
+	return ANIM_VICTORY if success else ANIM_DEFEAT
+
+
+static func play_local_result(tree: SceneTree, success: bool) -> bool:
+	for candidate: Node in tree.get_nodes_in_group(&"player"):
+		var player := candidate as Player
+		if player != null and player.is_local() and player.animator != null:
+			return player.animator.play_result(success)
+	return false
+
+
+## Any deliberate input interrupts an automatic idle and restarts its wait.
+func note_activity() -> void:
+	_long_idle_elapsed = 0.0
+	if _player.anim_state in LONG_IDLE_CLIPS:
+		_anim_lock_until_msec = 0
+		_player.anim_state = Player.ANIM_IDLE
+
+
+## Owner-only deterministic timer. The exact selected clip is already carried
+## by anim_state/anim_clip, so observers and late joiners need no new RPC.
+func update_long_idle(delta: float, eligible: bool) -> bool:
+	if _player.anim_state in LONG_IDLE_CLIPS:
+		return false
+	if not eligible or _player.anim_state != Player.ANIM_IDLE \
+			or Time.get_ticks_msec() < _anim_lock_until_msec:
+		_long_idle_elapsed = 0.0
+		return false
+	_long_idle_elapsed += maxf(delta, 0.0)
+	if _long_idle_elapsed < LONG_IDLE_DELAY_SECONDS:
+		return false
+	var clip: StringName = LONG_IDLE_CLIPS[_long_idle_index % LONG_IDLE_CLIPS.size()]
+	_long_idle_index = (_long_idle_index + 1) % LONG_IDLE_CLIPS.size()
+	_long_idle_elapsed = 0.0
+	play_one_shot(clip, roundi(float(LONG_IDLE_DURATIONS[clip]) * 1000.0))
+	return true
+
+
 ## Lets movement take anim_state back right away.
 func release_lock() -> void:
 	_anim_lock_until_msec = 0
@@ -150,6 +287,14 @@ func release_lock() -> void:
 
 func set_leg_length_factor(value: float) -> void:
 	_leg_length_factor = clampf(value, GelMotionFit.MIN_LENGTH_FACTOR, GelMotionFit.MAX_LENGTH_FACTOR)
+
+
+func _fit_to_proportions(proportions: GelBodyProportions) -> void:
+	set_leg_length_factor(proportions.leg_length)
+
+
+func leg_length_factor() -> float:
+	return _leg_length_factor
 
 
 ## Samples the jump clip from the real ascent and landing instead of playing
@@ -180,25 +325,96 @@ func update_jump(delta: float, ground_speed: float) -> void:
 # --- Playback (every peer) ------------------------------------------------------
 
 
-## Runs for every peer's copy of the player, local or not -- anim_state is
-## only ever written by the owning peer and reaches everyone else through the
-## MultiplayerSynchronizer, same as seat_node_path.
+## Runs for every peer's copy of the player. The owning peer resolves the
+## exact clip into anim_clip; all copies then play that replicated value.
 func animate() -> void:
+	var clip: StringName = _player.anim_clip
+	if _player.is_local():
+		clip = _resolve_owned_clip()
+		if _player.anim_clip != clip:
+			_player.anim_clip = clip
 	if anim_player == null:
 		return
-	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else Player.ANIM_SIT
-	var run_fallback: bool = false
+	_ensure_replicated_clip(clip)
+	var run_fallback: bool = clip == Player.ANIM_RUN and not anim_player.has_animation(Player.ANIM_RUN)
+	if run_fallback:
+		clip = Player.ANIM_WALK
+	if not anim_player.has_animation(clip):
+		clip = Player.ANIM_IDLE
+	if anim_player.current_animation != String(clip):
+		_play_clip(clip)
+	_apply_playback(clip, run_fallback)
+	_update_idle_bubble(clip)
+	if clip == ANIM_CONGA:
+		_sync_nearby_conga()
+
+
+func _build_idle_bubble() -> void:
+	_idle_bubble = MeshInstance3D.new()
+	_idle_bubble.name = "LongIdleBubble"
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.14
+	sphere.height = 0.28
+	sphere.radial_segments = 16
+	sphere.rings = 8
+	_idle_bubble.mesh = sphere
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color("8fe8ff58")
+	material.metallic = 0.18
+	material.roughness = 0.08
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_idle_bubble.material_override = material
+	_idle_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_idle_bubble.layers = RenderLayers.LOCAL_BODY if _player.is_local() else RenderLayers.WORLD
+	_idle_bubble.visible = false
+	_player.add_child(_idle_bubble)
+
+
+func _update_idle_bubble(clip: StringName) -> void:
+	if not is_instance_valid(_idle_bubble) or anim_player == null or clip != &"BlowBubble":
+		if is_instance_valid(_idle_bubble):
+			_idle_bubble.visible = false
+		return
+	var at: float = anim_player.current_animation_position
+	var amount: float = idle_bubble_amount(at)
+	_idle_bubble.visible = amount > 0.01
+	_idle_bubble.scale = Vector3.ONE * amount
+	_idle_bubble.position = Vector3(0.0, 1.48 + 0.32 * bubble_float_amount(at), -0.43)
+
+
+static func idle_bubble_amount(at: float) -> float:
+	if at < 0.62 or at > 2.62:
+		return 0.0
+	var grow: float = smoothstep(0.62, 1.18, at)
+	var fade: float = 1.0 - smoothstep(2.2, 2.62, at)
+	return maxf(grow * fade, 0.0)
+
+
+static func bubble_float_amount(at: float) -> float:
+	return clampf((at - 1.0) / 1.62, 0.0, 1.0)
+
+
+## Only the owner calls this. Everything it consults that is not replicated
+## is collapsed into anim_clip before another peer renders the character.
+func _resolve_owned_clip() -> StringName:
+	if anim_player == null:
+		return _player.anim_state
+	var clip: StringName = _player.anim_state \
+			if _player.seat_node_path.is_empty() or _player.anim_state in RESULT_CLIPS \
+			else _seat_clip()
 	if clip == Player.ANIM_WALK:
 		clip = _gait_clip()
-	elif clip == Player.ANIM_RUN and not anim_player.has_animation(Player.ANIM_RUN):
-		clip = Player.ANIM_WALK
-		run_fallback = true
 	elif clip == Player.ANIM_PICKUP:
 		clip = pickup_clip()
 	elif clip == Player.ANIM_TURN and not anim_player.has_animation(Player.ANIM_TURN):
 		clip = Player.ANIM_IDLE
-	if anim_player.current_animation != String(clip):
-		_play_clip(clip)
+	if clip != Player.ANIM_RUN and not anim_player.has_animation(clip):
+		clip = Player.ANIM_IDLE
+	return clip
+
+
+func _apply_playback(clip: StringName, run_fallback: bool) -> void:
 	if clip == Player.ANIM_JUMP:
 		anim_player.speed_scale = 0.0
 		anim_player.seek(_player.jump_anim_time, true)
@@ -210,7 +426,7 @@ func animate() -> void:
 		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
 			_player.locomotion_speed, RUN_AUTHORED_SPEED, _leg_length_factor, RUN_MIN_SCALE, 1.3
 		)
-	elif clip == Player.ANIM_WALK:
+	elif clip == Player.ANIM_WALK or clip == ANIM_CARRY_WALK:
 		anim_player.speed_scale = GelMotionFit.gait_speed_scale(
 			_player.locomotion_speed, WALK_AUTHORED_SPEED, _leg_length_factor, 0.5,
 			RUN_FALLBACK_MAX_SCALE if run_fallback else 1.5
@@ -223,11 +439,56 @@ func animate() -> void:
 		anim_player.speed_scale = 1.0
 
 
+## All conga copies visible on one peer use that peer's monotonic clock. This
+## aligns nearby dancers without another network stream or dependence on who
+## entered the dance first; distant solo dancers keep their natural start.
+func _sync_nearby_conga() -> void:
+	if not _player.is_inside_tree():
+		return
+	var has_partner: bool = false
+	for candidate: Node in _player.get_tree().get_nodes_in_group(&"player"):
+		var other := candidate as Player
+		if other == null or other == _player or other.anim_clip != ANIM_CONGA:
+			continue
+		if conga_distance_is_near(_player.global_position.distance_to(other.global_position)):
+			has_partner = true
+			break
+	if not has_partner:
+		return
+	var length: float = anim_player.current_animation_length
+	if length > 0.0:
+		anim_player.seek(conga_phase_msec(Time.get_ticks_msec(), length), true)
+
+
+static func conga_phase_msec(now_msec: int, length: float) -> float:
+	return fposmod(float(now_msec) / 1000.0, maxf(length, 0.001))
+
+
+static func conga_distance_is_near(distance: float) -> bool:
+	return distance <= CONGA_SYNC_RADIUS
+
+
+## A blended pickup clip is generated lazily per AnimationPlayer. The owner
+## created its copy while resolving anim_clip; a remote peer creates the same
+## deterministic blend from the replicated step name, without needing the
+## owner's package or pickup height.
+func _ensure_replicated_clip(clip: StringName) -> void:
+	var prefix: String = String(PICKUP_BLEND_LIBRARY) + "/"
+	if anim_player.has_animation(clip) or not String(clip).begins_with(prefix):
+		return
+	var step: int = String(clip).trim_prefix(prefix).to_int()
+	_pickup_clip_for_step(step)
+
+
 ## The pickup clip for the player's pickup_high_weight: either authored clip
 ## at the ends, a baked blend of both in between (quantised, so at most a
 ## handful exist).
 func pickup_clip() -> StringName:
 	var step: int = roundi(_player.pickup_high_weight * PICKUP_BLEND_STEPS)
+	return _pickup_clip_for_step(step)
+
+
+func _pickup_clip_for_step(step: int) -> StringName:
 	if step <= 0 or not anim_player.has_animation(Player.ANIM_PICKUP_HIGH):
 		return Player.ANIM_PICKUP
 	if step >= PICKUP_BLEND_STEPS:
@@ -284,30 +545,60 @@ func _gait_clip() -> StringName:
 		_strolling = false
 	elif not _strolling and _player.locomotion_speed < STROLL_BELOW:
 		_strolling = true
+	if is_instance_valid(_player.carried_package) and anim_player.has_animation(ANIM_CARRY_WALK):
+		return ANIM_CARRY_WALK
 	return Player.ANIM_STROLL if _strolling and anim_player.has_animation(Player.ANIM_STROLL) else Player.ANIM_WALK
+
+
+func _seat_clip() -> StringName:
+	var path: NodePath = _player.seat_node_path
+	var last_name: StringName = path.get_name(path.get_name_count() - 1) if path.get_name_count() > 0 else &""
+	if last_name == &"DriverEyePoint" and anim_player.has_animation(ANIM_DRIVE):
+		return ANIM_DRIVE
+	return Player.ANIM_SIT
 
 
 ## The gaits all start on the left foot's touchdown, so switching between them
 ## keeps the cycle phase: the feet carry on instead of skating to a new step.
 func _play_clip(clip: StringName) -> void:
-	var gaits: Array[String] = [String(Player.ANIM_WALK), String(Player.ANIM_STROLL), String(Player.ANIM_RUN)]
 	var phase: float = -1.0
-	if anim_player.current_animation in gaits and String(clip) in gaits:
+	var previous := StringName(anim_player.current_animation)
+	if previous in GAIT_CLIPS and clip in GAIT_CLIPS:
 		phase = anim_player.current_animation_position / maxf(anim_player.current_animation_length, 0.001)
 	# A pickup whose height arrives late (anim_state replicated before the
 	# pick_up RPC) swaps blends in place instead of restarting the squat.
 	var pickup_time: float = -1.0
 	if _is_pickup_clip(StringName(anim_player.current_animation)) and _is_pickup_clip(clip):
 		pickup_time = anim_player.current_animation_position
-	# Idle <-> TurnInPlace blend a little longer: a step cut short settles.
-	var turn_blend: bool = clip == Player.ANIM_TURN or anim_player.current_animation == String(Player.ANIM_TURN)
-	anim_player.play(String(clip), 0.2 if phase >= 0.0 or turn_blend else 0.15)
+	anim_player.play(String(clip), transition_blend_time(previous, clip))
 	if phase >= 0.0:
 		anim_player.seek(phase * anim_player.current_animation_length)
 	elif pickup_time >= 0.0:
 		anim_player.seek(pickup_time)
 
 
-func _is_pickup_clip(clip: StringName) -> bool:
+static func transition_blend_time(from_clip: StringName, to_clip: StringName) -> float:
+	if from_clip.is_empty() or from_clip == to_clip:
+		return 0.0
+	if from_clip in GAIT_CLIPS and to_clip in GAIT_CLIPS:
+		return GAIT_BLEND
+	if to_clip in REACTION_CLIPS:
+		return REACTION_IN_BLEND
+	if from_clip in REACTION_CLIPS:
+		return REACTION_OUT_BLEND
+	if from_clip in [Player.ANIM_SIT, ANIM_DRIVE] \
+			or to_clip in [Player.ANIM_SIT, ANIM_DRIVE]:
+		return SEAT_BLEND
+	if from_clip == Player.ANIM_TURN or to_clip == Player.ANIM_TURN:
+		return TURN_BLEND
+	if _is_pickup_clip(from_clip) or _is_pickup_clip(to_clip) \
+			or from_clip == Player.ANIM_JUMP or to_clip == Player.ANIM_JUMP:
+		return ONE_SHOT_BLEND
+	if from_clip in GAIT_CLIPS or to_clip in GAIT_CLIPS:
+		return LOCOMOTION_BLEND
+	return ONE_SHOT_BLEND
+
+
+static func _is_pickup_clip(clip: StringName) -> bool:
 	return clip == Player.ANIM_PICKUP or clip == Player.ANIM_PICKUP_HIGH \
 			or String(clip).begins_with(String(PICKUP_BLEND_LIBRARY) + "/")

@@ -8,7 +8,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-1601 | Tramos de montaña: subida, bajada, curva cerrada, cornisa | constructor-tramos | xhigh | ruta de 2-5 min generada |
+| D-1601 | Tramos de montaña: subida, bajada, curva cerrada, cornisa | constructor-tramos | xhigh | tramos de 2-5 min sobre aristas del grafo fijo (revisión D-0140) |
 | D-1602 | Pendiente afecta al vehículo (fuerza, frenado) y a la carga (se desliza) | constructor-camion | high | medición de carga en subida |
 | D-1603 | Cornisa con caída: vehículo que se cae reaparece con daño | constructor-tramos | high | test |
 | D-1604 | Desprendimiento de rocas (peligro con aviso) (incluye D-1736, fusión de D-0112) | constructor-tramos | medium | test |

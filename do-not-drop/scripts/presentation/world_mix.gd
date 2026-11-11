@@ -20,6 +20,7 @@ extends RefCounted
 ##   music    loop RMS       -24 dBFS   the depot's radio (Music bus)
 ##   machine  loop RMS       -40 dBFS   the forklift's engine going back and forth
 ##   repeat   loudest 100 ms -30 dBFS   the forklift's reverse beep, over and over
+##   foley    loudest 100 ms -24 dBFS   paper and other close, dry handling sounds (N-606.4a)
 ## (The last two were "ambient" and "signal" at first, and the depot got
 ## grating: a sound that never stops sits well under one that calls once.)
 ##
@@ -34,6 +35,15 @@ const CLUTTER_DB: float = -26.0
 
 # The crew (player_sprint.gd): a footfall while running, "detail" class.
 const FOOTSTEP_DB: float = -20.0
+## Elastic gel one-shots sit under package/trap signals; S-311.98 routes them
+## through Interior/Exterior and changes pitch, without changing this base.
+const GEL_FOLEY_DB: float = -18.0
+## Reaction babble is deliberately below the -18 dBFS trap cues; ping
+## callouts keep CALLOUT_VOICE_DB because they are explicit player signals.
+const GEL_VOICE_DB: float = -12.0
+## Each player's short positional dance loop is normalized to -18 dB RMS;
+## -6 lands on the music target before distance attenuation and the Music slider.
+const GEL_DANCE_MUSIC_DB: float = -6.0
 
 # Outdoors (route.gd, route_sky.gd).
 ## The wind, the distant road, the crickets and the dog's bark are
@@ -81,6 +91,17 @@ const TRAIN_CHUG_DB: float = -6.0
 ## self-normalises like the doorbell, so this is the "signal" target minus that.
 const CALLOUT_VOICE_DB: float = -6.0
 
+# The next-day newspaper scene (newspaper_director.gd, N-606.4a). Every
+# one self-normalises to SynthAudioNewspaper.STREAM_LOUDEST_DB (-12): the rooster,
+# the hawker's hit and the spit are "signal" (-18), the little birds "nature"
+# (-24), the paper and the page "foley" (-24).
+const NEWSPAPER_ROOSTER_DB: float = -6.0
+const NEWSPAPER_CHIRPS_DB: float = -12.0
+const NEWSPAPER_EXTRA_DB: float = -6.0
+const NEWSPAPER_PAPER_DB: float = -12.0
+const NEWSPAPER_PAGE_DB: float = -12.0
+const NEWSPAPER_SPIT_DB: float = -6.0
+
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
 ## The radio plays mus_depot_radio_loop.ogg (N-403, tools/audio/compose_music.py),
 ## measured in assets/audio/music/loudness.json: -19.4 dBFS RMS, -4.5 dB to -24.
@@ -90,6 +111,10 @@ const FORKLIFT_BEEP_DB: float = -17.5
 ## -40, same reasoning as the truck's own ENGINE_DB is engine_loop()'s raw level.
 const FORKLIFT_ENGINE_DB: float = -24.0
 const ROLLER_DOOR_DB: float = -1.0
+## The shed forklift (forklift_cues.gd, D-0606.c3): the same engine loop as the depot's, and the hydraulic
+## pump (self-normalised to -16 like it) 1 dB louder as it only runs while the forks move.
+const SHED_FORKLIFT_ENGINE_DB: float = -24.0
+const SHED_FORKLIFT_HYDRAULIC_DB: float = -23.0
 
 # The river under the narrow bridge (narrow_bridge_segment.gd). Positioned
 # 3D, so this is its level at the player's unit_size, same as the crossing

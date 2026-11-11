@@ -178,10 +178,10 @@ static func _stations() -> Dictionary:
 
 func _check_helpers() -> void:
 	_expect(CompanyNet.hands_location(7) == &"hands:7", "A peer's hands are hands:<peer>")
-	_expect(CompanyNet.product_exists(&"hen") and not CompanyNet.product_exists(&"unicorn"),
+	_expect(CompanyAsk.product_exists(&"hen") and not CompanyAsk.product_exists(&"unicorn"),
 		"Product ids are checked against data/products/")
-	_expect(not CompanyNet.product_exists(&"../products/hen"), "A path is never a product id")
-	_expect(not CompanyNet.product_exists(&"HEN") and not CompanyNet.product_exists(&"hen.tres"),
+	_expect(not CompanyAsk.product_exists(&"../products/hen"), "A path is never a product id")
+	_expect(not CompanyAsk.product_exists(&"HEN") and not CompanyAsk.product_exists(&"hen.tres"),
 		"A product id matches the catalog's file name exactly (case included, no extension)")
 	_expect(CompanyNet.within_reach(Vector3.ZERO, Vector3(4.0, 0.0, 0.0))
 		and not CompanyNet.within_reach(Vector3.ZERO, Vector3(5.0, 0.0, 0.0))

@@ -16,7 +16,7 @@
 | D-1307 | Bajar con la carga al muelle y caminar/carrito a la casa | constructor-jugador | high | test |
 | D-1308 | Caer al agua: jugador nada, paquete flota o se hunde según embalaje | constructor-jugador | high | test de los dos casos |
 | D-1309 | Rescate de paquete en el agua (bichero, red) | constructor-jugador | medium | test |
-| D-1310 | Generación del archipiélago por semilla (islas, muelles, casas) | constructor-tramos | xhigh | 3 semillas distintas con capturas |
+| D-1310 | Islas fijas de `mapa.md`; casas y muelles por semilla (revisión D-0140: el trazado es fijo) | constructor-tramos | high | 3 semillas distintas con capturas |
 | D-1311 | Navegación: boyas y faros como guía (como el GPS) | constructor-mundo | medium | test |
 | D-1312 | Límite del mapa en agua (corriente que devuelve) | constructor-mundo | medium | test |
 | ~~D-1313~~ | ~~Distrito Puerto en tierra (grúas, contenedores) — ver D-1535~~ **Fusionada en D-1535 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | escena cargable |

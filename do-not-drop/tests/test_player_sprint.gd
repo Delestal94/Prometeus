@@ -18,14 +18,16 @@ extends SceneTree
 ##   a remote jog (Walk above walking pace) counts as running;
 ## - PlayerAnimator: Run picked with hysteresis, plays "Run" if the library has
 ##   it and Walk sped up if not; the other peer sees the same state
-##   (anim_state / locomotion_speed are replicated) and hears the footfalls;
+##   (anim_state / anim_clip / locomotion_speed are replicated) and hears the footfalls;
 ## - the real character (sm_char_player_rounded.glb) ships its own looping "Run"
-##   clip (N-115.3), played at speed / 6 m/s, never the Walk fallback.
+##   clip (N-115.3), played at its measured proportion-aware gait rate, never
+##   the Walk fallback.
 
 const Sprint = preload("res://scripts/gameplay/player/player_sprint.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
 const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
+const MotionFit = preload("res://scripts/gameplay/player/gel/gel_animation_fit.gd")
 const TRAP_KINDS: Array[String] = ["fragile", "balance", "liquid", "noisy", "explosive", "hostile", "growing_weight"]
 
 var _failures: int = 0
@@ -136,6 +138,18 @@ func _test_no_running_seated_or_on_a_moving_truck(level: Node) -> void:
 	vehicle.call(&"set_door_open", &"cab_left", true)
 	driver_seat.interact(player)
 	_expect(not player.seat_node_path.is_empty() and not sprint.wants_run(forward), "Nobody runs while driving")
+	# The pace cap a forklift sets on its driver (D-0606.c2): no run and walking slowed to the cap, gone with the meta.
+	player.seat_node_path = NodePath()
+	player._seated = false
+	_expect(sprint.wants_run(forward), "Without the cap the sprint is a run again")
+	player.set_meta(Sprint.PACE_CAP_META, 2.2)
+	_expect(not sprint.wants_run(forward) and not sprint.can_run(), "With a pace cap nobody runs")
+	_expect(not sprint.can_jump(), "... nor jumps")
+	var capped: float = sprint.ground_speed(forward)
+	_expect(is_equal_approx(capped, 2.2), "The capped ground speed is the cap, not 6 or 3.6 (got %s)" % capped)
+	player.remove_meta(Sprint.PACE_CAP_META)
+	_expect(is_equal_approx(sprint.ground_speed(forward), 6.0), "Taking the cap off gives the run back")
+	_expect(sprint.can_jump(), "... and the jump")
 
 
 # --- Steps shake the box -----------------------------------------------------------------------
@@ -331,9 +345,14 @@ func _test_animator_picks_run_or_the_fallback(level: Node) -> void:
 	player.locomotion_speed = 6.0
 	player.seat_node_path = NodePath()
 	var with_run: AnimationPlayer = _fake_animation_player(true)
-	PlayerAnimator.new(player, with_run, null).animate()
+	var with_run_animator := PlayerAnimator.new(player, with_run, null)
+	with_run_animator.animate()
 	_expect(with_run.current_animation == "Run", "With a Run clip in the library the runner plays Run")
-	_expect(is_equal_approx(with_run.speed_scale, 1.0), "...at the authored pace (scale %s)" % with_run.speed_scale)
+	var expected_run_scale: float = MotionFit.gait_speed_scale(
+		6.0, PlayerAnimator.RUN_AUTHORED_SPEED, with_run_animator.leg_length_factor(),
+		PlayerAnimator.RUN_MIN_SCALE, 1.3)
+	_expect(is_equal_approx(with_run.speed_scale, expected_run_scale),
+		"...at the calibrated authored pace (scale %s)" % with_run.speed_scale)
 	var without_run: AnimationPlayer = _fake_animation_player(false)
 	PlayerAnimator.new(player, without_run, null).animate()
 	_expect(without_run.current_animation == "Walk", "Without a Run clip Walk plays instead")
@@ -365,8 +384,12 @@ func _test_character_library_has_a_looping_run(level: Node) -> void:
 		player.animator.animate()
 		_expect(playing.current_animation == "Run", "At %.1f m/s the runner plays Run, not Walk (got %s)" % [
 				pace, playing.current_animation])
-		_expect(is_equal_approx(playing.speed_scale, pace / PlayerAnimator.RUN_AUTHORED_SPEED),
-				"...at speed / 6 m/s so the feet don't skate (%.1f m/s: x%.3f)" % [pace, playing.speed_scale])
+		var expected: float = MotionFit.gait_speed_scale(
+			pace, PlayerAnimator.RUN_AUTHORED_SPEED, player.animator.leg_length_factor(),
+			PlayerAnimator.RUN_MIN_SCALE, 1.3)
+		_expect(is_equal_approx(playing.speed_scale, expected),
+				"...at the calibrated gait rate so the feet don't skate (%.1f m/s: x%.3f)" \
+				% [pace, playing.speed_scale])
 
 
 func _test_other_peer_sees_the_run(level: Node) -> void:
@@ -377,8 +400,9 @@ func _test_other_peer_sees_the_run(level: Node) -> void:
 	_expect(not remote.is_local(), "The second crew member belongs to another peer")
 	var sprint: Node = remote.get_node(^"Sprint")
 	_expect(not sprint.running, "A standing peer is not running")
-	# What the owner replicates: anim_state Run and the pace.
+	# What the owner replicates: anim_state, the resolved clip and the pace.
 	remote.anim_state = Player.ANIM_RUN
+	remote.anim_clip = Player.ANIM_RUN
 	remote.locomotion_speed = 6.0
 	var footsteps_before: int = sprint.steps_taken
 	for i: int in 90:
@@ -388,10 +412,14 @@ func _test_other_peer_sees_the_run(level: Node) -> void:
 	_expect(footsteps in [4, 5], "Its footfalls come at the running cadence: 4-5 in 1.5 s (got %d)" % footsteps)
 	await process_frame
 	var playing: AnimationPlayer = remote.animator.anim_player
-	_expect(playing.current_animation == "Run" and is_equal_approx(playing.speed_scale, 1.0),
+	var expected: float = MotionFit.gait_speed_scale(
+		6.0, PlayerAnimator.RUN_AUTHORED_SPEED, remote.animator.leg_length_factor(),
+		PlayerAnimator.RUN_MIN_SCALE, 1.3)
+	_expect(playing.current_animation == "Run" and is_equal_approx(playing.speed_scale, expected),
 			"...and sees the character's Run clip at its authored pace (got %s x%.2f)" % [
 			playing.current_animation, playing.speed_scale])
 	remote.anim_state = Player.ANIM_WALK
+	remote.anim_clip = Player.ANIM_WALK
 	remote.locomotion_speed = Player.WALK_SPEED
 	await physics_frame
 	await physics_frame
@@ -400,8 +428,9 @@ func _test_other_peer_sees_the_run(level: Node) -> void:
 	var replicated: Array[String] = []
 	for path: NodePath in synchronizer.replication_config.get_properties():
 		replicated.append(String(path))
-	_expect(replicated.has(".:anim_state") and replicated.has(".:locomotion_speed"),
-			"The run travels as anim_state plus the pace, which the synchronizer replicates (got %s)" % [replicated])
+	_expect(replicated.has(".:anim_state") and replicated.has(".:anim_clip") \
+			and replicated.has(".:locomotion_speed"),
+			"The run travels as state, exact clip and pace through the synchronizer (got %s)" % [replicated])
 	var footstep: AudioStreamWAV = SynthAudioSteps.footstep()
 	_expect(footstep.data.size() > 1000 and footstep == SynthAudioSteps.footstep(),
 			"The footfall is a shared synthesized sound")

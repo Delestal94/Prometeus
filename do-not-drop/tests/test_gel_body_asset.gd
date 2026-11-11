@@ -2,7 +2,7 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
 ## three triangle budgets, eleven zero-default working morphs, twenty-six named bones,
-## nine animation durations, finite vertex/UV data, normalized four-slot skinning,
+## forty-nine animation durations, finite vertex/UV data, normalized four-slot skinning,
 ## zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
 
@@ -16,9 +16,27 @@ const JIGGLE_BONES: Array[String] = [
 	"jiggle_head", "jiggle_belly", "jiggle_forearm.L", "jiggle_forearm.R",
 	"jiggle_calf.L", "jiggle_calf.R",
 ]
+const PURE_GEL_CLIPS: Array[String] = [
+	"Pancake", "GumStretch", "BallBounce", "SplitAndJoin", "ColdShiver", "Inflate",
+	"Flan", "IdleBounce",
+]
+const SCALE_GEL_CLIPS: Array[String] = [
+	"Pancake", "GumStretch", "BallBounce", "Inflate", "Flan", "IdleBounce",
+]
 const DURATIONS: Dictionary = {
 	"Idle": 6.0, "Walk": 1.0 / 3.0, "Stroll": 0.6, "Run": 1.0 / 3.0, "Jump": 1.6,
 	"PickUpPackage": 1.6, "PickUpHigh": 1.6, "Sit": 4.0, "TurnInPlace": 0.8,
+	"CarryWalk": 1.0 / 3.0, "ThrowPackage": 1.0, "DropPackage": 0.9, "Drive": 2.0,
+	"EnterTruck": 1.2, "ExitTruck": 1.2, "RingDoorbell": 1.1,
+	"Stumble": 1.2, "Slip": 1.3, "Pushed": 0.9, "BoxHit": 0.8,
+	"Scared": 1.0, "Dizzy": 2.4, "ShakeOffWater": 1.8,
+	"Wave": 2.2, "Clap": 2.4, "Facepalm": 2.2, "Shrug": 2.0,
+	"Point": 2.0, "ThumbsUp": 2.0, "MeltAndReturn": 3.0, "ShakeLikeDog": 1.8,
+	"Pancake": 2.4, "GumStretch": 2.8, "BallBounce": 2.4,
+	"SplitAndJoin": 3.2, "ColdShiver": 2.0, "Inflate": 2.8,
+	"InspectHand": 3.4, "BlowBubble": 3.2, "IdleBounce": 2.6,
+	"SimpleStep": 2.4, "Robot": 2.4, "Disco": 2.8, "FloorWorm": 3.2,
+	"Headbang": 1.6, "VictoryDance": 2.8, "Defeat": 3.0, "Flan": 2.4, "Conga": 2.4,
 }
 var _failures: int = 0
 
@@ -58,6 +76,7 @@ func _run() -> void:
 					var duration: float = player.get_animation(clip).length
 					_expect(absf(duration - float(DURATIONS[clip])) < 0.02,
 						"LOD%d %s duration matches source (got %.3f)" % [lod, clip, duration])
+			_check_clean_clips(player, lod)
 		var body: MeshInstance3D = _find(model, "MeshInstance3D") as MeshInstance3D
 		_expect(body != null and body.mesh != null, "LOD%d has body geometry (got %s)" % [lod, body])
 		if body != null and body.mesh != null:
@@ -66,6 +85,47 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: isolated gel body LODs, morphs, rig, clips and geometry")
 	quit(_failures)
+
+
+func _check_clean_clips(player: AnimationPlayer, lod: int) -> void:
+	var secondary_tracks: Array[String] = []
+	var unexpected_scale_tracks: Array[String] = []
+	var pure_clips_with_scale: Dictionary = {}
+	for clip: String in DURATIONS:
+		if not player.has_animation(clip):
+			continue
+		var animation: Animation = player.get_animation(clip)
+		for track: int in animation.get_track_count():
+			var path: String = String(animation.track_get_path(track))
+			for bone: String in JIGGLE_BONES:
+				if path.contains(bone):
+					secondary_tracks.append("%s:%s" % [clip, path])
+			if animation.track_get_type(track) == Animation.TYPE_SCALE_3D \
+					and _scale_track_changes(animation, track):
+				if clip in PURE_GEL_CLIPS:
+					pure_clips_with_scale[clip] = true
+				else:
+					unexpected_scale_tracks.append("%s:%s" % [clip, path])
+	_expect(secondary_tracks.is_empty(),
+		"LOD%d leaves all six jelly bones to SpringBoneSimulator3D (got %s)"
+		% [lod, secondary_tracks.slice(0, 3)])
+	_expect(unexpected_scale_tracks.is_empty(),
+		"LOD%d restricts animated scale tracks to deformable gel clips (got %d: %s)"
+		% [lod, unexpected_scale_tracks.size(), unexpected_scale_tracks.slice(0, 3)])
+	for clip: String in SCALE_GEL_CLIPS:
+		_expect(pure_clips_with_scale.has(clip),
+			"LOD%d %s visibly uses squash/stretch scale" % [lod, clip])
+
+
+func _scale_track_changes(animation: Animation, track: int) -> bool:
+	if animation.track_get_key_count(track) < 2:
+		return false
+	var first: Vector3 = animation.track_get_key_value(track, 0)
+	for key: int in range(1, animation.track_get_key_count(track)):
+		var value: Vector3 = animation.track_get_key_value(track, key)
+		if not value.is_equal_approx(first):
+			return true
+	return false
 
 
 func _check_mesh(body: MeshInstance3D, lod: int) -> void:

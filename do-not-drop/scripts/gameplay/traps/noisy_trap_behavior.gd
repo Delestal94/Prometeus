@@ -34,12 +34,14 @@ var _box: Node
 func on_setup(package: Node, config: Dictionary) -> void:
 	super.on_setup(package, config)
 	_agitation_max = maxf(float(config.get("agitation_max", 100.0)), 1.0)
-	_gain_per_shake = float(config.get("agitation_gain_per_shake", 25.0))
+	# Severity (D-0710): every shake and every running step riles it more; calming it is the same.
+	_gain_per_shake = float(config.get("agitation_gain_per_shake", 25.0)) * severity
 	_shake_threshold = float(config.get("shake_threshold", 7.0))
 	_calm_rate = float(config.get("agitation_decay_rate", 30.0))
 	_passive_decay = float(config.get("agitation_passive_decay", 5.0))
 	_at_risk_at = float(config.get("at_risk_at", 60.0))
-	_fail_seconds = float(config.get("fail_seconds_at_max", 2.0))
+	# ...and once fully worked up it gets loose sooner.
+	_fail_seconds = float(config.get("fail_seconds_at_max", 2.0)) / severity
 	_radio_calm_extra_decay = float(config.get("radio_calm_extra_decay", 0.0))
 	_radio_loud_gain_mult = float(config.get("radio_loud_gain_mult", 1.0))
 	_radio_loud_passive_mult = float(config.get("radio_loud_passive_mult", 1.0))
@@ -93,7 +95,7 @@ func on_carried_step(strength: float) -> float:
 	if _escaped:
 		return 0.0
 	var before: float = integrity
-	agitation = clampf(agitation + RUN_STEP_AGITATION * strength, 0.0, _agitation_max)
+	agitation = clampf(agitation + RUN_STEP_AGITATION * strength * severity, 0.0, _agitation_max)
 	_sync_integrity()
 	return maxf(before - integrity, 0.0)
 

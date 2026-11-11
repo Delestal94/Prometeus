@@ -96,6 +96,8 @@ WORLD_MOOD_SKY_CLEAR_NIGHT,despejada,clear
 WORLD_HOUSE_DELIVERY,ENTREGA,DELIVERY
 WORLD_GPS_HOUSE_CODE,CASA %d · %s,HOUSE %d · %s
 WORLD_GPS_PARK,BAHÍA %d,BAY %d
+WORLD_GPS_SHED,GALPÓN,SHED
+WORLD_GPS_ETA,~%d MIN,~%d MIN
 WORLD_GPS_BEST,RÉCORD %s,BEST %s
 WORLD_GPS_NO_BEST,SIN RÉCORD,NO RECORD
 WORLD_GPS_CODE,%s · %d s,%s · %d s
@@ -365,6 +367,7 @@ WORLD_GATE_NEEDS_EQUIPMENT,NO PASA SIN EQUIPO: %s,NO ENTRY WITHOUT GEAR: %s
 WORLD_DISPATCH_NEEDS_VEHICLE,No entra: necesita %s,Can't load: needs %s
 WORLD_DISPATCH_NEEDS_MILESTONE,No entra: falta el hito %s,Can't load: milestone %s missing
 WORLD_DISPATCH_NEEDS_EQUIPMENT,No entra: falta el equipo %s,Can't load: gear %s missing
+WORLD_DISPATCH_FAR_LIMIT,No sale: ya hay %d vehículos en la calle,Can't leave: %d vehicles are already out
 WORLD_LOAD_NO_SLOTS,No entra: el vehículo lleva %s cajas,Can't load: vehicle holds %s boxes
 WORLD_LOAD_NO_WEIGHT,No entra: pasa los %s kg del vehículo,Can't load: over the vehicle's %s kg
 WORLD_STREET_CENTRO,Calle Central,Central Street
@@ -391,17 +394,90 @@ WORLD_SHED_ZONE_RECEPTION,RECEPCIÓN,RECEIVING
 WORLD_SHED_ZONE_STORAGE,ESTANTES,SHELVING
 WORLD_SHED_ZONE_ASSEMBLY,ARMADO,PACKING
 WORLD_SHED_ZONE_DISPATCH,DESPACHO,DISPATCH
+WORLD_SHED_SIGN_SMALL,GALPÓN,SHED
+WORLD_SHED_SIGN_MEDIUM,GALPÓN GRANDE,BIG SHED
+WORLD_SHED_SIGN_LARGE,CENTRO DE DISTRIBUCIÓN,DISTRIBUTION CENTER
+WORLD_SHED_SIGN_LOGISTICS,CENTRO LOGÍSTICO,LOGISTICS CENTER
 WORLD_SHED_USE_SHELF,Usar estante,Use shelf
 WORLD_SHED_USE_TABLE,Usar mesa de armado,Use packing table
 WORLD_SHED_USE_DISPATCH,Usar despacho,Use dispatch
+WORLD_SHED_USE_CART,Cargar o descargar el carrito,Load or unload the cart
+WORLD_SHED_PUSH_CART,Empujar el carrito,Push the cart
+WORLD_SHED_GRIP_CART,Agarrar o soltar el carrito,Grab or let go of the cart
+WORLD_SHED_PUSH_BLOCKED,No pasa: no hay lugar ahí,It will not go: no room there
+WORLD_SHED_TAKE_FROM_CART,Tomar %s del carrito,Take %s from the cart
+WORLD_SHED_RESTOCK_FROM_CART,Devolver al estante lo del carrito,Put the cart's stock back on its shelf
+WORLD_SHED_USE_JACK,Subir o bajar el palet,Pick up or put down the pallet
+WORLD_SHED_PUSH_JACK,Empujar la zorra,Push the pallet jack
+WORLD_SHED_BOARD_FORKLIFT,Subir al autoelevador,Get on the forklift
+WORLD_FORKLIFT_DRIVING,"%s: tomar o dejar el palet · %s / %s: mástil · %s: bajar","%s: take or leave the pallet · %s / %s: mast · %s: get off"
+WORLD_FORKLIFT_REFUSED,No se puede hacer eso acá,Can't do that here
+WORLD_FORKLIFT_NO_PALLET,No hay un palet a esa altura,There is no pallet at this height
+WORLD_FORKLIFT_NO_ROOM,No hay lugar para apoyar el palet acá,No room to set the pallet down here
+WORLD_FORKLIFT_NO_RACK,Ningún hueco de estante a esta altura,No rack slot at this height
+WORLD_FORKLIFT_HANDS_FULL,La zorra ya lleva el palet,The pallet jack already carries the pallet
+WORLD_FORKLIFT_TRUCK_AWAY,El camión no está en el portón,The truck is not at the gate
+WORLD_FORKLIFT_NO_PARK,No hay lugar para bajarte acá: alejate de estantes y muros,No room to get off here: move away from shelves and walls
+WORLD_SHED_USE_SUPPLIER,Pedir al proveedor,Order from the supplier
 WORLD_PLACEABLE_ASSEMBLY_TABLE,Mesa de armado,Packing table
 WORLD_PLACEABLE_SHELF,Estante,Shelf
 WORLD_PLACEABLE_FRIDGE,Heladera,Fridge
 WORLD_PLACEABLE_DISPATCH_ZONE,Zona de despacho,Dispatch zone
 WORLD_PACKTUT_BOX,Tomá una caja del dispensador,Take a box from the dispenser
 WORLD_PACKTUT_PRODUCTS,Poné en la caja los productos de la hoja de pedido,Put the products on the order sheet into the box
-WORLD_PACKTUT_SEALS,Pegá los sellos que pide el pedido,Stick the seals the order asks for
+WORLD_PACKTUT_SEALS,Pegá los sellos que pide el pedido,Put on the stamps the order asks for
 WORLD_PACKTUT_LABEL,Pegá la etiqueta de envío,Stick the shipping label
 WORLD_PACKTUT_DISPATCH,Cerrá la caja con cinta y dejala en la zona de despacho,Tape the box shut and leave it in the dispatch zone
 WORLD_PACKTUT_TAPE,Cerrá la caja con cinta,Tape the box shut
 WORLD_PACKTUT_DONE,¡Listo! Tu primera caja salió,Done! Your first box is on its way
+WORLD_SHOP_UPGRADE_1,Mejora 1: segunda mesa y estantes,Upgrade 1: second table and shelves
+WORLD_SHOP_LABEL_READER,Lectora de etiquetas,Label reader
+WORLD_SHOP_CONVEYOR,Cinta transportadora,Conveyor belt
+WORLD_SHOP_PACKER,Embaladora,Packing machine
+WORLD_SHOP_EXPANSION_1,Ampliación del galpón 1,Shed expansion 1
+WORLD_SHOP_EXPANSION_2,Ampliación del galpón 2,Shed expansion 2
+WORLD_SHOP_EXPANSION_3,Ampliación del galpón 3,Shed expansion 3
+WORLD_EMPLOYEE_NOVICE,Empleado novato,Novice employee
+WORLD_EMPLOYEE_REGULAR,Empleado normal,Regular employee
+WORLD_EMPLOYEE_EXPERT,Empleado experto,Expert employee
+WORLD_SHOP_VEHICLE_VAN,Camioneta extra,Extra van
+WORLD_SHOP_VEHICLE_BIKE,Bici,Bike
+WORLD_SHOP_VEHICLE_CART,Carrito,Cart
+WORLD_SHOP_VEHICLE_OFFROAD,Camioneta 4x4,4x4 truck
+WORLD_SHOP_VEHICLE_BOAT,Lancha,Boat
+WORLD_SHOP_VEHICLE_PLANE,Avioneta,Light plane
+WORLD_SHOP_NO_COMPANY,No hay empresa,No company
+WORLD_SHOP_UNKNOWN_ITEM,Ese ítem no existe,That item does not exist
+WORLD_SHOP_ALREADY_OWNED,Ya lo tenés,Already owned
+WORLD_SHOP_NEEDS_ITEM,Primero hace falta %s,Needs %s first
+WORLD_SHOP_WRONG_STAGE,Falta la ampliación anterior (etapa %s),The previous expansion is missing (stage %s)
+WORLD_SHOP_CANNOT_AFFORD,Faltan monedas: cuesta %s y hay %s,Not enough money: costs %s and you have %s
+WORLD_SHOP_FLEET_FULL,El playón no tiene lugar para más de %s vehículos,The yard has no room for more than %s vehicles
+WORLD_DOOR_CHEER_1,¡Justo lo que pedí! Gracias,Just what I ordered! Thanks
+WORLD_DOOR_CHEER_2,¡Qué rápido! Muy bien,That was quick! Well done
+WORLD_DOOR_CHEER_3,Todo en orden. ¡Gracias!,All in order. Thank you!
+WORLD_DOOR_SHRUG_1,Bueno... llegó,Well... it arrived
+WORLD_DOOR_SHRUG_2,Podría haber sido mejor,It could have been better
+WORLD_TOW_DONE,La grúa te llevó al playón (-$%d),The tow truck took you to the yard (-$%d)
+WORLD_TOW_NO_TRIP,No hay salida abierta para este vehículo,No open trip for this vehicle
+WORLD_TOW_NOT_STUCK,El vehículo todavía anda: volvé manejando,The vehicle still runs: drive back
+WORLD_TOW_NOT_YOURS,Otro maneja esa camioneta: que lo pida quien va al volante,Someone else drives that van: the driver has to ask
+WORLD_TOW_OFFER,Volver con grúa (-$%d),Tow home (-$%d)
+WORLD_TOW_NO_MONEY,No alcanza para la grúa: hacen falta $%d,Not enough money for the tow: it costs $%d
+WORLD_SPOILED,Se echó a perder: %d %s,Spoiled: %d %s
+WORLD_ZONE_PARQUE_INDUSTRIAL,Parque Industrial,Industrial Park
+WORLD_ZONE_CENTRO,Barrio Centro,Downtown
+WORLD_ZONE_SUBURBIO,Suburbio,Suburbs
+WORLD_ZONE_CAMPO,Campo,Countryside
+WORLD_ZONE_PUERTO,Puerto,Harbor
+WORLD_ZONE_ISLAS,Islas,Islands
+WORLD_ZONE_MONTANA,Montaña,Mountains
+WORLD_ZONE_NIEVE,Nieve,Snowfields
+WORLD_ZONE_VOLCAN,Volcán,Volcano
+WORLD_VEHICLE_VAN_CLASSIC,Camioneta clásica,Classic van
+WORLD_VEHICLE_VAN_AGILE,Camioneta ágil,Agile van
+WORLD_VEHICLE_VAN_VINTAGE,Camioneta vintage,Vintage van
+WORLD_INDICATOR_SUPPLIES,Faltan insumos,Needs supplies
+WORLD_INDICATOR_LATE,%d atrasados,%d late
+WORLD_VOICE_BOSS,Jefa,Boss
+WORLD_VOICE_BOSS_DAY_OPEN,Arrancamos el día %d. ¡A trabajar!,Day %d is on. Let's get to work!

@@ -2,6 +2,8 @@
 
 Una palabra por concepto en los textos del juego (`translations/strings_ui.csv`, `strings_world.csv`).
 `test_ui_translations` (`_check_glossary`) falla si reaparecen los términos descartados.
+Los términos del modo Empresa (pedido, remito, palet, galpón, hito…) están en
+[`expansion-distritos/diseno/glosario.md`](expansion-distritos/diseno/glosario.md).
 
 | Concepto | ES | EN | Uso | Descartado |
 |---|---|---|---|---|

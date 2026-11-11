@@ -17,8 +17,8 @@ alcanza, PR "(partial)" con lo hecho y las subtareas abiertas.
 | Carril | Modelo del trigger | Grupos (en orden) | Agentes principales |
 |---|---|---|---|
 | 1 · Arquitectura y diseño | Opus 5.5 | 02, 01 | `Plan`, `constructor-progresion`, `critico-diseno`, `documentador` |
-| 2 · Galpón y stock | Sonnet 5.5 | 09, 06 (después 10, 11) | `constructor-mundo`, `constructor-jugador`, `constructor-camion` (autoelevador) |
-| 3 · Armado y pedidos | Sonnet 5.5 | 07, 08 | `constructor-trampas`, `constructor-jugador`, `constructor-progresion`, `constructor-ui` |
+| 2 · Galpón y stock | Sonnet 5.5 | 09, 06 (después 10, 11) | `constructor-negocio`, `constructor-mundo`, `constructor-jugador`, `constructor-camion` (autoelevador) |
+| 3 · Armado y pedidos | Sonnet 5.5 | 07, 08 | `constructor-negocio`, `constructor-trampas`, `constructor-jugador`, `constructor-progresion`, `constructor-ui` |
 | 4 · Mapa, salidas y economía | Sonnet 5.5 | 03, 05 (después 15, 04) | `constructor-tramos`, `constructor-mundo`, `constructor-progresion`, `constructor-ui` |
 | 5 · Red, CI y calidad | Opus 5.5 | 20 (después 12-14 lo de red) | `constructor-red`, `auditor-red`, `escritor-tests`, `perfilador-rendimiento` |
 
@@ -49,10 +49,13 @@ Fuente: `docs/expansion-distritos/detalle/*.md` (tareas con detalle) y las tabla
 1. En los grupos de tu carril, en orden, la **primera** tarea que cumple todo esto:
    - no está `[x]` ni `⚠ Bloqueada` ni tachada;
    - no tiene PR abierto ni rama `origin/exp/<ID>-*`;
+   - no está en la sección "Expansión: tareas asignadas a Slatex" de `docs/tareas-slatex.md` (las hace él;
+     si una tuya depende de una de esas, elegí otra);
    - todas sus `Depende de` están `[x]`. Las decididas cuentan como hechas, y una dependencia de otro
      carril sin hacer **no** se espera: se elige otra;
-   - es de la fase en curso. F0 y F1 hasta que D-0111 esté `[x]`; después F2, F3, F4 y F5 en orden
-     (README de la expansión). Los bloques Núcleo van antes que Ampliación y Pulido.
+   - es de la fase en curso. F0 y F1 hasta que D-2016 esté `[x]` (con D-2016.3 y D-2016.4: es el criterio de cierre de
+     D-0111, revisión D-0140); antes, las tareas de `detalle/F2-*` no se toman. Después F2, F3, F4 y F5 en
+     orden (README de la expansión). Los bloques Núcleo van antes que Ampliación y Pulido.
 2. **Tu carril no tiene nada tomable** → tomá la primera tomable de cualquier carril, siguiendo
    "Orden recomendado" de `detalle/README.md`.
 3. **No hay nada tomable en ningún carril** → detallá. Tomá las 5 tareas siguientes de tu carril que
@@ -91,8 +94,9 @@ Una reserva `exp/` abandonada se retoma con la regla 15 del README; nunca se bor
    que el usuario nombró (fila 5 de `2026-10-04-expansion-decisiones-delegadas.md`), no gastar plata
    real, no tocar precio, fecha ni página de Steam.
 3. **Construí** como `construccion.md` §3, con la tabla de agentes de allá. La carpeta
-   `scripts/gameplay/business/` es de `constructor-negocio` cuando exista (D-0141); hasta entonces,
-   `constructor-mundo` para el galpón y `constructor-progresion` para stock, pedidos y plata.
+   `scripts/gameplay/business/` (galpón, stock, armado, empleados, automatización) es de
+   `constructor-negocio` (D-0141); la plata, los precios y el libro de pedidos siguen con
+   `constructor-progresion`.
 4. **Test** nuevo o ampliado (skill `nuevo-test`) que compruebe lo que dice "Hecho cuando". Correlo con
    `ejecutor-tests` y el filtro `company` (o el del área). Nunca la batería entera.
 5. **Red:** `auditor-red` antes del PR. **Zona compartida o archivos de Slatex:** `revisor-gdscript` y
@@ -119,3 +123,5 @@ van al cuerpo del PR, para la auditoría.
    - las decisiones tomadas;
    - el link a `revisar/<ID>.md` si existe.
 3. Si un PR de otro carril cambió algo que tu tarea usa, rebase antes de pedir el merge.
+4. Si tu PR baja más de 10 % una situación del presupuesto de D-2012 (contra la "Serie del presupuesto" de
+   `docs/rendimiento-pc.md`), lleva "(perf)" en el título y una tarea.

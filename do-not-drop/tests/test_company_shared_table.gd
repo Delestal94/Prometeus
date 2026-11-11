@@ -207,7 +207,7 @@ func _check_solo() -> void:
 	_expect(_ask(net, heard, T.TAPE, {"station": &"table_1"}) == &"", "table_1's box is taped")
 	var sealed: Dictionary = events.back()
 	var keys: Array = ["table", "order", "package_id", "node_name", "trap", "trap_intensity",
-		"contents", "absorption", "quality", "pos", "basis", "money", "minute"]
+		"contents", "absorption", "quality", "pos", "basis", "assisted", "filled", "money", "minute"]
 	_expect((sealed.keys() as Array).size() == keys.size() and sealed.has_all(keys),
 		"box_sealed carries the contract's fields plus money and minute (%s)" % [sealed.keys()])
 	_expect(sealed["package_id"] == &"box_1" and sealed["order"] == &"o1"

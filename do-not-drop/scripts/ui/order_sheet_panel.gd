@@ -6,7 +6,8 @@ class_name OrderSheetPanel
 ##
 ## Draws what OrderSheet.build() returns and nothing else, so a client shows what the host
 ## sent. Every state has a mark besides its colour ("✓" done, "○" pending, "✗" wrong), so it
-## reads without colour. A pure display: no focus, no input.
+## reads without colour. A pure display: no focus, no input; only the stamp lines take the mouse, to
+## say what their requirement asks and pays as a tooltip (CompanyTooltips, D-1908).
 
 const DONE: String = "✓"
 const PENDING: String = "○"
@@ -53,15 +54,19 @@ func refresh(sheet: Dictionary) -> void:
 		if int(extra["qty"]) > 0 and not _has_item(sheet, extra["product"]):
 			_mark(text, false, true).name = "Extra_%s" % extra["product"]
 	for req: Dictionary in sheet.get("requirements", []):
+		var tip: String = CompanyTooltips.requirement_text(CompanyTooltips.load_requirement(StringName(req["id"])))
 		for seal: Dictionary in req["seals"]:
 			var seal_name: String = _seal_name(seal["kind"])
-			_mark(tr("UI_ORDER_SHEET_SEAL") % seal_name, bool(seal["done"]), false).name = "Seal_%s" % seal["kind"]
+			var line: Label = _mark(tr("UI_ORDER_SHEET_SEAL") % seal_name, bool(seal["done"]), false)
+			line.name = "Seal_%s" % seal["kind"]
+			line.tooltip_text = tip
+			line.mouse_filter = Control.MOUSE_FILTER_PASS
 	_mark(tr("UI_ORDER_SHEET_TAPE"), bool(sheet.get("taped", false)), false).name = "Tape"
 	_mark(tr("UI_ORDER_SHEET_LABEL"), bool(sheet.get("labeled", false)), false).name = "Label"
 	var minutes: int = int(sheet.get("minutes_left", 0))
 	var late: bool = bool(sheet.get("late", false))
 	var time_text: String = tr("UI_ORDER_SHEET_LATE") % -minutes if late else tr("UI_ORDER_SHEET_LEFT") % minutes
-	UiTheme.label(_column, time_text, 15, UiTheme.RED if late else UiTheme.INK).name = "Time"
+	UiTheme.label(_column, time_text, 15, UiTheme.status(2, self) if late else UiTheme.INK).name = "Time"
 	UiTheme.label(_column, tr("UI_ORDER_SHEET_PAY") % int(sheet.get("pay", 0)), 16, UiTheme.INK, true).name = "Pay"
 	var ready: bool = bool(sheet.get("ready", false))
 	var verdict: String = tr("UI_ORDER_SHEET_READY") if ready else tr("UI_ORDER_SHEET_NOT_READY")
@@ -71,7 +76,7 @@ func refresh(sheet: Dictionary) -> void:
 ## A line with its mark in front and the colour that matches it.
 func _mark(text: String, done: bool, wrong: bool) -> Label:
 	var glyph: String = WRONG if wrong else (DONE if done else PENDING)
-	var color: Color = UiTheme.RED if wrong else (UiTheme.MINT if done else UiTheme.INK)
+	var color: Color = UiTheme.status(2, self) if wrong else (UiTheme.status(0, self) if done else UiTheme.INK)
 	return UiTheme.label(_column, "%s  %s" % [glyph, text], 16, color)
 
 

@@ -33,6 +33,10 @@ check_modules() {
 		echo "pre-push: un módulo de do-not-drop/modules/ nombra algo del juego, no se sube nada."
 		exit 1
 	fi
+	if ! "$py" "$ROOT/tools/check_docs.py"; then
+		echo "pre-push: docs sin indexar, con links rotos o con rutas que ya no existen (docs/README.md)."
+		exit 1
+	fi
 }
 
 # One file per task (docs/tareas/README.md): a task block written back into

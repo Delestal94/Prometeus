@@ -126,24 +126,25 @@ func build_fans() -> void:
 
 func build_life() -> void:
 	# The clerk behind the cage's window, facing the truck bay (+X).
-	var clerk := _worker(Vector3(-11.0, Layout.FLOOR_TOP, 5.4), -PI * 0.5, Color("2dd4a3"), [
+	var clerk := _worker(Vector3(-11.0, Layout.FLOOR_TOP, 5.4), -PI * 0.5, Color("2dd4a3"), &"delgada", [
 		tr("WORLD_DEPOT_CLERK_1"), tr("WORLD_DEPOT_CLERK_2"), tr("WORLD_DEPOT_CLERK_3")])
 	clerk.name = "Clerk"
 	await _tick()
 	# At the desk in the office on the mezzanine.
-	var dispatcher := _worker(Vector3(11.4, Layout.FLOOR_TOP + Layout.MEZZANINE_HEIGHT, 29.95), PI, Color("4cc9f0"), [
+	var dispatcher := _worker(
+		Vector3(11.4, Layout.FLOOR_TOP + Layout.MEZZANINE_HEIGHT, 29.95), PI, Color("4cc9f0"), &"flaca", [
 		tr("WORLD_DEPOT_DISPATCHER_1"), tr("WORLD_DEPOT_DISPATCHER_2")])
 	dispatcher.name = "Dispatcher"
 	await _tick()
-	var packer := _worker(Vector3(2.2, Layout.FLOOR_TOP, 28.2), 0.0, Color("ff9f1c"), [
+	var packer := _worker(Vector3(2.2, Layout.FLOOR_TOP, 28.2), 0.0, Color("ff9f1c"), &"rellena", [
 		tr("WORLD_DEPOT_PACKER_1"), tr("WORLD_DEPOT_PACKER_2"), tr("WORLD_DEPOT_PACKER_3")])
 	packer.name = "Packer"
 	await _tick()
-	var mechanic := _worker(Vector3(13.5, Layout.FLOOR_TOP, 5.2), -PI * 0.5, Color("c0392b"), [
+	var mechanic := _worker(Vector3(13.5, Layout.FLOOR_TOP, 5.2), -PI * 0.5, Color("c0392b"), &"cabezona", [
 		tr("WORLD_DEPOT_MECHANIC_1"), tr("WORLD_DEPOT_MECHANIC_2")])
 	mechanic.name = "Mechanic"
 	await _tick()
-	var walker := _worker(Vector3(-8.5, Layout.FLOOR_TOP, 25.2), 0.0, Color("ffc93c"), [
+	var walker := _worker(Vector3(-8.5, Layout.FLOOR_TOP, 25.2), 0.0, Color("ffc93c"), &"larguirucha", [
 		tr("WORLD_DEPOT_WALKER_1"), tr("WORLD_DEPOT_WALKER_2"), tr("WORLD_DEPOT_WALKER_3")])
 	walker.name = "StockWalker"
 	await _tick()
@@ -164,9 +165,16 @@ func _tick() -> void:
 		await slicer.tick()
 
 
-func _worker(at: Vector3, yaw: float, uniform: Color, lines: Array) -> DepotWorker:
+func _worker(
+	at: Vector3,
+	yaw: float,
+	uniform: Color,
+	preset_id: StringName,
+	lines: Array
+) -> DepotWorker:
 	var worker := DepotWorker.new()
 	worker.uniform = uniform
+	worker.proportion_preset = preset_id
 	worker.position = at
 	worker.rotation.y = yaw
 	worker.lines = PackedStringArray(lines)

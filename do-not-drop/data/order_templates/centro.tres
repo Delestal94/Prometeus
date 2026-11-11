@@ -1,0 +1,250 @@
+[gd_resource type="Resource" script_class="OrderTemplateSet" load_steps=43 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/order_template_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://scripts/gameplay/business/order_template.gd" id="2_tpl"]
+
+[sub_resource type="Resource" id="Resource_ce01"]
+script = ExtResource("2_tpl")
+id = &"centro_01"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce02"]
+script = ExtResource("2_tpl")
+id = &"centro_02"
+items = Array[Dictionary]([{"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce03"]
+script = ExtResource("2_tpl")
+id = &"centro_03"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce04"]
+script = ExtResource("2_tpl")
+id = &"centro_04"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ce05"]
+script = ExtResource("2_tpl")
+id = &"centro_05"
+items = Array[Dictionary]([{"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ce06"]
+script = ExtResource("2_tpl")
+id = &"centro_06"
+items = Array[Dictionary]([{"product": &"porcelain_vase", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce07"]
+script = ExtResource("2_tpl")
+id = &"centro_07"
+items = Array[Dictionary]([{"product": &"porcelain_vase", "qty": 2}])
+requirements = Array[StringName]([&"fragile", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ce08"]
+script = ExtResource("2_tpl")
+id = &"centro_08"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ce09"]
+script = ExtResource("2_tpl")
+id = &"centro_09"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 2}])
+requirements = Array[StringName]([&"urgent"])
+
+[sub_resource type="Resource" id="Resource_ce10"]
+script = ExtResource("2_tpl")
+id = &"centro_10"
+items = Array[Dictionary]([{"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce11"]
+script = ExtResource("2_tpl")
+id = &"centro_11"
+items = Array[Dictionary]([{"product": &"puppy", "qty": 2}])
+requirements = Array[StringName]([&"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce12"]
+script = ExtResource("2_tpl")
+id = &"centro_12"
+items = Array[Dictionary]([{"product": &"porcelain_vase", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ce13"]
+script = ExtResource("2_tpl")
+id = &"centro_13"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"urgent"])
+
+[sub_resource type="Resource" id="Resource_ce14"]
+script = ExtResource("2_tpl")
+id = &"centro_14"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce15"]
+script = ExtResource("2_tpl")
+id = &"centro_15"
+items = Array[Dictionary]([{"product": &"hen", "qty": 2}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce16"]
+script = ExtResource("2_tpl")
+id = &"centro_16"
+items = Array[Dictionary]([{"product": &"porcelain_vase", "qty": 1}, {"product": &"puppy", "qty": 2}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce17"]
+script = ExtResource("2_tpl")
+id = &"centro_17"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 1}, {"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce18"]
+script = ExtResource("2_tpl")
+id = &"centro_18"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"milk_canister", "qty": 2}])
+requirements = Array[StringName]([&"cold", &"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce19"]
+script = ExtResource("2_tpl")
+id = &"centro_19"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 2}, {"product": &"porcelain_vase", "qty": 2}])
+requirements = Array[StringName]([&"fragile", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ce20"]
+script = ExtResource("2_tpl")
+id = &"centro_20"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"fragile", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce21"]
+script = ExtResource("2_tpl")
+id = &"centro_21"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 2}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce22"]
+script = ExtResource("2_tpl")
+id = &"centro_22"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 2}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce23"]
+script = ExtResource("2_tpl")
+id = &"centro_23"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"hen", "qty": 2}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce24"]
+script = ExtResource("2_tpl")
+id = &"centro_24"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 2}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce25"]
+script = ExtResource("2_tpl")
+id = &"centro_25"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 2}, {"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce26"]
+script = ExtResource("2_tpl")
+id = &"centro_26"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 2}, {"product": &"sourdough", "qty": 2}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce27"]
+script = ExtResource("2_tpl")
+id = &"centro_27"
+items = Array[Dictionary]([{"product": &"hen", "qty": 1}, {"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ce28"]
+script = ExtResource("2_tpl")
+id = &"centro_28"
+items = Array[Dictionary]([{"product": &"porcelain_vase", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce29"]
+script = ExtResource("2_tpl")
+id = &"centro_29"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 2}, {"product": &"milk_canister", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce30"]
+script = ExtResource("2_tpl")
+id = &"centro_30"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 2}, {"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce31"]
+script = ExtResource("2_tpl")
+id = &"centro_31"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"fireworks_crate", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce32"]
+script = ExtResource("2_tpl")
+id = &"centro_32"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce33"]
+script = ExtResource("2_tpl")
+id = &"centro_33"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"milk_canister", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce34"]
+script = ExtResource("2_tpl")
+id = &"centro_34"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"hen", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ce35"]
+script = ExtResource("2_tpl")
+id = &"centro_35"
+items = Array[Dictionary]([{"product": &"puppy", "qty": 1}, {"product": &"sourdough", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce36"]
+script = ExtResource("2_tpl")
+id = &"centro_36"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"hen", "qty": 1}, {"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"urgent"])
+
+[sub_resource type="Resource" id="Resource_ce37"]
+script = ExtResource("2_tpl")
+id = &"centro_37"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 1}, {"product": &"milk_canister", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce38"]
+script = ExtResource("2_tpl")
+id = &"centro_38"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 1}, {"product": &"puppy", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ce39"]
+script = ExtResource("2_tpl")
+id = &"centro_39"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ce40"]
+script = ExtResource("2_tpl")
+id = &"centro_40"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"glass_tower", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[resource]
+script = ExtResource("1_set")
+id = &"centro"
+zone = &"centro"
+templates = Array[ExtResource("2_tpl")]([SubResource("Resource_ce01"), SubResource("Resource_ce02"), SubResource("Resource_ce03"), SubResource("Resource_ce04"), SubResource("Resource_ce05"), SubResource("Resource_ce06"), SubResource("Resource_ce07"), SubResource("Resource_ce08"), SubResource("Resource_ce09"), SubResource("Resource_ce10"), SubResource("Resource_ce11"), SubResource("Resource_ce12"), SubResource("Resource_ce13"), SubResource("Resource_ce14"), SubResource("Resource_ce15"), SubResource("Resource_ce16"), SubResource("Resource_ce17"), SubResource("Resource_ce18"), SubResource("Resource_ce19"), SubResource("Resource_ce20"), SubResource("Resource_ce21"), SubResource("Resource_ce22"), SubResource("Resource_ce23"), SubResource("Resource_ce24"), SubResource("Resource_ce25"), SubResource("Resource_ce26"), SubResource("Resource_ce27"), SubResource("Resource_ce28"), SubResource("Resource_ce29"), SubResource("Resource_ce30"), SubResource("Resource_ce31"), SubResource("Resource_ce32"), SubResource("Resource_ce33"), SubResource("Resource_ce34"), SubResource("Resource_ce35"), SubResource("Resource_ce36"), SubResource("Resource_ce37"), SubResource("Resource_ce38"), SubResource("Resource_ce39"), SubResource("Resource_ce40")])

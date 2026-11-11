@@ -50,7 +50,7 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 ### General (todos los jugadores)
 | Acción | Input |
 |---|---|
-| Ping/emote rápido | Rueda del mouse click / D-pad arriba | Tocar: “¡Cuidado!”. Mantener: rueda de seis mensajes; elegir con mouse o stick derecho. |
+| Ping/emote rápido | V o rueda del mouse click / D-pad arriba | Tocar: “¡Cuidado!”. Mantener: rueda de ocho mensajes; C / R3 cambia a los ocho emotes. Elegir con mouse o stick derecho y soltar para confirmar. |
 | Usar carta | G (reasignable) / D-pad izquierda | Rescate en ruta; Descuento y Re-voto desde Suministros |
 | Pausa/menú | Esc / Start | — |
 | Tripulación (solo en el depósito) | **Mantener** Tab / Back | Lista de quién está, con uniforme, quién maneja y quién tiene caja; el anfitrión LAN ve además el código de sala |
@@ -115,6 +115,36 @@ Main Menu
   todos); solo el anfitrión puede reiniciar (un cliente que recarga su nivel se queda
   sin jugadores); si se cae el anfitrión, el cliente ve una pantalla "Sin conexión".
   **Pendiente**: el reinicio del anfitrión todavía no recarga el mundo de los clientes.
+- **Modo Empresa** (D-1909, `scripts/ui/company_pause_menu.gd`): Esc abre su menú de pausa con
+  Continuar, **Cerrar el día**, Opciones, Volver al menú y Salir. Jugando solo pausa el mundo y el reloj
+  del día; con más gente el día sigue. "Cerrar el día" lo usa solo el host con el día en curso y pide
+  confirmación; un cliente lo ve apagado con "Lo cierra el host". Mientras salir pierde el día, el aviso
+  queda sobre las dos salidas y cada una pregunta antes ("Salir igual"). Esc vuelve de una confirmación y,
+  si no hay ninguna, cierra el menú.
+- **Portapapeles del modo Empresa** (D-1902, `scripts/gameplay/company_clipboard.gd`): `I` (cruceta
+  derecha en el mando, solo para sacarlo) lo levanta con la hoja Stock o la última que se miró; `Q` / `E`
+  (LB / RB) o un clic en la pestaña cambian de hoja (Stock, Proveedor; Empleados llega con el hito 8);
+  `Esc`, `I` o B lo guardan sin abrir la pausa. Levantado, el ratón queda libre y el jugador sin input. No sale
+  con las manos ocupadas (caja, unidades en la mano, carrito, asiento, celular, modo construcción) y se guarda
+  solo si alguna empieza, al resumen del día o al pedir la pausa. El tablero del proveedor del galpón lo saca
+  en la hoja Proveedor. El pie con las teclas sale del mapa de entradas (teclado o mando).
+- **Celular del modo Empresa** (D-1923, `scripts/ui/company_phone.gd`): `F` (LB) lo saca y lo guarda. Tiene
+  dos apps: **Pedidos** (los abiertos, con cliente, zona y minutos que quedan, o "atrasado") y **Mapa** (las
+  zonas a escala, cuántos pedidos van a cada una y dónde estás). Se cambia de app con `Q` / `E` (LB / RB) o con
+  sus pestañas, y `Esc` o B lo guardan. Comparte las manos con el portapapeles: sacar uno guarda el otro.
+  No sale con las manos ocupadas ni en modo construcción.
+- **Modo construcción del galpón** (`scripts/gameplay/shed_builder.gd`): `B` (Back) entra y sale; `Enter` (A)
+  pone o agarra una pieza; `F` (X) la gira; `Q` / `E` (LB / RB) eligen la pieza; `Supr` (R3) vende;
+  `RePág` / `AvPág` (gatillos) acercan y alejan; `Retroceso` (B) cancela.
+- **Pantallas de la Empresa con mando** (D-1948, `tests/test_gamepad_nav_screens.gd`): el cierre del día, la
+  pausa, la tienda, el despacho, las hojas del portapapeles y la página de empresas del menú abren con el foco
+  puesto. La cruceta o el stick recorren todo, A elige y B sale. En el cierre del día (D-1910), arriba y abajo
+  hacen scroll del cuerpo cuando no entra en la pantalla. En los créditos (Garaje > Créditos, D-1940), arriba y
+  abajo hacen scroll de la lista.
+- **HUD del modo Empresa**: arriba a la izquierda el día y la hora (o "Pausa"), la plata (en rojo si es
+  negativa) y los pedidos abiertos (en naranja si hay atrasados) (D-1903). A la derecha, el feed de quién hizo
+  qué (D-1935). En el galpón, una flecha sobre la mesa que necesita insumos o la zona de despacho con atrasos
+  (D-1907). Con "Paleta para daltonismo" activa, los estados usan la paleta Okabe-Ito (D-1918).
 - El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, el código de
   sala (8 letras, `K7QM-4TXA`; ver `scripts/ui/room_code.gd`) para pasarle a los amigos. "Unirse" acepta
   el código o la IP.
@@ -149,7 +179,7 @@ si llegan varios, `hud_notices.gd` conserva la cola y enseña primero el de mayo
 | Capa | Zona | Contenido | Movimiento |
 |---|---|---|---|
 | **Crítico** | Arriba, centro | Tu caja en riesgo (incluida la cuenta del explosivo) o el evento de ruta con su cuenta regresiva | Grande, con pulso suave |
-| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete, abrir/cerrar/ver la tapa y subtítulos opcionales de sonidos: la trampa en riesgo y, en cola (hasta 3, por prioridad, con vencimiento), la bocina de otro jugador, el timbre y el cliente, los animales y la lluvia (N-965) | Un solo bloque estable |
+| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete, abrir/cerrar/ver la tapa y subtítulos opcionales de sonidos: la trampa en riesgo y, en cola (hasta 3, por prioridad, con vencimiento), la bocina de otro jugador, el timbre y el cliente, los animales y la lluvia (N-965). Dos placas apiladas con 4 px de aire (N-983): arriba el aviso con la tecla dibujada como keycap; abajo los subtítulos en crema (`#FFF3D6`), la trampa en riesgo con el chip "EN RIESGO !"; el tamaño de los subtítulos (normal, grande, muy grande) se elige en Opciones y escala solo esa placa | Un solo bloque estable |
 | **Información** | Esquinas | Velocidad, tiempo, distancia, estado de la carga, sesión, dinero cuando corresponde y avisos breves | Chico y quieto |
 
 La barra de atajos respeta **Ayudas de controles: siempre / al principio / nunca**. En

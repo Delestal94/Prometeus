@@ -2,8 +2,19 @@ extends SceneTree
 ## Replays recorded real drives through every real trap behavior (S-108).
 ## Not part of the unit-test battery: record drives first, then run:
 ##   <godot> --headless --path do-not-drop --script res://tests/sim_trap_balance.gd
+## With `-- --levels` (D-0710.b) it plays the same drives at each packing level's severity instead
+## (BoxTrap.severity: a perfect box rides low, a badly packed one high) and writes levels_report.md;
+## `--trials=N` sets the repetitions per drive (LEVEL_TRIALS by default there) and
+## `--severities=1,1.25,1.5` tries other severities for low, mid and high before changing CompanyTuning.
 
 const TRIALS_PER_DRIVE: int = 50
+const LEVEL_TRIALS: int = 20
+## The profiles the level comparison plays: the absent one and the one who only holds lose nearly
+## every box at any level, so the difference shows with the ones who answer the trap.
+const LEVEL_PROFILES: Array[String] = ["clumsy", "expert"]
+const LEVELS: Array[StringName] = [&"low", &"mid", &"high"]
+## D-0710.b's bar: more boxes lost at high than at low in at least this many of the 7 traps.
+const LEVEL_TRAPS_REQUIRED: int = 5
 const LATENCIES: Array[float] = [0.0, 0.15]
 ## Liquid's scrub (N-117 "Fregá"): swings per second while the bot is scrubbing.
 ## Left-right-left-right at a hand's pace; an assumption of the harness.
@@ -43,6 +54,8 @@ const TAP_SPREAD := {"clumsy": 0.20, "expert": 0.05}
 const LATENCY_BLUR: float = 0.25
 
 var _trials_per_drive: int = TRIALS_PER_DRIVE
+## --severities: level -> severity tried in place of BoxTrap.severity().
+var _severity_override: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -57,7 +70,8 @@ func _arg(name: String, fallback: String) -> String:
 
 
 func _run() -> void:
-	_trials_per_drive = maxi(1, int(_arg("trials", str(TRIALS_PER_DRIVE))))
+	var levels_mode: bool = OS.get_cmdline_user_args().has("--levels")
+	_trials_per_drive = maxi(1, int(_arg("trials", str(LEVEL_TRIALS if levels_mode else TRIALS_PER_DRIVE))))
 	var only_trap: String = _arg("only", "")
 	var drives: Array[Dictionary] = _load_drives()
 	if drives.size() != 5:
@@ -65,6 +79,12 @@ func _run() -> void:
 		quit(1)
 		return
 	var traps: Array[TrapDefinition] = _load_traps()
+	if levels_mode:
+		var tried: PackedStringArray = _arg("severities", "").split(",", false)
+		for index: int in range(mini(tried.size(), LEVELS.size())):
+			_severity_override[LEVELS[index]] = tried[index].to_float()
+		_run_levels_report(traps, drives)
+		return
 	var rows: Array[Dictionary] = []
 	for definition: TrapDefinition in traps:
 		if not only_trap.is_empty() and String(definition.id) != only_trap:
@@ -142,13 +162,16 @@ func _load_traps() -> Array[TrapDefinition]:
 	return traps
 
 
+## `severity`: what the box's packing hands the trap (ITrapBehavior.severity, D-0710.b); 1 is the trap as is.
 func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: String, latency: float,
-		seed_value: int, scenario_seed: int = 0) -> Dictionary:
+		seed_value: int, scenario_seed: int = 0, severity: float = 1.0) -> Dictionary:
 	var package := RigidBody3D.new()
 	package.mass = 8.0
 	root.add_child(package)
 	var behavior := definition.create_behavior() as ITrapBehavior
-	behavior.on_setup(package, definition.params.duplicate(true))
+	var config: Dictionary = definition.params.duplicate(true)
+	config["severity"] = severity
+	behavior.on_setup(package, config)
 	var behavior_rng: Variant = behavior.get("_rng")
 	if behavior_rng is RandomNumberGenerator:
 		(behavior_rng as RandomNumberGenerator).seed = seed_value
@@ -347,11 +370,13 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 		always_lost += int(_find_row(rows, trap_id, "always", 0).get("ruined_pct", 0.0) >= 80.0)
 		lines.append("| %s | %s |" % [trap_id, " | ".join(cells)])
 	lines.append_array(["", "Antes de N-117.4 (los mismos recorridos con Hostil de antes: órdenes de 11 s y"
-		+ " decaimiento de 14 por segundo, que dejaba al torpe en 83 %):", "", "| Trampa | Ausente | Torpe | Experto | Siempre mantiene |",
+		+ " decaimiento de 14 por segundo, que dejaba al torpe en 83 %):", "",
+		"| Trampa | Ausente | Torpe | Experto | Siempre mantiene |",
 		"|---|---:|---:|---:|---:|"])
 	for trap_id: String in BEFORE_TANDA_3:
 		var before: Array = BEFORE_TANDA_3[trap_id]
-		lines.append("| %s | %.1f%% | %.1f%% | %.1f%% | %.1f%% |" % [trap_id, before[0], before[1], before[2], before[3]])
+		lines.append("| %s | %.1f%% | %.1f%% | %.1f%% | %.1f%% |" % [trap_id, before[0], before[1], before[2],
+				before[3]])
 	lines.append_array([
 		"",
 		("El que siempre mantiene pierde el 80 %% o más en %d de %d trampas (meta de N-117: 5 de 7, cuando cada"
@@ -412,8 +437,106 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 		"Recorridos: %s." % _drive_summary(drives),
 		"",
 	])
-	return "
-".join(lines)
+	return "\n".join(lines)
+
+
+## D-0710.b: boxes lost (%) per trap, level and profile at 0 ms, the same seeds at every level:
+## {trap_id: {level: {profile: ruined_pct}}}. `trials` repetitions per drive.
+func level_ruins(traps: Array[TrapDefinition], drives: Array[Dictionary], trials: int,
+		levels: Array[StringName] = LEVELS, profiles: Array[String] = LEVEL_PROFILES) -> Dictionary:
+	var result: Dictionary = {}
+	for definition: TrapDefinition in traps:
+		var by_level: Dictionary = {}
+		for level: StringName in levels:
+			var by_profile: Dictionary = {}
+			for profile_name: String in profiles:
+				var ruined: int = 0
+				var runs: int = 0
+				for drive_index: int in range(drives.size()):
+					for trial: int in range(trials):
+						var seed_value: int = hash("%s:%s:%.2f:%d:%d" % [definition.id, profile_name, 0.0,
+								drive_index, trial])
+						var scenario_seed: int = hash("%s:%d:%d" % [definition.id, drive_index, trial])
+						var outcome: Dictionary = _simulate(definition, drives[drive_index], profile_name, 0.0,
+								seed_value, scenario_seed, level_severity(level))
+						ruined += int(outcome.ruined)
+						runs += 1
+				by_profile[profile_name] = 100.0 * ruined / maxi(runs, 1)
+			by_level[level] = by_profile
+		result[String(definition.id)] = by_level
+	return result
+
+
+## The severity a box at `level` hands its trap: BoxTrap.severity(), unless --severities says otherwise.
+func level_severity(level: StringName) -> float:
+	return float(_severity_override.get(level, BoxTrap.severity(level)))
+
+
+## Traps of level_ruins() that lose more boxes at high than at low (all its profiles together).
+static func harsher_at_high(ruins: Dictionary) -> Array[String]:
+	var harsher: Array[String] = []
+	for trap_id: String in ruins:
+		var by_level: Dictionary = ruins[trap_id]
+		if _level_total(by_level, &"high") > _level_total(by_level, &"low"):
+			harsher.append(trap_id)
+	return harsher
+
+
+static func _level_total(by_level: Dictionary, level: StringName) -> float:
+	var total: float = 0.0
+	for pct: float in (by_level.get(level, {}) as Dictionary).values():
+		total += pct
+	return total
+
+
+func _run_levels_report(traps: Array[TrapDefinition], drives: Array[Dictionary]) -> void:
+	var ruins: Dictionary = level_ruins(traps, drives, _trials_per_drive)
+	var harsher: Array[String] = harsher_at_high(ruins)
+	var lines: Array[String] = [
+		"# D-0710.b · Trampas por nivel de armado",
+		"",
+		("Generado por `tests/sim_trap_balance.gd -- --levels` con los comportamientos reales: 5 recorridos × %d"
+		+ " repeticiones por combinación, 0 ms, las mismas semillas en cada nivel.") % _trials_per_drive,
+		("Severidad por nivel (`CompanyTuning.TRAP_SEVERITY_*`, `ITrapBehavior.severity`): bajo %.2f (la trampa"
+		+ " como es hoy), medio %.2f, alto %.2f. Cada trampa multiplica por ella el daño que hace (golpes, derrame,"
+		+ " enojo, peso, mecha y tiempo hasta volcar), nunca lo que hace la respuesta correcta.") % [
+			level_severity(&"low"), level_severity(&"mid"), level_severity(&"high")],
+		"",
+		"## % de cajas perdidas por nivel",
+		"",
+		"| Trampa | Torpe bajo | Torpe medio | Torpe alto | Experto bajo | Experto medio | Experto alto"
+		+ " | Más en alto |",
+		"|---|---:|---:|---:|---:|---:|---:|---|",
+	]
+	for trap_id: String in ruins:
+		var by_level: Dictionary = ruins[trap_id]
+		var cells: Array[String] = []
+		for profile_name: String in LEVEL_PROFILES:
+			for level: StringName in LEVELS:
+				cells.append("%.1f%%" % float((by_level[level] as Dictionary)[profile_name]))
+		lines.append("| %s | %s | %s |" % [trap_id, " | ".join(cells), "sí" if harsher.has(trap_id) else "no"])
+	var passes: bool = harsher.size() >= LEVEL_TRAPS_REQUIRED
+	lines.append_array([
+		"",
+		("Más roturas en alto que en bajo en %d de %d trampas (D-0710.b pide %d): **%s**.") % [harsher.size(),
+			ruins.size(), LEVEL_TRAPS_REQUIRED, "CUMPLE" if passes else "REQUIERE AJUSTE"],
+		"",
+		"Recorridos: %s." % _drive_summary(drives),
+		"",
+	])
+	var report: String = "\n".join(lines)
+	var file := FileAccess.open("res://tests/sim_data/levels_report.md", FileAccess.WRITE)
+	if file != null:
+		file.store_string(report)
+		file.close()
+	print(report)
+	if passes:
+		print("PASS sim_trap_balance levels: %d of %d traps lose more at high than at low" % [harsher.size(),
+				ruins.size()])
+	else:
+		push_error("Only %d of %d traps lose more at high than at low (want %d)" % [harsher.size(), ruins.size(),
+				LEVEL_TRAPS_REQUIRED])
+	quit(0 if passes else 1)
 
 
 func _find_row(rows: Array[Dictionary], trap_id: String, profile: String, latency_ms: int) -> Dictionary:

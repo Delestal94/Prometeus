@@ -30,10 +30,16 @@ const SOUND_NAMES: Dictionary = {
 	&"doorbell_ding_dong": "Timbre", &"neighbor_cheer": "Alegría del vecino",
 	&"comic_ruin_stinger": "Caja arruinada", &"comic_boom": "Explosión",
 	&"forklift_motor_loop": "Motor eléctrico", &"river_flow_loop": "Río",
+	&"forklift_hydraulic_loop": "Hidráulico del autoelevador",
 	&"train_horn": "Silbato del tren", &"train_chug_loop": "Traqueteo del tren",
 	&"care_step": "Toque correcto", &"care_error": "Tecla equivocada", &"care_success": "Arreglo listo",
 	&"care_whoosh": "Giro de la flecha", &"care_tick": "Avance de la herramienta",
 	&"footstep": "Pisada",
+	&"rooster_crow": "Gallo", &"morning_chirps": "Pajaritos de la mañana", &"extra_stinger": "¡Extra! del diario",
+	&"paper_rustle": "Papel de diario", &"page_turn": "Página que se da vuelta", &"mate_spit": "Escupida del mate",
+	&"clipboard_clip_up": "Broche del portapapeles (sacar)",
+	&"clipboard_clip_down": "Broche del portapapeles (guardar)",
+	&"clipboard_sheet": "Hoja del portapapeles",
 	# Not a synthesized sound: a crewmate's voice chat (VoicePlayback, N-212.2).
 	&"AudioStreamGenerator": "Voz",
 }
@@ -41,12 +47,14 @@ const SOUND_NAMES: Dictionary = {
 const SOURCE_NAMES: Dictionary = {
 	"vehicle": "Camión", "vehicle_presentation": "Camión", "reference_truck": "Puertas del camión",
 	"cargo_clutter": "Objetos sueltos del camión", "depot": "Depósito", "depot_forklift": "Autoelevador",
+	"forklift_cues": "Autoelevador del galpón",
 	"depot_roller_door": "Portón del depósito", "route": "Ruta", "route_sky": "Ambiente",
 	"ingame_music": "Música", "package_feedback": "Caja (trampa)", "package_contents_view": "Caja (contenido)",
 	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",
 	"chasing_dog": "Perro", "flock_crossing": "Ovejas", "rail_crossing_segment": "Paso a nivel",
 	"narrow_bridge_segment": "Puente", "care_prompt_view": "Panel de cuidado",
-	"player_sprint": "Jugador (correr)", "voice_playback": "Voz de compañero",
+	"newspaper_director": "Diario del día siguiente", "player_sprint": "Jugador (correr)",
+	"voice_playback": "Voz de compañero",
 }
 
 ## Keys muted this session.

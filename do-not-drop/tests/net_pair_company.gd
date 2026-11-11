@@ -19,7 +19,8 @@ const MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 const COMPANY_SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const SAVE_DIR: String = "user://net_pair_company"
 ## Everything this process waits for (the world, the client coming and going) fits in this long
-## from its start: run-net-pair.sh kills it at 150 s, and the client starts 2 s after the host.
+## from its start: run-net-pair.sh kills it at 150 s, and the client starts once the host's room is open
+## (its "NETLOG role=host session ready" line, a few seconds in).
 const DEADLINE_MSEC: int = 120000
 
 var _host: bool = false
@@ -60,6 +61,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# run-net-pair.sh starts the client once the host's room is open (N-987.3), on this line, not after a fixed sleep.
+	if _host:
+		(root.get_node(^"/root/NetworkManager") as NetSession).session_ready.connect(func(_is_host: bool) -> void:
+			print("NETLOG role=host session ready at %.1f s" % (Time.get_ticks_msec() / 1000.0)))
 	# The menu takes the command line's flags itself, as the game does on start.
 	change_scene_to_file(MENU_SCENE)
 	var world: CompanyRoot = await _wait_for_world()

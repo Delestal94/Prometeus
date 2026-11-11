@@ -21,6 +21,11 @@ alguna, la cambia con el mismo procedimiento ("Decisiones futuras", más abajo) 
 Con esto, las tareas D-0102, D-0103, D-0105, D-0106, D-0505, D-0704, D-1928 y D-2036 dejan de ser ⏸.
 D-0113 pasa a ser parte de D-0112.
 
+2026-11-04: las filas 1 a 5 se cerraron una por una, por delegación del usuario, con su documento:
+[modo-empresa](2026-11-04-modo-empresa.md), [carrito](2026-11-04-carrito.md),
+[duracion-del-dia](2026-11-04-duracion-del-dia.md), [galpon-vacio](2026-11-04-galpon-vacio.md) y
+[recortes-zona-gris](2026-11-04-recortes-zona-gris.md) (la zona gris y el alcance del Early Access de D-0112).
+
 ## Decisiones futuras de la expansión
 
 Para todo lo de `docs/expansion-distritos/` que sea **cómo se hace** (diseño de una mecánica, números,

@@ -68,7 +68,8 @@ func _test_generated_orders(state: Node) -> void:
 	var zones: Array[ZoneDefinition] = [load("res://data/zones/centro.tres"), load("res://data/zones/campo.tres")]
 	var usual: int = OrderRhythm.orders_for_day(3)
 	state.money = 500
-	var plain := OrderGenerator.generate_day(7, 1, 3, zones, products, reqs)
+	var plain := OrderGenerator.generate_day(
+		7, 1, 3, zones, products, reqs, CompanyTuning.ORDER_ITEMS_MAX)
 	var solvent := OrderGenerator.generate_day(
 		7, 1, 3, zones, products, reqs, CompanyTuning.ORDER_ITEMS_MAX, state)
 	var no_company := OrderGenerator.generate_day(

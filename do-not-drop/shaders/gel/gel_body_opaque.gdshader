@@ -11,14 +11,17 @@ instance uniform float gel_opacity : hint_range(0.0, 1.0) = 1.0;
 // Values >= 2 pack a 15-bit team colour above the fractional brightness.
 instance uniform float gel_brightness : hint_range(0.5, 1.5) = 1.0;
 // Packed to stay within Godot's 16 instance-uniform limit:
-// surface = absorption, shine, skin effect mode, effect amount. Negative X/Y
-// keep the shared material's legacy absorption and shine until a skin applies.
+// surface = absorption, shine, skin effect mode plus general-thickness weight,
+// effect amount. Negative X/Y keep the shared material's legacy absorption and
+// shine until a skin applies. The mode's fractional offset is weight * 0.25.
 instance uniform vec4 gel_skin_surface = vec4(-1.0, -1.0, 0.0, 0.0);
 // interior = RGB feature colour plus object-space feature scale.
 instance uniform vec4 gel_interior = vec4(0.0, 0.0, 0.0, 8.0);
 instance uniform float gel_squash_stretch : hint_range(-0.2, 0.2) = 0.0;
 instance uniform vec3 gel_contact_direction = vec3(1.0, 0.0, 0.0);
-instance uniform float gel_contact_compression : hint_range(0.0, 0.16) = 0.0;
+// Positive = contact compression. Negative values pack knockout cause in the
+// integer part and transition amount in the fraction, preserving 16 uniforms.
+instance uniform float gel_contact_compression : hint_range(-6.0, 1.25) = 0.0;
 instance uniform vec4 gel_wave_0 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_1 = vec4(0.0, 0.0, 0.0, -1.0);
 instance uniform vec4 gel_wave_2 = vec4(0.0, 0.0, 0.0, -1.0);
@@ -115,6 +118,11 @@ float team_accent_signature() {
 	float green = mod(floor(color_code / 32.0), 32.0);
 	float blue = floor(color_code / 1024.0);
 	return mod(red + green * 8.0 + blue * 10.0, 11.0);
+}
+
+float general_thickness_weight() {
+	float skin_mode = floor(gel_skin_surface.z + 0.5);
+	return clamp((gel_skin_surface.z - skin_mode) * 4.0, -1.0, 1.0);
 }
 
 float team_core_mask(vec3 point) {
@@ -235,6 +243,13 @@ float environment_ripple(vec3 point) {
 }
 
 void vertex() {
+	float knockout_packed = max(-gel_contact_compression, 0.0);
+	float knockout_cause = floor(knockout_packed + 0.0001);
+	float knockout = fract(knockout_packed);
+	float positive_deformation = max(gel_contact_compression, 0.0);
+	float extreme_impact = positive_deformation > 0.2
+		? clamp((positive_deformation - 0.75) / 0.5, -1.0, 1.0) : 0.0;
+	float contact_compression = positive_deformation > 0.2 ? 0.0 : positive_deformation;
 	float drag_mask = inertial_drag_mask(VERTEX);
 	vec3 turning_drag = vec3(-VERTEX.z, 0.0, VERTEX.x) * gel_inertia.w;
 	VERTEX += (gel_inertia.xyz + turning_drag) * drag_mask;
@@ -249,7 +264,7 @@ void vertex() {
 	VERTEX *= vec3(radial_scale, vertical_scale, radial_scale);
 	NORMAL = normalize(NORMAL / vec3(radial_scale, vertical_scale, radial_scale));
 	vec3 contact_axis = normalize(gel_contact_direction);
-	float contact_scale = max(1.0 - gel_contact_compression, 0.82);
+	float contact_scale = max(1.0 - contact_compression, 0.82);
 	float contact_radial = inversesqrt(contact_scale);
 	float contact_position = dot(VERTEX, contact_axis);
 	vec3 contact_perpendicular = VERTEX - contact_axis * contact_position;
@@ -262,6 +277,54 @@ void vertex() {
 		contact_axis * contact_normal / contact_scale
 		+ (NORMAL - contact_axis * contact_normal) / contact_radial
 	);
+	// A hard impact uses the same direction and packed uniform, but expands far
+	// past ordinary contact before an underdamped rebound. The positive bounds
+	// guarantee that neither positions nor normals can invert.
+	float extreme_axis_scale = clamp(1.0 - extreme_impact * 0.64, 0.36, 1.65);
+	float extreme_radial_scale = inversesqrt(extreme_axis_scale);
+	float extreme_position = dot(VERTEX, contact_axis);
+	vec3 extreme_perpendicular = VERTEX - contact_axis * extreme_position;
+	VERTEX = contact_axis * extreme_position * extreme_axis_scale
+		+ extreme_perpendicular * extreme_radial_scale;
+	float extreme_normal = dot(NORMAL, contact_axis);
+	NORMAL = normalize(
+		contact_axis * extreme_normal / extreme_axis_scale
+		+ (NORMAL - contact_axis * extreme_normal) / extreme_radial_scale
+	);
+	float melt = knockout * knockout * (3.0 - 2.0 * knockout);
+	float source_height = clamp(VERTEX.y / 1.75, 0.0, 1.0);
+	if (knockout_cause < 1.5) {
+		// Default melt: a soft, rounded puddle.
+		float puddle_spread = mix(1.0, 1.55 + source_height * 0.38, melt);
+		float puddle_height = 0.025 + source_height * 0.055;
+		VERTEX.xz *= puddle_spread;
+		VERTEX.y = mix(VERTEX.y, puddle_height, melt);
+		NORMAL = normalize(NORMAL / vec3(puddle_spread, mix(1.0, 0.045, melt), puddle_spread));
+	} else if (knockout_cause < 2.5) {
+		// Crushed: a broad, even pancake with a thicker rim.
+		float pancake_spread = mix(1.0, 1.82 + source_height * 0.24, melt);
+		VERTEX.xz *= pancake_spread;
+		VERTEX.y = mix(VERTEX.y, 0.045 + source_height * 0.035, melt);
+		NORMAL = normalize(NORMAL / vec3(pancake_spread, mix(1.0, 0.035, melt), pancake_spread));
+	} else if (knockout_cause < 3.5) {
+		// Explosion: the body contracts to a tiny core while droplets carry the silhouette.
+		vec3 burst_direction = normalize(VERTEX + vec3(0.13, 0.37, -0.09));
+		VERTEX = mix(VERTEX, vec3(0.0, 0.68, 0.0) + burst_direction * 0.055, melt);
+	} else if (knockout_cause < 4.5) {
+		// Water: dissolve downward into a narrow, rippled remnant.
+		float dissolve_wave = sin(VERTEX.x * 15.0 + VERTEX.z * 11.0) * 0.018;
+		VERTEX.xz *= mix(1.0, 0.42, melt);
+		VERTEX.y = mix(VERTEX.y, -0.12 + source_height * 0.025 + dissolve_wave, melt);
+		NORMAL = normalize(NORMAL / vec3(mix(1.0, 0.42, melt), mix(1.0, 0.025, melt), mix(1.0, 0.42, melt)));
+	} else {
+		// Run over: a low skid stretched strongly along the wheel direction.
+		float skid_x = mix(1.0, 2.18, melt);
+		float skid_z = mix(1.0, 1.18, melt);
+		VERTEX.x = VERTEX.x * skid_x + source_height * melt * 0.34;
+		VERTEX.z *= skid_z;
+		VERTEX.y = mix(VERTEX.y, 0.035 + source_height * 0.03, melt);
+		NORMAL = normalize(NORMAL / vec3(skid_x, mix(1.0, 0.03, melt), skid_z));
+	}
 	float wind_mask = smoothstep(0.12, 1.55, VERTEX.y);
 	float wind_sway = sin(gel_weather.x * 1.35 + gel_weather.y * 6.28318);
 	wind_sway = wind_sway * 0.72 + sin(gel_weather.x * 2.1 + gel_weather.y * 3.1) * 0.28;
@@ -283,7 +346,9 @@ void fragment() {
 	// preserving visual distinction without returning to alpha blending.
 	vec3 opaque_tint = mix(vec3(1.0), player_tint, mix(0.72, 1.0, gel_opacity));
 	vec3 surface_tint = mix(opaque_tint, vec3(1.0), milkiness * (1.0 - fresnel));
-	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters;
+	float thickness_morph_scale = 1.0 + general_thickness_weight() * 0.21;
+	float thickness_meters = texture(thickness_map, UV).r * thickness_decode_meters
+		* thickness_morph_scale;
 	float thickness_absorption = 1.0 - exp(-absorption_coefficient * thickness_meters);
 	if (gel_skin_surface.x >= 0.0) {
 		thickness_absorption = 1.0 - exp(-gel_skin_surface.x * thickness_meters);

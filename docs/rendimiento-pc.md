@@ -224,11 +224,197 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 8. Poner `--via-loader` en la corrida diaria de `pc-build` (o sumar una segunda serie) para que "frames de más de 33 ms"
    mida lo que ve el jugador; el cambio es de la rutina, no se tocó.
 
+## Memoria en Endless larga (N-980.3), 2026-11-07
+
+Comprueba que la sonda ya no crece sola (N-980.1) y que el juego tampoco. Commit base `d739fd5`, con ventana a
+1920×1080, Alto, semilla 4242, con la PC compartida con otras corridas (por eso los FPS de acá no se comparan):
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --windowed --script res://tests/bench_drive.gd -- --endless --seconds=1000 --seed=4242 --memory-every=20
+```
+
+`--memory-every` imprime una línea `BENCH memory` cada N segundos y no guarda nada en la sonda. Los bytes privados del
+proceso se muestrearon desde afuera cada 10 s (`PrivateMemorySize64` de `Get-Process`).
+
+**Criterio, fijado antes de correr:** de 60 s a 400 s, pendiente (mínimos cuadrados) de memoria estática y de bytes
+privados de 0,045 MiB/s o menos (un décimo de los 0,45 MiB/s de la sonda vieja), orphans en 0, y nodos y recursos sin
+crecer más de 5 % entre el tercio medio y el último. **Resultado: cumple, pero no a la primera.**
+
+| Corrida | Estática MiB/s (60-400) | Privados MiB/s (60-400) | Privados MiB/s (60-1000) | Nodos/s (60-1000) | Objetos/s (60-1000) | `buffer_mem` final | ¿Cumple? |
+|---|---|---|---|---|---|---|---|
+| A, 400 s, sin el arreglo | 0,005 | **0,141** | no llegó | no llegó | no llegó | 61,6 MiB | **No**: escalón de +42 MiB de la foto de prensa |
+| B, 1000 s, sin el arreglo | 0,005 | 0,044 | **0,064** | **0,108** | **0,584** | 75,6 MiB | Al límite en 400 s; a 1000 s se ve la deriva |
+| C, 1000 s, con el arreglo | 0,003 | 0,014 | 0,008 | 0,020 | 0,037 | 61,6 MiB | **Sí** |
+
+B y C recorrieron lo mismo (18.310 m, 46 rescates). La corrida A falló y se dejó el criterio como estaba: por eso se
+corrió más larga y se buscó qué crecía, en vez de dar por buena la que pasó justo.
+
+- **Lo que crecía era del juego, no de la sonda.** Un censo por grupo de nodos dio `GPUParticles3D` sueltos bajo el
+  nivel (15, 37, 53 y 72 a los 200, 400, 600 y 800 s): los `ImpactDebris` de cada golpe fuerte, que nunca se liberaban
+  (`vehicle_effects.gd`). Un `GPUParticles3D` nace emitiendo, y encender un one-shot que ya emite cancela `finished`.
+  Arreglado con `emitting = false` antes de encenderlo; test `test_impact_debris_freed` (falla sin el arreglo).
+- **Corrida C:** bytes privados de 1.118,5 MiB a los 400 s y 1.119,0 a los 1000 s; recursos clavados en 6.081 y orphans
+  en 0 en todos los puntos. La estática sigue subiendo 0,002 MiB/s, 8 MiB por hora; de eso, ~0,0012 MiB/s es la sonda
+  (el `PackedFloat32Array` de ms por frame, 4 bytes por frame a ~300 FPS). Lo demás no se investigó.
+- **Sin medir: la foto de prensa.** En la corrida A la primera `PressPhotoLens` trajo un tirón de 1.054 ms a los 289 s y
+  +42 MiB de privados que no se devolvieron. B y C no sacaron ninguna foto, así que el arreglo no se probó con foto, y no
+  se sabe si cada foto suma lo mismo o solo la primera. `NewsPhotographer` saca como mucho 6 por partida, una por tipo,
+  y el lente se libera, así que está acotado por diseño; el peor caso serían ~250 MiB si cada una sumara 42.
+
+| Corrida C, t (s) | Estática MiB | Video MiB | Privados MiB | Objetos | Nodos | Recursos | Orphans |
+|---|---|---|---|---|---|---|---|
+| 60 | 261,84 | 265,00 | 1.106,8 | 13.993 | 3.104 | 6.081 | 0 |
+| 200 | 262,10 | 264,74 | 1.104,3 | 13.957 | 3.070 | 6.081 | 0 |
+| 400 | 262,51 | 264,60 | 1.118,5 | 13.865 | 3.013 | 6.081 | 0 |
+| 600 | 263,44 | 265,65 | 1.118,6 | 14.074 | 3.167 | 6.081 | 0 |
+| 800 | 263,51 | 265,70 | 1.118,3 | 14.079 | 3.153 | 6.081 | 0 |
+| 1000 | 264,15 | 265,30 | 1.119,0 | 14.044 | 3.129 | 6.081 | 0 |
+
+## Presupuesto del modo Empresa (D-2012)
+
+Con la GPU de la PC de arriba (RTX 4060 Ti) y el preset **medio** (`WorldQuality`, escala 0,9, MSAA 2x), a
+1920×1080 en ventana:
+
+| Situación | FPS | Draw calls | Cuerpos físicos activos | Nodos |
+|---|---|---|---|---|
+| Galpón por defecto | ≥ 90 | ≤ 900 | ≤ 400 | ≤ 6000 |
+| Galpón grande lleno | ≥ 60 | — | — | — |
+| Manejando por Centro | ≥ 75 | — | — | — |
+
+Los PRs de la expansión que bajen más de 10 % la situación que tocan llevan "(perf)" en el título y una tarea.
+
+**Cómo se mide:** `tests/bench_company.gd`, con ventana. El preset medio es su valor por defecto; imprime una línea
+`BENCH_COMPANY_BUDGET` por cada límite y `BENCH_COMPANY_BUDGET_OVER <n>`. `pc-build` lo corre en cada pasada y anota
+los valores en la [serie](#serie-del-presupuesto).
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --windowed --script res://tests/bench_company.gd -- --seconds=30
+```
+
+- **FPS:** promedio de la etapa, frames / tiempo total (no la mediana). 1 % bajo = 1000 / p99 ms, como en la serie.
+- **Draw calls:** el **pico** de la vuelta por el galpón, no el promedio, que esconde lo peor: mirar afuera por la
+  puerta, que también pasa al volver hacia el spawn. Incluye la pasada de sombras.
+- **Cuerpos físicos activos:** `RigidBody3D` (la van incluida) despiertos y sin congelar, pico muestreado una vez por
+  segundo. Los monitores `PHYSICS_3D_*` leen 0 con Jolt. `physics_bodies` son todos, también los estáticos.
+- **Nodos:** `OBJECT_NODE_COUNT` al terminar la vuelta, antes de manejar.
+- **Galpón grande lleno:** no lo mide este bench, abre el galpón inicial. Lo mide D-0947.
+- **Manejando por Centro:** los frames del manejo con la van dentro de `data/zones/centro.tres` (`centro_*`).
+- **Otro preset u otra resolución:** las líneas salen igual, cada una con `(off budget setup: ...)`, y no cuentan para
+  la tabla. Un `--quality` que no es preset corta con código 2.
+- CI corre el mismo bench por software y solo informa: los FPS no valen ahí. Nodos y cuerpos dan lo mismo (comprobado
+  sin ventana). Los draw calls no están comprobados: sin ventana leen 0, CI no fija `--resolution` (sale 1280×720, y sus
+  líneas salen marcadas) y a los pocos FPS del render por software el pico puede perderse la vista peor. D-2012.3
+  compara el log de CI con la PC antes de usarlo.
+
+### Primera medición, 2026-11-07
+
+**Commit:** `origin/main` `b61e3802` más el bench de esta tarea. Tres corridas de 30 s por etapa. **PC ocupada:**
+había otros 2 a 6 procesos de Godot de otros carriles y la CPU entre 17 y 48 %, así que los FPS son un piso y van con
+su rango. Se midió a mano con el comando de arriba: `pc-build` todavía no corrió (D-2012.4). Los nodos, los cuerpos y el pico de draw calls no se mueven entre corridas
+(± 2); el promedio de draw calls sí, porque pesa por frame y depende de cuánto tarda cada vista.
+
+| Situación | FPS prom. | FPS 1 % bajo | Draw calls prom. / pico | Cuerpos activos (de todos) | Nodos | Resultado |
+|---|---|---|---|---|---|---|
+| Galpón por defecto (medido) | 186-248 | 77-105 | 2.079 / **5.632** | 2 (930) | **15.210** | FPS y cuerpos entran; **draw calls y nodos no** |
+| Mirando afuera por la puerta (parte de la anterior) | 117-162 | 75-105 | 4.795 / 5.498 | | | |
+| Manejando por Centro | 140-165 | 79-88 | 2.072 / 2.656 | 3 (996) | 16.420 | FPS entra |
+
+Sin ventana (`--headless`, `-- --cpu-only`): 15.210 nodos, 930 cuerpos, 2 activos, los mismos 554 m manejados y
+~6,9 ms por frame en las dos etapas, muy parejo (p50 6,9 / p95 7,5). Eso no es un costo: coincide con los 6.900 µs de
+`low_processor_mode_sleep_usec` del proyecto, la espera por frame del motor cuando no tiene ventana que dibujar.
+
+**Sobra FPS y sobran conteos.** La RTX 4060 Ti lo mueve holgado, pero el presupuesto de conteos es el que cuida a una
+PC más floja, y está pasado más del doble. De dónde sale, de un censo de la escena en el arranque:
+
+| Qué | Piezas | Nodos | Mallas | Cuerpos |
+|---|---|---|---|---|
+| `camino_*` (dos piezas, de 774 nodos cada una) | 76 | 5.670 | 4.313 | 325 |
+| `calle_*` | 117 | 3.859 | 1.710 | 308 |
+| `Centro` (decorado) | 9 | 1.619 | 793 | 54 |
+| `avenida_*` | 37 | 1.260 | 634 | 87 |
+| `chacra_*` | 33 | 970 | 431 | 99 |
+| `pasaje_*` | 12 | 372 | 168 | 24 |
+
+`World` (el galpón, la van y el jugador) son ~930 nodos: los otros 14.000 son `WorldCells`. Es por D-0303: las calles
+principales se fijan y sus celdas quedan cargadas para siempre, aunque estén a 1,5 km (`CompanyCells.pin_fixed_cells`,
+`pin_streets`): desde el galpón hay 49 celdas cargadas, 24 más allá del radio de carga. La cámara ve hasta 4.000 m
+(el valor por defecto de `Camera3D`, también en el jugador) y no hay oclusión, así que por la puerta se dibujan todas.
+
+Experimento, sin subir: ocultando (`visible = false`) esas 24 celdas (`CELL_LOAD_RADIUS` = 2, contado en
+cuadrado desde la celda del galpón):
+
+| Vista desde la puerta | Draw calls antes | Después |
+|---|---|---|
+| Al frente (+Z) | 4.707 | 959 |
+| Al frente y a la izquierda | 4.794 | 969 |
+| Al frente y a la derecha, hacia Centro | 4.967 | 2.259 |
+| Adentro, hacia el fondo | 808 | 808 |
+
+Lo que falta para entrar en el presupuesto queda en D-2012.2 y D-2012.3
+(`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`).
+
+### Celdas fijas lejanas, 2026-11-07 (D-2012.1)
+
+Una celda fijada pasado `CELL_LOAD_RADIUS` de toda ancla queda estacionada: conserva nodos y colisión, no se dibuja
+y muestra su impostor. Vuelve a dibujarse al entrar en ese radio y, una vez dibujada, aguanta hasta
+`CELL_UNLOAD_RADIUS`, igual que la carga de una celda común.
+
+**Commit:** `origin/main` `96e0cb55` más este cambio. Cuatro corridas de 30 s por etapa después del cambio y tres
+antes, intercaladas, con el comando de arriba. **PC ocupada** por otros carriles: la tercera corrida de después
+bajó en todas las etapas, también en el manejo que este cambio no toca, y es el piso de cada rango.
+
+| Medida | Antes | Después |
+|---|---|---|
+| `draw_calls_peak` (vuelta por el galpón) | 5.630-5.633 | **2.588-2.590** |
+| `draw_calls` (promedio de la vuelta) | 1.966-1.994 | 977-1.014 |
+| `door_draw_calls` (promedio por la puerta) | 4.779-4.794 | 1.024-1.052 |
+| `door_fps_avg` / `door_fps_low_1pct` | 97-104 / 48-68 | 180-270 / 90-138 |
+| `fps_avg` / `fps_low_1pct` | 159-167 / 51-70 | 153-233 / 68-97 |
+| `centro_fps_avg` | 96-106 | 75-110 |
+| `centro_draw_calls_peak` | 2.654-2.656 | 2.655-2.656 |
+| `nodes` | 15.203 | 15.225 |
+| `physics_active` | 2 | 2 |
+
+Por vista, con `tests/render_company_far.gd` (preset medio, 1280×720), el mismo script sobre el código de antes y
+de después:
+
+| Vista | Draw calls antes | Después |
+|---|---|---|
+| Por la puerta, al frente | 4.707 | 965 |
+| Al frente y a la izquierda | 4.794 | 977 |
+| Al frente y a la derecha, hacia Centro | 4.967 | 2.267 |
+| Adentro, hacia el fondo | 794 | 794 |
+| En la avenida a 640 m, hacia Centro | 1.118 | 1.121 |
+| En la avenida a 640 m, hacia el galpón | 4.087 | 2.496 |
+
+- **Sigue OVER:** el pico de 2.588 es la vista hacia Centro, que está dentro del radio y se dibuja. Manejando por
+  Centro no cambia nada por lo mismo. Es D-2012.2: bajarlo es agrupar las mallas, no esconder celdas.
+- **Se ve igual:** comparando las capturas de antes y después, cambia como mucho el 0,02 % de los píxeles, en la
+  línea del horizonte (postes y objetos lejanos).
+- **Lo que suma:** 22 nodos (dos por cada uno de los 11 impostores nuevos). Prender las 19 celdas estacionadas de una
+  vez costó 2,3 ms y apagarlas 1,9 ms; una sola, 0,7 ms como mucho. Cruzar un borde cambia unas pocas.
+- **Son 19 y no las 24 del experimento:** la van estacionada en el patio es un ancla del host, en la celda al norte
+  del galpón. Las celdas a 3 de ella siguen dibujadas por la histéresis.
+
+### Serie del presupuesto
+
+Una fila por corrida de `pc-build`, con los valores de las líneas `BENCH_COMPANY_BUDGET` aunque todos entren: contra
+esto se comparan el 10 % de "(perf)" y las caídas de la rutina. La primera fila es la medición de arriba, a mano; en
+`fps_avg` y `centro_fps_avg` va su rango.
+
+| Fecha | Commit | `fps_avg` | `centro_fps_avg` | `draw_calls_peak` | `physics_active` | `nodes` | Notas |
+|---|---|---|---|---|---|---|---|
+| 2026-11-07 | `b61e3802` + bench | 186-248 | 140-165 | 5.632 | 2 | 15.210 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
+| 2026-11-07 | `96e0cb55` + D-2012.1 | 153-233 | 75-110 | 2.590 | 2 | 15.225 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
+
 ## Ancho de banda del modo Empresa (D-2002)
 
-**Fecha:** 2026-10-19. **Commit:** base `origin/main` `425041a` (rama `exp/D-2002-shed-pose-rate`, D-2002.3; la
-primera medición, D-2002.1, fue sobre `3d4a242` en `exp/D-2002-bandwidth-budget`). Lo mide
-`tests/test_company_bandwidth_budget.gd` (corre en la batería, filtro `company`; imprime líneas `COMPANY_BW`):
+**Fecha:** 2026-10-22 (D-2002.5: la caja en la mano no manda su pose). **Commit:** base `origin/main` `1905b0dd`
+(rama `exp/D-2002.5-carried-box-pose`). Antes: D-2002.4 el mismo día sobre `7ac2db32`
+(`exp/D-2002.4-bandwidth-exits`), D-2002.2 el mismo día sobre `a7405f5`
+(`exp/D-2002.2-exit-bandwidth`), D-2002.3 el 2026-10-19 sobre `425041a` (`exp/D-2002-shed-pose-rate`) y
+D-2002.1 sobre `3d4a242` (`exp/D-2002-bandwidth-budget`). Lo mide `tests/test_company_bandwidth_budget.gd` (corre en
+la batería, filtro `company`; imprime líneas `COMPANY_BW`), con los casos en `tests/company_bandwidth_cases.gd`:
 
 ```
 bash tools/run-tests.sh company_bandwidth
@@ -236,75 +422,306 @@ bash tools/run-tests.sh company_bandwidth
 ```
 
 Todo es lo que el host le manda a **cada cliente** (KB/s = 1024 B/s), sin voz (la voz es solo de Steam y tiene su
-propio chequeo en `test_net_bandwidth_budget`). Cada caso da dos números:
+propio chequeo en `test_net_bandwidth_budget`). El número de cada caso es el de su **peor cliente**: el test prueba
+el host en el galpón o a bordo de cada vehículo, y cada cliente. Cada caso da dos números:
 
 - **Modelo:** el mundo real de la empresa (`company_root.tscn`) con cada `MultiplayerSynchronizer` que tiene,
   al intervalo en que el mundo lo deja, contado como lo empaqueta SceneMultiplayer y con un datagrama de Steam en
   el techo (80 B) alrededor de cada paquete: el mismo modelo que `test_net_bandwidth_budget`
-  (`tests/bandwidth_model.gd`, compartido). Los floats cuentan como de 64 bits y los enteros como de 32 (una pose
-  en movimiento; el reloj en ms del jugador, `net_time`, pasa 32767 a los 33 s de juego). Es un techo: Steam puede
-  juntar mensajes en un datagrama.
+  (`tests/bandwidth_model.gd`, compartido, sin cambios). Los floats cuentan como de 64 bits y los enteros como de 32
+  (una pose en movimiento; el reloj en ms del jugador, `net_time`, pasa 32767 a los 33 s de juego). Es un techo:
+  Steam puede juntar mensajes en un datagrama, y los intervalos distintos se cuentan en paquetes aparte.
+  Para las salidas: la camioneta de la flota (`CompanyFleet`, `World/Vehicles/van_classic`) se maneja por código a
+  través del portón con la carga completa preparada (sus `cargo_slots`: 7 pedidos de un día tardío, cada uno en su
+  caja), así que su sincronizador cuenta al ritmo que manda en movimiento (`NetRestThrottle` despierto: cada 16,7 ms
+hasta D-2002.4, cada 30 ms desde entonces)
+  y los eventos `trip_started` / `trip_closed` son los reales que publica `CompanyTripsView`. El jugador a bordo
+  (`net_in_vehicle`) manda al ritmo que le da `apply_pose_rate()` (30/s; sentado, 15/s desde D-2002.4). La carga es el sincronizador de
+  `package.tscn` (`BoxToPackage.PACKAGE_SCENE`). Cada jugador del galpón lleva una caja en la mano (en todos los
+  casos desde D-2002.5; antes solo con vehículos afuera), al ritmo que manda una caja real en la mano de alguien a
+  pie: muteada, cada 5 s; lejos, a los de a bordo les llega en los pulsos de keepalive.
 - **Medido (ENet):** 4 u 8 peers ENet en localhost, en un proceso, cada uno con un jugador real (`player.tscn`) por
   peer, sumado a la cuadrilla como lo hace el mundo de la empresa (`CompanyRoot.join_crew()`), y un `CompanyNet`;
-  el host publica `units_moved` reales al ritmo de abajo. Se lee como lo lee el overlay de red en LAN (N-216,
-  `NetStats`) y se le suman los 28 B de IP y UDP de cada datagrama. Los jugadores están quietos y durante la cuenta
-  tienen el proceso en pausa: lo que mandan no depende de eso (con 4 da lo mismo con o sin pausa), y 64 jugadores
-  completos en un proceso bajaban a 61 FPS, menos envíos que los del juego. Su reloj todavía no pasó los 33 s
-  (`net_time` de 3 B y no de 5): en una partida larga son 2 B más por pose. Tres corridas seguidas dan casi lo
-  mismo (abajo, el rango).
-- **Lo que ninguno de los dos cuenta:** los deltas `ON_CHANGE` (anim_state, face_*, visible); el margen los cubre.
+  el host publica `units_moved` reales al ritmo de abajo. En las salidas, además, en cada peer la escena del
+  vehículo (`vehicle.tscn`, sin `NetRestThrottle`: siempre a su ritmo en movimiento) y sus 7 cajas
+  (`package.tscn`: las cuidadas a 30/s, el resto a su ritmo de reposo), en todos los casos una caja por jugador del
+  galpón, tomada en el host por ese jugador (la mutea `package.gd` solo; el test cuenta las poses que les llegan a
+  las copias de los clientes: a lo sumo una cada 5 s), con la visibilidad que decidiría
+  `CompanyInterest` (a bordo ven todos los vehículos; el galpón, solo si están cerca), y los que viajan mandan como
+  pasajeros (`net_in_vehicle`). Se lee como lo lee el overlay de red en LAN (N-216, `NetStats`), cliente por
+  cliente, y se le suman los 28 B de IP y UDP de cada datagrama. Todo está quieto y durante la cuenta tiene el
+  proceso en pausa: lo que se manda no depende de eso, y 64 jugadores completos en un proceso bajaban a 61 FPS. El
+  reloj todavía no pasó los 33 s (`net_time` de 3 B y no de 5). Cuatro corridas seguidas: abajo, el rango. Con 8
+  peers en un proceso ENet varía más entre clientes iguales (una vez un cliente del galpón recibió 2,8 KB/s y el
+  resto 12,8: probablemente el freno de paquetes no confiables de ENet, con un solo proceso atendiendo a todos); el
+  test compara cada cliente con el techo del modelo y el peor con el presupuesto.
+- **Lo que ninguno de los dos cuenta:** los deltas `ON_CHANGE` (anim_state, face_*, puertas, `driver_peer_id`,
+  visible, marcha y freno de la camioneta). Los eventos de salida y el keepalive de `CompanyInterest` están solo en
+  el modelo. **No** es cierto que el margen cubra todo con vehículos afuera (`auditor-red`, 2026-10-22): ver
+  "Salvedades de D-2002.2" abajo.
+
+**Salvedades de D-2002.2 (`auditor-red`, 2026-10-22), resueltas en D-2002.4 salvo la 5 (ver "D-2002.4" abajo):
+los números de las salidas de D-2002.2 suponían cosas que todavía no existían y dejaban afuera costos reales.**
+
+1. **Qué camioneta lleva cada cuerpo** (premisa, la resuelve D-0302.2.b.2): caja y jugador buscan su vehículo con
+   `get_first_node_in_group(&"vehicle")` (`package.gd` `_find_vehicle`, `player_ride.gd`), siempre la primera de
+   la flota. Una caja en la segunda camioneta queda en coordenadas del mundo, su `NetRestThrottle` nunca descansa
+   y manda a 30/s: en "2 lejos" son unos +25 KB/s para el de a bordo (~75 de 64 con 4). También se supone que la
+   caja en el rack viaja con la camioneta en el modo Empresa (hoy queda congelada sin ronda activa,
+   `package_handling.gd`) y que la camioneta se maneja.
+2. **`care_state` de la caja cuidada** (`package.tscn`, `ON_CHANGE`, republicado cada 0,1 s por
+   `package_rescue.gd`): ~520-620 B por envío, ~6-7 KB/s por caja cuidada para cada cliente que la ve. Salida con 4:
+   ~42 de 40; "2 lejos" con 4: ~63 de 64.
+3. **Cajas que se cargan en el galpón durante una salida** (30/s mientras se mueven): una por jugador que se queda
+   suma ~4,4 KB/s; salida con 4, ~40,0.
+4. **Pulsos de keepalive desfasados** (clientes con distinto `hidden_at`): el techo es 2,5 KB/s por cliente del
+   galpón, no 2,5 en total.
+5. **Al reaparecer la visibilidad** puede reenviarse cada `ON_CHANGE` (NodePaths y diccionarios de la caja): falta
+   verificarlo en el código de Godot 4.7.
+
+Qué hizo D-2002.4 con cada una: (1) resuelta por D-0302.2.b.4 del lado del dueño (`VehiclePick`);
+`test_company_multi_vehicle` prueba que una caja quieta en la segunda camioneta, que sigue andando, manda en su
+espacio y descansa (la copia en los otros peers sigue en la primera: D-0302.2.b.4.b); (2) contado con el
+`care_state` real más grande (`PackageRescue.publish_care()` de cada trampa, la bomba: 912 B) como delta
+`ON_CHANGE` confiable a su ritmo; (3) contada una caja en la mano, a 30/s, por cada jugador del galpón mientras
+hay vehículos afuera, en el modelo y en ENet; (4) cada cliente del galpón con su propio reloj de pulsos; (5)
+queda abierta (verificar en el código de Godot 4.7 si al reaparecer se reenvía cada `ON_CHANGE`). Además el test
+espera `is_resting()` de la camioneta estacionada en vez de 30 ticks fijos (descansa a los 26).
 
 Carga de "galpón a full": cada jugador hace una acción de negocio por segundo (tomar, guardar, poner en la grilla,
-encintar: una petición que el host convierte en un evento para todos) más una por segundo de las reglas del host
-(pedidos, reloj, fases): 5 eventos/s con 4 jugadores, 9 con 8. Cada uno del tamaño del `units_moved` real más
-grande (con `pos`: 181 B con su RPC), en un datagrama propio. `bot_company_day` todavía es un esqueleto: cuando
-tenga etapas, este ritmo se cambia por un día medido.
+encintar; a bordo, entregar: una petición que el host convierte en un evento para todos) más una por segundo de
+las reglas del host (pedidos, reloj, fases): 5 eventos/s con 4 jugadores, 9 con 8. Cada uno del tamaño del
+`units_moved` real más grande (con `pos`: 181 B con su RPC), en un datagrama propio. Con vehículos afuera, además,
+un evento de salida por segundo y por vehículo (techo: una salida manda dos), del tamaño del real más grande
+(`trip_started` con 7 pedidos y 7 cajas: 409 B). `bot_company_day` todavía es un esqueleto: cuando tenga etapas,
+estos ritmos se cambian por un día medido.
+
+**Los casos** (`tests/company_bandwidth_cases.gd`, `case_layout()`; reparto de `roles-tripulacion.md`):
+
+- **Galpón:** toda la cuadrilla en el galpón; la camioneta estacionada afuera, en reposo (cada 0,5 s).
+- **Una salida afuera:** un vehículo afuera con 2 a bordo (conductor y un pasajero que cuida una caja: "Ruta 1-2",
+  §2.3-2.4) y el resto en el galpón. El vehículo todavía está **cerca** del galpón (a 2 celdas o menos,
+  `CELL_LOAD_RADIUS`): los del galpón también reciben el vehículo y su carga. Es el peor momento de la salida.
+- **2 vehículos lejos** (`VEHICLES_FAR_MAX`): dos vehículos a más de `CELL_UNLOAD_RADIUS` celdas del galpón, con 2 a
+  bordo cada uno, como mucho todos menos 2 (recepción y armado se quedan, §2.3): con 4 jugadores es un conductor en
+  cada uno. `CompanyInterest` no le manda los vehículos ni sus cajas al galpón (sí el pulso de keepalive), y los
+  dos vehículos van **cerca entre sí** (la misma ruta): cada uno a bordo recibe los dos.
+- Cada vehículo lleva carga completa (7 cajas): una cuidada por cada pasajero (o por el conductor si va solo) en
+  movimiento, el resto quieta en el rack (a su ritmo de reposo).
+- **Con más gente a bordo** (solo se imprime, `crowded_*`): el techo de diseño, conductor y 3 pasajeros por
+  vehículo, con un solo jugador en el galpón.
 
 **D-2002.3 (2026-10-19): en el mundo de la empresa cada jugador manda su pose 15 veces por segundo a pie**
 (`CompanyTuning.SHED_POSE_RATE_HZ`, la opción "bajar el envío en el galpón" de abajo). El juego de siempre
 (Reparto, Infinito) sigue en 30 (`player.tscn`, sin tocar). Desde entonces el test **falla si el galpón pasa
-24 KB/s con 4 o con 8 jugadores**, en el modelo o en la medición.
+24 KB/s con 4 o con 8 jugadores**, en el modelo o en la medición. **Desde D-2002.2 también falla si con 4 jugadores
+una salida pasa 40 KB/s o 2 vehículos lejos pasan 64**; con 8 esos dos no entran todavía en el modelo: se imprimen
+(`over_budget` con los culpables) y no fallan (`FULL_CREW_FITS`; el test avisa cuando entren).
+
+**Desde D-2002.4 el test también falla si con 8 jugadores 2 vehículos lejos pasan 64** (`FULL_CREW_FITS["far"]`),
+**y desde D-2002.5 si la salida con 8 pasa 40** (`FULL_CREW_FITS["trip"]`): el test exige los seis casos.
 
 | Caso | Presupuesto por cliente | 4 jugadores (modelo / ENet) | 8 jugadores (modelo / ENet) | Estado |
 |---|---|---|---|---|
-| Galpón, poses a 15/s (D-2002.3) | ≤ 24 KB/s | 8,7 / 5,9-6,0 | 19,8 / 13,1-13,4 | Entran los dos (el test falla si alguno se pasa) |
+| **Galpón, cada uno con una caja en la mano (D-2002.5, con `net_vehicle`)** | ≤ 24 KB/s | **9,4 / 6,1** | **20,9 / 12,9-13,0** | Entran los dos (el test falla si alguno se pasa) |
+| **Una salida afuera (D-2002.5, la caja en la mano sin pose, con `net_vehicle`)** | ≤ 40 KB/s | **28,2-28,3 / 19,4-20,6** | **39,7 / 24,6-26,6** | Entran los dos (el test falla si alguno se pasa); con 8 sobran 0,3 |
+| **2 vehículos lejos (D-2002.5, con `net_vehicle`)** | ≤ 64 KB/s | **42,2 / 32,5-33,0** | **53,6 / 36,0-38,4** | Entran los dos (el test falla si alguno se pasa) |
+| Las tres, D-2002.5 antes de mezclar `net_vehicle` (D-0302.2.b.4.b) | | 9,2 / 27,8 / 41,6 | 20,3 / 39,0 / 52,7 | `net_vehicle` suma 5 B a cada pose de caja y de jugador |
+| Galpón, cada uno con una caja en la mano a 30/s (antes de D-2002.5, solo modelo, calculado) | ≤ 24 KB/s | ~29,1 / — | ~57,7 / — | No entraba ni con 4 (nadie lo contaba) |
+| Galpón, poses a 15/s (D-2002.3, igual en D-2002.4; sin cajas en la mano) | ≤ 24 KB/s | 9,1 / 5,9-6,0 | 20,2 / 12,8-13,6 | Superado por D-2002.5 |
+| Una salida afuera (D-2002.4, todo contado y 4 palancas) | ≤ 40 KB/s | 38,7 / 30,2-30,8 | 67,3 / 52,2-54,0 | 8 no entraba: las 6 cajas en la mano de los que cargan |
+| 2 vehículos lejos (D-2002.4, todo contado y 4 palancas) | ≤ 64 KB/s | 45,9 / 36,6-36,9 | 57,0 / 40,1-42,4 | Superado por D-2002.5 |
+| Una salida, todo contado, sin palancas (D-2002.4, antes) | ≤ 40 KB/s | 54,3 / — | 82,9 / — | 4 no entraba |
+| 2 lejos, todo contado, sin palancas (D-2002.4, antes) | ≤ 64 KB/s | 69,9 / — | 90,9 / — | 4 no entraba |
 | Galpón, poses a 30/s (D-2002.1, antes) | ≤ 24 KB/s | 16,1 / 10,8-10,9 | 37,2 / 22,5-25,2 | 4 entraba; 8 se pasaba |
-| Una salida afuera | ≤ 40 KB/s | pendiente D-2002.2 (sin vehículo en el mundo de la empresa todavía) | pendiente D-2002.2 | — |
-| 2 vehículos lejos | ≤ 64 KB/s | pendiente D-2002.2 (sin vehículo en el mundo de la empresa todavía) | pendiente D-2002.2 | — |
+| Una salida afuera (D-2002.2, sin las salvedades) | ≤ 40 KB/s | 35,6 / 23,1-23,6 | 46,6 / 26,0-30,3 | Superado por D-2002.4 |
+| 2 vehículos lejos (D-2002.2, sin las salvedades) | ≤ 64 KB/s | 50,1 / 33,2-33,7 | 66,2 / 38,3-42,7 | Superado por D-2002.4 |
+
+El galpón subió 0,4 KB/s desde D-2002.3 (8,7 → 9,1 y 19,8 → 20,2): es la camioneta de la flota estacionada afuera
+(D-0302.2.b), que el modelo cuenta sola a su ritmo de reposo (133 B cada 0,5 s).
 
 Detalle del galpón (poses a 15/s; entre paréntesis, a 30/s antes de D-2002.3):
 
 | | 4 jugadores | 8 jugadores |
 |---|---|---|
-| Por cliente, modelo (de eso, cabeceras de datagrama) | 8,7 KB/s (3,9) — antes 16,1 (7,4) | 19,8 KB/s (8,9) — antes 37,2 (17,1) |
-| Por cliente, ENet medido (overlay + IP/UDP) | 5,9-6,0 KB/s (4,6 + 1,4) — antes 10,9 (8,3 + 2,6) | 13,1-13,4 KB/s (10,1-10,3 + 3,0-3,1) — antes 22,5-25,2 |
-| Datagramas por segundo a cada cliente (modelo / ENet) | 50 / 50 — antes 95 / 93 | 114 / 109-112 — antes 219 / 191-214 |
-| Subida del host (modelo con datagramas / ENet sin IP/UDP) | 26,1 / 13,7 KB/s — antes 48,4 / 24,9 | 138,3 / 70,9-72,4 KB/s — antes 260,6 / 121-135 |
+| Por cliente, modelo (de eso, cabeceras de datagrama) | 9,1 KB/s (4,1) — antes 16,1 (7,4) | 20,2 KB/s (9,1) — antes 37,2 (17,1) |
+| Por cliente, ENet medido (overlay + IP/UDP) | 5,9-6,0 KB/s (4,6 + 1,4) — antes 10,9 (8,3 + 2,6) | 12,8-13,6 KB/s (9,9-10,5 + 2,9-3,1) — antes 22,5-25,2 |
+| Datagramas por segundo a cada cliente (modelo / ENet) | 52 / 50 — antes 95 / 93 | 116 / 106-114 — antes 219 / 191-214 |
+| Subida del host (modelo con datagramas / ENet sin IP/UDP) | 27,4 / 13,7 KB/s — antes 48,4 / 24,9 | 141,3 / 59,9-73,6 KB/s — antes 260,6 / 121-135 |
 
-Qué se cuenta hoy en el galpón: solo los sincronizadores del jugador. `Player/MultiplayerSynchronizer` manda 82 B
-(con su cabecera) cada 66,6 ms en el galpón (cada 33,3 ms en el juego de siempre); el de `GelProportions` es solo
-`ON_CHANGE` (no manda nada quieto, confirmado en la medición). El galpón en sí no tiene sincronizadores: los bultos
-del piso son estáticos (regla 10 de `red-autoridad.md`). Cuando una tarea sume cuerpos sincronizados al galpón (la
-caja armada de D-0711, el palet en la zorra) el modelo los cuenta solo, una vez cada uno. El snapshot de un join
-tardío del galpón amueblado pesa unos 755 B comprimido (2.264 B crudo), una sola vez.
+Detalle de las salidas (D-2002.2; el peor cliente y, entre paréntesis, los demás del mismo reparto):
+
+| | Una salida, 4 | Una salida, 8 | 2 lejos, 4 | 2 lejos, 8 |
+|---|---|---|---|---|
+| A bordo de cada vehículo | 2 | 2 | 1 y 1 | 2 y 2 |
+| Peor cliente (modelo) | en el galpón, host en el galpón | en el galpón, host en el galpón | a bordo, host en el galpón | a bordo, host en el galpón |
+| Por cliente, modelo (de eso, cabeceras de datagrama) | 35,6 KB/s (13,5) (a bordo 33,1) | 46,6 (18,5) (a bordo 44,1) | 50,1 (12,6) (galpón 17,1) | 66,2 (19,9) (galpón 33,1) |
+| Por cliente, ENet medido (overlay + IP/UDP) | 23,1-23,6 (19,5-19,7 + 3,6-3,9) (a bordo 21,4-22,0) | 26,0-30,3 (21,8-24,9 + 4,3-5,4) (a bordo 19,8-28,6) | 33,2-33,7 (29,9-30,1 + 3,3-3,6) (galpón 9,3-9,4) | 38,3-42,7 (33,8-37,0 + 4,5-5,7) (galpón 14,3-16,8) |
+| Datagramas por segundo al peor cliente (modelo / ENet) | 173 / 133-144 | 237 / 156-199 | 161 / 121-131 | 255 / 165-208 |
+| Subida del host (modelo con datagramas / ENet sin IP/UDP) | 101,7 / 55,9-56,6 | 321,4 / 142-165 | 117,3 / 67,0-67,3 | 364,1 / 157-177 |
+| Keepalive de `CompanyInterest` (modelo) | — | — | 2,5 a bordo, 2,4 en el galpón | 2,5 a bordo, 2,4 en el galpón |
+| Con más gente a bordo (techo de diseño, solo modelo) | 39,7 (3 a bordo) | 59,9 (4 a bordo) | 50,2 (2 y 1) | 83,6 (4 y 3) |
+
+Por qué ENet da tanto menos que el modelo en las salidas (con 8, 26-30 contra 46,6): ENet junta en un datagrama
+los paquetes que salen juntos hacia un peer (el modelo cuenta uno de 80 B por paquete), la camioneta a 145 FPS manda
+cada 3 frames (~48/s, no 60) y quieta tiene floats de 4 B (el modelo los cuenta de 8). Steam también junta mensajes,
+pero el presupuesto se decide con el techo, como en el galpón.
+
+Lo que pesa cada pieza (modelo, por cliente que la ve): la camioneta en movimiento manda 133 B cada 16,7 ms
+(12,6 KB/s sola en su paquete, 4,7 de datagramas; la segunda suma 7,8 en el mismo paquete); una caja manda 150 B
+(dos `Transform3D`: `net_transform` y `hold_offset`; 98 B desde D-2002.5, sin `hold_offset`, 103 con `net_vehicle`), 6,8 KB/s cuidada a
+30/s y 0,3 en reposo (en el paquete de las demás); un jugador a bordo reenviado por el host, 5,0 KB/s (a pie en el galpón, 2,5). Un vehículo vacío afuera
+(no cuenta para el tope de `CompanyTrips`) cuesta lo mismo que uno cargado menos sus cajas.
+
+Qué se cuenta hoy en el galpón: los sincronizadores del jugador y la camioneta estacionada.
+`Player/MultiplayerSynchronizer` manda 82 B (con su cabecera) cada 66,6 ms en el galpón (cada 33,3 ms a bordo y en el juego de siempre); el de
+`GelProportions` es solo `ON_CHANGE` (no manda nada quieto, confirmado en la medición). El galpón en sí no tiene
+sincronizadores: los bultos del piso son estáticos (regla 10 de `red-autoridad.md`). Las cajas selladas que esperan
+en el despacho (D-0715.b, `DeliveryPackage`) sí tienen, pero un mundo recién abierto no tiene ninguna: el galpón no
+las cuenta todavía (7 en reposo serían ~2,2 KB/s más); queda para rehacer el galpón con `bot_company_day`. El
+snapshot de un join tardío del galpón amueblado pesa unos 960 B comprimido (2.904 B crudo), una sola vez.
 
 **Culpables, en orden (8 jugadores, modelo, poses a 15/s):**
+
+Galpón (20,2 KB/s, entra):
 
 1. Las poses de los otros 6 clientes, reenviadas por el host (`server_relay`, un paquete por jugador y por envío,
    15 por segundo): 15,0 KB/s, de los que 7,0 son cabeceras de datagrama (a 30/s eran 30,1 y 14,1).
 2. La pose del jugador del host: 2,4 KB/s (1,2 de datagramas; antes 4,8).
 3. Los eventos de negocio, 9 por segundo: 2,3 KB/s (0,7 de datagramas), igual que antes.
+4. La camioneta estacionada: 0,4 KB/s (0,2).
 
-Con 4 jugadores el orden es el mismo (5,0 / 2,4 / 1,3 KB/s). Las poses siguen siendo lo que más pesa.
+Con 4 jugadores el orden es el mismo (5,0 / 2,4 / 1,3 / 0,4 KB/s). Las poses siguen siendo lo que más pesa.
+
+Una salida afuera (46,6 KB/s de 40; el peor es un cliente del galpón con el host en el galpón):
+
+1. La camioneta en movimiento: 12,6 KB/s (4,7 de datagramas).
+2. Los 2 que van a bordo, reenviados a 30/s: 10,0 (4,7).
+3. Los otros 4 del galpón, reenviados a 15/s: 10,0 (4,7).
+4. La caja que cuida el pasajero, a 30/s: 6,8 (2,3).
+5. La pose del jugador del host: 2,4 (1,2).
+6. Los eventos de negocio, 9 por segundo: 2,3 (0,7).
+7. Las otras 6 cajas, quietas en el rack: 1,9 (0,2).
+8. Los eventos de salida (techo, uno por segundo): 0,5 (0,1).
+
+Con 4 jugadores (35,6, entra): 12,6 / 10,0 / 6,8 / 2,4 / 1,9 (las cajas quietas) / 1,3 (los eventos, 5 por
+segundo) / 0,5.
+
+2 vehículos lejos (66,2 KB/s de 64; el peor va a bordo, con el host en el galpón):
+
+1. Las 2 camionetas en movimiento (las dos cerca, en la misma ruta): 20,4 KB/s (4,7 de datagramas).
+2. Los otros 3 que van a bordo, reenviados a 30/s: 15,0 (7,0).
+3. Las 2 cajas cuidadas, a 30/s: 11,2 (2,3).
+4. Los 3 del galpón, reenviados a 15/s aunque estén lejos (los jugadores no se filtran por distancia): 7,5 (3,5).
+5. Las otras 12 cajas, quietas: 3,8 (0,3).
+6. El keepalive: cada pulso que `CompanyInterest` le manda al galpón (cada 20 s) despierta las cajas quietas dos
+   veces, al prender y al apagar la visibilidad (`NetRestThrottle` despierta con `visibility_changed`), y quedan
+   0,5 s a ritmo completo para los que van a bordo: 2,5 (0,0).
+7. La pose del jugador del host: 2,4 (1,2). 8. Los eventos de negocio: 2,3 (0,7). 9. Los de salida: 1,0 (0,2).
+
+Con 4 jugadores (50,1, entra): 20,4 / 11,2 / 5,0 (el otro conductor) / 3,8 / 2,5 (uno del galpón) / 2,5
+(keepalive) / 2,4 / 1,3 / 1,0. Al cliente que se queda en el galpón el pulso le cuesta 2,4 KB/s (17,1 en total con
+4; 33,1 con 8): 2 camionetas, 2 cajas cuidadas y 12 quietas que se despiertan con el pulso (sin despertarlas serían
+~0,5).
+
+**Qué haría entrar a 8 (estimado en D-2002.2 con el mismo modelo; las primeras se aplicaron en D-2002.4, arriba):**
+
+- **La camioneta a 30/s en el mundo de la empresa** (0,0333 en vez de 0,0167): comparte el paquete de las cajas
+  cuidadas. Una salida 46,6 → 37,9; 2 lejos 66,2 → 53,6. Entran las dos con un solo número. Además a 60 FPS el
+  0,0167 ya manda cerca de 30/s (es apenas más que 1/60, el mismo redondeo que `pose_interval()` arregló para el
+  jugador): habría que medirlo a mano antes de decidir. El costo es la predicción del conductor (N-218), que
+  corrige contra las poses del host la mitad de seguido; si se nota, 60/s solo para el conductor pide un segundo
+  sincronizador (cambia el protocolo).
+- **Filtrar también a los jugadores por distancia** (la regla de `CompanyInterest`, que la decisión del 2026-10-21
+  dejó para "si D-2002.2 mide que no entra en 64"): 2 lejos con 8, 66,2 → 58,7. A una salida cerca del galpón no
+  le cambia nada.
+- **Los que van sentados (conductor y pasajeros) mandan a 15/s** (`apply_pose_rate()` hoy vuelve a 30 sentado o a
+  bordo; sentado, su pose en el espacio del vehículo casi no cambia): una salida 46,6 → 41,6 (no alcanza solo); 2
+  lejos → 58,7.
+- **Que el pulso no despierte las cajas** (`NetRestThrottle` despierta con cualquier `visibility_changed` de un
+  peer; el keepalive de `WorldCellInterest` prende y apaga): 2 lejos 66,2 → 63,7, y el galpón pasa de 2,4 a ~0,5 de
+  keepalive. Toca los dos módulos (`net_pose_smoother`, `world_cells`).
+- **Que la caja no mande `hold_offset` mientras nadie la tiene en la mano** (hoy va en cada pose, `IDENTITY` si
+  nadie la tiene; va con la pose a propósito, así que no basta pasarlo a `ON_CHANGE`): 150 → 98 B por caja; una
+  salida −2,1 KB/s. Es `package.tscn` (de Slatex y del Reparto). **Hecho en D-2002.5** (`hold_offset` ya no viaja
+  nunca: cada peer lo calcula).
+
+Con 4 jugadores las dos salidas entran sin nada de esto. Con el techo de diseño a bordo (conductor y 3 pasajeros, 3
+con 4 jugadores) una salida da 39,7: entra sin margen.
+
+**D-2002.4 (2026-10-22): lo que faltaba contar y las palancas de las salidas**
+([decisión](decisiones/2026-10-22-palancas-ancho-de-banda-salidas.md)). Todo solo en el modo Empresa; el Reparto
+y el Infinito no cambian:
+
+1. La camioneta de la flota manda cada 0,03 s en movimiento (`CompanyTuning.FLEET_POSE_INTERVAL_SEC`, en
+   `CompanyFleet._make()` antes de que `NetRestThrottle` guarde el intervalo). Medido con el tope de FPS del
+   motor, 2 peers ENet: el 0,0167 de siempre manda 35,8/s a 60 FPS y 47,9 a 144; 0,0333 (`pose_interval(30)`)
+   25,0 y 28,7; 0,03, 30,0 y 29,0. El modelo la cuenta a 33,3/s en un paquete propio.
+2. Sentados, 15/s (`CompanyTuning.SEATED_POSE_RATE_HZ`, `player_ride.gd` `set_seated_pose_rate()`); parado en la
+   caja de carga, 30. Los de a bordo de los casos van sentados (conductor y pasajero con la caja en la falda).
+3. El keepalive no despierta: `WorldCellInterest.pulse_visibility()` cambia la visibilidad con la meta
+   `net_rest_quiet` y `NetRestThrottle` la respeta; tampoco se despierta al ocultar. El test lo mide con una caja
+   real (`pulse wakes ... 0 times`).
+4. `care_state` de una caja de la empresa cada 0,2 s (`CompanyTuning.CARE_PUBLISH_SEC`, `BoxToPackage.tune()`).
+
+Lo que se cuenta nuevo (modelo): `care_state` de 912 B (bomba; con su cabecera de delta, 17 B) a 5/s por caja
+cuidada: 4,9 KB/s cada una (a 10/s eran 9,9); una caja en la mano a 30/s por cada jugador del galpón durante
+una salida: 5,2 KB/s cada una; con 2 lejos y 8, los pulsos desfasados de 3 clientes del galpón despertaban las
+cajas quietas por 7,4-9,9 KB/s para los de a bordo (ahora 0, y al galpón el pulso le cuesta 0,4).
+
+Culpables después de las palancas (modelo, peor cliente):
+
+- Salida con 4 (38,7; el peor va a bordo): 2 cajas en la mano en el galpón 10,4 / la camioneta 7,0 / la caja
+  cuidada 5,2 / su `care_state` 4,9 / el otro de a bordo 2,5 / el otro del galpón 2,5 / el resto (pose del host,
+  eventos, cajas quietas) 6,1.
+- Salida con 8 (67,3, no entra; el peor va a bordo): 6 cajas en la mano 28,5 / 5 del galpón reenviados 12,5 / la
+  camioneta 7,0 / `care_state` 4,9 / la caja cuidada 4,7 / el resto 9,6.
+- 2 lejos con 4 (45,9): las 2 camionetas 11,4 / las 2 cajas cuidadas 11,2 / sus `care_state` 9,9 / las 12 quietas
+  3,8 / el resto 9,7. Al del galpón le llegan 21,3.
+- 2 lejos con 8 (57,0): 11,4 / 11,2 / 9,9 / 3 de a bordo reenviados 7,5 / 3 del galpón 7,5 / el resto 9,5. Al del
+  galpón, 41,2 (entra en los 64 del caso, no en los 24 del galpón: ver `revisar/D-2002.4.md`).
+
+Por qué ENet sube tanto respecto de D-2002.2 (salida con 4, 23,6 → 30,8): ahora se miden las 2 cajas en la mano y
+los deltas de `care_state`, que antes no estaban; la camioneta y los sentados bajaron.
+
+**D-2002.5 (2026-10-22): la caja en la mano no manda su pose**
+([decisión](decisiones/2026-10-22-caja-en-la-mano-sin-pose.md)). En todos los modos (es el mismo `package.tscn`):
+
+1. Mientras un jugador a pie la tiene en la mano (`is_held` y `carrier_peer_id > 0`), el host mutea el
+   `NetRestThrottle` de la caja (`set_muted()`, nuevo en `net_pose_smoother`): manda una pose cada 5 s
+   (`muted_interval`, para que el reloj de 16 bits de SceneMultiplayer no se dé vuelta en una caja que se lleva
+   minutos). Al soltarla vuelve a cada tick desde el tick siguiente.
+2. Cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del que la lleva (cabeza, rayo contra lo que
+   estorba, subida desde `pick_up`), en el cuerpo como lo dibuja. `hold_offset` sale de la replicación: una caja que
+   se mueve manda 98 B en vez de 150 (por eso bajan también la caja cuidada y las quietas); con `net_vehicle`
+   (D-0302.2.b.4.b, mezclado después), 103 en vez de 155.
+3. Al soltarla, las poses viejas (de antes de tomarla y del goteo) no se usan: la caja queda donde se dibujó hasta la
+   primera pose nueva del host y se acerca en 0,25 s (`test_remote_carry_alignment`).
+
+Culpables después (modelo, peor cliente; con `net_vehicle`, mezclado después de medir D-2002.5):
+
+- Salida con 8 (39,7 de 40, entra justo; el peor va a bordo, el host en el galpón): 5 del galpón reenviados 12,9 / la
+  camioneta 7,0 / la caja cuidada 5,5 / su `care_state` 4,9 / el otro de a bordo 2,6 / la pose del host 2,5 / los
+  eventos de negocio 2,3 / las 6 quietas 1,4 / los eventos de salida 0,5 / las 6 cajas en la mano 0,1.
+- Salida con 4 (28,2): la camioneta 7,0 / la caja cuidada 5,5 / `care_state` 4,9 / el otro de a bordo 2,6 / el del
+  galpón 2,6 / el resto 5,8.
+- 2 lejos con 8 (53,6): las 2 camionetas 11,4 / los 2 `care_state` 9,9 / las 2 cajas cuidadas 8,5 / 3 de a bordo 7,7
+  / 3 del galpón 7,7 / el resto 8,5 (los pulsos de las 4 cajas en la mano del galpón, 0,1). Con 4, 42,2.
+- Galpón con 8 (20,9): igual que en D-2002.3 más las 8 cajas en la mano (0,2). A 30/s y 150 B, como mandaban antes,
+  habrían sido ~37,6 KB/s más (~57,7 en total; con 4, ~29,1: tampoco entraba).
+
+En el Reparto (`test_net_bandwidth_budget`, 8 jugadores, 14 cajas): host → cada cliente, caso estable 80,7 → 68,8
+KB/s (la caja de 148 a 98 B con `net_vehicle`; el modelo sigue contando una caja por jugador moviéndose, un techo: la
+que se lleva a pie ya no manda), todo moviéndose 107,2 → 87,1, subida del host 4,6 → 3,9 Mbit/s.
 
 **Cómo está hecho D-2002.3:**
 
 - `CompanyRoot.join_crew(player)` (lo usa `_spawn_player` y los jugadores de la medición) mete al jugador en
   `company_crew` y llama `Player.set_on_foot_pose_rate(CompanyTuning.SHED_POSE_RATE_HZ)`. El jugador elige el
   intervalo cada tick al publicar su pose (`player_ride.gd`, `apply_pose_rate()`): a pie, el pedido; subido a un
-  vehículo (`net_in_vehicle`) o sentado, el de `player.tscn` otra vez (30/s). En el mundo de la empresa no hay
-  vehículo todavía; `test_company_root` lo prueba con uno de mentira. Solo cuenta el del dueño: él manda y el host
-  reenvía al mismo ritmo.
+  vehículo (`net_in_vehicle`) o sentado, el de `player.tscn` otra vez (30/s): `test_company_root` lo prueba con un
+  vehículo de mentira y D-2002.2 lo mide a bordo de la camioneta de la flota (`rider_pose_rate`). Solo cuenta el
+  del dueño: él manda y el host reenvía al mismo ritmo.
 - El intervalo es 0,0666 s y no 1/15 exacto (`pose_interval()`, redondeado hacia abajo a 0,1 ms como el 0,0333 de
   la escena): SceneMultiplayer mira el sincronizador una vez por frame y cuenta desde el frame en que mandó, así
   que con 1/15 exacto un frame que cae un pelo antes espera al siguiente (a 60 FPS, cada 5 frames: 12 por segundo).

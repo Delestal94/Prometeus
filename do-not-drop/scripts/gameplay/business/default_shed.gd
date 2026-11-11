@@ -35,6 +35,9 @@ const ROLE_ASSEMBLY: StringName = &"assembly"
 @export var first_order: Array[Dictionary] = []
 ## Where those pallets stand, in cells (centre of each, Vector2), in the order of their ids.
 @export var pallet_spots: Array[Vector2] = []
+## Where the picking carts stand at the start, in cells (centre of each, Vector2); the cart at index i is
+## "cart_<i + 1>" (D-0610.b).
+@export var cart_spots: Array[Vector2] = []
 ## Painted floor zones without a piece or fixed area of their own: {role, rect (Rect2i, cells),
 ## label_at (Vector2, cell where the name is written)}. Dock, exit and dispatch come from
 ## WarehouseStages and the dispatch piece.
@@ -142,11 +145,13 @@ func problems() -> Array[String]:
 	if not WalkReachability.entries_connected(grid, scratch.layout, entries):
 		found.append("the dock is cut off from the exit")
 	var shelf_slots: Dictionary = {}
+	var shelf_cold: Dictionary = {}
 	for index: int in scratch.layout.size():
 		var def: PlaceableDefinition = PlaceableShop.definition(
 			StringName(str(scratch.layout[index]["id"])))
 		if def != null and def.role == &"storage":
 			shelf_slots[str(piece_uid(scratch.layout, index))] = def.slots
+			shelf_cold[str(piece_uid(scratch.layout, index))] = def.cold
 	var labeled: Dictionary = {}
 	for entry: Dictionary in shelf_stock:
 		var shelf: String = str(entry.get("shelf", ""))
@@ -157,8 +162,13 @@ func problems() -> Array[String]:
 		if labeled.has(key):
 			found.append("shelf slot %s is labeled twice" % key)
 		labeled[key] = true
-		if not ResourceLoader.exists("res://data/products/%s.tres" % str(entry.get("product", ""))):
+		var product: ProductDefinition = load(
+			"res://data/products/%s.tres" % str(entry.get("product", ""))) as ProductDefinition \
+			if ResourceLoader.exists("res://data/products/%s.tres" % str(entry.get("product", ""))) else null
+		if product == null:
 			found.append("unknown product %s" % entry.get("product", ""))
+		elif shelf_cold.has(shelf) and (product.temperature == ColdPack.COLD) != bool(shelf_cold[shelf]):
+			found.append("%s on shelf %s: cold products go only in a fridge (D-0617)" % [product.id, shelf])
 	if first_pallets().size() > pallet_spots.size():
 		found.append("%d pallets but only %d spots" % [first_pallets().size(), pallet_spots.size()])
 	return found
@@ -189,3 +199,17 @@ class ScratchState extends RefCounted:
 
 	func store_stock(stock_in: Inventory) -> void:
 		inventory = stock_in.to_dict()
+
+
+## Until the order screen (D-0603) puts real orders in the calendar, the first order of the default shed arrives with
+## the truck every day for `days` days from `first_day`, the same on every peer, so the truck can be seen driving in.
+## It brings nothing: the stock stays what the shed started with.
+static func seed_stand_in(schedule: SupplierSchedule, first_day: int, days: int) -> void:
+	var data: DefaultShed = load_default()
+	if data == null:
+		return
+	var lines: Array = []
+	for line: Dictionary in data.first_order:
+		lines.append({"product": line.get("product", &""), "qty": line.get("qty", 0)})
+	for day: int in range(first_day, first_day + days):
+		schedule.place(day - 1, lines)

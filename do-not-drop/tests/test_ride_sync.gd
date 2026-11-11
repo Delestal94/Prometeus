@@ -35,11 +35,14 @@ func _initialize() -> void:
 	var player_config: SceneReplicationConfig = (player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_config
 	_expect(player_config.has_property(NodePath(".:net_position")) and player_config.has_property(NodePath(".:net_in_vehicle"))
 		and not player_config.has_property(NodePath(".:position")), "Players replicate a truck-relative position, not a raw one")
+	# Which truck that is, among several (D-0302.2.b.4.b, test_company_multi_vehicle).
+	_expect(player_config.has_property(NodePath(".:net_vehicle")), "Players replicate which truck their position is in")
 	var packages: Array[Node] = []
 	packages.assign(get_nodes_in_group(&"cargo"))
 	var package_config: SceneReplicationConfig = (packages[0].get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_config
 	_expect(package_config.has_property(NodePath(".:net_transform")) and package_config.has_property(NodePath(".:net_in_vehicle"))
 		and not package_config.has_property(NodePath(".:position")), "Boxes replicate a truck-relative transform, not a raw one")
+	_expect(package_config.has_property(NodePath(".:net_vehicle")), "Boxes replicate which truck their transform is in")
 	# A merge once reused indices 13/14 for care_state/salvage_state, which
 	# dropped the tender/assistant peers and broke spawning in net_pair.
 	for path: String in [".:tender_peer_id", ".:assistant_peer_id", ".:care_state", ".:salvage_state"]:

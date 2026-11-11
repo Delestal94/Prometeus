@@ -8,7 +8,8 @@ extends SceneTree
 ##   few meters and stop within MIN_FILL of its end; a piece that does not fit at the
 ##   end is a straight one cut to size;
 ## - each piece is set on the street and faces along it (yaw matches the tangent);
-## - a `curve` piece takes the turn the street makes over its span;
+## - a `curve` piece takes the turn the street makes over its span, and the next piece
+##   starts where it ends: the built lengths add up to the street's, no bare stretch (D-0304.5);
 ## - Campo's streets lay their pieces (gravel, mud, curve, chicane...) and Centro's
 ##   differ from them, with a golden for one Campo street;
 ## - build() makes a RouteSegment per piece, placed where the plan says.
@@ -63,6 +64,12 @@ func _test_every_street() -> void:
 				var gap: float = (piece.position as Vector2).distance_to(_graph.point_at(edge.id,
 						float(pieces[i - 1].start) + float(pieces[i - 1].advance)))
 				_expect(gap < MAX_GAP, "Pieces %d and %d of %s meet (gap %.1f m)" % [i - 1, i, edge.id, gap])
+		var built: float = 0.0
+		for piece: Dictionary in pieces:
+			_expect(is_equal_approx(float(piece.advance), float(piece.length)),
+					"A piece of %s advances by the length it is built with" % edge.id)
+			built += float(piece.length)
+		_expect(absf(built - length) < 12.0, "Street %s: pieces add up to %.0f of %.0f m" % [edge.id, built, length])
 		# Kinds repeat in the order the data gives, except a last cut one.
 		for i in pieces.size() - 1:
 			_expect(pieces[i].kind == edge.segments[i % edge.segments.size()],
@@ -95,7 +102,7 @@ func _test_curve_turn() -> void:
 			if piece.kind != &"curve":
 				continue
 			seen += 1
-			var span_end: float = float(piece.start) + EdgePieces.CURVE_SPAN
+			var span_end: float = float(piece.start) + float(piece.length)
 			if span_end > _graph.edge_length(edge.id):
 				continue
 			var a: Vector2 = _graph.tangent_at(edge.id, piece.start)

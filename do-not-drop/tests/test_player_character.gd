@@ -106,12 +106,13 @@ func _initialize() -> void:
 	for _i: int in range(10):
 		await physics_frame
 	await process_frame
-	_expect(player_anim.current_animation == "Sit", "Seated players play Sit (got %s)" % player_anim.current_animation)
+	_expect(player_anim.current_animation == "Drive",
+		"The driver plays Drive while passenger seats keep Sit (got %s)" % player_anim.current_animation)
 	player.call(&"leave_seat")
 	for _i: int in range(5):
 		await physics_frame
 	await process_frame
-	_expect(player_anim.current_animation != "Sit", "Standing up leaves the Sit clip")
+	_expect(player_anim.current_animation not in ["Sit", "Drive"], "Standing up leaves the seated clips")
 
 	# Height-weighted pickup: grip height above the feet -> PickUpHigh weight.
 	for sample: Vector2 in [Vector2(0.2, 0.0), Vector2(PlayerScript.PICKUP_LOW_GRIP, 0.0),

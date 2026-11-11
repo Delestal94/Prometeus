@@ -129,7 +129,10 @@ var _body_visual: Node3D = null
 ## ever computed on the owning peer (is_local()), same authority split as
 ## seat_node_path above.
 var anim_state: StringName = ANIM_IDLE
-## Picks anim_state (owner) and plays it (every peer); see PlayerAnimator.
+## Exact clip selected by the owner and replicated so copies never redo that
+## choice from transient local data (carried_package or gait hysteresis).
+var anim_clip: StringName = ANIM_IDLE
+## Picks anim_state/anim_clip (owner) and plays anim_clip (every peer); see PlayerAnimator.
 var animator: PlayerAnimator
 ## Presentation state authored by the owning peer, replicated with anim_state.
 ## Scales the gait clips (see PlayerAnimator.WALK_AUTHORED_SPEED); jump samples the real
@@ -179,16 +182,16 @@ var cosmetic_id: StringName = &"team_color":
 	set(value):
 		cosmetic_id = value
 		_apply_cosmetic()
-## Replicated in place of position (see player.tscn), written by the owning
-## peer. Standing in the truck's cargo bay it's in the truck's own space, so
-## everyone else puts this player back inside *their* copy of the truck
-## instead of where a world position from a moment ago left them (a metre
-## behind at speed: through the rear doors, or out of the truck).
+## Replicated in place of position (see player.tscn), written by the owning peer. Standing in the truck's cargo bay
+## it's in the truck's own space, so everyone else puts this player back inside *their* copy of the truck instead
+## of where a world position from a moment ago left them (a metre behind at speed: through the rear doors, or out).
 var net_position: Vector3 = Vector3.ZERO:
 	set(value):
 		net_position = value
 		_has_net_state = true
 var net_in_vehicle: bool = false
+## Which vehicle that space is (D-0302.2.b.4.b: VehiclePick.index_of(), -1 on foot), replicated with the pose.
+var net_vehicle: int = -1
 ## N-217: the facing (relative to the truck's heading while net_in_vehicle, replicated instead of `rotation`) and
 ## the owner's clock (ms); each synced packet goes into everyone else's _net_smoother (Ride.push_net_pose).
 var net_yaw: float = 0.0
@@ -320,7 +323,6 @@ func _build_body() -> void:
 	add_child(_carry_pose)
 	_carry_pose.setup(self, PlayerAppearance.find_skeleton(visual))
 
-
 func _apply_face() -> void:
 	if _character_face != null:
 		_character_face.set_expression(face_eyes, face_mouth)
@@ -363,8 +365,8 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_local() and animator != null: animator.note_activity()
 	OnFootInput.handle_event(self, event)
-
 
 ## Runs on every peer's copy of this player, seated or driving, local or
 ## not -- posing BodyVisual at the seat is pure presentation, so it doesn't
@@ -452,17 +454,7 @@ func _physics_process(delta: float) -> void:
 		_interaction_component.publish_lid_hint(null)
 		return
 	if _seated:
-		var candidate: DeliveryPackage = (_cargo_care.assist_candidate() if tended_package != null
-				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
-		_interaction_component.publish_prompt(
-				candidate.assist_prompt() if candidate != null and assisted_package == null else "")
-		_interaction_component.publish_lid_hint(_lid_target())
-		if carried_package != null:
-			_carry_component.update_carried_package()
-		if assisted_package != null:
-			_cargo_care.update_assisting()
-		elif candidate != null and Input.is_action_just_pressed(&"interact"):
-			candidate.rpc_id(1, &"request_assist")
+		_seat_pose_component.seated_step()
 		return
 	Movement.on_foot_step(self, delta)
 
@@ -602,19 +594,19 @@ func _within_reach(target: Node3D) -> bool:
 
 @rpc("any_peer", "call_local", "unreliable")
 func receive_package_hit(push: Vector3, simulation_seed: int = 0) -> void:
-	# Loose boxes are simulated on the host; nobody else gets to knock people over.
-	if not _from_host() or not RpcGuard.finite_vec3(push):
+	if not _from_host() or not RpcGuard.finite_vec3(push):  # Only host-simulated loose boxes can knock people over.
 		return
 	if _package_hit_cooldown > 0.0 or _seated:
 		return
 	_package_hit_cooldown = 0.45
 	_flinch_time = 0.32
+	_gel_effects_component.play_hit(push.length())
 	if push.length() >= 2.2:
 		_activate_ragdoll(push, simulation_seed)
 		return
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
-		animator.play_one_shot(ANIM_JUMP, 420)
+		animator.play_one_shot(PlayerAnimator.ANIM_BOX_HIT, PlayerAnimator.BOX_HIT_ANIM_LOCK_MS)
 
 
 func _activate_ragdoll(push: Vector3, simulation_seed: int = 0) -> void:
@@ -680,9 +672,10 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 
 ## Seats are a temporary safe spot, not a lock-in. Leaving restores the
 ## on-foot controller at the seat's location, so passengers can react to
-## loose cargo while the van is moving.
-func leave_seat() -> void:
-	_seat_pose_component.leave_seat()
+## loose cargo while the van is moving. `tell_host` false: the host let the
+## seat go already (its vehicle left the fleet, CompanyFleet.prune()).
+func leave_seat(tell_host: bool = true) -> void:
+	_seat_pose_component.leave_seat(tell_host)
 
 
 ## Where to stand when getting up: the seat's own "ExitPoint" if it has one

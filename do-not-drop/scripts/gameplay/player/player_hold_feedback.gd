@@ -11,10 +11,10 @@ extends RefCounted
 ## glow on the box they are steadying. It is never sent anywhere and never read
 ## by the host, so a wrong guess only ever shows for a moment.
 ##
-## The hands themselves: the seated body has no hold pose today and the
-## carrying hands (carry_pose.gd) follow the box regardless, so nothing there
-## reads `holding` yet. Character work is on hold (S-311); when it reopens,
-## `holding` / `press_count` are what a hand squeeze should follow.
+## The hands themselves: player_hold_pose.gd reads `holding` on the local player's
+## own copy, so the gel's hands grip the box the very frame the button goes down
+## (the rest of the crew see it from the host's care_state.held_by instead, which
+## is why this flag stays local and is never the source of that one).
 
 ## The package whose grip glow this is lighting, if any. Variant: a box freed
 ## from under us (ruined and cleaned up, run over) must not stop a typed call.

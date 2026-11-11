@@ -5,6 +5,7 @@ extends Node
 
 const SubtitleQueue = preload("res://scripts/ui/hud/sound_subtitle_queue.gd")
 const ControlHints = preload("res://scripts/ui/control_hints.gd")
+const PromptPlates = preload("res://scripts/ui/hud/hud_prompt_plates.gd")
 
 ## Set by Hud before this is added as its child.
 var hud: Hud
@@ -42,6 +43,8 @@ func _ready() -> void:
 	EventBus.cargo_animal_alert.connect(_on_animal_subtitle)
 	EventBus.cargo_animal_ended.connect(_on_animal_ended_subtitle)
 	EventBus.run_started.connect(_on_run_started_subtitle)
+	GameSettings.subtitle_scale_changed.connect(_on_subtitle_scale_changed)
+	GameSettings.colorblind_palette_changed.connect(_on_palette_changed)
 
 
 func refresh_shortcuts(delta: float = 0.0) -> void:
@@ -184,23 +187,71 @@ func render_interaction_prompt() -> void:
 	var lines: PackedStringArray = []
 	var action_id: StringName = _action_id_for_prompt(hud.interaction_prompt)
 	if not hud.interaction_prompt.is_empty():
-		lines.append("[ %s ]  %s" % [GameSettings.binding_label(&"interact"), hud.interaction_prompt])
+		lines.append(_keycap_line(GameSettings.binding_label(&"interact"), hud.interaction_prompt))
 	if _carrying:
-		lines.append(tr("HUD_PROMPT_DROP") % GameSettings.binding_label(&"package_drop"))
+		var drop_key: String = escape_bbcode(GameSettings.binding_label(&"package_drop"))
+		lines.append(UiTheme.keycaps(tr("HUD_PROMPT_DROP") % drop_key, true))
 		if action_id == &"":
 			action_id = &"drop"
 	if not _lid_action.is_empty():
-		lines.append("[ %s ]  %s" % [GameSettings.binding_label(&"package_open"), _lid_action])
+		lines.append(_keycap_line(GameSettings.binding_label(&"package_open"), _lid_action))
 		if action_id == &"":
 			action_id = &"open_box"
 	if not _lid_inside.is_empty():
-		lines.append(tr("HUD_PROMPT_INSIDE") % _lid_inside)
-	if not _sound_subtitle.is_empty():
-		lines.append(_sound_subtitle)
-	lines.append_array(_subtitles.lines())
+		lines.append(escape_bbcode(tr("HUD_PROMPT_INSIDE") % _lid_inside))
 	hud.interaction_label.text = "\n".join(lines)
 	hud.interaction_icon.texture = UiTheme.action_icon(action_id)
 	hud.interaction_icon.visible = hud.interaction_icon.texture != null
+	# The sounds go in their own cream plate under the prompt (N-983.1).
+	var sounds: PackedStringArray = []
+	if not _sound_subtitle.is_empty():
+		sounds.append(_at_risk_line(_sound_subtitle))
+	for line: String in _subtitles.lines():
+		sounds.append(escape_bbcode(line))
+	hud.subtitle_label.text = "\n".join(sounds)
+
+
+## The prompt's key drawn as a keycap, like the controls bar under it.
+func _keycap_line(key: String, action: String) -> String:
+	return UiTheme.keycaps("%s  %s" % [escape_bbcode(key), escape_bbcode(action)], true)
+
+
+## The trap at risk, the line that matters most: tagged with the cargo card's
+## "EN RIESGO !" on the state colour as a chip, so it is told apart by the
+## word and the shape and not only by colour (N-983.2).
+func _at_risk_line(subtitle: String) -> String:
+	var chip: Color = UiTheme.state_color(ITrapBehavior.TrapState.AT_RISK, GameSettings.colorblind_palette)
+	return "[bgcolor=#%s][color=#%s] %s [/color][/bgcolor] %s" % [
+		chip.to_html(false), UiTheme.INK.to_html(false),
+		escape_bbcode(tr(Hud.STATE_STATUS[ITrapBehavior.TrapState.AT_RISK])), escape_bbcode(subtitle)]
+
+
+## The subtitles and prompts carry literal brackets ("[vidrio que cruje]"), which
+## the rich labels would read as tags.
+static func escape_bbcode(text: String) -> String:
+	return text.replace("[", "[lb]")
+
+
+## Every frame (Hud._process): a plate shows only while it has text, and the
+## stack holding both only while either does (an empty one would still add the
+## dashboard's spacing).
+func refresh_plates() -> void:
+	var has_prompt: bool = not hud.interaction_label.text.is_empty()
+	var has_sounds: bool = not hud.subtitle_label.text.is_empty()
+	hud.interaction_label.visible = has_prompt
+	hud.subtitle_label.visible = has_sounds
+	hud.prompt_stack.visible = has_prompt or has_sounds
+
+
+## The "EN RIESGO !" chip takes the state colour of the palette.
+func _on_palette_changed(_enabled: bool) -> void:
+	if hud != null and hud.subtitle_label != null:
+		render_interaction_prompt()
+
+
+func _on_subtitle_scale_changed(_scale: float) -> void:
+	if hud != null and hud.subtitle_label != null:
+		PromptPlates.apply_subtitle_scale(hud.subtitle_label, Hud.PILL_FONT_SIZE)
 
 
 ## Prompt translation keys to the action they ask for, checked in this order.

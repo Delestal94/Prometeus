@@ -3,7 +3,8 @@ extends Node3D
 ## The shed of the Modo Empresa as the players walk in it (expansion D-0911 and D-0620): floor and
 ## walls of the company's stage with the gates open where the dock and the exit are, every piece of
 ## CompanyState.layout (shelves, packing tables, the dispatch zone), the painted floor zones, the
-## shelf labels with their units and the pallets that wait in reception.
+## shelf labels with their units, the pallets that wait in reception, the picking carts (D-0610.b) and the pallet
+## jack with the pallets it moved (D-0605.b).
 ##
 ## It only DRAWS state: the layout and the stage from CompanyState, the units from the Inventory
 ## (CompanyNet's copy, equal on every peer). The host fills a new company's layout and stock from
@@ -23,13 +24,24 @@ extends Node3D
 ## Grid to world: the floor is centred on this node; cell (cx, cz) of the stage's grid, one
 ## CompanyTuning.WAREHOUSE_GRID_M each, is at ((cx - w/2) m, (cz - d/2) m). +Z is the south: the dock
 ## is on that wall, the customer exit on the north one (WarehouseStages). A piece turned
-## `turns` quarter turns faces local +Z, which turns with it.
+## `turns` quarter turns faces local +Z, which turns with it. holds() says whether a world point is in
+## the shed (the walls' line, and so the gates, included): CompanyRoot asks it who is in, for DayCycle.
 
 signal piece_used(uid: StringName, role: StringName, peer_id: int)
+## A player worked a picking cart (PickingCartPoint): which cart, how (load or push), who, where they stood.
+signal cart_used(cart_id: StringName, action: StringName, peer_id: int, from: Vector3, product: StringName)
+## A player worked the pallet jack (PalletJackPoint): how (work or push), who, where they stood.
+signal jack_used(action: StringName, peer_id: int, from: Vector3)
+## The supplier board was used and its screen opens on this peer (SupplierBoardPoint, D-0603.b.2).
+signal supplier_board_opened
 
 const WALL_HEIGHT: float = 4.0
 const WALL_THICKNESS: float = 0.3
 const LINTEL_BOTTOM: float = 3.0
+## How far the colliders that stand on the floor go on under it (m, root_in_floor()), and how close to the floor their
+## foot has to be to count.
+const FLOOR_ROOT_M: float = 1.0
+const FLOOR_LEVEL_SLACK_M: float = 0.02
 const FLOOR_COLOR: Color = Color(0.42, 0.42, 0.44)
 ## Warehouse slab (D-0911 "Suelo del galpón"): tx_detail_concrete_512 has one saw-cut joint per axis
 ## on its border, so with one repetition every FLOOR_SLAB_M metres the joints fall on world multiples
@@ -56,6 +68,12 @@ const MODEL_TABLE: String = "sm_env_depot_packing_table"
 const MODEL_SHELF: String = "sm_env_shed_shelf"
 const SHELF_MODEL_SIZE: Vector3 = Vector3(2.0, 2.0, 1.0)
 const MODEL_PALLET: String = "sm_env_depot_pallet_wrapped"
+## The supplier board (D-0603.b.2, grey-box until the clipboard, D-0131 / D-0413): a panel on the inside of
+## the dock's wall, SUPPLIER_BOARD_CELLS from the dock gate toward the west wall (at least one cell in).
+const SUPPLIER_BOARD_CELLS: float = 3.0
+const SUPPLIER_BOARD_SIZE: Vector3 = Vector3(1.0, 0.7, 0.06)
+const SUPPLIER_BOARD_HEIGHT: float = 1.45
+const SUPPLIER_BOARD_COLOR: Color = Color(0.46, 0.47, 0.5)
 ## Zone names the floor shows (translations/strings_world.csv).
 const ZONE_KEYS: Dictionary = {
 	&"dock": "WORLD_SHED_ZONE_DOCK",
@@ -77,6 +95,9 @@ const ZONE_COLORS: Dictionary = {
 }
 ## The zone name's size on the floor (DepotLabels.floor_text: 0.012 m per pixel, so 0.24 m tall).
 const ZONE_LABEL_SIZE: int = 20
+## Nodes another adapter hangs under the shed (the build mode's camera, grid and ghost, ShedBuilder) join
+## this group: a redraw keeps them, since they are not the shed's drawing and their owner frees them.
+const OVERLAY_GROUP: StringName = &"company_shed_overlay"
 
 ## Station state of every packing table, by piece uid (D-0701), kept across redraws: the table node
 ## is drawn here, the box in its hollow is PackingStation's. Shelf labels by uid (D-0608) too.
@@ -88,8 +109,20 @@ var grid: Vector2i = Vector2i.ZERO
 var pieces: Array[Dictionary] = []
 ## The point to use each piece drawn, by uid (ShedPiecePoint, D-0914), and who used which.
 var use_points: Dictionary = {}
+## The dispatch board's station of each dispatch zone drawn, by the piece's uid (DispatchStation, D-0310.b): the
+## dispatch zone has this instead of a use point.
+var dispatch_stations: Dictionary = {}
+## The supplier board's point, hung again on every drawing.
+var supplier_point: SupplierBoardPoint
 ## Where the pallets stood at the last redraw: pallet id -> its node.
 var pallet_nodes: Dictionary = {}
+## The picking carts drawn, by id (PickingCartView). Each stands at its default spot (DefaultShed.cart_spots)
+## or, once pushed, where the CompanyNet it follows says (CompanyCarts).
+var cart_views: Dictionary = {}
+## The pallet jack and the pallets on the floor (PalletYardView), redrawn from the CompanyNet it follows.
+var yard: PalletYardView
+## The supplier's truck beside the shed (CompanyRoot sets it): whether its bed is open and where its rear is.
+var truck: SupplierTruckView
 
 var _default: DefaultShed
 var _slot_views: Array[Dictionary] = []
@@ -103,22 +136,35 @@ func _init() -> void:
 
 
 ## Redraws from `company_net` from now on, the same on every peer: the whole shed when a layout event
-## is applied (layout_placed / moved / sold) or a snapshot replaced the state
-## (company_state_restored), the labels and pallets when units move. It only draws.
+## is applied (layout_placed / moved / sold, and shed_expanded: floor, walls, gates and zones of the new
+## stage, D-0910.2) or a snapshot replaced the state (company_state_restored), the labels and pallets when
+## units move. It only draws.
 func follow(company_net: CompanyNet) -> void:
 	_net = company_net
+	if yard != null:
+		yard.forklift.net = company_net
 	if not company_net.event_applied.is_connected(_on_event_applied):
 		company_net.event_applied.connect(_on_event_applied)
 	if not company_net.company_state_restored.is_connected(_on_state_restored):
 		company_net.company_state_restored.connect(_on_state_restored)
 
 
-func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
+func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	if _net == null or not is_instance_valid(_net) or _net.company == null:
 		return
 	if CompanyLayoutNet.EVENT_KINDS.has(kind):
 		rebuild(_net.company, _net.inventory)
+	elif kind == CompanyShopNet.BOUGHT and int(_net.company.get(&"warehouse_stage")) != stage:
+		rebuild(_net.company, _net.inventory)
 	elif kind == &"units_moved" and _pallet_root != null:
+		refresh_stock(_net.inventory)
+	elif kind == CompanyCarts.MOVED:
+		_on_cart_moved(data)
+	elif kind == CompanyPallets.FORK and yard != null:
+		yard.refresh(_net.pallets)
+	elif CompanyPallets.EVENT_KINDS.has(kind) and _pallet_root != null:
+		if kind == CompanyPallets.MOVED and yard != null:
+			yard.refresh(_net.pallets, true)
 		refresh_stock(_net.inventory)
 
 
@@ -147,19 +193,37 @@ func piece_at(cell: Vector2i) -> StringName:
 	return &""
 
 
+## True when `world_point` stands in this shed (who is in it, D-0316.1: DayCycle.crew_in_shed): over
+## the floor of the stage drawn, grown by WALL_THICKNESS on every side so whoever stands in the dock's
+## or the exit's gate is in. The height is not looked at. Out of the tree it holds nothing.
+func holds(world_point: Vector3) -> bool:
+	if not is_inside_tree():
+		return false
+	var local: Vector3 = to_local(world_point)
+	var half: Vector2 = WarehouseStages.floor_size_m(stage) * 0.5 + Vector2(WALL_THICKNESS, WALL_THICKNESS)
+	return absf(local.x) <= half.x and absf(local.z) <= half.y
+
+
 ## Draws the shed of `state` (a CompanyState: layout and warehouse_stage) with the units of `stock`.
 func rebuild(state: Object, stock: Inventory) -> void:
 	for child: Node in get_children():
+		if child.is_in_group(OVERLAY_GROUP):
+			continue
 		remove_child(child)
 		child.queue_free()
 	pieces.clear()
 	use_points.clear()
+	dispatch_stations.clear()
 	_slot_views.clear()
 	pallet_nodes.clear()
+	cart_views.clear()
+	yard = null
 	stage = int(state.warehouse_stage)
 	grid = WarehouseStages.grid_size_for(stage)
 	_build_shell()
+	add_child(ShedExterior.build(stage, WarehouseStages.floor_size_m(stage), WALL_HEIGHT))
 	_build_lights(state.layout)
+	_build_supplier_board()
 	var furniture := Node3D.new()
 	furniture.name = "Furniture"
 	add_child(furniture)
@@ -177,6 +241,7 @@ func rebuild(state: Object, stock: Inventory) -> void:
 		live_uids[uid] = true
 		_build_piece(kit, uid, def, piece, furniture)
 	kit.commit("Batch")
+	root_in_floor(kit.body as Node3D)
 	for uid: Variant in stations.keys():
 		if not live_uids.has(uid):
 			stations.erase(uid)
@@ -184,6 +249,8 @@ func rebuild(state: Object, stock: Inventory) -> void:
 	_pallet_root = Node3D.new()
 	_pallet_root.name = "Pallets"
 	add_child(_pallet_root)
+	_build_carts()
+	_build_yard()
 	refresh_stock(stock)
 
 
@@ -216,6 +283,10 @@ func refresh_stock(stock: Inventory) -> void:
 		label.modulate = Color(1, 1, 1) if qty > 0 else Color(1.0, 0.62, 0.55)
 		(view["crate"] as Node3D).visible = qty > 0
 	_draw_pallets(stock)
+	for cart_view: PickingCartView in cart_views.values():
+		cart_view.refresh(stock)
+	if yard != null and _net != null and is_instance_valid(_net):
+		yard.refresh(_net.pallets)
 
 
 ## The pallets waiting in the Inventory (pallet:<id> locations) as {id, product, qty}, by id.
@@ -253,6 +324,21 @@ static func solid_box(box_name: String, size: Vector3, center: Vector3, color: C
 	return body
 
 
+## Roots the box colliders under `body` that stand on the shed's floor FLOOR_ROOT_M into the ground (only the
+## colliders: nothing drawn changes). A box stopped against a collider that ends at floor level has its shortest way out
+## under it: forks swung into a wall in one tick (ForkliftBody) would drag the whole driver into the floor instead of
+## out of the wall.
+static func root_in_floor(body: Node3D) -> void:
+	for child: Node in body.get_children():
+		var shape := child as CollisionShape3D
+		if shape == null or not (shape.shape is BoxShape3D):
+			continue
+		var box := shape.shape as BoxShape3D
+		if absf(body.position.y + shape.position.y - box.size.y * 0.5) < FLOOR_LEVEL_SLACK_M:
+			box.size.y += FLOOR_ROOT_M
+			shape.position.y -= FLOOR_ROOT_M * 0.5
+
+
 # --- Shell: floor, walls with the two gates open ---
 
 
@@ -286,6 +372,9 @@ func _build_shell() -> void:
 		wall_material()))
 	shell.add_child(solid_box("WallRight", side, Vector3(half.x + WALL_THICKNESS * 0.5, y, 0.0), WALL_COLOR,
 		wall_material()))
+	for wall: Node in shell.get_children():
+		if wall.name != &"Floor":
+			root_in_floor(wall as Node3D)
 
 
 ## A wall along X at depth `z` from x0 to x1 with a gap `gap` (x range): two pieces and a lintel.
@@ -319,11 +408,18 @@ func _paint_fixed_zones(kit: DepotKit) -> void:
 
 
 func _paint_default_zones(kit: DepotKit) -> void:
-	if _default == null or _default.stage != stage:
+	if not _default_fits():
 		return
 	for zone: Dictionary in _default.zones:
 		_paint_zone(kit, StringName(str(zone.get("role", ""))), zone.get("rect", Rect2i()),
 			zone.get("label_at", Vector2.ZERO))
+
+
+## The default shed's cells (painted zones, cart and pallet spots) are on the floor drawn: its own stage or a
+## bigger one, since every stage grows from the corner (0, 0) (D-0905). Growing the shed (D-0910.2) keeps
+## the carts and the zones where they were instead of dropping them.
+func _default_fits() -> bool:
+	return _default != null and _default.stage <= stage
 
 
 ## A flat patch of colour over the rect and its name written on the floor, readable from the south.
@@ -363,8 +459,10 @@ func _build_piece(kit: DepotKit, uid: StringName, def: PlaceableDefinition, piec
 		&"assembly":
 			_build_table(kit, uid, def, at)
 		&"dispatch":
-			# Painted on the floor (it does not block walking): the patch and its name are all of it.
+			# Painted on the floor (it does not block walking): the patch and its name, and the station
+			# that opens the dispatch board (D-0310.b).
 			_paint_zone(kit, &"dispatch", rect, Vector2(rect.position) + Vector2(rect.size) * 0.5)
+			_add_dispatch_station(uid, def, at)
 		_:
 			kit.box(Vector3(def.footprint.x, def.height_m, def.footprint.y) * CompanyTuning.WAREHOUSE_GRID_M,
 				center + Vector3.UP * def.height_m * 0.5, DepotKit.flat(Color(0.5, 0.5, 0.52)), true)
@@ -383,6 +481,14 @@ func _add_use_point(uid: StringName, def: PlaceableDefinition, at: Transform3D) 
 	use_points[uid] = point
 
 
+## The dispatch board's station in the middle of the zone, under the piece's own transform.
+func _add_dispatch_station(uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:
+	var station := DispatchStation.make(uid, def.footprint.y * CompanyTuning.WAREHOUSE_GRID_M)
+	station.transform = at * Transform3D(Basis.IDENTITY, station.position)
+	add_child(station)
+	dispatch_stations[uid] = station
+
+
 func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D,
 		furniture: Node3D) -> void:
 	var metres: float = CompanyTuning.WAREHOUSE_GRID_M
@@ -395,7 +501,7 @@ func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 	# Solid as one block: nobody walks through the rack.
 	kit.collider(Vector3(width, def.height_m, depth), at * Transform3D(Basis.IDENTITY,
 		Vector3(0.0, def.height_m * 0.5, 0.0)))
-	var shelf: Shelf = Shelf.make(uid, def.slots)
+	var shelf: Shelf = Shelf.make(uid, def.slots, def.cold)
 	var node := Node3D.new()
 	node.name = "Shelf_%s" % uid
 	node.transform = at
@@ -411,7 +517,10 @@ func _build_shelf(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 ## the count under the name. refresh_stock() rewrites them from the Inventory.
 func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int, product: StringName,
 		width: float, depth: float) -> void:
-	if slot < 0 or slot >= def.slots or not shelf.set_label(Inventory.new(), slot, product):
+	var definition := load("res://data/products/%s.tres" % product) as ProductDefinition
+	if slot < 0 or slot >= def.slots or definition == null:
+		return
+	if not shelf.set_label(Inventory.new(), slot, product, definition.temperature):
 		return
 	var level: int = floori(slot / float(SHELF_COLUMNS))
 	var column: int = slot % SHELF_COLUMNS
@@ -427,25 +536,39 @@ func _label_slot(node: Node3D, shelf: Shelf, def: PlaceableDefinition, slot: int
 	node.add_child(crate)
 	var label := Label3D.new()
 	label.name = "Label_%d" % slot
-	label.font_size = 22
+	UiTheme.label_3d(label, 22)
 	label.pixel_size = SHELF_LABEL_PIXEL
 	label.outline_size = 8
 	label.width = (slot_w - 0.04) / SHELF_LABEL_PIXEL
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.position = Vector3(x, SHELF_LABELS[level], depth * 0.5 + 0.01)
 	node.add_child(label)
-	var content: PackageContent = null
-	var definition := load("res://data/products/%s.tres" % product) as ProductDefinition
-	if definition != null:
-		content = definition.content
+	var content: PackageContent = definition.content
 	_slot_views.append({"label": label, "crate": crate, "product": product,
 		"location": shelf.location(slot), "name": content.localized_name() if content != null else String(product)})
 
 
+## The fridges of the shed (shelf uid -> true): ColdChain.advance's `cold_shelves` (D-0616.b).
+func cold_shelves() -> Dictionary:
+	var found: Dictionary = {}
+	for uid: StringName in shelves:
+		if (shelves[uid] as Shelf).cold:
+			found[uid] = true
+	return found
+
+
 ## The shelf slot a units request names (ShelfPicking.station_id) as CompanyNet's `stations` resolver
 ## wants it: where its units lie, the spot to reach (the piece's use point), what it accepts and holds
-## (D-0609). {} for anything else, or a slot with no label.
+## (D-0609). A picking cart is a station too, named by its location, cart:<id> (D-0610.b). {} for anything
+## else, or a slot with no label.
 func station_for(id: StringName) -> Dictionary:
+	if id == CompanyPallets.STATION:
+		return _jack_station()
+	if id == CompanyPallets.FORK_STATION:
+		return _fork_station()
+	var cart_id: StringName = PickingCart.parse_location(id)
+	if cart_id != &"":
+		return _cart_station(cart_id)
 	var named: Dictionary = ShelfPicking.parse_station(id)
 	if named.is_empty():
 		return {}
@@ -459,6 +582,194 @@ func station_for(id: StringName) -> Dictionary:
 		"location": shelf.location(slot), "spot": point.global_position,
 		"accepts": shelf.label_of(slot), "capacity": CompanyTuning.SHELF_SLOT_CAPACITY,
 	}
+
+
+# --- Picking carts ---
+
+
+## One cart per DefaultShed.cart_spots entry ("cart_1", "cart_2"...), where the host's pushes left it.
+func _build_carts() -> void:
+	var spots: Array[Vector2] = []
+	if _default_fits():
+		spots = _default.cart_spots
+	for index: int in spots.size():
+		var id := StringName("cart_%d" % (index + 1))
+		var local: Vector3 = cell_to_local(spots[index])
+		if _net != null and is_instance_valid(_net):
+			var pushed: Variant = _net.carts.position_of(id)
+			if pushed is Vector3:
+				local = pushed
+		var view: PickingCartView = PickingCartView.make(id, local)
+		view.used.connect(func(cart_id: StringName, action: StringName, peer_id: int, from: Vector3,
+				product: StringName) -> void:
+			cart_used.emit(cart_id, action, peer_id, from, product))
+		add_child(view)
+		cart_views[id] = view
+
+
+## A cart_moved reached this peer: the cart rolls to where the host left it.
+func _on_cart_moved(data: Dictionary) -> void:
+	var view: Variant = cart_views.get(StringName(str(data.get("cart", ""))))
+	var pos: Variant = data.get("pos")
+	if view is PickingCartView and is_instance_valid(view) and pos is Vector3:
+		(view as PickingCartView).place_at(pos, true)
+
+
+## A cart as CompanyNet's `stations` resolver wants it (D-0610.b): its units' location, a spot over the
+## platform to measure reach to, the units it holds at most and, for a push, where it stands now (shed
+## frame) and whether the floor at a point is free (cart_can_stand). {} for a cart that is not drawn.
+func _cart_station(cart_id: StringName) -> Dictionary:
+	var view: Variant = cart_views.get(cart_id)
+	if not (view is PickingCartView) or not is_instance_valid(view) or not (view as PickingCartView).is_inside_tree():
+		return {}
+	var cart_view := view as PickingCartView
+	return {
+		"location": cart_view.cart.location(), "spot": cart_view.global_position + Vector3.UP * 0.5,
+		"capacity": CompanyTuning.CART_MAX_UNITS, "at": cart_view.position,
+		"stand_ok": cart_can_stand.bind(cart_id),
+	}
+
+
+## Whether a cart may be left at `local` (shed frame): inside the floor with CompanyTuning.CART_CLEARANCE_M
+## to the walls, that far from every piece of furniture (the dispatch zone is only painted) and
+## CompanyTuning.CART_SPACING_M from every other cart (D-0610.c); `cart` is the one that would stand there.
+func cart_can_stand(local: Vector3, cart: StringName = &"") -> bool:
+	var clearance: float = CompanyTuning.CART_CLEARANCE_M
+	var half: Vector2 = WarehouseStages.floor_size_m(stage) * 0.5
+	if absf(local.x) > half.x - clearance or absf(local.z) > half.y - clearance:
+		return false
+	for other: StringName in cart_views:
+		var view: Variant = cart_views[other]
+		if other == cart or not is_instance_valid(view):
+			continue
+		var at: Vector3 = (view as PickingCartView).position
+		if Vector2(at.x - local.x, at.z - local.z).length() < CompanyTuning.CART_SPACING_M:
+			return false
+	var cell: Vector2 = local_to_cell(local)
+	for piece: Dictionary in pieces:
+		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))
+		if def != null and def.role == &"dispatch":
+			continue
+		if Rect2(piece["rect"]).grow(clearance / CompanyTuning.WAREHOUSE_GRID_M).has_point(cell):
+			return false
+	return true
+
+
+# --- The pallet jack ---
+
+
+## The jack and the floor pallets, one yard per drawing; its jack's points forward who used it.
+func _build_yard() -> void:
+	yard = PalletYardView.make(stage)
+	yard.racks = rack_slots()
+	yard.forklift.net = _net
+	yard.jack_used.connect(func(action: StringName, peer_id: int, from: Vector3) -> void:
+		jack_used.emit(action, peer_id, from))
+	add_child(yard)
+
+
+## The pallet jack as CompanyNet's `stations` resolver wants it (D-0605.b, see CompanyPallets): a spot over the
+## forks to measure reach to, where the jack stands now, the floor, the checks only a shed can make, and the
+## truck's bed. {} for a shed that draws no jack.
+func _jack_station() -> Dictionary:
+	if yard == null or not is_instance_valid(yard) or not yard.is_inside_tree():
+		return {}
+	var rear: Vector2 = SupplierTruckView.rear_of(stage)
+	return {
+		"location": &"jack:yard", "spot": yard.jack.global_position + Vector3.UP * 0.5,
+		"at": Vector2(yard.jack.position.x, yard.jack.position.z), "floor": PalletYardView.floor_rect(stage),
+		"stand_ok": jack_can_stand, "free_ok": pallet_spot_free, "bed_at": rear,
+		"bed_open": truck != null and is_instance_valid(truck) and truck.bed_open(),
+	}
+
+
+## The pallet slots of the racks (D-0606.b): every shelf has one per level (SHELF_DECKS), id "<shelf uid>-<level>",
+## at the middle of the shelf, the pallet's long side along the shelf's. Slot id -> {pos: Vector2 (shed frame, m),
+## level: float (m, the deck), yaw: float (the PalletBox's turn)}.
+func rack_slots() -> Dictionary:
+	var found: Dictionary = {}
+	for piece: Dictionary in pieces:
+		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))
+		if def == null or def.id != &"shelf":
+			continue
+		var rect: Rect2i = piece["rect"]
+		var middle: Vector3 = cell_to_local(Vector2(rect.position) + Vector2(rect.size) * 0.5)
+		for level: int in SHELF_LEVELS:
+			found[StringName("%s-%d" % [piece["uid"], level])] = {"pos": Vector2(middle.x, middle.z),
+				"level": SHELF_DECKS[level], "yaw": 0.0 if rect.size.x >= rect.size.y else PI * 0.5}
+	return found
+
+
+## The forklift as CompanyNet's `stations` resolver wants it (D-0606.b, see CompanyForklift): the jack's station
+## (floor, the checks only a shed can make, the truck's bed) with a spot at the forklift, where it stands and faces
+## now (the driver's player while somebody drives), and the rack slots with their level. {} for a shed with no yard.
+func _fork_station() -> Dictionary:
+	var base: Dictionary = _jack_station()
+	if base.is_empty() or yard.forklift == null:
+		return {}
+	var pose: Dictionary = yard.forklift.pose()
+	var body: Vector2 = pose["body"]
+	var racks: Array = []
+	for slot: Variant in yard.racks:
+		racks.append({"slot": slot, "pos": yard.racks[slot]["pos"], "level": yard.racks[slot]["level"]})
+	base.merge({"location": &"forklift:yard", "spot": yard.to_global(Vector3(body.x, 0.5, body.y)), "body": body,
+		"yaw": pose["yaw"], "racks": racks}, true)
+	return base
+
+
+## Whether the jack may stand at `at` (metres, shed frame): as a picking cart (cart_can_stand).
+func jack_can_stand(at: Vector2) -> bool:
+	return cart_can_stand(Vector3(at.x, 0.0, at.y))
+
+
+## Whether a pallet may lie at `at` (metres, shed frame): not over one of the pallets of reception that
+## the Inventory draws (_draw_pallets). Furniture and walls are the jack's own check (cart_can_stand).
+func pallet_spot_free(at: Vector2) -> bool:
+	var size: Vector2 = CompanyTuning.PALLET_FOOTPRINT_M
+	var footprint := Rect2(at - size * 0.5, size)
+	for node: Node3D in pallet_nodes.values():
+		if footprint.intersects(Rect2(Vector2(node.position.x, node.position.z) - size * 0.5, size)):
+			return false
+	return true
+
+
+# --- The supplier board ---
+
+
+## Where the supplier board hangs (shed frame, floor height): on the inside of the dock's wall,
+## SUPPLIER_BOARD_CELLS west of the dock gate, at least one cell from the west wall.
+static func supplier_board_spot(stage_index: int) -> Vector3:
+	var size: Vector2i = WarehouseStages.grid_size_for(stage_index)
+	var dock: Rect2i = WarehouseStages.dock_rect(stage_index)
+	var metres: float = CompanyTuning.WAREHOUSE_GRID_M
+	var x: float = maxf(float(dock.position.x) - SUPPLIER_BOARD_CELLS, 1.0)
+	return Vector3((x - size.x * 0.5) * metres, 0.0, size.y * 0.5 * metres)
+
+
+## The grey board, its sign and the point in front of it that opens the order screen on the user's peer.
+func _build_supplier_board() -> void:
+	var at: Vector3 = supplier_board_spot(stage)
+	var board := MeshInstance3D.new()
+	board.name = "SupplierBoard"
+	var mesh := BoxMesh.new()
+	mesh.size = SUPPLIER_BOARD_SIZE
+	mesh.material = DepotKit.flat(SUPPLIER_BOARD_COLOR)
+	board.mesh = mesh
+	board.position = at + Vector3(0.0, SUPPLIER_BOARD_HEIGHT, -SUPPLIER_BOARD_SIZE.z * 0.5)
+	add_child(board)
+	var title := Label3D.new()
+	title.name = "Sign"
+	title.text = tr(SupplierBoardPoint.PROMPT_KEY)
+	UiTheme.label_3d(title, 28)
+	title.pixel_size = 0.004
+	title.outline_size = 8
+	title.position = Vector3(0.0, SUPPLIER_BOARD_SIZE.y * 0.5 + 0.12, 0.0)
+	title.rotation.y = PI
+	board.add_child(title)
+	supplier_point = SupplierBoardPoint.make()
+	supplier_point.position = at + Vector3(0.0, 1.0, -0.6)
+	supplier_point.opened.connect(func() -> void: supplier_board_opened.emit())
+	add_child(supplier_point)
 
 
 func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: Transform3D) -> void:
@@ -484,6 +795,13 @@ func _build_table(kit: DepotKit, uid: StringName, def: PlaceableDefinition, at: 
 
 func _draw_pallets(stock: Inventory) -> void:
 	var waiting: Array[Dictionary] = pallets_in(stock)
+	if _net != null and is_instance_valid(_net):
+		# The pallets the jack moves are the yard's (D-0605.b), wherever they are.
+		var in_reception: Array[Dictionary] = []
+		for entry: Dictionary in waiting:
+			if not _net.pallets.book.places.has(StringName(entry["id"])):
+				in_reception.append(entry)
+		waiting = in_reception
 	var same: bool = waiting.size() == pallet_nodes.size()
 	for entry: Dictionary in waiting:
 		same = same and pallet_nodes.has(entry["id"])
@@ -497,7 +815,9 @@ func _draw_pallets(stock: Inventory) -> void:
 		_pallet_root.remove_child(child)
 		child.queue_free()
 	pallet_nodes.clear()
-	var spots: Array[Vector2] = _default.pallet_spots if _default != null and _default.stage == stage else []
+	var spots: Array[Vector2] = []
+	if _default_fits():
+		spots.assign(_default.pallet_spots)
 	for index: int in waiting.size():
 		var spot: Vector2 = spots[index % spots.size()] if not spots.is_empty() else Vector2(grid) * 0.5
 		var lift: float = floorf(index / float(maxi(spots.size(), 1))) * 1.25
@@ -519,10 +839,11 @@ func _make_pallet(entry: Dictionary, at: Vector3) -> Node3D:
 	shape.shape = box_shape
 	shape.position = bounds.get_center()
 	body.add_child(shape)
+	root_in_floor(body)
 	var label := Label3D.new()
 	label.name = "Label"
 	label.text = _pallet_text(entry)
-	label.font_size = 28
+	UiTheme.label_3d(label, 28)
 	label.pixel_size = 0.0035
 	label.outline_size = 8
 	label.position = Vector3(0.0, bounds.size.y + 0.2, 0.0)

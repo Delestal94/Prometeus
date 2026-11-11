@@ -364,8 +364,25 @@ modificarlo:
   caja a la cintura, sin sentadilla, con los mismos tiempos: `player.gd` mezcla los dos
   según la altura de la caja), `Sit` 4 s en loop (pelvis 0,5 m más abajo,
   manos sobre la panza, pies que se balancean) y `TurnInPlace` 0,8 s en loop (dos
-  pasitos que reacomodan los pies; `player.gd` lo usa al girar parado). `player.gd` ubica el cuerpo sobre
-  cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
+  pasitos que reacomodan los pies; `player.gd` lo usa al girar parado). Los idles largos
+  `InspectHand`, `BlowBubble` e `IdleBounce` se alternan tras 15 s sin entrada y se
+  cancelan apenas el jugador toca un control. En resultados, una entrega usa
+  `VictoryDance` y una derrota usa el loop encorvado `Defeat`; cada dueño publica el
+  clip por el estado de animación existente. Un knockout replica sólo `knockout_cause`:
+  ambos shaders gel distinguen derretido, aplastado, explosión, disolución en agua y
+  atropello; dos ráfagas acotadas heredan el color y las gotas de explosión vuelven
+  al centro al reaparecer. La misma deformación se reproduce al revés. Un choque de
+  7 m/s o más usa el canal de contacto existente para comprimir hasta 0,36, rebotar
+  con volumen constante y volver a cero; ambos shaders limitan cada eje a valores
+  positivos para que la malla no se invierta. Aterrizajes emiten gotas, salpicadura y
+  burbujas; correr deja una estela mundial de 0,36 s y los impactos crean manchas
+  orgánicas en pisos o paredes. Todo hereda `gel_color`, usa 45 partículas fijas y
+  mantiene como máximo 12 manchas que se desvanecen en 3,5 s. `player.gd` ubica el cuerpo sobre
+  cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`. Cuatro
+  voces 3D reutilizables reproducen foley sintetizado y cacheado: pasos squish distintos para
+  ruta, grava, metal y suelo blando, además de salto, aterrizaje, rebote, golpe, estiramiento,
+  derretido y rearmado; el estado de movimiento/animación ya replicado dispara los mismos cues
+  en cada peer sin agregar RPC.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)
   y recorta la pierna dentro del short y la cintura del short bajo la camiseta.

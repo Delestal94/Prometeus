@@ -85,7 +85,7 @@ func _run() -> void:
 				var path: String = "user://sound_subtitles_%s_%s_%d.png" % [scene_name, locale, pct]
 				root.get_texture().get_image().save_png(path)
 				print("Saved ", ProjectSettings.globalize_path(path), " lines=",
-					String(hud.interaction_label.text).split("\n").size())
+					String(hud.subtitle_label.text).split("\n").size())
 	run_manager.cargo.erase(&"sub_box")
 	settings.text_backdrop_opacity = original_opacity
 	settings.sound_subtitles = original_subtitles

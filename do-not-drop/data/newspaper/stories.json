@@ -240,6 +240,32 @@
     }
    ]
   },
+  "dog_chase": {
+   "section": "rural",
+   "weight": 5,
+   "topic": "dog",
+   "variants": [
+    {
+     "h": "HUD_NEWS_DOG_CHASE_1_H",
+     "b": "HUD_NEWS_DOG_CHASE_1_B"
+    },
+    {
+     "h": "HUD_NEWS_DOG_CHASE_2_H",
+     "b": "HUD_NEWS_DOG_CHASE_2_B"
+    },
+    {
+     "h": "HUD_NEWS_DOG_CHASE_3_H",
+     "b": "HUD_NEWS_DOG_CHASE_3_B"
+    },
+    {
+     "h": "HUD_NEWS_DOG_CHASE_4_H",
+     "b": "HUD_NEWS_DOG_CHASE_4_B",
+     "tags": [
+      "honked"
+     ]
+    }
+   ]
+  },
   "fault_rear_door": {
    "section": "police",
    "weight": 6,
@@ -578,6 +604,48 @@
     }
    ],
    "filler": true
+  },
+  "rollover": {
+   "section": "police",
+   "weight": 12,
+   "topic": "rollover",
+   "variants": [
+    {
+     "h": "HUD_NEWS_ROLLOVER_1_H",
+     "b": "HUD_NEWS_ROLLOVER_1_B"
+    },
+    {
+     "h": "HUD_NEWS_ROLLOVER_2_H",
+     "b": "HUD_NEWS_ROLLOVER_2_B"
+    },
+    {
+     "h": "HUD_NEWS_ROLLOVER_3_H",
+     "b": "HUD_NEWS_ROLLOVER_3_B"
+    },
+    {
+     "h": "HUD_NEWS_ROLLOVER_4_H",
+     "b": "HUD_NEWS_ROLLOVER_4_B"
+    }
+   ]
+  },
+  "train_stop": {
+   "section": "society",
+   "weight": 4,
+   "topic": "train",
+   "variants": [
+    {
+     "h": "HUD_NEWS_TRAIN_STOP_1_H",
+     "b": "HUD_NEWS_TRAIN_STOP_1_B"
+    },
+    {
+     "h": "HUD_NEWS_TRAIN_STOP_2_H",
+     "b": "HUD_NEWS_TRAIN_STOP_2_B"
+    },
+    {
+     "h": "HUD_NEWS_TRAIN_STOP_3_H",
+     "b": "HUD_NEWS_TRAIN_STOP_3_B"
+    }
+   ]
   }
  }
 }

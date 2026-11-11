@@ -7,7 +7,9 @@ class_name DispatchBoardPanel
 ## picked to that vehicle through the existing path: DispatchZone.load_boxes() ->
 ## CompanyTrips.stage_cargo() (D-0716 / D-0717). A box the vehicle cannot take (DispatchRules,
 ## D-0309) cannot be picked: its row says why. Picking more than the vehicle holds (slots,
-## kg: the same checks as DispatchLoading.plan()) is refused with the reason too.
+## kg: the same checks as DispatchLoading.plan()) is refused with the reason too. While
+## CompanyTrips.departure_verdict() says the vehicle can't leave (CompanyTuning.VEHICLES_FAR_MAX
+## vehicles are already out, D-0316) Load is off and the status line says why.
 ##
 ## Data comes in through open() / refresh() as one dictionary, no autoload is read, so the panel
 ## runs headless in a test:
@@ -16,10 +18,18 @@ class_name DispatchBoardPanel
 ##   box_kg: Dictionary box id -> kg, zones / gates: id -> ZoneDefinition / GateRequirement,
 ##   owned: CompanyState.gate_owned(), opened_gates: Array, can_act: bool (false on a client:
 ##   the Load button shows disabled, with the reason, not hidden).
+## Optional bay: Array of {"id", "def": VehicleDefinition} (D-0931.b), the vehicles standing in the bay
+## (at most DispatchBay.MAX_VEHICLES, the first is "vehicle"). With two or more a "Load all" button shows:
+## DispatchBay.load_bay() hands every waiting box to the first vehicle that accepts it and `loaded` is
+## emitted once per vehicle that got boxes.
 ##
 ## Gamepad first: rows are buttons in one focus column (ui_accept picks / drops a box), then
 ## Load and Close; blocked rows stay focusable so their reason can be read. Every state has a
 ## mark besides its colour: "✓" picked, "○" free, "✗" blocked.
+##
+## Final style (D-1906): the vehicle's load shows as two bars, slots and kg, each filled with what is picked and
+## coloured by how full it is (UiTheme.state_color: calm under FILL_WARN, warning from there to full), with the
+## numbers beside them; each row's text takes its state's colour (picked mint, free ink, blocked muted).
 
 ## The host loaded `boxes` on `vehicle_id` (the zone and the trip gate already know). The world
 ## adapter replicates it to the clients.
@@ -31,6 +41,8 @@ const FREE: String = "○"
 const BLOCKED: String = "✗"
 ## Slot squares drawn at most; a vehicle with more slots shows the numbers only.
 const MAX_SLOT_MARKS: int = 12
+## Share of the vehicle picked from which a load bar turns to the warning colour.
+const FILL_WARN: float = 0.75
 
 var _ctx: Dictionary = {}
 var _selected: Array[StringName] = []
@@ -41,10 +53,13 @@ var _status_args: Array = []
 var _vehicle_label: Label
 var _capacity_label: Label
 var _slots_label: Label
+var _slots_bar: ProgressBar
+var _weight_bar: ProgressBar
 var _rows_box: VBoxContainer
 var _scroll: ScrollContainer
 var _status_label: Label
 var _load_button: Button
+var _load_all_button: Button
 var _close_button: Button
 
 
@@ -63,6 +78,7 @@ func open(ctx: Dictionary) -> void:
 	refresh(ctx)
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	UiTheme.pop_in(self)
 	_focus_first.call_deferred()
 
 
@@ -72,11 +88,13 @@ func close() -> void:
 	closed.emit()
 
 
-## Redraws the board from `ctx`. The picks that are still waiting in the zone are kept.
+## Redraws the board from `ctx`. The picks that are still waiting in the zone are kept, and so is the
+## focus when its row is still there (the world refreshes the board while it is open).
 func refresh(ctx: Dictionary) -> void:
 	_ctx = ctx
 	if _rows_box == null:
 		return
+	var focused: StringName = _focused_box()
 	var waiting: Array[StringName] = _waiting()
 	var kept: Array[StringName] = []
 	for box_id: StringName in _selected:
@@ -98,6 +116,8 @@ func refresh(ctx: Dictionary) -> void:
 		row.pressed.connect(toggle.bind(box_id))
 		_rows[box_id] = row
 	_update_view()
+	if focused != &"" and _rows.has(focused):
+		(_rows[focused] as Button).grab_focus.call_deferred()
 
 
 ## Picks `box_id`, or drops it when it was picked. Returns {"ok", "key", "args"}: when not ok
@@ -134,14 +154,69 @@ func confirm() -> int:
 	_status_key = "UI_DISPATCH_LOADED"
 	_status_args = [count]
 	loaded.emit(_vehicle_id(), chosen)
+	count = _status_args[0]
 	refresh(_ctx)
 	_focus_first()
 	return count
 
 
-## True when Load would do something: the board may act, a vehicle is there and a box is picked.
+## `count` of the boxes just handed over found no place on the vehicle after all (CompanyDispatch): the line, and
+## what confirm() answers, say what really went.
+func left_out(count: int) -> void:
+	if count > 0 and _status_key == "UI_DISPATCH_LOADED":
+		_status_args = [maxi(int(_status_args[0]) - count, 0)]
+
+
+## Loads the whole zone onto the bay's vehicles (DispatchBay.load_bay): each box goes to the first vehicle that
+## accepts it, oldest first, and the picks are ignored. Vehicles that may not leave now (the cap of vehicles
+## out) are left out. Returns how many boxes went (0 when the board may not act or no box fits).
+func confirm_bay() -> int:
+	if not can_confirm_bay():
+		return 0
+	var zone: DispatchZone = _ctx.get("zone")
+	var result: Dictionary = DispatchBay.load_bay(
+		zone, _ctx.get("trips"), _ctx.get("book"), _bay_ready(), _ctx.get("box_kg", {}),
+		_ctx.get("zones", {}), _ctx.get("gates", {}), _ctx.get("owned", {}), _ctx.get("opened_gates", [])
+	)
+	var count: int = 0
+	var loads: Dictionary = result["loads"]
+	var sent: Array = []
+	for vehicle_id: StringName in loads:
+		var chosen: Array[StringName] = []
+		chosen.assign(loads[vehicle_id])
+		if chosen.is_empty():
+			continue
+		count += chosen.size()
+		sent.append([vehicle_id, chosen])
+	if count <= 0:
+		return 0
+	_selected.clear()
+	_status_key = "UI_DISPATCH_LOADED"
+	_status_args = [count]
+	for entry: Array in sent:
+		loaded.emit(entry[0], entry[1])
+	count = _status_args[0]
+	refresh(_ctx)
+	_focus_first()
+	return count
+
+
+## True when "Load all" would do something: the board may act, two or more vehicles stand in the bay, one of
+## them may leave and a box waits.
+func can_confirm_bay() -> bool:
+	return (_acts() and _ctx.get("zone") != null and not _waiting().is_empty() and _bay().size() >= 2
+		and not _bay_ready().is_empty())
+
+
+func load_all_button() -> Button:
+	return _load_all_button
+
+
+## True when Load would do something: the board may act, a vehicle is there and may leave
+## (_departure()), and a box is picked.
 func can_confirm() -> bool:
-	return _acts() and _ctx.get("vehicle") != null and _ctx.get("zone") != null and not _selected.is_empty()
+	return (_acts() and _ctx.get("vehicle") != null and _ctx.get("zone") != null and not _selected.is_empty()
+		and _departure()["ok"])
 
 
 func selected() -> Array[StringName]:
@@ -194,6 +269,12 @@ func _build() -> void:
 	_capacity_label.name = "Capacity"
 	_slots_label = UiTheme.label(column, "", 20, UiTheme.INK)
 	_slots_label.name = "Slots"
+	var bars := HBoxContainer.new()
+	bars.name = "LoadBars"
+	bars.add_theme_constant_override("separation", 14)
+	column.add_child(bars)
+	_slots_bar = _load_bar(bars, "SlotsBar")
+	_weight_bar = _load_bar(bars, "WeightBar")
 	UiTheme.label(column, tr("UI_DISPATCH_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
 	_scroll.custom_minimum_size = Vector2(0, 250)
@@ -215,6 +296,10 @@ func _build() -> void:
 	_load_button.name = "Load"
 	_load_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_load_button.pressed.connect(confirm)
+	_load_all_button = UiTheme.button(buttons, tr("UI_DISPATCH_LOAD_ALL"), true)
+	_load_all_button.name = "LoadAll"
+	_load_all_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_load_all_button.pressed.connect(confirm_bay)
 	_close_button = UiTheme.button(buttons, tr("UI_DISPATCH_CLOSE"))
 	_close_button.name = "Close"
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -231,10 +316,14 @@ func _update_view() -> void:
 		_vehicle_label.text = tr("UI_DISPATCH_NO_VEHICLE")
 		_capacity_label.text = ""
 		_slots_label.text = ""
+		_slots_bar.get_parent().hide()
 	else:
 		_vehicle_label.text = tr("UI_DISPATCH_VEHICLE") % _vehicle_name(vehicle)
 		_capacity_label.text = tr("UI_DISPATCH_CAPACITY") % [_selected.size(), slots, kg, max_kg]
 		_slots_label.text = _slot_marks(_selected.size(), slots)
+		_slots_bar.get_parent().show()
+		_fill_bar(_slots_bar, float(_selected.size()) / maxf(float(slots), 1.0))
+		_fill_bar(_weight_bar, kg / maxf(max_kg, 0.001))
 	for box_id: StringName in _rows:
 		var row: Button = _rows[box_id]
 		var verdict: Dictionary = _rules_verdict(box_id)
@@ -244,10 +333,15 @@ func _update_view() -> void:
 			mark = BLOCKED
 			line += "\n" + reason_text(String(verdict["key"]), verdict["args"])
 		row.text = "%s  %s" % [mark, line]
+		row.add_theme_color_override(&"font_color", row_color(mark, UiTheme.colorblind(self)))
+		row.add_theme_color_override(&"font_focus_color", row_color(mark, UiTheme.colorblind(self)))
 	_load_button.disabled = not can_confirm()
 	_load_button.text = tr("UI_DISPATCH_LOAD")
 	if not _selected.is_empty():
 		_load_button.text = tr("UI_DISPATCH_LOAD_N") % _selected.size()
+	_load_all_button.visible = _bay().size() >= 2
+	_load_all_button.disabled = not can_confirm_bay()
+	_load_all_button.text = tr("UI_DISPATCH_LOAD_ALL") % _bay().size() if _bay().size() >= 2 else ""
 	_status_label.text = _status_line()
 	_link_focus()
 
@@ -259,6 +353,9 @@ func _status_line() -> String:
 		return tr("UI_DISPATCH_HOST_ONLY")
 	if _ctx.get("vehicle") == null:
 		return ""
+	var departure: Dictionary = _departure()
+	if not departure["ok"]:
+		return reason_text(String(departure["key"]), departure["args"])
 	if _rows.size() > 0 and _selected.is_empty():
 		return tr("UI_DISPATCH_PICK")
 	return ""
@@ -273,6 +370,8 @@ func _link_focus() -> void:
 	var last_row: Control = chain.back() if not chain.is_empty() else null
 	if not _load_button.disabled:
 		chain.append(_load_button)
+	if _load_all_button.visible and not _load_all_button.disabled:
+		chain.append(_load_all_button)
 	chain.append(_close_button)
 	for i: int in chain.size():
 		var node: Control = chain[i]
@@ -285,6 +384,17 @@ func _link_focus() -> void:
 		_close_button.focus_neighbor_left = _close_button.get_path_to(_load_button)
 		if last_row != null:
 			_close_button.focus_neighbor_top = _close_button.get_path_to(last_row)
+
+
+## The box whose row has the focus, or &"" (none, or the focus is on Load / Close / outside the board).
+func _focused_box() -> StringName:
+	var owner: Control = get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	if owner == null:
+		return &""
+	for box_id: StringName in _rows:
+		if _rows[box_id] == owner:
+			return box_id
+	return &""
 
 
 func _focus_first() -> void:
@@ -319,6 +429,30 @@ func _rules_verdict(box_id: StringName) -> Dictionary:
 		order, vehicle, _ctx.get("zones", {}), _ctx.get("gates", {}), _ctx.get("owned", {}),
 		_ctx.get("opened_gates", [])
 	)
+
+
+## Whether the vehicle may leave now: CompanyTrips.departure_verdict() (the cap of vehicles out,
+## D-0316); ok when the board has no trips.
+func _departure() -> Dictionary:
+	var trips: CompanyTrips = _ctx.get("trips")
+	if trips == null:
+		return {"ok": true, "key": "", "args": []}
+	return trips.departure_verdict(_vehicle_id())
+
+
+func _bay() -> Array:
+	var bay: Variant = _ctx.get("bay", [])
+	return bay if bay is Array else []
+
+
+## The bay's vehicles that may leave now (CompanyTrips.departure_verdict()).
+func _bay_ready() -> Array:
+	var trips: CompanyTrips = _ctx.get("trips")
+	var ready: Array = []
+	for entry: Dictionary in _bay():
+		if trips == null or trips.departure_verdict(StringName(entry["id"]))["ok"]:
+			ready.append(entry)
+	return ready.slice(0, DispatchBay.MAX_VEHICLES)
 
 
 func _waiting() -> Array[StringName]:
@@ -376,6 +510,35 @@ func _vehicle_name(vehicle: VehicleDefinition) -> String:
 
 
 ## "■ ■ □ □" for 2 of 4 slots used: the fill reads by shape, not by colour.
+## The colour of a load bar `ratio` full: calm under FILL_WARN, the warning colour from there on.
+static func fill_color(ratio: float, colorblind: bool = false) -> Color:
+	return UiTheme.state_color(0 if ratio < FILL_WARN else 1, colorblind)
+
+
+## The colour of a row's text by its mark.
+static func row_color(mark: String, colorblind: bool = false) -> Color:
+	if mark == PICKED:
+		return UiTheme.state_color(0, colorblind)
+	return UiTheme.MUTED if mark == BLOCKED else UiTheme.INK
+
+
+func _load_bar(parent: Control, bar_name: String) -> ProgressBar:
+	var bar_node: ProgressBar = UiTheme.bar(parent, fill_color(0.0), 16)
+	bar_node.name = bar_name
+	bar_node.max_value = 1.0
+	bar_node.step = 0.0
+	bar_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return bar_node
+
+
+func _fill_bar(bar_node: ProgressBar, ratio: float) -> void:
+	bar_node.value = clampf(ratio, 0.0, 1.0)
+	var fill := (bar_node.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate() as StyleBoxFlat
+	fill.bg_color = fill_color(ratio, UiTheme.colorblind(self))
+	bar_node.add_theme_stylebox_override(&"fill", fill)
+
+
 static func _slot_marks(used: int, total: int) -> String:
 	if total > MAX_SLOT_MARKS:
 		return "%d / %d" % [used, total]

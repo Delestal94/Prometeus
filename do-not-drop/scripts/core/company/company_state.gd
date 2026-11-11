@@ -32,11 +32,35 @@ var warehouse_stage: int = 0
 ## Stock, in the Inventory.to_dict() form (use stock() / store_stock()).
 var inventory: Dictionary = {}
 var company_name: String = ""
+## The company's world seed (D-0246): every random draw of the business starts from day_seed().
+## Saved with the company and sent in the host's snapshot; 1 to CompanySeed.MAX_SEED.
+var company_seed: int = 0
 ## Wallet history (D-0501), oldest first, at most CompanyTuning.LEDGER_MAX entries:
 ## {day, minute, amount (signed), reason, balance (after the movement)}.
 var ledger: Array[Dictionary] = []
+## The supplier calendar (D-0603.b.2), in the SupplierSchedule.to_dict() form: what was ordered and the
+## day its truck comes. The live one is CompanyNet's; the host writes it here after every order.
+var supplier_calendar: Dictionary = {"deliveries": {}}
+## The supplier pallets and the pallet jack (D-0605.c), in the CompanyPallets.to_save() form: the book, where the
+## jack stands and the delivery note. The live one is CompanyNet's; the host writes it here before every save.
+## {} for none (a company before D-0605.c, or a broken save): the shed starts with an empty book.
+var pallets: Dictionary = {}
+## How long the cold units of each place have been out of a fridge (D-0616.b), in the ColdChain.to_dict() form.
+## The live clocks are the host's ColdChainTick; it writes them here before every save. Optional in a save (a
+## company from before D-0616.b starts with fresh ones) and never in a snapshot: a client has no clocks.
+var cold_clocks: Dictionary = {}
+## The company's modifiers (D-1919, diseno/dificultad.md §2-3): OPTION_KEYS -> bool, both off for a new company.
+## The host sets them outside a match only; a save without them loads both off.
+var options: Dictionary = {}
 
 var _active: bool = false
+
+
+## Armado asistido: the tape fills the box's free cells (PackingStation.seal, D-1919).
+const OPTION_ASSISTED_PACKING: String = "assisted_packing"
+## Días tranquilos: no day events (the day-event draw, D-0123, reads it when it exists).
+const OPTION_CALM_DAYS: String = "calm_days"
+const OPTION_KEYS: Array[String] = [OPTION_ASSISTED_PACKING, OPTION_CALM_DAYS]
 
 
 func _init() -> void:
@@ -48,10 +72,14 @@ func is_active() -> bool:
 	return _active
 
 
-## Starts a fresh company with the starting money, day, clock and reputation.
-func new_company(new_name: String = "") -> void:
+## Starts a fresh company with the starting money, day, clock and reputation. `seed_value` fixes
+## its world seed (a test, a shared challenge); 0 or an invalid one draws a new one.
+func new_company(new_name: String = "", seed_value: int = 0) -> void:
 	_set_defaults()
 	company_name = new_name
+	company_seed = CompanySeed.normalize(seed_value)
+	if company_seed == 0:
+		company_seed = CompanySeed.fresh()
 	_active = true
 
 
@@ -65,6 +93,7 @@ func reset() -> void:
 func to_dict() -> Dictionary:
 	return {
 		"company_name": company_name,
+		"company_seed": company_seed,
 		"money": money,
 		"day": day,
 		"clock_minutes": clock_minutes,
@@ -79,6 +108,10 @@ func to_dict() -> Dictionary:
 		"warehouse_stage": warehouse_stage,
 		"inventory": inventory.duplicate(true),
 		"ledger": ledger.duplicate(true),
+		"supplier_calendar": supplier_calendar.duplicate(true),
+		"pallets": pallets.duplicate(true),
+		"cold_clocks": cold_clocks.duplicate(true),
+		"options": options.duplicate(),
 	}
 
 
@@ -91,6 +124,9 @@ func from_dict(data: Dictionary) -> bool:
 		return false
 	_set_defaults()
 	company_name = str(data.get("company_name", ""))
+	company_seed = CompanySeed.normalize(data.get("company_seed"))
+	if company_seed == 0:
+		company_seed = CompanySeed.from_name(company_name)
 	money = int(_num(data.get("money"), CompanyTuning.STARTING_MONEY))
 	day = maxi(int(_num(data.get("day"), CompanyTuning.STARTING_DAY)), 1)
 	clock_minutes = clampi(
@@ -120,8 +156,47 @@ func from_dict(data: Dictionary) -> bool:
 	ledger = _entries(data.get("ledger", []))
 	if ledger.size() > CompanyTuning.LEDGER_MAX:
 		ledger = ledger.slice(ledger.size() - CompanyTuning.LEDGER_MAX)
+	var calendar: Variant = data.get("supplier_calendar", {})
+	if calendar is Dictionary:
+		supplier_calendar = SupplierSchedule.from_dict(calendar).to_dict()
+	var saved_pallets := CompanyPallets.new()
+	if saved_pallets.load_save(data.get("pallets")):
+		pallets = saved_pallets.to_save()
+	var saved_clocks := ColdChain.new()
+	saved_clocks.from_dict(data.get("cold_clocks", {}))
+	cold_clocks = saved_clocks.to_dict() if saved_clocks.is_ticking() else {}
+	options = sanitize_options(data.get("options"))
 	_active = true
 	return true
+
+
+## True when the modifier `key` (OPTION_KEYS) is on.
+func option(key: String) -> bool:
+	return bool(options.get(key, false))
+
+
+## The modifiers of `raw` (a save's or a snapshot's): only OPTION_KEYS with bool values, the rest off (an
+## unknown key or a value that is not a bool is ignored). A save from before D-1919 has none: both off.
+static func sanitize_options(raw: Variant) -> Dictionary:
+	var out: Dictionary = default_options()
+	if raw is Dictionary:
+		for key: String in OPTION_KEYS:
+			var value: Variant = (raw as Dictionary).get(key)
+			if typeof(value) == TYPE_BOOL:
+				out[key] = value
+	return out
+
+
+static func default_options() -> Dictionary:
+	var out: Dictionary = {}
+	for key: String in OPTION_KEYS:
+		out[key] = false
+	return out
+
+
+## The seed of `stream` (CompanySeed.ORDERS, SUPPLIERS) for `for_day`, or today when it is -1.
+func day_seed(stream: StringName, for_day: int = -1) -> int:
+	return CompanySeed.for_day(company_seed, day if for_day < 0 else for_day, stream)
 
 
 ## Adds money to the wallet and records it. A zero or negative amount does nothing
@@ -191,7 +266,7 @@ func gate_owned() -> Dictionary:
 	var vehicles: Array[StringName] = []
 	for entry: Dictionary in fleet:
 		var key: Variant = entry.get("vehicle", entry.get("key", ""))
-		if typeof(key) == TYPE_STRING or typeof(key) == TYPE_STRING_NAME:
+		if (typeof(key) == TYPE_STRING or typeof(key) == TYPE_STRING_NAME) and not String(key).is_empty():
 			vehicles.append(StringName(key))
 	return {"milestones": milestones_done, "equipment": equipment, "vehicles": vehicles}
 
@@ -248,7 +323,12 @@ func _set_defaults() -> void:
 	warehouse_stage = 0
 	inventory = Inventory.new().to_dict()
 	ledger = []
+	supplier_calendar = SupplierSchedule.new().to_dict()
+	pallets = {}
+	cold_clocks = {}
+	options = default_options()
 	company_name = ""
+	company_seed = 0
 
 
 func _clamp_reputation(value: float) -> float:

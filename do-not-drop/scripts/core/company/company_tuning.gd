@@ -36,6 +36,9 @@ const OPENING_REAL_SECONDS: float = 5.0
 ## a player standing on the shed's door line can't send an event per frame. Shorter than a walk
 ## through the door; long enough that nobody gains by dancing on the line.
 const SHED_FREEZE_SETTLE_REAL_SECONDS: float = 1.0
+## Host rules of the company (DayCycle's poll, and what joins it: orders, suppliers, employees) run
+## this many times a real second on BusinessTick (D-0232), not once per frame.
+const BUSINESS_TICK_HZ: float = 4.0
 
 # --- World cells (D-0303) ---
 ## The continuous map is cut in squares of this side, in meters (diseno/mapa.md).
@@ -48,15 +51,77 @@ const CELL_IMPOSTOR_RADIUS: int = 5
 ## Instancing budget per frame, in real milliseconds (the N-917 lesson: never a big frame).
 const CELL_SLICE_MSEC: float = 4.0
 
+# --- GPS (D-0308) ---
+## Typical speed on each street surface, in m/s: the GPS weighs a street by length / speed (time),
+## so it prefers a longer asphalt road to a short mud track. Unknown surface: 10.
+const SURFACE_SPEED: Dictionary = {&"asphalt": 14.0, &"cobble": 10.0, &"gravel": 9.0, &"dirt": 7.0}
+## How far ahead along the route the GPS arrow points, in meters.
+const GPS_LOOKAHEAD: float = 30.0
+
+# --- Tow home (D-0307) ---
+## "Volver con grua": a vehicle left stuck or broken on a trip is towed back to the shed's yard for this
+## much money (spent from the company wallet, ledger reason `tow`). The undelivered orders fail, as in any
+## trip that comes back with them. Low enough to be a way out, high enough that nobody wrecks a van to skip
+## the drive (a failed order already costs more than it pays, docs/economia-y-contramedidas.md).
+const TOW_COST: int = 50
+## Real seconds of black screen while the vehicle is carried to the yard.
+const TOW_BLACK_SCREEN_SECONDS: float = 3.0
+## A company van on a trip counts as STUCK (CompanyTow, D-0307.1) after this many seconds with a driver, the
+## pedal down and nearly no speed (level_common.gd's STUCK_SECONDS and STUCK_SPEED of the delivery run, the same
+## numbers): the tow is offered then. Mud is not stuck: the crew pushes there.
+const TOW_STUCK_SECONDS: float = 6.0
+## Speed (m/s) under which a van with the pedal down counts as not moving.
+const TOW_STUCK_SPEED: float = 0.3
+## A van that was counted stuck stays stuck (the tow stays on offer) until it really moves: faster than
+## TOW_STUCK_SPEED for this many seconds in a row, or until its trip closes. Lifting the pedal or leaving the wheel
+## does not clear it.
+const TOW_UNSTUCK_SECONDS: float = 1.0
+
+# --- Crew split between the shed and the street (D-0316) ---
+## Most vehicles out on a trip at once (docs/decisiones/2026-10-04-mapa-continuo.md, point 6): the
+## dispatch board doesn't load a third one and the shed gate starts no third trip, with the reason.
+## D-0317 confirms or raises it with D-2002's measurements.
+const VEHICLES_FAR_MAX: int = 2
+## The gate holds a vehicle with cargo that may not leave (CompanyTrips.hold_at_gate, D-0316.2) and tells its
+## driver why at most this often, in real seconds, however long it pushes (CompanyTrips.held_notice_msec).
+const GATE_HELD_NOTICE_REAL_SECONDS: float = 3.0
+## A client at the wheel of a held vehicle brakes its own predicted copy at the gate, as the host does, for this
+## long after each notice (CompanyGateBrake, D-0316.4): the notice's period and a round trip to spare, so a vehicle
+## pushed against the gate for good stays braked from one notice to the next.
+const GATE_BRAKE_REAL_SECONDS: float = 3.5
+## Who gets a company vehicle's or loose box's updates (CompanyInterest): the peers whose player is
+## within CELL_LOAD_RADIUS cells of it, until it is past CELL_UNLOAD_RADIUS. They look again this often,
+## in real seconds: a vehicle at 100 km/h covers 7 m, far under a cell.
+const INTEREST_UPDATE_REAL_SECONDS: float = 0.25
+## A body hidden from a peer is still sent to it for INTEREST_PULSE_REAL_SECONDS this often, so
+## SceneMultiplayer's 16-bit sync clock never falls half a turn behind (WorldCellInterest).
+const INTEREST_KEEPALIVE_REAL_SECONDS: float = 20.0
+const INTEREST_PULSE_REAL_SECONDS: float = 0.1
+
 # --- Network (D-2002) ---
 ## Poses a second each player sends on foot in the company's world (D-2002.3): half the game's 30
 ## (player.tscn). Nobody goes fast in the shed, and at 30 the poses the host relays sent each client
 ## of a full crew 37 KB/s, over the shed's 24 (docs/rendimiento-pc.md). Riding a vehicle a player
 ## sends at the game's rate again (player_ride.gd set_on_foot_pose_rate(), CompanyRoot.join_crew()).
 const SHED_POSE_RATE_HZ: int = 15
+## ... and seated in a company vehicle (D-2002.4): a driver's or a passenger's pose is in its seat's space
+## and hardly moves. Standing in a vehicle's cargo bay a player still sends at the game's 30.
+const SEATED_POSE_RATE_HZ: int = 15
+## Seconds between two poses of a company vehicle on the move (D-2002.4, CompanyFleet._make()): about 30 a
+## second instead of vehicle.tscn's ~60 (0.0167, the delivery truck's, untouched). 0.03 and not 1/30: at 60
+## fps SceneMultiplayer sends once two frames have passed, and 0.0333 (two frames to a hundredth of a ms)
+## measured 25 a second there, 0.03 a clean 30 (29 at 144 fps). Parked, NetRestThrottle's rest still rules.
+const FLEET_POSE_INTERVAL_SEC: float = 0.03
+## Seconds between two care_state publishes of a company box under care (D-2002.4, BoxToPackage.tune()):
+## twice the delivery's 0.1 s. A tended box's state is up to ~900 B (the bomb's, docs/rendimiento-pc.md),
+## and at 10 a second it cost each client who sees it ~10 KB/s. A bump warning still goes out at once.
+const CARE_PUBLISH_SEC: float = 0.2
 
 # --- Fixed costs ---
 const RENT_PER_DAY: int = 100
+## Money the suggested supplier order leaves untouched besides the rent (D-0151,
+## roles-tripulacion.md §6.3): the reserve of the economy curve.
+const SOLO_ORDER_CASH_RESERVE: int = 100
 
 # --- Bankruptcy (D-0510) ---
 ## A company that closes the day in the red opens the next one with this share of its orders
@@ -94,6 +159,39 @@ const SUPPLY_CAPACITY: Dictionary = {
 ## A supply counts as low at or under this share of its capacity.
 const SUPPLY_LOW_RATIO: float = 0.25
 
+## Cooler with ice (D-0721, ColdPack): a cold product lasts COLD_BASE_MINUTES in a box without ice
+## and COLD_PER_ICE_MINUTES more per ice pack (up to ICE_PACKS_MAX); an ice pack costs ICE_PACK_COST.
+const COLD_BASE_MINUTES: float = 15.0
+const COLD_PER_ICE_MINUTES: float = 25.0
+const ICE_PACKS_MAX: int = 2
+const ICE_PACK_COST: int = 2
+## Cold stock outside a fridge (D-0616, ColdChain): a cold product rots after this many game minutes
+## out of cold storage (2 h), counted per product and place; in a fridge the clock stops.
+const COLD_SPOIL_MINUTES: float = 120.0
+
+## Gift wrap (D-0723, GiftWrap): a gift order delivered in a wrapped box pays GIFT_WRAP_BONUS of its
+## pay on top of the gift requirement's own bonus; the paper costs GIFT_WRAP_COST.
+const GIFT_WRAP_BONUS: float = 0.15
+const GIFT_WRAP_COST: int = 3
+
+## Quality check by a second player (D-0734, BoxReview): a box that someone other than its packer opened and
+## found faultless, and that was not touched afterwards, pays BOX_REVIEW_BONUS of its pay on top (stacks with
+## the condition bonus; small, because the check costs a second player's time).
+const BOX_REVIEW_BONUS: float = 0.05
+
+## Multi-box orders (D-0729, OrderParts): an order whose products need more than MULTI_BOX_FILL of one
+## XL box is split into up to ORDER_BOXES_MAX boxes, all of them delivered together.
+const ORDER_BOXES_MAX: int = 3
+const MULTI_BOX_FILL: float = 0.75
+
+## Products that must not share a box (D-0726, ProductCompatibility): assembly quality points lost
+## per incompatible pair found in one box (a pair is two different groups, counted once per kind).
+const INCOMPATIBLE_QUALITY_PENALTY: int = 30
+
+## Upright-only products (D-0727, ProductOrientation): assembly quality points lost per such product
+## in a box laid on its side.
+const TIPPED_QUALITY_PENALTY: int = 25
+
 # --- Warehouse grid (D-0904) ---
 ## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
 const WAREHOUSE_GRID_M: float = 1.0
@@ -106,7 +204,7 @@ const PLACEABLE_REFUND_RATIO: float = 0.5
 const WAREHOUSE_STAGE_IDS: Array[StringName] = [&"small", &"medium", &"large", &"logistics_center"]
 const WAREHOUSE_STAGE_GRID: Array[Vector2i] = [
 	Vector2i(12, 8), Vector2i(18, 12), Vector2i(24, 16), Vector2i(32, 20)]
-const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 1500, 6000, 20000]
+const WAREHOUSE_STAGE_PRICE: Array[int] = [0, 800, 2000, 5000]
 ## Most pieces (shelves, tables, zones...) a stage can hold, so the built shed stays inside the
 ## performance budget (D-0915): about one piece per six floor cells. Same index as the arrays above.
 const WAREHOUSE_STAGE_MAX_PIECES: Array[int] = [16, 36, 64, 100]
@@ -116,6 +214,13 @@ const WAREHOUSE_STAGE_MAX_PIECES: Array[int] = [16, 36, 64, 100]
 ## customer exit (north wall, centered). No object can be placed there at any stage.
 const WAREHOUSE_DOCK_CELLS: Vector2i = Vector2i(4, 2)
 const WAREHOUSE_EXIT_CELLS: Vector2i = Vector2i(2, 2)
+
+# --- Return bundle (D-0252) ---
+## Where the return bundle (ReturnBundle) lies when a saved day loads, in the world at floor height: in the
+## starting shed (stage 0, standing at the origin), the middle of cell (10, 1), at the north end of the aisle in
+## front of the default packing tables (DefaultShed: table_1 and table_2 against the east wall, cells 11 x 2..5).
+## A bigger stage keeps it in that cell, as it keeps every piece; a piece over it moves it (ReturnBundle.spot()).
+const RETURN_BUNDLE_SPOT: Vector3 = Vector3(4.5, 0.0, -2.5)
 
 # --- Warehouse lighting (D-0913) ---
 ## Ceiling lamps: one per tile of at most this many meters, so the number grows with the stage
@@ -157,6 +262,33 @@ const SHELF_SLOT_CAPACITY: int = 24
 ## Units a player carries in their hands, all of one product (red-autoridad.md section 2,
 ## row 5; CompanyNet checks it on units_take, D-2003). Picking (D-0609) and D-0117 tune it.
 const HAND_MAX_UNITS: int = 4
+## Units a picking cart carries in total, products mixed (D-0610, the "carries 6" of its table row). More than
+## the hands (HAND_MAX_UNITS) so the cart is worth the trip; PickingCart refuses the unit that would pass it.
+const CART_MAX_UNITS: int = 6
+## One push of a picking cart (D-0610.b): how far it rolls, in metres, away from whoever pushes it.
+const CART_PUSH_STEP_M: float = 1.2
+## How close to a wall or a piece of furniture (m, from the cart's centre) the cart may be left.
+const CART_CLEARANCE_M: float = 0.7
+## Holding the cart's handle (D-0610.c2.b, PickingCartGrip): the cart keeps at least CART_GRIP_DISTANCE_M from
+## whoever holds it (centre of the cart to their feet, m, on the floor), pushed ahead at most once every
+## CART_GRIP_INTERVAL_S, plus a lead: how far they walk towards it in CART_GRIP_LEAD_S (the interval and the
+## cushion a remote player is drawn with on the host) plus their round trip, at most CART_GRIP_MAX_LEAD_M. So
+## the step their peer sees late is already ahead of where they walk by then, and the next one comes in time.
+## The deck is solid: a player (radius 0.35) touches it at most 0.93 m from the centre (towards a corner), so
+## (CART_GRIP_DISTANCE_M - 0.93) / CART_GRIP_INTERVAL_S stays over Player.WALK_SPEED: even with no lead a
+## holder pressed against the deck gets room faster than they walk and is never held back.
+## The shortest step worth a request; who is CART_GRIP_RELEASE_M away lets go (past DISTANCE + MAX_LEAD, where
+## a cart that ran ahead stops, and within reach of it); after a `blocked` the grip waits CART_GRIP_BLOCKED_PAUSE_S.
+const CART_GRIP_DISTANCE_M: float = 1.5
+const CART_GRIP_LEAD_S: float = 0.25
+const CART_GRIP_MAX_LEAD_M: float = 1.5
+const CART_GRIP_RELEASE_M: float = 3.6
+const CART_GRIP_MIN_STEP_M: float = 0.1
+const CART_GRIP_INTERVAL_S: float = 0.15
+const CART_GRIP_BLOCKED_PAUSE_S: float = 0.6
+## How close two picking carts may stand, centre to centre on the floor (m, D-0610.c): past the diagonal of the
+## 1.0 x 0.6 m platform, so two carts never overlap whichever way they face.
+const CART_SPACING_M: float = 1.2
 
 # --- Orders ---
 ## Shipping fee added to an order's pay, by zone id (unknown zones pay 0).
@@ -170,9 +302,17 @@ const ORDERS_MAX_PER_DAY: int = 16
 const ORDER_HOUR_WEIGHTS: Array[float] = [1.0, 2.0, 3.0, 3.0, 2.5, 1.0, 1.0, 2.0, 2.5, 2.0, 0.5]
 ## Orders do not arrive in the last hour of the day: the crew would have no time to ship them.
 const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
+## With a crew of one the day's arrival hours are squeezed so the last order comes in by 15:00 of the
+## shed (D-0151, roles-tripulacion.md §6.2): the shed stands still while the only player drives (S4),
+## and with three trips the afternoon orders would never come in. The count does not change.
+const SOLO_ORDER_LAST_ARRIVAL_MIN: int = 15 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3
+## The first days ask for fewer distinct products (D-0812): up to ORDER_ITEMS_EARLY_MAX on days
+## 1 to ORDER_EARLY_DAYS, so a crew still learning the shed packs one or two products per box.
+const ORDER_EARLY_DAYS: int = 3
+const ORDER_ITEMS_EARLY_MAX: int = 2
 ## Delivery window from the moment the order comes in: 4 game hours.
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
@@ -214,6 +354,24 @@ const PENALTY_REPUTATION_CAP: float = -10.0
 const TIP_FAST_WINDOW_SHARE: float = 0.5
 const TIP_RATE: float = 0.15
 const TIP_REPUTATION: float = 1.0
+## Reputation a delivery with nothing wrong with it earns on top of its pay (D-0815); the tip adds
+## its own TIP_REPUTATION when it was also quick.
+const CLEAN_DELIVERY_REPUTATION: float = 0.5
+## The customer's rating of a delivery, 1 to 5 stars (D-0816, OrderRating). Only information for now:
+## it moves no money and no reputation. A clean delivery earns 4 stars, 5 when it also tipped (quick);
+## otherwise the worst failure decides: a wrong box 1, a broken product 2, lateness or a label of
+## another order 3.
+const STARS_MIN: int = 1
+const STARS_MAX: int = 5
+const STARS_CLEAN_SLOW: int = 4
+const STARS_WRONG_BOX: int = 1
+const STARS_BROKEN: int = 2
+const STARS_LATE: int = 3
+const STARS_MISLABELED: int = 3
+## The customer's reaction at the door, from the stars (D-0817, OrderDoorReaction): 4 or 5 stars cheer,
+## 3 shrugs, 1 or 2 are angry.
+const REACTION_CHEER_MIN_STARS: int = 4
+const REACTION_SHRUG_MIN_STARS: int = 3
 ## Merit the carrier of an intact delivery earns when a trip closes (D-0320, TripResult).
 const TRIP_MERIT_INTACT: int = 10
 
@@ -223,7 +381,14 @@ const SUPPLIER_TRUCKS_PER_DAY: int = 1
 const SUPPLIER_ARRIVAL_MIN: int = 8 * 60 + 30
 ## It waits this long at the dock (3 game hours).
 const SUPPLIER_WAIT_MIN: int = 180
-## The truck NPC's drive (D-0601, SupplierTruck): grey-box size in meters (width, height, length),
+## Docks the shed has for supplier trucks (D-0621.c.a, DockQueue): trucks that overlap in time queue for one.
+## D-0640 (a second dock) raises it.
+const SUPPLIER_DOCK_BAYS: int = 1
+## Days of supplier deliveries the delivery note keeps line by line (D-2026.2, DeliveryNote): the last two weeks.
+## Older days fold into per-product missing totals, so the note (in every save and snapshot) stops growing with
+## the days played. Decision: docs/decisiones/2026-11-04-save-50-dias.md.
+const DELIVERY_NOTE_DAYS_KEPT: int = 14
+## The truck NPC's drive (D-0601, SupplierTruck): size in meters (width, height, length),
 ## the gap between the shed's floor edge and its rear when parked (the south wall is 0.3 thick), the
 ## turn radius, how far it reverses in a straight line, the straight run before the turn, and the
 ## game minutes it takes to drive in (it is parked at SUPPLIER_ARRIVAL_MIN) and to drive out (it
@@ -239,6 +404,21 @@ const SUPPLIER_DRIVE_OUT_MIN: float = 4.0
 ## and how close the jack's holder must stand to pick one up.
 const PALLET_FOOTPRINT_M: Vector2 = Vector2(1.2, 0.8)
 const PALLET_JACK_REACH_M: float = 1.6
+## One push of the pallet jack in the world (D-0605.b): how far it rolls, in metres, away from whoever pushes
+## it. More than a pallet's long side (1.2 m), so a pallet put down is never under the next one.
+const JACK_PUSH_STEP_M: float = 1.3
+## The forklift (D-0606, PalletForklift): how high the forks go (m), how fast they rise (m/s, the
+## depot's staff forklift speed) and how close to a level they must be to take or leave a pallet.
+const FORKLIFT_MAX_LIFT_M: float = 2.4
+const FORKLIFT_LIFT_SPEED: float = 0.55
+const FORKLIFT_LEVEL_TOLERANCE_M: float = 0.12
+## The forklift in the world (D-0606.b): how far ahead of its driver the middle of a pallet on the forks lies
+## (m), and how long one mast request moves the forks at most (s: the driver asks again while the key is held,
+## so a lost "stop" cannot send the forks to the top).
+const FORKLIFT_TIP_M: float = 1.2
+const FORKLIFT_MAST_BURST_S: float = 0.5
+## How fast its driver goes (m/s, D-0606.c2): a forklift's 8 km/h, under walking pace (3.6), and no running.
+const FORKLIFT_DRIVE_SPEED_MPS: float = 2.2
 
 # --- Packing quality (base of D-0709 and D-0710) ---
 const QUALITY_START: float = 100.0
@@ -253,6 +433,9 @@ const QUALITY_NO_TAPE_OR_LABEL_PENALTY: float = 10.0
 ## where protection is the share of free cells that carry padding.
 const ABSORPTION_UNPADDED: float = 1.0
 const ABSORPTION_FULL_PADDING: float = 0.6
+## Armado asistido (D-1919, dificultad.md §2.1): an assisted box absorbs no better than this, the quick match's
+## automatic padding (armado-y-trampas.md: hand packing must be worth more).
+const ASSISTED_MIN_ABSORPTION: float = 0.75
 ## More free cells than this without padding adds the Balance trap (low intensity).
 const OVERSIZED_FREE_RATIO: float = 0.5
 ## Trap intensity from packing quality (D-0710, BoxTrap): 1 - quality / 100, read as low below
@@ -260,3 +443,14 @@ const OVERSIZED_FREE_RATIO: float = 0.5
 const TRAP_INTENSITY_MID: float = 0.1
 const TRAP_INTENSITY_HIGH: float = 0.25
 const TRAP_LOOSE_BOX_INTENSITY: float = 0.3
+## How hard the trap hits at each level (D-0710.b, ITrapBehavior.severity): every behavior scales the harm it
+## does by it (hits, leaks, anger, growth, a shorter fuse or tipping time), never what the right answer does.
+## Low is the trap as it is today (armado-y-trampas.md §5). Measured with `sim_trap_balance.gd -- --levels
+## --trials=10` (tests/sim_data/levels_report.md: 10 repetitions, though LEVEL_TRIALS is 20): at 1.25 the clumsy
+## loses 8 to 46 points more boxes than at low in 6 of the 7 traps and the same in Fragile (50 %), where the expert
+## is the one who loses more, 2 to 20 % (a crash nobody can cushion); elsewhere the expert loses 2 % at most
+## (Noisy). Hostile sends the clumsy to 100 % at 1.25 too, so what rules out 1.5 is Fragile's 96 % for the clumsy
+## (docs/decisiones/2026-11-04-severidad-de-trampas.md).
+const TRAP_SEVERITY_LOW: float = 1.0
+const TRAP_SEVERITY_MID: float = 1.1
+const TRAP_SEVERITY_HIGH: float = 1.25

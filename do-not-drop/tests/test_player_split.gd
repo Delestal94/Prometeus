@@ -13,12 +13,14 @@ extends SceneTree
 ##   values, and the helpers load and are static;
 ## - what the helpers compute is what the single-file version computed: the collision masks, the pickup blend,
 ##   the drawn pose of a node, the rescue after a fall out of the world and the look clamp, on small inputs;
+## - the seated tick (PlayerSeatPose.seated_step) offers a neighbour's box only once one's own is ruined;
 ## - player.gd stays under MAX_LINES lines, far from the lint limit (1000), so it doesn't grow back to the edge.
 
 ## The script is loaded when the test runs: with --script this file compiles before the autoloads exist, and
 ## naming Player here would pull them in too early (see test_assist.gd).
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 const PLAYER_SCRIPT: String = "res://scripts/gameplay/player/player.gd"
+const PACKAGE_SCRIPT: String = "res://scripts/gameplay/package/package.gd"
 const MAX_LINES: int = 700
 const HELPERS: Array[String] = ["player_ride", "player_movement", "player_input", "player_net_visibility"]
 
@@ -59,7 +61,8 @@ const STATIC_METHODS: Array[String] = ["pickup_high_weight_for", "_drawn_transfo
 ## Variables other scripts read or write on a player.
 const VARS: Array[String] = [
 	"carried_package", "tended_package", "assisted_package", "seat_node_path", "net_position", "net_in_vehicle",
-	"anim_state", "locomotion_speed", "turn_rate", "jump_anim_time", "pickup_high_weight", "cosmetic_id",
+	"net_vehicle", "anim_state", "anim_clip", "locomotion_speed", "turn_rate", "jump_anim_time", "pickup_high_weight",
+	"cosmetic_id",
 	"face_eyes", "face_mouth", "animator", "stick_sensitivity", "_seated", "_camera", "_head", "_pitch",
 	"_riding", "_ride_last_transform", "_vehicle", "_has_net_state", "_bob_time", "_bob_amount",
 	"_highlighted", "_carry_pose", "_pickup_elapsed", "_flinch_time", "_ragdolled", "_body_visual", "_nearby",
@@ -210,8 +213,45 @@ func _check_behavior(scene: PackedScene, script: GDScript) -> void:
 	player.call(&"_apply_look", Vector2(0.0, 100000.0))
 	_expect(is_equal_approx(absf(float(player.get(&"_pitch"))), 1.4), "The pitch is clamped to PITCH_LIMIT")
 	_expect(is_equal_approx(absf((player.get(&"_head") as Node3D).rotation.x), 1.4), "The head follows the pitch")
+	await _check_seated_step(player)
 	root.remove_child(player)
 	player.free()
+
+
+## The seated tick lives in PlayerSeatPose: offering to help with a neighbour's box takes one's own being ruined.
+func _check_seated_step(player: Node) -> void:
+	var own: Node = _package(&"split_own")
+	var neighbour: Node = _package(&"split_neighbour")
+	neighbour.global_position = (player as Node3D).global_position
+	await process_frame
+	neighbour.set(&"tender_peer_id", 2)
+	neighbour.get(&"care").needs_restore = true
+	player.set(&"tended_package", own)
+	player.set(&"_seated", true)
+	var seat_pose: Node = player.get_node(^"PlayerSeatPose")
+	seat_pose.call(&"seated_step")
+	_expect(String(player.get(&"_last_prompt")).is_empty(), "Seated with a box that still lives: nothing offered")
+	own.set(&"_lost", true)
+	seat_pose.call(&"seated_step")
+	_expect(String(player.get(&"_last_prompt")) == String(neighbour.call(&"assist_prompt")),
+			"Seated with a ruined box: the neighbour's is offered")
+	player.set(&"assisted_package", neighbour)
+	seat_pose.call(&"seated_step")
+	_expect(String(player.get(&"_last_prompt")).is_empty(), "Already helping: nothing else offered")
+	player.set(&"assisted_package", null)
+	player.set(&"tended_package", null)
+	player.set(&"_seated", false)
+	own.free()
+	neighbour.free()
+
+
+func _package(id: StringName) -> Node:
+	var package: RigidBody3D = (load(PACKAGE_SCRIPT) as GDScript).new()
+	package.set(&"package_id", id)
+	package.freeze = true
+	package.add_to_group(&"cargo")
+	root.add_child(package)
+	return package
 
 
 func _expect(condition: bool, description: String) -> void:

@@ -7,7 +7,16 @@ extends SceneTree
 ## - only the unlocked zones appear, and a zone without deliveries never does;
 ## - fragile and cold products bring their requirement; "urgent" halves the window
 ##   and every requirement raises the pay over the plain sum;
-## - max_items caps the distinct products; every product and zone exists.
+## - the first days (D-0812) cap orders at 2 products, later days at 3;
+## - max_items caps the distinct products; every product and zone exists;
+## - with order templates (D-0820.b) each order of a zone with a set matches one of its templates
+##   (products, quantities, requirements), within the day's item cap, deterministically; a zone
+##   without a set still draws at random;
+## - with the fixed map (HouseMap, D-2016.2) every order names a house of its own zone on the map, the
+##   same ones on every run, and the rest of each order (id, zone, products, minute) is the same as
+##   without the map; a zone with no house on it keeps "<zone>_house_<n>".
+## - customer names (D-0840, customer_names.gd) are "First Last" from a pool of 1500+, all different, and a
+##   day of orders uses many of them.
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -26,7 +35,11 @@ func _run() -> void:
 	_test_zones()
 	_test_requirements()
 	_test_max_items()
+	_test_early_days()
 	_test_empty_inputs()
+	_test_templates()
+	_test_map_houses()
+	_test_customer_names()
 	quit(_failures)
 
 
@@ -53,7 +66,7 @@ func _open() -> Array[ZoneDefinition]:
 
 
 func _day(day_seed: int, players: int = 3) -> Array[Dictionary]:
-	return OrderGenerator.generate_day(day_seed, 1, players, _open(), _products, _reqs)
+	return OrderGenerator.generate_day(day_seed, 4, players, _open(), _products, _reqs)
 
 
 func _test_determinism() -> void:
@@ -134,10 +147,95 @@ func _test_max_items() -> void:
 	_expect(widest == CompanyTuning.ORDER_ITEMS_MAX, "orders reach 3 distinct products")
 
 
+func _test_early_days() -> void:
+	_expect(OrderGenerator.items_cap_for_day(1) == CompanyTuning.ORDER_ITEMS_EARLY_MAX, "day 1 cap is 2")
+	_expect(OrderGenerator.items_cap_for_day(CompanyTuning.ORDER_EARLY_DAYS) == 2, "last early day cap is 2")
+	_expect(OrderGenerator.items_cap_for_day(CompanyTuning.ORDER_EARLY_DAYS + 1) == 3, "later days cap is 3")
+	var widest_early := 0
+	for day in range(1, CompanyTuning.ORDER_EARLY_DAYS + 1):
+		for seed_value in 30:
+			for order in OrderGenerator.generate_day(seed_value, day, 4, _open(), _products, _reqs):
+				widest_early = maxi(widest_early, order["items"].size())
+				_expect(order["items"].size() >= 1, "early orders still have a product")
+	_expect(widest_early == 2, "early days reach 2 products and never 3")
+	var forced := OrderGenerator.generate_day(5, 1, 4, _open(), _products, _reqs, 3)
+	var widest_forced := 0
+	for seed_value in 30:
+		for order in OrderGenerator.generate_day(seed_value, 1, 4, _open(), _products, _reqs, 3):
+			widest_forced = maxi(widest_forced, order["items"].size())
+	_expect(forced.size() > 0 and widest_forced == 3, "an explicit max_items overrides the day")
+
+
 func _test_empty_inputs() -> void:
 	_expect(OrderGenerator.generate_day(1, 1, 3, _open(), {}, _reqs).is_empty(), "no products, no orders")
 	var none: Array[ZoneDefinition] = []
 	_expect(OrderGenerator.generate_day(1, 1, 3, none, _products, _reqs).is_empty(), "no zones, no orders")
+
+
+func _test_templates() -> void:
+	var templates: Dictionary = {}
+	for set_res in OrderTemplateCheck.load_sets():
+		templates[set_res.zone] = set_res
+	_expect(templates.has(&"centro") and templates.has(&"campo"), "sets for centro and campo load")
+	var from_templates := 0
+	for seed_value in 20:
+		for day in [1, 4]:
+			var cap: int = OrderGenerator.items_cap_for_day(day)
+			var orders := OrderGenerator.generate_day(seed_value, day, 3, _open(), _products, _reqs, 0, null, templates)
+			var again := OrderGenerator.generate_day(seed_value, day, 3, _open(), _products, _reqs, 0, null, templates)
+			_expect(orders == again, "templates: same seed, same orders")
+			for order in orders:
+				var set_res: OrderTemplateSet = templates[order["zone"]]
+				var found := false
+				for template in set_res.templates:
+					if template.items == order["items"] and template.requirements == order["requirements"]:
+						found = true
+				_expect(found, "order matches a template of its zone")
+				from_templates += 1
+				_expect((order["items"] as Array).size() <= cap, "template within the day's item cap")
+	_expect(from_templates > 0, "orders were drawn from templates")
+	var plain := OrderGenerator.generate_day(3, 4, 3, _open(), _products, _reqs)
+	_expect(plain == _day(3), "no templates keeps the random draw")
+
+
+func _test_map_houses() -> void:
+	var houses: HouseMap = HouseMap.load_default()
+	_expect(houses != null and not houses.in_zone(&"centro").is_empty(), "the fixed map has houses in Centro")
+	for seed_value in [1, 7, 42]:
+		var plain := OrderGenerator.generate_day(seed_value, 4, 4, _open(), _products, _reqs)
+		var mapped := OrderGenerator.generate_day(seed_value, 4, 4, _open(), _products, _reqs, 0, null, {}, houses)
+		var again := OrderGenerator.generate_day(seed_value, 4, 4, _open(), _products, _reqs, 0, null, {}, houses)
+		_expect(mapped == again, "map houses are deterministic (seed %d)" % seed_value)
+		_expect(mapped.size() == plain.size(), "the map changes no order count (seed %d)" % seed_value)
+		for i in mapped.size():
+			var house: HouseSpot = houses.spot(mapped[i]["house_id"])
+			_expect(house != null and house.zone == mapped[i]["zone"],
+				"%s names a map house of its zone (got %s)" % [mapped[i]["id"], mapped[i]["house_id"]])
+			for key in ["id", "zone", "items", "created_min", "requirements"]:
+				_expect(mapped[i][key] == plain[i][key], "%s keeps its %s with the map" % [mapped[i]["id"], key])
+	var empty := HouseMap.new()
+	for order in OrderGenerator.generate_day(3, 4, 3, _open(), _products, _reqs, 0, null, {}, empty):
+		_expect(String(order["house_id"]).begins_with(String(order["zone"]) + "_house_"),
+			"a zone with no map house keeps <zone>_house_<n> (got %s)" % order["house_id"])
+
+
+func _test_customer_names() -> void:
+	_expect(CustomerNames.count() >= 1500, "the name pool has at least 1500 names (got %d)" % CustomerNames.count())
+	var seen: Dictionary = {}
+	for i in CustomerNames.count():
+		seen[CustomerNames.name_at(i)] = true
+	_expect(seen.size() == CustomerNames.count(),
+		"every index makes a different name (%d of %d)" % [seen.size(), CustomerNames.count()])
+	_expect(CustomerNames.name_at(-1) == CustomerNames.name_at(CustomerNames.count() - 1),
+		"a negative index wraps")
+	var names: Dictionary = {}
+	for day_seed in [11, 12, 13]:
+		for order in _day(day_seed, 6):
+			var customer: String = order["customer"]
+			_expect(customer.split(" ").size() == 2 and seen.has(customer),
+				"%s is a pool name (got %s)" % [order["id"], customer])
+			names[customer] = true
+	_expect(names.size() >= 20, "three days of orders use many names (got %d)" % names.size())
 
 
 func _expect(condition: bool, label: String) -> void:

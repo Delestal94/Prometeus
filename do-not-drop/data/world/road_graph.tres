@@ -433,7 +433,7 @@ from_id = &"gate_campo_obra"
 to_id = &"campo_a"
 width = 9
 surface = &"gravel"
-segments = Array[StringName]([&"gravel", &"straight", &"hill"])
+segments = Array[StringName]([&"gravel", &"construction_zone", &"straight", &"hill"])
 area = &"campo"
 street = &"camino_campo"
 
@@ -520,7 +520,7 @@ out_handle = Vector2(100, -50)
 in_handle = Vector2(-100, 60)
 width = 7
 surface = &"gravel"
-segments = Array[StringName]([&"gravel", &"curve", &"straight"])
+segments = Array[StringName]([&"gravel", &"speed_bump", &"curve", &"straight"])
 area = &"campo"
 street = &"chacras"
 

@@ -280,7 +280,7 @@ Lo que quedó construido sobre el estudio:
 - **Pruebas**: `test_newspaper_scene.gd` (flujo, contenido, encuadre y tamaño de letra de cada primer plano a
   720p, saltar, opción, todo el catálogo entrando en sus cajas en los dos idiomas) y
   `modules/camera_rail/tests/test_camera_rail.gd`. Capturas: `tests/render_newspaper_scene.gd`.
-- **Pendiente**: audio, giro de tapa, paso de página y birome, clips del Jefe (N-606.4, en pausa con S-311).
+- **Pendiente**: giro de tapa, birome, clips del Jefe (N-606.4c, en pausa con S-311). El audio llegó con N-606.4a (abajo).
 
 ## Fotos y tipografía (N-606.5, 2026-10-01)
 
@@ -303,3 +303,24 @@ Lo que quedó construido sobre el estudio:
   con Nunito de respaldo para glifos que falten.
 - **Encuadre**: el acercamiento pasa por detrás de la cabeza del Jefe, así la nariz y el bigote ya no asoman por
   el borde del diario.
+
+## Audio (N-606.4a, 2026-10-22)
+
+Todo sintetizado en `SynthAudioNewspaper` (`modules/synth_audio/synth_audio_newspaper.gd`) y reproducido por
+`NewspaperDirector` en el bus SFX (2D: la escena no tiene lugar en el mundo de la partida). Los tiempos están en
+`data/newspaper/shots.json`: `sounds` en cada plano (`at` en segundos desde que empieza el plano; `when`
+`news`/`clean` opcional) y `story.sounds` para el primer plano de cada bloque. Se cortan al saltar.
+
+| Cuándo | Sonido | Cómo debería sonar |
+|---|---|---|
+| General, 0,3 s | Gallo (`rooster_crow`, 1,85 s) | «ki-ki-ri-kiiii»: cuatro notas de voz brillante y nasal (400-900 Hz) que suben en la segunda y bajan en la larga, con un quiebre de voz a la mitad. Que se lea gallo de lejos, no sirena. |
+| General, 1,3 s | Pajaritos (`morning_chirps`, 1,85 s) | Nueve píos cortos y redondeados (2,7-3,5 kHz) en tres grupitos, detrás del gallo. |
+| Acercamiento, 0,4 s | Papel (`paper_rustle`, 0,75 s) | Crujido seco e irregular de papel que se despliega; sube y se aquieta. Sin tono. |
+| Tapa, 0,1 s | «¡Extra!» (`extra_stinger`, 1,95 s) | Un «ex-tra» gritado sin letra clara (voz con la «e» y la «a»), dos notas de bronce rápidas (sol-do) y un acorde de do mayor sostenido con un platillo debajo. Dice «esta es grande». |
+| Cada otra noticia, 0,1 s | Página (`page_turn`, 0,55 s) | Un «fsshh» seco que sube de medios a agudos y un aleteo suave donde cae la hoja; con ±4 % de variación de tono. La foto, que está en la misma página, no lleva. |
+| Reacción, 0,25 s | Papel (el que baja el diario) | El mismo crujido. |
+| Reacción, 0,9 s | Escupida (`mate_spit`, 1,0 s) | Con malas noticias: un «¡pfffft!» húmedo con los labios vibrando (más lento al final) y gotitas que caen sobre el papel («plip», dos «plaf» más pesados). Con la partida limpia suena en cambio el festejo del vecino (`neighbor_cheer`). |
+
+Niveles en `world_mix.gd` (`NEWSPAPER_*_DB`): gallo, «¡extra!» y escupida son «señal» (−18 dBFS), los pajaritos
+«naturaleza» (−24) y el papel y la página la clase nueva «foley» (−24). Lo que no se puede medir sin oídos: que
+el gallo no cargue y que la escupida haga reír en vez de molestar; a validar jugando.

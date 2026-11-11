@@ -24,7 +24,7 @@ const SAVED_KEYS: Array[StringName] = [
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
 	&"opaque_gel", &"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log",
 	&"last_join_address",
-	&"newspaper_mode", &"text_backdrop_opacity", &"pad_bindings",
+	&"newspaper_mode", &"text_backdrop_opacity", &"pad_bindings", &"subtitle_scale",
 ]
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
@@ -98,6 +98,8 @@ const REBINDABLE_ACTIONS := [
 	&"drive_accelerate", &"drive_brake", &"drive_handbrake",
 	&"package_drop", &"package_open", &"care_work", &"care_tool_next", &"phone_toggle", &"crew_panel",
 	&"spectate_toggle",
+	# D-0606.c1: the shed forklift's mast.
+	&"forklift_mast_up", &"forklift_mast_down",
 ]
 ## Actions that carry a key in the Input Map but are not offered in Options: no
 ## action may be moved onto their key (a notice says it is reserved, like Esc / F11).
@@ -116,6 +118,7 @@ const DEFAULT_KEY_BINDINGS := {
 	&"package_drop": KEY_Q, &"package_open": KEY_T, &"care_work": KEY_NONE, &"care_tool_next": KEY_X,
 	&"phone_toggle": KEY_F,
 	&"crew_panel": KEY_TAB, &"spectate_toggle": KEY_TAB,
+	&"forklift_mast_up": KEY_UP, &"forklift_mast_down": KEY_DOWN,
 }
 
 ## Where each action is read. Two actions only clash over a key when they share
@@ -137,6 +140,8 @@ const BINDING_CONTEXTS := {
 		&"care_tool_next": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"phone_toggle": CONTEXT_FOOT | CONTEXT_DRIVE,
 	&"crew_panel": CONTEXT_FOOT | CONTEXT_DRIVE | CONTEXT_DEPOT, &"spectate_toggle": CONTEXT_SPECTATE,
+	# Driven only inside the shed (the van's shift keys share the arrows out on the road).
+	&"forklift_mast_up": CONTEXT_DEPOT, &"forklift_mast_down": CONTEXT_DEPOT,
 }
 
 ## What rebind_key() / reset_binding() (and the pad versions) report in result["status"].
@@ -248,6 +253,21 @@ var sound_subtitles: bool = false:
 		sound_subtitles_changed.emit(sound_subtitles)
 		_save()
 signal sound_subtitles_changed(enabled: bool)
+
+## How big the sound-subtitle panel is drawn (N-983.3): normal, large, very large.
+## Only that panel scales, not the prompt above it or the rest of the HUD; a stray
+## value snaps to the closest step, so it can never go below 1x or past 1.5x.
+const SUBTITLE_SCALES: Array[float] = [1.0, 1.25, 1.5]
+var subtitle_scale: float = 1.0:
+	set(value):
+		var closest: float = SUBTITLE_SCALES[0]
+		for candidate: float in SUBTITLE_SCALES:
+			if absf(candidate - value) < absf(closest - value):
+				closest = candidate
+		subtitle_scale = closest
+		subtitle_scale_changed.emit(subtitle_scale)
+		_save()
+signal subtitle_scale_changed(scale: float)
 
 ## Opacity of the plate behind the subtitles and the interaction prompts
 ## (N-969): 1 is a solid plate. It never goes below TEXT_BACKDROP_MIN (N-977.3):
@@ -548,6 +568,7 @@ func reset_to_defaults() -> void:
 	opaque_gel = false
 	menu_text_scale = 1.0
 	sound_subtitles = false
+	subtitle_scale = 1.0
 	text_backdrop_opacity = TEXT_BACKDROP_DEFAULT
 	voice_chat_enabled = false
 	voice_push_to_talk = true

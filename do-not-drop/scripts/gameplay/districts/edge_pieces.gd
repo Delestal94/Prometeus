@@ -17,6 +17,8 @@ const MIN_FILL: float = 2.0
 const CURVE_SPAN: float = 50.0
 ## Kinds that bend the road on their own: they take the street's turn over their span.
 const BENDING: Array[StringName] = [&"curve"]
+## Passes to settle a bend's turn and its built length on each other.
+const BEND_PASSES: int = 4
 const FILL_KIND: StringName = &"straight"
 
 static var _lengths: Dictionary = {}
@@ -24,14 +26,18 @@ static var _lengths: Dictionary = {}
 
 ## The pieces of one street, in order: { kind, start (m along the street), length,
 ## position (Vector2 on the ground), yaw (radians, for a Basis(UP, yaw)), turn_deg
-## (curves only) }. Empty for a street that is not in the graph or lists no pieces.
-static func plan(graph: RoadGraph, edge_id: StringName) -> Array[Dictionary]:
+## (curves only), surface (the street's RoadEdge.surface, what build_piece() draws it with) }.
+## Empty for a street that is not in the graph or lists no pieces.
+##
+## With `keep_clear` (a ground rectangle, D-0314.a: the shed's) a street that starts inside it
+## starts at the point where it leaves it, so no roadway is laid under the shed's floor and walls.
+static func plan(graph: RoadGraph, edge_id: StringName, keep_clear: Rect2 = Rect2()) -> Array[Dictionary]:
 	var pieces: Array[Dictionary] = []
 	var edge: RoadEdge = graph.edge_by_id(edge_id)
 	if edge == null or edge.segments.is_empty():
 		return pieces
 	var total: float = graph.edge_length(edge_id)
-	var at: float = 0.0
+	var at: float = clear_offset(graph, edge_id, keep_clear)
 	var index: int = 0
 	while total - at >= MIN_FILL:
 		var kind: StringName = edge.segments[index % edge.segments.size()]
@@ -47,6 +53,17 @@ static func plan(graph: RoadGraph, edge_id: StringName) -> Array[Dictionary]:
 	return pieces
 
 
+## How far along the street (m, whole metres) it leaves `keep_clear`: 0 when it does not start inside it.
+static func clear_offset(graph: RoadGraph, edge_id: StringName, keep_clear: Rect2) -> float:
+	if not keep_clear.has_area():
+		return 0.0
+	var total: float = graph.edge_length(edge_id)
+	var at: float = 0.0
+	while at < total and keep_clear.has_point(graph.point_at(edge_id, at)):
+		at += 1.0
+	return at
+
+
 ## Builds the plan under `parent` (one RouteSegment per piece, already placed).
 static func build(graph: RoadGraph, edge_id: StringName, parent: Node3D) -> Array[RouteSegment]:
 	var built: Array[RouteSegment] = []
@@ -57,7 +74,8 @@ static func build(graph: RoadGraph, edge_id: StringName, parent: Node3D) -> Arra
 	return built
 
 
-## One piece of a plan() as a RouteSegment, placed in world space, not yet in the tree.
+## One piece of a plan() as a RouteSegment, placed in world space, not yet in the tree. It is drawn
+## with its street's surface (StreetSurface, D-0304.1b) once it builds itself.
 static func build_piece(piece: Dictionary) -> RouteSegment:
 	var segment: RouteSegment = (RoadGraph.SEGMENT_SCRIPTS[piece.kind] as GDScript).new() as RouteSegment
 	segment.length = piece.length
@@ -65,6 +83,7 @@ static func build_piece(piece: Dictionary) -> RouteSegment:
 		(segment as CurveSegment).turn_deg = piece.turn_deg
 	var ground: Vector2 = piece.position
 	segment.transform = Transform3D(Basis(Vector3.UP, piece.yaw), Vector3(ground.x, 0.0, ground.y))
+	StreetSurface.dress(segment, piece.get("surface", StreetSurface.FALLBACK))
 	return segment
 
 
@@ -92,10 +111,20 @@ static func _piece(graph: RoadGraph, edge_id: StringName, kind: StringName, at: 
 	var piece: Dictionary = {
 		"kind": kind, "start": at, "length": span, "advance": span,
 		"position": start, "yaw": atan2(-facing.x, -facing.y), "turn_deg": 0.0,
+		"surface": graph.edge_by_id(edge_id).surface,
 	}
 	if BENDING.has(kind):
-		# Same sign as CurveSegment.turn_deg: the change of yaw (Basis(UP, yaw)) over the span.
-		var leaving: Vector2 = graph.tangent_at(edge_id, maxf(at, at + span - 0.5))
-		piece.turn_deg = rad_to_deg(wrapf(atan2(-leaving.x, -leaving.y) - float(piece.yaw), -PI, PI))
-		piece.length = CurveSegment.length_for_turn(piece.turn_deg)
+		# The piece advances by the length it is built with, and the turn is the one the street
+		# makes over that length: a few passes settle the two on each other (a chord is 10 m).
+		var length: float = span
+		for _pass in BEND_PASSES:
+			var leaving: Vector2 = graph.tangent_at(edge_id, maxf(at, at + length - 0.5))
+			# Same sign as CurveSegment.turn_deg: the change of yaw (Basis(UP, yaw)) over the span.
+			piece.turn_deg = rad_to_deg(wrapf(atan2(-leaving.x, -leaving.y) - float(piece.yaw), -PI, PI))
+			var built: float = CurveSegment.length_for_turn(piece.turn_deg)
+			if is_equal_approx(built, length):
+				break
+			length = built
+		piece.length = length
+		piece.advance = length
 	return piece

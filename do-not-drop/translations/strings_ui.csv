@@ -277,7 +277,7 @@ HUD_PREP_LOAD_AND_DRIVE,Cargá paquetes y tomá el volante,Load packages and tak
 HUD_PREP_MISSING,(falta),(missing)
 HUD_PREP_ORDER,Casa %d: %s %s,House %d: %s %s
 HUD_PROGRESS_REMAINING_ONE,Te falta %s para %s,You need %s to unlock %s
-HUD_PROMPT_DROP,[ %s ]  Soltar paquete,[ %s ]  Drop package
+HUD_PROMPT_DROP,%s  Soltar paquete,%s  Drop package
 HUD_PROMPT_INSIDE,Adentro:  %s,Inside:  %s
 HUD_RESCUED,¡%s a salvo!,%s is safe!
 HUD_RESTART,Reiniciar,Restart
@@ -365,6 +365,14 @@ UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved 
 UI_COSM_GEL_SKIN,Skin de gelatina,Gel skin
 UI_COSM_GEL_SKIN_HINT,El color y el interior se ven igual para todos.,Everyone sees the same color and interior.
 UI_COSM_BODY,Cuerpo,Body
+UI_COSM_STYLE,Estilo,Style
+UI_COSM_STYLE_HINT,Se aplica en vivo al maniquí de gelatina.,Applied live to the gel mannequin.
+UI_COSM_HAIR,Pelo,Hair
+UI_COSM_EYEBROWS,Cejas,Eyebrows
+UI_COSM_MOUSTACHES,Bigotes,Moustaches
+UI_COSM_COSTUMES,Disfraces,Costumes
+UI_COSM_ACCESSORIES,Accesorios,Accessories
+UI_COSM_UNLOCK_HINT,Avanzá en las entregas para ampliar el vestuario.,Keep delivering to expand the wardrobe.
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face
 UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.
@@ -422,10 +430,37 @@ UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
 UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
 UI_COMPANY_BANKRUPT_WARNING,Cerraste en rojo: hoy llegan menos pedidos (%d %%).,You closed in the red: fewer orders today (%d%%).
+UI_COMPANY_CLOSE_DAY,Cerrar el día,Close the day
+UI_COMPANY_CLOSE_DAY_CONFIRM,"¿Cerrar el día ahora? No entran más pedidos, las salidas vuelven y lo no entregado se cobra como a las 20:00.","Close the day now? No more orders come in, the trips come back and anything not delivered is charged as at 20:00."
+UI_COMPANY_CLOSE_DAY_HOST_ONLY,Lo cierra el host,The host closes the day
+UI_COMPANY_EXIT_LOSES_DAY,"Salir ahora pierde lo hecho desde las 08:00. Para guardarlo, cerrá el día.","Leaving now loses everything done since 08:00. To keep it, close the day."
+UI_COMPANY_EXIT_ANYWAY,Salir igual,Leave anyway
+UI_COMPANY_PAUSE_BODY,El reloj del galpón está quieto hasta que vuelvas.,The shed's clock stands still until you're back.
+UI_COMPANY_SOFT_PAUSE_BODY,El día sigue corriendo para el resto del equipo.,The day keeps going for the rest of the crew.
 UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d, balance $%d, %d units in stock."
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
 UI_COMPANY_PRESENCE_UNNAMED,Modo Empresa — día %d,Company mode — day %d
+UI_COMPANY_SLOTS_HOST,Abrir sala para amigos,Open a room for friends
+UI_COMPANY_SLOTS_NEW,Nueva empresa,New company
+UI_COMPANY_SLOTS_EMPTY,Todavía no hay ninguna empresa guardada.,No company saved yet.
+UI_COMPANY_SLOTS_DETAILS,Día %d · $%d · %s,Day %d · $%d · %s
+UI_COMPANY_SLOTS_TOO_NEW,Guardada con una versión más nueva,Saved by a newer version
+UI_COMPANY_SLOTS_INTERRUPTED,Día cortado,Day cut short
+UI_COMPANY_SLOTS_INTERRUPTED_HINT,El día se cortó: vuelve a jugarse desde las 08:00.,The day was cut short: it plays again from 08:00.
+UI_COMPANY_SLOTS_DELETE,Borrar,Delete
+UI_COMPANY_SLOTS_DELETE_CONFIRM,¿Seguro? Borrar,Sure? Delete
+UI_COMPANY_SLOTS_NAME,Nombre de la empresa,Company name
+UI_COMPANY_SLOTS_DEFAULT_NAME,Mi empresa,My company
+UI_COMPANY_SLOTS_CREATE,Crear y jugar,Create and play
+UI_COMPANY_SLOTS_OPTIONS_TITLE,Opciones de %s,Options for %s
+UI_COMPANY_SLOTS_SAVE,Guardar,Save
+UI_COMPANY_OPT_ASSISTED_PACKING,Armado asistido,Assisted packing
+UI_COMPANY_OPT_ASSISTED_PACKING_DESC,"Al poner la cinta, la mesa de armado completa sola el relleno y cierra la caja.","Taping a box makes the packing table add the filler and close it for you."
+UI_COMPANY_OPT_ASSISTED_PACKING_SHORT,Asistido,Assisted
+UI_COMPANY_OPT_CALM_DAYS,Días tranquilos,Calm days
+UI_COMPANY_OPT_CALM_DAYS_DESC,"Sin eventos del día: solo pedidos, stock y ruta.","No daily events: just orders, stock and the road."
+UI_COMPANY_OPT_CALM_DAYS_SHORT,Tranquilo,Calm
 UI_MENU_COMPANY,Modo Empresa (en pruebas),Company mode (testing)
 UI_MENU_ENDLESS,Modo Endless,Endless mode
 UI_MENU_ERROR_CONNECTION,No se pudo completar la conexión. Revisá la dirección e intentá de nuevo.,Couldn't complete the connection. Check the address and try again.
@@ -447,6 +482,7 @@ UI_MENU_PAGE_HOME,¿LISTOS PARA REPARTIR?,READY TO DELIVER?
 UI_MENU_PAGE_JOIN,UNIRSE A UNA SALA,JOIN A ROOM
 UI_MENU_PAGE_GARAGE,GARAJE,GARAGE
 UI_MENU_PAGE_PLAY,¿CÓMO SALIMOS HOY?,HOW ARE WE HEADING OUT?
+UI_MENU_PAGE_COMPANY,MODO EMPRESA,COMPANY MODE
 UI_MENU_PLAY,¡JUGAR!,PLAY!
 UI_MENU_QUIT,Salir,Quit
 UI_MENU_SOLO,Jugar solo,Play solo
@@ -512,6 +548,9 @@ UI_OPT_BIND_RIGHT_CLICK,Click derecho,Right click
 UI_OPT_BIND_GROUP_FOOT,A pie,On foot
 UI_OPT_BIND_GROUP_DRIVE,Manejando,Driving
 UI_OPT_BIND_GROUP_CREW,Tripulación,Crew
+UI_OPT_BIND_GROUP_FORKLIFT,Autoelevador,Forklift
+UI_OPT_BIND_MAST_UP,Subir el mástil,Raise the mast
+UI_OPT_BIND_MAST_DOWN,Bajar el mástil,Lower the mast
 UI_OPT_BIND_DEFAULT,Original,Default
 UI_OPT_BIND_DEFAULT_HINT,Volver a la tecla y el botón originales,Back to the original key and button
 UI_OPT_BIND_SWAPPED,%s tenía esa tecla: se intercambiaron.,%s had that key: swapped.
@@ -555,6 +594,10 @@ UI_OPT_SENSITIVITY,Sensibilidad de la mirada,Look sensitivity
 UI_OPT_SHAKE,Sacudida de cámara,Camera shake
 UI_OPT_SOUND_CHECK,Sonidos del juego (uno por uno)…,Game sounds (one by one)…
 UI_OPT_SOUND_SUBTITLES,Subtítulos de sonidos,Sound subtitles
+UI_OPT_SUBTITLE_SIZE,Tamaño de subtítulos,Subtitle size
+UI_OPT_SUBTITLE_SIZE_NORMAL,Normal,Normal
+UI_OPT_SUBTITLE_SIZE_LARGE,Grande,Large
+UI_OPT_SUBTITLE_SIZE_XLARGE,Muy grande,Extra large
 UI_OPT_TEXT_BACKDROP,Fondo del texto,Text backdrop
 UI_OPT_VOICE_CHAT,Chat de voz,Voice chat
 UI_OPT_VOICE_CREW,Voces de la tripulación,Crew voices
@@ -834,13 +877,13 @@ UI_TUT_DRIVER_CONTROL,%s  acelerar y frenar,%s  accelerate and brake
 UI_TUT_DRIVER_TITLE,Conductor,Driver
 UI_TUT_EXPLOSIVE_ACTION,Pedí el código: el conductor lo ve en el tablero; tocá las flechas que te diga.,Ask for the code: the driver sees it on the dashboard; tap the arrows they say.
 UI_TUT_EXPLOSIVE_BREAKS,Dejar que la cuenta regresiva llegue a cero.,Letting the countdown reach zero.
-UI_TUT_FRAGILE_ACTION,Amortiguá: un toque del botón justo antes de cada bache, cuando se cierra el anillo.,Cushion it: one tap of the button right before each bump, as the ring closes.
+UI_TUT_FRAGILE_ACTION,"Amortiguá: un toque del botón justo antes de cada bache, cuando se cierra el anillo.","Cushion it: one tap of the button right before each bump, as the ring closes."
 UI_TUT_FRAGILE_BREAKS,Los golpes fuertes le quitan integridad.,Heavy impacts reduce its integrity.
 UI_TUT_HOSTILE_ACTION,Leelo: mantené si está tranquilo :) y soltá si está enojado >:(,Read it: hold while it is calm :) and let go when it is angry >:(
 UI_TUT_HOSTILE_BREAKS,Tocar cuando ordena NO TOCAR o ignorar CALMÁ.,Touching it when it says DON'T TOUCH or ignoring CALM.
 UI_TUT_LEFT_CLICK,Click izq.,Left click
 UI_TUT_LEFT_STICK,Stick izq.,Left stick
-UI_TUT_LIQUID_ACTION,Fregá: alterná izquierda y derecha rápido, sin apretar nada.,Scrub: swing left and right fast, holding nothing.
+UI_TUT_LIQUID_ACTION,"Fregá: alterná izquierda y derecha rápido, sin apretar nada.","Scrub: swing left and right fast, holding nothing."
 UI_TUT_LIQUID_BREAKS,Inclinarla y dejar crecer el charco.,Tilting it and letting the puddle grow.
 UI_TUT_NEXT,Siguiente,Next
 UI_TUT_NOISY_ACTION,Abrazalo: mantené la acción para calmarlo.,Hug it: hold the action to calm it.
@@ -1112,6 +1155,28 @@ HUD_NEWS_ENDLESS_END_2_H,Ruta sin fin: el camión que no sabía dónde parar,End
 HUD_NEWS_ENDLESS_END_2_B,{player} juró que 'la próxima curva es la última'. No lo era.,{player} swore 'the next curve is the last one'. It was not.
 HUD_NEWS_ENDLESS_END_3_H,{town} despide al camión: {km} km y todavía quedan cajas,{town} bids farewell to the truck: {km} km and there are still crates
 HUD_NEWS_ENDLESS_END_3_B,El depósito solo pide que alguien avise cuando frene.,The depot only asks that someone call when it stops.
+HUD_NEWS_ROLLOVER_1_H,Camión de reparto vuelca y se queda mirando las estrellas,Delivery truck tips over and lies there looking at the stars
+HUD_NEWS_ROLLOVER_1_B,{player} aseguró que 'así se ve mejor el paisaje'. Las cajas no opinaron.,{player} insisted that 'the view is better this way'. The crates had no comment.
+HUD_NEWS_ROLLOVER_2_H,Vuelco en la ruta de {town}: el camión pide que lo den vuelta,Rollover on the {town} road: the truck asks to be turned back over
+HUD_NEWS_ROLLOVER_2_B,"Testigos vieron cuatro ruedas girando en el aire, 'todavía con ganas', dicen.","Witnesses saw four wheels spinning in the air, 'still full of enthusiasm', they say."
+HUD_NEWS_ROLLOVER_3_H,Camión patas para arriba: el repartidor juró que 'ya venía torcido',Truck upside down: the driver swore it 'was already crooked'
+HUD_NEWS_ROLLOVER_3_B,"{player} salió caminando y pidió un mate. De la carga, mejor no hablar.",{player} walked out and asked for a mate. Best not to speak of the cargo.
+HUD_NEWS_ROLLOVER_4_H,Entrega patas para arriba: {km} km de viaje y la última curva la hizo de costado,Delivery upside down: {km} km of road and the last curve was taken sideways
+HUD_NEWS_ROLLOVER_4_B,"{neighbor} fue el primero en llegar y le dio una palmada al camión: 'Ánimo, hermano'.","{neighbor} was first on the scene and patted the truck: 'Chin up, buddy.'"
+HUD_NEWS_DOG_CHASE_1_H,Perro de {town} corre al camión de reparto: 'Cobro peaje',{town} dog chases delivery truck: 'I collect the toll'
+HUD_NEWS_DOG_CHASE_1_B,{player} lo vio por el espejo. El perro no aflojó hasta quedarse sin aire.,{player} saw it in the mirror. The dog did not let up until it ran out of breath.
+HUD_NEWS_DOG_CHASE_2_H,Carrera pareja en la banquina: un perro le ganó a un camión (por un rato),Neck and neck on the shoulder: a dog beat a truck (for a while)
+HUD_NEWS_DOG_CHASE_2_B,"'Ladraba en tres idiomas', declaró {neighbor}, testigo del hecho.","'It was barking in three languages,' said {neighbor}, a witness."
+HUD_NEWS_DOG_CHASE_3_H,Perro vigila la ruta y no deja pasar a nadie sin ladrarle,Dog patrols the road and lets nobody by without a bark
+HUD_NEWS_DOG_CHASE_3_B,"El camión pasó, pero el perro dejó constancia de su disconformidad.","The truck got through, but the dog put its disapproval on record."
+HUD_NEWS_DOG_CHASE_4_H,"Bocinazo espanta a un perro: 'Fue un malentendido', dicen ambas partes","Honk scares off a dog: 'It was a misunderstanding,' say both parties"
+HUD_NEWS_DOG_CHASE_4_B,Un bocinazo desde el camión y el perro volvió a casa con la cola baja y el orgullo herido.,One honk from the truck and the dog went home with its tail down and its pride hurt.
+HUD_NEWS_TRAIN_STOP_1_H,El tren pasó y el camión esperó: milagro de civismo en {town},The train passed and the truck waited: a miracle of civic duty in {town}
+HUD_NEWS_TRAIN_STOP_1_B,"{player} frenó a tiempo. Las cajas, por una vez, no tuvieron nada que decir.","{player} stopped in time. For once, the crates had nothing to say."
+HUD_NEWS_TRAIN_STOP_2_H,"Barrera baja, camión frena: el tren cruzó sin novedad","Barrier down, truck brakes: the train crossed without incident"
+HUD_NEWS_TRAIN_STOP_2_B,"'Pensé que no llegaba', admitió {player}, con el corazón en la boca.","'I thought I would not make it,' admitted {player}, heart in mouth."
+HUD_NEWS_TRAIN_STOP_3_H,Un tren detuvo al camión más apurado de {town},A train stops the most hurried truck in {town}
+HUD_NEWS_TRAIN_STOP_3_B,"{neighbor}, que lo vio todo desde la banquina, aplaudió. El tren no saludó.","{neighbor}, who saw it all from the shoulder, applauded. The train did not wave."
 HUD_NEWS_FILLER_CLASSIFIED_1_H,SE BUSCA gallina,WANTED: hen
 HUD_NEWS_FILLER_CLASSIFIED_1_B,Responde al nombre de 'Cacarea'. Se ofrece un mate de recompensa. Preguntar por {neighbor}.,Answers to the name 'Cluckers'. A mate is offered as reward. Ask for {neighbor}.
 HUD_NEWS_FILLER_CLASSIFIED_2_H,"VENDO camioncito, poco uso","FOR SALE: little truck, barely used"
@@ -1260,6 +1325,16 @@ UI_GEL_EDITOR_RESTORE,Restaurar base,Restore preset
 UI_GEL_EDITOR_UNDO,Deshacer,Undo
 HUD_SECTION_ENDLESS,ENDLESS,ENDLESS
 UI_PING_TITLE,PING,PING
+UI_EMOTE_TITLE,EMOTES,EMOTES
+UI_EMOTE_SWITCH_HINT,C / R3  CAMBIAR RUEDA,C / R3  SWITCH WHEEL
+UI_EMOTE_WAVE,Saludar,Wave
+UI_EMOTE_CLAP,Aplaudir,Clap
+UI_EMOTE_FACEPALM,Facepalm,Facepalm
+UI_EMOTE_SHRUG,Encogerse,Shrug
+UI_EMOTE_POINT,Señalar,Point
+UI_EMOTE_THUMBS_UP,Pulgar arriba,Thumbs up
+UI_EMOTE_MELT,Derretirse,Melt
+UI_EMOTE_SHAKE,Sacudirse,Shake
 UI_FINANCE_TITLE,Cierre del día,Day closing
 UI_FINANCE_DAY,Día %d,Day %d
 UI_FINANCE_INCOME,Ingresos,Income
@@ -1270,17 +1345,57 @@ UI_FINANCE_PROFIT,Ganancia  %s,Profit  %s
 UI_FINANCE_BALANCE,Saldo: abriste con %s · cerrás con %s,Balance: opened with %s · closing with %s
 UI_FINANCE_TRUNCATED,El libro está lleno: puede faltar parte del día.,The ledger is full: part of the day may be missing.
 UI_FINANCE_CONTINUE,Seguir,Continue
+UI_FINANCE_NOTE,Remito del proveedor,Supplier delivery note
+UI_FINANCE_NOTE_SHORT,"%s: llegaron %d de %d (faltan %d)","%s: %d of %d arrived (%d short)"
+UI_FINANCE_NOTE_EXTRA,"%s: llegaron %d de %d (sobran %d)","%s: %d of %d arrived (%d extra)"
+UI_FINANCE_NOTE_MORE,Y %d productos más,And %d more products
+UI_FINANCE_AUTO_ORDER,Pedido automático al proveedor: %d unidades,Automatic supplier order: %d units
 UI_FINANCE_REASON_ORDER_PAID,Pedidos cobrados,Orders paid
 UI_FINANCE_REASON_TIP,Propinas,Tips
 UI_FINANCE_REASON_PLACEABLE_SELL,Venta de piezas del galpón,Shed pieces sold
-UI_FINANCE_REASON_SUPPLIER,Mercadería al proveedor,Supplier stock
+UI_FINANCE_REASON_SUPPLIER,Mercadería al proveedor,Goods from the supplier
 UI_FINANCE_REASON_BOXES,Cajas,Boxes
 UI_FINANCE_REASON_PACKAGING,"Embalaje (relleno, cinta, etiquetas)","Packaging (filler, tape, labels)"
 UI_FINANCE_REASON_RENT,Alquiler del galpón,Shed rent
 UI_FINANCE_REASON_PLACEABLE_BUY,Piezas del galpón compradas,Shed pieces bought
 UI_FINANCE_REASON_WAREHOUSE_EXPAND,Ampliación del galpón,Shed expansion
 UI_FINANCE_REASON_PENALTY,Penalidades,Penalties
+UI_FINANCE_REASON_TOW,Grúa,Tow truck
 UI_FINANCE_REASON_OTHER,Otros,Other
+UI_MENU_CREDITS,Créditos,Credits
+UI_MENU_PAGE_CREDITS,Créditos,Credits
+UI_CREDITS_TEAM,Hecho por,Made by
+UI_CREDITS_TEAM_NACHO,"Nacho: camión, ruta, mundo y negocio","Nacho: truck, road, world and business"
+UI_CREDITS_TEAM_SLATEX,"Slatex: jugador, paquetes, trampas, interfaz y sonido","Slatex: player, packages, traps, interface and sound"
+UI_CREDITS_ENGINE,Motor,Engine
+UI_CREDITS_ENGINE_GODOT,Godot Engine (licencia MIT),Godot Engine (MIT license)
+UI_CREDITS_ENGINE_STEAM,GodotSteam (licencia MIT),GodotSteam (MIT license)
+UI_CREDITS_FONTS,Fuentes,Fonts
+UI_CREDITS_FONTS_LIST,"Lilita One, Nunito y PT Serif","Lilita One, Nunito and PT Serif"
+UI_CREDITS_FONTS_LICENSE,SIL Open Font License 1.1,SIL Open Font License 1.1
+UI_CREDITS_SOUND,Música y sonido,Music and sound
+UI_CREDITS_SOUND_MUSIC,"Música compuesta por código, nota por nota, sin samples","Music composed in code, note by note, with no samples"
+UI_CREDITS_SOUND_SFX,"Sonidos sintetizados en el juego, sin voces grabadas","Sounds synthesized in the game, with no recorded voices"
+UI_CREDITS_ART,Arte,Art
+UI_CREDITS_ART_MODELS,Modelos low-poly armados con scripts de Blender,Low-poly models built with Blender scripts
+UI_CREDITS_THANKS,Gracias,Thanks
+UI_CREDITS_THANKS_TESTERS,"A cada persona que probó el juego, se cayó y lo volvió a intentar","To everyone who played the game, fell over and tried again"
+UI_CPHONE_APP_ORDERS,Pedidos,Orders
+UI_CPHONE_APP_MAP,Mapa,Map
+UI_CPHONE_NO_ORDERS,No hay pedidos abiertos,No open orders
+UI_CPHONE_ROW,"%s · %s · %s · %s","%s · %s · %s · %s"
+UI_CPHONE_LEFT,quedan %d min,%d min left
+UI_CPHONE_LATE,atrasado,late
+UI_CPHONE_HINT,F / LB: guardar · Q / E: cambiar de app,F / LB: put away · Q / E: switch app
+UI_DAYHUD_DAY_TIME,Día %d · %s,Day %d · %s
+UI_DAYHUD_PAUSED,Pausa,Paused
+UI_DAYHUD_ORDERS,Pedidos: %d,Orders: %d
+UI_FINANCE_REASON_WAGES,Sueldos,Wages
+UI_DAYCLOSE_MILESTONES,Hitos del día,Milestones today
+UI_DAYCLOSE_WAGES,Sueldos pagados,Wages paid
+UI_DAYCLOSE_TOMORROW,Mañana: %s,Tomorrow: %s
+UI_DAYCLOSE_REASON_MILESTONE,Hito: %s,Milestone: %s
+UI_DAYCLOSE_REASON_EVENT,Evento: %s,Event: %s
 UI_OPT_BIND_KEY_TIP,Tecla,Key
 UI_OPT_BIND_PAD_TIP,Botón o stick del mando,Gamepad button or stick
 UI_OPT_PRESS_PAD,Botón…,Button…
@@ -1323,6 +1438,16 @@ UI_ORDER_SHEET_ADDRESS,%s %d,%s %d
 UI_ORDER_SHEET_ITEM,%s  %d/%d,%s  %d/%d
 UI_ORDER_SHEET_EXTRA,Sobra: %s ×%d,Extra: %s ×%d
 UI_ORDER_SHEET_SEAL,Sello: %s,Stamp: %s
+UI_TIP_PRODUCT_SIZE,Tamaño: %d×%d×%d celdas · %s kg,Size: %d×%d×%d cells · %s kg
+UI_TIP_PRODUCT_FRAGILE,"Frágil: un golpe lo rompe","Fragile: one bump breaks it"
+UI_TIP_PRODUCT_COLD,Va en frío,Keep it cold
+UI_TIP_PRODUCT_HEAT,Va caliente,Keep it hot
+UI_TIP_PRODUCT_TRAP,Trampa: %s,Trap: %s
+UI_TIP_PRODUCT_PRICES,Compra $%d · Venta $%d,Buy $%d · Sell $%d
+UI_TIP_REQ_SEAL,Pide el sello %s,Needs the %s stamp
+UI_TIP_REQ_QUALITY,Calidad de armado mínima: %d,Minimum packing quality: %d
+UI_TIP_REQ_WINDOW,Plazo: %d %% del normal,Deadline: %d%% of the usual
+UI_TIP_REQ_BONUS,Paga +%d %% si se cumple,Pays +%d%% when met
 UI_ORDER_SHEET_TAPE,Cinta,Tape
 UI_ORDER_SHEET_LABEL,Etiqueta,Label
 UI_ORDER_SHEET_LEFT,Quedan %d min,%d min left
@@ -1362,11 +1487,23 @@ UI_DISPATCH_ROW,%s · %s · %.1f kg,%s · %s · %.1f kg
 UI_DISPATCH_PICK,Elegí al menos una caja,Pick at least one box
 UI_DISPATCH_LOAD,Cargar,Load
 UI_DISPATCH_LOAD_N,Cargar %d,Load %d
+UI_DISPATCH_LOAD_ALL,Cargar todo (%d vehículos),Load all (%d vehicles)
 UI_DISPATCH_CLOSE,Cerrar,Close
 UI_DISPATCH_LOADED,Cargadas %d cajas,%d boxes loaded
 UI_DISPATCH_HOST_ONLY,Solo el anfitrión carga el vehículo,Only the host loads the vehicle
+UI_STOCK_TITLE,Stock,Stock
+UI_STOCK_HINT,Unidades por producto,Units per product
+UI_STOCK_EMPTY,Todavía no hay stock,No stock yet
+UI_STOCK_ROW,%s  ·  Estante %d  ·  Recepción %d  ·  Total %d,%s  ·  Shelves %d  ·  Reception %d  ·  Total %d
+UI_STOCK_ROW_MORE,En manos %d  ·  En cajas %d  ·  Otros %d,In hands %d  ·  In boxes %d  ·  Other %d
+UI_STOCK_SHORT,⚠ Faltan %d,⚠ %d missing
+UI_STOCK_SHORT_COMING,⚠ Faltan %d (vienen %d),⚠ %d missing (%d coming)
+UI_STOCK_COVERED,⟳ Viene en camino (%d),⟳ On the way (%d)
+UI_STOCK_TOTALS,%d unidades en %d productos,%d units in %d products
+UI_STOCK_CLOSE,Cerrar,Close
 UI_SUPPLIER_TITLE,Pedido al proveedor,Supplier order
 UI_SUPPLIER_FROM,Proveedor: %s,Supplier: %s
+UI_SUPPLIER_ALREADY,Ya pedido para mañana: %d unidades,Already ordered for tomorrow: %d units
 UI_SUPPLIER_HINT,Sumá unidades de cada producto y después Pedir,Add units of each product and then Order
 UI_SUPPLIER_ROW,%s · $%d c/u,%s · $%d each
 UI_SUPPLIER_TOTAL,Total: $%d,Total: $%d
@@ -1380,3 +1517,123 @@ UI_SUPPLIER_ORDERED,"Pedido hecho: %d palets, llegan el día %d","Order placed: 
 UI_SUPPLIER_HOST_ONLY,Solo el anfitrión hace el pedido,Only the host places the order
 UI_SUPPLIER_ORDER,Pedir,Order
 UI_SUPPLIER_CLOSE,Cerrar,Close
+UI_SUPPLIER_SENT,"Pedido enviado, esperando al anfitrión…","Order sent, waiting for the host…"
+UI_SUPPLIER_DAY_CLOSED,"El día ya cerró: pedí cuando abra el próximo","The day is closed: order once the next one opens"
+UI_SUPPLIER_TOO_MUCH,El camión de ese día ya viene lleno de ese producto,That day's truck is already full of that product
+UI_SUPPLIER_NAME_DISTRIBUIDORA_CENTRAL,Distribuidora Central,Distribuidora Central
+UI_ORDER_NOTICE_ONE,Pedido nuevo: %s — %s %d,New order: %s — %s %d
+UI_ORDER_NOTICE_ONE_NO_ADDRESS,Pedido nuevo: %s,New order: %s
+UI_ORDER_NOTICE_MANY,%d pedidos nuevos,%d new orders
+UI_ORDER_STARS_1,Pésima,Awful
+UI_ORDER_STARS_2,Mala,Bad
+UI_ORDER_STARS_3,Regular,Fair
+UI_ORDER_STARS_4,Buena,Good
+UI_ORDER_STARS_5,Excelente,Excellent
+UI_FINANCE_SHOP,Tienda,Shop
+UI_FEED_ORDER_ADDED,Llegó el pedido %s,Order %s came in
+UI_FEED_ORDER_EXPIRED,Se venció el pedido %s,Order %s ran out of time
+UI_FEED_BOX_PLACED,%s puso %s ×%d en una caja,%s put %s ×%d in a box
+UI_FEED_BOX_LABELED,Caja etiquetada para el pedido %s,Box labeled for order %s
+UI_FEED_BOX_SEALED,Caja cerrada para el pedido %s,Box sealed for order %s
+UI_FEED_BOX_SEALED_BLANK,Caja cerrada sin pedido,Box sealed without an order
+UI_FEED_SUPPLIER_ORDERED,%s le pidió %d unidades al proveedor,%s ordered %d units from the supplier
+UI_FEED_SPOILED,"%s: se echaron a perder %d","%s: %d spoiled"
+UI_FEED_TRUCK_LEFT,Se fue el camión del proveedor,The supplier truck left
+UI_FEED_SOMEONE,Alguien,Someone
+UI_SHOP_TITLE,Tienda de la empresa,Company shop
+UI_SHOP_MONEY,Caja de la empresa: %s,Company cash: %s
+UI_SHOP_ROW,"%s · $%d","%s · $%d"
+UI_SHOP_BUY,Comprar,Buy
+UI_SHOP_CLOSE,Volver al cierre,Back to summary
+UI_SHOP_EMPTY,Todavía no hay nada a la venta,Nothing for sale yet
+UI_SHOP_KIND_VEHICLE,Vehículo,Vehicle
+UI_SHOP_KIND_MACHINE,Máquina,Machine
+UI_SHOP_KIND_EXPANSION,Ampliación,Expansion
+UI_SHOP_BOUGHT,Comprado: %s,Bought: %s
+UI_SHOP_HOST_ONLY,Solo el anfitrión compra por la empresa,Only the host buys for the company
+UI_SHOP_BAD_DATA,Eso no se puede comprar,That cannot be bought
+UI_SHOP_NO_LINK,Sin conexión con el anfitrión,No connection to the host
+UI_COMPANY_NOTE_1,Dejalo en la puerta. ¡Gracias!,Leave it at the door. Thanks!
+UI_COMPANY_NOTE_2,Si no estoy toque timbre dos veces.,"If I'm out, ring twice."
+UI_COMPANY_NOTE_3,Cuidado con el perro (es amistoso).,Careful with the dog (he's friendly).
+UI_COMPANY_NOTE_4,Ojalá llegue antes de la cena.,Hope it gets here before dinner.
+UI_COMPANY_NOTE_GIFT_1,¡No lo abras! Es sorpresa.,Don't open it! It's a surprise.
+UI_COMPANY_NOTE_GIFT_2,Para mi abuela. Con cariño.,For my grandma. With love.
+UI_COMPANY_NOTE_5,"Si no hay nadie, probá con el vecino de la reja verde.","If nobody answers, try the neighbor with the green gate."
+UI_COMPANY_NOTE_6,El timbre no anda: golpeá fuerte.,The doorbell is broken: knock hard.
+UI_COMPANY_NOTE_7,"Por favor, no lo tires. Gracias.",Please don't throw it. Thanks.
+UI_COMPANY_NOTE_8,"Estoy en una reunión, pero escucho todo.","I'm in a meeting, but I can hear everything."
+UI_COMPANY_NOTE_9,Ojo con el escalón de la entrada.,Watch the step at the entrance.
+UI_COMPANY_NOTE_10,El gato va a querer ayudarte. No lo dejes.,The cat will want to help. Don't let it.
+UI_COMPANY_NOTE_11,"Si llueve, dejalo bajo el techito.","If it rains, leave it under the little roof."
+UI_COMPANY_NOTE_12,Lo necesito antes de que se enfríe el mate.,I need it before the tea gets cold.
+UI_COMPANY_NOTE_13,"No toques la bocina, el bebé duerme.","Don't honk, the baby is asleep."
+UI_COMPANY_NOTE_14,La casa es la de las macetas. Todas son macetas.,It's the house with the plant pots. They all are.
+UI_COMPANY_NOTE_15,"Gracias por venir hasta acá, de verdad.","Thanks for coming all the way out here, really."
+UI_COMPANY_NOTE_16,"Si es muy pesado, pedile ayuda a alguien.","If it's too heavy, ask someone for a hand."
+UI_COMPANY_NOTE_17,"Hay un perro atado, pero se suelta.","There's a dog on a leash, but he gets loose."
+UI_COMPANY_NOTE_18,"No sé qué pedí, pero ya lo quiero.","I don't remember what I ordered, but I already want it."
+UI_COMPANY_NOTE_19,Firmo con una cruz si hace falta.,I'll sign with an X if needed.
+UI_COMPANY_NOTE_20,"Entrá por el costado, el portón de adelante está trabado.","Come in by the side, the front gate is stuck."
+UI_COMPANY_NOTE_21,Cuidá la caja como si fuera tuya.,Treat the box like it's yours.
+UI_COMPANY_NOTE_22,Llevo tres días esperando esto.,I've been waiting for this for three days.
+UI_COMPANY_NOTE_23,"Si llegás tarde, no pasa nada. Bueno, un poco sí.","If you're late, it's fine. Well, a little bit not."
+UI_COMPANY_NOTE_24,Mi puerta es azul. O verde. Depende de la luz.,My door is blue. Or green. Depends on the light.
+UI_COMPANY_NOTE_25,"No lo apoyes de costado, por favor.",Please don't lay it on its side.
+UI_COMPANY_NOTE_26,Hay una gallina suelta. No es mía.,There's a loose hen. It isn't mine.
+UI_COMPANY_NOTE_27,Te dejé agua fresca en el cantero.,I left some fresh water by the flower bed.
+UI_COMPANY_NOTE_28,"Si ves una bicicleta roja, ya llegaste.","If you see a red bike, you've arrived."
+UI_COMPANY_NOTE_29,"Que no se moje, que es de cartón.","Keep it dry, it's cardboard."
+UI_COMPANY_NOTE_30,Tocá el timbre una vez. Dos asusta al loro.,Ring once. Twice scares the parrot.
+UI_COMPANY_NOTE_31,Mi suegra va a atenderte. Suerte.,My mother-in-law will answer. Good luck.
+UI_COMPANY_NOTE_32,No es una bomba. Es una tostadora.,It's not a bomb. It's a toaster.
+UI_COMPANY_NOTE_33,"Gracias, sos mi repartidor favorito.","Thanks, you're my favorite courier."
+UI_COMPANY_NOTE_34,"Si me ves en la ventana, saludá.","If you see me at the window, wave."
+UI_COMPANY_NOTE_35,"El pasto está alto, perdón por el camino.","The grass is tall, sorry about the path."
+UI_COMPANY_NOTE_36,Dejalo en el buzón. Si entra.,Leave it in the mailbox. If it fits.
+UI_COMPANY_NOTE_37,La puerta se abre sola si la empujás con ganas.,The door opens by itself if you push with feeling.
+UI_COMPANY_NOTE_38,"Es para un cumpleaños, no llegues tarde.","It's for a birthday, don't be late."
+UI_COMPANY_NOTE_39,Mejor que no lo vea el vecino de enfrente.,Better the neighbor across the street doesn't see it.
+UI_COMPANY_NOTE_40,"Voy a estar en la huerta, gritá fuerte.","I'll be in the garden, shout loud."
+UI_COMPANY_NOTE_41,"Si el perro te mira feo, no lo mires.","If the dog gives you a look, don't look back."
+UI_COMPANY_NOTE_42,Prometo una propina. Algún día.,I promise a tip. Someday.
+UI_COMPANY_NOTE_43,"Cualquier cosa, estoy en el fondo.","If anything, I'm out back."
+UI_COMPANY_NOTE_44,Espero que el camino no esté muy roto.,I hope the road isn't too bad.
+UI_COMPANY_NOTE_45,Hoy es el día más importante de mi semana.,Today is the most important day of my week.
+UI_COMPANY_NOTE_46,"Gracias por todo, y perdón por todo.","Thanks for everything, and sorry for everything."
+UI_COMPANY_NOTE_47,No lo agites. Ni lo mires mucho.,Don't shake it. Or stare at it.
+UI_COMPANY_NOTE_48,Llevá el paquete con cuidado. Adentro hay un tesoro.,Carry the package with care. There's a treasure inside.
+UI_COMPANY_NOTE_GIFT_3,Feliz cumpleaños. Que no se note la caja.,Happy birthday. Don't let the box show.
+UI_COMPANY_NOTE_GIFT_4,Es para mi mejor amigo. No le digas nada.,It's for my best friend. Don't tell him anything.
+UI_COMPANY_NOTE_GIFT_5,Con moño y todo. Cuidá el moño.,Bow and all. Mind the bow.
+UI_COMPANY_NOTE_GIFT_6,Que lo abra recién a la noche.,Have them open it only tonight.
+UI_COMPANY_NOTE_GIFT_7,"Un regalo chiquito, pero con mucho amor.","A small gift, but with a lot of love."
+UI_COMPANY_NOTE_GIFT_8,"Si preguntan, vos no sabés nada.","If anyone asks, you know nothing."
+UI_COMPANY_NOTE_GIFT_9,Es para mi mamá. Se va a emocionar.,It's for my mom. She'll get emotional.
+UI_COMPANY_NOTE_GIFT_10,Sorpresa de aniversario. Shhh.,Anniversary surprise. Shhh.
+UI_COMPANY_NOTE_GIFT_11,"Que no lo agiten, adentro hay algo frágil.","Don't shake it, there's something fragile inside."
+UI_COMPANY_NOTE_GIFT_12,Tocá el timbre y escondete.,Ring the bell and hide.
+UI_COMPANY_DISTRICT_PARQUE_INDUSTRIAL,Parque industrial,Industrial park
+UI_COMPANY_DISTRICT_CENTRO,Centro,Downtown
+UI_COMPANY_DISTRICT_SUBURBIO,Suburbio,Suburbs
+UI_COMPANY_DISTRICT_CAMPO,Campo,Countryside
+UI_COMPANY_DISTRICT_PUERTO,Puerto,Harbor
+UI_COMPANY_DISTRICT_ISLAS,Islas,Islands
+UI_COMPANY_DISTRICT_MONTANA,Montaña,Mountain
+UI_COMPANY_DISTRICT_NIEVE,Nieve,Snow
+UI_COMPANY_DISTRICT_VOLCAN,Volcán,Volcano
+UI_CLIPBOARD_SHEET_STOCK,Stock,Stock
+UI_CLIPBOARD_SHEET_SUPPLIER,Proveedor,Supplier
+UI_CLIPBOARD_HINT_KEY,"%s / %s: cambiar de hoja · %s o Esc: guardar","%s / %s: change sheet · %s or Esc: put away"
+UI_CLIPBOARD_HINT_PAD,"%s / %s: cambiar de hoja · %s: guardar","%s / %s: change sheet · %s: put away"
+UI_ONBOARD_STOCK_PALLET,Guardá la mercadería del palet en el estante,Put the pallet's goods away on the shelf
+UI_ONBOARD_PICK,Buscá en el estante lo que pide el tablero,Pick from the shelf what the board asks for
+UI_ONBOARD_PACK,Armá la caja del pedido en la mesa y dejala en despacho,Pack the order's box at the table and leave it at dispatch
+UI_ONBOARD_DRIVE,Cargá el camión y seguí el GPS,Load the truck and follow the GPS
+UI_ONBOARD_DELIVER,Entregá la caja en la puerta,Deliver the box at the door
+UI_ONBOARD_RETURN,Volvé al galpón,Drive back to the shed
+UI_ONBOARD_RESTOCK,"Reponé la mesa: cinta, cajas y relleno","Restock the table: tape, boxes and filler"
+UI_ONBOARD_UNLOAD,Bajá el palet del proveedor con la zorra,Unload the supplier's pallet with the pallet jack
+UI_ONBOARD_ORDER_MORE,Sumá lo que faltó al pedido de mañana,Add what was missing to tomorrow's order
+UI_ONBOARD_FILL,Llená el hueco con relleno antes de cerrar,Fill the gap with filler before taping
+UI_ONBOARD_CONTROL,Usá %s,Use %s

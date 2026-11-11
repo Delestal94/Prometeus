@@ -175,6 +175,29 @@ static func make_forklift_motor_loop() -> AudioStreamWAV:
 	return stream
 
 
+## The shed forklift's hydraulic pump while its forks rise or sink (forklift_cues.gd, D-0606.c3): a
+## wavering mid whine (165 Hz carrier, slow frequency wobble, one octave up, a thin whistle on top) and
+## a slow swell, every rate a whole number of cycles over the second so the loop seam stays silent.
+## Higher and more "liquid" than the engine's 110 Hz hum on purpose: the two read apart by ear when both run.
+const FORKLIFT_HYDRAULIC_STREAM_RMS_DB: float = -16.0
+
+
+static func make_forklift_hydraulic_loop() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 1.0
+	var sample_count: int = int(RATE * DURATION)
+	var mix := PackedFloat32Array()
+	mix.resize(sample_count)
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var swell: float = 0.8 + 0.2 * sin(TAU * 3.0 * t)
+		var pump: float = sin(TAU * 165.0 * t + 1.2 * sin(TAU * 4.0 * t)) * 0.5 + sin(TAU * 330.0 * t) * 0.22
+		var whistle: float = sin(TAU * 1320.0 * t + 2.0 * sin(TAU * 2.0 * t)) * 0.07
+		mix[i] = (pump + whistle) * swell
+	var data: PackedByteArray = SynthAudioDsp.normalized(mix, RATE, FORKLIFT_HYDRAULIC_STREAM_RMS_DB, false)
+	return SynthAudioDsp.loop(data, RATE, sample_count)
+
+
 ## The river under the narrow bridge (docs/tareas-nacho.md #178 warns against
 ## repeating the depot's old zumbido: a flat drone with no real position).
 ## This is an ordinary positioned 3D loop instead, same recipe as the wind

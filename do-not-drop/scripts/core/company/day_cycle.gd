@@ -5,6 +5,8 @@ extends Node
 ## Child of the company world, not an autoload; it names no autoload either (lesson N-919). The
 ## owner (CompanyRoot) hands it the CompanyNet, the GameClock and the CompanyState by reference
 ## (attach()) and two Callables for what only the world knows (crew_in_shed, trips_out).
+## In the company world the host's BusinessTick (D-0232) calls poll() and the root turns this
+## node's own _process (every POLL_SECONDS) off; that one only runs with no CompanyRoot (tests).
 ##
 ## Phases are host facts (docs/expansion-distritos/diseno/red-autoridad.md, "Fases del día"). Only
 ## the host decides a transition, in poll() and open_day() / next_day(); each one goes out once as
@@ -26,12 +28,14 @@ extends Node
 ##
 ## The day, in order:
 ##   OPENING    open_day() / next_day(): the clock restarts at 08:00 and the day is company.day (set
-##              on every peer as the event is applied). Lasts OPENING_REAL_SECONDS real seconds (the
-##              supplier shows up); the clock already runs.
+##              on every peer as the event is applied), and the order book every peer shares drops its
+##              closed orders (CompanyOrdersNet.prune_closed(), D-0813.1). Lasts OPENING_REAL_SECONDS
+##              real seconds (the supplier shows up); the clock already runs.
 ##   OPERATING  until the world clock reads DAY_END_MIN (20:00).
-##   CLOSING    from 20:00 on. S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0.
-##              It lasts at least one poll, so what listens to company_day_closing (rent, D-0320)
-##              lands in the summary.
+##   CLOSING    from 20:00 on, or earlier when the host closes the day (close_early(), D-0253).
+##              S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0. It lasts at
+##              least one poll, so what listens to company_day_closing (rent, D-0320) lands in the
+##              summary.
 ##   SUMMARY    the closing screen: DaySummary.build() of the day goes out inside the event and the
 ##              world clock stops. Only the host's next_day() moves on (a client can't hurry the day).
 ##
@@ -164,6 +168,15 @@ func next_day() -> bool:
 	return _open(_day + 1)
 
 
+## Host, from the pause's "close the day" (D-0253, guardado.md rule 2): the day goes to CLOSING
+## now, by the same transition as 20:00, so no new orders come in, SUMMARY waits for the trips out
+## and saves like any close. False, sending nothing, on a client or outside OPERATING.
+func close_early() -> bool:
+	if not is_host() or _phase != Phase.OPERATING:
+		return false
+	return _transition(Phase.CLOSING)
+
+
 ## Host: moves the day on if it is time, once per call: OPENING to OPERATING after
 ## OPENING_REAL_SECONDS, OPERATING to CLOSING when the world clock reads 20:00, CLOSING to
 ## SUMMARY when no trip is out; otherwise it freezes or thaws the shed (S4). _process() calls it a
@@ -208,6 +221,9 @@ func apply_phase(data: Dictionary) -> bool:
 	if is_new:
 		match phase:
 			Phase.OPENING:
+				# Inside the event, so every peer's order book drops the same orders (D-0813.1).
+				if _has_net():
+					net.orders.prune_closed()
 				_pending_facts.append([&"company_day_started", [day]])
 				var notice: String = str(opening_notice.call()) if opening_notice.is_valid() else ""
 				if not notice.is_empty():

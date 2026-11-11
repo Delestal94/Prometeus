@@ -13,7 +13,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
-import bpy
+try:
+    import bpy
+except ImportError:  # check_delgada_reference.py reuses the masks outside Blender.
+    bpy = None
 import numpy as np
 
 

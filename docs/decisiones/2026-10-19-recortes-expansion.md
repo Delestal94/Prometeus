@@ -24,3 +24,7 @@ saca el tachado en su tabla con un PR que diga por qué. Todo este cambio se rev
 
 **Queda para el usuario** (issue #470): qué parte de la expansión entra al Early Access (recomendado: F0-F2,
 y F3-F4 como actualizaciones gratis), la zona gris y las horas de la PC de arte.
+
+**2026-11-04:** la zona gris y el orden del Early Access los decidió Claude por delegación
+([2026-11-04-recortes-zona-gris](2026-11-04-recortes-zona-gris.md)); la fecha, la página y las horas de la PC
+siguen siendo del usuario.

@@ -14,6 +14,7 @@
 ## La idea en una pantalla
 
 > Versión larga, con qué se conserva del juego actual y qué **no** es: [diseno/vision.md](diseno/vision.md) (D-0101).
+> Cómo suena la empresa (quién manda, tono de mensajes): [diseno/narrativa-empresa.md](diseno/narrativa-empresa.md) (D-0121).
 
 **Bucle del día (un turno de juego, 15-25 min reales):**
 
@@ -96,6 +97,8 @@ playtesting; ver memoria "playtesting al final").
 | 19 | [19-ui-audio-vfx.md](19-ui-audio-vfx.md) | UI, tutorial, audio y efectos |
 | 20 | [20-red-calidad-lanzamiento.md](20-red-calidad-lanzamiento.md) | Red, rendimiento, QA, tests, Steam |
 
+Para sumar contenido (producto, caja, proveedor, vehículo, requisito de pedido, objeto del galpón, zona): [../agregar-contenido-expansion.md](../agregar-contenido-expansion.md) (D-0244).
+
 Cada grupo tiene 50 tareas en tres bloques: **Núcleo** (lo mínimo para su fase), **Ampliación**
 (suma valor claro) y **Pulido**. Los modelos 3D de cada vehículo y distrito están en su propio grupo;
 el 18 junta el arte compartido (productos, cajas, empleados, máquinas, bibliotecas de props).
@@ -103,9 +106,9 @@ el 18 junta el arte compartido (productos, cajas, empleados, máquinas, bibliote
 ## Cómo leer las tareas
 
 - **ID** `D-GGNN`: grupo `GG`, tarea `NN` (D-0712 = grupo 07, tarea 12). Sin choque con `N-`/`S-`.
-- **Agente**: el que la construye según la tabla de `CLAUDE.md`. `constructor-negocio` es un agente
-  nuevo (lo crea D-0141) para galpón, stock, armado, empleados y automatización; hasta que exista,
-  esas tareas van con `constructor-mundo` (galpón) o `constructor-progresion` (plata y pedidos).
+- **Agente**: el que la construye según la tabla de `CLAUDE.md`. `constructor-negocio` (D-0141) hace
+  galpón, stock, armado, empleados y automatización; la plata y los pedidos siguen con
+  `constructor-progresion`.
   `*` = necesita Blender/ComfyUI en la PC (rutina `sesion-arte`).
 - **Esf.**: esfuerzo de razonamiento (`low` · `medium` · `high` · `xhigh`), como en `tareas-nacho.md`.
 - **Hecho cuando**: criterio verificable con test, captura, bot o benchmark. Nada se marca por
@@ -119,10 +122,12 @@ Las rutinas `desarrollador` toman tareas de `detalle/` y de las tablas de grupo,
 (F0 → F5). Si una tarea no tiene detalle, primero lo escriben, en el mismo PR. No se pasan a
 `docs/tareas-nacho.md`: esa lista sigue siendo de la rutina de construcción.
 
-## Dueño: Nacho (las 1000)
+## Dueño: Nacho, menos las asignadas a Slatex
 
-Pedido del usuario (2026-10-04): **todas las tareas de esta carpeta son de Nacho**; ninguna va a
-`docs/tareas-slatex.md`. Cuando una toca archivos de Slatex se hace igual, sin esperarlo, con el aviso
+Pedido del usuario (2026-10-04): las tareas de esta carpeta son de Nacho. Excepción (pedido de Slatex,
+2026-11-01): las de la sección "Expansión: tareas asignadas a Slatex" de `docs/tareas-slatex.md` (UI,
+audio y efectos del grupo 19, y productos, embalaje, portapapeles y clientes del grupo 18) las hace él;
+las rutinas no las toman. Siguen en sus tablas y se marcan ahí al cerrarlas. Cuando una toca archivos de Slatex se hace igual, sin esperarlo, con el aviso
 en `docs/avisos/` en el mismo commit (como ya se trabajan las `S-xxx` heredadas): armado y contenido del
 paquete (`scripts/gameplay/package/`), jugador (`scripts/gameplay/player/`), UI (`scripts/ui/`) y
 progresión heredada. `run_manager.gd`, `network_manager.gd`, `event_bus.gd` y `modules/` son zona

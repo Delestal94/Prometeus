@@ -37,6 +37,15 @@ class SilhouetteTests(unittest.TestCase):
         self.assertFalse(result["final_item_17_complete"])
         self.assertEqual(result["worst_pixel_difference"], 0)
 
+    def test_real_presets_complete_item_17(self):
+        self.manifest["presets"] = "gel_body_shaper"
+        for row in self.manifest["captures"]:
+            row["state"] = {"state0": "delgada", "state1": "flaca"}.get(row["state"], row["state"])
+        self.write()
+        result = compare(self.directory)
+        self.assertTrue(result["final_item_17_complete"])
+        self.assertEqual(result["remaining"], "")
+
     def test_incomplete_rejected(self):
         self.manifest["captures"].pop()
         self.write()

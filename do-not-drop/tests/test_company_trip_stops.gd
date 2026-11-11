@@ -7,7 +7,10 @@ extends SceneTree
 ## - delivering 2 stops and coming back leaves 2 DELIVERED and 1 FAILED, and the
 ##   products of the failed order's sound box return to the Inventory;
 ## - next_stop() walks the pending houses and is empty when none is left;
-## - a broken undelivered box loses its products instead of restocking them.
+## - a broken undelivered box loses its products instead of restocking them;
+## - record_settled() (D-2016.2) takes an order the door already settled (DELIVERED in the book)
+##   once, leaves its stop done and keeps it out of the failed ones; an order still OUT, one of
+##   another trip or a closed trip are refused.
 
 var _failures: int = 0
 
@@ -19,6 +22,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_test_three_houses()
 	_test_broken_box_is_lost()
+	_test_record_settled()
 	quit(_failures)
 
 
@@ -79,3 +83,20 @@ func _test_broken_box_is_lost() -> void:
 	trip.close(book, 500, inv, broken)
 	_expect(inv.count(&"hen", Trip.RETURN_LOCATION) == 0, "broken box is not restocked")
 	_expect(trip.lost_units == 2 and inv.total_units() == 0, "broken box products are lost")
+
+
+func _test_record_settled() -> void:
+	var houses: Array[StringName] = [&"h1", &"h2"]
+	var s: Array = _setup(houses)
+	var book: OrderBook = s[0]
+	var trip := Trip.start(&"t3", &"van", s[2], s[3], book, 480)
+	_expect(not trip.record_settled(&"o1", book), "an order still OUT is not settled")
+	_expect(book.mark_delivered(&"o1", 100, true, 500) > 0, "the door settles o1")
+	_expect(trip.record_settled(&"o1", book), "the trip records the settled o1")
+	_expect(not trip.record_settled(&"o1", book), "a settled order is recorded once")
+	_expect(not trip.record_settled(&"o9", book), "an order of another trip is refused")
+	_expect(trip.pending_stops() == [&"h2"], "h1 is done once o1 is recorded")
+	var failed: Array[StringName] = trip.close(book, 540)
+	_expect(failed == [&"o2"], "only the unsettled o2 fails")
+	_expect(book.state_of(&"o1") == Order.STATE_DELIVERED, "o1 stays DELIVERED")
+	_expect(not trip.record_settled(&"o2", book), "a closed trip records nothing")

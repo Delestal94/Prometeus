@@ -90,10 +90,12 @@ func _process(_delta: float) -> void:
 	while points.size() < parts.size():
 		_build_point(points.size())
 	var vehicle: Node3D = package._find_vehicle()
+	# A hidden copy (a far company box, CompanyInterest) shows and offers none: its points are top-level.
+	var shown: bool = package.is_visible_in_tree()
 	for index: int in points.size():
 		var point: Area3D = points[index]
 		var collected: bool = (data.get("collected", []) as Array).has(index)
-		var active: bool = index < parts.size() and not collected and package.care.phase != &"lost"
+		var active: bool = shown and index < parts.size() and not collected and package.care.phase != &"lost"
 		point.visible = active
 		point.collision_layer = 16 if active else 0
 		if not active:

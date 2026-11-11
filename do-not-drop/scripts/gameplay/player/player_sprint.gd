@@ -16,13 +16,14 @@ extends Node
 ##
 ## Nothing runs seated, driving, or on top of a truck that is moving.
 
-const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
-const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 ## What the NetworkManager autoload runs (world_seed is not on NetSession).
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
+## A vehicle-like thing (the depot forklift) sets this meta on the player it carries: the pace cap in m/s. While
+## it is there nobody runs or jumps, and walking is slowed to the cap.
+const PACE_CAP_META: StringName = &"pace_cap"
 ## Ground speeds, m/s. Walking is Player.WALK_SPEED (3.6).
 const RUN_SPEED: float = 6.0
 ## With a box in the arms; Growing weight's box (heavier by the second) only lets you jog.
@@ -58,7 +59,6 @@ const CRASH_HAZARD: float = 0.8
 const VERGE_HAZARD: float = 0.2
 ## strings of the first-time tip live in tutorial_catalog.gd.
 const TIP_ID: StringName = &"sprint_carry"
-const FOOTSTEP_PITCH_SPREAD: float = 0.06
 ## Host: step reports it accepts per second (a full-speed runner makes RUN_SPEED / STEP_DISTANCE), and how
 ## many it lets pile up, so a client cannot flood the damage road.
 const STEP_TOKENS_PER_SECOND: float = RUN_SPEED / STEP_DISTANCE
@@ -80,7 +80,6 @@ var _stagger: float = 0.0
 ## Host: steps reported by the owner with a box in the arms, the number the roll uses.
 var _host_steps: int = 0
 var _solo_seed: int = 0
-var _footstep_player: AudioStreamPlayer3D
 var _was_running_with_box: bool = false
 ## The physics tick ground_speed() last decided in: a tick the controller
 ## skipped (a menu is open) is not a tick spent running.
@@ -129,7 +128,14 @@ static func is_heavy(package: DeliveryPackage) -> bool:
 func can_run() -> bool:
 	if player == null or player._seated or not player.seat_node_path.is_empty():
 		return false
+	if player.has_meta(PACE_CAP_META):
+		return false
 	return not on_moving_truck()
+
+
+## False while something carries the crew member (PACE_CAP_META): a forklift does not jump.
+func can_jump() -> bool:
+	return player == null or not player.has_meta(PACE_CAP_META)
 
 
 ## Standing on a truck that is going somewhere: the floor is not theirs to run on.
@@ -155,6 +161,8 @@ func ground_speed(input_vector: Vector2) -> float:
 	var speed: float = speed_for(running, player.carried_package)
 	if _stagger > 0.0:
 		speed *= STAGGER_SPEED_SCALE
+	if player.has_meta(PACE_CAP_META):
+		speed = minf(speed, float(player.get_meta(PACE_CAP_META)))
 	var running_with_box: bool = running and player.carried_package != null
 	if running_with_box and not _was_running_with_box:
 		_show_first_run_tip()
@@ -195,7 +203,6 @@ func remote_is_running() -> bool:
 
 func _on_step() -> void:
 	steps_taken += 1
-	_play_footstep()
 	var box: DeliveryPackage = player.carried_package if is_instance_valid(player.carried_package) else null
 	if box == null:
 		return
@@ -203,20 +210,6 @@ func _on_step() -> void:
 	RunShake.bounce(box, steps_taken)
 	if player.is_local():
 		rpc_id(1, &"submit_run_step", measure_hazard())
-
-
-func _play_footstep() -> void:
-	if _footstep_player == null:
-		_footstep_player = AudioStreamPlayer3D.new()
-		_footstep_player.name = "Footstep"
-		_footstep_player.bus = &"SFX"
-		_footstep_player.stream = SynthAudioSteps.footstep()
-		_footstep_player.volume_db = WorldMix.FOOTSTEP_DB
-		_footstep_player.unit_size = 5.0
-		_footstep_player.max_distance = 25.0
-		player.add_child(_footstep_player)  # In 3D space: this node is not a Node3D.
-	_footstep_player.pitch_scale = 1.0 + randf_range(-FOOTSTEP_PITCH_SPREAD, FOOTSTEP_PITCH_SPREAD)
-	_footstep_player.play()
 
 
 # --- Owner: how bad is the ground under this step ---------------------------------------------
@@ -239,13 +232,22 @@ func measure_hazard() -> float:
 	return clampf(hazard, 0.0, 1.0)
 
 
-## The route says how rough the ground is under the runner (gravel, the verge);
-## anywhere else (the depot, the yard) it is flat.
+## The route says how rough the ground is under the runner (gravel, the verge). With no route (the company's
+## world) the floor itself does: a street's bodies carry it (StreetSurface). Anywhere else it is flat.
 func ground_roughness() -> float:
 	var route: Node = player.get_tree().get_first_node_in_group(&"route") if player.is_inside_tree() else null
-	if route == null or not route.has_method(&"ground_roughness"):
-		return 0.0
-	return float(route.call(&"ground_roughness", player.global_position))
+	if route != null and route.has_method(&"ground_roughness"):
+		return float(route.call(&"ground_roughness", player.global_position))
+	for index: int in player.get_slide_collision_count():
+		var collision: KinematicCollision3D = player.get_slide_collision(index)
+		if collision.get_normal().y >= 0.5:
+			return roughness_of(collision.get_collider())
+	return 0.0
+
+
+## What a floor says of itself: 0 unless it carries `ground_roughness`.
+static func roughness_of(collider: Object) -> float:
+	return float(collider.get_meta(&"ground_roughness", 0.0)) if collider != null else 0.0
 
 
 # --- Host: the shaking and the trip -----------------------------------------------------------
@@ -332,7 +334,7 @@ func play_stumble() -> void:
 	running = false
 	player.locomotion_speed = minf(player.locomotion_speed, Player.WALK_SPEED)
 	if player.is_local():
-		player.animator.play_one_shot(Player.ANIM_JUMP, 420)
+		player.animator.play_one_shot(PlayerAnimator.ANIM_STUMBLE, PlayerAnimator.STUMBLE_ANIM_LOCK_MS)
 	player._flinch_time = 0.32
 
 

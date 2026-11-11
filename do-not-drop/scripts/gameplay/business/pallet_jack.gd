@@ -3,16 +3,20 @@ extends RefCounted
 ## Where each supplier pallet physically is, and the manual pallet jack that moves it (expansion D-0605).
 ##
 ## Pure data, no node, no autoload: a pallet is on the truck's bed, carried by the jack or standing on
-## the shed floor at a point in meters. The jack takes one pallet at a time. Units reach the Inventory
-## (Pallet.receive) once, when a pallet from the bed is put down on the floor, so a pallet that never
+## the shed floor at a point in meters, or on a rack slot (D-0606).
+## The jack takes one pallet at a time. Units reach the Inventory
+## (Pallet.receive) once, when a pallet from the bed is first put down (its place's `received`), so a pallet that never
 ## leaves the bed is never counted and leaves with the truck. The nodes that draw and drive it come
 ## with D-0605.b. Host authority: peers apply the same calls in the same order.
 
 const AT_BED: StringName = &"bed"
 const AT_JACK: StringName = &"jack"
 const AT_FLOOR: StringName = &"floor"
+## On a rack slot (D-0606): only the forklift reaches that high (PalletForklift).
+const AT_RACK: StringName = &"rack"
 
-## Pallet id -> {pallet (the Pallet dictionary), at (AT_*), pos (Vector2, only on the floor)}.
+## Pallet id -> {pallet (the Pallet dictionary), at (AT_*), pos (Vector2, only on the floor), received (bool: its
+## units went into the Inventory, at its first put-down; never again, even emptied)}.
 var places: Dictionary = {}
 ## Id of the pallet on the jack, &"" when it is empty.
 var carrying: StringName = &""
@@ -25,7 +29,7 @@ func load_bed(pallets: Array[Dictionary]) -> int:
 		var id := StringName(pallet.get("id", &""))
 		if not Pallet.validate(pallet).is_empty() or places.has(id):
 			continue
-		places[id] = {"pallet": pallet, "at": AT_BED}
+		places[id] = {"pallet": pallet, "at": AT_BED, "received": false}
 		loaded += 1
 	return loaded
 
@@ -36,8 +40,20 @@ func ids_at(at: StringName) -> Array[StringName]:
 	for id: StringName in places:
 		if places[id]["at"] == at:
 			found.append(id)
-	found.sort()
+	found.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	return found
+
+
+## Whether pick_up(id, holder) would work, changing nothing (the host checks a request with it).
+func can_pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
+	if carrying != &"" or not places.has(id):
+		return false
+	var place: Dictionary = places[id]
+	if place["at"] == AT_JACK:
+		return false
+	if place["at"] == AT_FLOOR or place["at"] == AT_RACK:
+		return holder.distance_to(place["pos"]) <= CompanyTuning.PALLET_JACK_REACH_M
+	return true
 
 
 ## Picks a pallet up from the bed or the floor. `holder` and `from_pos` (meters) are where the person
@@ -45,17 +61,23 @@ func ids_at(at: StringName) -> Array[StringName]:
 ## from the dock, the caller checks that). False, changing nothing, if the jack is full, the pallet is
 ## unknown or already on the jack, or it is out of reach.
 func pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
-	if carrying != &"" or not places.has(id):
+	if not can_pick_up(id, holder):
 		return false
 	var place: Dictionary = places[id]
-	if place["at"] == AT_JACK:
-		return false
-	if place["at"] == AT_FLOOR:
-		if holder.distance_to(place["pos"]) > CompanyTuning.PALLET_JACK_REACH_M:
-			return false
-		place.erase("pos")
+	place.erase("pos")
+	place.erase("slot")
 	place["at"] = AT_JACK
 	carrying = id
+	return true
+
+
+## Whether put_down(pos, floor_rect, ...) would find the spot free, changing nothing.
+func can_put_down(pos: Vector2, floor_rect: Rect2) -> bool:
+	if carrying == &"" or not floor_rect.encloses(_footprint(pos)):
+		return false
+	for id: StringName in ids_at(AT_FLOOR):
+		if _footprint(places[id]["pos"]).intersects(_footprint(pos)):
+			return false
 	return true
 
 
@@ -63,20 +85,52 @@ func pick_up(id: StringName, holder: Vector2 = Vector2.ZERO) -> bool:
 ## another floor pallet. A pallet that came from the bed is received into `inventory` here, once.
 ## False, changing nothing, when the jack is empty or the spot is not free.
 func put_down(pos: Vector2, floor_rect: Rect2, inventory: Inventory) -> bool:
-	if carrying == &"" or not floor_rect.encloses(_footprint(pos)):
+	if not can_put_down(pos, floor_rect) or not _receive_carried(inventory):
 		return false
-	for id: StringName in ids_at(AT_FLOOR):
-		if _footprint(places[id]["pos"]).intersects(_footprint(pos)):
-			return false
 	var place: Dictionary = places[carrying]
-	var pallet: Dictionary = place["pallet"]
-	if inventory.contents_at(Pallet.location(carrying)).is_empty():
-		if not Pallet.receive(inventory, pallet):
-			return false
 	place["at"] = AT_FLOOR
 	place["pos"] = pos
 	carrying = &""
 	return true
+
+
+## Puts the carried pallet on rack slot `slot`, whose front is at `pos` (meters), if no other pallet
+## holds it. Like put_down, a pallet from the bed is received into `inventory` here, once. False,
+## changing nothing, when the jack is empty or the slot is taken. Height and reach are PalletForklift's.
+func put_on_rack(slot: StringName, pos: Vector2, inventory: Inventory) -> bool:
+	if carrying == &"" or slot == &"" or rack_pallet(slot) != &"" or not _receive_carried(inventory):
+		return false
+	var place: Dictionary = places[carrying]
+	place["at"] = AT_RACK
+	place["pos"] = pos
+	place["slot"] = slot
+	carrying = &""
+	return true
+
+
+## The carried pallet's units into `inventory` the first time it is set down (its `received`), never again, not
+## even once it was emptied (D-0605.b). Units already at its location count as received. False when they do not fit.
+func _receive_carried(inventory: Inventory) -> bool:
+	var place: Dictionary = places[carrying]
+	if not _received(place) and inventory.contents_at(Pallet.location(carrying)).is_empty():
+		if not Pallet.receive(inventory, place["pallet"]):
+			return false
+	place["received"] = true
+	return true
+
+
+## Whether a place's units were received (its `received` is true; missing or not a bool, no).
+static func _received(place: Dictionary) -> bool:
+	var flag: Variant = place.get("received", false)
+	return flag is bool and flag
+
+
+## Id of the pallet on rack slot `slot`, &"" when it is free.
+func rack_pallet(slot: StringName) -> StringName:
+	for id: StringName in ids_at(AT_RACK):
+		if places[id]["slot"] == slot:
+			return id
+	return &""
 
 
 ## What still sits on the bed (the truck takes it away when it leaves).
@@ -87,7 +141,18 @@ func left_on_bed() -> Array[Dictionary]:
 	return left
 
 
-## Takes a pallet off the yard (opened and emptied: Pallet.is_depleted). Not while it is on the jack.
+## The pallets on the floor or on a rack with no units left in `inventory`, sorted. Those were received when they
+## were set down, so an empty one ran out; the stock says so, not the pallet's state: units leave a sealed pallet too
+## (cold units that rot, CompanyColdNet). On the bed nothing was received yet, and the jack holds on to its pallet.
+func emptied_ids(inventory: Inventory) -> Array[StringName]:
+	var found: Array[StringName] = []
+	for id: StringName in ids_at(AT_FLOOR) + ids_at(AT_RACK):
+		if inventory.contents_at(Pallet.location(id)).is_empty():
+			found.append(id)
+	return found
+
+
+## Takes a pallet off the yard (its units ran out: emptied_ids()). Not while it is on the jack.
 func remove(id: StringName) -> bool:
 	if not places.has(id) or places[id]["at"] == AT_JACK:
 		return false
@@ -99,8 +164,11 @@ func to_dict() -> Dictionary:
 	var out: Dictionary = {}
 	for id: StringName in places:
 		var place: Dictionary = places[id].duplicate()
+		place["received"] = _received(place)
 		if place.has("pos"):
 			place["pos"] = [place["pos"].x, place["pos"].y]
+		if place.has("slot"):
+			place["slot"] = String(place["slot"])
 		out[String(id)] = place
 	return {"places": out, "carrying": String(carrying)}
 
@@ -114,6 +182,9 @@ func from_dict(data: Dictionary) -> void:
 			var xy: Array = place["pos"]
 			place["pos"] = Vector2(float(xy[0]), float(xy[1]))
 		place["at"] = StringName(place["at"])
+		place["received"] = _received(place)
+		if place.has("slot"):
+			place["slot"] = StringName(place["slot"])
 		places[StringName(key)] = place
 	carrying = StringName(data.get("carrying", ""))
 

@@ -88,11 +88,101 @@ const MAX_PLAYERS: int = 8
 ## packing tables (company mode, D-0715);
 ## 38: the company world (company_root.tscn) is in LEVEL_SCENES, so a joiner may
 ## be sent to it, and its World/PlayerSpawner spawns the crew (company mode
-## online, D-0214).
+## online, D-0214);
+## 39: CompanyNet's _request takes a new kind, cart_push, _apply_event a new one,
+## cart_moved, and its snapshot a "carts" part: where the picking carts stand
+## (company mode, D-0610.b);
+## 40: CompanyNet's _apply_event carries three new kinds, trip_started,
+## trip_refused and trip_closed, and its snapshot a "trips" part: the company
+## vehicles out of the shed, as the host's CompanyTrips decides them (company
+## mode, D-0302.2);
+## 41: CompanyNet's _apply_event carries two new kinds, order_added and
+## order_expired, and its snapshot an "orders" part: the day's order book from
+## the host (company mode, D-0813);
+## 42: box_sealed makes a DeliveryPackage on every peer, World/Packages/
+## Package_<box id>; a client tells the host it has it with a new CompanyNet
+## _request kind, package_ack, and only then does the host open that package's
+## MultiplayerSynchronizer to it; a peer checks the event's node_name, pos, basis,
+## trap, trap_intensity, absorption and quality first, and box_tape may be refused
+## with no_trap (company mode, D-0715.b);
+## 43: CompanyNet's _request takes three new kinds, jack_pick, jack_put and jack_push,
+## _apply_event four, jack_picked, jack_placed, jack_moved and jack_loaded, and its
+## snapshot a "pallets" part: the supplier pallets and the pallet jack (company
+## mode, D-0605.b);
+## 44: CompanyNet's _request takes a new kind, supplier_order, _apply_event a new
+## one, supplier_ordered, and its snapshot a "supplier" part: the supplier
+## calendar; the shed's SupplierBoardPoint has a new RPC, _open_here (company
+## mode, D-0603.b.2);
+## 45: the company's loose boxes (World/Packages) are sent only to the players
+## near them and hidden on a far client: an older client keeps a stale copy of a
+## box the host stops sending, and the host's consume() of a far box broadcasts
+## _remote_consume only after it lets the box go (company mode, D-0316.3);
+## 46: CompanyNet's _apply_event takes a fifth jack event, jack_departed {day, lines}
+## (the supplier truck drove off with what was left on its bed), and the "pallets"
+## snapshot part carries departed_day and the delivery note (company mode, D-0618.b).
+## 47: CompanyNet's _apply_event carries a new host kind, wallet_moved {amount,
+## reason, money, minute}: the company's money moved by the host with no request,
+## set on every peer from the host's balance (company mode, D-0517);
+## 48: CompanyNet's _request takes a new kind, fork_act (get on, mast with the stop's `at_height`,
+## take or leave a pallet, get off: the forklift a player drives), jack_picked takes `by`, jack_placed takes
+## `slot`, _apply_event a new kind, fork_state, and the "pallets" snapshot part a
+## "forklift" entry (company mode, D-0606.b);
+## 49: the company world has its vehicles on every peer, World/Vehicles/<vehicle
+## id> (vehicle.tscn and its synchronizer, sent only to the players near it): the
+## client builds them from the host's snapshot and acks them with a new RPC on
+## World/Vehicles, CompanyFleet._have_fleet, and only then does the host open each
+## one's synchronizer to it; an older client has no such node and would not hide a
+## far copy; the van relays vehicle_telemetry only during a run (company mode,
+## D-0302.2.b).
+## 50: CompanyNet's _request takes a new kind, shop_buy, and _apply_event a new
+## one, shop_bought {item, money, minute}: the company shop's purchases, only the
+## host's go through and a client's is refused with host_only (company mode, D-0518).
+## 51: CompanyNet's _apply_event takes a new host kind, units_spoiled {product, qty,
+## location}: cold products left outside a fridge rotted, and every peer discards them
+## from its stock (company mode, D-0616.b).
+## 52: CompanyTripsView (the company world's TripsView) has a new RPC, _held_here(vehicle, cap): the
+## host tells the driver of a company vehicle it holds at the gate why (one with cargo that may not
+## leave with VEHICLES_FAR_MAX out: before, it crossed and counted as out); an older client gets an
+## RPC it doesn't have (company mode, D-0316.2).
+## 53: the "orders" snapshot part carries `stars` (1-5, the customer's rating) on a
+## delivered order; an older client refuses that book (company mode, D-0816.b).
+## 54: CompanyNet's _request takes two new kinds, box_restock {station, supply} and
+## box_discard {station}, and _apply_event two, box_restocked {table, supply, count} and
+## box_discarded {table, box, contents, to[, pos]}: a packing table restocked and its open
+## box thrown away, the units back in the hands or in a floor bundle (company mode, D-0715.c).
+## 55: CompanyNet's supplier_ordered may come from the host with no request and peer 0
+## (AUTO_PEER): the host's automatic supplier order at the day's close; an older client applies
+## it but shows no summary line (company mode, D-0151.3b).
+## 56: CompanyNet's supplier_order request names the supplier (`supplier`, none: the
+## default one), supplier_ordered carries it, and the "supplier" snapshot part a
+## `suppliers` entry with the other suppliers' trucks; an older client refuses the
+## event and that part (company mode, D-0621.b).
+## 57: player.tscn and package.tscn replicate `net_vehicle` (which vehicle the pose's
+## space is, VehiclePick.index_of(), -1 none) after their other properties, and the box's
+## submit_carry_transform and request_drop take a trailing `vehicle` index: with several
+## vehicles every copy goes on the one its owner rides (D-0302.2.b.4.b).
+## 58: CompanyNet's _request takes a new kind, trip_tow {vehicle, rid}: any peer asks the host to tow a
+## stuck or broken company vehicle home; it goes out as the wallet_moved (reason tow) and trip_closed events
+## that already exist, and a refusal comes back with a WORLD_TOW_* key (company mode, D-0307.1).
+## 59: CompanyNet's _request takes a new kind, shed_expand {stage}, and _apply_event a
+## new one, shed_expanded {stage, minute, money}: the host grows the shed to its next
+## stage and every peer redraws the bigger grid at once; a client's request is refused
+## with host_only (company mode, D-0910.2).
+## 60: a package no longer replicates hold_offset and submit_carry_transform drops its
+## `in_hands`: every peer draws a box held on foot in its carrier's hands from that player's
+## own pose, and the host sends its pose only every 5 s meanwhile (D-2002.5);
+## 61: player.tscn replicates anim_clip, the exact clip chosen by the player authority:
+## remote copies no longer derive gait/pickup variants from transient local state (S-311.84).
+## 62: player.tscn replicates PlayerPhoneProp:phone_raised (phone held up in the right hand), S-304.
+## 63: care_state carries held_by and helped_by, the peers steadying the box (their hands grip it), S-205.
+## 64: player.tscn replicates PlayerHeldTool:held_tool (the company's clipboard in the hand), D-1902.
+## 65: box_sealed carries assisted and filled, the company snapshot its options (Armado asistido), D-1919.
+## 66: CompanyNet's _apply_event takes a new host kind, jack_cleared {pallets}: the pallets that ran out leave the
+## book on every peer; an older client refuses it and keeps them (company mode), D-0607.b.
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 38
+const PROTOCOL_VERSION: int = 66
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

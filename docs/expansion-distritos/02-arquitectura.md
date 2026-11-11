@@ -28,6 +28,10 @@
 | D-0218 | ✅ Registro de productos y proveedores leído de `.tres` | constructor-negocio | medium | idem con productos |
 | D-0219 | ✅ Reloj del juego determinista desde el host (hora del día, aceleración, pausa) | constructor-red | high | test con dos peers ve la misma hora ±1 tick |
 | D-0220 | ✅ Decidir dónde vive cada script nuevo (`business/`, `fleet/`, `districts/`) y qué va a módulos | Plan | medium | árbol de carpetas en `docs/arquitectura.md`; `check_modules` verde |
+| D-0251 | ✅ Un día cortado vuelve a su apertura: crear la empresa guarda el día 1 y un corte solo marca `interrupted`, no escribe nada a medias ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_company_autosave` ampliado: cobrar, salir a mitad de día y cargar da la plata, el stock y el libro de caja de la apertura |
+| D-0252 | ✅ Stock sin lugares en curso al guardar: manos, piso, cajas y paquetes al bulto de devolución con posición ([guardado.md](diseno/guardado.md) §3) | constructor-progresion | medium | test: después de cargar, toda unidad está en un lugar con estación y el bulto se puede tomar |
+| D-0253 | ✅ Cerrar el día antes: el host lo pide desde la pausa y se guarda como un cierre; las salidas avisan que cortar pierde el día ([guardado.md](diseno/guardado.md) regla 2) | constructor-progresion | medium | `test_day_cycle` ampliado; botón y aviso en el menú de pausa |
+| D-0254 | Partir `company_root.gd` (1000 líneas) y `company_net.gd` (999) antes de enganchar puerta, cobro y alquiler ([riesgos.md](diseno/riesgos.md) R-16, [revisión D-0140](diseno/revision-diseno.md)) | constructor-red | medium | los dos bajan de 850 líneas, `PROTOCOL_VERSION` no cambia y `tools/run-tests.sh company` sigue en verde |
 
 ## Ampliación
 
@@ -44,14 +48,14 @@
 | ~~D-0229~~ | ~~Módulo portable `milestones` (condiciones y recompensas declarativas)~~ **Fusionada en D-0401 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | idem |
 | ~~D-0230~~ | ~~Adaptadores chicos en `scripts/` que conectan cada módulo nuevo con el juego~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | medium | ningún módulo nombra autoloads (check verde) |
 | ~~D-0231~~ | ~~Simulación del día sin escena (headless) para tests y balance: corre 1 día en < 2 s~~ **Fusionada en D-0540 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | `tools/sim_day.gd` imprime ingresos, entregas y fallas |
-| D-0232 | Sistema de "tick de negocio" a frecuencia fija (4 Hz) separado de la física | constructor-negocio | medium | test verifica cadencia; el perfilador no lo ve en el frame |
+| D-0232 | ✅ Sistema de "tick de negocio" a frecuencia fija (4 Hz) separado de la física | constructor-negocio | medium | test verifica cadencia; el perfilador no lo ve en el frame |
 | ~~D-0233~~ | ~~Pool de objetos para productos y cajas (evitar crear y borrar nodos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | perfilador-rendimiento | high | `bench_depot` sin picos de allocs al armar 100 cajas |
 | ~~D-0234~~ | ~~Migración del save de perfil actual (`unlock_profile`) al save de empresa~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | high | perfil viejo carga y conserva cosméticos y récords |
-| D-0235 | Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
-| D-0236 | Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
+| D-0235 | ✅ Varias empresas guardadas (slots) con nombre y fecha | constructor-progresion | medium | test crea, lista y borra 3 slots |
+| D-0236 | ✅ Guardado automático al cerrar el día y al salir | constructor-progresion | medium | test: matar el proceso a mitad de día y recuperar el último cierre |
 | ~~D-0237~~ | ~~Rutas de guardado compatibles con Steam Auto-Cloud (ver N-914)~~ **Fusionada en D-2010 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | rutas bajo `user://saves/company/`; documentado |
-| D-0238 | Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
-| D-0239 | Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |
+| D-0238 | ✅ Flags de desarrollo: `--company-day=N`, `--district=x`, `--money=n` para tests y capturas | constructor-progresion | low | documentados en README; usados por `render_*` |
+| D-0239 | ✅ Telemetría local del día (`run_log`) con eventos de negocio | constructor-progresion | medium | log del día se lee con `run_telemetry_format` |
 | ~~D-0240~~ | ~~Separación simulación/presentación en todo lo nuevo (convención §)~~ **Fusionada en D-2041 (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-gdscript | medium | revisión sin hallazgos de mezcla en `business/` |
 
 ## Pulido
@@ -60,10 +64,10 @@
 |---|---|---|---|---|
 | ~~D-0241~~ | ~~Tipado estricto en todos los scripts nuevos (sin `Variant` implícitos)~~ **Fusionada en D-2041 (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-gdscript | low | lint sin warnings de tipo en carpetas nuevas |
 | ~~D-0242~~ | ~~Presupuesto de líneas por archivo (lint) respetado en carpetas nuevas~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | revisor-gdscript | low | `tools/lint` verde |
-| D-0243 | Test de que ningún `--script` pierde autoloads al nombrar clases nuevas (lección de N-919) | escritor-tests | medium | `test_hud_script_loads` extendido a `CompanyState` |
-| D-0244 | Documentar cómo agregar un producto, un distrito y un vehículo (3 guías cortas) (incluye D-0850, D-0950, D-1050, D-1150, D-1250, fusión de D-0112) | documentador | low | `docs/agregar-producto.md`, `agregar-distrito.md`, `agregar-vehiculo.md` actualizada |
-| D-0245 | Validador de `.tres` de la expansión (ids únicos, rutas existentes, rangos) en CI | escritor-tests | medium | `test_expansion_resources` falla con un id repetido |
-| D-0246 | Semilla de mundo compartida extendida a pedidos y proveedores (todos ven lo mismo) | auditor-red | high | auditoría sin desincronías |
+| D-0243 | ✅ Test de que ningún `--script` pierde autoloads al nombrar clases nuevas (lección de N-919) | escritor-tests | medium | `test_hud_script_loads` extendido a `CompanyState` |
+| D-0244 | ✅ Documentar cómo agregar un producto, un distrito y un vehículo (3 guías cortas) (incluye D-0850, D-0950, D-1050, D-1150, D-1250, fusión de D-0112) | documentador | low | `docs/agregar-contenido-expansion.md` (una sola guía, [crítica](diseno/critica-alcance.md)) y `agregar-vehiculo.md` actualizada |
+| D-0245 | ✅ Validador de `.tres` de la expansión (ids únicos, rutas existentes, rangos) en CI | escritor-tests | medium | `test_expansion_resources` falla con un id repetido |
+| D-0246 | ✅ Semilla de mundo compartida extendida a pedidos y proveedores (todos ven lo mismo) | auditor-red | high | auditoría sin desincronías |
 | ~~D-0247~~ | ~~Ver si `DeliveryHouse` puede ser genérica para muelle, pista y casa de montaña~~ **Fusionada en D-0311 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | decisión anotada y, si sí, una sola clase con variantes |
 | ~~D-0248~~ | ~~Medir costo de memoria del modo Empresa con galpón grande~~ **Fusionada en D-0947 (D-0112, [crítica](diseno/critica-alcance.md))** | perfilador-rendimiento | medium | número en `docs/rendimiento-pc.md` |
 | ~~D-0249~~ | ~~Revisión de arquitectura por `auditor-integral` al cerrar F0~~ **Fusionada en D-2039 (D-0112, [crítica](diseno/critica-alcance.md))** | auditor-integral | high | hallazgos P0-P1 resueltos |

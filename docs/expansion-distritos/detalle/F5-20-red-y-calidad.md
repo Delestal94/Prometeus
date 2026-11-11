@@ -46,15 +46,15 @@ comprueba que los hashes coinciden y que el script falla si uno no coincide (un 
 y los KB/s por cliente dentro del presupuesto de D-2002 (≤ 24 KB/s en el galpón).
 
 ### D-2024 · Bot de jugador solo, 20 días — A · Opus 5.5 · high · Aviso: no · F5
-**Depende de:** D-0126, D-2016, D-0510 (quiebra), D-1001 (empleados, si el modo solo los usa)
+**Depende de:** D-0126, D-0151, D-2016, D-0510 (quiebra), D-1001 (empleados, si el modo solo los usa)
 **Qué:** `tests/bot_company_solo.gd`: las etapas de `bot_company_day` con **un** jugador, 20 días seguidos
 con el reloj acelerado (`GameClock` a ×20) y el save cargado entre día y día (como se jugaría). Juega con
 la política del modo solo de [roles-tripulacion.md](../diseno/roles-tripulacion.md) (sale solo cuando
 hay 3-4 cajas listas o un pedido por vencer; el galpón se pausa mientras maneja).
 - [ ] **D-2024.1** Bucle de días sobre `bot_company_day` (la lista de etapas se reusa, no se copia): sale
   con `BOT_FAIL day=<n> <etapa>:<motivo>` en el primer error.
-- [ ] **D-2024.2** Política simple de compras (reponer el producto con menos stock que pedidos abiertos) y
-  de salidas (la regla de arriba). Los números van en `CompanyTuning` si son de diseño; los del bot, en el
+- [ ] **D-2024.2** Sin compras a mano: el bot vive del pedido automático al proveedor (D-0151,
+  roles-tripulacion.md §6.2); solo decide las salidas (la regla de arriba). Los números van en `CompanyTuning` si son de diseño; los del bot, en el
   bot.
 - [ ] **D-2024.3** Resumen por día: plata, entregas, vencidos, roturas, minutos de galpón y de ruta. Una
   línea `SOLO day=<n> money=<> delivered=<> expired=<>`.
@@ -84,16 +84,18 @@ la tabla de cada distrito de [distritos.md](../diseno/distritos.md) con la semil
 **Hecho cuando:** el bot llega al Volcán en simulación con la semilla de CI y la curva queda anotada.
 
 ### D-2026 · Save de 50 días — B · Opus 5.5 · medium · Aviso: no · F5
+**[x] Hecho (2026-11-04, lote local; revisión 2026-11-07)** — `test_company_save_50_days`: 165 KB, 0,02 s de guardado y 0,15 s de carga (peor de 3, PC libre); el remito guarda 14 días (`DELIVERY_NOTE_DAYS_KEPT`), `PlaceableShop.definition` cachea (la carga tardaba 15 s) y el libro de palets ya no crece (D-0607.b).
 **Depende de:** D-0206 (save de empresa), D-0236 (guardado al cerrar el día)
 **Qué:** un save de 50 días con todo lo que crece con el tiempo: historial de días (resúmenes), libro
 de pedidos con los cerrados, disposición del galpón con todas las estaciones, stock lleno y bultos en el
 piso. Medir tamaño y tiempo de `CompanySave.save()` / `load_into()`.
-- [ ] **D-2026.1** Generador del save (en el test, sin jugar): estado sintético con los máximos de
+- [x] **D-2026.1** Generador del save (en el test, sin jugar): estado sintético con los máximos de
   `CompanyTuning` (`ORDERS_MAX_PER_DAY`, la etapa mayor de `WAREHOUSE_STAGE_MAX_PIECES`, todos los
   productos) repetido 50 días.
-- [ ] **D-2026.2** Si el historial crece sin techo, recortarlo: el save guarda los últimos N días
+- [x] **D-2026.2** Si el historial crece sin techo, recortarlo: el save guarda los últimos N días
   completos y de los anteriores solo los totales (N en `CompanyTuning`, decisión documentada).
-**Test** `test_company_save_50_days`: el save de 50 días pesa < 2 MB, `load_into()` tarda < 2 s (medido
-con `Time.get_ticks_usec`, el peor de 3) y cargar → guardar → cargar da el mismo `to_dict()`; un save de 100
-días no pesa más del doble del de 50.
+**Test** `test_company_save_50_days`: el save de 50 días pesa < 2 MB, `save()` y `load_into()` tardan < 2 s
+(medido con `Time.get_ticks_usec`, el peor de 3) y cargar → guardar → cargar da el mismo `to_dict()`; un save de
+100 días no pesa más del doble del de 50 y le suma menos de 2 KB; en esos 100 días todos los camiones cargan
+completos y el libro de palets no pasa de `MAX_PALLETS / 2`.
 **Hecho cuando:** el test pasa en CI.

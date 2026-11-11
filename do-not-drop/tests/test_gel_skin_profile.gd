@@ -95,11 +95,13 @@ func _applied_skin(owner: Node) -> StringName:
 		return &""
 	var color: Color = mesh.get_instance_shader_parameter(&"gel_color")
 	var surface: Vector4 = mesh.get_instance_shader_parameter(&"gel_skin_surface")
+	# The fractional part carries the general-thickness weight (S-311.15).
+	var packed_mode := roundf(surface.z)
 	for definition: Resource in Catalog.all_skins():
 		var mode := float(definition.get(&"interior_mode"))
 		if int(definition.get(&"animation_mode")) != 0:
 			mode = 5.0 + float(definition.get(&"animation_mode"))
-		if color == definition.get(&"color") and is_equal_approx(surface.z, mode):
+		if color == definition.get(&"color") and is_equal_approx(packed_mode, mode):
 			return definition.get(&"id")
 	return &""
 

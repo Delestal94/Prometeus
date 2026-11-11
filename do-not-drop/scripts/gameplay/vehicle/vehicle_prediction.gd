@@ -65,6 +65,9 @@ var last_sent: Array = []
 var last_shift: float = 0.0
 ## Client: the input number of the newest host state compared with its own (0 before any), for tests.
 var host_seq: int = 0
+## Client: the host's pose in that state (Transform3D.IDENTITY before any in this prediction session): where the host
+## had the truck, as late as the link brings it (CompanyGateBrake reads it, D-0316.4).
+var host_pose: Transform3D = Transform3D.IDENTITY
 ## Client, `--net-sim` on LAN (N-922.5): the inputs it sends and the host's states it compares with, each held back
 ## half the profile's lag plus its jitter and lost at its rate, as the sockets would do it over Steam. Without them a
 ## LAN test with `--net-sim` only delayed the pose buffer, which the driver doesn't use: the prediction looked perfect.
@@ -232,6 +235,7 @@ func host_state(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_v
 
 func _reconcile(state: Array) -> void:
 	host_seq = int(state[0])
+	host_pose = state[1]
 	reconciler.reconcile(int(state[0]), state[1], state[2], state[3])
 
 
@@ -258,6 +262,7 @@ func _correct(vehicle: Vehicle, delta: float) -> void:
 func _start(vehicle: Vehicle, smoother: NetPoseSmoother, host_velocity: Vector3, host_spin: Vector3) -> void:
 	active = true
 	_exit_left = 0.0
+	host_pose = Transform3D.IDENTITY
 	reconciler.clear()
 	downlink.clear()
 	# Toward the newest pose the host sent, from the one drawn a cushion behind it: eased there like any correction

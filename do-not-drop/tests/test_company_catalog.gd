@@ -44,7 +44,7 @@ func _check_data() -> void:
 	_expect(catalog.errors.is_empty(), "data/ loads with no errors (got %s)" % [catalog.errors])
 	var expected: Dictionary = {
 		CompanyCatalog.PRODUCTS: 10, CompanyCatalog.ZONES: 9, CompanyCatalog.VEHICLES: 3,
-		CompanyCatalog.GATES: 7, CompanyCatalog.SUPPLIERS: 1, CompanyCatalog.BOXES: 4,
+		CompanyCatalog.GATES: 7, CompanyCatalog.SUPPLIERS: 5, CompanyCatalog.BOXES: 4,
 	}
 	for kind: StringName in expected:
 		var count: int = catalog.all(kind).size()

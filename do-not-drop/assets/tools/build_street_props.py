@@ -39,6 +39,16 @@ pivot and orientation as before, so no scene or script changes:
       "TailLights". The chassis sides stay flat and free at |x| = 1.30 around
       y = 1.05 for the "GRUA" Label3D boards. Built so the AO bake's 1 m
       subdivision doesn't blow it up (~2.0k tris, ~2.4k after the bake).
+  vehicles/sm_vehicle_supplier_truck.glb (D-0601 / D-1814, group
+      "supplier"): the Modo Empresa supplier's cab-over box truck of
+      supplier_truck_view.gd, 2.4 x 6.4 x 3.2 m (CompanyTuning
+      .SUPPLIER_TRUCK_SIZE_M), faces Godot -Z, wheels on y = 0, origin at the
+      centre of the footprint. The box is hollow where the view stacks the
+      pallets (floor top 0.78, inner walls |x| = 1.12, ceiling 3.12, front
+      wall 1.7 m behind the nose). Named meshes: "RearDoor" (roll-up shutter,
+      origin at its top edge (0, 2.9, 3.155) in Godot: the view scales its
+      local Y to roll it up into the header), "Light" ("lamp") and
+      "TailLights". No AO bake.
   environment/props/sm_env_prop_street_lamp_refined.glb (and the unused
       sm_env_prop_street_lamp.glb, same model): 4.6 m, arm toward +X.
       Materials "lamp_metal" and "lamp_glass" (the glass is one mesh: it glows
@@ -983,9 +993,201 @@ def tow_crane():
     done("vehicles/sm_vehicle_tow_crane.glb")
 
 
+# =============================================================================
+# Supplier's box truck of the Modo Empresa (D-0601 / D-1814)
+# =============================================================================
+
+PALETTE.update({
+    # The cab in the orange of the grey box it replaced, so the truck still
+    # reads the same from the yard; the box in a warm off-white with the
+    # supplier's teal band and yellow parcel emblem.
+    "supplier_cab": srgb("c7732a"), "supplier_box": srgb("e6e2d6"),
+    "supplier_trim": srgb("9aa3a3"), "supplier_dark": srgb("2b2f33"),
+    "supplier_teal": srgb("2f8f7f"), "supplier_shutter": srgb("cfd3cd"),
+})
+
+## What supplier_truck_view.gd keeps for the pallets and the pallet jack
+## (CAB_LENGTH, CARGO_FLOOR, BED_WALL): the box's floor tops out at 0.78 m, its
+## inner walls are at |x| = 1.12, its ceiling at 3.12 and its front wall 1.7 m
+## behind the nose. Size is CompanyTuning.SUPPLIER_TRUCK_SIZE_M.
+SUPPLIER_CAB_LENGTH = 1.7
+SUPPLIER_FLOOR = 0.7
+SUPPLIER_WALL = 0.08
+## The rear shutter's top edge, in Blender coordinates: the "RearDoor" mesh has
+## its origin there, so Godot rolls it up by scaling its local Y toward it.
+SUPPLIER_DOOR_PIVOT = (0.0, -3.155, 2.9)
+
+
+def _quad_x(name, x, y0, y1, z0, z1, material, side):
+    """A flat decal on a side wall (x = const), facing outward (`side`)."""
+    return _mesh(name, [(x, y0, z0), (x, y1, z0), (x, y1, z1), (x, y0, z1)], [(0, 1, 2, 3)], material,
+                 (side, 0.0, 0.0))
+
+
+def _quad_y(name, y, x0, x1, z0, z1, material, facing):
+    """A flat decal across the truck (y = const), facing +Y (front) or -Y (rear)."""
+    return _mesh(name, [(x0, y, z0), (x1, y, z0), (x1, y, z1), (x0, y, z1)], [(0, 1, 2, 3)], material,
+                 (0.0, facing, 0.0))
+
+
+def supplier_truck():
+    """Cab-over box truck with three axles in Blender coordinates: nose toward
+    +Y (Godot -Z), the box's rear opening toward -Y (Godot +Z, the dock), wheels
+    on z = 0, 2.4 x 6.4 x 3.2 m without the mirrors. The box is open inside
+    (floor, walls, ceiling: the view stacks the pallets there) and closed at
+    the rear by the roll-up shutter "RearDoor"."""
+    clear()
+    hx, half_len, height = 1.2, 3.2, 3.2
+    rear, box_front = -half_len, half_len - SUPPLIER_CAB_LENGTH
+    floor_top = SUPPLIER_FLOOR + SUPPLIER_WALL
+    ceiling = height - SUPPLIER_WALL
+    wall_h = ceiling - floor_top
+    box_len = box_front - rear
+    box_mid = (box_front + rear) / 2.0
+    wheel_r, wheel_w, wheel_x = 0.36, 0.3, 1.0
+    front_axle, axles = 2.3, (2.3, -0.8, -2.2)
+
+    # --- Cargo box: floor, walls, roof, ribs, rails, rear frame, livery -------
+    before = _snapshot()
+    # Wooden floor, its top where the pallets stand; the tyres stay just under it.
+    cube("CargoFloor", (0, box_mid, (0.72 + floor_top) / 2.0), (2.0 * hx, box_len, floor_top - 0.72), "wood")
+    cube("CargoRoof", (0, box_mid, ceiling + SUPPLIER_WALL / 2.0), (2.0 * hx, box_len, SUPPLIER_WALL), "supplier_box")
+    cube("CargoFront", (0, box_front - SUPPLIER_WALL / 2.0, floor_top + wall_h / 2.0),
+         (2.0 * hx, SUPPLIER_WALL, wall_h), "supplier_box")
+    wall_y0 = rear + 0.12
+    for side in (-1.0, 1.0):
+        cube("CargoWall", (side * (hx - SUPPLIER_WALL / 2.0), (wall_y0 + box_front) / 2.0, floor_top + wall_h / 2.0),
+             (SUPPLIER_WALL, box_front - wall_y0, wall_h), "supplier_box")
+        # Livery under the ribs: the supplier's teal band and a yellow pinstripe.
+        _quad_x("Band", side * (hx + 0.003), rear + 0.16, box_front - 0.08, 1.32, 1.68, "supplier_teal", side)
+        _quad_x("Pinstripe", side * (hx + 0.003), rear + 0.16, box_front - 0.08, 1.22, 1.27, "ui_yellow", side)
+        # Emblem near the cab: a yellow disc with a taped parcel on it.
+        _disc("Emblem", (side * (hx + 0.006), 0.65, 2.3), 0.42, 12, "ui_yellow", (side, 0.0, 0.0))
+        _quad_x("EmblemParcel", side * (hx + 0.009), 0.45, 0.85, 2.13, 2.45, "logo_cardboard", side)
+        _quad_x("EmblemLid", side * (hx + 0.011), 0.45, 0.85, 2.37, 2.41, "ink", side)
+        _quad_x("EmblemTape", side * (hx + 0.012), 0.615, 0.685, 2.13, 2.45, "ink", side)
+        # Vertical stiffeners, the top and bottom rails and the front corner post.
+        for y in (-2.55, -1.75, -0.95, -0.15):
+            cube("Rib", (side * (hx + 0.0175), y, floor_top + wall_h / 2.0), (0.035, 0.07, wall_h), "supplier_trim")
+        cube("TopRail", (side * (hx + 0.02), box_mid, height - 0.05), (0.04, box_len, 0.1), "supplier_trim")
+        cube("BottomRail", (side * (hx + 0.025), box_mid, 0.77), (0.05, box_len, 0.14), "supplier_trim")
+        cube("FrontPost", (side * hx, box_front - 0.04, (SUPPLIER_FLOOR + height) / 2.0),
+             (0.07, 0.08, height - SUPPLIER_FLOOR), "supplier_trim")
+        # Rear frame: the posts the shutter runs in.
+        cube("RearPost", (side * 1.13, rear + 0.07, (SUPPLIER_FLOOR + height) / 2.0),
+             (0.16, 0.14, height - SUPPLIER_FLOOR), "supplier_trim")
+    # Header (the shutter's drum housing) and a flush sill the pallets slide over.
+    cube("RearHeader", (0, rear + 0.09, 3.05), (2.0 * hx + 0.02, 0.18, 0.3), "supplier_trim")
+    cube("RearSill", (0, rear + 0.07, (SUPPLIER_FLOOR + floor_top) / 2.0), (2.0 * hx, 0.14, floor_top - SUPPLIER_FLOOR),
+         "supplier_dark")
+    rod("GrabHandle", (1.17, rear - 0.03, 1.25), (1.17, rear - 0.03, 1.85), 0.018, "supplier_dark", 4)
+    # Underride bar with hazard stripes, its brackets, the tail lights' housings.
+    cube("RearBumper", (0, rear + 0.08, 0.42), (2.2, 0.12, 0.16), "supplier_dark")
+    for i in range(6):
+        x0 = -1.0 + i * (2.0 / 6.0)
+        _quad_y("BumperStripe", rear + 0.019, x0, x0 + 1.0 / 6.0, 0.36, 0.48, "reflector", -1.0)
+    for side in (-1.0, 1.0):
+        cube("BumperBracket", (side * 0.45, rear + 0.2, 0.56), (0.08, 0.1, 0.32), "supplier_dark")
+    # Chassis under the box: two rails, crossmembers, side guards, tank, mudflaps.
+    for side in (-1.0, 1.0):
+        cube("Rail", (side * 0.45, -0.1, 0.61), (0.14, 6.0, 0.22), "supplier_dark")
+        for z in (0.36, 0.56):
+            cube("SideGuard", (side * 1.12, 0.5, z), (0.05, 1.7, 0.08), "supplier_trim")
+        for y in (-0.2, 1.2):
+            cube("GuardBracket", (side * 0.82, y, 0.62), (0.6, 0.05, 0.06), "supplier_dark")
+        cube("Mudflap", (side * wheel_x, -2.68, 0.36), (0.32, 0.03, 0.42), "rubber")
+    for y in (-3.0, -1.5, 0.4, 1.4):
+        cube("Crossmember", (0, y, 0.64), (0.76, 0.1, 0.12), "supplier_dark")
+    cylinder("FuelTank", (-0.8, 0.55, 0.42), 0.22, 0.8, "supplier_trim", 8, rot=ALONG_Y)
+    cube("BatteryBox", (0.8, 0.55, 0.45), (0.34, 0.5, 0.3), "supplier_dark")
+    _group(before, "CargoBox")
+
+    # --- Cab: cab-over shell with raked windscreen and a roof deflector -------
+    before = _snapshot()
+    cab = [(1.55, 0.9), (half_len, 0.9), (half_len, 1.75), (3.1, 2.62), (2.95, 2.76), (1.55, 2.76)]
+    round_edges(flat_poly("CabShell", cab, -1.15, 2.3, "supplier_cab", plane="yz"), 0.08, 1)
+    deflector = [(2.8, 2.74), (1.58, 2.74), (1.58, 3.16), (1.95, 3.16)]
+    round_edges(flat_poly("Deflector", deflector, -1.08, 2.16, "supplier_cab", plane="yz"), 0.05, 1)
+    _pane_yz("Windshield", (half_len, 1.75), (3.1, 2.62), 2.0, "window", (0.06, 0.94))
+    for sx in (-1.0, 1.0):
+        rod("Wiper", (sx * 0.25 - 0.3, 3.21, 1.84), (sx * 0.25 - 0.08, 3.18, 2.2), 0.012, "ink", 4)
+    for x in (1.15, -1.165):
+        flat_poly("SideWindow", [(1.85, 1.85), (3.08, 1.85), (3.0, 2.55), (1.85, 2.55)], x, 0.015, "window",
+                  plane="yz")
+    # Face: grille with slats and badge, lamps in dark bezels, indicators, bumper.
+    _quad_y("Grille", half_len + 0.006, -0.72, 0.72, 1.0, 1.52, "supplier_dark", 1.0)
+    for z in (1.1, 1.24, 1.38):
+        _quad_y("GrilleSlat", half_len + 0.01, -0.68, 0.68, z, z + 0.05, "supplier_trim", 1.0)
+    _disc("Badge", (0.0, half_len + 0.012, 1.64), 0.09, 8, "ui_yellow", (0.0, 1.0, 0.0), axis="y")
+    for side in (-1.0, 1.0):
+        cube("LampBezel", (side * 0.92, half_len - 0.02, 1.14), (0.38, 0.05, 0.22), "supplier_dark")
+        cube("Indicator", (side * 1.1, half_len - 0.01, 1.14), (0.08, 0.04, 0.14), "warning")
+    cube("Bumper", (0, 3.08, 0.725), (2.36, 0.24, 0.35), "supplier_dark", 0.03)
+    cube("FrontPlate", (0, half_len + 0.005, 0.72), (0.4, 0.01, 0.12), "sign_white")
+    for side in (-1.0, 1.0):
+        # Doors: seam, handle, and the teal band carried over from the box.
+        cube("DoorSeam", (side * 1.152, 1.75, 1.75), (0.012, 0.015, 1.6), "supplier_dark")
+        cube("DoorHandle", (side * 1.155, 1.95, 1.7), (0.02, 0.16, 0.04), "supplier_dark")
+        _quad_x("CabStripe", side * 1.153, 1.6, 3.12, 1.32, 1.44, "supplier_teal", side)
+        # Mirrors on two arms ahead of the doors, glass toward the back.
+        rod("MirrorArm", (side * 1.13, 2.95, 2.35), (side * 1.4, 3.05, 2.35), 0.02, "supplier_dark", 4)
+        rod("MirrorArm", (side * 1.13, 2.95, 1.9), (side * 1.4, 3.05, 1.95), 0.02, "supplier_dark", 4)
+        cube("Mirror", (side * 1.43, 3.06, 2.15), (0.07, 0.14, 0.42), "supplier_dark", 0.02)
+        _quad_y("MirrorGlass", 2.988, side * 1.4, side * 1.46, 1.98, 2.32, "window", -1.0)
+        # Step under the door and the dark fender over the front wheel.
+        cube("Step", (side * 1.1, 1.68, 0.55), (0.22, 0.22, 0.05), "supplier_trim")
+        rod("StepHanger", (side * 1.1, 1.68, 0.57), (side * 1.06, 1.68, 0.9), 0.02, "supplier_dark", 4)
+        ring = arc(front_axle, wheel_r, 0.54, math.pi, 0.0, 6) + arc(front_axle, wheel_r, 0.46, 0.0, math.pi, 6)
+        flat_poly("Fender", ring, 0.82 if side > 0 else -1.18, 0.36, "supplier_dark", plane="yz")
+    _group(before, "Cab")
+
+    # --- Wheels and axles ------------------------------------------------------
+    before = _snapshot()
+    for y in axles:
+        rod("Axle", (-0.85, y, wheel_r), (0.85, y, wheel_r), 0.06, "supplier_dark", 6)
+        if y < 0.0:
+            cube("Differential", (0, y, wheel_r), (0.3, 0.3, 0.28), "supplier_dark")
+        for side in (-1.0, 1.0):
+            tyre = cylinder("Tyre", (side * wheel_x, y, wheel_r), wheel_r, wheel_w, "rubber", 12, rot=ALONG_X)
+            _drop_faces(tyre, (-side, 0.0, 0.0))  # the inner side is under the truck
+            _disc("Hub", (side * (wheel_x + wheel_w / 2.0 + 0.005), y, wheel_r), 0.2, 8, "supplier_trim",
+                  (side, 0.0, 0.0))
+            cylinder("HubNut", (side * (wheel_x + wheel_w / 2.0 + 0.02), y, wheel_r), 0.06, 0.04, "supplier_dark", 6,
+                     rot=ALONG_X)
+    _group(before, "Wheels")
+
+    # --- Lights: ONE "Light" mesh in "lamp" (LowpolyMaterials lights it at night)
+    lamps = [cube("Lamp", (side * 0.92, half_len + 0.0, 1.14), (0.3, 0.04, 0.15), "lamp") for side in (-1.0, 1.0)]
+    join(lamps, "Light")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    tails = [cube("Tail", (side * 1.13, rear - 0.01, 1.02), (0.12, 0.03, 0.24), "danger") for side in (-1.0, 1.0)]
+    join(tails, "TailLights")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    # --- Rear roll-up shutter: origin at its top edge, under the header -------
+    before = _snapshot()
+    door_w, door_top = 2.1, SUPPLIER_DOOR_PIVOT[2]
+    door_h = door_top - floor_top
+    cube("ShutterBack", (0, -3.15, floor_top + door_h / 2.0), (door_w, 0.012, door_h), "supplier_trim")
+    slats = 7
+    pitch = door_h / slats
+    for k in range(slats):
+        z0 = floor_top + k * pitch
+        cube("Slat", (0, -3.161, z0 + pitch / 2.0), (door_w, 0.012, pitch - 0.035),
+             "supplier_teal" if k == 2 else "supplier_shutter")
+    cube("ShutterBar", (0, -3.172, floor_top + 0.05), (door_w, 0.03, 0.1), "supplier_dark")
+    _quad_y("ShutterReflector", -3.188, -0.9, 0.9, floor_top + 0.03, floor_top + 0.07, "reflector", -1.0)
+    cube("ShutterHandle", (0, -3.19, floor_top + 0.16), (0.26, 0.03, 0.05), "supplier_dark")
+    door = _group(before, "RearDoor")
+    _pivot(door, SUPPLIER_DOOR_PIVOT)
+
+    done("vehicles/sm_vehicle_supplier_truck.glb")
+
+
 BUILDERS = {
     "cars": [hatchback, pickup],
     "crane": [tow_crane],
+    "supplier": [supplier_truck],
     "lamp": [street_lamp],
     "landmarks": [windmill, water_tower],
     "roadside": [mailbox, milestone, wooden_crate, traffic_cone],

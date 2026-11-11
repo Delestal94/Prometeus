@@ -18,30 +18,39 @@ const TAKE_IN_SECONDS: float = 0.3
 
 ## The carrier's pose, applied on the host's copy: `in_vehicle` puts it on the host's own truck (each peer's
 ## copy of the truck is a little behind the host's, and a world pose put the box a metre behind the hands at
-## speed). `sender` is the remote sender (0: a genuine local call). `in_hands`: the same pose in the carrier's
-## body space; on foot the other peers draw the box there on the carrier's body as they draw it (N-217,
-## PackageNetPose), seated it rides on the truck as before.
+## speed). `sender` is the remote sender (0: a genuine local call). Held by a Player on foot, carrier_peer_id
+## says who: every other peer draws the box in that player's hands as it draws them (N-217, PackageNetPose) and
+## its pose is muted meanwhile (D-2002.5); seated it rides on the truck with the host's poses, as before.
+## `vehicle_index`: which truck (space_of()).
 static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Transform3D, in_vehicle: bool,
-		in_hands: Transform3D = Transform3D.IDENTITY) -> void:
+		vehicle_index: int = -1) -> void:
 	if sender != 0 and (not is_instance_valid(p.carrier) or sender != p.carrier.get_multiplayer_authority()):
 		return
 	if not p.is_held:
 		return
-	var vehicle: Node3D = p._find_vehicle()
+	var vehicle: Node3D = space_of(p, in_vehicle, vehicle_index)
 	p._carry_in_vehicle = in_vehicle and vehicle != null
 	p._carry_pose = carry_transform
 	p.global_transform = vehicle.global_transform * carry_transform if p._carry_in_vehicle else carry_transform
-	var on_foot: bool = is_instance_valid(p.carrier) and (not p.carrier is Player
-			or (p.carrier as Player).seat_node_path.is_empty())
-	var follows: bool = on_foot and in_hands != Transform3D.IDENTITY
-	p.carrier_peer_id = int(p.carrier.get_multiplayer_authority()) if follows else 0
-	p.hold_offset = in_hands if p.carrier_peer_id > 0 else Transform3D.IDENTITY
+	var on_foot: bool = is_instance_valid(p.carrier) and p.carrier is Player \
+			and (p.carrier as Player).seat_node_path.is_empty()
+	p.carrier_peer_id = int(p.carrier.get_multiplayer_authority()) if on_foot else 0
+
+
+## The truck a carrier's pose `in_vehicle` is in (D-0302.2.b.4.b): the one it names, `vehicle_index` (its
+## VehiclePick.index_of(), with several vehicles), which becomes the box's own so the next ticks place it there too;
+## with none named (one truck, an index this peer lacks), the box's (_find_vehicle()).
+static func space_of(p: DeliveryPackage, in_vehicle: bool, vehicle_index: int) -> Node3D:
+	var named: Node3D = VehiclePick.at(p.get_tree(), vehicle_index) if in_vehicle and p.is_inside_tree() else null
+	if named != null:
+		p._vehicle = named
+		return named
+	return p._find_vehicle()
 
 
 static func set_held(p: DeliveryPackage, held: bool) -> void:
 	p.is_held = held
 	p.carrier_peer_id = 0
-	p.hold_offset = Transform3D.IDENTITY
 	# Re-applied every tick while held (package.gd): until the carrier's first pose, where it is.
 	p._carry_pose = p.global_transform
 	p._carry_in_vehicle = false
@@ -95,6 +104,9 @@ static func transfer(p: DeliveryPackage, sender_id: int, recipient_path: NodePat
 	var recipient: Player = p.get_node_or_null(recipient_path) as Player if RpcGuard.path_ok(recipient_path) else null
 	if recipient == null or recipient == p.carrier or recipient.carried_package != null:
 		return
+	# Somebody driving on foot (the shed's forklift, meta `driving`) has their hands on it: no box.
+	if recipient.has_meta(&"driving"):
+		return
 	if DeliveryPackage._reach_origin(recipient).distance_to(DeliveryPackage._reach_origin(p.carrier)) \
 			> TRANSFER_REACH + p.reach_slack(sender_id):
 		return
@@ -109,11 +121,12 @@ static func transfer(p: DeliveryPackage, sender_id: int, recipient_path: NodePat
 ## `in_vehicle` as in accept_carry(): set down in the truck, it's placed on
 ## the host's truck and starts out moving with it.
 ## `sender_id`: the remote sender (0: a genuine local call), checked against the carrier here.
-static func drop(p: DeliveryPackage, sender_id: int, drop_transform: Transform3D, in_vehicle: bool) -> void:
+static func drop(p: DeliveryPackage, sender_id: int, drop_transform: Transform3D, in_vehicle: bool,
+		vehicle_index: int = -1) -> void:
 	if sender_id != 0 and p.carrier != null and int(p.carrier.get_multiplayer_authority()) != sender_id:
 		return
 	release_carrier(p)
-	var vehicle: Node3D = p._find_vehicle()
+	var vehicle: Node3D = space_of(p, in_vehicle, vehicle_index)
 	p.global_transform = vehicle.global_transform * drop_transform if in_vehicle and vehicle != null \
 			else drop_transform
 	p.reset_physics_interpolation()
@@ -157,7 +170,8 @@ static func place_at(p: DeliveryPackage, mount: Node3D, mount_point: Node) -> vo
 	p.current_mount_path = (mount_point if mount_point != null else mount).get_path()
 	# Frozen while loading, until level_base.gd starts the run. A box put back
 	# mid-run has to ride physically like the rest, not stay glued to the shelf.
-	p.freeze = not p._is_run_active()
+	# So does one on a vehicle that drives with no run to start (rack_drives()).
+	p.freeze = not p._is_run_active() and not rack_drives(mount)
 	ride_along_if_aboard(p)
 	p._emit_event(&"package_placed", [p.package_id])
 	if p._rescue_pending:
@@ -165,11 +179,20 @@ static func place_at(p: DeliveryPackage, mount: Node3D, mount_point: Node) -> vo
 		p._award_milestone(p._last_holder_peer, &"rescued")
 
 
+## Whether `mount` is on a vehicle that drives outside a delivery run (the company's fleet, CompanyFleet): no run
+## will thaw a box there, and frozen it stays in the air when the van leaves (D-0302.2.b.3).
+static func rack_drives(mount: Node3D) -> bool:
+	var body: Node = mount.owner
+	return body != null and body.is_in_group(CompanyTrips.VEHICLE_GROUP)
+
+
 ## A resident took the box at the door. Its carrier's hands have to empty on
 ## every peer before the node goes away, or they keep "holding" a freed box.
 ##
 ## With `hand_over_at` (the resident at the door) it doesn't just vanish: see play_consume().
 static func consume(p: DeliveryPackage, hand_over_at: Variant) -> void:
+	# Before the broadcast: whatever hides the box from a far peer lets it go, or that peer keeps it.
+	p.consuming.emit()
 	release_carrier(p)
 	release_mount(p)
 	# It's a scene node, not a spawned one: freeing it here never reached the

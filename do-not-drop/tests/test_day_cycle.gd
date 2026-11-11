@@ -29,6 +29,12 @@ extends SceneTree
 ##   stopped.
 ## - A day_phase the state refuses doesn't start the clock (open_day) and isn't retried at every
 ##   poll (a back-off of RETRY_MSEC).
+## - D-0253: the host closes the day at noon (DayCycle.close_early(), through DayClose): CLOSING at
+##   once by the same transition as 20:00, one event and company_day_closing once, no planned order
+##   comes in after it, a trip out still holds the summary and SUMMARY follows; in IDLE, OPENING,
+##   CLOSING or SUMMARY it does nothing, and on a client it does nothing either (the pause button is
+##   off with "the host closes it"). The exits warn that leaving loses the day only on the host in
+##   OPERATING or CLOSING.
 ## - Malformed day_phase data (event or snapshot part) is refused and changes nothing.
 ## Expected in the log: CompanyNet's three warnings (a day_phase with no day cycle on the net) and
 ## two errors (the host could not apply its own day_phase).
@@ -78,6 +84,7 @@ func _run() -> void:
 	await _check_solo()
 	_check_big_summary()
 	_check_refused_phase()
+	_check_close_early()
 	await _check_two_peers()
 	if _failures == 0:
 		print("PASS: the day goes OPENING, OPERATING, CLOSING, SUMMARY from the host, a trip out holds the"
@@ -210,6 +217,73 @@ func _check_solo() -> void:
 	_check_bad_data(net)
 	parts["side"].free()
 
+
+## D-0253: the host closes the day at noon. CLOSING by the same transition as 20:00, no order comes in
+## after it, a trip out holds the summary, and SUMMARY follows; outside OPERATING it does nothing.
+func _check_close_early() -> void:
+	_started.clear()
+	_closing.clear()
+	_summaries.clear()
+	_trips = 0
+	_inside = true
+	var state: Node = _new_state("Temprano SRL")
+	var parts: Dictionary = _new_side("EarlySide", state)
+	parts["side"].add_child(state)
+	var net: CompanyNet = parts["net"]
+	var clock: GameClock = parts["clock"]
+	var cycle: DayCycle = parts["cycle"]
+	net.inventory = Inventory.new()
+	cycle.trips_out = func() -> int: return _trips
+	_expect(not cycle.close_early() and not DayClose.can_close(cycle) and net.seq == 0,
+		"close_early() before a day opens does nothing (seq %d)" % net.seq)
+	_expect(clock.set_speed(SPEED) and cycle.open_day(1), "The host opens day 1 and the clock runs x100")
+	var seq: int = net.seq
+	_expect(not cycle.close_early() and cycle.phase() == DayCycle.Phase.OPENING and net.seq == seq
+		and not DayClose.exit_loses_day(cycle),
+		"In OPENING close_early() is refused, sends nothing and leaving loses nothing yet")
+	var planned: int = CompanyDayOrders.plan(net, state, 1, 2)
+	_advance(cycle, 5.0)
+	var noon: float = clock.minute_now()
+	var due: int = 0
+	for order: Dictionary in net.orders.planned():
+		if int(order.get("created_min", 99999)) <= floori(cycle.shed_minute()):
+			due += 1
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING and noon < float(CompanyTuning.DAY_END_MIN)
+		and planned > 0 and due > 0 and net.orders.book.size() == 0,
+		"Day 1 is OPERATING at %.0f min with %d of %d planned orders due and none taken in yet"
+		% [noon, due, planned])
+	var button: Dictionary = DayClose.button(cycle)
+	_expect(DayClose.can_close(cycle) and button["enabled"] and String(button["hint"]).is_empty()
+		and button["text"] == tr(DayClose.BUTTON_KEY) and button["confirm"] == tr(DayClose.CONFIRM_KEY),
+		"The host's pause button is on, with its text and confirmation (got %s)" % [button])
+	_expect(DayClose.exit_loses_day(cycle) and DayClose.exit_warning(cycle) == tr(DayClose.EXIT_WARNING_KEY)
+		and not DayClose.exit_warning(cycle).is_empty(),
+		"...and the exits warn that leaving loses the day")
+	_trips = 1
+	seq = net.seq
+	_expect(DayClose.close(cycle) and cycle.phase() == DayCycle.Phase.CLOSING and net.seq == seq + 1,
+		"Closing the day at noon is CLOSING at once, as one day_phase event (got %s, seq +%d)"
+		% [cycle.phase_name(), net.seq - seq])
+	_expect(_closing == [1] and clock.minute_now() < float(CompanyTuning.DAY_END_MIN) and not clock.is_paused(),
+		"...company_day_closing(1) once, long before 20:00, the clock still running (%.0f min)" % clock.minute_now())
+	_expect(not cycle.close_early() and not DayClose.can_close(cycle) and net.seq == seq + 1,
+		"Closing it again does nothing")
+	_expect(DayClose.exit_loses_day(cycle), "In CLOSING leaving still loses the day")
+	_expect(CompanyDayOrders.poll(net, cycle) == 0 and net.orders.book.size() == 0,
+		"No order comes in once the day is closing (book %d)" % net.orders.book.size())
+	_advance(cycle, 1.0)
+	_expect(cycle.phase() == DayCycle.Phase.CLOSING and _summaries.is_empty(),
+		"A trip out holds the summary (got %s)" % cycle.phase_name())
+	_trips = 0
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and _summaries.size() == 1 and _summaries[0][0] == 1
+		and clock.is_paused(),
+		"The trip back, the summary of day 1 follows and stops the clock (got %s)" % cycle.phase_name())
+	_expect(not cycle.close_early() and not DayClose.exit_loses_day(cycle),
+		"In SUMMARY close_early() does nothing and leaving loses nothing")
+	_expect(not DayClose.can_close(null) and not DayClose.close(null) and DayClose.exit_warning(null).is_empty(),
+		"Without a day cycle nothing closes and nothing is warned")
+	parts["side"].free()
 
 ## A day with 41 distinct reasons of cost, one of them 80 characters long.
 func _check_big_summary() -> void:
@@ -531,6 +605,14 @@ func _check_peers_follow(client_side: Node) -> void:
 		"...its company has the host's day (got %s)" % _client_state.get(&"day"))
 	_expect(not _client_cycle.open_day(1) and not _client_cycle.next_day(),
 		"A client can't open the day or move it on")
+	var client_button: Dictionary = DayClose.button(_client_cycle)
+	_expect(not _client_cycle.close_early() and not DayClose.close(_client_cycle)
+		and _client_cycle.phase() == DayCycle.Phase.OPERATING and _host_net.seq == _client_net.seq,
+		"A client can't close the day early (D-0253), and nothing is sent (seq %d)" % _client_net.seq)
+	_expect(not client_button["enabled"] and client_button["hint"] == tr(DayClose.HOST_ONLY_KEY)
+		and DayClose.exit_warning(_client_cycle).is_empty(),
+		"...its pause button is off with \"the host closes it\" and its exits warn of nothing (got %s)"
+		% [client_button])
 	_client_cycle.poll()
 	_now += 1_000
 	_client_cycle.poll()

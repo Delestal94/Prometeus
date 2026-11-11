@@ -15,18 +15,22 @@ extends SceneTree
 ##   without the key and a key that isn't a JSON true load unchanged (clock kept); save() never
 ##   overwrites a file from a newer build;
 ## - a host CompanyRoot (solo) that comes up with no company loads its slot first: a new company only
-##   when the slot is empty or corrupt (kept as .bad), the saved one when there is one (an interrupted
-##   day from the opening), and over a newer build's file it plays a new company that is never saved,
-##   not even when it comes up again with that company still on;
+##   when the slot is empty or corrupt (kept as .bad), saving its day 1 opening at once (D-0251), the
+##   saved one when there is one (an interrupted day from the opening; leaving marks that opening
+##   again, keeps nothing played on it and puts the company in play back to it), and over a newer
+##   build's file it plays a new company that is never saved, not even when it comes up again with
+##   that company still on;
 ## - CompanyRoot.stock_for_save() puts what every hands:<peer> held in SAVED_HANDS_LOCATION, totals and
-##   reservations unchanged, without touching the stock it copies;
+##   reservations as a save keeps them (the same totals, nothing reserved: D-0252; the floor, boxes and
+##   packages are test_company_save_stock's), without touching the stock it copies;
 ## - two ENet peers in one process, each with a CompanyRoot (its world left out): the host plays day 2
 ##   (11:15, money and stock moved by events), the client mirrors it (snapshot, then events) and takes
-##   3 hens in its hands. The host leaves (its session closes, its world goes): the host's world saves
-##   the day as it stood at the last applied event, interrupted, with every hand emptied onto the
-##   floor; the client, on server_disconnected, keeps a summary with the host's day, clock, money,
-##   today's income and costs and the live units, gets its own company back, stops its world and
-##   loads the main menu, which shows that summary once, all without an engine error;
+##   3 hens in its hands. The host leaves (its session closes, its world goes): the host's world marks
+##   interrupted the opening it saved when it came up, and loading it gives that opening (day 2, 805,
+##   10 hens on the dock) without the day's moves (D-0251); the client, on server_disconnected, keeps a
+##   summary with the host's day, clock, money, today's income and costs and the live units, gets its
+##   own company back, stops its world and loads the main menu, which shows that summary once, all
+##   without an engine error;
 ## - a client whose session fails with no server_disconnected (NetworkManager.session_failed, a
 ##   handshake that times out) does the same: summary, its own company back, world stopped, menu.
 ## - the same with a live GameClock and DayCycle in both worlds (D-0203): the host opens the day, the
@@ -283,7 +287,10 @@ func _check_load_on_entry() -> void:
 	_expect(bool(state.call(&"is_active")) and state.get(&"money") == CompanyTuning.STARTING_MONEY,
 		"An empty slot: the root starts a new company (money %s)" % state.get(&"money"))
 	await _leave(fresh)
-	_expect(CompanySave.was_interrupted("entry", DIR), "...and leaving saves it, interrupted")
+	var opened: Dictionary = _raw("entry").get("company", {})
+	_expect(CompanySave.exists("entry", DIR) and int(opened.get("day", 0)) == 1,
+		"...whose day 1 opening it saves as it comes up (D-0251)")
+	_expect(CompanySave.was_interrupted("entry", DIR), "...and leaving marks it interrupted")
 
 	var saved := _new_state()
 	saved.call(&"new_company", "Saved SRL")
@@ -301,8 +308,11 @@ func _check_load_on_entry() -> void:
 			state.get(&"clock_minutes")])
 	state.call(&"earn", 10, &"tip")
 	await _leave(resumed)
-	_expect(int((_raw("entry").get("company", {}) as Dictionary).get("money", 0)) == 1244,
-		"...and leaving saves what was played on it (money 1244)")
+	_expect(int((_raw("entry").get("company", {}) as Dictionary).get("money", 0)) == 1234
+		and CompanySave.was_interrupted("entry", DIR),
+		"...and leaving keeps that opening, not what was played on it (money 1234, D-0251)")
+	_expect(state.get(&"money") == 1234 and state.get(&"clock_minutes") == CompanyTuning.DAY_START_MIN,
+		"...and the company in play goes back to it (money %s)" % state.get(&"money"))
 
 	_write(path, "{ not json")
 	state.call(&"reset")
@@ -344,9 +354,12 @@ func _check_stock_for_save() -> void:
 		and kept.count(&"puppy", CompanyRoot.SAVED_HANDS_LOCATION) == 3
 		and kept.contents_at(&"hands:1").is_empty() and kept.contents_at(&"hands:7").is_empty(),
 		"Every hand's units lie in %s (got %s)" % [CompanyRoot.SAVED_HANDS_LOCATION, kept.to_dict()])
-	_expect(kept.total_units() == live.total_units() and kept.count(&"hen", &"dock") == 4
-		and kept.reserved_by(&"order_9") == {&"hen": 2},
-		"...the rest, the totals and the reservations unchanged")
+	_expect(kept.total_units() == live.total_units() and kept.count(&"hen", &"dock") == 4,
+		"...the rest and the totals unchanged")
+	_expect(kept.reserved_by(&"order_9").is_empty() and (kept.to_dict()["reserved"] as Dictionary).is_empty()
+		and live.reserved_by(&"order_9") == {&"hen": 2},
+		"...and nothing reserved in the copy (D-0252), the live reservation kept (got %s)"
+		% [kept.to_dict()["reserved"]])
 
 
 func _check_host_leaves() -> void:
@@ -465,11 +478,14 @@ func _check_host_leaves() -> void:
 	await _check_menu_shows(in_menu, seen)
 
 	_expect(CompanySave.was_interrupted(SLOT, DIR),
-		"The host's world saved the day as interrupted when it closed")
+		"The host's world marked the day as interrupted when it closed")
 	var saved: Dictionary = _raw(SLOT).get("company", {})
-	_expect(int(saved.get("day", 0)) == 2 and int(saved.get("clock_minutes", 0)) == CLOCK_MID_DAY
-		and int(saved.get("money", 0)) == 805,
-		"...as it stood: day 2 at 11:15 with 805 (got %s)" % [saved])
+	var saved_stock := Inventory.new()
+	saved_stock.from_dict(saved.get("inventory", {}))
+	_expect(int(saved.get("day", 0)) == 2 and int(saved.get("money", 0)) == 805
+		and saved_stock.count(&"hen", &"dock") == 10 and saved_stock.total_units() == 10,
+		"...over the opening it saved when it came up: day 2 with 805, the 10 hens on the dock (got %s)"
+		% [saved])
 	var reloaded: Node = _new_state()
 	var result: CompanySave.LoadResult = CompanySave.load_into(reloaded, SLOT, DIR)
 	var reloaded_stock: Inventory = reloaded.call(&"stock")
@@ -478,10 +494,10 @@ func _check_host_leaves() -> void:
 		and reloaded.get(&"money") == 805,
 		"Loading the host's save starts day 2 from the opening with 805 (day %s, clock %s)"
 		% [reloaded.get(&"day"), reloaded.get(&"clock_minutes")])
-	_expect(reloaded_stock.total_units() == host_stock.total_units()
-		and reloaded_stock.count(&"hen", &"cart:c1") == host_stock.count(&"hen", &"cart:c1")
-		and reloaded_stock.count(&"hen", CompanyRoot.SAVED_HANDS_LOCATION) == 5,
-		"...and the stock at the last applied event, the 5 hens in hands on the floor (%s)"
+	_expect(reloaded_stock.count(&"hen", &"dock") == 10 and reloaded_stock.total_units() == 10
+		and reloaded_stock.count(&"hen", &"cart:c1") == 0
+		and reloaded_stock.count(&"hen", CompanyRoot.SAVED_HANDS_LOCATION) == 0,
+		"...and the opening's stock: nothing of the day's moves reached the save (D-0251) (%s)"
 		% [reloaded_stock.to_dict()])
 	_expect(reloaded_stock.contents_at(client_hands).is_empty()
 		and reloaded_stock.contents_at(CompanyNet.hands_location(1)).is_empty(),

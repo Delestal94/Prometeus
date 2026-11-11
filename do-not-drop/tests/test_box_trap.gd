@@ -3,7 +3,8 @@ extends SceneTree
 ##
 ## Packing quality to trap intensity (expansion D-0710, box_trap.gd), for an order of one porcelain
 ## vase (examples 1-3 of diseno/armado-y-trampas.md):
-## - intensity is 1 - quality / 100 and stays inside 0..1;
+## - intensity is 1 - quality / 100 and stays inside 0..1; quality 90 is exactly mid and 75 exactly high
+##   (the subtraction alone gives 0.09999999999999998 at 90);
 ## - glass in an M box with every gap padded: fragile, quality 100, intensity 0, low;
 ## - the same unpadded: quality 68.33, intensity 0.317, high, plus a low Balance (0.3);
 ## - 10 of 19 gaps padded: quality 85, intensity 0.15, mid, no extra trap;
@@ -43,6 +44,11 @@ func _test_formula() -> void:
 	_expect(BoxTrap.level(0.0) == BoxTrap.LEVEL_LOW, "0 is low")
 	_expect(BoxTrap.level(0.15) == BoxTrap.LEVEL_MID, "0.15 is mid")
 	_expect(BoxTrap.level(0.3) == BoxTrap.LEVEL_HIGH, "0.3 is high")
+	_expect(BoxTrap.level(BoxTrap.intensity(90.1)) == BoxTrap.LEVEL_LOW, "just over quality 90 is low")
+	_expect(BoxTrap.level(BoxTrap.intensity(90.0)) == BoxTrap.LEVEL_MID, "quality 90 is mid, the edge is not low")
+	_expect(BoxTrap.intensity(90.0) >= CompanyTuning.TRAP_INTENSITY_MID, "quality 90 is no clean seal (PackingVfx)")
+	_expect(BoxTrap.level(BoxTrap.intensity(75.1)) == BoxTrap.LEVEL_MID, "just over quality 75 is mid")
+	_expect(BoxTrap.level(BoxTrap.intensity(75.0)) == BoxTrap.LEVEL_HIGH, "quality 75 is high")
 
 
 func _test_glass(order: Dictionary, products: Dictionary) -> void:

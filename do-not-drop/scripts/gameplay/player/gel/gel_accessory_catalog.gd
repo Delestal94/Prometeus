@@ -1,6 +1,6 @@
 class_name GelAccessoryCatalog
 extends RefCounted
-## Stable IDs and attachment intent for the fifteen loose accessories (S-311.72).
+## Stable IDs and attachment intent for the sixteen loose accessories (S-311.72, S-305).
 ## Unlocks and profile selection intentionally belong to S-311.76.
 
 const DEFAULT_ID: StringName = &"cap"
@@ -36,6 +36,8 @@ const ACCESSORIES: Array[Dictionary] = [
 		&"color": Color("264653"), &"accent": Color("2a9d8f"), &"hat_rule": &"none"},
 	{&"id": &"fairy_wings", &"signature": &"wing_core", &"anchor": &"back", &"bone": &"chest",
 		&"color": Color("b8f2e6"), &"accent": Color("aed9e0"), &"hat_rule": &"none"},
+	{&"id": &"reflective_vest", &"signature": &"vest_stripe", &"anchor": &"torso", &"bone": &"chest",
+		&"color": Color("e8ff3a"), &"accent": Color("c9d1d9"), &"hat_rule": &"none"},
 ]
 
 

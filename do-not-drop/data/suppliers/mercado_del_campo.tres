@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SupplierDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/supplier_definition.gd" id="1_supplier"]
+
+[resource]
+script = ExtResource("1_supplier")
+id = &"mercado_del_campo"
+products = Array[StringName]([&"hen", &"milk_canister", &"puppy", &"raccoon_cage", &"sourdough"])
+price_factor = 0.9
+arrival_min = 450
+wait_minutes = 120

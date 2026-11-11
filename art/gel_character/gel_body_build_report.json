@@ -10,10 +10,52 @@
       "PickUpPackage": 1.6,
       "PickUpHigh": 1.6,
       "Sit": 4.0,
-      "TurnInPlace": 0.8
+      "TurnInPlace": 0.8,
+      "CarryWalk": 0.3333333333333333,
+      "ThrowPackage": 1.0,
+      "DropPackage": 0.9,
+      "Drive": 2.0,
+      "EnterTruck": 1.2,
+      "ExitTruck": 1.2,
+      "RingDoorbell": 1.1,
+      "Stumble": 1.2,
+      "Slip": 1.3,
+      "Pushed": 0.9,
+      "BoxHit": 0.8,
+      "Scared": 1.0,
+      "Dizzy": 2.4,
+      "ShakeOffWater": 1.8,
+      "Wave": 2.2,
+      "Clap": 2.4,
+      "Facepalm": 2.2,
+      "Shrug": 2.0,
+      "Point": 2.0,
+      "ThumbsUp": 2.0,
+      "MeltAndReturn": 3.0,
+      "ShakeLikeDog": 1.8,
+      "Pancake": 2.4,
+      "GumStretch": 2.8,
+      "BallBounce": 2.4,
+      "SplitAndJoin": 3.2,
+      "ColdShiver": 2.0,
+      "Inflate": 2.8,
+      "InspectHand": 3.4,
+      "BlowBubble": 3.2,
+      "IdleBounce": 2.6,
+      "SimpleStep": 2.4,
+      "Robot": 2.4,
+      "Disco": 2.8,
+      "FloorWorm": 3.2,
+      "Headbang": 1.6,
+      "VictoryDance": 2.8,
+      "Defeat": 3.0,
+      "Flan": 2.4,
+      "Conga": 2.4
     },
     "maximum_rotation_error_radians": 0.0,
-    "maximum_bone_length_error_m": 3.4480758515087473e-07,
+    "maximum_deformed_rotation_error_radians": 0.3083655536174774,
+    "maximum_bone_length_error_m": 3.8222786719055435e-07,
+    "maximum_deformed_bone_length_delta_m": 0.21488751607212497,
     "maximum_unreachable_endpoint_m": 0.0,
     "maximum_unreachable_endpoint_by_clip": {
       "Idle": {
@@ -51,13 +93,183 @@
       "TurnInPlace": {
         "distance_m": 0.0,
         "time_s": 0.0
+      },
+      "CarryWalk": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ThrowPackage": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "DropPackage": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Drive": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "EnterTruck": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ExitTruck": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "RingDoorbell": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Stumble": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Slip": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Pushed": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "BoxHit": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Scared": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Dizzy": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ShakeOffWater": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Wave": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Clap": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Facepalm": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Shrug": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Point": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ThumbsUp": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "MeltAndReturn": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ShakeLikeDog": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Pancake": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "GumStretch": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "BallBounce": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "SplitAndJoin": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "ColdShiver": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Inflate": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "InspectHand": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "BlowBubble": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "IdleBounce": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "SimpleStep": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Robot": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Disco": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "FloorWorm": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Headbang": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "VictoryDance": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Defeat": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Flan": {
+        "distance_m": 0.0,
+        "time_s": 0.0
+      },
+      "Conga": {
+        "distance_m": 0.0,
+        "time_s": 0.0
       }
     },
-    "maximum_chain_attachment_error_m": 3.21326533747432e-07,
+    "maximum_chain_attachment_error_m": 3.694053160340814e-07,
     "maximum_ankle_goal_error_m": 1.1567869294553018e-06,
-    "maximum_interaction_grip_error_m": 7.731391055031327e-07,
+    "maximum_interaction_grip_error_m": 7.86239263908441e-07,
     "maximum_pelvis_adjustment_m": 0.0,
-    "endpoint_measurement": "baked keyframes; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous interpolation certification",
+    "curve_review": {
+      "sample_rate_hz": 60,
+      "source_interpolation": "BEZIER",
+      "handle_type": "AUTO_CLAMPED",
+      "linear_keyframes": 0,
+      "curves": 7340,
+      "keyframes": 916460,
+      "export_sampling": "forced at authored 60 Hz for deterministic glTF playback",
+      "scope": "sub-frame continuity; finite visual captures remain the arc and overlap review"
+    },
+    "endpoint_measurement": "baked 60 Hz keyframes with auto-clamped sub-frame curves; all ankle targets; Sit grips and pickup grips from 0.42 seconds onward; no continuous-space collision certification",
     "foot_joint_height_ranges_m": {
       "Idle": [
         0.15999871492385864,
@@ -94,6 +306,166 @@
       "TurnInPlace": [
         0.15999817848205566,
         0.24696144461631775
+      ],
+      "CarryWalk": [
+        0.15996965765953064,
+        0.30476877093315125
+      ],
+      "ThrowPackage": [
+        0.15999482572078705,
+        0.17593780159950256
+      ],
+      "DropPackage": [
+        0.15999425947666168,
+        0.15999923646450043
+      ],
+      "Drive": [
+        -0.05749921873211861,
+        0.006886477582156658
+      ],
+      "EnterTruck": [
+        -0.05749913305044174,
+        0.1599990278482437
+      ],
+      "ExitTruck": [
+        -0.05749913305044174,
+        0.1599990278482437
+      ],
+      "RingDoorbell": [
+        0.1599988341331482,
+        0.15999926626682281
+      ],
+      "Stumble": [
+        0.15999732911586761,
+        0.22489504516124725
+      ],
+      "Slip": [
+        0.1599951833486557,
+        0.23991245031356812
+      ],
+      "Pushed": [
+        0.15999723970890045,
+        0.19993063807487488
+      ],
+      "BoxHit": [
+        0.159988671541214,
+        0.15999920666217804
+      ],
+      "Scared": [
+        0.1599659025669098,
+        0.15999916195869446
+      ],
+      "Dizzy": [
+        0.15999816358089447,
+        0.1599997580051422
+      ],
+      "ShakeOffWater": [
+        0.1599985808134079,
+        0.15999944508075714
+      ],
+      "Wave": [
+        0.15999895334243774,
+        0.1599990278482437
+      ],
+      "Clap": [
+        0.1599985659122467,
+        0.15999923646450043
+      ],
+      "Facepalm": [
+        0.15999718010425568,
+        0.15999919176101685
+      ],
+      "Shrug": [
+        0.15999820828437805,
+        0.15999926626682281
+      ],
+      "Point": [
+        0.1599988043308258,
+        0.15999934077262878
+      ],
+      "ThumbsUp": [
+        0.15999895334243774,
+        0.1599990278482437
+      ],
+      "MeltAndReturn": [
+        -0.21500088274478912,
+        0.1599990278482437
+      ],
+      "ShakeLikeDog": [
+        0.1599971354007721,
+        0.15999943017959595
+      ],
+      "Pancake": [
+        0.1599946916103363,
+        0.1599993109703064
+      ],
+      "GumStretch": [
+        0.15999877452850342,
+        0.15999937057495117
+      ],
+      "BallBounce": [
+        0.15999814867973328,
+        0.3847082853317261
+      ],
+      "SplitAndJoin": [
+        0.15999533236026764,
+        0.15999935567378998
+      ],
+      "ColdShiver": [
+        0.15999825298786163,
+        0.15999926626682281
+      ],
+      "Inflate": [
+        0.1599987894296646,
+        0.15999968349933624
+      ],
+      "InspectHand": [
+        0.159998819231987,
+        0.1599992960691452
+      ],
+      "BlowBubble": [
+        0.15999850630760193,
+        0.1599993258714676
+      ],
+      "IdleBounce": [
+        0.15999820828437805,
+        0.2999874949455261
+      ],
+      "SimpleStep": [
+        0.1599990278482437,
+        0.2199772745370865
+      ],
+      "Robot": [
+        0.15999819338321686,
+        0.17749528586864471
+      ],
+      "Disco": [
+        0.15999895334243774,
+        0.1949925720691681
+      ],
+      "FloorWorm": [
+        -0.08002069592475891,
+        -0.040005724877119064
+      ],
+      "Headbang": [
+        0.15996646881103516,
+        0.15999844670295715
+      ],
+      "VictoryDance": [
+        0.15999837219715118,
+        0.24999932944774628
+      ],
+      "Defeat": [
+        0.15999001264572144,
+        0.159995898604393
+      ],
+      "Flan": [
+        0.1599966585636139,
+        0.17249944806098938
+      ],
+      "Conga": [
+        0.15999865531921387,
+        0.21497689187526703
       ]
     },
     "foot_plant_status": "joint ranges measured; deformed sole contact requires independent pose capture",
@@ -245,7 +617,7 @@
     },
     {
       "name": "GelBodyLOD1",
-      "vertices": 1126,
+      "vertices": 1136,
       "measured_proportions": {
         "height_m": 1.7549998760710537,
         "head_diameter_m": 0.4874519407749176,
@@ -257,9 +629,9 @@
         "flat_sole_vertices": 12,
         "flat_sole_depth_m": 0.15885205706581473
       },
-      "triangles": 2248,
-      "geometry_sha256": "6b95ddb9d742c838edd01453d911ddd78d476fde3d7335969eaf6fe98c31a0af",
-      "morph_sha256": "5fe82392450ce22abe7d5efa4b78c6ccd50df99fc0b876eec078420167198713",
+      "triangles": 2268,
+      "geometry_sha256": "d0a99392644327e8af2b5813188dc9eef13fa52d290e14ecc8da90d10ec6fcc6",
+      "morph_sha256": "d5938ca8162b6de495f38631a2aedf2d478014f32a25ed08210260ee9ed69329",
       "body_shape": {
         "lod_index": 1,
         "contract": {
@@ -307,8 +679,8 @@
         "surface": {
           "boundary_or_nonmanifold_edges": 0,
           "connected_components": 1,
-          "smooth_faces": 1124,
-          "faces": 1124
+          "smooth_faces": 1134,
+          "faces": 1134
         },
         "transitions": {
           "neck_shoulders": {
@@ -324,8 +696,8 @@
         }
       },
       "authoring_topology": {
-        "faces": 1124,
-        "quad_faces": 1124,
+        "faces": 1134,
+        "quad_faces": 1134,
         "joint_contract": {
           "minimum_bilateral_loops": 2,
           "minimum_neck_loops": 1,
@@ -381,7 +753,7 @@
             "minimum_loop_vertices": 10,
             "nearest_loop_distance_m": 0.003511991500854572,
             "maximum_vertex_valence": 5,
-            "morph_extremes_edge_aspect_p90": 2.787441539775584
+            "morph_extremes_edge_aspect_p90": 2.770583171743068
           }
         }
       }
@@ -393,7 +765,7 @@
         "height_m": 1.7549998760710537,
         "head_diameter_m": 0.4874519407749176,
         "arm_shoulder_to_hand_m": 0.648615026473999,
-        "torso_waist_width_m": 0.4191860109567642,
+        "torso_waist_width_m": 0.40355223417282104,
         "foot_width_m": 0.25846489518880844,
         "foot_forward_reach_m": 0.19561456143856049,
         "foot_depth_m": 0.24271920323371887,
@@ -401,8 +773,8 @@
         "flat_sole_depth_m": 0.15885205706581473
       },
       "triangles": 794,
-      "geometry_sha256": "ccb0e83198d30287b642af72564174a3cdc1d03ca26ecf62b65d1f2d47b988f9",
-      "morph_sha256": "7d2df0e9a1aa3af307ae1f7a400285e7c203ef5f5255a763781cfec034400f66",
+      "geometry_sha256": "ea5dad94e68b85dfefcd4b67d430ac10a367e41a55bb54518f21eb8220ee13e5",
+      "morph_sha256": "eda4a27692d49f1a60645ea7b467f101646f70775dbe1d5b935511d250303b55",
       "body_shape": {
         "lod_index": 2,
         "contract": {
@@ -455,14 +827,14 @@
         },
         "transitions": {
           "neck_shoulders": {
-            "adjacent_face_angle_p95_degrees": 50.57495966881852,
+            "adjacent_face_angle_p95_degrees": 54.16878047823,
             "maximum_adjacent_face_angle_degrees": 65.15973755750314,
-            "sampled_edges": 239
+            "sampled_edges": 226
           },
           "torso_legs": {
-            "adjacent_face_angle_p95_degrees": 51.69898796088563,
+            "adjacent_face_angle_p95_degrees": 53.69575244832536,
             "maximum_adjacent_face_angle_degrees": 61.97724724893338,
-            "sampled_edges": 169
+            "sampled_edges": 154
           }
         }
       }

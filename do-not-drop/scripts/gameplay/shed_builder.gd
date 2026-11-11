@@ -55,6 +55,9 @@ var shed: CompanyShed
 var net: CompanyNet
 ## The player kept still while building (its input is off until the mode ends).
 var player: Node3D
+## Returns true while another screen owns the input (the supplier order screen, D-0603.b.2): the mode does not
+## start then. Unset, nothing blocks it.
+var busy: Callable = Callable()
 var camera: Camera3D
 var hint: Label
 
@@ -119,9 +122,12 @@ func is_building() -> bool:
 	return mode.active
 
 
-## Starts the mode on the shed's current floor. False when it was refused (BuildMode.last_refusal).
+## Starts the mode on the shed's current floor. False when it was refused (BuildMode.last_refusal) or
+## `busy` says another screen owns the input.
 func enter() -> bool:
 	if shed == null or net == null or net.company == null:
+		return false
+	if busy.is_valid() and bool(busy.call()):
 		return false
 	if not mode.enter(shed.grid, true):
 		return false
@@ -260,9 +266,15 @@ func _on_request_rejected(rid: int, reason: StringName) -> void:
 	_refresh()
 
 
-## A layout event arrived (ours or anyone's): the ghost and hint follow the new layout.
+## A layout event arrived (ours or anyone's): the ghost and hint follow the new layout. When the shed
+## grew (shed_expanded, D-0910.2; or an expansion bought in the shop), the cursor's grid and checks take
+## the new stage first.
 func _on_event_applied(_seq: int, kind: StringName, _data: Dictionary) -> void:
-	if mode.active and CompanyLayoutNet.EVENT_KINDS.has(kind):
+	if not mode.active or cursor == null:
+		return
+	if kind == CompanyLayoutNet.EXPANDED or kind == CompanyShopNet.BOUGHT:
+		WarehouseStages.apply_to(int(net.company.get(&"warehouse_stage")), cursor.placement, mode)
+	if CompanyLayoutNet.EVENT_KINDS.has(kind) or kind == CompanyShopNet.BOUGHT:
 		_refresh()
 
 
@@ -299,6 +311,9 @@ func _make_view() -> void:
 	_ghost = MeshInstance3D.new()
 	_ghost.name = "BuildGhost"
 	shed.add_child(_ghost)
+	# Under the shed, but not its drawing: every layout event redraws the shed and must keep them.
+	for node: Node in [camera, _grid, _ghost]:
+		node.add_to_group(CompanyShed.OVERLAY_GROUP)
 	var layer := CanvasLayer.new()
 	layer.name = "BuildHud"
 	add_child(layer)

@@ -89,11 +89,17 @@ func _refresh_seating(tree: SceneTree, force: bool) -> void:
 	_local_seat_path = NodePath()
 	var found_local: bool = false
 	for player: Node in tree.get_nodes_in_group(player_group):
-		var seat: NodePath = NodePath(player.get(&"seat_node_path"))
+		var seat: NodePath = _seat_of(player)
 		_seated_paths[seat] = true
 		if not found_local and player.has_method(&"is_local") and bool(player.call(&"is_local")):
 			found_local = true
 			_local_seat_path = seat
+
+
+## The seat a player sits in; empty for a node that has no `seat_node_path` (a stand-in, a prop in the group).
+static func _seat_of(player: Node) -> NodePath:
+	var raw: Variant = player.get(&"seat_node_path")
+	return NodePath(raw) if raw != null else NodePath()
 
 
 ## `force` looks at the players again even if this frame already did.
@@ -116,7 +122,7 @@ func _update_indicator(force: bool = true) -> void:
 ## Whether any player's replicated seat is this one (true on every peer).
 func is_occupied() -> bool:
 	for player: Node in get_tree().get_nodes_in_group(player_group):
-		if NodePath(player.get(&"seat_node_path")) == _own_seat_path:
+		if _seat_of(player) == _own_seat_path:
 			return true
 	return false
 
@@ -176,6 +182,24 @@ func release_occupant(peer_id: int) -> void:
 	if is_instance_valid(occupant) and int(occupant.get_multiplayer_authority()) == peer_id:
 		occupant = null
 	_on_released(peer_id)
+	_give_back_wheel(peer_id)
+
+
+## Host, on its own word: the seat is going away with its vehicle, so whoever
+## sits here is let go as release_occupant() does. No peer asked, so none of
+## its checks apply, and it works in the middle of another peer's RPC too.
+## The player gets up on their own peer.
+func vacate() -> void:
+	if not is_instance_valid(occupant):
+		occupant = null
+		return
+	var peer_id: int = int(occupant.get_multiplayer_authority())
+	occupant = null
+	_on_released(peer_id)
+	_give_back_wheel(peer_id)
+
+
+func _give_back_wheel(peer_id: int) -> void:
 	if role != &"driver":
 		return
 	var vehicle: Node = get_node_or_null(vehicle_path)

@@ -4,6 +4,11 @@ extends RefCounted
 
 const Proportions := preload("res://scripts/gameplay/player/gel/gel_body_proportions.gd")
 
+## Opt-in piece meta: scale the piece's x/z offset with its bone like its size (clothing worn over the torso).
+const SHELL_META: StringName = &"gel_fit_shell"
+## Rest height of the chest bone: the torso_length stretch of a shell piece pivots there.
+const SHELL_PIVOT_Y: float = 0.84
+
 var _pieces: Array[MeshInstance3D] = []
 var _base_transforms: Dictionary = {}
 var _last_values: Dictionary = {}
@@ -52,6 +57,12 @@ func apply(proportions: GelBodyProportions) -> bool:
 		var bone: StringName = piece.get_meta(&"gel_costume_bone")
 		var factors: Vector3 = _scale_for(bone, values)
 		var origin: Vector3 = _fit_origin(base.origin, bone, values)
+		if piece.has_meta(SHELL_META):
+			# A shell piece (S-305 vest) hangs off the torso surface: its offset grows with the body.
+			origin.x = base.origin.x * factors.x
+			origin.z = base.origin.z * factors.z
+			origin.y = (SHELL_PIVOT_Y + (base.origin.y - SHELL_PIVOT_Y) * float(values[&"torso_length"])) \
+				* float(values[&"total_height"])
 		piece.transform = Transform3D(base.basis.scaled_local(factors), origin)
 	_last_values = values.duplicate(true)
 	return true
@@ -69,9 +80,7 @@ func _scale_for(bone: StringName, values: Dictionary) -> Vector3:
 	var thickness: float = 1.0 + float(values[&"general_thickness"]) * 0.12
 	var result := Vector3(thickness, float(values[&"total_height"]), thickness)
 	if bone == &"head":
-		var head_width: float = 1.0 + float(values[&"head_shape"]) * 0.10
-		return Vector3(head_width, 1.0 - float(values[&"head_shape"]) * 0.07, head_width) \
-			* float(values[&"head_size"])
+		return GelFace.head_shape_axes(float(values[&"head_shape"])) * float(values[&"head_size"])
 	if bone == &"chest":
 		result.x *= 1.0 + float(values[&"shoulders"]) * 0.14
 		result.z *= 1.0 + float(values[&"chest"]) * 0.16 + float(values[&"belly"]) * 0.08
@@ -94,6 +103,10 @@ func _scale_for(bone: StringName, values: Dictionary) -> Vector3:
 
 func _fit_origin(origin: Vector3, bone: StringName, values: Dictionary) -> Vector3:
 	var fitted := origin
+	if bone == &"head":
+		# The real head_shape morph scales about its centre, not the piece.
+		var centre: Vector3 = GelFace.HEAD_SHAPE_CENTRE
+		fitted = centre + (origin - centre) * GelFace.head_shape_axes(float(values[&"head_shape"]))
 	fitted.y *= float(values[&"total_height"])
 	if bone == &"head":
 		fitted.x *= float(values[&"head_size"])

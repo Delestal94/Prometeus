@@ -9,7 +9,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-2001 | ✅ Modelo de autoridad de la expansión (host dueño de empresa, stock, pedidos, empleados) | auditor-red | xhigh | doc en `docs/arquitectura.md` |
-| D-2002 | Presupuesto de ancho de banda del galpón (objetos, empleados, cintas) (incluye D-0317, fusión de D-0112) | constructor-red | high | número medido con 8 jugadores |
+| D-2002 | ✅ Presupuesto de ancho de banda del galpón (objetos, empleados, cintas) (incluye D-0317, fusión de D-0112) | constructor-red | high | número medido con 8 jugadores |
 | D-2003 | ✅ Sincronización por eventos en vez de por tick para stock y pedidos | constructor-red | xhigh | test de red |
 | D-2004 | ✅ Join tardío al galpón: el que entra recibe el estado completo | constructor-red | xhigh | test de join tardío a mitad de día |
 | D-2005 | ✅ Desconexión del host a mitad de día: guarda y vuelve al menú con resultados (N-222) | constructor-red | high | test |
@@ -18,12 +18,12 @@
 | D-2008 | ✅ `PROTOCOL_VERSION` nuevo para la expansión | constructor-red | low | número subido según §6 |
 | D-2009 | ✅ Steam: lobby con nombre de empresa y día | constructor-red | medium | test en build |
 | D-2010 | ✅ Guardado en la nube del save de empresa (D-0237) (incluye D-0237, fusión de D-0112) | constructor-red | medium | probado en build |
-| D-2011 | Benchmark del modo Empresa (`bench_company`) en CI | perfilador-rendimiento | high | paso de CI con número |
-| D-2012 | Presupuesto de FPS por distrito y galpón | perfilador-rendimiento | medium | tabla en `rendimiento-pc.md` |
+| D-2011 | ✅ Benchmark del modo Empresa (`bench_company`) en CI | perfilador-rendimiento | high | paso de CI con número |
+| D-2012 | ◐ (falta la primera corrida de pc-build) Presupuesto de FPS por distrito y galpón | perfilador-rendimiento | medium | tabla en `rendimiento-pc.md` |
 | D-2013 | Leak check de un día completo y de 10 días | perfilador-rendimiento | high | sin huérfanos (como S-908) |
 | D-2014 | ✅ Tests de la expansión entran en `run-tests.sh` por filtro (`company`, `district`, `fleet`) | escritor-tests | low | filtros funcionan |
 | D-2015 | ✅ Tests afectados en el hook `pre-push` para carpetas nuevas | escritor-tests | low | hook los detecta |
-| D-2016 | Recorrido de QA del día completo para `probador-qa` | probador-qa | medium | guion en `docs/qa-recorrido.md` |
+| D-2016 | Bot `bot_company_day` y guion de QA del día completo (criterio de cierre de F1) | probador-qa | medium | `BOT_OK` sin `BOT_STUB` con 1 y 2 jugadores (D-2016.4) y guion en `docs/qa-recorrido.md` |
 | D-2017 | Recorrido de QA de red par y trío en modo Empresa | probador-qa | high | guion |
 | D-2018 | ✅ `portability-check.sh` incluye los módulos nuevos | escritor-tests | low | CI verde |
 | D-2019 | ◐ (falta el arranque en la build de la PC) Build de Windows con la expansión | empaquetador-release | medium | build y smoke test |
@@ -38,7 +38,7 @@
 | D-2023 | Bot de 8 jugadores simulados para pruebas de carga | constructor-red | high | corre en CI nocturno |
 | D-2024 | Bot de jugador solo que juega 20 días (D-0126) | constructor-progresion | high | termina sin quiebra ni bloqueos |
 | D-2025 | Bot que juega la campaña completa acelerada | constructor-progresion | high | llega al Volcán en sim |
-| D-2026 | Test de save de 50 días (tamaño y tiempo de carga) | escritor-tests | medium | < 2 s de carga |
+| D-2026 | ✅ Test de save de 50 días (tamaño y tiempo de carga) | escritor-tests | medium | < 2 s de carga |
 | D-2027 | Fuzz de acciones en red (agarrar/soltar al mismo tiempo) (incluye D-0646, fusión de D-0112) | escritor-tests | high | test sin duplicados |
 | ~~D-2028~~ | ~~Steam: logros (D-0440)~~ **Fusionada en D-0440 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | logros en build |
 | ~~D-2029~~ | ~~Steam: Remote Play Together en el galpón~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-red | medium | probado |

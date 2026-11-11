@@ -11,19 +11,42 @@ extends SceneTree
 ##   material carries tx_detail_concrete_512.png in world triplanar, one repetition per
 ##   CompanyShed.FLOOR_SLAB_M (a whole number of grid cells, so the slab joints land on cell lines);
 ## - the local player stands inside the shed, on the floor;
+## - D-0715.b / D-0318.1: its CompanyNet's tables build packages under World/Packages, and the host's
+##   package is tracked by the cells: it runs in the shed, freezes out where no cell is loaded and is
+##   let go (thawed) as it leaves the tree; D-0316.3: the package is a loose box of the root's interest
+##   (CompanyInterest.LOOSE_BOX_GROUP), and solo is the host, so its consuming signal (what consume()
+##   emits before broadcasting the removal) releases it: untracked and out of the group;
+## - D-0316: it has an Interest child (CompanyInterest) reading CompanyRoot.CREW_GROUP, which tracks a
+##   node put in the company_vehicle group; solo is the host, so the cells anchor on the player, on the
+##   company's own vehicles (World/Vehicles, D-0302.2.b: test_company_fleet) and on that vehicle;
 ## - D-2002.3: it sends its pose CompanyTuning.SHED_POSE_RATE_HZ times a second on foot (the interval
-##   rounded down, not up), back to the game's 30 while riding a vehicle (a stand-in in the "vehicle"
-##   group that carries everyone) and to the shed's rate off it; a player outside the company's world
+##   rounded down, not up), back to the game's 30 while riding a vehicle (standing in the cargo bay of
+##   the company's van) and to the shed's rate off it; a player outside the company's world
 ##   (Delivery, Endless) keeps player.tscn's 30 while it walks;
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
 ##   and holds its stock (a client would wait for the host's snapshot instead); it hands
 ##   CompanyNet the CompanyState node, whose to_dict() the snapshot carries (D-2004);
 ## - it has a GameClock and a DayCycle child hooked to that CompanyNet (D-0203, D-0219); solo opens the
-##   company's day once the world is up: OPENING of its day, the clock running from 08:00, and no
-##   shed freeze while no shed area is wired;
+##   company's day once the world is up: OPENING of its day, the clock running from 08:00, and the
+##   shed not frozen with its player in it;
+## - D-0316.1: the shed holds (CompanyShed.holds()) the spawn, at any height, and whoever stands in the
+##   dock's or the exit's gate, not a point 20 m out of it; the root wires DayCycle.crew_in_shed: yes
+##   with the player where it spawned, no with it 20 m out, yes again back in; no with it seated on a
+##   seat 20 m out while its body is still in (Player.reach_origin()); yes with another crew member of
+##   the session in and the player out, no with both out; a crew member of another session (its own
+##   SceneMultiplayer) standing in the shed doesn't count; with the player out
+##   during OPERATING the shed freezes (one event; shed_minute() stands still while the world clock
+##   runs) and thaws when it is back (on the test's own ticks, no frame in between);
 ## - on a client (a session that isn't the host) it waits for the snapshot without touching
 ##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
 ##   what the client had (switched off when it had none, its own company when it had one);
+## - D-0508.3: the day's SUMMARY opens the closing screen (DaySummaryPanel) and its "continue" opens the
+##   next day on the host; D-0614.c: the screen lists the day's delivery note (the root's
+##   CompanyNet.pallets.note): a product the truck left short shows its row;
+## - D-0511.2: the closing screen has a Shop button that opens the company's shop (CompanyShopScreen, the
+##   root's shop_screen) over it; Buy goes through CompanyNet (solo is the host): the cash, the equipment and
+##   the status line follow, a shed expansion redraws the shed at its new stage, closing the shop gives the
+##   focus back to the closing screen, and the shop goes away with it;
 ## - the main menu knows the scene, the --mode=company flag and has the button;
 ## - it saves in the folder it is given (save_dir, D-2005): leaving the solo root saves the day
 ##   as interrupted there, and the real slot (user://saves/company/) is never touched;
@@ -44,14 +67,17 @@ const CLOSED_PORT: int = 24639
 const GAME_POSE_RATE_HZ: int = 30
 ## Physics ticks for the owner to publish its pose (and pick its rate) again.
 const POSE_TICKS: int = 3
+## D-0316.1: how far out of the shed's floor the player stands on the street, and for how many of the
+## test's seconds it stays out (past CompanyTuning.SHED_FREEZE_SETTLE_REAL_SECONDS, so it can thaw).
+const OUT_M: float = 20.0
+const OUT_SECONDS: float = 3.0
 
-
-## A vehicle that carries everyone, wherever they stand (as test_gel_active_ragdoll's).
-class Carrier extends Node3D:
-	func carries(_point: Vector3, _margin: float = 0.0) -> bool:
-		return true
 
 var _failures: int = 0
+## The test's own ticks (_ticks()) for the root's DayCycle and GameClock: real time stopped at
+## _base_msec, moved on by hand.
+var _base_msec: int = 0
+var _skip_msec: int = 0
 
 
 func _initialize() -> void:
@@ -73,9 +99,13 @@ func _run() -> void:
 	_expect(cells != null and cells == level.get(&"cells"), "The root has its WorldCells child (D-0313)")
 	if cells != null:
 		var spawned: Node3D = level.get(&"player") as Node3D
-		_expect(cells.anchors.size() == 1 and cells.anchors[0].distance_to(spawned.global_position) < 0.01,
-			"The only anchor is the local player")
+		var vans: Array[Node3D] = (level as CompanyRoot).fleet.vehicles()
+		_expect(cells.anchors.size() == 1 + vans.size() and cells.anchors[0].distance_to(spawned.global_position) < 0.01
+			and not vans.is_empty() and _near_any(cells.anchors, vans[0].global_position),
+			"The anchors are the local player and the company's vehicles (got %s)" % [cells.anchors])
 		_expect(cells.is_loaded(Vector2i(0, 0)), "The shed's cell is loaded on entering")
+		_check_package_cells(level as CompanyRoot, cells)
+	await _check_interest(level)
 	_expect(root.get_node_or_null(^"SceneLoader") == null, "No loader is left once inside the company")
 	var net: CompanyNet = level.get_node_or_null(^"CompanyNet") as CompanyNet
 	_expect(net != null and net == level.get(&"net"), "The root has its CompanyNet child (D-2003)")
@@ -94,7 +124,7 @@ func _run() -> void:
 				and not clock.is_paused() and clock.minute_now() < float(CompanyTuning.DAY_START_MIN) + 5.0,
 				"Solo opens the company's day: OPENING of day %s with the clock at 08:00 (got %s, %.1f)"
 				% [state.get(&"day"), cycle.phase_name(), clock.minute_now()])
-			_expect(not cycle.is_frozen(), "...and the shed isn't frozen (no area is wired yet)")
+			_expect(not cycle.is_frozen(), "...and the shed isn't frozen: its player stands in it")
 	_expect_presence(state, true, "Solo, with the day open")
 	_check_bankrupt_notice(level as CompanyRoot, state)
 
@@ -134,12 +164,17 @@ func _run() -> void:
 			await physics_frame
 		var height: float = player.global_position.y
 		_expect(height > -1.0, "The player stands on the floor, not falling (y=%.2f)" % height)
-		await _check_pose_rate(player as Player, level.get_node(^"World") as Node3D)
+		await _check_pose_rate(player as Player, (level as CompanyRoot).fleet.vehicles()[0])
+		_check_crew_in_shed(level as CompanyRoot)
+
+	_check_summary_screen(level, state)
 
 	var menu_source: String = FileAccess.get_file_as_string("res://scripts/ui/main_menu.gd")
 	_expect(menu_source.contains(SCENE) and menu_source.contains("--mode=company"),
 		"The main menu opens this scene with --mode=company")
-	_expect(menu_source.contains("pressed.connect(_play_company)"), "The Play page has a Modo Empresa button")
+	# D-1904: the button opens the company page (slots), which plays through _play_company().
+	_expect(menu_source.contains("pressed.connect(_open_company_page)") and menu_source.contains("_play_company()"),
+		"The Play page has a Modo Empresa button")
 
 	level.queue_free()
 	await process_frame
@@ -156,6 +191,120 @@ func _run() -> void:
 	quit(_failures)
 
 
+## D-0715.b / D-0318.1: the root's tables build their packages under World/Packages, and the host's
+## package is tracked by the cells: it runs in the shed (a pinned cell), freezes out where no cell is
+## loaded, and is let go (thawed) as it leaves the tree.
+func _check_package_cells(level: CompanyRoot, cells: CompanyCells) -> void:
+	var holder: Node3D = level.get_node_or_null(^"World/Packages") as Node3D
+	var packages: CompanyPackages = level.net.table.packages if level.net != null else null
+	_expect(holder != null and holder == level.packages and packages != null
+		and packages.parent == holder, "The root's tables build their packages under World/Packages")
+	if holder == null or packages == null:
+		return
+	var box := PackedBox.new(&"S")
+	box.place(load("res://data/products/hen.tres"), Vector3i.ZERO)
+	box.taped = true
+	var sealed: Dictionary = {
+		"package_id": &"box_99", "node_name": &"Package_box_99", "trap": &"noisy",
+		"trap_intensity": 0.5, "absorption": 1.0, "quality": 50.0, "pos": Vector3(0.0, 1.0, 0.0),
+		"basis": Basis.IDENTITY,
+	}
+	var package: DeliveryPackage = packages.make(box, sealed)
+	packages.put(package)
+	_expect(package != null and package.get_parent() == holder, "A package goes under World/Packages")
+	if package == null:
+		return
+	_expect(package.is_in_group(CompanyInterest.LOOSE_BOX_GROUP),
+		"The package is a loose box of the interest: in CompanyInterest.LOOSE_BOX_GROUP (D-0316.3)")
+	var sync := package.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	level.interest.track(sync, package)
+	package.consuming.emit()
+	_expect(not level.interest.is_tracked(sync) and not package.is_in_group(CompanyInterest.LOOSE_BOX_GROUP),
+		"Solo is the host: the package's consuming (before consume() broadcasts) lets the interest release it")
+	cells.step(Time.get_ticks_msec() / 1000.0)
+	_expect(not cells.is_body_frozen(package), "In the shed's loaded cell the host's package runs")
+	package.global_position = Vector3(5000.0, 1.0, 5000.0)
+	cells.step(Time.get_ticks_msec() / 1000.0)
+	_expect(cells.is_body_frozen(package) and package.freeze,
+		"Out where no cell is loaded it freezes (D-0318.1: the root tracks the host's packages)")
+	holder.remove_child(package)
+	_expect(not cells.is_body_frozen(package) and not package.freeze,
+		"Leaving the tree it is let go and thawed")
+	package.free()
+
+
+## D-0508.3: the day's SUMMARY opens the closing screen with the host's numbers, its "continue" opens
+## the next day and the screen goes away with it.
+func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
+	var panel: DaySummaryPanel = level.summary_panel
+	var cycle: DayCycle = level.day_cycle
+	_expect(panel != null and not panel.visible,
+		"The root has its closing screen, hidden while the day runs (D-0508.3)")
+	if panel == null or cycle == null:
+		return
+	var day: int = cycle.current_day()
+	state.call(&"earn", 120, &"order_paid")
+	if level.net != null:
+		level.net.pallets.note.check(day, {&"hen": 10}, {&"hen": 4})
+	for next: DayCycle.Phase in [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]:
+		cycle.call(&"_transition", next)
+	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and panel.visible,
+		"SUMMARY opens the closing screen (phase %s)" % cycle.phase_name())
+	var note_box: Control = panel.find_child("Note", true, false) as Control
+	_expect(note_box != null and note_box.visible and panel.find_child("Note_hen", true, false) != null,
+		"The closing screen lists the day's delivery note: hen came 6 short (D-0614.c)")
+	_check_shop_screen(level, state)
+	panel.close()
+	_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == day + 1 and not panel.visible,
+		"Its continue opens the next day (day %d, %s)" % [cycle.current_day(), cycle.phase_name()])
+
+
+## D-0511.2: the closing screen's Shop button opens the shop; buying goes through CompanyNet and the shop,
+## the company and the shed follow; the company is put back as it was.
+func _check_shop_screen(level: CompanyRoot, state: Node) -> void:
+	var screen: CompanyShopScreen = level.shop_screen
+	var summary: DaySummaryPanel = level.summary_panel
+	var shop_button: Button = summary.find_child("Shop", true, false) as Button
+	_expect(screen != null and screen.panel != null and not screen.panel.visible,
+		"The root has its shop screen, closed while the closing screen shows (D-0511.2)")
+	_expect(shop_button != null and shop_button.visible, "The closing screen has its Shop button")
+	if screen == null or screen.panel == null or shop_button == null:
+		return
+	var before: Dictionary = state.call(&"to_dict")
+	state.set(&"money", 5000)
+	shop_button.pressed.emit()
+	var shop: CompanyShopPanel = screen.panel
+	_expect(shop.visible and not summary.is_processing_unhandled_input(),
+		"The Shop button opens the shop over the closing screen, which stops listening to ui_cancel")
+	var money_label: Label = shop.find_child("Money", true, false) as Label
+	_expect(money_label != null and money_label.text.contains(MoneyText.format(5000)),
+		"The shop shows the company's cash")
+	var host_line: Label = shop.find_child("HostOnly", true, false) as Label
+	_expect(host_line != null and not host_line.visible, "Solo is the host: no only-the-host line")
+	shop.buy(&"upgrade_1")
+	_expect((state.get(&"equipment") as Array).has(&"upgrade_1") and int(state.get(&"money")) == 4550,
+		"Buy goes through CompanyNet: the host bought the machine (money %s)" % state.get(&"money"))
+	_expect(money_label.text.contains(MoneyText.format(4550)) and shop.buy_button(&"upgrade_1").disabled
+		and shop.status_text().contains(CompanyShopPanel.item_name(CompanyShop.find(&"upgrade_1"))),
+		"...and the shop follows the event: cash, owned row and the status line (%s)" % shop.status_text())
+	_expect(level.shed.stage == 0, "A machine doesn't redraw the shed")
+	shop.buy(&"expansion_1")
+	_expect(int(state.get(&"warehouse_stage")) == 1 and level.shed.stage == 1,
+		"An expansion bought in the shop redraws the shed at stage 1 (shed %d)" % level.shed.stage)
+	shop.close()
+	_expect(not shop.visible and summary.is_processing_unhandled_input(),
+		"Closing the shop gives the closing screen its ui_cancel back")
+	shop_button.pressed.emit()
+	summary.hide()
+	_expect(not shop.visible and summary.is_processing_unhandled_input(),
+		"The shop goes away with the closing screen")
+	summary.show()
+	state.call(&"from_dict", before)
+	level.shed.rebuild(level.net.company, level.net.inventory)
+	_expect(int(state.get(&"warehouse_stage")) == 0 and level.shed.stage == 0,
+		"(the test puts the company and the shed back)")
+
+
 ## D-0510.2: the root's DayCycle.opening_notice is the bankruptcy warning in the red, "" in the black.
 func _check_bankrupt_notice(level: CompanyRoot, state: Node) -> void:
 	var notice: Callable = level.day_cycle.opening_notice
@@ -169,22 +318,21 @@ func _check_bankrupt_notice(level: CompanyRoot, state: Node) -> void:
 
 
 ## D-2002.3: the company's `player` sends its pose at the shed's rate on foot, the game's riding a
-## vehicle (a Carrier in `world`) and the shed's again once off it.
-func _check_pose_rate(player: Player, world: Node3D) -> void:
+## vehicle (standing in the bay of `van`, the company's) and the shed's again once off it.
+func _check_pose_rate(player: Player, van: Node3D) -> void:
 	var sync := player.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	var shed_rate: int = CompanyTuning.SHED_POSE_RATE_HZ
 	_expect(_rate(sync) == shed_rate and sync.replication_interval <= 1.0 / shed_rate,
 		"The company's player sends its pose %d times a second on foot (every %.4f s)"
 		% [shed_rate, sync.replication_interval])
-	var truck := Carrier.new()
-	truck.add_to_group(&"vehicle")
-	world.add_child(truck)
+	var home: Vector3 = player.global_position
+	player.global_position = van.to_global(Vector3(0.0, 0.6, 2.0))
 	for _tick: int in range(POSE_TICKS):
 		await physics_frame
 	_expect(player.net_in_vehicle and _rate(sync) == GAME_POSE_RATE_HZ,
 		"Riding a vehicle it sends the game's %d a second again (in vehicle %s, every %.4f s)"
 		% [GAME_POSE_RATE_HZ, player.net_in_vehicle, sync.replication_interval])
-	truck.free()
+	player.global_position = home
 	for _tick: int in range(POSE_TICKS):
 		await physics_frame
 	_expect(not player.net_in_vehicle and _rate(sync) == shed_rate,
@@ -209,6 +357,132 @@ func _check_game_pose_rate() -> void:
 ## Sends a second `sync` makes at its interval, rounded.
 static func _rate(sync: MultiplayerSynchronizer) -> int:
 	return roundi(1.0 / sync.replication_interval) if sync.replication_interval > 0.0 else 0
+
+
+## D-0316.1: the shed holds the spawn and its gates, not the street, and the root's DayCycle reads its
+## crew from it. The player is moved without a frame in between, so it never falls on the street.
+func _check_crew_in_shed(level: CompanyRoot) -> void:
+	var shed: CompanyShed = level.shed
+	var half: Vector2 = WarehouseStages.floor_size_m(shed.stage) * 0.5
+	_expect(shed.holds(CompanyRoot.SPAWN) and shed.holds(CompanyRoot.SPAWN + Vector3.UP * 10.0),
+		"The shed holds the spawn %s, at any height" % CompanyRoot.SPAWN)
+	# The middle of each gate, in the walls' line: dock south, exit north.
+	var gates: Array[Rect2i] = WarehouseStages.gate_rects(shed.stage)
+	var in_wall: float = half.y + CompanyShed.WALL_THICKNESS * 0.5
+	var dock: Vector3 = shed.cell_to_local(Vector2(gates[0].position) + Vector2(gates[0].size) * 0.5)
+	var door: Vector3 = shed.cell_to_local(Vector2(gates[1].position) + Vector2(gates[1].size) * 0.5)
+	dock.z = in_wall
+	door.z = -in_wall
+	_expect(shed.holds(dock) and shed.holds(door),
+		"...and whoever stands in the dock's gate %s or the exit's %s" % [dock, door])
+	var south := Vector3(0.0, 1.0, half.y + OUT_M)
+	var east := Vector3(half.x + OUT_M, 1.0, 0.0)
+	_expect(not shed.holds(south) and not shed.holds(east),
+		"...but not a point %.0f m out of its floor (%s, %s)" % [OUT_M, south, east])
+	var cycle: DayCycle = level.day_cycle
+	var player: Node3D = level.player
+	_expect(cycle.crew_in_shed.is_valid(), "The root wires DayCycle.crew_in_shed")
+	if not cycle.crew_in_shed.is_valid() or player == null:
+		return
+	var home: Vector3 = player.global_position
+	_expect(bool(cycle.crew_in_shed.call()), "With its player where it spawned (%s) the crew is in the shed" % home)
+	var street := Vector3(home.x, home.y, half.y + OUT_M)
+	player.global_position = street
+	_expect(not bool(cycle.crew_in_shed.call()),
+		"With its player %.0f m out (%s) nobody is in the shed" % [OUT_M, street])
+	player.global_position = home
+	_expect(bool(cycle.crew_in_shed.call()), "...and back in, the crew is in again")
+	_check_seated_and_others(level, player as Player, street)
+	_check_frozen_shed(level, street)
+
+
+## A seated player is where its seat is (Player.reach_origin()), not where its body stayed; another
+## crew member of the same session keeps the shed in; one of another session (its own multiplayer)
+## counts for nothing here. Every node added is freed before returning, with no frame in between.
+func _check_seated_and_others(level: CompanyRoot, player: Player, street: Vector3) -> void:
+	var inside: Callable = level.day_cycle.crew_in_shed
+	var home: Vector3 = player.global_position
+	var seat := Node3D.new()
+	seat.name = "StreetSeat"
+	level.get_node(^"World").add_child(seat)
+	seat.global_position = street
+	player.seat_node_path = player.get_path_to(seat)
+	_expect(not bool(inside.call()) and level.shed.holds(player.global_position),
+		"Seated %.0f m out, with its body still in the shed (%s), nobody is in it" % [OUT_M, player.global_position])
+	player.seat_node_path = NodePath()
+	seat.free()
+	_expect(bool(inside.call()), "...and off the seat, its body in the shed, the crew is in again")
+	var mate := Node3D.new()
+	mate.name = "CrewMate"
+	mate.add_to_group(CompanyRoot.CREW_GROUP)
+	level.get_node(^"World").add_child(mate)
+	mate.global_position = CompanyRoot.SPAWN
+	player.global_position = street
+	_expect(bool(inside.call()), "With the player out and another of the crew in, the crew is in the shed")
+	mate.global_position = street
+	_expect(not bool(inside.call()), "...and with both out, nobody is")
+	mate.free()
+	# Another session in this process: its own SceneMultiplayer, a crew member standing in the shed.
+	var side := Node.new()
+	side.name = "OtherSession"
+	root.add_child(side)
+	set_multiplayer(SceneMultiplayer.new(), side.get_path())
+	var stranger := Node3D.new()
+	stranger.name = "Stranger"
+	stranger.add_to_group(CompanyRoot.CREW_GROUP)
+	stranger.position = CompanyRoot.SPAWN
+	side.add_child(stranger)
+	_expect(stranger.multiplayer != level.multiplayer and level.shed.holds(stranger.global_position)
+		and not bool(inside.call()),
+		"A crew member of another session standing in the shed doesn't count: with the player out nobody is in")
+	set_multiplayer(null, side.get_path())
+	side.free()
+	player.global_position = home
+	_expect(bool(inside.call()), "...and the player back in, the crew is in again")
+
+
+## The shed freezes with the player out during OPERATING and thaws once it is back, as the day's own
+## events. The cycle and the clock run on the test's ticks (_ticks()), and no frame passes, so the
+## root's BusinessTick polls nothing in between. They keep those ticks until the root is freed (the
+## real ones would put the clock back by what was skipped).
+func _check_frozen_shed(level: CompanyRoot, street: Vector3) -> void:
+	var cycle: DayCycle = level.day_cycle
+	var clock: GameClock = level.clock
+	var player: Node3D = level.player
+	var home: Vector3 = player.global_position
+	_base_msec = Time.get_ticks_msec()
+	_skip_msec = 0
+	cycle.ticks = _ticks
+	clock.ticks = _ticks
+	# Past the opening's real seconds (the BusinessTick may have got there already).
+	_skip_msec += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0)
+	cycle.poll()
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING and not cycle.is_frozen(),
+		"Past the opening the day is OPERATING with the shed running (got %s, frozen %s)"
+		% [cycle.phase_name(), cycle.is_frozen()])
+	var seq: int = level.net.seq
+	player.global_position = street
+	cycle.poll()
+	var frozen_at: float = cycle.shed_minute()
+	_expect(cycle.is_frozen() and level.net.seq == seq + 1 and is_equal_approx(frozen_at, clock.minute_now()),
+		"With its player out the shed freezes at the world's minute, as one event (frozen %s, seq +%d, %.2f)"
+		% [cycle.is_frozen(), level.net.seq - seq, frozen_at])
+	_skip_msec += roundi(OUT_SECONDS * 1000.0)
+	cycle.poll()
+	_expect(clock.minute_now() > frozen_at + 1.0 and is_equal_approx(cycle.shed_minute(), frozen_at)
+		and level.net.seq == seq + 1,
+		"%.0f s later the world is at %.2f and the shed still reads %.2f (seq +%d)"
+		% [OUT_SECONDS, clock.minute_now(), cycle.shed_minute(), level.net.seq - seq])
+	player.global_position = home
+	cycle.poll()
+	_expect(not cycle.is_frozen() and level.net.seq == seq + 2 and is_equal_approx(cycle.shed_minute(), frozen_at),
+		"Back in, the shed thaws from %.2f (frozen %s, seq +%d, shed %.2f)"
+		% [frozen_at, cycle.is_frozen(), level.net.seq - seq, cycle.shed_minute()])
+
+
+## The test's ticks for the root's DayCycle and GameClock: real time stopped, moved on by _skip_msec.
+func _ticks() -> int:
+	return _base_msec + _skip_msec
 
 
 ## A client loads the host's company from the snapshot; leaving the root puts its own back.
@@ -312,6 +586,46 @@ func _clean() -> void:
 	for file: String in dir.get_files():
 		dir.remove(file)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR))
+
+
+## D-0316: the Interest child, and the host's cells anchored on every company vehicle too.
+func _check_interest(level: Node) -> void:
+	var interest: CompanyInterest = level.get_node_or_null(^"Interest") as CompanyInterest
+	_expect(interest != null and interest == level.get(&"interest"), "The root has its Interest child (D-0316)")
+	if interest == null:
+		return
+	_expect(interest.crew_group == CompanyRoot.CREW_GROUP, "The interest reads the crew group")
+	var van := Node3D.new()
+	van.name = "van_test"
+	van.position = Vector3(300.0, 0.0, -40.0)
+	var sync := MultiplayerSynchronizer.new()
+	var config := SceneReplicationConfig.new()
+	config.add_property(^".:position")
+	sync.replication_config = config
+	van.add_child(sync)
+	van.add_to_group(CompanyTrips.VEHICLE_GROUP)
+	level.add_child(van)
+	# The root's _process runs after process_frame is emitted: two frames for it to have run once.
+	await process_frame
+	await process_frame
+	interest.step(Time.get_ticks_msec() / 1000.0 + 1.0)
+	_expect(interest.is_tracked(sync), "A company vehicle's synchronizer is tracked by the interest")
+	var cells: CompanyCells = level.get(&"cells")
+	var fleet: int = (level as CompanyRoot).fleet.vehicles().size()
+	_expect(cells.anchors.size() == 2 + fleet and cells.anchors.has(van.global_position),
+		"Solo is the host: the cells anchor on the player, the fleet and the vehicle (got %s)" % [cells.anchors])
+	van.free()
+	interest.step(Time.get_ticks_msec() / 1000.0 + 2.0)
+	_expect(interest.tracked_count() == fleet,
+		"A freed vehicle is forgotten, the fleet's stay tracked (got %d)" % interest.tracked_count())
+
+
+## Whether one of `points` is within a centimetre of `at`.
+static func _near_any(points: Array[Vector3], at: Vector3) -> bool:
+	for point: Vector3 in points:
+		if point.distance_to(at) < 0.01:
+			return true
+	return false
 
 
 func _expect(condition: bool, message: String) -> void:

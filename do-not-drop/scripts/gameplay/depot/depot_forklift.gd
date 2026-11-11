@@ -11,6 +11,7 @@ extends AnimatableBody3D
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_through.gd")
 const BEACON := Color("ffb02e")
+const OPERATOR_PRESET: StringName = &"petisa"
 const SPEED: float = 1.6
 const LIFT_SPEED: float = 0.55
 const LIFT_TOP: float = 2.3
@@ -82,7 +83,8 @@ func _physics_process(delta: float) -> void:
 		else:
 			_beeper.stop()
 	var moving: bool = (_phase == 0 or _phase == 3) and not blocked
-	_engine.pitch_scale = lerpf(_engine.pitch_scale, 1.25 if moving or _phase in [1, 2] else 0.85, clampf(delta * 3.0, 0.0, 1.0))
+	var target_pitch: float = 1.25 if moving or _phase in [1, 2] else 0.85
+	_engine.pitch_scale = lerpf(_engine.pitch_scale, target_pitch, clampf(delta * 3.0, 0.0, 1.0))
 	var flash: bool = sin(_time * 9.0) > 0.2
 	(_beacon.material_override as StandardMaterial3D).emission_energy_multiplier = 3.0 if flash else 0.4
 	_beacon_light.light_energy = 0.9 if flash else 0.1
@@ -132,30 +134,33 @@ func _build() -> void:
 	add_child(_carriage)
 	var lift_kit := DepotKit.new(_carriage, "CarriageColliders")
 	lift_kit.model(DepotKit.depot_model("sm_env_depot_forklift_carriage"), Transform3D.IDENTITY)
-	lift_kit.model("res://assets/models/environment/props/sm_env_prop_pallet.glb", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.85), Vector3(0.0, 0.17, -1.05)))
+	lift_kit.model(
+		"res://assets/models/environment/props/sm_env_prop_pallet.glb",
+		Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.85), Vector3(0.0, 0.17, -1.05))
+	)
 	var box_paths: Array[String] = [
 		"res://assets/models/cargo/sm_cargo_box_cube.glb",
 		"res://assets/models/cargo/sm_cargo_box_flat.glb",
 		"res://assets/models/cargo/sm_cargo_box_tall.glb",
 	]
-	var spots: Array[Vector3] = [Vector3(-0.22, 0.22, -1.3), Vector3(0.22, 0.22, -1.3), Vector3(-0.22, 0.22, -0.8), Vector3(0.22, 0.22, -0.8), Vector3(0.0, 0.63, -1.05)]
+	var spots: Array[Vector3] = [
+		Vector3(-0.22, 0.22, -1.3), Vector3(0.22, 0.22, -1.3),
+		Vector3(-0.22, 0.22, -0.8), Vector3(0.22, 0.22, -0.8),
+		Vector3(0.0, 0.63, -1.05),
+	]
 	for index: int in range(spots.size()):
-		lift_kit.model(box_paths[index % box_paths.size()], Transform3D(Basis(Vector3.UP, index * 0.2).scaled(Vector3.ONE * 0.62), spots[index]))
+		var box_transform := Transform3D(
+			Basis(Vector3.UP, index * 0.2).scaled(Vector3.ONE * 0.62), spots[index]
+		)
+		lift_kit.model(box_paths[index % box_paths.size()], box_transform)
 	lift_kit.commit("CarriageMesh")
 	# Driver: stands on the rear platform at the controls.
 	var driver: Node3D = DepotWorker.CHARACTER_SCENE.instantiate()
 	driver.name = "Operator"
 	driver.position = Vector3(-0.05, 0.34, 1.45)
 	add_child(driver)
-	for node: Node in driver.find_children("*", "MeshInstance3D", true, false):
-		var mesh_instance := node as MeshInstance3D
-		if mesh_instance.mesh != null and mesh_instance.mesh.get_surface_count() > 0:
-			var suit := mesh_instance.mesh.surface_get_material(0) as BaseMaterial3D
-			if suit != null:
-				var tinted := suit.duplicate() as BaseMaterial3D
-				tinted.albedo_color = Color("ffc93c")
-				mesh_instance.set_surface_override_material(0, tinted)
-			break
+	if not DepotWorker.configure_character(driver, Color("ffc93c"), OPERATOR_PRESET):
+		push_warning("Forklift operator could not configure gel preset %s" % OPERATOR_PRESET)
 	var anim := driver.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if anim != null and anim.has_animation(&"Idle"):
 		anim.get_animation(&"Idle").loop_mode = Animation.LOOP_LINEAR

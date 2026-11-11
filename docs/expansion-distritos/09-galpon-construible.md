@@ -43,12 +43,12 @@
 | ~~D-0928~~ | ~~Pisos y paredes pintables con la marca de la empresa~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | cosmético |
 | ~~D-0929~~ | ~~Segundo piso/mezanine construible (D-0631)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | test |
 | ~~D-0930~~ | ~~Ventanas y techo con claraboyas (día/noche)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | low | captura |
-| D-0931 | Zona de carga para varios vehículos a la vez | constructor-mundo | medium | test |
+| D-0931 | ◐ (D-0931.a hecha; falta D-0931.b: el mundo) Zona de carga para varios vehículos a la vez | constructor-mundo | medium | test |
 | ~~D-0932~~ | ~~Estacionamiento de camiones de proveedores ampliado~~ **Fusionada en D-0640 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | ver D-0640 |
 | ~~D-0933~~ | ~~Alarma de incendio/evento (caja explosiva en el galpón)~~ **Fusionada en D-1138 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | medium | evento |
 | ~~D-0934~~ | ~~Mapa de calor de tránsito de empleados (para optimizar)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | medium | overlay |
 | D-0935 | Herramienta de medir tiempos por estación (cuello de botella) (incluye D-1133, fusión de D-0112) | constructor-ui | medium | overlay |
-| D-0936 | Exterior del galpón que cambia con la etapa (cartel, playón) | constructor-mundo | medium | 4 variantes |
+| D-0936 | ✅ Exterior del galpón que cambia con la etapa (cartel, playón) | constructor-mundo | medium | 4 variantes |
 | ~~D-0937~~ | ~~Galpones secundarios en otros distritos (D-0330)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | test |
 | ~~D-0938~~ | ~~Ajuste fino sin grilla (modo libre) para decoración~~ **Recortada (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | D-0939 | Colisiones de objetos colocados livianas (cajas simples) | perfilador-rendimiento | medium | física medida |
@@ -65,6 +65,6 @@
 | ~~D-0945~~ | ~~Iconos del catálogo de construcción~~ **Fusionada en D-1845 (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | íconos |
 | D-0946 | Captura del galpón en cada etapa | revisor-visual | low | 4 capturas |
 | D-0947 | `bench_depot` con galpón grande lleno (incluye D-0248, fusión de D-0112) | perfilador-rendimiento | high | FPS ≥ objetivo |
-| D-0948 | Test de layouts inválidos (estación encerrada) (incluye D-0940, fusión de D-0112) | escritor-tests | medium | test |
+| D-0948 | ✅ Test de layouts inválidos (estación encerrada) (incluye D-0940, fusión de D-0112) | escritor-tests | medium | test |
 | D-0949 | QA del modo construcción | probador-qa | medium | tabla |
 | ~~D-0950~~ | ~~Documentar cómo agregar un objeto colocable~~ **Fusionada en D-0244 (D-0112, [crítica](diseno/critica-alcance.md))** | documentador | low | guía |

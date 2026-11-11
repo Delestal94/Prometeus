@@ -52,6 +52,7 @@ func _test_freeze_far_away() -> void:
 	streamer.build_for = _floor_cell
 	streamer.slice_msec = 1000.0
 	root.add_child(streamer)
+	streamer.set_process(false)  # After add_child: entering the tree turns it on. This test's clock runs step().
 	streamer.anchors = [Vector3(50, 0, 50)]
 	var now := 0.0
 	streamer.step(now)
@@ -101,6 +102,7 @@ func _test_game_frozen_stays_frozen() -> void:
 	streamer.build_for = _floor_cell
 	streamer.slice_msec = 1000.0
 	root.add_child(streamer)
+	streamer.set_process(false)  # After add_child: entering the tree turns it on. This test's clock runs step().
 	streamer.anchors = [Vector3(50, 0, 50)]
 	var held := _crate(Vector3(100, 0.26, 100))
 	held.freeze = true

@@ -47,6 +47,7 @@ const EXPECTED: Array[StringName] = [
 	&"drive_accelerate", &"drive_brake", &"drive_handbrake",
 	&"package_drop", &"package_open", &"care_work", &"care_tool_next", &"phone_toggle", &"crew_panel",
 	&"spectate_toggle",
+	&"forklift_mast_up", &"forklift_mast_down",
 ]
 ## Left out on purpose: mouse look, camera/dev toggles, pause, restart. The ones
 ## with a keyboard key are reserved: nothing can be rebound onto that key.
@@ -382,9 +383,13 @@ func _test_interaction_follows_actions() -> void:
 # --- Gamepad: defaults, rebinding, persistence, conflicts, reset (N-966.3) ---------------------------
 
 
-## A free gamepad input per action: buttons 15..34, then the spare axes 6..
+## A free gamepad input per action: buttons 15..34, the spare axes 6..9 (MAX_AXIS), then buttons 35..
 func _free_pad(index: int) -> String:
-	return "b%d" % (15 + index) if index < 20 else "a%d+" % (6 + index - 20)
+	if index < 20:
+		return "b%d" % (15 + index)
+	if index < 24:
+		return "a%d+" % (6 + index - 20)
+	return "b%d" % (35 + index - 24)
 
 
 func _test_pad_defaults() -> void:

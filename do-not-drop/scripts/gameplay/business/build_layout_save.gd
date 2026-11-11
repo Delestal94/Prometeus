@@ -15,19 +15,39 @@ extends RefCounted
 ## piece dictionary with a numeric position is skipped.
 static func sanitize(raw: Variant, stage: int) -> Array[Dictionary]:
 	var kept: Array[Dictionary] = []
+	_replay(raw, stage, kept)
+	return kept
+
+
+## Why sanitize() would not keep `raw` whole on the grid of `stage`: BuildPlacement's reason for the first
+## piece it drops (fixed_area, blocks_path, out_of_bounds...; no_definition for an entry that is not a
+## piece), or &"" when it keeps every one. Growing the shed asks it first (D-0910.2): the dock and the exit
+## move with the walls, and a layout the bigger stage would not keep whole would load differently later.
+static func misfit(raw: Variant, stage: int) -> StringName:
+	var kept: Array[Dictionary] = []
+	return _replay(raw, stage, kept)
+
+
+## sanitize()'s pass: the pieces of `raw` that fit, appended to `kept` in order; returns the reason the
+## first one left out was refused (&"" when none was; nothing to keep when `raw` is not an Array).
+static func _replay(raw: Variant, stage: int, kept: Array[Dictionary]) -> StringName:
+	var first: StringName = &""
 	if not raw is Array:
-		return kept
+		return first
 	var placement := BuildPlacement.new()
 	WarehouseStages.apply_to(stage, placement)
 	for item: Variant in raw:
 		var piece: Dictionary = _normalized(item)
-		if piece.is_empty():
-			continue
-		var def: PlaceableDefinition = PlaceableShop.definition(StringName(piece["id"]))
-		var result: Dictionary = placement.preview(kept, def, piece["x"], piece["z"], piece["turns"])
-		if bool(result["ok"]):
-			kept.append(piece)
-	return kept
+		var reason: StringName = BuildPlacement.REASON_NO_DEFINITION
+		if not piece.is_empty():
+			var def: PlaceableDefinition = PlaceableShop.definition(StringName(piece["id"]))
+			var result: Dictionary = placement.preview(kept, def, piece["x"], piece["z"], piece["turns"])
+			reason = result["reason"]
+			if bool(result["ok"]):
+				kept.append(piece)
+		if reason != BuildPlacement.REASON_OK and first == &"":
+			first = reason
+	return first
 
 
 ## `{id: String, x: int, z: int, turns: 0-3[, uid: String]}` from a saved entry, or {} when it is not one.

@@ -82,8 +82,16 @@ func _initialize() -> void:
 	var van: VehicleBody3D = level.vehicle
 	van.controls_enabled = false
 	van.set_controls(0.9, 0.0, false)
-	for _i: int in range(1200):  # 20 simulated seconds at 60Hz, sustained speed
+	# Wait for the distance, not a frame count: a slow machine covers it in more frames.
+	# Long cap (5 simulated minutes); an early end of the run (stuck detection) also stops the wait.
+	for _i: int in range(18000):
 		await physics_frame
+		if not bool(manager.get(&"is_running")) or float(level.get(&"distance_traveled")) > 100.0:
+			break
+	for _i: int in range(600):  # 10 more simulated seconds of sustained speed with the traps aboard
+		await physics_frame
+		if not bool(manager.get(&"is_running")):
+			break
 
 	# Usually still running with solid distance covered. The rare exception:
 	# level_endless.gd's own stuck-detection (added after stress testing found

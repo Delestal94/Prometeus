@@ -1,0 +1,38 @@
+{
+  "task": "S-311.15",
+  "decision_complete": true,
+  "source": "geometry_metrics.json",
+  "base_map": "thickness.png",
+  "base_map_resolution": [1024, 1024],
+  "correction": {
+    "weight": "general_thickness",
+    "shader_formula": "t_corrected = t_base * (1 + weight * 0.21)",
+    "instance_uniform_carrier": "gel_skin_surface.z fractional offset",
+    "pack_scale": 0.25,
+    "keeps_skin_mode": true,
+    "additional_instance_uniforms": 0,
+    "additional_draw_calls": 0
+  },
+  "measured_mean_thickness_m": {
+    "minus_one": 0.16275927920691546,
+    "base": 0.20639659584289635,
+    "plus_one": 0.24914030710481136
+  },
+  "predicted_mean_thickness_m": {
+    "minus_one": 0.16305331071588813,
+    "plus_one": 0.24973988096990457
+  },
+  "relative_mean_error": {
+    "minus_one": 0.0018065422162435864,
+    "plus_one": 0.0024065711087085375,
+    "acceptance_max": 0.01
+  },
+  "smooth_normals": {
+    "runtime_test": "res://tests/test_gel_thickness_morph.gd",
+    "requirements": [
+      "one finite unit normal per imported vertex",
+      "coincident UV-seam vertices retain matching smooth normals"
+    ]
+  },
+  "extremes_tested": [-1.0, 0.0, 1.0]
+}

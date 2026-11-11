@@ -6,8 +6,11 @@ extends SceneTree
 ## Playtest 2026-09-25: it's the rigged Shiba Inu now, whose gait follows how
 ## fast it really moves (no galloping on the spot), and its barks don't come
 ## on a fixed beat.
+## N-606.4b: it tells the newspaper (EventBus roadside_moment, dog_chase) when
+## it starts the chase, and again tagged "honked" when the horn sends it home.
 
 var _failures: int = 0
+var _moments: Array = []
 
 
 func _initialize() -> void:
@@ -17,6 +20,8 @@ func _initialize() -> void:
 func _run() -> void:
 	root.get_node(^"/root/RunManager").set(&"is_running", true)
 
+	root.get_node(^"/root/EventBus").connect(&"roadside_moment", func(kind: StringName, tags: Array) -> void:
+		_moments.append([kind, tags]))
 	var chase := await _setup()
 	var animal: Node3D = chase.dog.dog
 	var animator := animal.find_child("AnimationPlayer", true, false) as AnimationPlayer
@@ -62,8 +67,10 @@ func _run() -> void:
 	_expect(caught_up and farthest_while_chasing < 16.0, "Once alongside, it keeps up beside the truck (at most %.1f m off)" % farthest_while_chasing)
 	_expect(chase.dog.run_distance <= ChasingDog.CHASE_LENGTH + 5.0 and chase.dog.state != ChasingDog.State.CHASING,
 		"It gives up after about %.0f m (ran %.0f)" % [ChasingDog.CHASE_LENGTH, chase.dog.run_distance])
+	_expect(_moments == [[&"dog_chase", []]], "Starting the chase tells the newspaper once (%s)" % str(_moments))
 	chase.world.free()
 
+	_moments.clear()
 	var scared := await _setup()
 	for tick: int in range(60 * 8):
 		_drive(scared.van, 8.0)
@@ -72,6 +79,8 @@ func _run() -> void:
 			break
 	root.get_node(^"/root/EventBus").call(&"request_horn")
 	_expect(scared.dog.state == ChasingDog.State.GIVING_UP, "A honk sends it home")
+	_expect(_moments.size() == 2 and _moments[1] == [&"dog_chase", ["honked"]],
+			"...and the newspaper hears the horn did it (%s)" % str(_moments))
 	scared.world.free()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)

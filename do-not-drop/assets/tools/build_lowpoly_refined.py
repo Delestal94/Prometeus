@@ -4,7 +4,8 @@
         --factory-startup --python do-not-drop/assets/tools/build_lowpoly_refined.py [-- group ...]
 
 Groups: houses, trees, plants, signs, props, yard (default: all); guardrail,
-tall_fern, fern, bramble, tall_grass, rock, rock_cluster, mushroom and wildflower rebuild just that one model.
+tall_fern, fern, bramble, tall_grass, rock, rock_cluster, mushroom, wildflower and
+fallen_log rebuild just that one model.
 
 The source of truth for the houses and barn, the whole forest set, the
 warning signs and the roadside furniture -- it overwrites the same GLB paths
@@ -757,12 +758,76 @@ def mushroom():
     bm.free()
 
 
+# Fallen log (N-978): each end was a loose 3 cm "trim" disc stuck on the
+# trunk (cream with no detail map in game), which read as a slate disc with a
+# white rim -- stone or plastic, not a cut log. Now the trunk's own end caps
+# become the cut face: flattened to x = +-LOG_END (the old discs' outer face,
+# so the bounding box is unchanged), then inset into a thin bark rim
+# ("trunk"), light sawn wood and a slightly darker growth ring (pass 3), each band
+# 3 mm lower than the last so the ring reads in the light as well as by
+# colour, around a pith a little off-centre. One surface, no overlapping
+# discs, so nothing z-fights. Both wood colours are "wood.*" copies, keyed as
+# "wood" by LowpolyMaterials (planks detail at 1.4 m: grain, not boards, at
+# this size). DetailMaterials keeps a "wood.*" material's own albedo (only
+# the detail map comes from the "wood" key; "wood" is not in LIFTED), so the
+# colour is what's authored here, x DETAIL_GAIN 1.16 in sRGB.
+# Pass 2 (2026-10-21): 0.42/0.24/0.10 came out mid brown in game, barely
+# lighter than the bark (the planks map darkens it and the face is mostly
+# side-lit). Now freshly cut pine, ~0.92/0.75/0.52 sRGB in game; the rings
+# keep the same ratio to it (~0.75/0.60/0.41), still well above the bark.
+# Pass 3 (2026-10-21): five insets per cap put the log at 328 tris, over the
+# 250-tri cap for everything RouteDresser's ground_plant rule scatters
+# (N-331.6). Now three: bark rim, light wood, ONE dark ring (a little wider
+# than the old two, so it reads from the road) and a light centre, 68 tris a
+# cap, 248 the model.
+LOG_END = 1.425
+LOG_WOOD = (0.58, 0.37, 0.17, 1)
+LOG_RING = (0.38, 0.23, 0.10, 1)
+# Cut face bands, outside in: (radius as a fraction of the bark, material slot).
+# Slot 0 trunk, 1 light wood, 2 ring.
+LOG_BANDS = [(0.87, 1), (0.56, 2), (0.45, 1)]
+
+
+def _log_end_caps(o, seed=978):
+    rng = random.Random(seed)
+    o.data.materials.append(_single_sided("wood", "log_end", LOG_WOOD))
+    o.data.materials.append(_single_sided("wood", "log_ring", LOG_RING))
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bm.normal_update()
+    # The cylinder runs along its local z (rotated onto world x afterwards).
+    caps = [f for f in bm.faces if abs(f.normal.z) > 0.9]
+    for cap in caps:
+        side = 1.0 if cap.normal.z > 0 else -1.0
+        for v in cap.verts:
+            v.co.z = side * LOG_END
+        centre = cap.calc_center_median()
+        centre += Vector((rng.uniform(-0.03, 0.03), rng.uniform(-0.03, 0.03), 0.0))
+        rim = [v.co.copy() for v in cap.verts]
+        face = cap
+        for depth, (frac, slot) in enumerate(LOG_BANDS):
+            res = bmesh.ops.inset_region(bm, faces=[face], thickness=0.0, depth=0.0)
+            for ring_face in res["faces"]:
+                ring_face.material_index = 0 if depth == 0 else LOG_BANDS[depth - 1][1]
+            # Place the new inner loop at `frac` of the way from the pith to
+            # the bark (along the same spoke), wobbled a little, sunk 3 mm
+            # per band.
+            for v in face.verts:
+                outer = max(rim, key=lambda p: (p - centre).normalized().dot((v.co - centre).normalized()))
+                wobble = 1.0 + rng.uniform(-0.04, 0.04)
+                v.co = centre + (outer - centre) * frac * wobble
+                v.co.z = side * (LOG_END - 0.003 * (depth + 1))
+            face.material_index = slot
+    bm.normal_update()
+    bm.to_mesh(o.data)
+    bm.free()
+
+
 def log():
     clear()
     o = cylinder("FallenLog", (0, 0, 0.3), 0.3, 2.8, "trunk", 10, rot=(0, math.pi / 2, 0))
     jitter(o, 0.03, 14)
-    for x in (-1.41, 1.41):
-        cylinder("LogEnd", (x, 0, 0.3), 0.27, 0.03, "trim", 10, rot=(0, math.pi / 2, 0))
+    _log_end_caps(o)
     cone("LogStub", (-0.5, 0.2, 0.55), 0.08, 0.03, 0.5, "trunk", 5, rot=(0.7, 0, 0))
     cone("LogStub", (0.7, -0.15, 0.5), 0.07, 0.03, 0.4, "trunk", 5, rot=(-0.8, 0.3, 0))
     for i, x in enumerate((-0.9, 0.2, 1.0)):
@@ -1158,7 +1223,8 @@ def bramble():
 # read pale, lighter than the lawn; 0.085/0.18/0.04 went tone on tone with it
 # (lost at night and at 10 m); now olive, its value between the two. The
 # palette's cyan-ish "fern" (0.08/0.34/0.13) is left alone (the small fern
-# moved to these two olives in N-331.10). LowpolyMaterials keys
+# moved to these olives in N-331.10; its upright fronds have their own
+# "fern.small_young" since N-331.11). LowpolyMaterials keys
 # both as "fern" (it cuts at the first dot): foliage detail and the autumn
 # tint still apply, and the albedo gets x1.16 there (DETAIL_GAIN).
 FERN_TALL = (0.13, 0.20, 0.03, 1)
@@ -1252,8 +1318,76 @@ def tall_fern_cluster():
 # from above they overlap into a continuous herringbone instead of the loose
 # arrowheads the tall cluster shows at 0.95-1.15; the fold is shallower
 # (0.2) so the two halves of a frond shade closer.
-FERN_REACH = (1.4, 1.6)
-FERN_FOLD = 0.2
+#
+# N-331.11 (director-arte, 2026-10-19): up close those leaflets still read as
+# a pile of loose triangles -- each one touched its frond only along the
+# midrib. Now every frond is one joined blade (_joined_frond): a strip down
+# the frond, a third of the teeth's width, that narrows to the stipe and the
+# tip, and one tooth per span and side hung off its edge, the tip swept
+# 1.1-1.3 spans forward (a hooked, pointed tooth). The margin is serrated
+# (notch, tooth, notch) but nothing in it is detached. No midrib vertex, so no
+# V fold: the teeth hang a little below the strip instead. 20 tris a frond,
+# 11 fronds, 220 tris, 1.21 x 1.21 m, 0.54 m tall. A first pass with a wider
+# strip (0.42) and teeth ending at the next station read as kale or oak
+# leaves. The upright fronds' colour went from "fern.tall_young" to their own
+# "fern.small_young" 0.14/0.22/0.035 (less yellow against the lawn); the tall
+# cluster keeps its two olives. LowpolyMaterials' "fern" grain went 1.0 -> 2.0
+# m per repeat in the same pass (its cells read as hexagons on these fronds).
+FERN_SMALL_YOUNG = (0.14, 0.22, 0.035, 1)
+# Tooth half-width per span (stipe to tip); the stipe span has no tooth.
+FERN_TEETH = (0.0, 0.85, 1.0, 0.92, 0.72, 0.45)
+# Strip half-width as a share of the wider neighbouring tooth.
+FERN_BLADE = 0.3
+
+
+def _joined_frond(bm, slot, root, heading, length, half_width, lift, droop, rng, teeth=FERN_TEETH, blade=FERN_BLADE):
+    """One fern frond as a single connected blade: a strip along the arc
+    (rising at `lift`, bending down by `droop` per quarter) that starts at
+    `root` and closes at the tip, with one triangular tooth per span and side
+    on its edge. 2 * spans - 2 strip tris plus 2 per toothed span."""
+    ch, sh = math.cos(heading), math.sin(heading)
+    side = Vector((-sh, ch, 0.0))
+    spans = len(teeth)
+    seg = [0.12] + [0.88 / (spans - 1)] * (spans - 1)
+    angles = [lift - droop * 3.0 * j / (spans - 1) for j in range(spans)]
+    spine = [Vector(root)]
+    for s, a in zip(seg, angles):
+        spine.append(spine[-1] + Vector((ch * math.cos(a), sh * math.cos(a), math.sin(a))) * length * s)
+    ups = [Vector((-ch * math.sin(a), -sh * math.sin(a), math.cos(a))) for a in angles]
+    # Strip edges per station: one shared vertex at the root and at the tip.
+    root_v = bm.verts.new(spine[0])
+    tip_v = bm.verts.new(spine[-1])
+    left, right = [root_v], [root_v]
+    for j in range(1, spans):
+        b = max(teeth[j - 1], teeth[j]) * blade * half_width
+        left.append(bm.verts.new(spine[j] + side * b))
+        right.append(bm.verts.new(spine[j] - side * b))
+    left.append(tip_v)
+    right.append(tip_v)
+
+    def face(verts, up):
+        f = bm.faces.new(verts)
+        f.normal_update()
+        if f.normal.dot(up) < 0.0:
+            f.normal_flip()
+        f.material_index = slot
+
+    for j in range(spans):
+        up = ups[j]
+        if j == 0:
+            face((root_v, left[1], right[1]), up)
+        elif j == spans - 1:
+            face((left[j], tip_v, right[j]), up)
+        else:
+            face((left[j], left[j + 1], right[j + 1]), up)
+            face((left[j], right[j + 1], right[j]), up)
+        if teeth[j] <= 0.0:
+            continue
+        for s, edge in ((1.0, left), (-1.0, right)):
+            w = teeth[j] * half_width * rng.uniform(0.88, 1.1)
+            sweep = rng.uniform(1.1, 1.3)
+            tooth = bm.verts.new(spine[j].lerp(spine[j + 1], sweep) + side * (s * w) - up * (w * 0.2))
+            face((edge[j], edge[j + 1], tooth), up)
 
 
 def fern(count=11, seed=8):
@@ -1262,7 +1396,7 @@ def fern(count=11, seed=8):
     obj = bpy.data.objects.new("Fern", mesh)
     bpy.context.collection.objects.link(obj)
     mesh.materials.append(_double_sided("fern", "tall", FERN_TALL))
-    mesh.materials.append(_double_sided("fern", "tall_young", FERN_TALL_YOUNG))
+    mesh.materials.append(_double_sided("fern", "small_young", FERN_SMALL_YOUNG))
     bm = bmesh.new()
     rng = random.Random(seed)
     start = rng.uniform(0.0, math.tau)
@@ -1272,8 +1406,7 @@ def fern(count=11, seed=8):
             lift, droop, length, slot = rng.uniform(0.6, 0.75), rng.uniform(0.22, 0.28), 0.56, 0
         else:       # upright
             lift, droop, length, slot = rng.uniform(1.1, 1.22), rng.uniform(0.26, 0.3), 0.8, 1
-        _pinnate_frond(bm, slot, (0.0, 0.0, 0.0), heading, length * rng.uniform(0.92, 1.08), 0.15, lift, droop, rng,
-                       fold=FERN_FOLD, reach=FERN_REACH)
+        _joined_frond(bm, slot, (0.0, 0.0, 0.0), heading, length * rng.uniform(0.92, 1.08), 0.17, lift, droop, rng)
     bm.to_mesh(mesh)
     bm.free()
 
@@ -1716,6 +1849,8 @@ GROUPS = {
     "mushroom": lambda: (mushroom(), export_forest("mushroom")),
     # Only the wildflowers (N-331.4), without rewriting the other plants.
     "wildflower": lambda: (wildflower_cluster(), export_forest("wildflower")),
+    # Only the fallen log (N-978), without rewriting the other plants.
+    "fallen_log": lambda: (log(), export_forest("fallen_log")),
     "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}

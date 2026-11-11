@@ -1,4 +1,4 @@
-"""Measure real Godot diagnostic captures; never substitutes for final Flaca/E.
+"""Measure real Godot LOD captures (S-311.17): LOD1/LOD2 against LOD0, fail above 5 %.
 
 python art/gel_character/compare_lod_silhouettes.py <capture-directory> --output <report.json>
 Pixel difference is the symmetric difference divided by union; fail above 5%.
@@ -48,10 +48,17 @@ def compare(directory):
                         "pass": difference / union <= 0.05})
     if not results:
         raise ValueError("No LOD comparisons")
+    passed = all(row["pass"] for row in results)
+    # S-311.17 needs the real presets (bone lengths through GelBodyShaper), not
+    # the old thinning proxy; morph extremes are single morphs on neutral bones.
+    real_presets = manifest.get("presets") == "gel_body_shaper" and {"delgada", "flaca"} <= states
+    complete = passed and real_presets
     return {"protocol": {key: manifest[key] for key in manifest if key != "captures"},
-            "passed_diagnostic_samples": all(row["pass"] for row in results),
-            "final_item_17_complete": False,
-            "remaining": "Full Flaca bone-length preset must be checked after C; these are opaque B diagnostics.",
+            "passed_diagnostic_samples": passed,
+            "final_item_17_complete": complete,
+            "remaining": "" if complete else (
+                "Captures must use the real Delgada and Flaca presets through GelBodyShaper."
+                if not real_presets else "A LOD differs from LOD0 by more than 5 %."),
             "worst_pixel_difference": max(row["pixel_difference"] for row in results),
             "comparisons": results}
 

@@ -27,10 +27,10 @@ bots y benchmarks, no con playtesting.
 | 6 | **Productos** | Los 10 de `data/contents/` (jarrón, lámpara, torre de vidrio, torta, masa madre, bidón, gallina, cachorro, fuegos artificiales, jaula del mapache), cada uno con su trampa | D-0204, D-0116 |
 | 7 | **Stock** | Palet físico de hasta 24 unidades, descarga con zorra o autoelevador, estantes con hueco etiquetado, picking a mano | D-0604 a D-0609, D-0611 |
 | 8 | **Pedidos** | 6 + 2 por jugador por día (tope 16), 1 a 3 productos, ventana de 4 h de juego, tablero en el galpón | D-0210, D-0801 a D-0804, D-0807 |
-| 9 | **Armado** | Cajas S, M, L y XL en grilla de celdas de 0,2 m, relleno, cinta, etiqueta, calidad `Q` y trampa según [armado-y-trampas.md](armado-y-trampas.md); sellos solo los que pide el pedido | D-0212, D-0217, D-0701 a D-0712 |
+| 9 | **Armado** | Cajas S, M, L y XL en grilla de celdas de 0,2 m, relleno, cinta, etiqueta, calidad `Q` y trampa según [armado-y-trampas.md](armado-y-trampas.md); sellos solo los que pide el pedido | D-0212, D-0213, D-0701 a D-0712 |
 | 10 | **Despacho y carga** | Dejar la caja armada en la zona de salida la asocia a la salida; se carga la camioneta actual | D-0716, D-0717, D-0809 |
 | 11 | **Camioneta actual** | La de hoy, sin cambios de manejo; nada de flota nueva | D-0207 |
-| 12 | **Mapa** | Mundo continuo con solo **Barrio Centro** (gris) y **Campo** (la ruta de hoy como zona) abiertos; portón del galpón como inicio de la salida; GPS a la próxima parada; 3 a 6 casas por salida | D-0301 a D-0309, D-0311, D-0314, D-0315 |
+| 12 | **Mapa** | Mundo continuo con solo **Barrio Centro** (gris) abierto; Campo existe en el mapa pero queda cerrado por `gate_campo_obra` hasta F2 (revisión D-0140); portón del galpón como inicio de la salida; GPS a la próxima parada; 3 a 6 casas por salida | D-0301 a D-0309, D-0311, D-0314 |
 | 13 | **Entrega** | `DeliveryHouse` y puerta del cliente como hoy, que además compara contenido contra el pedido | D-0213, D-0340, D-0815 |
 | 14 | **Cierre del día** | Cobro, alquiler (100), penalidades, resumen, guardado | D-0320, D-0501 a D-0510, D-0508 |
 | 15 | **Roles de la tripulación** | Sin clases fijas; la regla de 2 min sin caja ni volante y la camioneta que sale con pocas cajas con 1 jugador | D-0110, D-0316 |
@@ -43,7 +43,7 @@ bots y benchmarks, no con playtesting.
 |---|---|---|
 | Empleados y automatización (grupos 10 y 11) | F2 | En F1 nadie trabaja solo; el galpón se congela si todos salen (S4) |
 | Modo construcción del galpón (D-0901 a D-0910) | F1 ampliación / F2 | El layout por defecto alcanza para cerrar el corte |
-| Hitos, licencias y desbloqueos (grupo 04) | F2 | En F1 Centro y Campo están abiertos desde el día 1; el sistema de hitos solo se prepara (D-0306) |
+| Hitos, licencias y desbloqueos (grupo 04) | F2 | En F1 solo Centro está abierto (Campo espera su hito, revisión D-0140); el sistema de hitos solo se prepara (D-0306) |
 | Suburbio, Puerto, Islas, Montaña, Nieve y Volcán | F2 a F4 | Una zona nueva sin cerrar el corte multiplica el riesgo |
 | Bici, carrito, lancha, avioneta y 4x4 | F2 a F4 | Una sola camioneta; `VehicleDefinition` existe pero solo con ella |
 | Heladera, frío y calor simulados (D-0616, D-0617) | F2 | El campo `temperatura` existe y se ignora (catálogo de productos) |
@@ -59,8 +59,10 @@ headless:
 
 1. recibe el palet del proveedor y lo guarda en estantes;
 2. toma pedidos del tablero y **arma 6 cajas** (calidad `Q` calculada, trampa asignada);
-3. despacha **una salida** a Barrio Centro con las cajas armadas, entrega las casas y **vuelve** al galpón;
-4. cierra el día con **ganancia > 0** (ingresos − costos − alquiler);
+3. despacha **una salida** a Barrio Centro con las cajas armadas, entrega las casas y **vuelve** al galpón; la
+   **puerta del mundo cobra** (el bot no llama `OrderSettlement` por su cuenta);
+4. cierra el día con **ganancia > 0** (ingresos − costos − alquiler), con el **alquiler cobrado por el juego**;
+4 bis. ningún jugador pasa más de **120 s sin caja ni volante** (el bot lo registra);
 5. termina sin ningún `ERROR` ni `SCRIPT ERROR` en el log.
 
 Y además, medido en la misma corrida:
@@ -71,11 +73,11 @@ Y además, medido en la misma corrida:
 | Sin fugas | huérfanos 0 y objetos que crecen < 2 % entre el día 2 y el 10 | D-2013 |
 | Un solo jugador completa el día | el mismo bot con 1 jugador cierra con ganancia > 0 | D-2016 |
 | Par y trío en red | `net_pair` y `net_trio` en modo Empresa sin desincronización | D-2017 |
-| Ningún frame > 50 ms al manejar de Centro a Campo por la carga de celdas | `test_company_cells` | D-0303 |
+| Ningún frame > 50 ms al manejar del galpón a la última casa de Centro por la carga de celdas | `test_company_cells` | D-0303 |
 | Tests viejos de Entrega y Endless siguen verdes | CI completo | — |
 
 Mientras alguna tarea del §2 no exista, el bot la **simula con un stub marcado** y el hueco queda como
-issue; el corte no se declara cerrado con stubs.
+issue; el corte no se declara cerrado con stubs. Cada stub imprime `BOT_STUB <etapa>` y bloquea `BOT_OK` (D-2016.4).
 
 ## 5. Arte gris permitido
 

@@ -52,7 +52,10 @@ function New-BodyFile([string]$text) {
 function Find-OpenIssue([string]$titlePattern) {
     $json = (gh issue list --repo $repo --label rutina-caida --state open --limit 50 --json 'number,title' 2>$null) -join "`n"
     if (-not $json.Trim()) { return $null }
-    $hit = @($json | ConvertFrom-Json) | Where-Object { $_.title -match $titlePattern } | Select-Object -First 1
+    # Through a variable: 5.1 writes the parsed array as ONE object, so @(...) would keep it whole, the
+    # filter would see every title at once and $hit.number would be all the open issues (N-973.5).
+    $issues = $json | ConvertFrom-Json
+    $hit = $issues | Where-Object { $_.title -match $titlePattern } | Select-Object -First 1
     if ($hit) { $hit.number } else { $null }
 }
 

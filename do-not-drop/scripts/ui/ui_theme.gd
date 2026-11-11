@@ -23,6 +23,7 @@ const UI_SOUNDS = preload("res://scripts/ui/ui_sounds.gd")
 ## roles moved: panels are cream now, so text on them is INK.
 const INK: Color = Color("1e2235")        # outlines, text on cards, shadows
 const PAPER: Color = Color("fff6e6")      # card fill; light text over the 3D view
+const CREAM: Color = Color("fff3d6")      # sound subtitles: warmer than the prompt's paper (N-983)
 const MUTED: Color = Color("857a6e")      # secondary text on cream
 const MINT: Color = Color("2dd4a3")       # go / OK / primary action
 const YELLOW: Color = Color("ffc93c")     # tape, money, warnings
@@ -104,6 +105,21 @@ static func apply(control: Control, scale_menu_text: bool = true) -> void:
 			var refresh: Callable = _refresh_text_scale.bind(control)
 			if not settings.is_connected(&"menu_text_scale_changed", refresh):
 				settings.connect(&"menu_text_scale_changed", refresh)
+
+
+## True when the player asked for the colour-safe palette (GameSettings.colorblind_palette), read through `node`'s
+## tree; false without the settings (a bare test).
+static func colorblind(node: Node) -> bool:
+	if node == null or not node.is_inside_tree():
+		return false
+	var settings: Node = node.get_node_or_null(^"/root/GameSettings")
+	return settings != null and bool(settings.get(&"colorblind_palette"))
+
+
+## A state's colour (0 ok, 1 warning, 2 danger) in the palette the player chose, read through `node` (D-1918):
+## the expansion's screens and marks colour their states with this, so the Okabe-Ito palette reaches them all.
+static func status(state: int, node: Node) -> Color:
+	return state_color(state, colorblind(node))
 
 
 static func state_color(state: int, colorblind: bool = false) -> Color:
@@ -193,6 +209,34 @@ static func label(parent: Node, text: String, font_size: int, color: Color = INK
 		node.add_theme_font_override("font", display_font())
 	parent.add_child(node)
 	return node
+
+
+## A text in the world (signs, labels, marks over the shed) in the brand's display face at `font_size`, so the
+## company world reads like its screens (D-1916). One call, so a caller over its line budget does not grow.
+static func label_3d(label: Label3D, font_size: int) -> void:
+	label.font = display_font()
+	label.font_size = font_size
+
+
+## Seconds a screen's card takes to come in (D-1941, with D-1934), and how small it starts.
+const POP_SECONDS: float = 0.14
+const POP_FROM_SCALE: float = 0.96
+
+
+## Brings `screen`'s card (its first PanelContainer) in: from transparent and a touch smaller to whole, over
+## POP_SECONDS. A screen calls it when it opens, beside its open sound. Returns the tween (null without a card).
+static func pop_in(screen: Control) -> Tween:
+	var cards: Array[Node] = screen.find_children("*", "PanelContainer", true, false)
+	if cards.is_empty() or not screen.is_inside_tree():
+		return null
+	var card := cards[0] as Control
+	card.pivot_offset = card.size * 0.5
+	card.modulate.a = 0.0
+	card.scale = Vector2.ONE * POP_FROM_SCALE
+	var tween: Tween = card.create_tween().set_parallel(true).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(card, ^"modulate:a", 1.0, POP_SECONDS)
+	tween.tween_property(card, ^"scale", Vector2.ONE, POP_SECONDS)
+	return tween
 
 
 ## A big display-face heading.

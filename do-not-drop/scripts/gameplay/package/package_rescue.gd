@@ -25,6 +25,17 @@ const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 ## The vehicle's movement interface (D-0209): its readers ask the van by name and fall back to a
 ## plain Node3D's transform. Preloaded: it names no autoload.
 const FleetMotion = preload("res://scripts/gameplay/fleet/fleet_motion.gd")
+## Seconds between two care_state publishes of a box under care (its panel, ring and hint on every
+## peer). A world may ask a box for another in this meta (the company's: BoxToPackage.tune(), D-2002.4).
+const CARE_PUBLISH_SEC: float = 0.1
+const CARE_PUBLISH_META: StringName = &"care_publish_sec"
+## The soonest (s) after a publish that hands going on or off the box may force the next one.
+const HANDS_PUBLISH_MIN_SEC: float = 0.05
+
+
+## How often `p` publishes its care_state: CARE_PUBLISH_SEC unless its world asked for another.
+static func care_publish_interval(p: Node) -> float:
+	return maxf(float(p.get_meta(CARE_PUBLISH_META, CARE_PUBLISH_SEC)), 0.0)
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -85,7 +96,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 				before_state = p.trap_state
 		p._award_pending_trap_milestones()
 	consume_input_edges(p)
-	_publish_cushion_change(p)
+	_publish_hand_change(p)
 	check_recovery(p)
 	var tool := StringName(input.get("tool", "tape"))
 	var run: Node = PackageAutoloads.run_manager(p)
@@ -97,7 +108,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 			p.care.message = LocText.make("HUD_CARE_MSG_SUPPLY_TAKEN")
 	p._report_change(before_integrity, before_state, p.tr("HUD_CARE_RUINED_IN_RESCUE"))
 	p._care_publish_time += delta
-	if p._care_publish_time >= 0.1:
+	if p._care_publish_time >= care_publish_interval(p):
 		p._care_publish_time = 0.0
 		publish_care(p)
 		p._emit_event(&"package_hint_changed", [p.package_id, p.hint_text()])
@@ -139,6 +150,22 @@ static func apply_external_damage(p: DeliveryPackage, amount: float, ruin_cause_
 ## How far ahead (s) a box looks for a bump the road announces: a little
 ## beyond the trap's own warning, so the trap decides when to show it.
 const ROAD_LOOKAHEAD: float = 1.2
+## A box packed in the company's warehouse carries its trap plan under this meta (BoxToPackage.META_TRAP_PLAN,
+## D-0710), set before the box enters the tree: its "severity" is how hard the packing lets the trap hit.
+const TRAP_PLAN_META: StringName = &"trap_plan"
+
+
+## What the box's trap is set up with (DeliveryPackage.initialize_trap(), and again when it is repaired): its
+## definition's params and, from its trap plan, the severity (ITrapBehavior.severity, D-0710.b). Without a plan
+## the trap rides at 1, its own numbers.
+static func trap_config(p: DeliveryPackage) -> Dictionary:
+	var config: Dictionary = p.trap_definition.params.duplicate(true)
+	var plan: Variant = p.get_meta(TRAP_PLAN_META, {})
+	if plan is Dictionary and (plan as Dictionary).has("severity"):
+		config["severity"] = float((plan as Dictionary)["severity"])
+	return config
+
+
 ## What a trap that draws something (the bomb's code) rolls it from: the
 ## session seed and the box, so the same session deals the same code to the
 ## same box, and each box its own. 0 without a seeded session (solo): the
@@ -240,18 +267,76 @@ static func owner_peer(p: DeliveryPackage) -> int:
 	return p._care_worker
 
 
-## The ring on the box and the card's "tap now" follow the trap's cushion
-## state, and a bump warning that arrives 0.1 s late is most of what a tap
-## can use: send it as soon as it changes.
-static func _publish_cushion_change(p: DeliveryPackage) -> void:
-	var cushion: Dictionary = p.trap_behavior.cushion_state()
-	if cushion.is_empty():
-		return
-	var signature: int = int(float(cushion["eta"]) >= 0.0) + 2 * int(bool(cushion["shield"])) \
-			+ 4 * int(cushion["saved"]) + 4096 * int(cushion["taps"])
+## What the hands answer to goes out as soon as it changes instead of waiting for the next care
+## publish (care_publish_interval(): 0.2 s for a company box, D-2002.4): the ring on the box and the
+## card's "tap now" follow the trap's cushion state, and a bump warning that arrives late is most of
+## what a tap can use; a sequence's step taken, missed or solved (the bomb's code, the growing
+## weight's) and the side a gesture pushes to (the balance's lean, the liquid's scrub) are what the
+## tender's card answers to. Publishes on this tick when care_signature() changed.
+static func _publish_hand_change(p: DeliveryPackage) -> void:
+	var signature: int = care_signature(p.trap_behavior)
 	if signature != p._cushion_signature:
 		p._cushion_signature = signature
-		p._care_publish_time = 0.1
+		p._care_publish_time = care_publish_interval(p)
+	# Hands going on or off the box (held_by / helped_by, S-205) are what every peer's copy of that
+	# player grips with: out on this tick too, but only when they changed -- nothing extra while held --
+	# and at most one such publish per HANDS_PUBLISH_MIN_SEC, so an input flapping every tick stays bounded.
+	var steady: Dictionary = steadying_peers(p)
+	if p._care_publish_time >= HANDS_PUBLISH_MIN_SEC \
+			and (int(steady["held_by"]) != int(p.care_state.get("held_by", 0))
+			or int(steady["helped_by"]) != int(p.care_state.get("helped_by", 0))):
+		p._care_publish_time = care_publish_interval(p)
+
+
+## The run is not simulating this box (stopped, or it is not in the run's cargo), so nothing would
+## republish it: nobody is steadying it any more. A new dictionary, so the replication sees the change.
+static func clear_steadying(p: DeliveryPackage) -> void:
+	if int(p.care_state.get("held_by", 0)) != 0 or int(p.care_state.get("helped_by", 0)) != 0:
+		var state: Dictionary = p.care_state.duplicate()
+		state["held_by"] = 0
+		state["helped_by"] = 0
+		p.care_state = state
+
+
+## Who has the primary action down on the box right now, from the samples the host holds (the same
+## ones that decide `steady`, before a trap that hands cannot answer, or the solo assistant, overrides
+## it: the hands are on the box either way). `held_by`: the tender, or whoever works the box loose;
+## `helped_by`: the helper. 0 when nobody. It rides in care_state so every peer can show those hands
+## gripping the box (player_hold_pose.gd); a sample that stops arriving expires on its own.
+static func steadying_peers(p: DeliveryPackage) -> Dictionary:
+	var held_by: int = 0
+	for peer_id: int in [p.tender_peer_id, p._care_worker]:
+		if _is_steadying(p, peer_id):
+			held_by = peer_id
+			break
+	var helper: int = p.assistant_peer_id
+	return {"held_by": held_by, "helped_by": helper if _is_steadying(p, helper) else 0}
+
+
+static func _is_steadying(p: DeliveryPackage, peer_id: int) -> bool:
+	return peer_id > 0 and p._has_fresh_input(peer_id) \
+			and bool((p._tender_inputs[peer_id]["input"] as Dictionary).get("steady", false))
+
+
+## What of `behavior`'s published care the hands answer to, as one number (0: nothing): the cushion
+## (bump announced, tap shielding, hits saved, taps), the sequence (index, mistakes, solved) and the
+## sign of the gesture's push. Its seconds and the push's size wait for the next publish.
+static func care_signature(behavior: ITrapBehavior) -> int:
+	if behavior == null:
+		return 0
+	var parts: Array = []
+	var cushion: Dictionary = behavior.cushion_state()
+	if not cushion.is_empty():
+		parts.append_array([float(cushion["eta"]) >= 0.0, bool(cushion["shield"]), int(cushion["saved"]),
+			int(cushion["taps"])])
+	var sequence: Dictionary = behavior.sequence_state()
+	if not sequence.is_empty():
+		parts.append_array([int(sequence.get("index", 0)), int(sequence.get("mistakes", 0)),
+			int(sequence.get("solved", 0))])
+	var gesture: Dictionary = behavior.gesture_state()
+	if not gesture.is_empty():
+		parts.append(signf(float(gesture.get("push", 0.0))))
+	return 0 if parts.is_empty() else hash(parts)
 
 
 static func check_recovery(p: DeliveryPackage) -> void:
@@ -270,7 +355,8 @@ static func complete_care_tool(p: DeliveryPackage, tool: StringName) -> void:
 		p._parasite_damage = 0.0
 		p.contents_spilled = false
 		p.salvage_state = {}
-		p.trap_behavior.on_setup(p, p.trap_definition.params.duplicate(true))
+		# The packing is the same box: a repaired one keeps its severity (D-0710).
+		p.trap_behavior.on_setup(p, trap_config(p))
 		# A neutralized explosive is inert, not a new bomb with a fresh timer.
 		var bomb := p.trap_behavior as ExplosiveTrapBehavior
 		if p._trap_kind() == &"explosive" and bomb != null:
@@ -302,6 +388,7 @@ static func publish_care(p: DeliveryPackage) -> void:
 		var gesture: Dictionary = p.trap_behavior.gesture_state()
 		if not gesture.is_empty():
 			state["gesture"] = gesture
+	state.merge(steadying_peers(p))
 	p.care_state = state
 	var run: Node = PackageAutoloads.run_manager(p)
 	if run != null and (run.get(&"cargo") as Dictionary).has(p.package_id):

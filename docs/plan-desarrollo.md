@@ -294,6 +294,8 @@ se corren los que siguen, sin comprimirlos: los plazos de Steam no se acortan.
 | Steam Next Fest | inscripción hasta 2027-01-10; festival 2027-02-22 a 2027-03-01 | La demo de la fila anterior, inscripta y publicada para el festival (decisión 2026-10-04, `docs/decisiones/2026-10-04-lanzamiento-steam.md`). | Build de demo, página publicada |
 | Early Access | 2027-03-12 (vie) | Lanzamiento con el contenido mínimo (1 vehículo, 1 set de tramos, las 7 trampas con una acción propia cada una, N-117), precio definido y build revisada por Steam (revisión de build: pedirla 2 semanas antes). | Demo publicada, playtesting de amigos |
 
+Expansión (D-0113, [2026-11-04-recortes-zona-gris](decisiones/2026-11-04-recortes-zona-gris.md)): el "Contenido cerrado" vale solo para el juego base; la expansión sigue sus fases F0-F5, con F0-F2 al Early Access (sin la zona gris, que llega en la primera actualización) y F3-F4 como actualizaciones gratuitas.
+
 ### Decisión de monetización (S-906, 2026-09-28)
 
 - **Compra única:** precio objetivo de lanzamiento entre **USD 8 y 15**, que se fija de manera

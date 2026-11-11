@@ -112,6 +112,18 @@ func deliver(
 	return true
 
 
+## Records an order of this trip that was already settled at the door: OrderSettlement.settle
+## (D-0815) marked it DELIVERED in `book` with its pay. False if it is not from this trip, is not
+## DELIVERED there or was already recorded (D-2016.2).
+func record_settled(order_id: StringName, book: OrderBook) -> bool:
+	if not is_out() or not order_id in order_ids or order_id in delivered_ids:
+		return false
+	if book.state_of(order_id) != Order.STATE_DELIVERED:
+		return false
+	delivered_ids.append(order_id)
+	return true
+
+
 ## Closes the trip on return to the yard: every order of the trip that was not
 ## delivered becomes FAILED. Returns the failed ids. A closed trip does nothing.
 ## With an inventory, the products of a failed order come back from its box to

@@ -8,7 +8,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-1701 | Tramos volcánicos: ceniza, piedra pómez, grietas | constructor-tramos | xhigh | ruta generada |
+| D-1701 | Tramos volcánicos: ceniza, piedra pómez, grietas | constructor-tramos | xhigh | tramos sobre aristas del grafo fijo (revisión D-0140) |
 | D-1702 | Ríos de lava como obstáculo (cruce por puente o rodeo) | constructor-tramos | high | test |
 | D-1703 | Calor: la carga sube de temperatura y los productos sensibles se arruinan | constructor-negocio | high | test |
 | ~~D-1704~~ | ~~Trampa "Derretible" activa en Volcán (D-0738)~~ **Fusionada en D-0738 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-trampas | medium | test |
@@ -23,7 +23,7 @@
 | D-1713 | Luz del volcán (resplandor de noche) | constructor-mundo | medium | captura |
 | D-1714 | Kit volcánico (rocas, pómez, carteles de peligro, estación) (incluye D-1737, fusión de D-0112) | modelador-blender* | high | kit |
 | D-1715 | Perfil de clima volcánico | constructor-mundo | medium | captura |
-| D-1716 | Erupción programada como evento del día (cierra zonas) | constructor-progresion | medium | evento |
+| D-1716 | Erupción programada como evento del día (no cierra zonas: franja anunciada de bombas y ceniza dentro del Volcán; revisión D-0140) | constructor-progresion | medium | evento |
 | ~~D-1717~~ | ~~Cajas térmicas obligatorias (D-0722)~~ **Fusionada en D-0722 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-negocio | low | test |
 | ~~D-1718~~ | ~~Ropa ignífuga de la tripulación~~ **Fusionada en D-0426 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-jugador | low | test |
 | D-1719 | Caer en lava: reaparición y caja perdida (con salvataje imposible) | constructor-jugador | medium | test |

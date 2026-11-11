@@ -141,17 +141,29 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.13** (`face5c9`) Manos manopla con pulgar separado como en la foto (sin dedos, hueso de pulgar para
   cerrar sobre una caja), pies de bota redondeada con planta plana, y uniones cuello-hombros y
   torso-piernas como en la referencia, resueltas con forma y sombreado, no con geometría abierta.
-- [ ] **S-311.14** Prueba de "núcleo": una malla interna más chica y más densa para que el torso se vea
+- [x] **S-311.14** Prueba de "núcleo": una malla interna más chica y más densa para que el torso se vea
   más opaco que las extremidades (criterio 11), con los mismos morphs. Se compara con resolverlo solo con
   el mapa de grosor (ítem 15) y se deja la opción más barata que pase el bloque E.
-- [ ] **S-311.15** Normales suaves y **mapa de grosor** (thickness): la luz atraviesa más en manos y
+- [x] **S-311.15** Normales suaves y **mapa de grosor** (thickness): la luz atraviesa más en manos y
   brazos que en el torso. El grosor tiene que seguir a los morphs (grosor horneado en el cuerpo base y
   corregido en el shader con los pesos de "grosor general"; comprobar en los extremos).
-- [ ] **S-311.16** UV0 sin solapamiento y estable con cualquier morph (skins, caras, decals no se estiran
+- [x] **S-311.16** UV0 sin solapamiento y estable con cualquier morph (skins, caras, decals no se estiran
   más de un 15 %) y UV1 o color de vértice con la máscara de zonas (cabeza, torso, brazos, manos,
   piernas, pies) para skins por zona.
-- [ ] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
+  > Ningún morph mueve UV0; la máscara `GelZone` (color de vértice, 7 zonas con cuello) está en los
+  > tres LOD. Las skins se muestrean en espacio objeto deformado (0 % de estiramiento). La cara ahora
+  > sigue el `head_shape` real reconstruyendo su parche sobre la cabeza deformada: máximo 9,45 %
+  > (antes ignoraba la forma y flotaba o se hundía unos 4 cm). Evidencia:
+  > `art/gel_character/review_bloque_b/s311_16_uv_zones_final.json`, test `test_gel_uv_zones.gd`.
+  > Pelo, cejas, bigote, piezas de cabeza del disfraz y esfera de cabeza del ragdoll ahora siguen el
+  > `head_shape` real (+1 más angosta y alta alrededor de `GelFace.HEAD_SHAPE_CENTRE`, -1 al revés) con
+  > `GelFace.head_shape_fit`; test `test_gel_head_shape_fit.gd` compara contra los vértices del GLB en ±1.
+- [x] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
   una captura a 15 m, en Delgada, Flaca y los extremos).
+  > CI compara las siluetas en cada PR (xvfb, 144 comparaciones con `GelBodyShaper`): Delgada 3,66 %,
+  > Flaca 4,82 %, extremos 4,58 %. LOD1 sumó una vuelta bajo la cabeza (2268 triángulos) y el
+  > simplificador de LOD2 rechaza colapsos que invierten normales (794). Evidencia:
+  > `art/gel_character/review_bloque_b/lod_silhouette_report.json`, `ESTADO_ACTUAL.md`.
 - [x] **S-311.18** (`9bf1593`) `validate_glb.py` ampliado: huesos que usa el juego, pesos normalizados, ningún vértice
   sin peso, malla cerrada, triángulos y morphs dentro del presupuesto, pivote en los pies, y un barrido de
   los extremos de cada morph y de 30 combinaciones al azar sin autointersección.
@@ -242,8 +254,8 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 - [x] **S-311.29** (`a05dafc`) Reflejos de estudio nítidos como los de la foto (criterio 4): especular
   de rugosidad baja + matcap procedural chico de ventana y cinta, visibles aunque el cielo sea oscuro.
 - [x] **S-311.30** (`33d459a`) Absorción por grosor (Beer-Lambert aproximado con el mapa base del ítem
-  15): más color y menos transparencia donde hay más gelatina. La corrección del mapa para morphs sigue
-  pendiente en S-311.15 y no se da por cerrada aquí.
+  15): más color y menos transparencia donde hay más gelatina. El mapa ya sigue la corrección validada
+  en S-311.15 para el peso de grosor general.
 - [x] **S-311.31** (`2e1a75f`) Luz trasera / subsurface falso: wrap lighting y transmisión a
   contraluz calculados en el mismo `light()` del shader, sin material ni pasada adicional.
 - [x] **S-311.32** (`39e09bc`) Motas y burbujas internas (criterio 7): ruido 3D en espacio del objeto,
@@ -363,72 +375,388 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   ropa.
 - [x] **S-311.75** Matriz automática disfraz × pelo × proporciones (presets y extremos): ninguna
   combinación se atraviesa (test).
-- [ ] **S-311.76** Desbloqueos en la progresión existente (`UnlockManager`) y panel de cosméticos con el
+- [x] **S-311.76** Desbloqueos en la progresión existente (`UnlockManager`) y panel de cosméticos con el
   maniquí de gelatina del ítem 22 en vez de cápsula + esfera.
 
 ### K. Animaciones base y de estudio (77-85)
 
-- [ ] **S-311.77** Clips base con `animation_library.py`: idle, caminar, trotar, correr (N-115), salto
+- [x] **S-311.77** Clips base con `animation_library.py`: idle, caminar, trotar, correr (N-115), salto
   (impulso, aire, aterrizaje), girar en el lugar.
-- [ ] **S-311.78** Clips de juego: levantar caja baja y alta, caminar cargando, lanzar, dejar, sentarse,
+- [x] **S-311.78** Clips de juego: levantar caja baja y alta, caminar cargando, lanzar, dejar, sentarse,
   manejar (IK de volante y pedales de Nacho: aviso), subir y bajar del camión, tocar timbre.
-- [ ] **S-311.79** Reacciones: tropezar, resbalar, empujado, golpe de caja, susto (explosiva), mareo,
+- [x] **S-311.79** Reacciones: tropezar, resbalar, empujado, golpe de caja, susto (explosiva), mareo,
   sacudirse el agua.
-- [ ] **S-311.80** Máquina de estados y mezclas en `PlayerAnimator` con tiempos pulidos; pies sin
+- [x] **S-311.80** Máquina de estados y mezclas en `PlayerAnimator` con tiempos pulidos; pies sin
   patinar con cualquier largo de pierna (medido: desplazamiento del pie apoyado < 2 cm por paso).
-- [ ] **S-311.81** Los clips quedan limpios y la física (bloque F) pone el "jelly" encima: sin bamboleo
+- [x] **S-311.81** Los clips quedan limpios y la física (bloque F) pone el "jelly" encima: sin bamboleo
   dibujado a mano que choque con la simulación.
-- [ ] **S-311.82** Anticipación, squash & stretch y follow-through en los clips clave (salto, lanzar,
+- [x] **S-311.82** Anticipación, squash & stretch y follow-through en los clips clave (salto, lanzar,
   aterrizar, levantar), con los 12 principios de animación.
-- [ ] **S-311.83** Pulido de estudio: curvas revisadas (arcos, overlap, sin interpolaciones lineales
+- [x] **S-311.83** Pulido de estudio: curvas revisadas (arcos, overlap, sin interpolaciones lineales
   duras), turntable y capturas en movimiento por clip en `art/gel_character/review/`, con Delgada, Flaca
   y un extremo.
-- [ ] **S-311.84** Los clips dependen solo del estado replicado: los otros ven la misma animación (test
+- [x] **S-311.84** Los clips dependen solo del estado replicado: los otros ven la misma animación (test
   de dos pares).
-- [ ] **S-311.85** Los mismos clips funcionan con cualquier proporción y en los NPC del depósito sin
+- [x] **S-311.85** Los mismos clips funcionan con cualquier proporción y en los NPC del depósito sin
   retoque a mano (retarget por nombres de huesos; test de clips presentes).
 
 ### L. Emotes graciosos y bailes (86-91)
 
-- [ ] **S-311.86** 8 emotes: saludar, aplaudir, facepalm, encogerse de hombros, señalar, pulgar arriba,
+- [x] **S-311.86** 8 emotes: saludar, aplaudir, facepalm, encogerse de hombros, señalar, pulgar arriba,
   derretirse al piso y volver, sacudirse como un perro.
-- [ ] **S-311.87** 6 animaciones de gelatina pura: panqueque, chicle estirado, rebote de pelota,
+- [x] **S-311.87** 6 animaciones de gelatina pura: panqueque, chicle estirado, rebote de pelota,
   dividirse en dos y juntarse, temblar de frío, inflarse.
-- [ ] **S-311.88** 8 bailes originales (sin copiar coreografías de otros juegos): paso simple, robot,
+- [x] **S-311.88** 8 bailes originales (sin copiar coreografías de otros juegos): paso simple, robot,
   disco, gusano en el piso, headbang, baile de la victoria, "flan" (todo el cuerpo ondulando) y conga
   que se sincroniza con quien esté cerca.
-- [ ] **S-311.89** Rueda de emotes con teclado y gamepad (junto a la rueda de pings S-505 o aparte),
+- [x] **S-311.89** Rueda de emotes con teclado y gamepad (junto a la rueda de pings S-505 o aparte),
   replicada.
-- [ ] **S-311.90** Idles largos si el jugador no toca nada: mirarse la mano transparente, hacer una
+- [x] **S-311.90** Idles largos si el jugador no toca nada: mirarse la mano transparente, hacer una
   burbuja, rebotar en el lugar.
-- [ ] **S-311.91** Celebración al entregar y derrota en resultados (`hud_results.gd` y S-508 están en la
+- [x] **S-311.91** Celebración al entregar y derrota en resultados (`hud_results.gd` y S-508 están en la
   lista de Nacho: aviso).
 
 ### M. Muerte, distorsión y efectos (92-95)
 
-- [ ] **S-311.92** Knockout de gelatina: se derrite en un charco (shader + partículas) y se rearma al
+- [x] **S-311.92** Knockout de gelatina: se derrite en un charco (shader + partículas) y se rearma al
   reaparecer con animación de reensamble.
-- [ ] **S-311.93** Variantes por causa: aplastado (panqueque), explosión (gotas que vuelven al centro),
+- [x] **S-311.93** Variantes por causa: aplastado (panqueque), explosión (gotas que vuelven al centro),
   caída al agua (se disuelve), atropellado.
-- [ ] **S-311.94** Distorsión extrema al chocar fuerte: se estira más allá de lo normal y vuelve con
+- [x] **S-311.94** Distorsión extrema al chocar fuerte: se estira más allá de lo normal y vuelve con
   rebote, con tope para que la malla nunca se rompa ni se invierta.
-- [ ] **S-311.95** VFX con `artista-vfx` del color de la skin: gotas, salpicaduras, burbujas al aterrizar,
+- [x] **S-311.95** VFX con `artista-vfx` del color de la skin: gotas, salpicaduras, burbujas al aterrizar,
   estela corta al correr, y manchas en piso y paredes que se desvanecen en segundos, con tope de
   cantidad (test de que no crecen sin límite).
 
 ### N. Sonido (96-98)
 
-- [ ] **S-311.96** Sonidos sintetizados en `SynthAudio` con `disenador-audio`: pasos "squish" por
+- [x] **S-311.96** Sonidos sintetizados en `SynthAudio` con `disenador-audio`: pasos "squish" por
   superficie, salto, aterrizaje, rebote, golpe, estirarse, derretirse, rearmarse.
-- [ ] **S-311.97** Voz sin palabras gelatinosa (base: S-402) y música corta propia para cada baile.
-- [ ] **S-311.98** Mezcla en los buses Interior/Exterior; tono según el jugador y el tamaño del cuerpo
+- [x] **S-311.97** Voz sin palabras gelatinosa (base: S-402) y música corta propia para cada baile.
+- [x] **S-311.98** Mezcla en los buses Interior/Exterior; tono según el jugador y el tamaño del cuerpo
   (más grande, más grave); nunca tapan los sonidos de las trampas (medido como en S-404).
 
 ### O. Integración y entrega (99-100)
 
-- [ ] **S-311.99** Todo junto en la personalización (preset, proporciones, color, skin, cara, pelo,
+- [x] **S-311.99** Todo junto en la personalización (preset, proporciones, color, skin, cara, pelo,
   disfraz), guardado y replicado. `tests/test_gel_character.gd`: huesos, clips, morphs, materiales,
   presupuesto, ragdoll estable, red de dos pares. Capturas finales con `revisor-visual`.
-- [ ] **S-311.100** Presentación de estudio en `art/gel_character/review/`: turntable de los seis presets
+- [x] **S-311.100** Presentación de estudio en `art/gel_character/review/`: turntable de los seis presets
   en 6 colores, un video del editor moviendo los sliders, reel de animaciones (base, graciosas, bailes,
   muertes) y `LEEME.md` final. Pasa a ser el personaje por defecto solo con el visto bueno del usuario.
+
+---
+
+## Expansión: tareas asignadas a Slatex (2026-11-01)
+
+Pedido de Slatex (2026-11-01): de las 1000 `D-` de `docs/expansion-distritos/`, las que caen en su dominio
+(UI, audio, efectos, jugador, paquete) y que ninguna rutina tiene en su carril. Las rutinas `desarrollador`
+y `sesion-arte` **no las toman** (`.claude/rutinas/desarrollador.md` §2). El detalle y el "hecho cuando"
+siguen en la tabla de su grupo; al cerrar una se marca allá y acá con el hash. Lo que toque código de
+la Empresa (`scripts/core/company/`, `scripts/gameplay/business/`, `data/`) lleva aviso en `docs/avisos/`.
+
+Quedan para Nacho, aunque estén en estos grupos: D-1930 (SFX de vehículos), D-1931 (clima por distrito),
+D-1936 (voz de proximidad, red), y del grupo 18 el galpón, máquinas, vehículos, distritos, animales y casas
+(los pide `arte-pendiente/` a la sesión de arte de su PC).
+
+**Para empezar** (su diseño ya está cerrado): D-1909 (pausa con "Cerrar el día": lo espera D-0253.a),
+D-1902 (portapapeles, `diseno/portapapeles.md`), D-1901 (tutorial, `diseno/onboarding.md`) y D-1919
+(modificadores, `diseno/dificultad.md`). El resto depende de sistemas de F1-F4 que todavía arman las rutinas.
+
+### Grupo 19 — UI, tutorial, audio y efectos (`19-ui-audio-vfx.md`)
+
+- [x] **D-1901** Tutorial de la primera semana: un objetivo por vez.
+  Rama `codex/D-1901-onboarding`: `scripts/gameplay/company_onboarding.gd` (función pura),
+  `company_onboarding_tracker.gd`, `scripts/ui/company_onboarding_line.gd`, `tests/test_company_onboarding.gd`; el bot
+  del día (`test_company_bot_day`) tilda los 6 objetivos del día 1. Pendiente, esperando sistemas: las notas del
+  Jefe (`WORLD_ONBOARD_*`, con el feed de avisos del HUD de la Empresa, D-1903), los disparadores de `restock` y
+  `fill` (insumos de la mesa y `Q` de la caja solo viven en el host) y que `pack`, `deliver` y `return` sean por
+  jugador (hoy los tilda la tripulación junta: la mesa y la puerta no tienen evento por jugador).
+- [x] **D-1902** Portapapeles: objeto en la mano con hojas (stock, proveedor; empleados con el hito 8).
+  Rama `codex/D-1902-clipboard`: `scripts/gameplay/company_clipboard.gd`, `scripts/ui/clipboard_frame.gd`,
+  `scripts/gameplay/player/player_held_tool.gd`, `tests/test_company_clipboard.gd`. La hoja Empleados espera a D-1038.
+- [x] **D-1903** HUD del día: hora, plata, pedidos pendientes.
+  Rama `codex/D-1903-day-hud`: `scripts/ui/company_day_hud.gd` (`CompanyDayHud`: arriba a la izquierda,
+  "Día 3 · 10:45" o "Pausa" con el reloj parado, la plata, en rojo si es negativa, y "Pedidos: N", en naranja
+  si alguno está atrasado; lee el reloj, la empresa y el libro de pedidos de cada par, sin red).
+  `scripts/ui/company_ui.gd` (`CompanyUi.add_to()`, desde `CompanyRoot`, agrega el feed y el HUD: las piezas
+  nuevas de la pantalla de la Empresa se suman ahí). Test: `tests/test_company_day_hud.gd`.
+  Pendiente: la captura (sin pantalla en esta sesión) y el ícono por evento del día, que espera a D-0123.
+- [x] **D-1904** Menú principal con modo Empresa y slots de guardado.
+  Rama `codex/D-1904-company-slots`: `scripts/ui/company_slots_page.gd` (página "Modo Empresa" del menú: lista de
+  empresas con día, plata, fecha y un chip por modificador, "Abrir sala para amigos", empresa nueva con nombre y
+  modificadores, "Opciones" y "Borrar" del slot), `main_menu.gd` (página `COMPANY`), `CompanySave.write_options()`,
+  `tests/test_company_slots_menu.gd`. Pendiente: la captura de la página (sin pantalla en esta sesión).
+- [x] **D-1905** Pantalla de cierre del día (resumen, hitos, sueldos).
+  Rama `codex/D-1905-day-close`: `scripts/ui/day_close_report.gd` (`DayCloseReport`: nombres de los motivos
+  `milestone:<id>` "Hito: …", `day_event:<id>` "Evento: …" y `wages`; filas de sueldos por empleado; hitos del día;
+  líneas "Mañana:"), `DaySummaryPanel` suma "Hitos del día", "Sueldos pagados" y "Mañana:" (cada parte se esconde
+  vacía), `CompanyRoot._on_day_summary` le pasa `DayCloseReport.extras()`; `tests/test_day_close_screen.gd`.
+  Se llenan solos cuando existan la contratación (D-1001), los hitos (grupo 04) y los eventos del día (D-0123).
+  Pendiente: la captura (sin pantalla en esta sesión).
+- [x] **D-1906** Pantalla de despacho con estilo final.
+  Rama `codex/D-1906-dispatch-style`: `DispatchBoardPanel` (`scripts/ui/dispatch_board_panel.gd`) suma dos barras de
+  carga, lugares y kg, llenas con lo elegido y del color de calma hasta `FILL_WARN` (3/4) y de aviso desde ahí
+  (`UiTheme.state_color`), escondidas sin vehículo; el texto de cada fila toma el color de su marca (elegida menta,
+  libre tinta, bloqueada apagada). Test: `tests/test_company_dispatch_panel.gd` (`_test_style`). Pendiente: la
+  captura (sin pantalla en esta sesión); la fuente y el tema unificados son D-1916.
+- [x] **D-1907** Indicadores en el mundo (flecha a la estación que necesita algo).
+  Rama `codex/D-1907-world-indicators`: `scripts/presentation/shed_indicators.gd` (`ShedIndicators`, bajo el galpón y
+  en su grupo de overlay): una flecha que sube y baja con una línea sobre la pieza que necesita a alguien. Mesa de
+  armado con un insumo bajo: naranja, "Faltan insumos". Zona de despacho con pedidos atrasados: roja, "N
+  atrasados". Se va cuando se atiende. Lo agrega `CompanyUi`. Test: `tests/test_shed_indicators.gd` (también en el
+  galpón real). Pendiente: la captura (sin pantalla en esta sesión).
+- [x] **D-1908** Tooltips de productos y requisitos.
+  Rama `codex/D-1908-tooltips`: `scripts/ui/company_tooltips.gd` (texto de producto: tamaño, peso, frágil, frío,
+  trampa y precios; de requisito: sello, calidad mínima, plazo y paga extra), tooltip y línea de detalle con el
+  foco en las hojas Stock y Proveedor (`stock_panel.gd`, `supplier_order_panel.gd`), tooltip en los sellos de
+  `order_sheet_panel.gd`; `tests/test_company_tooltips.gd`. Pendiente: la captura (sin pantalla en esta sesión).
+- [x] **D-1909** Menú de pausa con opciones de la empresa ("Cerrar el día" y el aviso de las salidas).
+  Rama `codex/D-1909-company-pause-menu`: `scripts/ui/company_pause_menu.gd`, `tests/test_company_pause_menu.gd`.
+- [x] **D-1910** Escalado de UI y Steam Deck.
+  Rama `codex/D-1910-steam-deck`: `tests/test_ui_steam_deck.gd` arma las pantallas nuevas (cierre del día lleno,
+  pausa de la Empresa, tienda, despacho y portapapeles) a 1280x720 (el tamaño base, el más justo con
+  `stretch=expand`) y a 1280x800 (Steam Deck), con el texto a 1x y 1,5x, y comprueba que cada panel queda adentro.
+  Encontró que el cierre del día lleno medía 1031 px de alto. Ahora `DaySummaryPanel` hace scroll en el cuerpo
+  (`fit_body()`, se ajusta a la pantalla y al tamaño de texto), con el título y "Seguir" siempre a la vista. Con
+  mando, arriba y abajo hacen scroll. Pendiente: la captura a 800p (sin pantalla en esta sesión).
+- [x] **D-1911** Música del galpón (loop de trabajo, sube con la actividad).
+  Rama `codex/D-1911-shed-music`: `modules/synth_audio/synth_audio_work_music.gd` (`SynthAudioWorkMusic`: cuatro
+  compases a 108 BPM en tres capas del mismo largo, base, ritmo y melodía; `SynthAudio.work_music_layer()`),
+  `scripts/presentation/shed_music.gd` (`ShedMusic`: las capas en sincronía en un `AudioStreamSynchronized` por el
+  bus Music; cada evento del negocio suma actividad, que se gasta sola; entra el ritmo y después la melodía, y el
+  cierre del día apaga el loop). `CompanyRoot` lo agrega (sin sumar líneas). Test: `tests/test_shed_music.gd`.
+  Pendiente: escucharlo por parlantes (sin audio en esta sesión) y su nivel en la mezcla del galpón (D-1912).
+- [x] **D-1912** Mezcla: buses para galpón, máquinas y distritos.
+  Rama `codex/D-1912-company-mix`: buses `Shed` (reverb de galpón, manda a SFX), `Machines` (a Shed) y `Districts`
+  (a Exterior) en `default_bus_layout.tres`, todos a 0 dB. `scripts/presentation/company_mix.gd` (`CompanyMix`:
+  bus con respaldo, camino y ganancia hasta Master, objetivos por clase). El autoelevador del galpón suena por
+  Machines. La música del galpón pasa a −12 dB para quedar en −30 dBFS. `tests/test_company_mix.gd` mide cada sonido
+  de la Empresa por su camino y la tabla quedó en `docs/audio-mundo.md`. Pendiente: escucharlo por parlantes (sin
+  audio en esta sesión).
+- [x] **D-1913** SFX de UI del portapapeles.
+  Rama `codex/D-1913-clipboard-sfx`: `SynthAudio.clipboard_clip_up()`, `clipboard_clip_down()` y `clipboard_sheet()`
+  (`modules/synth_audio/synth_audio_handling.gd`), tocados por `company_clipboard.gd` en el bus SFX: broche al sacar y
+  guardar, papel al cambiar de hoja; `sound_audit.gd` los lista; `tests/test_company_clipboard_sfx.gd`.
+- [x] **D-1914** Efecto de pedido completado.
+  Rama `codex/D-1914-order-done-vfx`: `scripts/presentation/packing_vfx.gd` (`PackingVfx`, lo agrega `CompanyUi`):
+  una caja cerrada para su pedido y bien armada (intensidad de trampa bajo `TRAP_INTENSITY_MID`) larga confeti
+  sobre la mesa (`CPUParticles3D` de un disparo, 36 papelitos) y un "✓" que sube y se apaga. Lee `box_sealed`
+  en cada par, sin red. Cada efecto se libera a los 1,4 s y hay como mucho 6 a la vez. Test:
+  `tests/test_packing_vfx.gd`. Pendiente: la captura (sin pantalla en esta sesión).
+- [x] **D-1915** Efecto de error de armado.
+  Rama `codex/D-1915-packing-error-vfx`: `PackingVfx` suma el error de armado. Una caja cerrada debajo del nivel o
+  sin la etiqueta de su pedido larga una bocanada roja chica que sube (18 partículas lentas) y una "✗" roja que
+  tiembla y se apaga. Test: `tests/test_packing_vfx.gd`. Pendiente: la captura (sin pantalla en esta sesión).
+- [x] **D-1916** Fuente y estilo visual unificado de la expansión.
+  Rama `codex/D-1916-unified-style`: `UiTheme.label_3d()` pone la fuente de la marca (Lilita One) y el tamaño a un
+  texto del mundo en una línea. La usan los carteles y etiquetas del galpón (estantes, tablero del proveedor,
+  palets, cartel de afuera), la estación de despacho, los nombres de las zonas, las flechas de D-1907 y las marcas
+  de D-1914/15. El HUD del día y el feed llevan el tema compartido (`UiTheme.apply(self, false)`).
+  `tests/test_expansion_style.gd` recorre las pantallas de la Empresa y el mundo real y comprueba que ningún texto
+  cae en la fuente por defecto de Godot. Quedan afuera, por ser del juego base, el tablero del camión y los globos
+  de los vecinos. Pendiente: la captura (sin pantalla en esta sesión).
+- [x] **D-1917** Traducción al inglés de todo lo nuevo.
+  Rama `codex/D-1917-english`: `tests/test_expansion_english.gd`. Revisa las dos tablas fila por fila, como las
+  importa Godot: tres campos, sin claves repetidas ni textos vacíos, y los mismos placeholders en español y en
+  inglés. Las claves de la expansión (335 hoy) (scripts de la Empresa y sus `data/*.tres`) no tienen letras del
+  castellano en el inglés y respetan el glosario en los términos que `test_ui_translations` no mira.
+  Arreglos que encontró:
+  - `UI_TUT_FRAGILE_ACTION` y `UI_TUT_LIQUID_ACTION` tenían una coma sin comillas: Godot partía la fila y el
+    inglés mostraba el resto del castellano.
+  - `UI_FINANCE_REASON_SUPPLIER` pasa a "Goods from the supplier" y `WORLD_PACKTUT_SEALS` a "stamps", como
+    dice el glosario.
+- [x] **D-1918** Accesibilidad: daltonismo en requisitos y estados.
+  Rama `codex/D-1918-colorblind`: `UiTheme.status(estado, nodo)` y `UiTheme.colorblind(nodo)` toman la paleta que
+  eligió el jugador (`GameSettings.colorblind_palette`). La usan los estados de la expansión: HUD del día (plata en
+  rojo, pedidos atrasados), cierre del día (ingresos, costos, ganancia), despacho (barras, filas elegidas), hoja de
+  pedido (plazo, renglones), flechas de las estaciones y marcas de la mesa. `tests/test_colorblind_states.gd`
+  simula deuteranopía y protanopía (Machado 2009) sobre la paleta segura y comprueba que cada pantalla usa
+  Okabe-Ito con la opción activa, sin tocar el archivo de ajustes. Pendiente: la captura con filtros (sin pantalla
+  en esta sesión).
+- [x] **D-1919** Modificadores de la empresa (armado asistido, días tranquilos).
+  Rama `codex/D-1919-company-modifiers`: `CompanyState.options` (guardado, snapshot y `list_slots()`), la cinta con
+  Armado asistido (`PackingStation.seal`, `box_sealed` con `assisted` y `filled`), `PackedBox.assisted` y absorción
+  mínima 0,75; `tests/test_company_modifiers.gd`. Pendiente, sin sistema todavía: `calm_days` en el sorteo de
+  eventos del día (D-0123, pasa a la tarea que lo construya), las pantallas de empresa nueva y "Opciones" del slot
+  (D-0235 / D-1904, hechas con D-1904), y en la mesa el aviso "Relleno insuficiente" y la ayuda "Cerrar (rellena solo)" (con la ayuda
+  de la mesa del HUD de la Empresa).
+- [x] **D-1920** Test de que todo texto nuevo pasa por `tr()`.
+  Rama `codex/D-1920-tr-coverage`: `tests/test_tr_coverage.gd` (amplía N-805: ningún literal con palabras llega a
+  un texto en pantalla sin clave, en todo `scripts/` y `modules/`; `tr()` solo de claves; toda clave de texto de
+  `data/**/*.tres` está en las tablas; las pantallas de la Empresa se arman en inglés sin restos en castellano).
+  Cubre D-0443 (los hitos entran solos al escaneo cuando existan), D-0649 (remitos) y D-0845 (pedidos). Quedan en
+  `LEGACY` tres textos de antes: "Entrega" y "%d pts" en `leaderboard_panel.gd` y `tr("None")` en `unlock_manager.gd`.
+- [x] **D-1923** Celular del jugador con app de pedidos y mapa.
+  Rama `codex/D-1923-company-phone`: `scripts/ui/company_phone.gd` (`CompanyPhone`, lo agrega `CompanyUi`) se saca
+  con `phone_toggle` (F / LB). En el mundo Empresa no había celular: la cámara vive solo en el reparto. Tiene dos
+  apps que se cambian con Q / E o con sus pestañas:
+  - Pedidos: los abiertos con cliente, zona y minutos que quedan, o "atrasado".
+  - Mapa (`company_phone_map.gd`, incluye D-0331): las zonas a escala, los pedidos abiertos por zona y un punto
+    donde está el jugador.
+  Comparte las manos con el portapapeles (grupo `hand_tool`): sacar uno guarda el otro. Test:
+  `tests/test_company_phone.gd`. Pendiente: la captura (sin pantalla en esta sesión).
+- [ ] **D-1926** Tutoriales por sistema (empleados, automatización, lancha, vuelo).
+  Saltada (2026-11-02): sus cuatro sistemas no existen todavía (empleados D-1001, automatización D-1101, lancha
+  D-1301, avioneta D-1401). Cada tutorial se arma cuando llegue su sistema.
+- [x] **D-1928** Voces del jefe y NPC como murmullos de `SynthAudio` + burbujas.
+  Rama `codex/D-1928-voices`: `modules/synth_audio/synth_audio_murmur.gd` (`SynthAudioMurmur`, accesor
+  `SynthAudio.murmur(voz, sílabas)`) arma una voz por personaje: la Jefa por radio, el Jefe del depósito, el
+  cliente y el chofer, sin archivos de voz. `scripts/presentation/company_voice.gd` (`CompanyVoice`, lo agrega
+  `CompanyUi`): `say()` muestra la línea en un globo y suena el murmullo en el bus Voice. La Jefa habla por radio,
+  con un globo abajo, y abre cada día ("Arrancamos el día N"); los demás hablan en un globo sobre su lugar.
+  Test: `tests/test_company_voice.gd`, que comprueba también que no se distribuye ningún archivo de voz.
+  Pendiente: escucharlo por parlantes (sin audio en esta sesión). Las demás líneas de la Jefa y del Jefe esperan
+  a sus sistemas (notas del tutorial, eventos del día).
+- [x] **D-1929** Música por distrito (9 temas compuestos por código).
+  Rama `codex/D-1929-district-music`: `modules/synth_audio/synth_audio_theme_music.gd` (`SynthAudioThemeMusic`,
+  accesor `SynthAudio.theme_music()`) compone nueve temas, cada uno con su tempo, tonalidad, modo, timbre y
+  batería. `scripts/presentation/district_music.gd` (`DistrictMusic`, lo agrega `CompanyUi`) toca el tema de la
+  zona donde está el jugador fuera del galpón, con fundido cruzado al cruzar de zona. Dentro del galpón no suena y
+  vuelve el loop del galpón (`ShedMusic.away`). Test: `tests/test_district_music.gd`. Pendiente: escucharlos por
+  parlantes (sin audio en esta sesión).
+- [x] **D-1935** Feed de eventos del galpón (quién hizo qué).
+  Rama `codex/D-1935-shed-feed`: `scripts/ui/shed_event_feed.gd` (`ShedEventFeed`: columna a la derecha con las
+  últimas 5 líneas, que se apagan a los 12 s; lee `CompanyNet.event_applied` en cada par: pedido que llega o se
+  vence, unidades puestas en una caja, caja etiquetada y cerrada, pedido al proveedor, mercadería echada a perder,
+  camión del proveedor que se va; quién sale del `peer` del evento o de las manos `hands:<peer>` de donde salieron
+  las unidades, con el apodo del jugador; lo mismo repetido por el mismo jugador se suma en su línea),
+  `CompanyRoot` lo agrega (sin sumar líneas), `tests/test_shed_event_feed.gd`. Pendiente: la captura (sin pantalla
+  en esta sesión) y el "quién" de etiquetar y cerrar cajas, que el evento todavía no trae (ver aviso).
+- [x] **D-1940** Créditos actualizados.
+  Rama `codex/D-1940-credits`: no había pantalla de créditos. `scripts/ui/credits_page.gd` (`CreditsPage`) es una
+  página del menú principal (Garaje > Créditos, "Volver" y Esc vuelven) con equipo, motor (Godot Engine y
+  GodotSteam, MIT), fuentes (Lilita One, Nunito y PT Serif, OFL 1.1), música y sonido hechos por código, modelos
+  armados con scripts de Blender y agradecimientos. Todo por clave, en los dos idiomas; arriba y abajo hacen
+  scroll. Test: `tests/test_credits_page.gd` (también comprueba que lo que dice está en el repositorio).
+  Pendiente: la captura (sin pantalla en esta sesión) y sumar nombres si hay colaboradores externos.
+- [ ] **D-1941** Pasada de pulido de UI completa.
+  Rama `codex/D-1941-ui-polish` (parcial): transiciones de entrada de las pantallas de la Empresa
+  (`UiTheme.pop_in()`, incluye D-1934; `tests/test_ui_transitions.gd`) y la lista cerrada de lo comprobado en
+  [`revisar/D-1941.md`](expansion-distritos/revisar/D-1941.md). Queda abierta la parte que necesita mirar la
+  pantalla (sin pantalla en esta sesión).
+- [x] **D-1942** Pasada de mezcla de audio completa.
+  Rama `codex/D-1942-mix-pass`: pasada de mezcla sobre todo lo nuevo del modo Empresa, medida por
+  `tests/test_company_mix.gd` (fuente, `volume_db` del reproductor y cada bus del camino, ±2 dB):
+  - portapapeles −31,5;
+  - autoelevador −40;
+  - loop del galpón −30;
+  - temas de distrito −24 (bajan de −21 a −24, como la radio del depósito: `DistrictMusic.VOLUME_DB` −6);
+  - murmullos −20, debajo de las señales del mundo.
+  La tabla de niveles está en `docs/audio-mundo.md`. Pendiente: escucharlo por parlantes (sin audio en esta
+  sesión).
+- [ ] **D-1943** Pasada de VFX para no tapar visión.
+  Rama `codex/D-1943-vfx-vision` (parcial): medido desde la cámara del jugador (ojos a 1,6 m, FOV 78°). La "✓"/"✗"
+  de la mesa ocupaba el 30 % del alto de pantalla a 1,2 m y la flecha de las estaciones el 24 % a 2 m. Ahora:
+  - la marca mide 0,26 m y arranca por encima de los ojos;
+  - la flecha mide 0,5 m y su punto más bajo queda por encima de los ojos;
+  - las partículas cubren menos del 3 %.
+  Test: `tests/test_vfx_vision.gd`. Queda abierta la parte que necesita capturas (sin pantalla en esta sesión).
+- [x] **D-1944** Revisión de UX copy de la expansión.
+  Rama `codex/D-1944-ux-copy`: revisión de los textos de la expansión (las claves que nombran los scripts y datos
+  de la Empresa) por voseo, glosario, largo y gramática. Cambios:
+  - El cartel del galpón mediano decía "DEPÓSITO" / "WAREHOUSE", y el glosario reserva esa palabra para Partida
+    rápida: pasa a "GALPÓN GRANDE" / "BIG SHED".
+  - El feed decía "puso 3 Gallina": pasa a "puso Gallina ×3", y "Gallina: se echaron a perder 2".
+  - La confirmación de cerrar el día queda más corta.
+  - "y N productos más" empieza con mayúscula.
+  `tests/test_expansion_english.gd` suma que el castellano de la expansión use vos (sin "tienes", "puedes",
+  "elige"…) y que no llame "depósito" ni "almacén" al galpón.
+- [ ] **D-1945** Capturas de cada pantalla nueva.
+  Sin hacer: necesita capturas y mirarlas. Esta sesión corre Godot solo `--headless`, sin pantalla. Las pantallas
+  nuevas a capturar están en `revisar/D-1941.md` y `revisar/D-1950.md`.
+- [ ] **D-1946** Revisión de accesibilidad.
+  Parcial (rama `codex/D-1946-a11y-notes`): lo comprobable por test está en
+  [`revisar/D-1946.md`](expansion-distritos/revisar/D-1946.md). Queda la revisión con capturas y con personas.
+- [x] **D-1947** Rendimiento de la UI (portapapeles sin picos).
+  Rama `codex/D-1947-clipboard-perf`: medido en el mundo real, sin pantalla.
+  - Antes: sacar el portapapeles costaba ~10 ms (36 ms la primera vez, con un cuadro de 174 ms) y cada cambio de
+    hoja ~11 ms, porque cada evento y cada hoja reconstruían todas las filas.
+  - Ahora: la hoja Stock reusa sus filas cuando los productos son los mismos y solo cambia textos y totales; la
+    hoja Proveedor guarda sus filas para el mismo carrito; las dos se arman invisibles mientras carga el mundo
+    (`CompanyClipboard._prewarm`). Sacarlo cuesta ~1–2 ms y cambiar de hoja menos de 1 ms.
+  Test: `tests/test_clipboard_perf.gd` (filas que no se reconstruyen, hojas precalentadas, tiempos con margen).
+- [x] **D-1948** Test de navegación con mando de todas las pantallas nuevas.
+  Rama `codex/D-1948-gamepad-nav`: `tests/test_gamepad_nav_screens.gd` abre cada pantalla nueva de la Empresa
+  (cierre del día, pausa, tienda, despacho con cajas y una bloqueada, hojas Stock y Proveedor del portapapeles,
+  página de empresas del menú y su formulario). Desde el foco con que abren, las cuatro direcciones y
+  siguiente/anterior (`find_valid_focus_neighbor`, como un mando) alcanzan todo control que toma foco, y B sale.
+  El celular (D-1923) y los créditos (D-1940) prueban su camino con mando en sus propios tests.
+- [x] **D-1949** Documentar controles nuevos en `controles-y-ui.md`.
+  Rama `codex/D-1949-controls-doc`: `docs/controles-y-ui.md` suma los controles nuevos del modo Empresa: celular
+  (F / LB, apps con Q / E), modo construcción, pantallas con mando (foco al abrir, B sale, scroll del cierre y de
+  los créditos) y el HUD de la Empresa con la paleta para daltonismo. El portapapeles y la pausa ya estaban.
+- [x] **D-1950** QA de UI.
+  Rama `codex/D-1950-ui-qa`: `tests/test_company_ui_qa.gd` arranca el mundo real de la Empresa y recorre portapapeles,
+  celular, pausa, despacho y cierre del día. Un `Logger` propio junta los errores paso por paso, y el test comprueba
+  que vuelve el input del jugador. La tabla y los hallazgos de la tanda están en
+  [`revisar/D-1950.md`](expansion-distritos/revisar/D-1950.md). Sin errores.
+
+### Grupo 18 — productos, embalaje, portapapeles y clientes (`18-modelos-y-arte.md`, necesitan PC)
+
+- [x] **D-1802** Productos lote 1: 10 del corte vertical.
+  Rama `codex/D-1802-products-lot1`: `assets/tools/build_product_models.py` arma con Blender en segundo plano
+  (`blender --background --python ... -- 1`) diez productos low-poly: botella, libro, taza, zapatillas, lámpara de
+  escritorio, tostadora, mochila, juego de mesa, auriculares y tetera. Quedan en
+  `assets/models/products/sm_product_<id>.glb`, cada uno con su caja `-colonly`, que Godot convierte en la
+  colisión simple. `tests/test_product_models.gd`: cargan, están apoyados y centrados en su base, tienen tamaño
+  real, son low-poly y tienen colisión. Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus
+  `ProductDefinition` en `data/products/` (datos de Nacho).
+- [x] **D-1803** Productos lote 2: 10 frágiles.
+  Rama `codex/D-1803-products-lot2`: `assets/tools/build_product_models.py -- 2` (Blender en segundo plano) arma diez productos frágiles: copas, pila de platos, televisor, espejo, frasco, florero alto, araña de luz, tetera de cerámica, portarretratos y globo de vidrio,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
+- [x] **D-1804** Productos lote 3: 10 fríos y perecederos.
+  Rama `codex/D-1804-products-lot3`: `assets/tools/build_product_models.py -- 3` (Blender en segundo plano) arma diez productos fríos y perecederos: pote de helado, pescado, ramo de flores, manteca, botella de leche, maple de huevos, arvejas congeladas, frutillas, yogures y pizza congelada,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
+- [x] **D-1805** Productos lote 4: 10 grandes y raros.
+  Rama `codex/D-1805-products-lot4`: `assets/tools/build_product_models.py -- 4` (Blender en segundo plano) arma diez productos grandes y raros: bicicleta, colchón enrollado, planta en maceta, pecera, guitarra, lámpara de pie, alfombra enrollada, sillón, tabla de surf y bombo,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
+- [x] **D-1806** Cajas S, M, L, XL abiertas y cerradas.
+  Rama `codex/D-1806-boxes`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma las cajas S, M, L y XL abiertas (cuatro paredes, piso y solapas dobladas hacia afuera) y cerradas (con su cinta), del tamaño exacto de su grilla de armado (`CompanyTuning.BOX_CELLS` × 0,2 m), con colisión de caja cerrada. Lo comprueba
+  `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
+- [x] **D-1807** Insumos: rollo de cinta, dispensador, burbuja, papel, espuma.
+  Rama `codex/D-1807-supplies`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma los insumos: rollo de cinta, dispensador, rollo de burbuja, rollo de papel de embalar y bloque de espuma. Lo comprueba
+  `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
+- [x] **D-1808** Sellos y etiquetas como decals.
+  Rama `codex/D-1808-decals`: `assets/tools/build_label_textures.py decals` dibuja con Pillow, sin generador ni
+  arte de terceros, 8 calcomanías de 256×256 en `assets/textures/decals/`: un sello por cada tipo de
+  `BoxSeals.KINDS` (frágil, no doblar, frío, regalo, pesado), "este lado arriba", la etiqueta de envío y la de
+  envío exprés. Son pictogramas sin palabras, así no hay nada que traducir. Test: `tests/test_label_textures.gd`.
+  Pendiente: mirarlas (sin pantalla en esta sesión) y pegarlas en las cajas (`BoxSeals`).
+- [x] **D-1809** Conservadora, caja térmica, caja impermeable.
+  Rama `codex/D-1809-containers`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma la conservadora, la caja térmica y la caja impermeable. Lo comprueba
+  `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
+- [x] **D-1816** Portapapeles en la mano (primera persona).
+  Rama `codex/D-1816-clipboard-model`: `assets/tools/build_shed_props.py` (Blender en segundo plano) arma el portapapeles en la mano (tabla, broche y una hoja), sin colisión porque se sostiene. Lo comprueba
+  `tests/test_shed_prop_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y ponerlos en el galpón.
+- [x] **D-1819** Clientes NPC en la puerta (6 variantes).
+  Rama `codex/D-1819-customers`: `assets/tools/build_customer_models.py` (Blender en segundo plano) arma seis clientes
+  low-poly para la puerta en `assets/models/characters/customers/`: abuela, vecino con gorra, chica con trenzas,
+  señor de bigote, nene y cocinero. Tienen colisión simple y no tienen esqueleto: la reacción de la puerta mueve
+  la figura entera. Test: `tests/test_customer_models.gd`. Pendiente: mirarlos (sin pantalla en esta sesión) y
+  ponerlos en las casas de los distritos.
+- [x] **D-1821** Productos lote 5: 10 de distritos.
+  Rama `codex/D-1821-products-lot5`: `assets/tools/build_product_models.py -- 5` (Blender en segundo plano) arma diez productos de distritos: cocos, horma de queso, recuerdo volcánico, globo de nieve, par de esquíes, red de pesca, frasco de miel, hierbas de montaña, ancla de recuerdo y barril de vino,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
+- [x] **D-1822** Productos lote 6: 10 peligrosos/vivos.
+  Rama `codex/D-1822-products-lot6`: `assets/tools/build_product_models.py -- 6` (Blender en segundo plano) arma diez productos peligrosos y vivos: garrafa, caja de fuegos artificiales, jaula con gallina, cactus, colmena, jaula de loro, pecera con tortuga, farol a kerosene, juego de química y conejera,
+  en `assets/models/products/`, cada uno con su colisión simple. Lo comprueba `tests/test_product_models.gd`.
+  Pendiente: mirarlos (sin pantalla en esta sesión) y crear sus `ProductDefinition` (datos de Nacho).
+- [x] **D-1833** Texturas de productos (marcas ficticias graciosas).
+  Rama `codex/D-1833-brand-labels`: `assets/tools/build_label_textures.py brands` dibuja con Pillow 30 etiquetas de
+  marcas inventadas y graciosas (Vaquita Feliz, Mate Mareado, Pez Distraído, Química Ups…; ninguna real), de
+  512×256 en `assets/textures/brands/`: banda de color, nombre en Lilita One y un emblema. Test:
+  `tests/test_label_textures.gd`. Pendiente: mirarlas (sin pantalla en esta sesión) y ponerlas en los productos.
+- [ ] **D-1840** Animación del jugador con portapapeles y escáner.
+  Saltada (2026-11-02): necesita animar el esqueleto del jugador en Blender y aprobar los clips mirándolos, y el
+  escáner no existe todavía como objeto. El portapapeles ya se sostiene por código (`PlayerHeldTool`, D-1902).
+- [x] **D-1845** Íconos de productos para UI (render automático).
+  Rama `codex/D-1845-product-icons`: `assets/tools/render_product_icons.py` renderiza con Blender en segundo plano
+  (Workbench, cámara ortográfica a tres cuartos, fondo transparente, sin ventana) un ícono de 128×128 por cada
+  modelo de `assets/models/products`: los 60 de los lotes 1 a 6, en `assets/ui/icons/products/`. Test:
+  `tests/test_product_icons.gd` (cada modelo con su ícono, fondo transparente, centrado y con relleno razonable).
+  Pendiente: mirarlos (sin pantalla en esta sesión) y usarlos en las hojas del portapapeles.

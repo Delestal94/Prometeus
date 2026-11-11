@@ -28,7 +28,8 @@ usuario" con el costo y el alcance (cantidad de claves, fuentes con los glifos).
    en los dos idiomas y los mismos marcadores. Nada de concatenar frases: una frase entera con `%s`, porque
    el orden de las palabras cambia entre idiomas.
 2. **Glosario**: `docs/glosario.md` (crealo si falta) con los términos del juego y su traducción fija
-   (camión/truck, paquete/package, depósito/depot, cada trampa, cada moneda). Un término que aparece
+   (camión/truck, paquete/package, depósito/depot, cada trampa, cada moneda), y para el modo Empresa
+   `docs/expansion-distritos/diseno/glosario.md` (`_check_company_glossary` lo comprueba). Un término que aparece
    traducido de dos formas es un hallazgo.
 3. **Calidad**: el inglés tiene que sonar nativo y con el mismo tono (humor, voseo → "you" directo), no a
    traducción literal; el español, rioplatense y consistente (voseo en todo el juego).

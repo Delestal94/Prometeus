@@ -7,7 +7,8 @@ extends SceneTree
 ##   command line's own arguments): the loading screen swaps company_root.tscn in as the current
 ##   scene, CompanyState.is_active() is true, its DayCycle is in OPENING of the company's day, the
 ##   world plays slot <n> (CompanyRoot.launch_slot, taken once), it has its World/PlayerSpawner and
-##   its player is one of the crew at SPAWN; no ERROR is logged on the way (a Logger counts them,
+##   its player is one of the crew at SPAWN; the host's BusinessTick (D-0232) polls the DayCycle,
+##   whose own _process is off; no ERROR is logged on the way (a Logger counts them,
 ##   as N-917's test does); leaving saves the day as interrupted in slot <n> of the test's own
 ##   folder (save_dir, set as the root enters the tree), and the game's own slot is never touched;
 ## - --mode=company, the older alias, takes the same way in (the loader heads for the company world
@@ -105,6 +106,10 @@ func _check_autostart(state: Node) -> void:
 		and cycle.current_day() == int(state.get(&"day")),
 		"Its DayCycle is in OPENING of the company's day %s (got %s)"
 		% [state.get(&"day"), cycle.phase_name() if cycle != null else "no DayCycle"])
+	var business: BusinessTick = level.business_tick
+	_expect(business != null and business.is_processing() and business.has_step(&"day_cycle")
+		and cycle != null and not cycle.is_processing(),
+		"The host's BusinessTick polls the DayCycle, whose own _process is off (D-0232)")
 	_expect(level.save_slot == SLOT and CompanyRoot.launch_slot.is_empty(),
 		"The world plays slot %s and the launch slot is taken once (save_slot '%s', left '%s')"
 		% [SLOT, level.save_slot, CompanyRoot.launch_slot])

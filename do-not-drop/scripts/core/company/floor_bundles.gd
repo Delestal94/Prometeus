@@ -7,8 +7,10 @@ extends RefCounted
 ## Every peer keeps one of these next to its Inventory, changed only by those events
 ## (apply_move()) and by the snapshot (its "floor" key: to_dict() on the host, positions_ok()
 ## and from_dict() on a client), so every peer agrees on where each bundle lies; one left empty
-## is gone. Pure data, no node: the Inventory counts the units, this only knows positions. What
-## draws the bundles (D-0611) reads it on CompanyNet.event_applied and company_state_restored.
+## is gone. The one other change is the host's, as a saved day loads and before any snapshot:
+## place() lays the return bundle on the floor (ReturnBundle, D-0252). Pure data, no node: the
+## Inventory counts the units, this only knows positions. What draws the bundles (D-0611) reads
+## it on CompanyNet.event_applied and company_state_restored.
 
 const PREFIX: String = "floor:"
 ## Most bundles a snapshot may carry (rule 5). Each one is a drop or a peer that left, and an
@@ -52,9 +54,20 @@ static func positions_ok(value: Variant) -> bool:
 
 
 ## Where bundle `where` lies, null when no bundle there has a position (none, or one a loaded
-## day put there without one: CompanyRoot.SAVED_HANDS_LOCATION).
+## day holds without one: a save from before D-0252 kept floor bundles, and only the return bundle,
+## CompanyRoot.SAVED_HANDS_LOCATION, is placed).
 func position_of(where: StringName) -> Variant:
 	return _at.get(where)
+
+
+## Host, as a saved day loads and before any snapshot (ReturnBundle.place(), D-0252): bundle
+## `where`, which holds units in `stock`, lies at `pos` from now on. Both as positions_ok() takes
+## them (a floor:<n> id, a finite Vector3). False, changing nothing, otherwise.
+func place(stock: Inventory, where: StringName, pos: Variant) -> bool:
+	if not positions_ok({where: pos}) or stock.contents_at(where).is_empty():
+		return false
+	_at[where] = pos
+	return true
 
 
 ## {floor:<n>: Vector3} of every bundle with a position, a copy (the snapshot's "floor").
@@ -95,8 +108,8 @@ func prune(stock: Inventory) -> void:
 
 
 ## The lowest floor:<n> that holds nothing in `stock` and has no position: where a new bundle
-## goes. A loaded day's stock may hold bundles without a position (SAVED_HANDS_LOCATION): those
-## are never reused.
+## goes. One that holds units is never reused, with a position (the return bundle a loaded day
+## placed, D-0252) or without (position_of()).
 func next_free(stock: Inventory) -> StringName:
 	var n: int = 0
 	while _at.has(location(n)) or not stock.contents_at(location(n)).is_empty():

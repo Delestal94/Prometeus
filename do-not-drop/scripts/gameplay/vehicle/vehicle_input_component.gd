@@ -18,7 +18,7 @@ func _physics_process(_delta: float) -> void:
 	var throttle: float = 0.0
 	var steer: float = 0.0
 	var handbrake: bool = false
-	if RunManager.is_running:
+	if _reads_input():
 		throttle = Input.get_axis("drive_brake", "drive_accelerate")
 		steer = Input.get_axis("drive_left", "drive_right")
 		handbrake = Input.is_action_pressed("drive_handbrake")
@@ -34,6 +34,13 @@ func _physics_process(_delta: float) -> void:
 	# On a client too: the truck numbers the input and sends it to the host on
 	# its own tick, and drives its predicted copy with it (vehicle_prediction.gd).
 	_vehicle.set_controls(throttle, steer, handbrake)
+
+
+## During a delivery run (the wheel is read even offline with nobody seated, as always); outside one only a van built
+## drivable_outside_run (the company's) and only with somebody at its wheel: offline, _is_local_driver() is always
+## true, and a player walking past a parked van must not press its pedal.
+func _reads_input() -> bool:
+	return RunManager.is_running or (_vehicle.is_drivable and _vehicle.driver_peer_id != 0)
 
 
 func _is_local_driver() -> bool:

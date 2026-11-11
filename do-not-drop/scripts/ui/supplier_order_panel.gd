@@ -13,25 +13,49 @@ class_name SupplierOrderPanel
 ## runs headless in a test:
 ##   cart: SupplierOrderCart (the one this panel edits), wallet: Object with can_afford(),
 ##   schedule: SupplierSchedule, day: int (today), supplier_name: String (optional),
-##   can_act: bool (false on a client: Order shows disabled, with the reason, not hidden).
+##   can_act: bool (false on a client: Order shows disabled, with the reason, not hidden),
+##   request: Callable(lines: Array[Dictionary]) -> int (optional, D-0603.b.2): Order asks the host
+##     with the cart's lines instead of calling submit() here, and the screen waits for the answer:
+##     placed() when the host's order event lands, refused() with the reason when it says no. The
+##     cart keeps its lines until then. The callable returns the request id (0: nobody to ask).
+##   already_ordered: int (optional, D-0151.3c): units already on tomorrow's truck; above 0 a line under the
+##     supplier says "already ordered: N" (the cart opens with the suggested order less those).
 ##
 ## Gamepad first: rows are two buttons (minus, plus) in a grid of focus neighbours, then Order and
 ## Close. Every state has a mark besides its colour: "+" more, "−" less, "✓" ordered.
+##
+## Embedded (set_embedded(), D-1902) it is the Supplier sheet of the clipboard (ClipboardFrame): no dark
+## backdrop, no title (the sheet's tab names it), no Close, no ui_cancel / ui_pause of its own and no open or
+## close sound. Opened, it takes the focus as always.
+##
+## Each row tells what the product is (CompanyTooltips, D-1908): as the tooltip of its name and buttons with
+## the mouse and, with the focus on its minus or plus (gamepad, keyboard), on the detail line under the list.
 
-## The host ordered `lines` ([{product, qty}]) for the truck of `arrival_day`. The world adapter
-## replicates the calendar to the clients (D-0603.c).
+## The order of `lines` ([{product, qty}]) is in the calendar for the truck of `arrival_day`: right away
+## with submit(), or when placed() says the host applied the request (D-0603.b.2).
 signal ordered(lines: Array[Dictionary], arrival_day: int)
 signal closed
 
 ## Units added or removed by one press of plus / minus.
 const STEP: int = 1
 
+## A sheet of the clipboard (see the class doc); set_embedded() changes it.
+## What the rows were built for: [cart instance id, its product ids] (D-1947).
+var _built_for: Array = []
+var embedded: bool = false
+
 var _ctx: Dictionary = {}
 var _rows: Dictionary = {}
 var _status_key: String = ""
 var _status_args: Array = []
+## Request mode: the lines and pallets of the order sent and not answered yet ([] when none).
+var _sent_lines: Array[Dictionary] = []
+var _sent_pallets: int = 0
+## Request mode: refused() came for the order being sent (a host answers its own at once).
+var _refused_now: bool = false
 
 var _supplier_label: Label
+var _already_label: Label
 var _rows_box: VBoxContainer
 var _scroll: ScrollContainer
 var _total_label: Label
@@ -40,6 +64,8 @@ var _arrival_label: Label
 var _status_label: Label
 var _order_button: Button
 var _close_button: Button
+## What the focused row's product is (D-1908); a test finds it by its name, "Detail".
+var _detail: Label
 
 
 func _ready() -> void:
@@ -53,16 +79,40 @@ func _ready() -> void:
 func open(ctx: Dictionary) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_clear_status()
+	if is_waiting():
+		# Closed and opened again while the host's answer is on its way: it still waits for it.
+		_status_key = "UI_SUPPLIER_SENT"
 	refresh(ctx)
 	show()
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_focus_first.call_deferred()
 
 
 func close() -> void:
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
+	if not embedded:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
+
+
+## Turns the sheet mode on or off (see the class doc), rebuilding what is drawn when it changes. The cart, the
+## status line and an order awaited stay.
+func set_embedded(on: bool) -> void:
+	if embedded == on:
+		return
+	embedded = on
+	if _rows_box == null:
+		return
+	for child: Node in get_children():
+		remove_child(child)
+		child.queue_free()
+	_rows.clear()
+	_built_for = []
+	_close_button = null
+	_build()
+	refresh(_ctx)
+
 
 
 ## Redraws the rows and totals from `ctx`; the cart keeps whatever was already in it.
@@ -70,15 +120,33 @@ func refresh(ctx: Dictionary) -> void:
 	_ctx = ctx
 	if _rows_box == null:
 		return
+	# The same cart with the same products: the rows stay (no rebuild, no hitch: D-1947), only the view updates.
+	var cart_now: SupplierOrderCart = _cart()
+	var built: Array = [cart_now.get_instance_id(), _product_ids(cart_now)] if cart_now != null else []
+	var kept: bool = not built.is_empty() and built == _built_for and not _rows.is_empty()
+	if kept and _rows_box.get_child_count() == _rows.size():
+		_update_view()
+		return
+	_built_for = built
 	for child: Node in _rows_box.get_children():
 		_rows_box.remove_child(child)
 		child.queue_free()
 	_rows.clear()
+	_detail.text = ""
 	var cart: SupplierOrderCart = _cart()
 	if cart != null:
 		for id: StringName in _product_ids(cart):
 			_add_row(id, cart)
 	_update_view()
+
+
+## Takes a new `ctx` and rewrites the totals, the arrival day, the status line and Order, keeping the rows
+## (and so the focus): for a wallet or a day that changed while the screen is open. The cart and the
+## products must be the same ones.
+func update_totals(ctx: Dictionary) -> void:
+	_ctx = ctx
+	if _rows_box != null:
+		_update_view()
 
 
 ## Adds `STEP` units of a product. Returns {"ok", "key", "args"}: when not ok the cart stays as it
@@ -92,8 +160,10 @@ func less(product: StringName) -> Dictionary:
 	return _edit(product, -STEP)
 
 
-## Puts the order in the schedule for the next day: SupplierOrderCart.submit(). Returns how many
-## pallets will come (0 when the screen may not act, the cart is empty or the wallet is short).
+## Puts the order in the schedule for the next day: SupplierOrderCart.submit(), or with a `request` in
+## the ctx asks the host for it (then the answer is placed() or refused()). Returns how many pallets
+## will come (0 when the screen may not act, the cart is empty, the wallet is short, an answer is
+## still awaited or the request could not be sent).
 func confirm() -> int:
 	if not can_confirm():
 		return 0
@@ -101,6 +171,9 @@ func confirm() -> int:
 	var pallets: int = cart.pallet_count()
 	var lines: Array[Dictionary] = cart.to_array()
 	var arrival: int = SupplierSchedule.arrival_day(_day())
+	var request: Variant = _ctx.get("request")
+	if request is Callable and (request as Callable).is_valid():
+		return _send(request, lines, pallets)
 	if not cart.submit(_ctx.get("wallet"), _ctx.get("schedule"), _day()):
 		_status_key = "UI_SUPPLIER_REFUSED"
 		_status_args = []
@@ -114,10 +187,48 @@ func confirm() -> int:
 	return pallets
 
 
-## True when Order would do something: the screen may act and the cart is orderable.
+## True when Order would do something: the screen may act, no answer is awaited and the cart is orderable.
 func can_confirm() -> bool:
 	var cart: SupplierOrderCart = _cart()
-	return _acts() and cart != null and _ctx.get("schedule") != null and cart.can_submit(_ctx.get("wallet"))
+	return (
+		_acts() and not is_waiting() and cart != null and _ctx.get("schedule") != null
+		and cart.can_submit(_ctx.get("wallet"))
+	)
+
+
+## Request mode: an order was sent and the host has not answered yet.
+func is_waiting() -> bool:
+	return not _sent_lines.is_empty()
+
+
+## Request mode: the host applied the order sent, which is in the calendar for the truck of
+## `arrival_day`. Its units come off the cart (whatever was added meanwhile stays), `ordered` is
+## emitted. Nothing happens when no order was awaited.
+func placed(arrival_day: int) -> void:
+	if not is_waiting():
+		return
+	var lines: Array[Dictionary] = _sent_lines
+	_sent_lines = []
+	var cart: SupplierOrderCart = _cart()
+	if cart != null:
+		for line: Dictionary in lines:
+			cart.remove(line["product"], int(line["qty"]))
+	_status_key = "UI_SUPPLIER_ORDERED"
+	_status_args = [_sent_pallets, arrival_day]
+	ordered.emit(lines, arrival_day)
+	refresh(_ctx)
+	if visible:
+		_focus_first()
+
+
+## Request mode: the host said no; the line shows why (`key` translated with `args`) and the cart is
+## as it was, so Order may be pressed again.
+func refused(key: String, args: Array = []) -> void:
+	_sent_lines = []
+	_refused_now = true
+	_status_key = key
+	_status_args = args
+	_update_view()
 
 
 func qty_of(product: StringName) -> int:
@@ -146,6 +257,11 @@ func status_text() -> String:
 	return _status_label.text if _status_label != null else ""
 
 
+## The "already ordered: N" line ("" when nothing is ordered for tomorrow).
+func already_text() -> String:
+	return _already_label.text if _already_label != null else ""
+
+
 func total_text() -> String:
 	return _total_label.text if _total_label != null else ""
 
@@ -163,21 +279,33 @@ static func reason_text(key: String, args: Array) -> String:
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(UiTheme.BACKDROP, 0.86)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	var column: VBoxContainer = UiTheme.panel(center, Vector2(700, 0), 22)
-	column.add_theme_constant_override("separation", 8)
-	UiTheme.title(column, tr("UI_SUPPLIER_TITLE"), 34)
+	if not embedded:
+		var dim := ColorRect.new()
+		dim.color = Color(UiTheme.BACKDROP, 0.86)
+		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(dim)
+	var column: VBoxContainer
+	if embedded:
+		# The clipboard's frame is the card: the sheet fills it and its list takes what is left (D-1902).
+		column = VBoxContainer.new()
+		column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(column)
+	else:
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(center)
+		column = UiTheme.panel(center, Vector2(700, 0), 22)
+	column.add_theme_constant_override("separation", 6 if embedded else 8)
+	if not embedded:
+		UiTheme.title(column, tr("UI_SUPPLIER_TITLE"), 34)
 	_supplier_label = UiTheme.label(column, "", 19, UiTheme.INK, true)
 	_supplier_label.name = "Supplier"
-	UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
+	_already_label = UiTheme.label(column, "", 16, UiTheme.INK)
+	_already_label.name = "Already"
+	if not embedded:
+		UiTheme.label(column, tr("UI_SUPPLIER_HINT"), 15, UiTheme.MUTED)
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(0, 250)
+	_scroll.custom_minimum_size = Vector2(0, 60 if embedded else 250)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.follow_focus = true
@@ -186,6 +314,9 @@ func _build() -> void:
 	_rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rows_box.add_theme_constant_override("separation", 6)
 	_scroll.add_child(_rows_box)
+	_detail = UiTheme.label(column, "", 15, UiTheme.INK)
+	_detail.name = "Detail"
+	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_total_label = UiTheme.label(column, "", 22, UiTheme.INK, true)
 	_total_label.name = "Total"
 	_pallets_label = UiTheme.label(column, "", 16, UiTheme.MUTED)
@@ -202,10 +333,31 @@ func _build() -> void:
 	_order_button.name = "Order"
 	_order_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_order_button.pressed.connect(confirm)
+	if embedded:
+		return
 	_close_button = UiTheme.button(buttons, tr("UI_SUPPLIER_CLOSE"))
 	_close_button.name = "Close"
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_close_button.pressed.connect(close)
+
+
+## Request mode: asks the host for `lines` and waits. The host (solo too) answers inside the call:
+## placed() or refused() may already have run when it returns. 0 (and the refusal line) when it could
+## not be sent or was refused.
+func _send(request: Callable, lines: Array[Dictionary], pallets: int) -> int:
+	_sent_lines = lines
+	_sent_pallets = pallets
+	_refused_now = false
+	_status_key = "UI_SUPPLIER_SENT"
+	_status_args = []
+	var rid: int = int(request.call(lines))
+	if rid <= 0 and is_waiting():
+		_sent_lines = []
+		_refused_now = true
+		_status_key = "UI_SUPPLIER_REFUSED"
+		_status_args = []
+	_update_view()
+	return 0 if rid <= 0 or _refused_now else pallets
 
 
 func _add_row(product: StringName, cart: SupplierOrderCart) -> void:
@@ -229,6 +381,16 @@ func _add_row(product: StringName, cart: SupplierOrderCart) -> void:
 	more_btn.name = "More"
 	more_btn.pressed.connect(more.bind(product))
 	_rows[product] = {"less": less_btn, "more": more_btn, "qty": qty_label}
+	var tip: String = CompanyTooltips.product_text(cart.products.get(product) as ProductDefinition)
+	name_label.tooltip_text = tip
+	name_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	for button: Button in [less_btn, more_btn]:
+		button.tooltip_text = tip
+		button.focus_entered.connect(_show_detail.bind(tip))
+
+
+func _show_detail(tip: String) -> void:
+	_detail.text = tip.replace("\n", " · ")
 
 
 func _edit(product: StringName, delta: int) -> Dictionary:
@@ -238,7 +400,8 @@ func _edit(product: StringName, delta: int) -> Dictionary:
 	var done: bool = cart.add(product, delta) if delta > 0 else cart.remove(product, -delta)
 	var verdict: Dictionary = {"ok": done, "key": "", "args": []}
 	if done:
-		_clear_status()
+		if not is_waiting():
+			_clear_status()
 	elif delta > 0:
 		verdict = {"ok": false, "key": "UI_SUPPLIER_LINE_MAX", "args": [SupplierOrderCart.MAX_LINE_QTY]}
 		_status_key = String(verdict["key"])
@@ -252,6 +415,9 @@ func _update_view() -> void:
 	var cart: SupplierOrderCart = _cart()
 	var supplier: String = String(_ctx.get("supplier_name", ""))
 	_supplier_label.text = tr("UI_SUPPLIER_FROM") % supplier if supplier != "" else ""
+	var already: int = int(_ctx.get("already_ordered", 0))
+	_already_label.text = tr("UI_SUPPLIER_ALREADY") % already if already > 0 else ""
+	_already_label.visible = already > 0
 	for product: StringName in _rows:
 		var n: int = cart.qty(product) if cart != null else 0
 		var parts: Dictionary = _rows[product]
@@ -280,7 +446,7 @@ func _status_line(cart: SupplierOrderCart) -> String:
 
 
 ## Focus grid: minus and plus side by side on each row, rows top to bottom, then Order (when on)
-## and Close.
+## and Close (none embedded). The plus is the right edge of its row: right stays on it.
 func _link_focus() -> void:
 	var rows: Array[Dictionary] = []
 	for product: StringName in _product_ids(_cart()):
@@ -289,12 +455,14 @@ func _link_focus() -> void:
 	var tail: Array[Control] = []
 	if not _order_button.disabled:
 		tail.append(_order_button)
-	tail.append(_close_button)
+	if _close_button != null:
+		tail.append(_close_button)
 	for i: int in rows.size():
 		for key: String in ["less", "more"]:
 			var node: Button = rows[i][key]
 			var above: Control = rows[i - 1][key] if i > 0 else node
-			var below: Control = rows[i + 1][key] if i + 1 < rows.size() else tail[0]
+			var last: Control = tail[0] if not tail.is_empty() else node
+			var below: Control = rows[i + 1][key] if i + 1 < rows.size() else last
 			node.focus_neighbor_top = node.get_path_to(above)
 			node.focus_neighbor_bottom = node.get_path_to(below)
 			node.focus_neighbor_left = node.get_path_to(rows[i]["less"])
@@ -313,8 +481,10 @@ func _focus_first() -> void:
 	var ids: Array[StringName] = _product_ids(cart)
 	if not ids.is_empty() and _rows.has(ids[0]):
 		(_rows[ids[0]]["more"] as Button).grab_focus()
-	else:
+	elif _close_button != null:
 		_close_button.grab_focus()
+	elif not _order_button.disabled:
+		_order_button.grab_focus()
 
 
 ## The products the supplier sells that are in the catalog, in id order.
@@ -352,6 +522,6 @@ func _clear_status() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
+	if visible and not embedded and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
 		close()
 		get_viewport().set_input_as_handled()

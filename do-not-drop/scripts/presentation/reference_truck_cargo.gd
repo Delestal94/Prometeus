@@ -119,7 +119,8 @@ func animate_jump_seats(tree: SceneTree, delta: float) -> void:
 		return
 	var occupied: Array = []
 	for player: Node in tree.get_nodes_in_group(&"player"):
-		occupied.append(NodePath(player.get(&"seat_node_path")))
+		var raw: Variant = player.get(&"seat_node_path")
+		occupied.append(NodePath(raw) if raw != null else NodePath())
 	for entry: Array in _jump_seats:
 		var hinge: Node3D = entry[0]
 		var target: float = 0.0 if entry[1] in occupied else JUMP_SEAT_FOLDED

@@ -51,6 +51,26 @@ class MorphSafeLodTests(unittest.TestCase):
         self.assertIn(1,kept)
         self.assert_closed_unique(result)
 
+    def test_vertex_importance_moves_the_collapse_elsewhere(self):
+        """S-311.17: an important vertex is removed last, never by default weights."""
+        points,faces = self.octahedron()
+        samples = np.array((points,points*np.array((1.1,.9,1.))))
+        kept,_,_ = simplify_morph_safe(points,faces,samples,target_triangles=6)
+        removed = sorted(set(range(len(points)))-set(kept))
+        self.assertEqual(len(removed),1)
+        importance = np.ones(len(points))
+        importance[removed[0]] = 1000.
+        unweighted = simplify_morph_safe(points,faces,samples,target_triangles=6,
+                                         vertex_importance=np.ones(len(points)))
+        self.assertEqual(unweighted[0],kept)
+        weighted,result,report = simplify_morph_safe(points,faces,samples,target_triangles=6,
+                                                     vertex_importance=importance)
+        self.assertIn(removed[0],weighted)
+        self.assertTrue(report['target_reached'])
+        self.assert_closed_unique(result)
+        with self.assertRaisesRegex(ValueError,'importance'):
+            simplify_morph_safe(points,faces,samples,vertex_importance=np.zeros(len(points)))
+
     def test_all_protected_mesh_remains_unmodified(self):
         points,faces = self.octahedron()
         kept,result,report = simplify_morph_safe(points,faces,[points],

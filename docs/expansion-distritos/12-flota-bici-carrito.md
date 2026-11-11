@@ -51,8 +51,8 @@
 | ~~D-1236~~ | ~~Cambio de vehículo en un hub (dejar la camioneta y seguir en bici)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | high | test |
 | ~~D-1237~~ | ~~Vehículo llevado en otro (bici en la caja de la camioneta)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-camion | high | test de física |
 | ~~D-1238~~ | ~~Seguro y costo de reparación por vehículo~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | low | test |
-| D-1239 | Vehículos manejados por NPC en salidas automáticas (D-1028) | constructor-negocio | medium | sim |
-| D-1240 | Pantalla de flota en el portapapeles | constructor-ui | medium | captura |
+| D-1239 | Vehículos manejados por NPC en salidas automáticas (D-1028) — **versión mínima ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)): solo cajas sin trampa fuerte a distritos dominados, media paga (regla de D-1027); al final del grupo, en la primera actualización del Early Access** | constructor-negocio | medium | sim |
+| ~~D-1240~~ | ~~Pantalla de flota en el portapapeles~~ **Recortada (D-0131, [portapapeles](diseno/portapapeles.md) §3: la flota se ve en la dársena y el GPS)** | constructor-ui | medium | captura |
 
 ## Pulido
 

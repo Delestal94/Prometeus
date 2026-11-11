@@ -31,7 +31,8 @@ P3: vigilar.
 | R-13 | `--script` que pierde autoloads al nombrar clases nuevas (N-919) | P2 | D-0243 | F0-F5 |
 | R-14 | Determinismo: pedidos por semilla y tripulación, tránsito por reloj | P2 | D-0246, D-0807, D-1504 | F1-F2 |
 | R-15 | Regresiones en Entrega y Endless por archivos compartidos | P2 | D-0315, D-2039 | todas |
-| R-16 | `CompanyNet` en 992 de las 1000 líneas del lint | P2 | D-2041 | F1-F2 |
+| R-16 | `CompanyNet` (999) y `CompanyRoot` (1000) en el tope de líneas del lint | P1 | D-0254 | F1 |
+| R-17 | El bot del corte mide etapas simuladas como OK | P0 | D-2016.4 | F1 |
 
 ## R-01 · Ancho de banda del galpón — P1 · F1-F2
 
@@ -41,8 +42,9 @@ P3: vigilar.
   suben la latencia y las pérdidas para todos, y el galpón lleno con 8 es justo el caso que se promete.
 - **Evidencia:**
   - `docs/rendimiento-pc.md` §"Ancho de banda del modo Empresa (D-2002)": con poses a 15/s, el galpón usa
-    8,7 KB/s con 4 jugadores y 19,8 con 8. "Una salida afuera" (≤ 40) y "2 vehículos lejos" (≤ 64) siguen
-    pendientes de D-2002.2.
+    8,7 KB/s con 4 jugadores y 19,8 con 8. Con D-2002.2 (2026-10-22): "una salida afuera" usa 35,6 de 40 con 4
+    y 46,6 con 8; "2 vehículos lejos", 50,1 de 64 con 4 y 66,2 con 8 (modelo; medido con ENet, 8 entra).
+    Con 8 lo que más pesa es la camioneta en movimiento a ~60/s (D-2002.4).
   - Hoy el galpón no tiene sincronizadores propios: los bultos del piso son estáticos (`red-autoridad.md`
     §1, regla 10). La caja armada es un `DeliveryPackage` con sincronizador a 30/s
     (`scenes/gameplay/package/package.tscn:98-99`), que `NetRestThrottle` frena en reposo.
@@ -56,9 +58,9 @@ P3: vigilar.
      del lado que recibe), no con un sincronizador cada uno. Lo mide `test_company_bandwidth_budget` con 20.
   2. Cintas como grafo: viajan la entrada y la salida de cada ítem, y el avance lo calcula cada peer con el
      reloj del día (D-1115). Nunca viaja la posición de cada ítem.
-  3. D-2002.2 mide una salida y 2 vehículos lejos apenas el mundo de la empresa tenga vehículo.
+  3. D-2002.2 midió una salida y 2 vehículos lejos: entran con 4; con 8, D-2002.4 (camioneta a 30/s).
   4. Si D-1047 o D-1148 pasan el presupuesto, se reabre D-2022 en vez de bajar más el ritmo de las poses.
-- **Tareas:** D-2002 (D-2002.2), D-1012, D-1115, D-1047, D-1148.
+- **Tareas:** D-2002 (D-2002.4), D-1012, D-1115, D-1047, D-1148.
 
 ## R-02 · Join tardío con partes que faltan — P1 · F1
 
@@ -108,6 +110,8 @@ P3: vigilar.
      entrar en SUMMARY, con el día siguiente como próximo, y al salir.
   2. Un día interrumpido carga el último cierre, o se guarda completo (pedidos, mesas, `_serial`, salidas).
      Nunca a medias.
+     Decidido en [guardado.md](guardado.md) (D-0134): vuelve a su apertura (D-0251); lo suelto va al bulto de
+     devolución (D-0252).
   3. Tests: matar el proceso a mitad de día y recuperar el último cierre (el "hecho cuando" de D-0236), y
      salir en SUMMARY y volver no cobra ni descuenta dos veces.
   4. `bot_company_day` deja de guardar por su cuenta cuando el gancho exista.
@@ -116,7 +120,7 @@ P3: vigilar.
 ## R-04 · Esquema del save sin migraciones — P2 · F2
 
 - **Qué puede salir mal:** F2 agrega empleados con estación (D-1016), máquinas con contenido (D-1116) y,
-  por R-03, pedidos y mesas. Una clave nueva sin subir la versión deja que un save viejo cargue con valores
+  por eventos del día, el plan de mañana (pedidos y mesas no: [guardado.md](guardado.md)). Una clave nueva sin subir la versión deja que un save viejo cargue con valores
   por defecto en silencio: empleados sin estación, unidades en lugares que ya no existen. Con Steam
   Auto-Cloud (D-2010) el mismo save viaja entre builds.
 - **Evidencia:** `scripts/core/company/company_save.gd:29-34` (`VERSION = 1`, `MIGRATIONS = {}`).
@@ -233,7 +237,8 @@ P3: vigilar.
 - **Evidencia:** punto 6 de la decisión del mapa continuo (el host simula todo; máximo 2 vehículos lejos).
   `company_tuning.gd:42-47` (celdas de 256 m, radio 2, impostores a 5). `company_cells.gd:5-8` y `:13-17`:
   31 celdas fijas, contadas con la misma cuenta de `pin_fixed_cells()`. `docs/rendimiento-pc.md`
-  §"Carga y memoria". D-2002.2 sigue pendiente.
+  §"Carga y memoria". D-2002.2 (2026-10-22): con 2 vehículos lejos y 8 jugadores el modelo da 66,2 de
+  64 KB/s; un tercer vehículo sumaría unos 24 KB/s al que va a bordo (estimado).
 - **Mitigación:** medir antes de abrir la segunda zona. D-2002 (con D-0317 adentro) decide si el tope de 2
   vehículos lejos se sostiene. D-2023 corre un bot de 8 jugadores en CI nocturno. Memoria con el galpón
   grande (D-0947), preset bajo (D-2038) y fugas en 10 días (D-2013). Las celdas fijas se cargan en versión
@@ -313,7 +318,7 @@ P3: vigilar.
   `detalle/F1-08-pedidos.md:49-52`. `red-autoridad.md` §1, regla 1. `critica-alcance.md:90-94`. La
   decisión del reloj por ancla. `detalle/F0-02-arquitectura.md:268`.
 - **Mitigación:** los pedidos se generan solo en el host al abrir el día y quedan fijos en el `OrderBook`,
-  que viaja en el snapshot y se guarda (D-0807, D-0236). D-0246 audita que nadie más los genere. Para el
+  que viaja en el snapshot; no se guarda, se vuelve a sortear igual con la semilla en cada apertura ([guardado.md](guardado.md)). D-0246 audita que nadie más los genere. Para el
   tránsito, el desfase del reloj se mide en red real y tiene que quedar por debajo del largo de un auto
   (D-1504), con auditoría de red (D-0349).
 - **Tareas:** D-0246, D-0807, D-1504, D-1505, D-0349.
@@ -334,7 +339,7 @@ P3: vigilar.
   antes y después de cada fase.
 - **Tareas:** D-0315, D-2039.
 
-## R-16 · `CompanyNet` contra el tope de líneas — P2 · F1-F2
+## R-16 · `CompanyNet` y `CompanyRoot` contra el tope de líneas — P1 · F1
 
 - **Qué puede salir mal:** `CompanyNet` maneja peticiones, eventos, snapshot, stock y piso, y cada acción
   nueva le suma un `kind`. Está en 992 líneas con un tope de 1000 en el lint, así que la próxima acción no
@@ -345,17 +350,29 @@ P3: vigilar.
   que sirven de modelo: `CompanyTableNet`, `CompanyLayoutNet` y `CompanySnapshot`.
 - **Mitigación:** antes de F2 se separan el armado de trozos del snapshot y el despacho de peticiones por
   dominio (como `CompanyTableNet`), con los tests `company` en verde y sin cambiar el protocolo.
-- **Tareas:** D-2041 (no alcanza sola) y "Sin tarea todavía", punto 1.
+- **Tareas:** D-0254 (revisión D-0140: hoy `company_net.gd` tiene 999 líneas y `company_root.gd` 1000, y enchufar la
+  puerta y el alquiler pasa por los dos) y D-2041.
+
+## R-17 · El bot del corte mide etapas simuladas como OK — P0 · F1
+
+- **Qué puede salir mal:** `bot_company_day` termina en `BOT_OK` aunque la puerta, el alquiler y la red los simula él:
+  llama `OrderSettlement.settle` por su cuenta, arma una caja y corre solo en el host. Si con eso se declara cerrado
+  el corte, F2 arranca sobre un día que en el juego real no cobra.
+- **Evidencia:** fuera de `tests/` no hay llamadas a `OrderSettlement.settle` ni a `FixedCosts.settle`;
+  encabezado de `tests/bot_company_day.gd` ("None of that is replicated to clients yet").
+- **Mitigación:** D-2016.4 (`BOT_STUB` bloquea `BOT_OK`) y la compuerta F1 → F2 atada a D-2016 en
+  `.claude/rutinas/desarrollador.md` §2.
+- **Tareas:** D-2016.4, D-0340, D-0509.b, D-2017.
 
 ## Sin tarea todavía
 
-1. **Partir `CompanyNet` (R-16).** Propuesta para el grupo 02: `constructor-red`, esfuerzo medium. Hecho
+1. ~~**Partir `CompanyNet` (R-16).**~~ Ya tiene tarea: D-0254. Propuesta original para el grupo 02: `constructor-red`, esfuerzo medium. Hecho
    cuando `company_net.gd` baja de 800 líneas, `PROTOCOL_VERSION` no cambia y `tools/run-tests.sh company`
    sigue en verde.
-2. **Compuerta de conteos en CI (R-08, R-09).** `bench_company` imprime `nodes`, `objects`, `draw_calls` y
-   `physics_bodies`, que no dependen de la velocidad de la GPU. Propuesta: sumarlo a D-2012, y que el paso
-   falle si se pasan los topes de `corte-vertical.md` §4 (≤ 900 draw calls, ≤ 400 cuerpos, ≤ 6000 nodos).
-   Los FPS siguen siendo informativos.
+2. ~~**Compuerta de conteos en CI (R-08, R-09).**~~ Ya tiene tarea: D-2012.3, cuando D-2012.1 y D-2012.2 bajen los
+   conteos. `bench_company` imprime `nodes`, `objects`, `draw_calls` y `physics_bodies`, que no dependen de la
+   velocidad de la GPU. Propuesta original: que el paso falle si se pasan los topes de `corte-vertical.md` §4
+   (≤ 900 draw calls, ≤ 400 cuerpos, ≤ 6000 nodos). Los FPS siguen siendo informativos.
 3. **Regla de versión del save (R-04).** Propuesta: un test que guarde la lista de claves de
    `CompanyState.to_dict()` por versión y falle si cambian sin que suba `CompanySave.VERSION`.
 4. **Tope del mapa en código (R-12).** La decisión del mapa continuo lo pone en `world_tuning.gd`, que no

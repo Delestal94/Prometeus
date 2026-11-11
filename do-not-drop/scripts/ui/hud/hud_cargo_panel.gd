@@ -57,7 +57,7 @@ func _refresh_gear() -> void:
 	if gear_label == null:
 		var metrics: Node = hud.speed_label.get_parent().get_parent()
 		var after_speed: int = hud.speed_label.get_parent().get_index() + 1
-		gear_label = UiTheme.label(metrics, "", 18, Hud.INK, true)
+		gear_label = UiTheme.label(metrics, "", Hud.HUD_MIN_FONT_SIZE, Hud.INK, true)
 		metrics.move_child(gear_label, after_speed)
 		# Big and saturated on the cream card; pulsed by refresh_state_pulses().
 		shift_up_label = UiTheme.label(metrics, "", 32, Color("d9151b"), true)
@@ -102,7 +102,7 @@ func _on_cargo_registered(id: StringName, name_key: String) -> void:
 	column.add_theme_constant_override("separation", 4)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(column)
-	var label: Label = UiTheme.title(column, "%s  ·  100%%" % display_name.to_upper(), 18)
+	var label: Label = UiTheme.title(column, "%s\n100%%" % display_name.to_upper(), Hud.HUD_MIN_FONT_SIZE)
 	var bar: ProgressBar = UiTheme.bar(column, Hud.MINT, 12)
 	bar.value = 100
 	hud.cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "key": name_key,
@@ -199,7 +199,9 @@ func refresh_row(id: StringName) -> void:
 					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(
 						disguise.localized_name())
 			break
-	label.text = "%s  ·  %d%%  ·  %s" % [display_name, roundi(integrity), tr(Hud.STATE_STATUS[state])]
+	# Two lines: the name, then "integrity · state". At 12 px on screen one line
+	# made the card as wide as the road; this way it grows up instead.
+	label.text = "%s\n%d%%  ·  %s" % [display_name, roundi(integrity), tr(Hud.STATE_STATUS[state])]
 	label.add_theme_color_override("font_color", _state_text_color(state))
 	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = UiTheme.state_color(state,
 			GameSettings.colorblind_palette)

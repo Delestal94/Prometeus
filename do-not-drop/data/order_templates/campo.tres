@@ -1,0 +1,250 @@
+[gd_resource type="Resource" script_class="OrderTemplateSet" load_steps=43 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/order_template_set.gd" id="1_set"]
+[ext_resource type="Script" path="res://scripts/gameplay/business/order_template.gd" id="2_tpl"]
+
+[sub_resource type="Resource" id="Resource_ca01"]
+script = ExtResource("2_tpl")
+id = &"campo_01"
+items = Array[Dictionary]([{"product": &"hen", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca02"]
+script = ExtResource("2_tpl")
+id = &"campo_02"
+items = Array[Dictionary]([{"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca03"]
+script = ExtResource("2_tpl")
+id = &"campo_03"
+items = Array[Dictionary]([{"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca04"]
+script = ExtResource("2_tpl")
+id = &"campo_04"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ca05"]
+script = ExtResource("2_tpl")
+id = &"campo_05"
+items = Array[Dictionary]([{"product": &"hen", "qty": 1}])
+requirements = Array[StringName]([&"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca06"]
+script = ExtResource("2_tpl")
+id = &"campo_06"
+items = Array[Dictionary]([{"product": &"raccoon_cage", "qty": 2}])
+requirements = Array[StringName]([&"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca07"]
+script = ExtResource("2_tpl")
+id = &"campo_07"
+items = Array[Dictionary]([{"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca08"]
+script = ExtResource("2_tpl")
+id = &"campo_08"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ca09"]
+script = ExtResource("2_tpl")
+id = &"campo_09"
+items = Array[Dictionary]([{"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca10"]
+script = ExtResource("2_tpl")
+id = &"campo_10"
+items = Array[Dictionary]([{"product": &"hen", "qty": 2}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca11"]
+script = ExtResource("2_tpl")
+id = &"campo_11"
+items = Array[Dictionary]([{"product": &"sourdough", "qty": 2}])
+requirements = Array[StringName]([&"gift"])
+
+[sub_resource type="Resource" id="Resource_ca12"]
+script = ExtResource("2_tpl")
+id = &"campo_12"
+items = Array[Dictionary]([{"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"gift"])
+
+[sub_resource type="Resource" id="Resource_ca13"]
+script = ExtResource("2_tpl")
+id = &"campo_13"
+items = Array[Dictionary]([{"product": &"sourdough", "qty": 2}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca14"]
+script = ExtResource("2_tpl")
+id = &"campo_14"
+items = Array[Dictionary]([{"product": &"hen", "qty": 1}])
+requirements = Array[StringName]([&"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ca15"]
+script = ExtResource("2_tpl")
+id = &"campo_15"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca16"]
+script = ExtResource("2_tpl")
+id = &"campo_16"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"milk_canister", "qty": 2}])
+requirements = Array[StringName]([&"cold", &"fragile", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ca17"]
+script = ExtResource("2_tpl")
+id = &"campo_17"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"hen", "qty": 2}])
+requirements = Array[StringName]([&"fragile", &"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca18"]
+script = ExtResource("2_tpl")
+id = &"campo_18"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"no_bend"])
+
+[sub_resource type="Resource" id="Resource_ca19"]
+script = ExtResource("2_tpl")
+id = &"campo_19"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"hen", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca20"]
+script = ExtResource("2_tpl")
+id = &"campo_20"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 2}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca21"]
+script = ExtResource("2_tpl")
+id = &"campo_21"
+items = Array[Dictionary]([{"product": &"raccoon_cage", "qty": 2}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ca22"]
+script = ExtResource("2_tpl")
+id = &"campo_22"
+items = Array[Dictionary]([{"product": &"raccoon_cage", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca23"]
+script = ExtResource("2_tpl")
+id = &"campo_23"
+items = Array[Dictionary]([{"product": &"puppy", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca24"]
+script = ExtResource("2_tpl")
+id = &"campo_24"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 2}, {"product": &"hen", "qty": 2}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca25"]
+script = ExtResource("2_tpl")
+id = &"campo_25"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"milk_canister", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"fragile", &"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca26"]
+script = ExtResource("2_tpl")
+id = &"campo_26"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"raccoon_cage", "qty": 2}])
+requirements = Array[StringName]([&"fragile", &"urgent"])
+
+[sub_resource type="Resource" id="Resource_ca27"]
+script = ExtResource("2_tpl")
+id = &"campo_27"
+items = Array[Dictionary]([{"product": &"hen", "qty": 2}, {"product": &"milk_canister", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ca28"]
+script = ExtResource("2_tpl")
+id = &"campo_28"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 2}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca29"]
+script = ExtResource("2_tpl")
+id = &"campo_29"
+items = Array[Dictionary]([{"product": &"sourdough", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ca30"]
+script = ExtResource("2_tpl")
+id = &"campo_30"
+items = Array[Dictionary]([{"product": &"hen", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca31"]
+script = ExtResource("2_tpl")
+id = &"campo_31"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"fireworks_crate", "qty": 1}, {"product": &"milk_canister", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca32"]
+script = ExtResource("2_tpl")
+id = &"campo_32"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 1}, {"product": &"sourdough", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ca33"]
+script = ExtResource("2_tpl")
+id = &"campo_33"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca34"]
+script = ExtResource("2_tpl")
+id = &"campo_34"
+items = Array[Dictionary]([{"product": &"milk_canister", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}, {"product": &"raccoon_cage", "qty": 1}])
+requirements = Array[StringName]([&"cold", &"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca35"]
+script = ExtResource("2_tpl")
+id = &"campo_35"
+items = Array[Dictionary]([{"product": &"hen", "qty": 1}, {"product": &"puppy", "qty": 1}, {"product": &"wedding_cake", "qty": 1}])
+requirements = Array[StringName]([&"cold"])
+
+[sub_resource type="Resource" id="Resource_ca36"]
+script = ExtResource("2_tpl")
+id = &"campo_36"
+items = Array[Dictionary]([{"product": &"glass_tower", "qty": 1}, {"product": &"hen", "qty": 1}, {"product": &"puppy", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca37"]
+script = ExtResource("2_tpl")
+id = &"campo_37"
+items = Array[Dictionary]([{"product": &"antique_lamp", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile", &"gift"])
+
+[sub_resource type="Resource" id="Resource_ca38"]
+script = ExtResource("2_tpl")
+id = &"campo_38"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 1}, {"product": &"hen", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[sub_resource type="Resource" id="Resource_ca39"]
+script = ExtResource("2_tpl")
+id = &"campo_39"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 1}, {"product": &"hen", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([])
+
+[sub_resource type="Resource" id="Resource_ca40"]
+script = ExtResource("2_tpl")
+id = &"campo_40"
+items = Array[Dictionary]([{"product": &"fireworks_crate", "qty": 1}, {"product": &"porcelain_vase", "qty": 1}, {"product": &"sourdough", "qty": 1}])
+requirements = Array[StringName]([&"fragile"])
+
+[resource]
+script = ExtResource("1_set")
+id = &"campo"
+zone = &"campo"
+templates = Array[ExtResource("2_tpl")]([SubResource("Resource_ca01"), SubResource("Resource_ca02"), SubResource("Resource_ca03"), SubResource("Resource_ca04"), SubResource("Resource_ca05"), SubResource("Resource_ca06"), SubResource("Resource_ca07"), SubResource("Resource_ca08"), SubResource("Resource_ca09"), SubResource("Resource_ca10"), SubResource("Resource_ca11"), SubResource("Resource_ca12"), SubResource("Resource_ca13"), SubResource("Resource_ca14"), SubResource("Resource_ca15"), SubResource("Resource_ca16"), SubResource("Resource_ca17"), SubResource("Resource_ca18"), SubResource("Resource_ca19"), SubResource("Resource_ca20"), SubResource("Resource_ca21"), SubResource("Resource_ca22"), SubResource("Resource_ca23"), SubResource("Resource_ca24"), SubResource("Resource_ca25"), SubResource("Resource_ca26"), SubResource("Resource_ca27"), SubResource("Resource_ca28"), SubResource("Resource_ca29"), SubResource("Resource_ca30"), SubResource("Resource_ca31"), SubResource("Resource_ca32"), SubResource("Resource_ca33"), SubResource("Resource_ca34"), SubResource("Resource_ca35"), SubResource("Resource_ca36"), SubResource("Resource_ca37"), SubResource("Resource_ca38"), SubResource("Resource_ca39"), SubResource("Resource_ca40")])
