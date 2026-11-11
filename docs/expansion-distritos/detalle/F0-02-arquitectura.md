@@ -38,7 +38,7 @@
 **Hecho cuando:** los dos tests pasan y la batería de CI sigue verde.
 
 ### D-0203 · `DayCycle`: apertura, operación y cierre — A · Opus 5.5 · high · Aviso: sí (`event_bus.gd`) · F0
-**[x] Hecho (2026-10-12, PR #393)** — `day_cycle.gd` (`DayCycle`, hijo del mundo): fases como hechos del host (evento `day_phase` de `CompanyNet`, parte `day_cycle` del snapshot, `PROTOCOL_VERSION` 32), señales `company_day_*` emitidas al aplicar en cada peer, galpón congelado como minuto propio (`shed_minute()`, no el reloj pausado), cableado en `company_root.gd` (`GameClock` + `DayCycle` en todos los peers; el host abre el día); `test_day_cycle` (solo + dos peers ENet). Falta: el área del galpón para `crew_in_shed` y `trips_out` (D-0319), guardar al `SUMMARY` (D-0206) y la pantalla de cierre.
+**[x] Hecho (2026-10-12, PR #393)** — `day_cycle.gd` (`DayCycle`, hijo del mundo): fases como hechos del host (evento `day_phase` de `CompanyNet`, parte `day_cycle` del snapshot, `PROTOCOL_VERSION` 32), señales `company_day_*` emitidas al aplicar en cada peer, galpón congelado como minuto propio (`shed_minute()`, no el reloj pausado), cableado en `company_root.gd` (`GameClock` + `DayCycle` en todos los peers; el host abre el día); `test_day_cycle` (solo + dos peers ENet). Lo que faltaba ya está en `company_root.gd`: `crew_in_shed` (D-0316.1), `trips_out` (`CompanyTrips`, D-0302.1), guardar al cierre (`save_closed_day()`) y la pantalla de cierre (D-0508.3).
 **Depende de:** D-0202, D-0219
 **Qué:** `scripts/core/company/day_cycle.gd` (nodo hijo del mundo, no autoload).
 - **Estados** `OPENING` (08:00, 5 s reales: aparece el proveedor) → `OPERATING` → `CLOSING` (20:00 o
@@ -82,7 +82,7 @@ del mapa.
 **Hecho cuando:** el test pasa.
 
 ### D-0206 · Guardado de empresa versionado — A · Opus 5.5 · xhigh · Aviso: sí (`modules/persistence/`) · F0
-**[x] Hecho (2026-10-04, PR #326)** — `company_save.gd` (`CompanySave`: `save`/`load_into`/`migrate` sobre `SafeJson`, `user://saves/company/<slot>.json`, versión 1, `MIGRATIONS` vacía); `test_company_save`. Engancharlo al cierre del día y al menú queda para D-0203/D-0214.
+**[x] Hecho (2026-10-04, PR #326)** — `company_save.gd` (`CompanySave`: `save`/`load_into`/`migrate` sobre `SafeJson`, `user://saves/company/<slot>.json`, versión 1, `MIGRATIONS` vacía); `test_company_save`. El cierre del día ya guarda (`CompanyRoot.save_closed_day()`) y el menú ya lista las empresas (`CompanySlotsPage`).
 **Depende de:** D-0202
 **Qué:** `scripts/core/company/company_save.gd`. Usa `SafeJson` (`modules/persistence/safe_json.gd`) como
 `CrewProgression`.
@@ -119,10 +119,10 @@ bloqueo abre: `&"water"`, `&"altitude"`…), `price: int`. Tres `.tres` en `data
 componente, para que lancha, avioneta y bici no hereden de `VehicleBody3D`. Recomendado: **componente**
 `scripts/gameplay/fleet/fleet_seats.gd` + `fleet_cargo.gd` que la camioneta usa por composición. No mover
 lógica de manejo.
-- [ ] **D-0208.1** Inventario de qué partes de `vehicle.gd` son asientos y carga (con líneas). Ojo: otra
+- [x] **D-0208.1** Inventario de qué partes de `vehicle.gd` son asientos y carga (con líneas). Ojo: otra
   sesión puede estar tocando `vehicle.gd`: rebase antes de empezar y cambios mínimos.
-- [ ] **D-0208.2** Extraer a componentes con la misma API pública.
-- [ ] **D-0208.3** Actualizar `docs/agregar-vehiculo.md`.
+- [x] **D-0208.2** Extraer a componentes con la misma API pública (`FleetCargo`, `FleetSeats`; PR #525).
+- [x] **D-0208.3** Actualizar `docs/agregar-vehiculo.md` (ya describe los dos componentes).
 **Hecho cuando:** los tests con filtros `vehicle`, `truck`, `seat` y `cargo` están verdes, `auditor-red`
 no tiene hallazgos y `vehicle.gd` bajó de líneas.
 
@@ -254,7 +254,7 @@ que vende los 10 productos, llega a las 08:30 y espera 180 min.
 **Hecho cuando:** el test pasa.
 
 ### D-0219 · Reloj del juego desde el host — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` si hace falta un RPC) · F0
-**[x] Hecho (2026-10-12, PR #381)** — `modules/day_clock/` (`DayClock`, ancla y `minute_at`) + adaptador `game_clock.gd` (`GameClock`): evento `clock_anchor` de `CompanyNet` solo al cambiar la marcha, ancla en el snapshot (parte `clock`), `PROTOCOL_VERSION` 31; `test_game_clock` con dos peers ENet. Falta cablearlo al mundo (D-0203/D-0214).
+**[x] Hecho (2026-10-12, PR #381)** — `modules/day_clock/` (`DayClock`, ancla y `minute_at`) + adaptador `game_clock.gd` (`GameClock`): evento `clock_anchor` de `CompanyNet` solo al cambiar la marcha, ancla en el snapshot (parte `clock`), `PROTOCOL_VERSION` 31; `test_game_clock` con dos peers ENet. Ya está cableado al mundo: `CompanyRoot` crea el `GameClock` en cada peer.
 **Depende de:** D-0202
 **Qué:** `scripts/core/company/game_clock.gd`. Lógica en `modules/day_clock/` (D-0223): sin nombres del
 juego, con adaptador.
@@ -307,7 +307,7 @@ tiene `BusinessTick` con el paso `day_cycle` y el `_process` del `DayCycle` apag
 **Hecho cuando:** los dos tests pasan y `check_modules` / `portability-check` están verdes.
 
 ### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR #582)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**[x] Hecho (2026-10-21, PR #582)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú ya existe (`CompanySlotsPage`, `scripts/ui/company_slots_page.gd`, D-1904).
 **Depende de:** D-0206
 **Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
 es de la UI del menú (Jugar → Empresa) y no entra acá.

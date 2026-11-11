@@ -98,12 +98,13 @@ o un vehículo que manejar (medible con el bot de D-0111).
 **Depende de:** D-0101, D-0110
 **Qué:** `diseno/corte-vertical.md` con la lista cerrada de lo que entra en F1:
 - galpón por defecto, 1 proveedor y los 10 productos de `data/contents/`;
-- cajas S-XL, pedidos para Barrio Centro y Campo, camioneta actual, cierre del día;
+- cajas S-XL, pedidos para Barrio Centro (Campo salió de F1 con la revisión D-0140), camioneta actual, cierre del día;
 - arte gris permitido.
 Criterio de cierre: el bot `tests/bot_company_day.gd` (lo crea D-2016) juega un día
 completo en headless con 2 jugadores simulados. Debe recibir el palet, armar 6 cajas, despachar una
 salida a Barrio Centro, volver y cerrar el día con ganancia > 0, sin `ERROR`/`SCRIPT ERROR` en el log.
 `bench_company` dentro del presupuesto de D-2012.
+La revisión D-0140 (2026-10-22) sumó al criterio, y así está en `diseno/corte-vertical.md` §4: la puerta del mundo cobra (el bot no llama a `OrderSettlement` por su cuenta), el alquiler lo cobra el juego, ningún jugador pasa más de 120 s sin caja ni volante y el mismo bot con 1 jugador también cierra con ganancia.
 **Hecho cuando:** el documento existe y cada ítem nombra su tarea `D-`.
 
 ### D-0112 · Crítica de alcance contra la capacidad del equipo — A · Opus 5.5 · high · Aviso: no · F0

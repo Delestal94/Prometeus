@@ -5,7 +5,10 @@
 > cuando le toque a un carril. Números de [supuestos.md](supuestos.md).
 
 ### D-0701 · Estación de armado — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR #340)** — lógica de la mesa: `PackingStation` (`scripts/gameplay/business/packing_station.gd`); `test_packing_station`. Quedan abiertas la mesa visible y la captura (ver `revisar/D-0701.md`).
+**[~] Parcial (2026-11-11, PR #@@PR@@)** — volvió de hecha: la lógica y la red de la mesa están (`PackingStation`, `CompanyTableNet`) y la mesa se ve en el galpón (D-0911), pero en el juego no se puede usar: `CompanyShed.station_for` no resuelve mesas, `CompanyRoot._on_piece_used` solo atiende el rol `storage` y ningún script fuera de `tests/` manda una petición `box_*`. Falta D-0701.b.
+Antes (hecha, 2026-10-04, PR #340) — lógica de la mesa: `PackingStation` (`scripts/gameplay/business/packing_station.gd`); `test_packing_station`. Quedan abiertas la mesa visible y la captura (ver `revisar/D-0701.md`).
+**Subtareas abiertas:**
+- [ ] **D-0701.b** (`constructor-negocio` + `constructor-jugador`; F1, [corte-vertical.md](../diseno/corte-vertical.md) §2 #9) La mesa usable en el mundo. La mesa de armado del galpón necesita su estación (`CompanyShed.station_for` con `table:<uid>`), puntos de uso que manden las peticiones de `CompanyTableNet` que ya existen (`box_start`, `box_place`, `box_take_out`, `box_fill`, `box_label`, `box_stamp`, `box_tape`, `box_restock`, `box_discard`) y su rama en `CompanyRoot._on_piece_used` (rol `assembly`). Es el enganche que esperan, cada una en su bloque: elegir la celda con vista previa (D-0703), el gesto de la cinta (D-0706), la etiqueta dibujada (D-0707), el sello y su gesto (D-0708), la hoja del pedido junto a la mesa (D-0714), reponer y el cartel de «falta cinta» (D-0718), y el cartel del tutorial con su marca de visto (D-0720). Con ella van D-0702.b (el dispensador y su menú) y `order_claim` (tomar el pedido para la mesa, fila 8 de `diseno/red-autoridad.md`; hoy lo da `CompanyTableNet.order_of`). Captura de `revisor-visual`. **Hecho cuando:** un test del mundo arma y encinta una caja en `company_root.tscn` usando solo los puntos de interacción, y `bot_company_day` arma así sus cajas (D-2016.4).
 **Depende de:** D-0212 (`PackedBox`), D-0904 (la mesa `assembly_table`)
 **Qué:** `class_name PackingStation`, `RefCounted` sin nodos (como `Shelf`). Una mesa tiene un hueco para
 **una** caja abierta (`box: PackedBox`) y hasta `STAGING_SLOTS = 4` productos esperando al lado
@@ -19,11 +22,13 @@
 - `to_dict` / `from_dict`: ida y vuelta por JSON (red y guardado).
 **Test** `test_packing_station`: una caja a la vez y tamaños inválidos, tope de productos en la mesa,
 `put_in_box` con sus tres negativas sin cambios, `take_box` y JSON.
-**Hecho cuando:** el test pasa. La escena de la mesa (placeholder gris sobre la huella 2×1 de
+**Hecho cuando:** el test pasa y la mesa se usa en el mundo (D-0701.b). La escena de la mesa (placeholder gris sobre la huella 2×1 de
 `assembly_table`) y su captura quedan para la subtarea D-0701.b.
 
 ### D-0702 · Dispensador de cajas — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR #345)** — lógica: `BoxDispenser` (`scripts/gameplay/business/box_dispenser.gd`); `test_box_dispenser`. El objeto del dispensador y su menú de tamaños quedan para D-0702.b (ver `revisar/D-0702.md`).
+**[~] Parcial (2026-11-11, PR #@@PR@@)** — volvió de hecha: la lógica y su test están, pero en el juego no se puede abrir una caja. Falta D-0702.b, que va con D-0701.b.
+Antes (hecha, 2026-10-04, PR #345) — lógica: `BoxDispenser` (`scripts/gameplay/business/box_dispenser.gd`); `test_box_dispenser`. El objeto del dispensador y su menú de tamaños quedan para D-0702.b (ver `revisar/D-0702.md`).
+- [ ] **D-0702.b** (`constructor-negocio`; F1, con D-0701.b) El dispensador en el mundo: el objeto (hoy una caja naranja del layout por defecto, D-0911) con su punto de uso y el menú de tamaños S, M, L y XL con mando y mouse, que manda `box_start`; captura.
 **Depende de:** D-0701 (`PackingStation`), D-0501 (billetera de `CompanyState`)
 **Qué:** `class_name BoxDispenser`, `RefCounted` con funciones estáticas. `dispense(station, size, wallet)`
 abre una caja vacía del tamaño elegido (S, M, L, XL) en el hueco de la mesa y cobra `CompanyTuning.BOX_COST`
@@ -31,7 +36,7 @@ con el motivo `&"boxes"`. Rechaza sin cambiar nada: tamaño desconocido, mesa qu
 que no alcanza, mesa o billetera nulas. `can_dispense` es la misma comprobación sin efectos (para el menú).
 **Test** `test_box_dispenser`: caja abierta del tamaño pedido en la mesa, cobro y libro mayor, y las cuatro
 negativas sin cambios.
-**Hecho cuando:** el test pasa (caja aparece abierta en la mesa).
+**Hecho cuando:** el test pasa (caja aparece abierta en la mesa) y se puede elegir el tamaño en el mundo (D-0702.b).
 
 ### D-0703 · Meter productos en la caja — A · Sonnet 5.5 · xhigh · Aviso: no · F1
 **[x] Hecho (2026-10-12, PR #373)** — `PackedBox.first_fit()` + `NO_SPOT`; `test_packing_station` ampliado con tres productos.
@@ -137,6 +142,7 @@ Decisión: el aviso de la mesa no bloquea el cierre, porque el pedido decide el 
 
 ### D-0713 · Balanza de control — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-19, PR #469)** — `BoxScale` (`scripts/gameplay/business/box_scale.gd`): `expected_kg`, `real_kg` y `weigh`; `CompanyTuning.SCALE_TOLERANCE_KG`; `test_box_scale`. El objeto de la balanza en la mesa queda para D-0713.b (ver `revisar/D-0713.md`).
+- [ ] **D-0713.b** (fuera de la lista del corte, [corte-vertical.md](../diseno/corte-vertical.md) §2 #9: no frena F1) El objeto de la balanza en la mesa y su lectura en pantalla (peso esperado, real y diferencia); después de D-0701.b.
 **Depende de:** D-0712 (`BoxContentCheck`), D-0116 (`ProductDefinition.weight_kg`)
 **Qué:** `class_name BoxScale`, `RefCounted` estático. `weigh(order, box, products)` devuelve `{expected, real, delta, ok}`: el peso esperado suma los productos del pedido por cantidad; el real, lo que contiene la caja; `ok` si `|delta| <= SCALE_TOLERANCE_KG` (0,05 kg).
 Decisión: solo pesan los productos (relleno y caja pesan 0) y es solo un aviso, como D-0712. No dice qué falta: un cambio por otro producto del mismo peso pasa (límite documentado y a propósito, para que la balanza sea una pista y no reemplace a `BoxContentCheck`).
@@ -152,7 +158,7 @@ Decisión: la hoja es un panel de solo lectura (sin foco ni input); abrirlo y ce
 **Hecho cuando:** el test pasa y la hoja se lee con la caja a medio armar.
 
 ### D-0715 · Varias personas en la misma mesa (uno pone productos, otro la cinta) — A · Sonnet 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F1
-**[x] Hecho (2026-10-19, PR #510)** — partial: `CompanyTableNet` (`scripts/core/company/company_table_net.gd`, `CompanyNet.table`) valida en el host y aplica en cada peer los siete pasos de la mesa (filas 9 a 15 del contrato), las mesas viajan en el snapshot (parte `packing`), `PROTOCOL_VERSION` 37; `test_company_shared_table`. Queda D-0715.b (crear y validar el `DeliveryPackage` en cada peer al encintar, persistir los ids de caja) y ~~D-0715.c (`box_restock` y `box_discard`; bloquea D-0701.b)~~ (hecha el 2026-10-22, protocolo 52).
+**[~] Parcial (2026-10-19, PR #510)** — `CompanyTableNet` (`scripts/core/company/company_table_net.gd`, `CompanyNet.table`) valida en el host y aplica en cada peer los siete pasos de la mesa (filas 9 a 15 del contrato), las mesas viajan en el snapshot (parte `packing`), `PROTOCOL_VERSION` 37; `test_company_shared_table`. Queda el resto de D-0715.b (abajo: `order_packed`, las cajas vivas en el snapshot y el `_serial` guardado con el día; crear y validar el `DeliveryPackage` en cada peer ya está) y ~~D-0715.c (`box_restock` y `box_discard`; bloquea D-0701.b)~~ (hecha el 2026-10-22, protocolo 52).
 **Depende de:** D-2001 (contrato), D-2003 / D-2004 (`CompanyNet`, snapshot), D-0701, D-0702, D-0703, D-0706, D-0707, D-0708, D-0718 (`PackingStation`, `BoxDispenser`, `PackedBox`, `PackagingSupplies`, `StationSupplies`), D-0709 / D-0710 (calidad y trampa), D-0910 (plata absoluta en los eventos)
 **Qué:**
 - **Peticiones y eventos** (contrato `diseno/red-autoridad.md` §2 filas 9 a 15 y §9), por el `_request` / `_apply_event` de siempre (ningún RPC nuevo): `box_start {station, size}` → `box_started {table, size, box, money, minute}`; `box_place {station, product, cx, cy, cz, rot: 0}` → `box_placed {…, from: hands:<peer>}`; `box_take_out {station, cx, cy, cz}` → `box_taken_out {…, product, to}`; `box_fill {station, cells}` → `box_filled {table, cells, money, minute}`; `box_label {station}` → `box_labeled {table, order, money, minute}`; `box_stamp {station, stamp}` → `box_stamped {…}`; `box_tape {station}` → `box_sealed {table, order, package_id, node_name, trap, trap_intensity, contents, absorption, quality, pos, basis, money, minute}`. Celdas como tres enteros, nunca `Vector3i`.
@@ -169,10 +175,11 @@ Decisión: la hoja es un panel de solo lectura (sin foco ni input); abrirlo y ce
   **Decisión:** reponer es gratis (D-0718: cuesta tiempo, no plata), así que `box_restocked` no lleva `money` ni `minute` (no hay movimiento que dejar absoluto); lleva `count`, lo que queda en la mesa del host. **Decisión:** `box_discard` **tira** la caja (la mesa queda libre para abrir otro tamaño) en vez de dejarla vacía en la mesa como `PackingStation.disassemble()` (D-0719): con la caja vacía en la mesa, una del tamaño equivocado la seguiría trabando, y sacar productos para rearmar la misma caja ya existe (`box_take_out`). De D-0719 vale lo demás: relleno, etiqueta y sellos se pierden, no se devuelve plata y la caja no vuelve a los insumos. `disassemble()` no se llama porque deja los productos en `staged`, que por red no viaja (decisión 9 de la mesa compartida). **Decisión:** lo que no entra en la mano va a **un** bulto en el `spot` de la mesa (donde estaba la caja, como `box_sealed`, y "los productos vuelven a la mesa" de D-0719), no a los pies del jugador: no depende de la pose que replica el cliente.
 **Decisión:** la caja en armado vive en `CompanyNet.table` y no en `CompanyShed.stations`; la celda lleva `cz` (la grilla es 3D) y `rot` solo 0; `box_fill` pide `cells` y no un tipo de relleno (uno solo en F1); los pasos que cuestan llevan `money` y `minute`; las cajas son `box_<n>` del host y su paquete usa el mismo id; el pedido de la mesa lo da `order_of` hasta que exista `order_claim`. `docs/decisiones/2026-10-19-mesa-compartida-red.md`.
 **Test** `test_company_shared_table`: solo, los siete pasos con sus cobros, insumos e inventario (dos gallinas a la caja, una sale y vuelve, relleno, sello, etiqueta, cinta: `box_sealed` con todos sus campos y la calidad de la caja encintada, unidades en `package:box_1`, reserva en 0); cada rechazo sin cambios ni `seq` (19 casos más mano ocupada y llena, `Vector3i` descartado en silencio); reserva de otro pedido y la propia; sin insumo, sin plata, caja llena; no se vende una mesa con caja y sí después; eventos que no encajan no se aplican; la parte del snapshot ida y vuelta y siete partes malas; con host + cliente ENet, el cliente abre y pone gallina y cachorro, el host sella, rellena, etiqueta y encinta, iguales tras cada paso (mesas, inventario, empresa y minuto del host en el libro); dos pedidos a la vez (caja y celda): pasa el del host y el cliente oye `has_box` / `cell_taken`; un tercero que entra tarde recibe la mesa a medio armar por snapshot, pone una gallina y el cliente la encinta; `seq` sin huecos.
-**Hecho cuando:** test de red con 2 peers armando la misma caja (pasa). Nota: el ✅ de la tabla del grupo es parcial: D-0715.b queda abierta en parte (D-0715.c hecha).
+**Hecho cuando:** test de red con 2 peers armando la misma caja (pasa). La fila de la tabla queda ◐ mientras D-0715.b siga abierta en parte (D-0715.c hecha).
 
 ### D-0716 · Despacho: la caja armada en la zona de salida se asocia a la salida — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR #488)** — `DispatchZone` (`scripts/gameplay/business/dispatch_zone.gd`): el área, `update_box`, `load_into`; `test_dispatch_zone`. Poner el área en el mundo y llamarla desde el host queda para D-0716.b (ver `revisar/D-0716.md`).
+**[x] Hecho (2026-10-19, PR #488)** — `DispatchZone` (`scripts/gameplay/business/dispatch_zone.gd`): el área, `update_box`, `load_into`; `test_dispatch_zone`. Poner el área en el mundo era D-0716.b: está en su versión mínima (abajo; ver `revisar/D-0716.md`).
+- [x] **D-0716.b** (2026-10-22, PR #725, con D-0310.b; versión mínima) `CompanyDispatch` arma la `DispatchZone` leyendo de `World/Packages` las cajas selladas y quietas dentro del piso de la pieza de despacho, cada vez que se abre el tablero y dos veces por segundo mientras está abierto. Los eventos `box_dispatched` / `box_undispatched` (fila 17 de `diseno/red-autoridad.md`) no existen: el estado de la zona por red es D-0310.c.
 **Depende de:** D-0711 (caja sellada = `DeliveryPackage`), D-0302.1 (`CompanyTrips.stage_cargo`), D-0801 (`OrderBook`)
 **Qué:** `class_name DispatchZone`, `RefCounted` sobre un `AABB` del piso. `update_box(box, order, pos, sealed, at_rest, book)` la llama el host cada tanto con la posición de cada caja: una caja sellada, quieta y dentro del área, cuyo pedido está `PACKED` con esa caja en el `OrderBook`, queda **despachada** (`box_dispatched`); si sale del área o la levantan antes de que arranque la salida, se **desata** (`box_undispatched`). `load_into(trips, vehicle)` le pasa a `CompanyTrips.stage_cargo` las cajas y pedidos que esperan y vacía la zona.
 Decisión: la zona no cambia el estado del pedido (sigue `PACKED`); pasa a `OUT` solo cuando el vehículo cruza el portón (`Trip.start`), como ya hace `CompanyTrips`. Así una caja que se saca a tiempo no deja un pedido trabado en `OUT`.
@@ -197,6 +204,7 @@ Decisión: reponer **no cuesta plata**, cuesta el tiempo de quien se queda en la
 
 ### D-0719 · Desarmar una caja mal armada — A · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-21, PR #538)** — `PackingStation.disassemble()`; `test_box_disassemble`. El gesto, el evento de red y desarmar una caja ya despachada quedan para D-0719.b (ver `revisar/D-0719.md`).
+- [ ] **D-0719.b** (fuera de la lista del corte: no frena F1) El gesto de desarmar en la mesa, su paso por red y desarmar una caja ya despachada; después de D-0701.b. Tirar la caja abierta ya existe por red (`box_discard`, D-0715.c).
 **Depende de:** D-0701 (`PackingStation`), D-0212 (`PackedBox.items`)
 **Qué:** `disassemble()` devuelve los productos de la caja de la mesa: vuelven a la mesa (`staged`) hasta `STAGING_SLOTS`, en el orden en que se armaron; lo que no entra va en `overflow` (para las manos o el estante), nada se pierde. Devuelve `{staged, overflow}`; `{}` y sin cambios si no hay caja.
 Decisión: la caja vacía queda abierta en la mesa (se puede rearmar enseguida, sin pagar otra). Decisión: relleno, cinta, etiqueta y sellos **se pierden** y no se reembolsan (ya se pagaron al usarlos, D-0504): equivocarse cuesta un poco y desarmar siempre es posible, también con la caja encintada.
