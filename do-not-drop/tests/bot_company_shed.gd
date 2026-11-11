@@ -381,6 +381,7 @@ static func stay_behind(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) ->
 	while await _pause(tree, level, ctx, CREW.STEP_SECONDS):
 		var order: Dictionary = _next_order(level, ctx)
 		if order.is_empty():
+			_note_wait(level, ctx)
 			continue
 		(ctx["taken"] as Dictionary)[order["id"]] = true
 		var done: Dictionary = await pack_order(
@@ -396,6 +397,19 @@ static func stay_behind(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) ->
 			ctx["worker_failure"] = "%s_%s" % [order["id"], why]
 			ctx["worker_on"] = false
 			return
+
+
+## Whoever stays found nothing to pack this step: why, counted in ctx.stay_waits (the bot prints it as BOT_INFO, so a
+## long idle stretch says whether the orders or the stock ran out). no_order: every order of the shared book that
+## waits for a box is taken; no_stock: one waits, but the shelves do not hold what it asks for (or no box fits it).
+static func _note_wait(level: CompanyRoot, ctx: Dictionary) -> void:
+	var why: String = "no_order"
+	for order: Dictionary in level.net.orders.book.open_orders():
+		if not (ctx["taken"] as Dictionary).has(order["id"]):
+			why = "no_stock"
+			break
+	var waits: Dictionary = ctx["stay_waits"]
+	waits[why] = int(waits.get(why, 0)) + 1
 
 
 ## The van is back: whoever stayed stops where it is. "" when its work went well, else what went wrong.

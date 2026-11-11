@@ -40,8 +40,9 @@ extends SceneTree
 ##                   carries the packing costs and the rent the game charged at CLOSING (D-0509.b); the game saved
 ##                   the closed day itself at SUMMARY (CompanyRoot.save_closed_day): the bot only reads that save
 ## Prints, in order: BOT_STAGE <stage> ok or BOT_FAIL <stage>:<reason> (the run stops at a failed stage), one
-## `BOT_STUB <stage> <id> [<tasks>] <what>` per shortcut taken, the BOT_SKIP lines, `BOT_ERROR <message>` per engine
-## error logged during the run (a Logger, ErrorCatcher), the summary block (`BOT_COMPANY key=value`: players, money,
+## `BOT_STUB <stage> <id> [<tasks>] <what>` per shortcut taken, the BOT_SKIP lines, with two players `BOT_INFO
+## stay_waits no_order=<n> no_stock=<n>` (the steps the one who stayed found nothing to pack, and why), `BOT_ERROR
+## <message>` per engine error logged during the run (a Logger, ErrorCatcher), the summary block (`BOT_COMPANY key=value`: players, money,
 ## profit (closing - opening money, corte-vertical.md §4.4), deliveries, boxes, breaks, assembly_errors,
 ## engine_errors, return_bundle_units, idle_max_s_<peer> per player, stage_ms_<stage>) and the final line: BOT_OK
 ## only when every stage was ok, no shortcut was taken, the profit is over 0, no engine error was logged and no
@@ -300,6 +301,10 @@ func _run() -> void:
 		print(line)
 	for line: String in ctx["skips"]:
 		print(line)
+	var waits: Dictionary = ctx["stay_waits"]
+	if not waits.is_empty():
+		print("BOT_INFO stay_waits no_order=%d no_stock=%d (steps of %.0f s with nothing to pack)" % [
+			int(waits.get("no_order", 0)), int(waits.get("no_stock", 0)), CREW.STEP_SECONDS])
 	for index: int in mini(errors.size(), MAX_ERROR_LINES):
 		print("BOT_ERROR %s" % errors[index])
 	for line: String in summary_lines(stats):
@@ -348,6 +353,8 @@ static func new_context(players: int, drive_cap_m: float = 0.0) -> Dictionary:
 		"packed": [], "extra": [], "table_orders": {},
 		# Spots of the dispatch zone used so far; whether the one who stays in the shed works, and what went wrong.
 		"zone_used": 0, "worker_on": false, "worker_failure": "",
+		# The steps the one who stays found nothing to pack, by why (SHED._note_wait): no_order, no_stock.
+		"stay_waits": {},
 		# The vehicle dispatch loaded, and the trip it is on (deliver -> return).
 		"vehicle_id": &"", "trip": null,
 		# Metres the van covered from its parking spot to where it stopped outside the yard.

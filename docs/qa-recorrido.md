@@ -141,45 +141,71 @@ en pocos minutos. Tildar cuando se vio cada uno en este recorrido:
 
 ## Modo Empresa (expansión, D-2016)
 
-Bot `tests/bot_company_day.gd` (headless, termina solo):
+Bot `tests/bot_company_day.gd` (headless, termina solo; las etapas del galpón están en
+`tests/bot_company_shed.gd`, los jugadores en `tests/bot_company_crew.gd` y la van en
+`tests/bot_company_trip.gd` y `tests/bot_company_van.gd`):
 
 ```bash
 "$GODOT" --headless --path do-not-drop --script res://tests/bot_company_day.gd -- --players=1
 "$GODOT" --headless --path do-not-drop --script res://tests/bot_company_day.gd -- --players=2
 ```
 
-- Abre `company_root.tscn` con el save en `user://bot_company_day` (se borra) y espera el `OPENING`
-  del día (máx. 10 s; si no llega, `BOT_FAIL no_opening`).
-- Corre las etapas en orden sobre el mismo mundo, cada una con lo que dejó la anterior. Cada una
-  imprime `BOT_STAGE <etapa> ok`, `BOT_FAIL not_implemented:<etapa>` (todavía no existe; sigue con la
-  próxima) o `BOT_FAIL <etapa>:<motivo>` (corta la corrida).
-- Etapas reales hoy (D-2016.2, solo con las piezas de F1 que ya existen): `receive_pallet` (los
-  palets del proveedor en recepción, se abren y se toma una mano), `shelve_stock` (a los huecos
-  rotulados; un hueco de otro producto rechaza `wrong_product`), `take_orders` (el generador por
-  semilla llena el `OrderBook`), `pack_boxes` (en una mesa: unidades del estante, caja, relleno,
-  etiqueta, sellos y cinta; el pedido queda `PACKED`), `dispatch` (la zona de despacho ata la caja a
-  su pedido, `DispatchRules` habilita la van y la carga queda en `CompanyTrips`), `drive` (el jugador
-  abre la puerta de la cabina, toma el volante de la van de la flota estacionada en el playón y la
-  saca con el acelerador por su propia física; el portón ve cruzar el nodo, el viaje arranca y el
-  pedido queda `OUT`), `deliver` (en cada parada la casa es una del mapa fijo de su zona y la puerta
-  cobra con `OrderSettlement`), `return` (el conductor vuelve marcha atrás hasta adentro del playón,
-  el viaje se cierra sin fallados, no queda vehículo afuera y el jugador se baja) y `close_day` (el
-  reloj salta a las 20:00, `DayCycle` pasa por `CLOSING` a `SUMMARY`, el resumen trae los costos del
-  armado y el día cerrado se guarda y se lee de vuelta).
-- Ninguna etapa queda `not_implemented`: la línea final esperada es `BOT_OK` (salida 0). `drive` todavía
-  no lleva la van por el grafo de calles hasta las casas (D-2016.3, cuando el grafo esté en el mundo de
-  la empresa, D-0314.a): sale del playón y frena afuera.
-- Lo que todavía no es un pedido de `CompanyNet` (abrir el palet, la mesa, mover unidades mano a
-  caja, el libro de pedidos, la zona de despacho) lo hace el bot sobre los objetos del host, y las
-  estaciones (`CompanyNet.stations`) las instala el bot porque `CompanyRoot` aún no las pone
-  (D-0611): no se replica a clientes, es una corrida del host.
-- Resumen: líneas `BOT_COMPANY key=value` (jugadores, plata, entregas, roturas, errores de armado,
-  ms por etapa) y al final `BOT_OK` (salida 0) o `BOT_FAIL stages_missing=<n>` (salida 1);
-  `BOT_TIMEOUT` (salida 3) si se colgó. `deliveries` cuenta los pedidos cobrados en la puerta (1);
-  `breaks` vale 0 hasta que el manejo pueda romper cajas; `assembly_errors` cuenta lo que falta o sobra en la caja armada (el bot arma bien: 0).
-- Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa (las nueve de arriba) que pasa de `ok` a
-  falla, y todo `ERROR`/`SCRIPT ERROR` del log. Los avisos de fin de
-  proceso (`ObjectDB instances were leaked`, `resources still in use`, de todo `--script`) no lo son.
+- Abre `company_root.tscn` con una empresa nueva de semilla fija (los mismos pedidos en cada corrida) y el
+  save en `user://bot_company_day` (se borra), y espera el `OPENING` del día (máx. 10 s; si no llega,
+  `BOT_FAIL no_opening`).
+- Juegan el jugador del host y, con `--players=2` o más, un segundo jugador del equipo en el mundo del
+  host: sus pedidos pasan por el chequeo que el host hace de un pedido de otro peer y su posición es la
+  pose que ese peer replicaría (sin transporte: la pareja por ENet es D-2017). Con más de 2, el resto
+  solo dimensiona los pedidos del día. Los dos se teletransportan al lado de lo que usan, así que cada
+  chequeo de alcance es el del juego.
+- Las estaciones son las del juego (`CompanyShed.station_for`, que `CompanyRoot` pone como
+  `CompanyNet.stations`; el bot no la reemplaza): un hueco de estante es `ShelfPicking.station_id()`, una
+  mesa de armado `table:<uid>`.
+- Etapas, en orden sobre el mismo mundo (cada una imprime `BOT_STAGE <etapa> ok` o
+  `BOT_FAIL <etapa>:<motivo>`, que corta la corrida):
+  - `receive_pallet`: los palets del primer camión están en recepción (en el stock y dibujados) y uno
+    sellado no da nada. Atajo `pallet_unload`: el bot los abre y saca las unidades él mismo.
+  - `shelve_stock`: un hueco rotulado para otro producto rechaza (`wrong_product`); todas las unidades van
+    al hueco rotulado con `units_store`, los jugadores por turno.
+  - `take_orders`: el mundo planea el día en el `OPENING` y trae cada pedido al libro compartido cuando el
+    reloj del galpón llega a su hora; el bot salta el reloj (`BOT_SKIP`) hasta completar 6 que pueda armar.
+  - `pack_boxes`: 6 cajas, una por pedido, los jugadores por turno en las mesas: `box_start`,
+    `units_take` en los estantes, `box_place` unidad por unidad, `box_fill`, `box_label`, `box_stamp`,
+    `box_tape` (y `box_restock` si a la mesa le falta algo). Cada caja cerrada es un `DeliveryPackage` en
+    `World/Packages` con su pedido; la plata sale por eventos. Atajos `table_use` (el juego no manda esos
+    pedidos al usar la mesa) y `order_claim` (el bot le dice a la mesa qué pedido arma).
+  - `dispatch`: cada uno lleva su caja en las manos a la zona de despacho y la apoya; el jugador del host
+    usa la estación de despacho, marca todas en el tablero y aprieta Cargar: van al estante de la van, la
+    carga queda preparada y el libro de viajes aprende los pedidos.
+  - `drive`: el jugador abre la cabina, toma el volante y acelera; el portón arranca el viaje (pedidos
+    `OUT`) y el piloto automático sigue el grafo de calles hasta la casa de la primera parada. Con 2
+    jugadores el segundo se queda en el galpón armando los pedidos que siguen entrando, a ritmo de persona
+    (6 s entre cosa y cosa), y deja cada caja en la zona hasta que vuelve la van.
+  - `deliver`: parada por parada la van va hasta la casa (del mapa fijo, de la zona del pedido). Atajo
+    `door_settle`: el bot cobra cada pedido con `OrderSettlement.settle` y lo anota en el viaje.
+  - `return`: el piloto vuelve (giro en tres tiempos, avenida, entrada al playón) y el portón cierra el
+    viaje sin fallados.
+  - `close_day`: el reloj salta a las 20:00 (`BOT_SKIP`); `DayCycle` pasa por `CLOSING` a `SUMMARY`; el
+    resumen trae los costos del armado y el alquiler que cobró el juego; el juego mismo guardó el día
+    cerrado al llegar a `SUMMARY` (la apertura del día siguiente) y el bot solo lo lee.
+- Después imprime una línea `BOT_STUB <etapa> <id> [<tareas>] <qué hace el bot>` por cada atajo que
+  tomó, las `BOT_SKIP`, una `BOT_ERROR <mensaje>` por cada error del motor registrado en la corrida, y el
+  resumen `BOT_COMPANY key=value`: `players`, `money`, `profit` (plata al cerrar menos plata al empezar),
+  `deliveries`, `boxes`, `breaks`, `assembly_errors`, `engine_errors`, `return_bundle_units`,
+  `idle_max_s_<peer>` (por jugador, el mayor tramo sin nada en las manos ni volante, en segundos reales) y
+  `stage_ms_<etapa>`.
+- Línea final: `BOT_OK` (salida 0) solo si las 9 etapas dieron `ok`, no hubo ningún `BOT_STUB`, la
+  ganancia es mayor que 0, no hubo errores del motor y ningún jugador pasó más de 120 s ocioso; si no,
+  `BOT_FAIL` con lo que falló (`stages_missing=<n> stubs=<n> profit=<n> engine_errors=<n>
+  idle_<peer>=<s>`, salida 1). `BOT_TIMEOUT` (salida 3) si pasó el límite (`--hard`, 900 s por defecto).
+- Hoy (2026-11-11) las 9 etapas pasan con 1 y con 2 jugadores, ganancia positiva y sin errores del motor,
+  y la línea final es `BOT_FAIL stubs=4`: quedan `pallet_unload` (D-0607.c), `table_use` (D-0701.b),
+  `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 + D-0815.b). La corrida completa tarda unos
+  7 a 8 minutos (la van visita varias casas de ida y vuelta).
+- Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa que pasa de `ok` a falla, un `BOT_STUB` nuevo,
+  `profit` ≤ 0, cualquier `BOT_ERROR`/`ERROR`/`SCRIPT ERROR` del log y un `idle_max_s` sobre 120. Los
+  avisos de fin de proceso (`ObjectDB instances were leaked`, `resources still in use`, de todo
+  `--script`) no lo son.
 
 ## Hallazgos
 
