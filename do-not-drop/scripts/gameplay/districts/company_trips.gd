@@ -105,6 +105,13 @@ var _inside_pose: Dictionary = {}
 var _held_told: Dictionary = {}
 
 
+## The book is a Node outside the tree: it goes with this object (found leaking at the exit of the exported
+## build, D-2019).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and is_instance_valid(book):
+		book.free()
+
+
 ## The gate across the playon's far edge: `exit_origin` is the middle of the opening in world coordinates
 ## (CompanyFleet.gate_of()), `width` its width in metres, `outward` the way out (the shed's north, -Z of its basis;
 ## default the world's -Z). The yard (set_yard()) makes the whole compound the inside.
