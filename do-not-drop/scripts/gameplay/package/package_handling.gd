@@ -186,6 +186,27 @@ static func rack_drives(mount: Node3D) -> bool:
 	return body != null and body.is_in_group(CompanyTrips.VEHICLE_GROUP)
 
 
+## A world with no delivery run (the company's, D-0710.d) marks with this meta, on every peer, a box that is out on
+## one of its trips. While it is there the box lives as it does in a run (DeliveryPackage._is_run_active() and
+## _registered_for_run()): its trap runs, hits and running steps wear it, the crew can look after it and it shows
+## what it asks for. Not replicated: each peer's world sets it from what it knows of the trips (TripCargo).
+const ON_TRIP_META: StringName = &"on_trip"
+
+
+## Whether `p` is out on a trip of a world with no delivery run (ON_TRIP_META).
+static func on_trip(p: DeliveryPackage) -> bool:
+	return p.has_meta(ON_TRIP_META)
+
+
+## Marks `p` as out on a trip, or back from it (ON_TRIP_META). What the trip did to it stays: its trap, its care and
+## its integrity are as they were when it came back.
+static func set_on_trip(p: DeliveryPackage, on: bool) -> void:
+	if on:
+		p.set_meta(ON_TRIP_META, true)
+	elif p.has_meta(ON_TRIP_META):
+		p.remove_meta(ON_TRIP_META)
+
+
 ## A resident took the box at the door. Its carrier's hands have to empty on
 ## every peer before the node goes away, or they keep "holding" a freed box.
 ##

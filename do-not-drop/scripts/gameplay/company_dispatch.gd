@@ -28,7 +28,9 @@ extends Node
 ## goes out on paper only. A mount left holding a box that fell is let go when the board reads it and when the
 ## vehicle's trip closes. A box a hand puts in a bay is not cargo: only "Load" stages (revisar/D-0302.2.b.3.md). The
 ## host's trip book learns the loaded orders (_bridge()) so the trip can start when the vehicle crosses the gate;
-## then CompanyTripsView takes them out in the shared book, on every peer (D-0302.2.b.3).
+## then CompanyTripsView takes them out in the shared book, on every peer (D-0302.2.b.3). From there to the trip's
+## close the boxes live as cargo does in a delivery run, and the ones that broke are told at the close (TripCargo,
+## added here on every peer, D-0710.d).
 ##
 ## While the board is open the mouse is free and the local player's input is off; closing gives both back.
 ## No RPC and no random roll here: nothing is placed or decided apart from the host's own loading.
@@ -108,6 +110,8 @@ static func add_to(root: Node) -> CompanyDispatch:
 		dispatch.trips.left_behind = dispatch.left_behind
 		dispatch.trips.trip_closed.connect(dispatch._on_trip_closed)
 		dispatch.trips.cargo_dropped.connect(dispatch._on_cargo_dropped)
+	# The boxes it loads live as cargo while their trip is out, and the broken ones reach its close (D-0710.d).
+	TripCargo.add_to(root, dispatch.packages, dispatch.trips, dispatch.trips_view)
 	var bus: Node = root.get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"depot_station_opened", dispatch._on_station_opened)
