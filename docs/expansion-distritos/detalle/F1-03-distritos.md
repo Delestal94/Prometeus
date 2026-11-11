@@ -39,6 +39,7 @@ o `FAILED`.
 
 ### D-0303 · Módulo `world_cells`: cargar el mapa por celdas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/`) · F1
 **[x] Hecho (2026-10-12, PR pendiente)** — `modules/world_cells/` (`WorldCellGrid` + `WorldCellStreamer`, con `module.cfg` y test propio) y su adaptador `CompanyCells`; `test_world_cells` y `test_company_cells`.
+**[x] Hecho (2026-11-11, PR #@@PR@@)** — D-0303.1: el criterio medido del corte (`diseno/corte-vertical.md` §4) se comprueba sobre las celdas reales. `test_company_cells` maneja del galpón a la casa de Centro con el camino más largo (`centro_12`, 1.192 m por `RoadNavigator.route()`) y vuelve, con las calles, `CentroDecor` y las 30 casas entrando al árbol: ningún cuadro trae más de 50 ms de trabajo de celdas (peor medido: 16-18 ms, una casa) y no quedan huérfanos. Para que eso valga con margen, un cuadro toma una sola cosa pesada: una casa nunca entra en el cuadro en que entró una celda con contenido ni dos casas en el mismo, sean de la celda que sean (`CentroDecor.take_frame()` / `hold_houses()`, que `CompanyCells` llama al entrar una celda); antes cada celda soltaba la suya y un cuadro del viaje llegaba a 40-47 ms. Qué mide el test, el margen y lo que quedó afuera (los cuadros del arranque): [`decisiones/2026-11-11-d03031-un-ingreso-pesado-por-cuadro.md`](../../decisiones/2026-11-11-d03031-un-ingreso-pesado-por-cuadro.md) y [`revisar/D-0303.1.md`](../revisar/D-0303.1.md).
 **Depende de:** D-0220, D-0301
 **Qué:** `modules/world_cells/` (portable, sin nombres del juego), con `module.cfg` y `tests/`.
 - **Grilla:** celdas de 256 m. Cada celda es una escena `cell_<x>_<z>.tscn` o se arma desde datos. Se
@@ -52,7 +53,12 @@ o `FAILED`.
 **Test del módulo:** con 3 anclas falsas moviéndose, el set de celdas cargadas es el esperado en cada
 paso, y una celda nunca se carga y descarga en el mismo segundo.
 **Test del juego** `test_company_cells`: manejar del galpón a Centro no deja frames > 50 ms por la
-carga (medido con el reloj del motor en headless) ni huérfanos al volver.
+carga (medido con el reloj del motor en headless) ni huérfanos al volver. Dos recorridos: con celdas
+vacías (el módulo solo) y, desde D-0303.1, con las celdas reales del juego hasta la última casa de
+Centro (calles, decorado y casas; lo que cuenta por cuadro es el paso del streamer más la casa que
+entra en ese cuadro, y un cuadro pasado del límite se repite hasta 3 veces para descartar ruido de la
+máquina). `test_company_root_graph` comprueba en el mundo real, con su propio `_process`, que un cuadro
+toma una sola cosa pesada.
 **Hecho cuando:** los dos tests pasan y CI corre el módulo en `portability-check.sh`.
 
 ### D-0304 · Grafo de calles y tramos sobre aristas — A · Opus 5.5 · xhigh · Aviso: sí (`modules/route_gen/`) · F1
