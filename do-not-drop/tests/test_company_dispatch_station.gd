@@ -21,7 +21,8 @@ extends SceneTree
 ##   again does not list the loaded boxes, and with the van loaded there is no vehicle at the yard and Load is
 ##   off; a box carried out of the area leaves the list and one whose package is gone is forgotten;
 ## - a peer that doesn't decide (no CompanyTrips, as a client) sees the list from its own copy but Load
-##   is off with the reason and loads nothing.
+##   is off with the reason and loads nothing; if the day closes with that board open, it says so by itself
+##   within SCAN_SEC, with nothing else changing (D-0851).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const DIR: String = "user://test_company_dispatch_station"
@@ -286,6 +287,10 @@ func _check_client(level: CompanyRoot, host: CompanyDispatch) -> void:
 	_expect(panel.load_button().disabled and panel.load_button().visible, "Load is disabled, not hidden")
 	_expect(panel.status_text() == _es("UI_DISPATCH_HOST_ONLY"), "...with the reason (got %s)" % panel.status_text())
 	_expect(panel.confirm() == 0 and level.trips._staged == staged_before, "and loads nothing")
+	level.day_cycle.call(&"_transition", DayCycle.Phase.CLOSING)
+	client._process(CompanyDispatch.SCAN_SEC)
+	_expect(panel.status_text() == _es(CompanyTrips.DAY_CLOSED),
+		"the day closing refreshes the open board by itself (got %s)" % panel.status_text())
 	panel.close()
 	_expect(host.panel.visible == false, "the host's board stayed closed")
 	client.queue_free()

@@ -18,7 +18,7 @@ extends SceneTree
 ##   back, Load works again;
 ## - with two vehicles in the bay (ctx "bay", D-0931.b) a "Load all" button shows: it hands the oldest boxes to
 ##   the first vehicle and the overflow to the second, emits `loaded` once per vehicle, is hidden with one
-##   vehicle and off on a client;
+##   vehicle and off on a client; a client's board with `day_closed` says the day closed instead of "host only";
 ## - both languages have every key the board uses (strings_ui.csv, and strings_world.csv for the
 ##   reasons that come from the world, like WORLD_DISPATCH_FAR_LIMIT);
 ## - final style (D-1906): two load bars, slots and kg, filled with what is picked (0 to 1), calm colour under
@@ -285,6 +285,14 @@ func _test_client_and_empty() -> void:
 	_expect(panel.load_button().visible, "client: Load stays visible")
 	var host_only: String = tr_es("UI_DISPATCH_HOST_ONLY")
 	_expect(panel.status_text() == host_only, "client sees the reason (got %s)" % panel.status_text())
+	var night: Dictionary = _ctx({&"box_1": &"barrio_centro"}, _van(4, 100.0), false)
+	night["day_closed"] = true
+	night["trips"] = null
+	var night_panel: DispatchBoardPanel = await _panel(night)
+	var closed_text: String = tr_es(CompanyTrips.DAY_CLOSED)
+	_expect(closed_text != CompanyTrips.DAY_CLOSED and night_panel.status_text() == closed_text,
+		"a client's board says the day closed, D-0851 (got %s)" % night_panel.status_text())
+	night_panel.queue_free()
 	_expect(panel.confirm() == 0 and (ctx["zone"] as DispatchZone).boxes().size() == 1, "client loads nothing")
 	panel.queue_free()
 	await process_frame

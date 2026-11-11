@@ -52,7 +52,7 @@
 | D-0337 | Rutas con dos caminos (rápido y peligroso vs. lento y seguro) | constructor-tramos | high | bifurcación en 2 distritos |
 | ~~D-0338~~ | ~~Persistencia del distrito (casas ya visitadas, clientes conocidos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | se guarda y carga |
 | ~~D-0339~~ | ~~Clientes que esperan afuera o salen a recibir (animación existente de casa)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | variantes por distrito |
-| D-0340 | **Es del cierre de F1** ([corte vertical](diseno/corte-vertical.md) §2 #13 y D-2016.4; detalle en [F1-03-distritos.md](detalle/F1-03-distritos.md)): va antes que el resto de este bloque. Puerta del cliente revisa contenido contra el pedido (no solo daño) | constructor-trampas | high | test: producto faltante baja la paga ; la puerta llama `OrderSettlement.settle` y publica `order_delivered` (D-0815.b): fuera de `tests/` hay ≥ 1 llamada a `settle`. Depende de D-0254 (revisión D-0140) |
+| D-0340 | **Es del cierre de F1** ([corte vertical](diseno/corte-vertical.md) §2 #13 y D-2016.4; detalle en [F1-03-distritos.md](detalle/F1-03-distritos.md)): va antes que el resto de este bloque. Puerta del cliente revisa contenido contra el pedido (no solo daño) | constructor-trampas | high | test: producto faltante baja la paga ; la puerta llama `OrderSettlement.settle` con `CompanyTrips.delivery_minute()` (D-0851) y publica `order_delivered` (D-0815.b): fuera de `tests/` hay ≥ 1 llamada a `settle`. Depende de D-0254 (revisión D-0140) |
 
 ## Pulido
 

@@ -437,6 +437,8 @@ UI_COMPANY_EXIT_LOSES_DAY,"Salir ahora pierde lo hecho desde las 08:00. Para gua
 UI_COMPANY_EXIT_ANYWAY,Salir igual,Leave anyway
 UI_COMPANY_PAUSE_BODY,El reloj del galpón está quieto hasta que vuelvas.,The shed's clock stands still until you're back.
 UI_COMPANY_SOFT_PAUSE_BODY,El día sigue corriendo para el resto del equipo.,The day keeps going for the rest of the crew.
+UI_COMPANY_GATE_DAY_CLOSED,"El día cerró: ya no se sale a repartir.","The day is over: no more trips out."
+UI_COMPANY_DAY_CLOSING_ROAD,"Los clientes reciben solo lo que ya está en camino.","Customers only receive what is already on the road."
 UI_COMPANY_DAY_CUT,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d, saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d, balance $%d, %d units in stock."
 UI_COMPANY_DAY_CUT_PARTIAL,"Día %d interrumpido a las %s: ingresos $%d, gastos $%d (parcial), saldo $%d, %d unidades en stock.","Day %d cut short at %s: income $%d, costs $%d (partial), balance $%d, %d units in stock."
 UI_COMPANY_PRESENCE,Empresa %s — día %d,Company %s — day %d
