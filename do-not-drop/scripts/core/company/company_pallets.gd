@@ -47,6 +47,8 @@ const FORK_STATION: StringName = &"forklift"
 const FORK: StringName = &"fork_state"
 const REQUEST_KINDS: Array[StringName] = [PICK, PUT, PUSH, FORK_ACT]
 const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED, DEPARTED, CLEARED, FORK]
+## The ones the host publishes with no request (CompanyNet.publish()): the truck's pallets and the forklift's state.
+const HOST_EVENT_KINDS: Array[StringName] = [LOADED, DEPARTED, CLEARED, FORK]
 ## The station every request of the jack names: CompanyNet resolves it through its `stations`.
 const STATION: StringName = &"jack"
 const SNAPSHOT_KEY: String = "pallets"
@@ -227,6 +229,13 @@ static func clear_empties(pallets: CompanyPallets, stock: Inventory, publish: Ca
 	var event: Dictionary = pallets.cleared_event(stock)
 	if not event.is_empty():
 		publish.call(CLEARED, event)
+
+
+## Host: check_for() for a request `net` (CompanyNet) took from `peer`, at the station of that kind (the jack or
+## the forklift, station_for()), within the sender's reach as for units (CompanyUnitsNet.reach()).
+func on_request(net: CompanyNet, peer: int, kind: StringName, data: Dictionary) -> Dictionary:
+	var gate: Dictionary = net.units.reach(net, peer, {"station": station_for(kind)})
+	return gate if gate["reason"] != &"" else check_for(net, peer, kind, data, gate["station"])
 
 
 ## Host: check() for a request `net` (CompanyNet) took from `peer`: the station with what only the host knows of

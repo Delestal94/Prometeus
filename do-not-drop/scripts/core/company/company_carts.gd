@@ -74,6 +74,15 @@ static func push_ask(data: Dictionary) -> Dictionary:
 	return {"cart": StringName(cart), "dir": flat, "step": step}
 
 
+## Host: check() for a cart_push `net` (CompanyNet) took from `peer`, at the cart's own station (cart:<id>),
+## within the sender's reach as for units (CompanyUnitsNet.reach()).
+func on_request(net: CompanyNet, peer: int, data: Dictionary) -> Dictionary:
+	var push: Dictionary = push_ask(data)
+	var gate: Dictionary = net.units.reach(net, peer,
+		{} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])})
+	return gate if gate["reason"] != &"" else check(push, gate["station"])
+
+
 ## Host: the cart_moved a cart_push asks for at `station` (what CompanyNet's `stations` knows of the cart
 ## plus "at" and "stand_ok", see above), or its refusal: {reason: &"", kind, data} or {reason}.
 func check(ask: Dictionary, station: Dictionary) -> Dictionary:

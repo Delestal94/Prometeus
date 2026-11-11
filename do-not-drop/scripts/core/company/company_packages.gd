@@ -36,6 +36,9 @@ signal added(package: DeliveryPackage)
 
 ## Request kind a client sends the host once it has a package: {package: package id, rid}.
 const ACK: StringName = &"package_ack"
+## The packages' kinds as CompanyNet puts them together. The ack is critical (rule 8): it is sent once.
+const REQUEST_KINDS: Array[StringName] = [ACK]
+const CRITICAL_KINDS: Array[StringName] = [ACK]
 const REASON_BAD_DATA: StringName = &"bad_data"
 const NODE_PREFIX: String = "Package_"
 const TRAPS_DIR: String = "res://data/traps/"

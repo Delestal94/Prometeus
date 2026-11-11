@@ -22,26 +22,24 @@ extends Node
 ## and any other snapshot part (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached
 ## by path, only to know which peers have their world up.
 ##
-## Kinds today: units_take, units_store and units_drop (rows 5 to 7; units_drop is critical), snapshot_request, the
-## shed layout's place, move, rotate, sell and expand (D-0910: CompanyLayoutNet, `build`), the packing tables' box_*
-## (rows 9 to 15b, D-0715: CompanyTableNet, `table`), package_ack (D-0715.b: CompanyPackages, `table.packages`),
-## cart_push (D-0610.b: CompanyCarts, `carts`; units move with units_take / units_store at the station
-## cart:<id>), the pallet jack's jack_pick, jack_put and jack_push (D-0605.b: CompanyPallets, `pallets`),
-## supplier_order (D-0603.b.2:
-## CompanySupplierNet, `supplier`), shop_buy (D-0518: CompanyShopNet, `shop`, the host's only) and trip_tow (D-0307.1:
-## CompanyTowNet, `tow`: a stuck vehicle towed home; its effects go out as wallet_moved and trip_closed).
-## A task that adds an action appends its kind to REQUEST_KINDS (and to CRITICAL_KINDS when losing it leaves a
-## player stuck, rule 8), checks it in _handle_request() and applies its event in _apply_state().
+## Every kind belongs to one domain, and CompanyNet only puts them together and routes them (D-0254). A domain is a
+## script that declares its kinds (REQUEST_KINDS, CRITICAL_KINDS when losing one leaves a player stuck, rule 8,
+## EVENT_KINDS, and HOST_EVENT_KINDS for the events its host rules publish()) and checks and applies them itself:
+## the units (rows 5 to 7), the shed layout (D-0910), the packing tables' box_* (rows 9 to 15b, D-0715) and
+## package_ack (D-0715.b), cart_push (D-0610.b; units move with units_take / units_store at the station cart:<id>),
+## the pallet jack, the forklift and the truck's pallets (D-0605.b), the trips out (D-0302.2.a), the day's orders
+## (D-0813, D-0851), supplier_order (D-0603.b.2), wallet_moved (D-0517), shop_buy (D-0518, the host's only), trip_tow
+## (D-0307.1: its effects go out as wallet_moved and trip_closed) and units_spoiled (D-0616.b, CompanyColdNet); each
+## is one of the variables below. CompanyNet's own kinds are snapshot_request, clock_anchor and day_phase.
+## A task that adds an action adds its kinds to its domain's lists and to that domain's check and apply: nothing
+## here changes. Only a new domain touches this file: its lists in the four constants below and one branch in
+## _handle_request() and in _apply_state().
 ##
 ## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its `pos` (a drop, or
 ## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
 ##
 ## Events nobody asks for (the contract's "without a client request") are the host's own rules: they go out
-## through publish(), the same path: clock_anchor (D-0219, GameClock, `clock`), day_phase (D-0203, DayCycle,
-## `day_cycle`), trip_* (D-0302.2.a, CompanyTripsView, `trips_view`), jack_loaded, jack_departed and jack_cleared, the
-## pallets of the day's truck (D-0605.b, D-0618.b, D-0607.b, CompanyRoot), order_added / order_expired / order_closed,
-## the day's orders (D-0813, D-0851, CompanyOrdersNet, `orders`) and wallet_moved, money in or out that no request led
-## to (D-0517, CompanyWalletNet, publish_wallet()) and units_spoiled, cold products gone bad (D-0616.b, CompanyColdNet).
+## through publish(), the same path, and only the kinds of HOST_EVENT_KINDS may.
 ##
 ## A host rule that reacts to a business fact listens to event_applied, never to Inventory.stock_changed: that one
 ## fires in the middle of applying an event, and a request made there is refused (it would number its event first).
@@ -63,21 +61,8 @@ signal company_state_restored(snapshot_seq: int)
 
 const HOST_ID: int = 1
 const SNAPSHOT_REQUEST: StringName = &"snapshot_request"
-## Units from the sender's hands onto the floor: {product, qty, pos: Vector3, rid} (row 7, D-2006).
-const UNITS_DROP: StringName = &"units_drop"
-## Request kinds the host takes (the contract's section 2 whitelist); anything else is
-## dropped. Later tasks append theirs.
-const REQUEST_KINDS: Array[StringName] = [
-	&"units_take", &"units_store", UNITS_DROP, SNAPSHOT_REQUEST, CompanyLayoutNet.PLACE, CompanyLayoutNet.MOVE,
-	CompanyLayoutNet.ROTATE, CompanyLayoutNet.SELL, CompanyTableNet.START, CompanyTableNet.PLACE,
-	CompanyTableNet.TAKE_OUT, CompanyTableNet.FILL, CompanyTableNet.LABEL, CompanyTableNet.STAMP,
-	CompanyTableNet.TAPE, CompanyPackages.ACK, CompanyCarts.PUSH, CompanySupplierNet.ORDER, CompanyPallets.PICK,
-	CompanyPallets.PUT, CompanyPallets.PUSH, CompanyPallets.FORK_ACT, CompanyShopNet.BUY,
-	CompanyTableNet.RESTOCK, CompanyTableNet.DISCARD, CompanyTowNet.ASK, CompanyLayoutNet.EXPAND,
-]
-## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
-## They spend RpcGuard's critical reserve once the sender's budget is gone.
-const CRITICAL_KINDS: Array[StringName] = [UNITS_DROP, CompanyPackages.ACK]
+## Units from the sender's hands onto the floor (CompanyUnitsNet.DROP): {product, qty, pos: Vector3, rid}.
+const UNITS_DROP: StringName = CompanyUnitsNet.DROP
 ## The host's day clock changed pace: {minute, speed, paused} (D-0219, GameClock.apply_anchor()).
 const CLOCK_ANCHOR: StringName = &"clock_anchor"
 ## The day moved on, or the shed froze or thawed: {day, phase, frozen, lag, frozen_at[, summary]}
@@ -85,23 +70,31 @@ const CLOCK_ANCHOR: StringName = &"clock_anchor"
 const DAY_PHASE: StringName = &"day_phase"
 ## The host's wallet moved: {amount (signed), reason, money (its balance after), minute} (D-0517, CompanyWalletNet).
 const WALLET: StringName = CompanyWalletNet.MOVED
-## Event kinds every peer applies.
-const EVENT_KINDS: Array[StringName] = [
-	&"units_moved", CLOCK_ANCHOR, DAY_PHASE, CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD,
-	CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED,
-	CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, CompanyCarts.MOVED,
-	CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, CompanyPallets.FORK,
-	CompanyPallets.DEPARTED, CompanyPallets.CLEARED, CompanyTripsView.STARTED, CompanyTripsView.REFUSED,
-	CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED,
-	CompanySupplierNet.ORDERED, WALLET, CompanyShopNet.BOUGHT, CompanyTableNet.RESTOCKED, CompanyTableNet.DISCARDED,
-	CompanyColdNet.SPOILED, CompanyLayoutNet.EXPANDED,
-]
+## CompanyNet's own kinds: asking for a snapshot; the clock's pace and the day's phases, host events both.
+const OWN_REQUEST_KINDS: Array[StringName] = [SNAPSHOT_REQUEST]
+const OWN_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE]
+## Request kinds the host takes (the contract's section 2 whitelist): its own and each domain's. Anything else
+## is dropped. A kind is in one list only, so _handle_request() hands it to one domain (test_company_split).
+const REQUEST_KINDS: Array[StringName] = (
+	OWN_REQUEST_KINDS + CompanyUnitsNet.REQUEST_KINDS + CompanyLayoutNet.REQUEST_KINDS
+	+ CompanyTableNet.REQUEST_KINDS + CompanyPackages.REQUEST_KINDS + CompanyCarts.REQUEST_KINDS
+	+ CompanyPallets.REQUEST_KINDS + CompanySupplierNet.REQUEST_KINDS + CompanyShopNet.REQUEST_KINDS
+	+ CompanyTowNet.REQUEST_KINDS)
+## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
+## They spend RpcGuard's critical reserve once the sender's budget is gone.
+const CRITICAL_KINDS: Array[StringName] = CompanyUnitsNet.CRITICAL_KINDS + CompanyPackages.CRITICAL_KINDS
+## Event kinds every peer applies: its own and each domain's, one list each as for the requests.
+const EVENT_KINDS: Array[StringName] = (
+	OWN_EVENT_KINDS + CompanyUnitsNet.EVENT_KINDS + CompanyLayoutNet.EVENT_KINDS + CompanyTableNet.EVENT_KINDS
+	+ CompanyCarts.EVENT_KINDS + CompanyPallets.EVENT_KINDS + CompanyTripsView.EVENT_KINDS
+	+ CompanyOrdersNet.EVENT_KINDS + CompanySupplierNet.EVENT_KINDS + CompanyWalletNet.EVENT_KINDS
+	+ CompanyShopNet.EVENT_KINDS + CompanyColdNet.EVENT_KINDS)
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
 ## publish_wallet(), the supplier order of the day's close: SupplierAutoOrderHook); never units_moved.
-const HOST_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE, CompanyPallets.LOADED, CompanyPallets.DEPARTED,
-	CompanyPallets.CLEARED, CompanyPallets.FORK, CompanyTripsView.STARTED, CompanyTripsView.REFUSED,
-	CompanyTripsView.CLOSED, CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED,
-	CompanySupplierNet.ORDERED, WALLET, CompanyColdNet.SPOILED]
+const HOST_EVENT_KINDS: Array[StringName] = (
+	OWN_EVENT_KINDS + CompanyPallets.HOST_EVENT_KINDS + CompanyTripsView.HOST_EVENT_KINDS
+	+ CompanyOrdersNet.HOST_EVENT_KINDS + CompanySupplierNet.HOST_EVENT_KINDS
+	+ CompanyWalletNet.HOST_EVENT_KINDS + CompanyColdNet.HOST_EVENT_KINDS)
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a later snapshot covers them anyway.
@@ -123,9 +116,6 @@ const SNAPSHOT_KEYS: Array[String] = ["seq", "inventory", "company", "floor"]
 const HANDS_PREFIX: String = "hands:"
 ## Inventory locations of the bundles of units on the floor: floor:<n> (D-2006).
 const FLOOR_PREFIX: String = FloorBundles.PREFIX
-## units_drop: a `pos` farther than this (meters) from where the host sees the player lands at
-## its feet instead. Never a refusal: letting go always empties the hand (row 7).
-const DROP_REACH: float = 2.0
 
 const REASON_BAD_DATA: StringName = &"bad_data"
 const REASON_NO_STATION: StringName = &"no_station"
@@ -153,6 +143,10 @@ var clock: GameClock = null
 var day_cycle: DayCycle = null
 ## The trips out (D-0302.2.a) or null, trip_* events land in its apply_trip(); set by its attach().
 var trips_view: CompanyTripsView = null
+## The units requests (rows 5 to 7) and the reach every request at a station is measured with (rule 4).
+var units: CompanyUnitsNet = CompanyUnitsNet.new()
+## The snapshot on its way (D-2004): the host's rate limit and chunks, the client's wait and the chunks it joins.
+var sync: CompanySnapshotSync = CompanySnapshotSync.new()
 ## The shed layout's build requests (host) and events (every peer) on `company`'s layout (D-0910).
 var build: CompanyLayoutNet = CompanyLayoutNet.new()
 ## The shared packing tables' requests (host), events (every peer) and state (D-0715); in every snapshot.
@@ -197,29 +191,11 @@ var _applying: bool = false
 ## Client: events that came after a skipped number, {seq: [kind, data]}, until a snapshot.
 var _held: Dictionary = {}
 var _awaiting_snapshot: bool = false
-## Client: when it last asked for a snapshot (msec), -1 for never.
-var _snapshot_asked_msec: int = -1
-## Host: {peer: msec} of the last snapshot request let through, per peer.
-var _snapshot_granted: Dictionary = {}
-## Host: {peer: Vector3}, where each peer stood at its last units request (take, store, drop).
-## What a leaver held is dropped there when its player node is already gone
-## (last_known_position(), D-2006); forgotten once it left.
-var _last_origin: Dictionary = {}
 ## Snapshot parts kept outside CompanyNet, {key: [take, put]} (add_snapshot_part()).
 var _parts: Dictionary = {}
-## Host: {peer: true} once a snapshot too big to send was reported for it (one error per peer).
-var _oversize_reported: Dictionary = {}
-## Host: id of the last snapshot sent. Each one takes the next, so a peer can tell an older
-## snapshot's chunks apart.
-var _snapshot_id: int = 0
-## Client: the newest snapshot id seen and, while that one is put together, its chunk count,
-## size uncompressed and {chunk index: bytes}. _rx_total is 0 once it is done or thrown away.
-var _rx_id: int = 0
-var _rx_total: int = 0
-var _rx_size: int = 0
-var _rx_chunks: Dictionary = {}
 
 func _init() -> void:
+	sync.started = _start_waiting
 	add_snapshot_part(CompanyTableNet.SNAPSHOT_KEY, func() -> Variant: return table.to_dict(),
 		func(value: Variant) -> bool: return table.put_snapshot(value))
 	table.packages.ask = request
@@ -333,31 +309,26 @@ func drop(product: StringName, qty: int, pos: Vector3) -> int:
 	return request(UNITS_DROP, {"product": product, "qty": qty, "pos": pos})
 
 
-## Rule 4's shared check: a spot (a pallet, a shelf slot, a grid cell) is within reach of
-## `origin` (the player's reach origin) up to Interactable.REMOTE_REACH plus `slack`.
+## Rule 4's shared check (CompanyUnitsNet.within_reach()): a spot (a pallet, a shelf slot, a grid cell) is within
+## reach of `origin` (the player's reach origin) up to Interactable.REMOTE_REACH plus `slack`.
 static func within_reach(origin: Vector3, spot: Vector3, slack: float = 0.0) -> bool:
-	return origin.distance_to(spot) <= Interactable.REMOTE_REACH + slack
+	return CompanyUnitsNet.within_reach(origin, spot, slack)
 
 
 ## Host: where `peer` stood at its last units request, null if it never made one or it left
 ## (D-2006: what a leaver held is dropped there when its player is already gone).
 func last_known_position(peer: int) -> Variant:
-	return _last_origin.get(peer)
+	return units.last_known_position(peer)
 
 
 ## Host: lets a snapshot request from `peer` through at `now_msec` unless one already went
-## through less than SNAPSHOT_INTERVAL_MSEC before; then sends it the snapshot and emits
-## snapshot_requested. The host never asks itself. True when it went through; a snapshot that
+## through less than SNAPSHOT_INTERVAL_MSEC before (CompanySnapshotSync.may_grant()); then sends it the snapshot
+## and emits snapshot_requested. The host never asks itself. True when it went through; a snapshot that
 ## could not be sent (send_snapshot()) doesn't count, so the next request may try again.
 func grant_snapshot(peer: int, now_msec: int) -> bool:
-	if peer == multiplayer.get_unique_id():
+	if peer == multiplayer.get_unique_id() or not sync.may_grant(peer, now_msec) or not send_snapshot(peer):
 		return false
-	var last: int = int(_snapshot_granted.get(peer, -1))
-	if last >= 0 and now_msec - last < SNAPSHOT_INTERVAL_MSEC:
-		return false
-	if not send_snapshot(peer):
-		return false
-	_snapshot_granted[peer] = now_msec
+	sync.granted(peer, now_msec)
 	snapshot_requested.emit(peer)
 	return true
 
@@ -417,7 +388,8 @@ func snapshot() -> Dictionary:
 ## after it. Sent when the peer's world comes up (NetworkManager.peer_level_ready) and when it
 ## asks (grant_snapshot()). False when this isn't the host, `peer` isn't connected, an event
 ## is being applied (the state is half changed and its seq not yet counted) or the snapshot
-## is over SNAPSHOT_MAX_BYTES or SNAPSHOT_MAX_CHUNKS (an error, once per peer until one fits).
+## is over SNAPSHOT_MAX_BYTES or SNAPSHOT_MAX_CHUNKS (an error, once per peer until one fits:
+## CompanySnapshotSync.pack(), which also numbers it).
 func send_snapshot(peer: int) -> bool:
 	if not is_host() or peer == multiplayer.get_unique_id():
 		return false
@@ -426,19 +398,14 @@ func send_snapshot(peer: int) -> bool:
 	if _applying:
 		push_error("CompanyNet: a snapshot for peer %d while an event is applied" % peer)
 		return false
-	var packed: Dictionary = pack_snapshot(snapshot(), snapshot_chunk_bytes)
+	var packed: Dictionary = sync.pack(peer, snapshot(), snapshot_chunk_bytes)
 	if packed.is_empty():
-		if not _oversize_reported.has(peer):
-			_oversize_reported[peer] = true
-			push_error("CompanyNet: the snapshot for peer %d is over %d bytes or %d chunks; not sent"
-				% [peer, SNAPSHOT_MAX_BYTES, SNAPSHOT_MAX_CHUNKS])
 		return false
-	_oversize_reported.erase(peer)
-	_snapshot_id += 1
+	var id: int = packed["id"]
 	var chunks: Array[PackedByteArray] = packed["chunks"]
 	var size: int = packed["size"]
 	for index: int in range(chunks.size()):
-		_snapshot.rpc_id(peer, _snapshot_id, index, chunks.size(), size, chunks[index])
+		_snapshot.rpc_id(peer, id, index, chunks.size(), size, chunks[index])
 	return true
 
 
@@ -506,18 +473,15 @@ func apply_snapshot(data: Dictionary) -> bool:
 ## peer is ready; only if it hasn't come within SNAPSHOT_INTERVAL_MSEC is it asked for.
 func wait_for_snapshot() -> void:
 	_start_waiting()
-	_snapshot_asked_msec = Time.get_ticks_msec()
+	sync.asked_msec = Time.get_ticks_msec()
 
 
 ## Client: while waiting for a snapshot, asks for one if SNAPSHOT_INTERVAL_MSEC passed since
-## the last time (or it never asked). `now_msec` is Time.get_ticks_msec() (_process), or a
-## clock a test drives. True when it asked.
+## the last time (or it never asked: CompanySnapshotSync.ask_due()). `now_msec` is Time.get_ticks_msec()
+## (_process), or a clock a test drives. True when it asked.
 func poll_snapshot(now_msec: int) -> bool:
-	if not _awaiting_snapshot or is_host():
+	if not _awaiting_snapshot or is_host() or not sync.ask_due(now_msec):
 		return false
-	if _snapshot_asked_msec >= 0 and now_msec - _snapshot_asked_msec < SNAPSHOT_INTERVAL_MSEC:
-		return false
-	_snapshot_asked_msec = now_msec
 	return request(SNAPSHOT_REQUEST) > 0
 
 
@@ -527,7 +491,7 @@ func poll_snapshot(now_msec: int) -> bool:
 func resume_after_snapshot(snapshot_seq: int) -> void:
 	seq = snapshot_seq
 	_awaiting_snapshot = false
-	_snapshot_asked_msec = -1
+	sync.asked_msec = -1
 	set_process(false)
 	var pending: Dictionary = _held
 	_held = {}
@@ -573,7 +537,7 @@ func _take_request(peer: int, kind: StringName, data: Dictionary) -> void:
 		return
 	if not REQUEST_KINDS.has(kind) or typeof(data.get("rid")) != TYPE_INT:
 		return
-	var reason: StringName = tow.ask(peer, data) if kind == CompanyTowNet.ASK else _handle_request(peer, kind, data)
+	var reason: StringName = _handle_request(peer, kind, data)
 	if reason != &"":
 		_refuse(peer, int(data["rid"]), reason)
 
@@ -590,11 +554,16 @@ func _apply_event(event_seq: int, kind: StringName, data: Dictionary) -> void:
 ## Every peer but the host: chunk `chunk` of `total` of snapshot `id` (the host numbers them,
 ## so a chunk of an older one is dropped), `size` bytes once joined and decompressed
 ## (decompress() needs it). Same channel as _apply_event, so it is in order with the events.
+## CompanySnapshotSync.take_chunk() keeps it; with the last one in, the snapshot is applied. One that doesn't
+## unpack or apply leaves this peer waiting: it asks again (poll_snapshot()).
 @rpc("authority", "call_remote", "reliable")
 func _snapshot(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
 	if not RpcGuard.from_host(self) or is_host():
 		return
-	_take_chunk(id, chunk, total, size, bytes)
+	var data: Variant = sync.take_chunk(id, chunk, total, size, bytes)
+	if data is Dictionary and ((data as Dictionary).is_empty() or not apply_snapshot(data)):
+		push_warning("CompanyNet: snapshot %d could not be applied; waiting for another" % id)
+		_start_waiting()
 
 
 ## The requester: the host refused request `rid`. Draws a notice at most; no state changes.
@@ -605,64 +574,34 @@ func _rejected(rid: int, reason: StringName) -> void:
 	request_rejected.emit(rid, reason)
 
 
-## Host: what a valid request does, or the reason it is refused (&"" when it went through).
+## Host: what a valid request does, or the reason it is refused (&"" when it went through). The domain that
+## declares the kind (its REQUEST_KINDS) checks it with what this node knows (on_request() or ask(): the stock,
+## the sender's reach and hands), and no other: one branch per domain and no `else`. Its answer is the refusal
+## or the one event, which _grant() publishes; the tow and the package ack have no event of their own.
 func _handle_request(peer: int, kind: StringName, data: Dictionary) -> StringName:
-	if CompanyLayoutNet.REQUEST_KINDS.has(kind):
-		return _build(peer, kind, data)
-	if CompanyTableNet.REQUEST_KINDS.has(kind) or kind == CompanyPackages.ACK:
-		return _pack(peer, kind, data)
-	if CompanyCarts.REQUEST_KINDS.has(kind) or CompanyPallets.REQUEST_KINDS.has(kind):
-		return _on_object(peer, kind, data)
-	if CompanySupplierNet.REQUEST_KINDS.has(kind) or kind == CompanyShopNet.BUY:
-		return _grant(shop.ask(self, peer, data) if kind == CompanyShopNet.BUY else supplier.ask(self, peer, data))
-	match kind:
-		&"units_take":
-			return _take_units(peer, data)
-		&"units_store":
-			return _store_units(peer, data)
-		UNITS_DROP:
-			return _drop_units(peer, data)
-		SNAPSHOT_REQUEST:
-			# Over the limit it is dropped, not refused: the client asks again on its own.
-			grant_snapshot(peer, Time.get_ticks_msec())
-	return &""
-
-
-## Host: a build request (D-0910), checked by CompanyLayoutNet (only the host's own goes through),
-## and its one event published. A packing table with a box (D-0715) or a shelf with a pallet (D-0606): not_empty.
-func _build(peer: int, kind: StringName, data: Dictionary) -> StringName:
-	var ask: Dictionary = build.check(company, inventory, kind, data, peer == multiplayer.get_unique_id())
-	var sold: StringName = ask["data"]["uid"] if ask["reason"] == &"" and kind == CompanyLayoutNet.SELL else &""
-	if sold != &"" and (table.has_box(sold) or pallets.on_rack_of(sold)):
-		return CompanyLayoutNet.REASON_NOT_EMPTY
-	return _grant(ask)
-
-
-## Host: a packing-table request (D-0715) at a table within the sender's reach (rule 4, measured
-## as for units), checked by CompanyTableNet with the sender's hands, and its one event published.
-func _pack(peer: int, kind: StringName, data: Dictionary) -> StringName:
-	if kind == CompanyPackages.ACK:
-		return table.packages.ack(peer, data)
-	var ask: Dictionary = CompanyTableNet.station_ask(data)
-	var station: Dictionary = _lookup_station(ask)
-	var problem: StringName = _station_problem(peer, ask, station)
-	if problem != &"":
-		return problem
-	return _grant(table.check(company, inventory, kind, data, station, hands_location(peer)))
-
-
-## Host: a request on a world object (a picking cart, D-0610.b; the pallet jack, D-0605.b): its station must be
-## within the sender's reach (as for units), then the object's own check gives the refusal or the one event.
-func _on_object(peer: int, kind: StringName, data: Dictionary) -> StringName:
-	var push: Dictionary = CompanyCarts.push_ask(data)
-	var ask: Dictionary = {"station": CompanyPallets.station_for(kind)}
-	var check: Callable = func(s: Dictionary) -> Dictionary: return pallets.check_for(self, peer, kind, data, s)
-	if kind == CompanyCarts.PUSH:
-		ask = {} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])}
-		check = func(station: Dictionary) -> Dictionary: return carts.check(push, station)
-	var station: Dictionary = _lookup_station(ask)
-	var problem: StringName = _station_problem(peer, ask, station)
-	return problem if problem != &"" else _grant(check.call(station))
+	var reason: StringName = &""
+	if CompanyUnitsNet.REQUEST_KINDS.has(kind):
+		reason = _grant(units.on_request(self, peer, kind, data))
+	elif CompanyLayoutNet.REQUEST_KINDS.has(kind):
+		reason = _grant(build.on_request(self, peer, kind, data))
+	elif CompanyTableNet.REQUEST_KINDS.has(kind):
+		reason = _grant(table.on_request(self, peer, kind, data))
+	elif CompanyPackages.REQUEST_KINDS.has(kind):
+		reason = table.packages.ack(peer, data)
+	elif CompanyCarts.REQUEST_KINDS.has(kind):
+		reason = _grant(carts.on_request(self, peer, data))
+	elif CompanyPallets.REQUEST_KINDS.has(kind):
+		reason = _grant(pallets.on_request(self, peer, kind, data))
+	elif CompanySupplierNet.REQUEST_KINDS.has(kind):
+		reason = _grant(supplier.ask(self, peer, data))
+	elif CompanyShopNet.REQUEST_KINDS.has(kind):
+		reason = _grant(shop.ask(self, peer, data))
+	elif CompanyTowNet.REQUEST_KINDS.has(kind):
+		reason = tow.ask(peer, data)
+	elif kind == SNAPSHOT_REQUEST:
+		# Over the limit it is dropped, not refused: the client asks again on its own.
+		grant_snapshot(peer, Time.get_ticks_msec())
+	return reason
 
 
 ## Host: the refusal of a checked request ({reason}), or its one event ({reason: &"", kind, data})
@@ -673,66 +612,10 @@ func _grant(ask: Dictionary) -> StringName:
 	return &"" if _publish(ask["kind"], ask["data"]) else REASON_BAD_DATA
 
 
-## Host, section 2 row 5: units from a station (pallet, shelf slot, floor bundle) into the
-## sender's hands, free or empty hands holding only that product, up to the hand's limit.
-## Reserved units may be taken too: a reservation is per product and stays where it is (who
-## may put a reserved unit in which box is checked at box_place, D-0807 / D-0703).
-func _take_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = CompanyAsk.at_station(data)
-	var station: Dictionary = _lookup_station(ask)
-	var problem: StringName = _station_problem(peer, ask, station)
-	if problem != &"":
-		return problem
-	return _grant(CompanyAsk.take(inventory, ask, station, hands_location(peer)))
-
-
-## Host, section 2 row 6: units from the sender's hands into a station that takes them (a
-## shelf slot labeled for that product, with room, D-0608). A floor bundle is no such station
-## (no_station): letting go on the floor is units_drop, a bundle of its own.
-func _store_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = CompanyAsk.at_station(data)
-	var station: Dictionary = _lookup_station(ask)
-	var problem: StringName = _station_problem(peer, ask, station)
-	if problem != &"":
-		return problem
-	return _grant(CompanyAsk.store(inventory, ask, station, hands_location(peer)))
-
-
-## Host, section 2 row 7 (D-2006): units from the sender's hands into a new floor bundle at
-## `pos`, or at its feet (_feet_of()) when `pos` is over DROP_REACH plus the reach slack from them
-## (never refused for distance). Refused for bad data, units not in the hand (not_enough, also
-## for another product) or no idea where the player is (out_of_reach, as at a station).
-func _drop_units(peer: int, data: Dictionary) -> StringName:
-	var ask: Dictionary = CompanyAsk.drop(data)
-	if ask.is_empty():
-		return REASON_BAD_DATA
-	var feet: Variant = _feet_of(peer)
-	if feet == null:
-		return REASON_OUT_OF_REACH
-	_last_origin[peer] = feet
-	var product: StringName = ask["product"]
-	var qty: int = ask["qty"]
-	if inventory.count(product, hands_location(peer)) < qty:
-		return REASON_NOT_ENOUGH
-	var pos: Vector3 = ask["pos"]
-	if pos.distance_to(feet) > DROP_REACH + NetStats.reach_slack(multiplayer.multiplayer_peer, peer):
-		pos = feet
-	return &"" if _drop_from_hands(peer, product, qty, pos) else REASON_BAD_DATA
-
-
-## Host: `qty` of `product` from `peer`'s hands into a new floor bundle at `pos` (one
-## units_moved with its `pos`). False when it could not be published.
-func _drop_from_hands(peer: int, product: StringName, qty: int, pos: Vector3) -> bool:
-	var moved: Dictionary = {
-		"product": product, "qty": qty, "from": hands_location(peer),
-		"to": floor_bundles.next_free(inventory), "pos": pos,
-	}
-	return _publish(&"units_moved", moved)
-
-
 ## Host: `peer` left (peer_removed or peer_disconnected, whichever comes first; the second finds empty hands and
 ## no forklift). What it held goes onto the floor, one units_moved per product into a new bundle at its feet
-## (_feet_of()), else the origin; the forklift it drove stays where it is. Mid-event it waits for the next frame.
+## (CompanyUnitsNet.feet_of()), else the origin; the forklift it drove stays where it is. Mid-event it waits for
+## the next frame.
 func _let_go(peer: int) -> void:
 	if _applying:
 		_let_go.call_deferred(peer)
@@ -740,21 +623,13 @@ func _let_go(peer: int) -> void:
 	var held: Dictionary = {}
 	if is_host() and peer != multiplayer.get_unique_id() and inventory != null:
 		held = inventory.contents_at(hands_location(peer))
-		_grant(pallets.let_go(peer, _lookup_station({"station": CompanyPallets.FORK_STATION})))
-	var pos: Variant = _feet_of(peer) if not held.is_empty() else null
+		_grant(pallets.let_go(peer, units.station_of(self, {"station": CompanyPallets.FORK_STATION})))
+	var pos: Variant = units.feet_of(self, peer) if not held.is_empty() else null
 	for product: StringName in held:
-		if not _drop_from_hands(peer, product, int(held[product]), pos if pos != null else Vector3.ZERO):
+		var at: Vector3 = pos if pos != null else Vector3.ZERO
+		if _grant(units.dropped(self, peer, product, int(held[product]), at)) != &"":
 			push_error("CompanyNet: what peer %d held (%s) could not be dropped" % [peer, product])
-	_last_origin.erase(peer)
-
-
-## Host: where `peer`'s player stands, its body (not its reach origin) or player_origin's value,
-## if known and finite; else where it stood at its last units request; else null.
-func _feet_of(peer: int) -> Variant:
-	var body: Variant = _origin_of(peer, false)
-	if body is Vector3 and RpcGuard.finite_vec3(body):
-		return body
-	return _last_origin.get(peer)
+	units.forget(peer)
 
 
 ## Host: the one way an event happens. Numbers it, applies it here first, sends it to every
@@ -803,51 +678,47 @@ func _receive(event_seq: int, kind: StringName, data: Dictionary) -> void:
 ## The one place an event changes state, with the same code on every peer (rule 6: no game
 ## rule is checked again, only that the data fits). False when it doesn't. While it runs
 ## (Inventory signals fire inside it) no request or event may start: _applying.
+## The domain that declares the kind (its EVENT_KINDS) applies it, and no other: one branch per domain and no
+## `else`, so a kind added later can't fall into somebody else's code (test_company_layout_net reads it here).
 func _apply_state(kind: StringName, data: Dictionary) -> bool:
 	if inventory == null or not EVENT_KINDS.has(kind):
 		return false
 	_applying = true
 	var applied: bool = false
-	match kind:
-		&"units_moved":
-			applied = floor_bundles.apply_move(inventory, CompanyAsk.as_id(data.get("product")),
-				CompanyAsk.as_int(data.get("qty")), CompanyAsk.as_id(data.get("from")),
-				CompanyAsk.as_id(data.get("to")), data.get("pos"))
-		CLOCK_ANCHOR:
-			if clock == null or not is_instance_valid(clock):
-				push_warning("CompanyNet: a clock_anchor event but no clock here (GameClock.attach())")
-			else:
-				applied = clock.apply_anchor(data)
-		DAY_PHASE:
-			if day_cycle == null or not is_instance_valid(day_cycle):
-				push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
-			else:
-				applied = day_cycle.apply_phase(data)
-		CompanyTripsView.STARTED, CompanyTripsView.REFUSED, CompanyTripsView.CLOSED:
-			applied = is_instance_valid(trips_view) and trips_view.apply_trip(kind, data)
-		CompanyLayoutNet.PLACED, CompanyLayoutNet.MOVED, CompanyLayoutNet.SOLD, CompanyLayoutNet.EXPANDED:
-			applied = build.apply(company, kind, data)
-			if applied and kind == CompanyLayoutNet.SOLD:
-				table.forget(CompanyAsk.as_id(data.get("uid")))
-		CompanyTableNet.STARTED, CompanyTableNet.PLACED, CompanyTableNet.TAKEN_OUT, CompanyTableNet.FILLED, \
-		CompanyTableNet.LABELED, CompanyTableNet.STAMPED, CompanyTableNet.SEALED, \
-		CompanyTableNet.RESTOCKED, CompanyTableNet.DISCARDED:
-			applied = table.apply(company, inventory, kind, data)
-		CompanyCarts.MOVED:
-			applied = carts.apply(data)
-		CompanyPallets.PICKED, CompanyPallets.PLACED, CompanyPallets.MOVED, CompanyPallets.LOADED, \
-		CompanyPallets.FORK, CompanyPallets.DEPARTED, CompanyPallets.CLEARED:
-			applied = pallets.apply(inventory, kind, data)
-		CompanyOrdersNet.ADDED, CompanyOrdersNet.EXPIRED, CompanyOrdersNet.CLOSED:
-			applied = orders.apply(kind, data)
-		CompanySupplierNet.ORDERED:
-			applied = supplier.apply(data)
-		WALLET:
-			applied = wallet.apply(company, data)
-		CompanyShopNet.BOUGHT:
-			applied = shop.apply(company, data)
-		CompanyColdNet.SPOILED:
-			applied = CompanyColdNet.apply(inventory, data)
+	if CompanyUnitsNet.EVENT_KINDS.has(kind):
+		applied = CompanyUnitsNet.apply(inventory, floor_bundles, data)
+	elif kind == CLOCK_ANCHOR:
+		if clock == null or not is_instance_valid(clock):
+			push_warning("CompanyNet: a clock_anchor event but no clock here (GameClock.attach())")
+		else:
+			applied = clock.apply_anchor(data)
+	elif kind == DAY_PHASE:
+		if day_cycle == null or not is_instance_valid(day_cycle):
+			push_warning("CompanyNet: a day_phase event but no day cycle here (DayCycle.attach())")
+		else:
+			applied = day_cycle.apply_phase(data)
+	elif CompanyTripsView.EVENT_KINDS.has(kind):
+		applied = is_instance_valid(trips_view) and trips_view.apply_trip(kind, data)
+	elif CompanyLayoutNet.EVENT_KINDS.has(kind):
+		applied = build.apply(company, kind, data)
+		if applied and kind == CompanyLayoutNet.SOLD:
+			table.forget(CompanyAsk.as_id(data.get("uid")))
+	elif CompanyTableNet.EVENT_KINDS.has(kind):
+		applied = table.apply(company, inventory, kind, data)
+	elif CompanyCarts.EVENT_KINDS.has(kind):
+		applied = carts.apply(data)
+	elif CompanyPallets.EVENT_KINDS.has(kind):
+		applied = pallets.apply(inventory, kind, data)
+	elif CompanyOrdersNet.EVENT_KINDS.has(kind):
+		applied = orders.apply(kind, data)
+	elif CompanySupplierNet.EVENT_KINDS.has(kind):
+		applied = supplier.apply(data)
+	elif CompanyWalletNet.EVENT_KINDS.has(kind):
+		applied = wallet.apply(company, data)
+	elif CompanyShopNet.EVENT_KINDS.has(kind):
+		applied = shop.apply(company, data)
+	elif CompanyColdNet.EVENT_KINDS.has(kind):
+		applied = CompanyColdNet.apply(inventory, data)
 	if applied:
 		floor_bundles.prune(inventory)
 	_applying = false
@@ -865,35 +736,6 @@ func _hold(event_seq: int, kind: StringName, data: Dictionary) -> void:
 func _start_waiting() -> void:
 	_awaiting_snapshot = true
 	set_process(true)
-
-
-## Client: keeps one chunk (checked first, rule 5: ids and counts in range, at most SNAPSHOT_CHUNK_BYTES, the
-## same total and size as the rest of its snapshot) and, with the last one in, joins them and applies the
-## snapshot. The first chunk of a newer snapshot drops what was kept of the one before, starts holding events
-## and restarts the wait before asking again. A repeated chunk, or one of an older or finished snapshot, changes
-## nothing. A snapshot that doesn't unpack or apply leaves this peer waiting: it asks again (poll_snapshot()).
-func _take_chunk(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
-	if not CompanySnapshot.chunk_ok(id, chunk, total, size, bytes) or id < _rx_id:
-		return
-	if id > _rx_id:
-		_rx_id = id
-		_rx_total = total
-		_rx_size = size
-		_rx_chunks = {}
-		_start_waiting()
-		_snapshot_asked_msec = Time.get_ticks_msec()
-	elif _rx_total == 0 or total != _rx_total or size != _rx_size or _rx_chunks.has(chunk):
-		return
-	_rx_chunks[chunk] = bytes
-	if _rx_chunks.size() < _rx_total:
-		return
-	var joined: PackedByteArray = CompanySnapshot.join(_rx_chunks, _rx_total)
-	_rx_total = 0
-	_rx_chunks = {}
-	var data: Dictionary = unpack_snapshot(joined, _rx_size)
-	if data.is_empty() or not apply_snapshot(data):
-		push_warning("CompanyNet: snapshot %d could not be applied; waiting for another" % id)
-		_start_waiting()
 
 
 ## Host: tells the requester why nothing happened. The host's own request hears it here at once
@@ -931,44 +773,8 @@ func _connected_client() -> bool:
 	)
 
 
-## The station a checked request names, or {} (CompanyAsk.station_of(): `stations` and the floor bundles).
-func _lookup_station(ask: Dictionary) -> Dictionary:
-	return CompanyAsk.station_of(ask, floor_bundles, stations)
-
-
-## Why a units request can't be done at that station: bad data, an unknown station or one out
-## of the sender's reach (rule 4, measured to the station's spot). &"" when it can.
-func _station_problem(peer: int, ask: Dictionary, station: Dictionary) -> StringName:
-	if ask.is_empty():
-		return REASON_BAD_DATA
-	if station.is_empty():
-		return REASON_NO_STATION
-	var origin: Variant = _origin_of(peer)
-	if not (origin is Vector3 and RpcGuard.finite_vec3(origin)):
-		return REASON_OUT_OF_REACH
-	_last_origin[peer] = origin
-	var slack: float = NetStats.reach_slack(multiplayer.multiplayer_peer, peer)
-	if not within_reach(origin, station["spot"], slack):
-		return REASON_OUT_OF_REACH
-	return &""
-
-
-## Where `peer`'s player is: its reach_origin() when `reach`, else its body's position;
-## player_origin's value when set. Null when that peer has no player.
-func _origin_of(peer: int, reach: bool = true) -> Variant:
-	if player_origin.is_valid():
-		return player_origin.call(peer)
-	for player: Node in get_tree().get_nodes_in_group(Interactable.player_group):
-		if player.get_multiplayer_authority() == peer and player is Node3D:
-			if reach and player.has_method(&"reach_origin"):
-				return player.call(&"reach_origin")
-			return (player as Node3D).global_position
-	return null
-
-
 func _on_peer_disconnected(peer: int) -> void:
-	_snapshot_granted.erase(peer)
-	_oversize_reported.erase(peer)
+	sync.forget(peer)
 	_let_go(peer)
 
 

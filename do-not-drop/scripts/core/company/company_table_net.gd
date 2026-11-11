@@ -209,6 +209,15 @@ static func package_location(package: StringName) -> StringName:
 	return StringName(PACKAGE_PREFIX + String(package))
 
 
+## Host: check() for a request `net` (CompanyNet) took from `peer`, at a table within the sender's reach (rule 4,
+## measured as for units: CompanyUnitsNet.reach()) and with the sender's hands.
+func on_request(net: CompanyNet, peer: int, kind: StringName, data: Dictionary) -> Dictionary:
+	var gate: Dictionary = net.units.reach(net, peer, station_ask(data))
+	if gate["reason"] != &"":
+		return gate
+	return check(net.company, net.inventory, kind, data, gate["station"], CompanyNet.hands_location(peer))
+
+
 ## Host: a table request at `station` (CompanyNet looked it up and measured the sender's reach to
 ## it), as {reason} when it is refused or {reason: &"", kind, data} with its one event. `hands` is
 ## the sender's (hands:<peer>, built by the host, rule 3), `state` the company (its wallet pays each

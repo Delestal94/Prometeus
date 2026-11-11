@@ -18,6 +18,9 @@ extends RefCounted
 
 ## Cold units rotted in a place (CompanyNet.HOST_EVENT_KINDS).
 const SPOILED: StringName = &"units_spoiled"
+## The cold chain's kinds as CompanyNet puts them together: one event, the host's own (ColdChainTick).
+const EVENT_KINDS: Array[StringName] = [SPOILED]
+const HOST_EVENT_KINDS: Array[StringName] = [SPOILED]
 
 
 ## Host: the event for one entry of ColdChain.age() ({product, location, qty}), or {} when it is not a

@@ -60,6 +60,8 @@ const STARTED: StringName = &"trip_started"
 const REFUSED: StringName = &"trip_refused"
 const CLOSED: StringName = &"trip_closed"
 const EVENT_KINDS: Array[StringName] = [STARTED, REFUSED, CLOSED]
+## All three are the host's own (CompanyTrips decides, follow() publishes): nobody asks for a trip.
+const HOST_EVENT_KINDS: Array[StringName] = [STARTED, REFUSED, CLOSED]
 ## Key of the trips out in CompanyNet's snapshot (add_snapshot_part()): a list of entries in
 ## trip_started's shape, refused ones with trip "" and no orders or boxes.
 const SNAPSHOT_KEY: String = "trips"

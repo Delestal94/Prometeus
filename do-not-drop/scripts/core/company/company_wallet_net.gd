@@ -31,6 +31,9 @@ extends RefCounted
 
 ## A wallet movement of the host's (D-0517), CompanyNet.WALLET.
 const MOVED: StringName = &"wallet_moved"
+## The wallet's kinds as CompanyNet puts them together: one event, the host's own (publish_wallet()).
+const EVENT_KINDS: Array[StringName] = [MOVED]
+const HOST_EVENT_KINDS: Array[StringName] = [MOVED]
 ## Largest balance or movement, either sign, an event may carry: no overflow adding one to the other.
 const MAX_MONEY: int = 1_000_000_000_000
 ## Longest reason a wallet event may carry (the ledger's are under 20: order_paid, warehouse_expand).

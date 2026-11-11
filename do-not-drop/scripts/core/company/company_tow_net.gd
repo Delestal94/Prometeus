@@ -17,6 +17,8 @@ extends RefCounted
 ## A client never writes the wallet nor the trip: it asks, as for any business request.
 
 const ASK: StringName = &"trip_tow"
+## The tow's kinds as CompanyNet puts them together: one request and no event of its own.
+const REQUEST_KINDS: Array[StringName] = [ASK]
 const REASON_BAD_DATA: StringName = &"bad_data"
 
 ## Host: the world's tow, Callable(peer: int, vehicle_id: StringName) -> StringName: the refusal, or &"" when done.

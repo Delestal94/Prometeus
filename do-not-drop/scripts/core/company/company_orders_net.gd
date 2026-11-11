@@ -38,6 +38,8 @@ const ADDED: StringName = &"order_added"
 const EXPIRED: StringName = &"order_expired"
 const CLOSED: StringName = &"order_closed"
 const EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED, CLOSED]
+## All three are the host's own rules (the day's plan, the clock, the day's close): CompanyNet.publish() takes them.
+const HOST_EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED, CLOSED]
 ## The states an order_closed may carry, as they travel.
 const CLOSED_STATES: Array[StringName] = [Order.STATE_FAILED, Order.STATE_CANCELLED]
 ## Key of the book in CompanyNet's snapshot (CompanyNet adds the part itself).
