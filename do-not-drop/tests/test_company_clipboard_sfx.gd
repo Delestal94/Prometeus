@@ -54,11 +54,14 @@ func _test_streams() -> void:
 		_expect(peak > 3000 and peak < 32767, "%s is heard and not clipped (peak %d)" % [cue, peak])
 	_expect(SynthAudio.clipboard_clip_up() == streams["clip_up"], "the clip is built once and shared")
 	_expect(streams["clip_up"].data != streams["clip_down"].data, "taking it out and putting it away sound apart")
-	_expect(SynthAudioHandling.make_clipboard_clip(true).data == SynthAudioHandling.make_clipboard_clip(true).data,
+	var first_up: PackedByteArray = SynthAudioHandling.make_clipboard_clip(true).data
+	var first_down: PackedByteArray = SynthAudioHandling.make_clipboard_clip(false).data
+	var first_sheet: PackedByteArray = SynthAudioHandling.make_clipboard_sheet().data
+	_expect(SynthAudioHandling.make_clipboard_clip(true).data == first_up,
 		"the clip taken out comes out the same on every build")
-	_expect(SynthAudioHandling.make_clipboard_clip(false).data == SynthAudioHandling.make_clipboard_clip(false).data,
+	_expect(SynthAudioHandling.make_clipboard_clip(false).data == first_down,
 		"the clip put away comes out the same on every build")
-	_expect(SynthAudioHandling.make_clipboard_sheet().data == SynthAudioHandling.make_clipboard_sheet().data,
+	_expect(SynthAudioHandling.make_clipboard_sheet().data == first_sheet,
 		"the sheet comes out the same on every build")
 
 
