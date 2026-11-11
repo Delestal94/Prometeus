@@ -120,7 +120,8 @@ Antes (revisión D-0140, 2026-10-22, volvió a ◐ desde hecha el 2026-10-12): `
   `CompanyTrips` y el cliente desde `CompanyTripsView`. Con esa marca `_is_run_active()` y `_registered_for_run()`
   aceptan la caja y la tarjeta de cuidado vive (`PlayerCargoCare.cared_for`). Al cerrar el viaje (portón, remolque o
   `forget`), `CompanyTrips.broken_boxes()` le pasa a `Trip.close()` las rotas (arruinadas o con el contenido afuera),
-  que quedan en `Trip.broken_ids`. No mueve productos (sin `Inventory`). Sin RPC nuevo. Decisión en
+  que quedan en `Trip.broken_ids`. No mueve productos (sin `Inventory`). Cuidar una caja en una salida no paga mérito
+  de la campaña clásica (`PackageTending.award_milestone`). Sin RPC nuevo. Decisión en
   `docs/decisiones/2026-11-11-d0710d-caja-en-salida.md`, aviso `docs/avisos/2026-11-11-d0710d-trampas-en-salidas.md`,
   pendientes en `revisar/D-0710.d.md`.
 **Hecho cuando:** vidrio sin relleno da Frágil alto; con relleno, Frágil bajo; (D-0710.b) `sim_trap_balance` muestra

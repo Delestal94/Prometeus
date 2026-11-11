@@ -8,7 +8,8 @@ extends SceneTree
 ##   nothing to it (DeliveryPackage._is_run_active() false);
 ## - once its vehicle crosses the gate outward its boxes carry ON_TRIP_META and live as cargo in a run: the same
 ##   hit takes more off a box packed at the high level (bare glass) than off one packed low (padded), a running
-##   step (PackageRunShake.jolt) wears it and the cargo tick (_simulate_cargo) runs on it;
+##   step (PackageRunShake.jolt) wears it and the cargo tick (_simulate_cargo) runs on it; a milestone earned on it
+##   pays no classic campaign merit (PackageTending.award_milestone refuses a trip box with no delivery run);
 ## - the box that broke on the road is in Trip.broken_ids when the trip comes back through the gate (and the sound
 ##   one is not), its trip_closed listeners read it there, and the boxes are off the trip again (a hit does nothing);
 ## - a trip closed by a tow (CompanyTrips.tow()) or by its vehicle leaving the world (forget()) also tells its
@@ -109,6 +110,11 @@ func _test_root() -> void:
 	RUN_SHAKE.jolt(padded, 1.0)
 	_expect(padded.integrity < stepped, "A running step wears a box on a trip (got %.2f -> %.2f)"
 		% [stepped, padded.integrity])
+	# A save on a trip is not the classic campaign's merit (no delivery run).
+	var crew: Node = root.get_node(^"/root/CrewProgression")
+	var merit_before: Dictionary = (crew.get(&"merit") as Dictionary).duplicate()
+	_expect(not padded._award_milestone(1, &"rescued") and (crew.get(&"merit") as Dictionary) == merit_before,
+		"A milestone on a trip box pays no campaign merit (got %s)" % [crew.get(&"merit")])
 	# The road keeps hitting the bare box before any tick (a solo crew's rack assistant steadies the boxes from
 	# the first tick on, which softens hits as it does in a run).
 	for _hit: int in range(60):
@@ -130,6 +136,9 @@ func _test_root() -> void:
 	padded.apply_impact(HIT)
 	_expect(is_equal_approx(padded.integrity, resting), "Back on the shelf a hit does nothing (got %.2f -> %.2f)"
 		% [resting, padded.integrity])
+	# Off the trip the same call reaches CrewProgression (so the refusal above was the trip's, not a dead path).
+	_expect(padded._award_milestone(1, &"rescued"), "Off the trip the milestone call still reaches CrewProgression")
+	crew.call(&"reset_campaign", false)
 	level.queue_free()
 	await process_frame
 	state.call(&"reset")

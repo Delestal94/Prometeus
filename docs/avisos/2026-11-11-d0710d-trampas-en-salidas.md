@@ -11,7 +11,12 @@
 - **`scripts/gameplay/package/package.gd`:** `_is_run_active()` y `_registered_for_run()` también dan verdadero para una
   caja con `ON_TRIP_META`. Sin firmas nuevas. Con eso, en una salida y sin `RunManager` corriendo, la caja vive como
   carga de una entrega: `PackageImpacts.apply_impact`, `PackageRunShake.jolt` y `_simulate_cargo` actúan, el cuidado
-  responde y la caja muestra lo que pide.
+  responde y la caja muestra lo que pide. La lectura de `RunManager.is_running` pasó a
+  `PackageTending.delivery_running(p)` (estática nueva) y `_is_run_active()` la llama.
+- **`scripts/gameplay/package/package_tending.gd`:** función estática nueva `delivery_running(p)`: hay una entrega
+  clásica en curso (o no hay `RunManager`, como en un test pelado). `award_milestone()` devuelve falso para una caja
+  en una salida sin entrega en curso: desactivar, calmar, rescatar o pasar una caja en una salida no suma mérito de la
+  campaña clásica (`CrewProgression.merit`, que se guarda con la campaña). Sin firmas cambiadas.
 - **`scripts/gameplay/player/player_cargo_care.gd`:** `_tick()` ya no corta cuando no hay entrega en curso si la caja en
   las manos o en el regazo va en una salida. Funciones nuevas: `pick_target(running)` y la estática
   `cared_for(running, box)`. Con una entrega en curso hace lo mismo que antes. Sin entrega, solo la caja de una salida
@@ -26,7 +31,9 @@
 ## Qué tiene que hacer Slatex
 
 - Nada obligatorio. Si alguna función nueva del paquete pregunta "¿hay una entrega en curso?", que use
-  `_is_run_active()` y no `RunManager.is_running`. Si no, en el mundo Empresa se queda apagada.
+  `_is_run_active()` y no `RunManager.is_running`. Si no, en el mundo Empresa se queda apagada. Si lo que agrega es
+  puntaje o mérito de la campaña clásica, que pase por `award_milestone()` (o mire `PackageTending.delivery_running`)
+  para que una salida de la empresa no lo pague.
 - En una salida, las herramientas de cuidado (cinta, reparar…) gastan del kit de `RunManager`
   (`CARE_SUPPLIES_START`, el que deja `reset_run`). En el mundo Empresa nada lo repone ni lo guarda. Esto queda
   anotado en `docs/expansion-distritos/revisar/D-0710.d.md`.

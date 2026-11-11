@@ -20,6 +20,11 @@ a `TripCargo` qué cajas están rotas y se las pasa a `Trip.close()`. Quedan en 
 - **Sin mover productos:** `CompanyTrips` no le pasa `Inventory` a `Trip.close()`. El stock es estado compartido y
   moverlo pide un evento del host. `company_net.gd` y `company_root.gd` estaban tomados por D-0254. Quedan como
   estaban con el remolque (`tow()`), que tampoco los movía.
+- **Sin mérito de la campaña clásica:** con la caja viva como carga, los hitos (desactivar, calmar, rescatar, pasar
+  la caja) llamarían a `CrewProgression.award_milestone`, que suma al mérito de la campaña clásica y lo guarda con
+  ella. Eso es puntaje de una entrega, así que `PackageTending.award_milestone` no lo da para una caja en una salida
+  sin `RunManager` corriendo (lo encontró la revisión). Si la empresa quiere premiar el cuidado en la ruta, será con
+  su propio puntaje.
 - **La entrega clásica no cambia:** ahí nadie pone el metadato. Los mismos tests de trampas y paquete pasan.
 
 **Lo que queda:** que el resumen del viaje y los clientes vean `broken_ids`, que las rotas pierdan sus productos y

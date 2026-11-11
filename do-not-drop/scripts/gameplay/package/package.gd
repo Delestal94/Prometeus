@@ -630,8 +630,7 @@ func release_mount() -> void:
 
 
 func _is_run_active() -> bool:
-	var run_manager: Node = PackageAutoloads.run_manager(self)
-	return run_manager == null or bool(run_manager.get("is_running")) or PackageHandling.on_trip(self)
+	return PackageTending.delivery_running(self) or PackageHandling.on_trip(self)
 
 
 func _award_pending_trap_milestones() -> void:
