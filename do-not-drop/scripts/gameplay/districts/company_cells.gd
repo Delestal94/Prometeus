@@ -11,8 +11,10 @@ extends WorldCellStreamer
 ## and its flat block shows instead (D-2012.1). A cell's content comes from
 ## `content_for` (the road graph's pieces, once the mesh per edge exists); until
 ## then a cell is an empty `Node3D` named `Cell_<x>_<z>` so the flow is testable.
-## A step after a cell is in the tree its pieces are batched (StreetBatcher,
-## D-2012.2): a few meshes and one verge body per cell instead of a node per box.
+## From the step after a cell is in the tree its pieces are batched, a few a step
+## (StreetBatcher, D-2012.2): a few meshes and one verge body per cell instead of
+## a node per box; it is not drawn until then. Every kind of piece is built and
+## baked once while the level loads (warm_pieces, CompanyRoot), so no cell pays a first time.
 
 ## Waypoints of the main streets, from diseno/mapa.md (x, z in meters).
 const MAIN_STREETS: Array = [
@@ -20,6 +22,8 @@ const MAIN_STREETS: Array = [
 	[Vector2(0, 0), Vector2(0, 512), Vector2(0, 1024), Vector2(-640, 1536), Vector2(512, 1792)],
 	[Vector2(0, 0), Vector2(-256, 0), Vector2(-768, 0), Vector2(-1024, -256)],
 ]
+## How far under the map warm_pieces() builds its pieces (m): nothing reaches it.
+const WARM_DEPTH: float = -2000.0
 ## Half-side of the pinned square around the shed, in cells.
 const SHED_PIN_RADIUS: int = 1
 ## Top of a far cell's flat block (m): under the zone slabs' (-0.1, CompanyRoot) so it never fights them for
@@ -32,6 +36,10 @@ var content_for: Callable
 ## The content `use_graph` made: a Callable holds its object by id only, so a RefCounted that nobody keeps is freed
 ## and `content_for` goes dead (every cell would come out as an empty Node3D).
 var _graph_content: EdgeCellContent
+## Cell -> the StreetBatcher still folding its pieces (a bake spread over frames, _batch_cell).
+var _bakes: Dictionary = {}
+## How long the last warm_pieces() took, milliseconds (tests and docs/rendimiento-pc.md).
+var warm_msec: float = 0.0
 
 
 func _init() -> void:
@@ -93,8 +101,39 @@ func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false
 	content_for = content.build_cell
 	if not cell_loaded.is_connected(_on_cell_in):
 		cell_loaded.connect(_on_cell_in)
+	if not cell_unloaded.is_connected(_on_cell_out):
+		cell_unloaded.connect(_on_cell_out)
 	pin_streets(graph)
 	return content
+
+
+## Builds one piece of every kind the streets use, bakes it and frees it, all at once, out of sight (WARM_DEPTH
+## under the map): what a kind of piece loads the first time it is built (its models, meshes and scripts) and
+## what the bake reads once per model (StaticMerger) are paid here, while the level loads, and not in the
+## frame a cell of the Campo enters the tree at the shed (R-09: 80-130 ms the first time, D-0303.1). Needs to
+## be in the tree (a piece builds itself in _ready) and to have had use_graph(); otherwise it does nothing.
+## CompanyRoot calls it right after use_graph(), which stays the planning alone. Returns how many pieces.
+func warm_pieces() -> int:
+	var content: EdgeCellContent = _graph_content
+	if content == null or not is_inside_tree():
+		return 0
+	var start: int = Time.get_ticks_usec()
+	var holder := Node3D.new()
+	holder.name = "WarmPieces"
+	holder.visible = false
+	add_child(holder)
+	holder.global_position = Vector3(0.0, WARM_DEPTH, 0.0)
+	var built: int = 0
+	for piece: Dictionary in content.one_piece_per_kind():
+		var segment: RouteSegment = EdgePieces.build_piece(piece)
+		segment.set_physics_process(false)
+		holder.add_child(segment)
+		built += 1
+	StreetBatcher.bake(holder)
+	remove_child(holder)
+	holder.free()
+	warm_msec = (Time.get_ticks_usec() - start) / 1000.0
+	return built
 
 
 ## A cell with content entering the tree is this frame's heavy work: Centro's houses wait for the next one
@@ -112,10 +151,28 @@ func _build_cell(cell: Vector2i) -> Node3D:
 	return node
 
 
-## The streamer's second pass over a cell, a step after it entered the tree: its street pieces are drawn as a
-## few meshes and their holders go (StreetBatcher, D-2012.2). The pieces, their `Road` and what moves stay.
-func _batch_cell(_cell: Vector2i, node: Node3D) -> void:
-	StreetBatcher.bake(node)
+## The streamer's second pass over a cell, from the step after it entered the tree: its street pieces are drawn
+## as a few meshes and their holders go (StreetBatcher, D-2012.2), a few pieces a step within the slice
+## (CompanyTuning.CELL_SLICE_MSEC); false until the last step. The pieces, their `Road` and what moves stay. A
+## frame that bakes is a cell's work: Centro's houses wait for the next one (CentroDecor.hold_houses, D-0303.1).
+func _batch_cell(cell: Vector2i, node: Node3D) -> bool:
+	var baker: StreetBatcher = _bakes.get(cell)
+	if baker == null or baker.holder != node:
+		baker = StreetBatcher.start(node)
+		if baker == null:
+			_bakes.erase(cell)
+			return true
+		_bakes[cell] = baker
+	CentroDecor.hold_houses()
+	if not baker.step(int(slice_msec * 1000.0)):
+		return false
+	_bakes.erase(cell)
+	return true
+
+
+## A cell that leaves halfway through its bake leaves the bake behind.
+func _on_cell_out(cell: Vector2i) -> void:
+	_bakes.erase(cell)
 
 
 ## A far cell's block: the streamer's flat block, lowered so its top is IMPOSTOR_TOP_Y (the streamer puts a node

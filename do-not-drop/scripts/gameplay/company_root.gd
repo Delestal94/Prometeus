@@ -700,6 +700,8 @@ func _add_cells() -> void:
 	add_child(cells)
 	# Streets (D-0304.1) and Centro's decor (D-0314) load with the cells; events off (D-0315.b).
 	cells.use_graph(RoadGraph.load_default(), CompanyCells.seed_of(session), false, CompanyCells.shed_ground(shed))
+	# Every kind of street piece built and baked once now, not in the first frames at the shed (D-2012.2, R-09).
+	cells.warm_pieces()
 
 
 ## The packages the sealed boxes become (D-0715.b), under World/Packages on every peer (CompanyPackages

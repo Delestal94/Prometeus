@@ -19,9 +19,11 @@ extends Node3D
 ## `finish_for.call(cell, node)` (optional) is a second pass over a cell that is already in the
 ## tree: merging its meshes, say, which needs the nodes built first. It runs in the step after the
 ## one that instanced the cell, within the same `slice_msec`, and a step never does both: the frame
-## that pays for a cell's nodes does not pay for their merge too. Until it has run the cell is in
-## the tree, solid, and not drawn, so nobody sees (or counts) the cell as it was before the pass;
-## `is_busy()` stays true until every loaded cell has had it.
+## that pays for a cell's nodes does not pay for their merge too. A pass too long for one frame does
+## a part and returns `false`: it is called again the next step (anything else means done). Until it
+## is done the cell is in the tree, solid, and not drawn, so nobody sees (or counts) the cell as it
+## was before the pass; then `cell_finished` is emitted. `is_busy()` stays true until every loaded
+## cell has had it.
 ##
 ## Loose bodies (crates dropped on a sidewalk) are not part of any cell, so
 ## `track_body` hands them to the streamer: while their cell is not instanced
@@ -33,6 +35,8 @@ extends Node3D
 
 signal cell_loaded(cell: Vector2i, node: Node3D)
 signal cell_unloaded(cell: Vector2i)
+## A loaded cell has had its `finish_for` pass to the end and is drawn from now on (only with a `finish_for`).
+signal cell_finished(cell: Vector2i, node: Node3D)
 
 var grid := WorldCellGrid.new()
 ## Where the anchors are now (players, vehicles), world positions.
@@ -232,23 +236,31 @@ func _instance_ready() -> void:
 			break
 
 
-## The second pass of the cells that wait for it, oldest first, within the slice budget, and each one is
-## drawn from then on. True if it ran any: the step instances nothing more.
+## The second pass of the cells that wait for it, oldest first, within the slice budget; each one is drawn
+## once its pass is done. A pass that answers `false` is not done: it is called again next step, before any
+## other. True if it ran any: the step instances nothing more.
 func _finish_ready() -> bool:
 	var start := Time.get_ticks_usec()
 	var budget := int(slice_msec * 1000.0)
 	var ran: bool = false
 	while not _unfinished.is_empty():
-		var cell: Vector2i = _unfinished.pop_front()
+		var cell: Vector2i = _unfinished[0]
 		var node: Node3D = _nodes.get(cell)
 		if node == null:
+			_unfinished.pop_front()
 			continue
+		var done: bool = true
 		if finish_for.is_valid():
 			var t0 := Time.get_ticks_usec()
-			finish_for.call(cell, node)
+			var answer: Variant = finish_for.call(cell, node)
+			done = not (answer is bool and answer == false)
 			longest_finish_usec = maxi(longest_finish_usec, Time.get_ticks_usec() - t0)
-		node.visible = not grid.is_parked(cell)
 		ran = true
+		if not done:
+			break
+		_unfinished.pop_front()
+		node.visible = not grid.is_parked(cell)
+		cell_finished.emit(cell, node)
 		if Time.get_ticks_usec() - start >= budget:
 			break
 	return ran

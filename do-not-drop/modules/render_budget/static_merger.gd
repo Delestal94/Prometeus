@@ -31,7 +31,8 @@ extends RefCounted
 ## collision-only box (RouteSegment._hide_box_visual), which nothing shows again.
 ##
 ## The roots themselves are never freed. Call it once the roots are in the tree (it reads global
-## transforms) and have built themselves.
+## transforms) and have built themselves. begin() / fold() / finish() are the same pass a root at a time,
+## for a caller that spreads it over frames.
 ##
 ## It is meant to run while the game plays (a cell that streams in), so it does not go through
 ## SurfaceTool: the triangles are moved as whole arrays. A BoxMesh is the engine's own 1 m box scaled;
@@ -77,17 +78,42 @@ static var _unit_box: _Source
 ## freed, "meshes": the MeshInstance3D and MultiMeshInstance3D added to `holder`}.
 static func merge(
 		holder: Node3D, roots: Array, drop_hidden: bool = false, claim: Callable = Callable()) -> Dictionary:
+	var job: RefCounted = begin(holder, drop_hidden, claim)
+	for root: Variant in roots:
+		fold(job, root as Node3D)
+	return finish(job, holder)
+
+
+## merge() in steps, for a caller that spreads the work over several frames: begin() once, fold() each root
+## (or fold_branch() each of its children; they need not all come in one frame, and nothing is added to `holder` meanwhile), then finish() once,
+## which adds the merged meshes and returns what merge() returns. The roots fold into the meshes as they
+## stand in the tree when each is folded; `holder` must not move in between.
+static func begin(holder: Node3D, drop_hidden: bool = false, claim: Callable = Callable()) -> RefCounted:
 	var job := _Job.new()
 	job.to_holder = holder.global_transform.affine_inverse()
 	job.drop_hidden = drop_hidden
 	job.claim = claim
-	for root: Variant in roots:
-		var node := root as Node3D
-		if node == null or not node.visible:
-			continue
-		for child: Node in node.get_children():
-			if _fold(child, job) == SPENT:
-				child.free()
+	return job
+
+
+## Folds what is static under `root` (not `root` itself, which is never freed) into the job begin() made.
+static func fold(job: RefCounted, root: Node3D) -> void:
+	if root == null or not is_instance_valid(root) or not root.visible:
+		return
+	for child: Node in root.get_children():
+		fold_branch(job, child)
+
+
+## fold() of a single child of a root, for a caller that slices finer than a root: the branch is folded and,
+## if nothing of it is left, freed.
+static func fold_branch(job: RefCounted, branch: Node) -> void:
+	if branch != null and is_instance_valid(branch) and _fold(branch, job as _Job) == SPENT:
+		branch.free()
+
+
+## Adds the job's merged meshes to `holder`. Returns {"parts", "freed", "meshes"}, as merge().
+static func finish(job_ref: RefCounted, holder: Node3D) -> Dictionary:
+	var job := job_ref as _Job
 	var made: Array[GeometryInstance3D] = []
 	for key: int in job.groups:
 		var group: _Group = job.groups[key]

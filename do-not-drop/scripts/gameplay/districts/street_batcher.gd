@@ -5,8 +5,8 @@ extends RefCounted
 ## EdgeCellContent gives a cell one RouteSegment per piece of street, and a piece builds itself out of
 ## boxes: a straight one is 17 meshes on 16 holders, a bridge 690. The company map's default view held
 ## 15,362 nodes and drew 2,598 calls at its worst, most of them these. bake() runs once over a cell that
-## is in the tree (CompanyCells hands it to the streamer as its second pass, WorldCellStreamer.finish_for)
-## and leaves, under the cell:
+## is in the tree (CompanyCells hands it to the streamer as its second pass, WorldCellStreamer.finish_for,
+## a few pieces a frame: start() / step()) and leaves, under the cell:
 ## - `Streets`: every roadway and verge box of the cell (the ones StreetSurface dressed) as one mesh, a
 ##   surface per street surface, drawn by StreetSurface.batched_material(). street_surface.gdshader
 ##   reads each box's own x and heading, which a merged mesh no longer has: they ride in the vertices
@@ -40,26 +40,83 @@ static var _unit_corners := PackedVector3Array()
 static var _unit_normals := PackedVector3Array()
 
 
+## The holder being baked, its pieces still to fold and what has been folded so far (start() / step()).
+var holder: Node3D
+var _pieces: Array[Node] = []
+## The pieces' children as they stood at start(), each folded on its own (a bridge's 690 parts are a few
+## dozen branches), and the next one to fold.
+var _branches: Array = []
+var _next: int = 0
+var _job: _Job
+var _merger: RefCounted
+## What bake() returns, once step() has said it is done; empty until then.
+var result: Dictionary = {}
+
+
 ## Bakes the street pieces (RouteSegment children) of `holder`, a cell's node or anything that holds
-## pieces the same way, which must be in the tree. Returns {"pieces", "surfaces": street boxes folded,
-## "parts": other meshes merged, "freed": nodes freed, "verges": verge bodies folded}; an empty
-## Dictionary when the holder has no piece.
-static func bake(holder: Node3D) -> Dictionary:
+## pieces the same way, which must be in the tree, all in one go. Returns {"pieces", "surfaces": street
+## boxes folded, "parts": other meshes merged, "freed": nodes freed, "verges": verge bodies folded}; an
+## empty Dictionary when the holder has no piece.
+static func bake(holder_node: Node3D) -> Dictionary:
+	var baker: StreetBatcher = start(holder_node)
+	if baker == null:
+		return {}
+	while not baker.step(-1):
+		pass
+	return baker.result
+
+
+## The same bake spread over frames: start() takes the pieces as they are now (null when there is none),
+## and each step() folds their branches (a piece's direct children) until `budget_usec` has gone (at least
+## one; -1, no limit), then adds
+## the merged meshes and the verge body in a step of its own. step() is true once all of it is done and
+## `result` holds what bake() returns. Until then the holder has its pieces half folded: whoever runs it keeps
+## the holder from being drawn (the streamer's second pass does, WorldCellStreamer.finish_for).
+static func start(holder_node: Node3D) -> StreetBatcher:
 	var pieces: Array[Node] = []
-	for child: Node in holder.get_children():
+	for child: Node in holder_node.get_children():
 		if child is RouteSegment:
 			pieces.append(child)
 	if pieces.is_empty():
-		return {}
-	var job := _Job.new()
-	job.to_holder = holder.global_transform.affine_inverse()
-	var merged: Dictionary = StaticMerger.merge(holder, pieces, true, _claim.bind(job))
-	_add_streets(holder, job)
-	var verges: int = _add_verge(holder, job)
-	return {
-		"pieces": pieces.size(), "surfaces": job.boxes, "parts": merged.parts,
+		return null
+	var baker := StreetBatcher.new()
+	baker.holder = holder_node
+	baker._pieces = pieces
+	for piece: Node in pieces:
+		if (piece as Node3D).visible:
+			baker._branches.append_array(piece.get_children())
+	baker._job = _Job.new()
+	baker._job.to_holder = holder_node.global_transform.affine_inverse()
+	baker._merger = StaticMerger.begin(holder_node, true, _claim.bind(baker._job))
+	return baker
+
+
+func step(budget_usec: int) -> bool:
+	if not result.is_empty():
+		return true
+	if not is_instance_valid(holder):
+		result = {"pieces": 0, "surfaces": 0, "parts": 0, "freed": 0, "verges": 0}
+		return true
+	var start_usec: int = Time.get_ticks_usec()
+	var folded: bool = false
+	while _next < _branches.size():
+		if folded and budget_usec >= 0 and Time.get_ticks_usec() - start_usec >= budget_usec:
+			return false
+		var branch: Variant = _branches[_next]
+		if is_instance_valid(branch):
+			StaticMerger.fold_branch(_merger, branch as Node)
+		_next += 1
+		folded = true
+	if folded and budget_usec >= 0 and Time.get_ticks_usec() - start_usec >= budget_usec:
+		return false
+	var merged: Dictionary = StaticMerger.finish(_merger, holder)
+	_add_streets(holder, _job)
+	var verges: int = _add_verge(holder, _job)
+	result = {
+		"pieces": _pieces.size(), "surfaces": _job.boxes, "parts": merged.parts,
 		"freed": int(merged.freed) + verges * 2, "verges": verges,
 	}
+	return true
 
 
 ## StaticMerger's question about a mesh it would leave: true for the ones this takes. A roadway or verge
