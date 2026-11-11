@@ -23,6 +23,7 @@
   válida y el valor se pierde silenciosamente (nos pasó con `controls_enabled` en
   `vehicle.tscn`: quedaba en su default `true` pese a tener `controls_enabled = false`
   escrito, porque estaba antes de `script =`).
+- **Un `GPUParticles3D` one-shot se apaga antes de encenderlo.** Nace con `emitting = true`, y poner `emitting = true` sobre un one-shot que ya emite cancela `finished`: el `finished.connect(queue_free)` nunca corre y el nodo queda en el nivel para siempre (N-980.3, los `ImpactDebris`). Hacé `particles.emitting = false` al crearlo.
 
 ## 0.1 Rendimiento (2026-09-23, medido con `tests/bench_drive.gd`)
 

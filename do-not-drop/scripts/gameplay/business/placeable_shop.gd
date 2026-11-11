@@ -16,8 +16,8 @@ const DEFINITIONS_DIR: String = "res://data/placeables/"
 
 ## Definitions already loaded, by id. The grid checks (BuildPlacement, WalkReachability, and
 ## BuildLayoutSave.sanitize() on every load) ask for a piece's definition thousands of times;
-## ResourceLoader.exists() goes to the disk each time, which made loading a full shed take
-## seconds (D-2026). The files are read-only data, so the first load is kept.
+## load() parses the .tres again every time, since nothing else holds the resource, which made
+## loading a full shed take seconds (D-2026). The files are read-only data, so the first load is kept.
 static var _loaded: Dictionary = {}
 
 

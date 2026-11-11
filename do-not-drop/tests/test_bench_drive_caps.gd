@@ -6,7 +6,9 @@ extends SceneTree
 ## - the probe source keeps no per-tick or per-frame array of samples (only the
 ##   one-float-per-frame PackedFloat32Array the percentiles need) and caps the
 ##   hitch lines it keeps whole;
-## - endless has no route to measure progress against, so it reports none.
+## - endless has no route to measure progress against, so it reports none;
+## - the memory series (--memory-every) reads every monitor a leak would show in,
+##   and only prints it: the probe keeps no point of the series (N-980.3).
 
 const BENCH_PATH: String = "res://tests/bench_drive.gd"
 
@@ -20,6 +22,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_check_running_stat()
 	_check_source_has_no_unbounded_buffers()
+	_check_memory_series()
 	if _failures == 0:
 		print("test_bench_drive_caps: OK")
 	quit(_failures)
@@ -52,3 +55,14 @@ func _check_source_has_no_unbounded_buffers() -> void:
 	_expect(text.contains("MAX_HITCH_LINES"), "The hitch frames kept whole have a cap")
 	_expect(text.contains("ADDED_KEEP_FRAMES"), "The node-added log is pruned")
 	_expect(text.contains("if _endless:\n\t\treturn -1.0"), "Endless reports no route progress")
+
+
+func _check_memory_series() -> void:
+	var script: GDScript = load(BENCH_PATH) as GDScript
+	var line: String = script.call(&"memory_line", 30.0)
+	_expect(line.begins_with("BENCH memory t=30 "), "A series line says when it was taken: %s" % line)
+	for field: String in ["static_mib", "video_mib", "objects", "nodes", "resources", "orphans"]:
+		_expect(line.contains(" %s=" % field), "A series line reports %s" % field)
+	var text: String = FileAccess.get_file_as_string(BENCH_PATH)
+	_expect(text.contains("\"memory-every\""), "The series has its option")
+	_expect(not text.contains("_memory_series"), "The series is printed, not kept in the probe")

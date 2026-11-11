@@ -170,12 +170,20 @@ static func place_at(p: DeliveryPackage, mount: Node3D, mount_point: Node) -> vo
 	p.current_mount_path = (mount_point if mount_point != null else mount).get_path()
 	# Frozen while loading, until level_base.gd starts the run. A box put back
 	# mid-run has to ride physically like the rest, not stay glued to the shelf.
-	p.freeze = not p._is_run_active()
+	# So does one on a vehicle that drives with no run to start (rack_drives()).
+	p.freeze = not p._is_run_active() and not rack_drives(mount)
 	ride_along_if_aboard(p)
 	p._emit_event(&"package_placed", [p.package_id])
 	if p._rescue_pending:
 		p._rescue_pending = false
 		p._award_milestone(p._last_holder_peer, &"rescued")
+
+
+## Whether `mount` is on a vehicle that drives outside a delivery run (the company's fleet, CompanyFleet): no run
+## will thaw a box there, and frozen it stays in the air when the van leaves (D-0302.2.b.3).
+static func rack_drives(mount: Node3D) -> bool:
+	var body: Node = mount.owner
+	return body != null and body.is_in_group(CompanyTrips.VEHICLE_GROUP)
 
 
 ## A resident took the box at the door. Its carrier's hands have to empty on

@@ -7,20 +7,22 @@ extends RefCounted
 ## over the stage index and the floor width: ShedExterior draws it, and two peers with the same
 ## stage draw the same outside (no RPC, no random roll). The sign text is a translation key.
 
-## Per stage: sign size (m, width x height), sign colour, yard depth (m, from the dock wall), yard
-## colour, lamp posts along the dock wall, and whether lane stripes are painted on it.
+## Per stage: sign size (m, width x height), the sign's and the yard's model (sm_env_shed_sign_<model>,
+## sm_env_shed_yard_<model>, assets/tools/build_depot_props.py), where the name goes on the sign's face (m: x from
+## its centre, y up from its base: the part each model leaves free), yard depth (m, from the dock wall), yard colour
+## and detail map, and lamp posts along the dock wall.
 const VARIANTS: Array[Dictionary] = [
-	{"sign": Vector2(4.0, 0.9), "sign_color": Color(0.55, 0.38, 0.22), "yard": 2.5,
-		"yard_color": Color(0.46, 0.43, 0.38), "lamps": 0, "stripes": false,
+	{"sign": Vector2(4.0, 0.9), "model": "small", "text": Rect2(-1.15, 0.16, 3.0, 0.68), "yard": 2.5,
+		"yard_color": Color(0.46, 0.43, 0.38), "detail": "concrete", "lamps": 0,
 		"key": &"WORLD_SHED_SIGN_SMALL"},
-	{"sign": Vector2(6.0, 1.2), "sign_color": Color(0.20, 0.36, 0.55), "yard": 4.5,
-		"yard_color": Color(0.42, 0.41, 0.40), "lamps": 2, "stripes": false,
+	{"sign": Vector2(6.0, 1.2), "model": "medium", "text": Rect2(-2.0, 0.58, 4.8, 0.56), "yard": 4.5,
+		"yard_color": Color(0.42, 0.41, 0.40), "detail": "concrete", "lamps": 2,
 		"key": &"WORLD_SHED_SIGN_MEDIUM"},
-	{"sign": Vector2(8.0, 1.6), "sign_color": Color(0.18, 0.42, 0.30), "yard": 6.5,
-		"yard_color": Color(0.36, 0.36, 0.38), "lamps": 4, "stripes": true,
+	{"sign": Vector2(8.0, 1.6), "model": "large", "text": Rect2(-2.48, 0.52, 6.2, 0.96), "yard": 6.5,
+		"yard_color": Color(0.36, 0.36, 0.38), "detail": "asphalt", "lamps": 4,
 		"key": &"WORLD_SHED_SIGN_LARGE"},
-	{"sign": Vector2(11.0, 2.0), "sign_color": Color(0.62, 0.20, 0.18), "yard": 8.5,
-		"yard_color": Color(0.30, 0.30, 0.33), "lamps": 6, "stripes": true,
+	{"sign": Vector2(11.0, 2.0), "model": "logistics", "text": Rect2(-3.1, 0.62, 8.2, 0.96), "yard": 8.5,
+		"yard_color": Color(0.30, 0.30, 0.33), "detail": "asphalt", "lamps": 6,
 		"key": &"WORLD_SHED_SIGN_LOGISTICS"},
 ]
 
