@@ -31,13 +31,15 @@ extends SceneTree
 ## - the book events: order_closed with a bad shape (unknown order, closed one, `delivered` or `open` as state, a
 ##   missing or extra key, cancelling a late order) is refused by the host without spending a seq;
 ## - a host and a client as ENet peers: the same close reaches the client as events, both books end equal, the
-##   reputation changes on the host only, and the client can't close, abandon or publish anything; a driver held
+##   reputation changes on the host only, and the client can't close, abandon or publish anything; a real trip that
+##   comes back undelivered reaches the client as trip_started, order_closed, trip_closed (the charge ahead of the
+##   trip's close, which fails for free: OrderDayClose.wire() before CompanyTripsView.follow()), -3 once; a driver held
 ##   because the day closed (_held_here with DAY_CLOSED_CAP) reads why on the client, and its brake holds on.
 ## The real CompanyRoot's wiring of all this is test_company_day_close_world.
 ## Expected in the log: CompanyNet's error for each event the host refuses to publish ("could not apply its
 ## own"), Godot's for the forged _apply_event ("RPC '_apply_event' is not allowed"), DayCycle's "would not close".
 
-const PORT: int = 24703
+const PORT: int = 24707
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const START_TICK: int = 9_000_000
 const ABANDONED_COST: float = -3.0
@@ -674,7 +676,55 @@ func _play_network() -> void:
 	_client.net.orders.put_snapshot({"orders": [], "now_min": 0})
 	_expect(_host.net.send_snapshot(id) and await _wait_for(_same_book),
 		"A snapshot brings the closed orders to a peer that missed them")
+	await _check_trip_on_the_wire()
 	await _check_held_on_the_client(id)
+
+
+## A real trip on the host, wired as CompanyRoot does (OrderDayClose.wire() before the view's follow()): the order
+## goes OUT on both books with trip_started (D-0302.2.b.3) and, back undelivered, reaches the client as order_closed
+## and then trip_closed. The host charged it once; the trip_closed behind it moves no book.
+func _check_trip_on_the_wire() -> void:
+	var net: CompanyNet = _host.net
+	var cycle := DayCycle.new()
+	cycle.name = "DayCycle"
+	_host.side.add_child(cycle)
+	var trips := CompanyTrips.new()
+	trips.name = "CompanyTrips"
+	_host.side.add_child(trips)
+	trips.setup(Vector3(0, 0, -4), 2.0)
+	OrderDayClose.wire(trips, net, cycle)
+	_host.view.follow(trips)
+	var order: Dictionary = _order(&"n_trip", 100, 1300)
+	_expect(net.publish(CompanyOrdersNet.ADDED, {"order": order}) and await _wait_for(_same_seq),
+		"A fifth order comes in on both peers")
+	var host_from: int = _host.kinds.size()
+	var client_from: int = _client.kinds.size()
+	trips.book.add(order)
+	trips.book.mark_packed(&"n_trip", &"box_n")
+	trips.stage_cargo(&"van_9", [&"n_trip"], [&"box_n"])
+	trips.track(&"van_9", Vector3(0, 0, -2))
+	trips.track(&"van_9", Vector3(0, 0, -6))
+	_expect(await _wait_for(_same_seq) and _same_book()
+		and _client.net.orders.book.state_of(&"n_trip") == Order.STATE_OUT and _client.view.is_out(&"van_9"),
+		"The trip leaves: the order is out on the client's book too (got %s)"
+		% _client.net.orders.book.state_of(&"n_trip"))
+	var host_rep: float = _reputation_of(_host)
+	var client_rep: float = _reputation_of(_client)
+	trips.track(&"van_9", Vector3(0, 0, -2))
+	_expect(await _wait_for(_same_seq) and _same_book()
+		and _client.net.orders.book.state_of(&"n_trip") == Order.STATE_FAILED and not _client.view.is_out(&"van_9"),
+		"It comes back undelivered: failed on both books, nothing out (got %s)"
+		% _client.net.orders.book.state_of(&"n_trip"))
+	var expected: Array[StringName] = [CompanyTripsView.STARTED, CompanyOrdersNet.CLOSED, CompanyTripsView.CLOSED]
+	_expect(_host.kinds.slice(host_from) == expected and _client.kinds.slice(client_from) == expected,
+		"Both peers applied trip_started, order_closed, trip_closed, in that order (host %s, client %s)"
+		% [_host.kinds.slice(host_from), _client.kinds.slice(client_from)])
+	_expect(is_equal_approx(_reputation_of(_host), host_rep + ABANDONED_COST)
+		and is_equal_approx(_reputation_of(_client), client_rep),
+		"The host charged it once (%.1f to %.1f), the client nothing"
+		% [host_rep, _reputation_of(_host)])
+	trips.free()
+	cycle.free()
 
 
 ## The host holds a vehicle a client drives after the day closed: over _held_here the client reads why, and its brake,

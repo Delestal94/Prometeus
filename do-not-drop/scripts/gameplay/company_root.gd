@@ -761,6 +761,8 @@ func _add_trips() -> void:
 	add_child(trips)
 	trips.use_gate(CompanyFleet.trip_gate(shed, net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	# OrderDayClose before the view: its trip_closed hook charges the orders a vehicle brought back (order_closed)
+	# ahead of the view's trip_closed event, which fails them for free (D-0851; test_company_day_close_world).
 	OrderDayClose.wire(trips, net, day_cycle)
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out

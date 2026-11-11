@@ -24,9 +24,12 @@ extends Node
 ## (_checked()); what still doesn't fit (over MAX_OUT vehicles out, or the close of a trip never
 ## sent) is left out with a warning, so no peer, the host included, ever logs an event refused.
 ##
-## Only what is out lives here: a vehicle back is forgotten. Nothing here moves an order: the
-## OrderBook stays the host's (CompanyTrips.book until D-0801) and orders are only ids. Reads, on any
-## peer: vehicles_out() (in the order they left), trips_out() (what a client's DayCycle.trips_out
+## Only what is out lives here: a vehicle back is forgotten. The shared book (CompanyNet.orders.book) follows
+## these events on every peer, in apply_trip() (D-0302.2.b.3): trip_started takes its orders out with their boxes,
+## trip_closed fails the `failed` ones, the same seq everywhere, so the books agree with no event of their own. An
+## order the book can't move (unknown, already closed) stays as it is: in the company world the host's order_closed
+## got there first, with what it costs (OrderDayClose.wire(), D-0851). CompanyTrips.book stays the host's own. Reads,
+## on any peer: vehicles_out() (in the order they left), trips_out() (what a client's DayCycle.trips_out
 ## reads; the host's reads CompanyTrips, the authority), is_out() and trip_of() (a vehicle's entry,
 ## in trip_started's shape). `changed` fires after every trip event applied here and after a
 ## snapshot (company_state_restored), once CompanyNet is done applying it, so a listener may request
@@ -170,15 +173,47 @@ func apply_trip(kind: StringName, data: Dictionary) -> bool:
 	var vehicle: StringName = fit["vehicle"]
 	if fit.has("entry"):
 		_out[vehicle] = fit["entry"]
+		_book_out(fit["entry"])
 	else:
 		var entry: Dictionary = _out[vehicle]
 		_out.erase(vehicle)
 		if entry["trip"] != &"":
 			_pending_closed.append([entry["trip"], vehicle, fit["failed"]])
+			_book_failed(fit["failed"])
 	_dirty = true
 	if not _has_net():
 		_flush()
 	return true
+
+
+## The shared book takes out what `entry` (a trip that started; a refused vehicle has no orders) carries. The box of
+## each order is the one in its place in the lists; an order not PACKED yet gets it now, as DispatchZone left it:
+## box_sealed doesn't mark it (D-0715.b's order_packed is open).
+func _book_out(entry: Dictionary) -> void:
+	var book: OrderBook = _book()
+	if book == null:
+		return
+	var orders: Array = entry.get("orders", [])
+	var boxes: Array = entry.get("boxes", [])
+	for index: int in orders.size():
+		var order_id: StringName = orders[index]
+		var state: StringName = book.state_of(order_id)
+		if (state == Order.STATE_OPEN or state == Order.STATE_LATE) and index < boxes.size():
+			book.mark_packed(order_id, boxes[index])
+		book.mark_out(order_id, entry["trip"])
+
+
+func _book_failed(failed: Array[StringName]) -> void:
+	var book: OrderBook = _book()
+	if book == null:
+		return
+	for order_id: StringName in failed:
+		book.mark_failed(order_id)
+
+
+## The shared book; null without a CompanyNet or its orders.
+func _book() -> OrderBook:
+	return net.orders.book if _has_net() and net.orders != null else null
 
 
 ## What apply_trip() would do with `data`, changing nothing: {vehicle, entry} for a vehicle that

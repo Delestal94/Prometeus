@@ -17,8 +17,10 @@ extends Node
 ## gate's line (the playon); only those of this node's own multiplayer count (a test holds several sessions in
 ## one tree). The OrderBook is this node's own, not the one every peer shares
 ## (CompanyNet.orders.book, D-0813), until what it does to it (mark_out, close) goes out as events
-## (rows 17, 19 and 20 of red-autoridad.md). Boxes are only ids here; where they ride is the
-## vehicle's business.
+## (rows 17, 19 and 20 of red-autoridad.md); the shared one follows the trips through their events
+## (CompanyTripsView, D-0302.2.b.3). Boxes are only ids here; where they ride is the vehicle's business
+## (the board puts them on its rack, DispatchRack): `left_behind` says which of the staged ones it doesn't carry,
+## and those don't leave (unstage_box()).
 ##
 ## At most `far_max` vehicles are out at once (D-0316, CompanyTuning.VEHICLES_FAR_MAX): a vehicle
 ## out is one whose trip is out, or one that crossed outward while refused. departure_verdict() is
@@ -83,6 +85,9 @@ var shed_minute_now: Callable = Callable()
 var far_max: int = CompanyTuning.VEHICLES_FAR_MAX
 ## Hold at the gate a vehicle that may not leave (D-0316.2); off, it crosses refused and counts as out.
 var hold_at_gate: bool = true
+## Whether a vehicle doesn't carry a box staged on it, Callable(vehicle_id: StringName, box_id: StringName) -> bool
+## (CompanyDispatch). Unset: it carries them all.
+var left_behind: Callable = Callable()
 ## Real milliseconds between two departure_held of the same vehicle.
 var held_notice_msec: int = roundi(CompanyTuning.GATE_HELD_NOTICE_REAL_SECONDS * 1000.0)
 
@@ -141,9 +146,27 @@ func stage_cargo(vehicle_id: StringName, orders: Array[StringName], boxes: Array
 	_staged[vehicle_id] = {"orders": kept_orders, "boxes": kept_boxes}
 
 
+## Takes `box_id` and its order (the same place in the lists) off the cargo staged on any vehicle: it is not in the
+## bay any more. A vehicle left with nothing has nothing staged, and goes back to the board's list. False when no
+## staged cargo has it.
+func unstage_box(box_id: StringName) -> bool:
+	for vehicle_id: StringName in _staged:
+		var cargo: Dictionary = _staged[vehicle_id]
+		var at: int = (cargo["boxes"] as Array).find(box_id)
+		if at < 0:
+			continue
+		(cargo["boxes"] as Array).remove_at(at)
+		if at < (cargo["orders"] as Array).size():
+			(cargo["orders"] as Array).remove_at(at)
+		if (cargo["boxes"] as Array).is_empty():
+			_staged.erase(vehicle_id)
+		return true
+	return false
+
+
 ## Host, the day is over (SUMMARY, OrderDayClose.wire()): every vehicle lets go what it was loaded with and never left
 ## with, each order closed in this node's book as the day closed it in the shared one (no order goes on to the next
-## day; there is nothing to pay or charge here, CompanyOrdersNet did). The boxes stay where they lie. Returns how many
+## day; there is nothing to pay or charge here, CompanyOrdersNet did). The boxes stay on its rack. Returns how many
 ## vehicles were unloaded, each told with cargo_dropped.
 func drop_staged() -> int:
 	var vehicles: Array = _staged.keys()
@@ -197,7 +220,8 @@ func has_cargo(vehicle_id: StringName) -> bool:
 
 
 ## Whether a vehicle carries `order_id` right now, out on a trip or loaded and yet to leave: the order book every peer
-## shares doesn't say so until the trips are events (CompanyOrdersNet.abandon() leaves such an order alone).
+## shares learns of an order when its trip leaves (CompanyTripsView), not when it is loaded, and
+## CompanyOrdersNet.abandon() leaves such an order alone.
 func carries(order_id: StringName) -> bool:
 	for trip: Trip in _active.values():
 		if order_id in trip.order_ids:
@@ -271,9 +295,11 @@ func _physics_process(_delta: float) -> void:
 func _watch(body: Node3D) -> void:
 	var id := StringName(body.name)
 	var at: Vector3 = body.global_position
-	if hold_at_gate and _inside_pose.has(id) and gate.departs(id, at) and _would_refuse(id):
-		_hold(body, id)
-		return
+	if hold_at_gate and _inside_pose.has(id) and gate.departs(id, at):
+		_drop_left_behind(id)
+		if _would_refuse(id):
+			_hold(body, id)
+			return
 	gate.track(id, at)
 	if gate.side_of(at) == TripGate.INSIDE:
 		_inside_pose[id] = at
@@ -337,7 +363,18 @@ static func _live_state(body: Node3D) -> PhysicsDirectBodyState3D:
 	return PhysicsServer3D.body_get_direct_state(rigid.get_rid())
 
 
+## Unstages what `left_behind` says `vehicle_id` doesn't carry, so a box taken down or fallen off before leaving doesn't
+## go out on paper: its order keeps waiting, it doesn't fail on the way back.
+func _drop_left_behind(vehicle_id: StringName) -> void:
+	if not left_behind.is_valid() or not _staged.has(vehicle_id):
+		return
+	for box_id: StringName in (_staged[vehicle_id]["boxes"] as Array).duplicate():
+		if bool(left_behind.call(vehicle_id, box_id)):
+			unstage_box(box_id)
+
+
 func _on_departed(vehicle_id: StringName) -> void:
+	_drop_left_behind(vehicle_id)
 	if is_out(vehicle_id) or not _staged.has(vehicle_id):
 		return
 	var verdict: Dictionary = departure_verdict(vehicle_id)

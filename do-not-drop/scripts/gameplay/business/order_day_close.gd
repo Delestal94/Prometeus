@@ -60,7 +60,8 @@ static func close_day(book: OrderBook, now_min: int, early: bool) -> Dictionary:
 
 ## The day's closing hooks on the host's trips: departures are denied once the day is closed, a delivery is timed
 ## with the shed's clock, an order a vehicle brings back undelivered fails and, with SUMMARY, what was loaded and
-## never left comes off its vehicle (D-0851).
+## never left comes off its vehicle (D-0851). Call it before CompanyTripsView.follow(): fail_returned() has to find
+## those orders open, and the view's trip_closed fails them for free.
 static func wire(trips: CompanyTrips, net: CompanyNet, day_cycle: DayCycle) -> void:
 	trips.day_open = func() -> bool: return not day_cycle.is_day_closed()
 	trips.shed_minute_now = day_cycle.shed_minute

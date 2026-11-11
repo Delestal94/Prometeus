@@ -42,7 +42,7 @@
 | D-1824 | Decoración del galpón (plantas, cafetera, carteles motivacionales) | modelador-blender* | medium | 10 props |
 | D-1825 | Vestuario y comedor de empleados | modelador-blender* | medium | 6 props |
 | D-1826 | Oficina del jefe — **al final de la cola de la PC ([D-0113](../decisiones/2026-11-04-recortes-zona-gris.md)); se usa como sala cerrada de decorado del galpón por defecto mientras D-0924 esté pospuesta** | modelador-blender* | medium | kit |
-| D-1827 | Cartel exterior de la empresa por etapa | modelador-blender* | low | 4 variantes |
+| D-1827 | ✅ Cartel exterior de la empresa por etapa | modelador-blender* | low | 4 variantes |
 | ~~D-1828~~ | ~~Logo de la empresa (editable por el jugador)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | plantillas |
 | ~~D-1829~~ | ~~Uniformes por rango~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | low | texturas |
 | ~~D-1830~~ | ~~Retratos de clientes (D-0847)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | artista-conceptual* | medium | 18 retratos |

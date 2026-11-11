@@ -48,8 +48,9 @@ wait_for_log() {
 	return 1
 }
 
+# 130-165 s the whole check with every core busy (N-987), the host needing more than the 120 s this used to allow.
 run() {
-	timeout 120 "$GODOT_BIN" --headless --path "$PROJECT" --script res://tests/net_trio.gd -- "$@"
+	timeout 240 "$GODOT_BIN" --headless --path "$PROJECT" --script res://tests/net_trio.gd -- "$@"
 }
 
 run --host >"$WORK/host.log" 2>&1 &

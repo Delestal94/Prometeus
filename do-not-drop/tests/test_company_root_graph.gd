@@ -12,6 +12,8 @@ extends SceneTree
 ##   start where they leave that ground, and the shed's floor and the roadway are never the same plane
 ##   with the zone slab under them (slab top -0.1, shed floor and roadway top 0.0);
 ## - a far cell's flat block (impostor) sits under the zone slabs' top, not on their plane;
+## - from the shed the pinned cells past the load radius keep their street nodes and collision but are not drawn
+##   and show their flat block; the ones inside it are drawn; driving there shows them again (D-2012.1);
 ## - a peer whose only anchor is its own player (a client's) still gets the street cells and Centro around
 ##   it, and they unload when it leaves;
 ## - building the cells costs little (a budget per cell, headless software rendering, a wide margin).
@@ -26,6 +28,8 @@ const FLOOR_TOP: float = 0.0
 const MAX_STEPS: int = 400
 
 var _failures: int = 0
+## The last second _settle stepped the streamer to: a settle never goes back on it, or its first looks are ignored.
+var _clock: float = 0.0
 
 
 func _initialize() -> void:
@@ -48,6 +52,7 @@ func _run() -> void:
 		_check_streets_near_the_shed(cells)
 		_check_no_roadway_in_the_shed(level, cells)
 		_check_planes(level, cells)
+		await _check_far_pinned(level, cells)
 		_check_impostor(cells)
 		_check_budget(level)
 		_check_player_only_anchor(cells)
@@ -159,6 +164,57 @@ func _check_planes(level: CompanyRoot, cells: CompanyCells) -> void:
 	_expect(backup != null and _top_of(backup) < SLAB_TOP - 0.1, "The backup ground is under the zone slabs")
 
 
+## A main street far from the shed is pinned for good: seen from the shed it is there, solid and not drawn.
+func _check_far_pinned(level: CompanyRoot, cells: CompanyCells) -> void:
+	var anchors: Array[Vector3] = [Vector3(0.0, 1.0, 0.0)]
+	cells.anchors = anchors
+	_settle(cells, 2.0)
+	var fine: bool = true
+	var parked: int = 0
+	var far_cell := Vector2i.ZERO
+	var body: StaticBody3D = null
+	for cell: Vector2i in cells.loaded_cells():
+		var gap: int = cells.grid.distance_to_anchors(cell, anchors)
+		var node: Node3D = cells.cell_node(cell)
+		if gap <= cells.grid.load_radius:
+			fine = fine and node.is_visible_in_tree()
+		elif gap > cells.grid.unload_radius:  # In between, the hysteresis: the van's yard is a cell north.
+			fine = fine and not node.is_visible_in_tree()
+			fine = fine and cells.grid.impostor_cells(anchors).has(cell) == (gap <= cells.grid.impostor_radius)
+			parked += 1
+			if body == null:
+				body = _first_body(node)
+				far_cell = cell
+	_expect(parked > 0, "Some pinned cells are past the unload radius of the shed (%d)" % parked)
+	_expect(fine, "Past it they are not drawn and show their block near enough; inside the load radius they are drawn")
+	_expect(body != null and cells.grid.is_parked(far_cell),
+		"One with a street, %s, is parked with its bodies" % far_cell)
+	if body != null:
+		await physics_frame
+		var from: Vector3 = body.global_position
+		var ray := PhysicsRayQueryParameters3D.create(from + Vector3.UP * 20.0, from + Vector3.DOWN * 20.0)
+		ray.hit_from_inside = true
+		var hit: Dictionary = level.get_viewport().world_3d.direct_space_state.intersect_ray(ray)
+		_expect(not hit.is_empty() and cells.cell_node(far_cell).is_ancestor_of(hit.get("collider") as Node),
+			"...and they still stop a ray (hit %s)" % [hit.get("collider")])
+	cells.anchors = [cells.grid.center_of(far_cell)]
+	_settle(cells, 6.0)
+	_expect(cells.cell_node(far_cell).is_visible_in_tree(), "Arriving there draws it")
+	cells.anchors = anchors
+	_settle(cells, 9.0)
+	_expect(cells.grid.is_parked(far_cell), "Going back to the shed parks it again")
+
+
+func _first_body(under: Node) -> StaticBody3D:
+	for child: Node in under.get_children():
+		var body: StaticBody3D = child as StaticBody3D
+		if body == null:
+			body = _first_body(child)
+		if body != null:
+			return body
+	return null
+
+
 func _check_impostor(cells: CompanyCells) -> void:
 	# A far anchor leaves cells near the shed unloaded but inside the impostor radius.
 	cells.anchors = [Vector3(1500.0, 0.0, 0.0)]
@@ -203,7 +259,7 @@ func _check_player_only_anchor(cells: CompanyCells) -> void:
 
 ## Steps the streamer on its own clock, starting `from_sec`, until it has nothing left to build.
 func _settle(cells: CompanyCells, from_sec: float) -> void:
-	var now: float = from_sec + Time.get_ticks_msec() / 1000.0
+	var now: float = maxf(from_sec + Time.get_ticks_msec() / 1000.0, _clock + 1.0)
 	var steps: int = 0
 	cells.step(now)
 	while cells.is_busy() and steps < MAX_STEPS:
@@ -216,6 +272,7 @@ func _settle(cells: CompanyCells, from_sec: float) -> void:
 		now += 0.3
 		cells.step(now)
 		steps += 1
+	_clock = now
 	_expect(steps < MAX_STEPS, "The cells settle (took %d steps)" % steps)
 
 

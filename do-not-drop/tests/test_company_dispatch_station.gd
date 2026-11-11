@@ -15,11 +15,11 @@ extends SceneTree
 ##   (DispatchRules: the van does not go there, the row says why), is not pickable; the vehicle is the
 ##   fleet's real van, by name, with the slots and kg of its VehicleDefinition; the local player's input is
 ##   off while it is open and back on when it closes;
-## - on the host two boxes picked and "Load" stage them on the van in CompanyTrips (their orders too), the
-##   host's trip book learns those orders as PACKED with their box, the shared book is left alone; the
-##   third waits; opening it again does not list the loaded boxes although they still lie in the zone, and
-##   with the van loaded there is no vehicle at the yard and Load is off; a box carried out of the area
-##   leaves the list and one whose package is gone is forgotten;
+## - on the host two boxes picked and "Load" stage them on the van in CompanyTrips (their orders too) and put them
+##   on its rack (D-0717.b; the rest of that flow is test_company_departure), the host's trip book learns those
+##   orders as PACKED with their box, the shared book moves only when the van leaves; the third waits; opening it
+##   again does not list the loaded boxes, and with the van loaded there is no vehicle at the yard and Load is
+##   off; a box carried out of the area leaves the list and one whose package is gone is forgotten;
 ## - a peer that doesn't decide (no CompanyTrips, as a client) sees the list from its own copy but Load
 ##   is off with the reason and loads nothing; if the day closes with that board open, it says so by itself
 ##   within SCAN_SEC, with nothing else changing (D-0851).
@@ -226,6 +226,10 @@ func _check_load(level: CompanyRoot, panel: DispatchBoardPanel) -> void:
 	_expect(staged.get("boxes", []) == [&"box_o1", &"box_o2"] and staged.get("orders", []) == [&"o1", &"o2"],
 		"the van has those boxes and orders staged (got %s)" % [staged])
 	_expect(trips.has_cargo(VAN), "CompanyTrips says the van has cargo")
+	for box_id: StringName in [&"box_o1", &"box_o2"]:
+		var package: DeliveryPackage = DispatchRack.package_of(level.packages, box_id)
+		_expect(package.is_loaded and level.fleet.vehicle(String(VAN)).is_ancestor_of(package.current_mount),
+			"%s went on the van's rack" % box_id)
 	for order_id: StringName in [&"o1", &"o2"]:
 		var box_id := StringName("box_" + str(order_id))
 		_expect(trips.book.state_of(order_id) == Order.STATE_PACKED and trips.book.box_of(order_id) == box_id,
@@ -235,8 +239,8 @@ func _check_load(level: CompanyRoot, panel: DispatchBoardPanel) -> void:
 	_expect(panel.row_button(&"box_o3") != null and panel.row_button(&"box_o1") == null, "the third box keeps waiting")
 
 
-## Opened again: the loaded boxes still lie in the zone but are not listed, the van is loaded so none is at the
-## yard; a box carried out of the area leaves the list, a freed package is forgotten.
+## Opened again: the loaded boxes are on the van and not listed, the van is loaded so none is at the yard; a box
+## carried out of the area leaves the list, a freed package is forgotten.
 func _check_reopen(level: CompanyRoot, dispatch: CompanyDispatch, station: DispatchStation) -> void:
 	station.interact(level.player)
 	await process_frame

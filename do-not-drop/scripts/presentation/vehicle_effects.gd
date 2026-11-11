@@ -288,6 +288,8 @@ func _burst_debris(at: Vector3, strength: float) -> void:
 	chip.material = look
 	var particles := GPUParticles3D.new()
 	particles.name = "ImpactDebris"
+	# Born emitting, and a one-shot turned on while it emits never says `finished`.
+	particles.emitting = false
 	particles.one_shot = true
 	particles.explosiveness = 0.95
 	particles.amount = clampi(int(strength * 2.5), 12, 60)

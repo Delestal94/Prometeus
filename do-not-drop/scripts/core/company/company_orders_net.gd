@@ -234,8 +234,9 @@ func close_day(net: CompanyNet, now_min: int, early: bool) -> int:
 
 
 ## Host, a vehicle came back (CompanyTrips.trip_closed): the orders it did not deliver fail, -3 reputation each
-## (the same price as a customer's abandon). Ids the book doesn't have or already closed are skipped. Returns how
-## many closed. Nothing on a client or while `net` applies an event.
+## (the same price as a customer's abandon), ahead of the trip_closed event, which would fail them for free
+## (CompanyTripsView; OrderDayClose.wire() sees to the order). Ids the book doesn't have or already closed are skipped.
+## Returns how many closed. Nothing on a client or while `net` applies an event.
 func fail_returned(net: CompanyNet, ids: Array[StringName]) -> int:
 	if net == null or net.orders != self or not net.is_host() or net.is_applying():
 		return 0

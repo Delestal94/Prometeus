@@ -95,7 +95,8 @@ func _add_truck(world: Node3D, shed: CompanyShed, clock_of: Callable) -> void:
 
 ## Host, once a game minute: the truck of the day is on its way in (SupplierTruckView draws it from
 ## SUPPLIER_DRIVE_IN_MIN before it parks) and its pallets are not on the bed yet: one jack_loaded puts them there
-## (CompanyPallets.loaded_event), once per day; and when it drove off, jack_departed (D-0618.b, send_truck_off).
+## (CompanyPallets.loaded_event), once per day; when it drove off, jack_departed (D-0618.b, send_truck_off). The
+## pallets that ran out leave the book first (D-0607.b, clear_empties), so the truck finds their room.
 func poll_pallets(clock: GameClock) -> void:
 	var hosted: COMPANY_STATE = _hosted_state.call()
 	if _net == null or not _net.is_host() or hosted == null or clock == null or not is_instance_valid(clock):
@@ -106,6 +107,7 @@ func poll_pallets(clock: GameClock) -> void:
 		return
 	_pallets_checked = Vector2i(day, minute)
 	CompanyPallets.send_truck_off(_net.pallets, _schedule, day, minute, _net.publish)
+	CompanyPallets.clear_empties(_net.pallets, _net.inventory, _net.publish)
 	if _pallets_day == day or not CompanyPallets.load_due(_schedule, day, minute):
 		return
 	var event: Dictionary = _net.pallets.loaded_event(day, _schedule.pallets_for(day), _net.inventory)
