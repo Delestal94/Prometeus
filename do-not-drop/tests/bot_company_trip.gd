@@ -11,6 +11,8 @@ extends RefCounted
 ## use VAN.TURN_OFF_ROAD_LIMIT_M).
 
 const VAN := preload("res://tests/bot_company_van.gd")
+## The shortcuts the bot notes (door_settle, CREW.STUBS).
+const CREW := preload("res://tests/bot_company_crew.gd")
 ## The yard's leg (VAN.leg) joins the street here: the shed's first avenue, this far from the node `shed`
 ## (the shed's centre, so past its walls and its playon). The graph has no street through the playon.
 const ENTRY_EDGE: StringName = &"avenida_este_1"
@@ -27,7 +29,7 @@ const HOUSE_REACH_M: float = 26.0
 ## the way ends after that many metres of the line (a test's short run).
 static func drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var vehicle: StringName = ctx["vehicle_id"]
-	if vehicle == &"" or ctx["box"] == null:
+	if vehicle == &"" or (ctx["packed"] as Array).is_empty():
 		return _fail("nothing_loaded")
 	var van: VehicleBody3D = VAN.van_of(level, vehicle)
 	if van != null:
@@ -39,8 +41,9 @@ static func drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dicti
 	var trip: Trip = level.trips.trip_of(vehicle)
 	if trip == null:
 		return _fail("trip_not_started")
-	if level.trips.book.state_of(ctx["order"]["id"]) != Order.STATE_OUT:
-		return _fail("order_not_out")
+	for entry: Dictionary in ctx["packed"]:
+		if level.trips.book.state_of(entry["order_id"]) != Order.STATE_OUT or not trip.order_ids.has(entry["order_id"]):
+			return _fail("order_not_out")
 	ctx["trip"] = trip
 	ctx["yard_exit"] = VAN.ground_of(van)
 	ctx["yard_dir"] = VAN.forward_of(van)
@@ -58,16 +61,16 @@ static func drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dicti
 
 
 ## Stop by stop, the van goes to the stop's house (the autopilot; it stays if it is there) and each house
-## is checked against the fixed map and the door settles its orders: the customer pays into the wallet
-## (OrderSettlement) and the Trip records the delivery. The door is still OrderSettlement.settle: the
-## company world has no delivery at a house's door yet (DeliveryHouse is the delivery run's: doorbell
-## and carried package); the van stands within HOUSE_REACH_M of the house first.
+## is checked against the fixed map and its orders are settled with the box each one rides in (the package's
+## own PackedBox): the customer pays into the wallet (OrderSettlement) and the Trip records the delivery. That
+## is the stub door_settle (CREW.STUBS): the company world has no delivery at a house's door yet (D-0340 +
+## D-0815.b: DeliveryHouse is the delivery run's, doorbell and carried package); the van stands within
+## HOUSE_REACH_M of the house first.
 static func deliver(
 	tree: SceneTree, level: CompanyRoot, ctx: Dictionary, products: Dictionary
 ) -> Dictionary:
 	var vehicle: StringName = ctx["vehicle_id"]
-	var box: PackedBox = ctx["box"]
-	if vehicle == &"" or box == null:
+	if vehicle == &"" or (ctx["packed"] as Array).is_empty():
 		return _fail("nothing_loaded")
 	var trips: CompanyTrips = level.trips
 	var trip: Trip = ctx["trip"]
@@ -90,6 +93,10 @@ static func deliver(
 			for order_id: StringName in stop["order_ids"]:
 				if house.zone != StringName(book.get_order(order_id)["zone"]):
 					return _fail("house_out_of_zone")
+				var box: PackedBox = box_of(level, book.box_of(order_id))
+				if box == null:
+					return _fail("no_box_for_%s" % order_id)
+				CREW.stub(ctx, &"door_settle")
 				var money: int = int(wallet.get("money"))
 				var settled: Dictionary = OrderSettlement.settle(
 					book, wallet, order_id, box, trips.delivery_minute(), [], products)
@@ -132,6 +139,17 @@ static func come_back(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> D
 	if str(result["return_clock"]) == "" or int(result["duration_min"]) < 0:
 		return _fail("result_clock")
 	return _ok()
+
+
+## The box the package `box_id` carries (its META_PACKED_BOX), null when there is no such package.
+static func box_of(level: CompanyRoot, box_id: StringName) -> PackedBox:
+	var package: DeliveryPackage = DispatchRack.package_of(level.packages, box_id)
+	if package == null:
+		return null
+	var saved: Variant = package.get_meta(BoxToPackage.META_PACKED_BOX, {})
+	if not saved is Dictionary or (saved as Dictionary).is_empty():
+		return null
+	return PackedBox.from_dict(saved)
 
 
 ## Where the yard's leg joins the street: {point: Vector2 (x z), dir: Vector2 unit, the way the avenue goes}.

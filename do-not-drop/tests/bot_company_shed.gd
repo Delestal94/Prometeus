@@ -192,12 +192,14 @@ static func dispatch(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Di
 	if packed.is_empty():
 		return _fail("nothing_packed")
 	var board := level.get_node_or_null(^"Dispatch") as CompanyDispatch
-	if board == null or level.shed.dispatch_stations.is_empty() or not CompanyDispatch.area_of(level.shed).has_surface():
+	var area: AABB = CompanyDispatch.area_of(level.shed)
+	if board == null or level.shed.dispatch_stations.is_empty() or not area.has_surface():
 		return _fail("no_dispatch_zone")
 	if not board.scan().boxes().is_empty():
 		return _fail("box_dispatched_from_the_table")
 	for entry: Dictionary in packed:
-		var why: String = await carry_to_zone(tree, level, ctx, _actor_of(ctx, int(entry["peer"])), entry["box_id"], 0.0)
+		var packer: Dictionary = _actor_of(ctx, int(entry["peer"]))
+		var why: String = await carry_to_zone(tree, level, ctx, packer, entry["box_id"], 0.0)
 		if why != "":
 			return _fail("%s_%s" % [entry["box_id"], why])
 	var zone: DispatchZone = board.scan()
