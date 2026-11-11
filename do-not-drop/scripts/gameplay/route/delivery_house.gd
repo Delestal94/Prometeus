@@ -55,6 +55,10 @@ const DOORBELL_WINDOW := Color("fff1d6")
 const DOORBELL_BUTTON := Color("e7be51")
 const DOORBELL_INK := Color("1e2235")
 const DOORBELL_FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
+## How far the panel's parts are still drawn at full quality (WorldQuality.set_view_range, D-2012.2): a dozen
+## parts of a few centimetres (screws, grille, push) that were a draw call each on every house in sight, the
+## houses of Barrio Centro 300-800 m off included. At 40 m the whole 26 cm plate is about 6 pixels tall.
+const DOORBELL_VIEW_RANGE: float = 40.0
 ## Solid volumes per visual, [size, centre] pairs matching the walls only --
 ## never the porch, so the doorbell stays reachable. The first three share
 ## the original 6x5 box; the farmhouse is wider and has a wing out back
@@ -379,6 +383,7 @@ func _build_doorbell_visual() -> void:
 	doorbell_number.position = Vector3(0.0, 0.08, -0.0375)
 	doorbell_number.rotation.y = PI
 	doorbell_panel.add_child(doorbell_number)
+	WorldQuality.set_view_range(doorbell_panel, DOORBELL_VIEW_RANGE)
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
