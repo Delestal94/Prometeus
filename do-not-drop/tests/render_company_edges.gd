@@ -5,7 +5,8 @@ extends SceneTree
 ##       --resolution 1280x720 --script res://tests/render_company_edges.gd
 ## Three streets of the company map (data/world/road_graph.tres, expansion D-0304.4)
 ## built the way a world cell builds them (EdgePieces.build, one RouteSegment per
-## piece along the Bezier), lit like the level: an asphalt avenue in Centro
+## piece along the Bezier, then batched as the cell is a step later: StreetBatcher,
+## D-2012.2), lit like the level: an asphalt avenue in Centro
 ## (avenida_este_1, with a speed bump), a gravel road in Campo (camino_campo_3:
 ## curves, s-curve and the narrow bridge), a dirt farm track (chacra_1, mud first) and a cobbled street
 ## of Centro (calle_v_640_m384), each drawn with its street's surface (StreetSurface, D-0304.1b).
@@ -16,7 +17,8 @@ extends SceneTree
 ## street that reaches the node, from low down and from above, each twice with the camera 0.3 m apart
 ## (render_company_edge_junction_*.png). One surface must show, the same in both: a toothed wedge of the
 ## other, or one that changes with the camera, is z-fighting (StreetSurface.LIFT).
-## CI runs this (tests.yml, runtime-audit): the headless tests never compile the shader, this does.
+## CI runs this (tests.yml, runtime-audit): the headless tests never compile the shader, this does
+## (its `batched` branch, the one the game draws the streets with).
 
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const STREETS: Array[StringName] = [&"avenida_este_1", &"camino_campo_3", &"chacra_1", &"calle_v_640_m384"]
@@ -56,6 +58,7 @@ func _shoot(graph: RoadGraph, street: StringName) -> void:
 	var pieces: Array[RouteSegment] = EdgePieces.build(graph, street, world)
 	for segment: RouteSegment in pieces:
 		segment.set_physics_process(false)
+	StreetBatcher.bake(world)
 	_camera = Camera3D.new()
 	_camera.fov = 70.0
 	_camera.far = 4000.0
@@ -92,6 +95,7 @@ func _shoot_junction(graph: RoadGraph) -> void:
 	for edge: RoadEdge in graph.edges_at(JUNCTION):
 		for segment: RouteSegment in EdgePieces.build(graph, edge.id, world):
 			segment.set_physics_process(false)
+	StreetBatcher.bake(world)
 	_camera = Camera3D.new()
 	_camera.fov = 70.0
 	_camera.far = 4000.0

@@ -11,6 +11,8 @@ extends WorldCellStreamer
 ## and its flat block shows instead (D-2012.1). A cell's content comes from
 ## `content_for` (the road graph's pieces, once the mesh per edge exists); until
 ## then a cell is an empty `Node3D` named `Cell_<x>_<z>` so the flow is testable.
+## A step after a cell is in the tree its pieces are batched (StreetBatcher,
+## D-2012.2): a few meshes and one verge body per cell instead of a node per box.
 
 ## Waypoints of the main streets, from diseno/mapa.md (x, z in meters).
 const MAIN_STREETS: Array = [
@@ -40,6 +42,7 @@ func _init() -> void:
 	slice_msec = CompanyTuning.CELL_SLICE_MSEC
 	build_for = _build_cell
 	impostor_for = _impostor
+	finish_for = _batch_cell
 	pin_fixed_cells()
 
 
@@ -96,6 +99,12 @@ func _build_cell(cell: Vector2i) -> Node3D:
 	var node := Node3D.new()
 	node.name = "Cell_%d_%d" % [cell.x, cell.y]
 	return node
+
+
+## The streamer's second pass over a cell, a step after it entered the tree: its street pieces are drawn as a
+## few meshes and their holders go (StreetBatcher, D-2012.2). The pieces, their `Road` and what moves stay.
+func _batch_cell(_cell: Vector2i, node: Node3D) -> void:
+	StreetBatcher.bake(node)
 
 
 ## A far cell's block: the streamer's flat block, lowered so its top is IMPOSTOR_TOP_Y (the streamer puts a node
