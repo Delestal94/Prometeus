@@ -7,6 +7,8 @@
 #
 # Windows (TakeMyPackage.exe, the PC build routine) or Linux (TakeMyPackage.x86_64, the release workflow, D-2020).
 #   SMOKE_GUARD_SECONDS  seconds after which a boot counts as hung (150). A slow CI runner asks for more.
+#   SMOKE_COMPANY_FRAMES frames of the company boot (6000). A machine that has not written the company's save
+#                        by then asks for more (raise SMOKE_GUARD_SECONDS with it).
 #   SMOKE_LOGS           folder that keeps menu.log, empresa.log and probe.log; left out, they go with the run.
 #
 # Each boot ends itself with --quit-after: killing the exe with `timeout` makes the engine log dozens of
@@ -27,9 +29,9 @@ if [ ! -d "$BUILD" ]; then
 fi
 BUILD="$(cd "$BUILD" && pwd)"
 # Headless there is nothing to draw and the engine sleeps between frames (~130 a second, measured on Windows):
-# ~45 to 55 s of the running game on a machine that keeps up. A boot that ends earlier than the load only fails,
-# it never passes.
-COMPANY_FRAMES=6000
+# about a minute of the running game (45 to 70 s measured on Windows). A boot that ends earlier than the load
+# only fails, it never passes.
+COMPANY_FRAMES="${SMOKE_COMPANY_FRAMES:-6000}"
 MENU_FRAMES=300
 # The flag README.md gives players (main_menu.gd; --mode=company is its older alias).
 COMPANY_FLAG='--autostart-company'
@@ -47,6 +49,9 @@ fail() {
 
 case "$GUARD_SECONDS" in
 	'' | *[!0-9]* | 0*) fail "SMOKE_GUARD_SECONDS tiene que ser un entero positivo (vino '$GUARD_SECONDS')" ;;
+esac
+case "$COMPANY_FRAMES" in
+	'' | *[!0-9]* | 0*) fail "SMOKE_COMPANY_FRAMES tiene que ser un entero positivo (vino '$COMPANY_FRAMES')" ;;
 esac
 
 EXE="$BUILD/TakeMyPackage.exe"

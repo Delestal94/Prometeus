@@ -224,6 +224,6 @@ y `scenes/company/`; si filtra recursos, agregarlos. Pedido a la rutina `pc-buil
 **[~] Parcial (2026-11-11, PR #@@PR@@)** — `release.yml` corre `tools/export/smoke-company.sh builds/linux` después del export y antes de los zips, y el paso falla si la última línea no es `Empresa OK` (arranque al menú, arranque con `--autostart-company` de unos 6000 cuadros, el guardado de la empresa y la sonda dentro del `.pck`); en Windows, con una build nueva de `main`, da `Empresa OK`. Una corrida manual ya no publica nada. `test_release_build` lo exige. Falta la corrida en GitHub (Linux). Revisar: [`revisar/D-2020.md`](../revisar/D-2020.md).
 **Depende de:** D-2019
 **Qué:** el smoke de `release.yml` hoy arranca el juego. Agregar una segunda corrida con
-`--autostart-company` (el script corre unos 6000 cuadros, 45 a 55 s) que falle si el log tiene `SCRIPT ERROR` o `ERROR`. `tools/export/smoke-company.sh`
+`--autostart-company` (el script corre unos 6000 cuadros, cerca de un minuto; `SMOKE_COMPANY_FRAMES` lo sube) que falle si el log tiene `SCRIPT ERROR` o `ERROR`. `tools/export/smoke-company.sh`
 (D-2019) ya hace eso y contempla Linux, aunque ahí todavía no se probó; con `timeout` a secas no alcanza (matar el proceso ensucia el log).
 **Hecho cuando:** el workflow tiene el paso y pasa en la siguiente release.
