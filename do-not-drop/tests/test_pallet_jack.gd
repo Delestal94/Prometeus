@@ -11,7 +11,10 @@ extends SceneTree
 ## - can_pick_up() and can_put_down() say what pick_up() and put_down() would do, changing nothing (the host's
 ##   check of a request, D-0605.b);
 ## - a pallet emptied after its first put-down is not received again, on the floor or a rack (the book's `received`,
-##   kept by to_dict/from_dict).
+##   kept by to_dict/from_dict);
+## - take_received() names the pallet a put-down brought into the Inventory, once: not a pick, not a second
+##   put-down, not a rack after the floor, not a pallet whose units were already there, and a rack counts like the
+##   floor (the supplier's bill hangs on it, D-0503.b).
 
 const FLOOR := Rect2(-6.0, -6.0, 12.0, 12.0)
 
@@ -30,6 +33,7 @@ func _run() -> void:
 	_test_many_moves_and_json()
 	_test_can_checks()
 	_test_emptied_not_received_again()
+	_test_take_received()
 	quit(_failures)
 
 
@@ -154,3 +158,47 @@ func _test_emptied_not_received_again() -> void:
 	copy.from_dict(jack.to_dict())
 	_expect(copy.places[&"a"]["received"] == true and copy.places[&"b"]["received"] == false,
 		"the round trip keeps which pallets were received")
+
+
+func _test_take_received() -> void:
+	var jack := _yard()
+	var inv := Inventory.new()
+	_expect(jack.take_received() == &"", "nothing was received yet")
+	jack.pick_up(&"a")
+	_expect(jack.take_received() == &"", "picking a pallet off the bed receives nothing")
+	jack.put_down(Vector2.ZERO, FLOOR, inv)
+	_expect(jack.take_received() == &"a", "the first put-down names the pallet it received")
+	_expect(jack.take_received() == &"", "... once")
+	jack.pick_up(&"a", Vector2.ZERO)
+	jack.put_down(Vector2(2.0, 0.0), FLOOR, inv)
+	_expect(jack.take_received() == &"", "moving it again receives nothing")
+	jack.pick_up(&"a", Vector2(2.0, 0.0))
+	jack.put_on_rack(&"r1", Vector2(4.0, 0.0), inv)
+	_expect(jack.take_received() == &"", "... nor setting it on a rack afterwards")
+	jack.pick_up(&"b")
+	jack.put_on_rack(&"r2", Vector2(4.0, 2.0), inv)
+	_expect(jack.take_received() == &"b", "a pallet set on a rack straight from the bed is received there")
+	# Not taken: the next put-down, of a pallet received before, wipes the note.
+	var late := _yard()
+	late.pick_up(&"a")
+	late.put_down(Vector2.ZERO, FLOOR, inv)
+	late.pick_up(&"a", Vector2.ZERO)
+	late.put_down(Vector2(2.0, 0.0), FLOOR, inv)
+	_expect(late.take_received() == &"", "a note nobody took does not outlive the next put-down")
+	# A save from before the book kept `received`: the units are already at the pallet's place.
+	var old := PalletJack.new()
+	var old_pallets: Array[Dictionary] = [Pallet.make(&"old", &"hen", 4)]
+	old.load_bed(old_pallets)
+	var stock := Inventory.new()
+	stock.receive(&"hen", 4, Pallet.location(&"old"))
+	old.pick_up(&"old")
+	_expect(old.put_down(Vector2.ZERO, FLOOR, stock) and old.take_received() == &"" and stock.total_units() == 4,
+		"a pallet whose units were already in the stock is not received again")
+	# A copy made between the put-down and the take (a snapshot, a save) does not carry the note.
+	var fresh := _yard()
+	fresh.pick_up(&"a")
+	fresh.put_down(Vector2.ZERO, FLOOR, Inventory.new())
+	var copy := PalletJack.new()
+	copy.from_dict(fresh.to_dict())
+	_expect(copy.take_received() == &"" and copy.places[&"a"]["received"] == true and fresh.take_received() == &"a",
+		"the note is not part of the book's dictionary: a copy knows the pallet is received, not that it just was")

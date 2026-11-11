@@ -54,6 +54,33 @@ da -500; las unidades quedan en `pallet:<id>`; recibir dos veces o un palet inv�
 mira el pedido entero; recibir sin saldo lo deja en rojo.
 **Hecho cuando:** el test pasa.
 
+### D-0503.b · El cobro del proveedor en el juego — A · Opus 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-11-11, PR #858)** — `SupplierBillHook` (`scripts/gameplay/supplier_bill_hook.gd`, lo engancha `CompanySupplierLink` en el host): el primer apoyo de un palet del camión cobra sus unidades al precio de su proveedor, una vez, como un `wallet_moved` con motivo `supplier`; `test_company_supplier_bill`.
+**Depende de:** D-0503, D-0517, D-0605.b, D-0509.b (el modelo del enganche)
+**Qué:** hasta acá `SupplierPurchase.receive` solo se llamaba en tests: `PalletJack` metía las unidades en el stock y nadie
+cobraba, así que la mercadería era gratis y la ganancia del día que mide el corte vertical (§4.4 de
+[corte-vertical.md](../diseno/corte-vertical.md)) no era real. Ahora:
+- `PalletJack.take_received()` dice qué palet entró al stock en el último apoyo (en el piso con la zorra o en un estante con
+  el autoelevador), una sola vez: mover de nuevo un palet ya recibido no lo nombra, ni lo nombra una copia del libro.
+- `SupplierPurchase.bill(wallet, pallet, products, seller)` cobra el palet al precio del proveedor (`price_factor`, el mismo
+  `SupplierOrderCart.unit_cost` que mostró el tablero, en el total y en cada fila); `cost` y `pallet_cost` aceptan el proveedor. `receive` queda para
+  quien tiene el palet y el stock en la mano.
+- `SupplierBillHook` escucha `jack_placed` en el host (como `FixedCostsHook` y `SupplierAutoOrderHook`, sin tocar
+  `company_root.gd` ni `company_net.gd`), busca el proveedor con `SupplierIds.pallet_supplier` y cobra por
+  `CompanyNet.publish_wallet` (D-0517): todos los pares ven el mismo saldo y el resumen del día muestra `supplier`.
+**Decisión:** [se cobra al primer apoyo](../../decisiones/2026-11-11-cobro-del-proveedor.md), no al remito ni al cierre: es el
+"recibir" de D-0503 y el momento en que las unidades entran al stock. Lo que el camión se lleva (D-0618) nunca se apoyó y no
+se paga; el stock inicial de una empresa nueva (`DefaultShed`, el palet regalado de [economia.md](../diseno/economia.md) §3)
+no viene en un camión y no se paga. Sin protocolo nuevo: el cobro es un `wallet_moved` como los demás.
+**Test** `test_company_supplier_bill`: con un `CompanyNet` y el enganche, subir el palet no cobra, apoyarlo cobra una vez justo
+después del `jack_placed`, moverlo de nuevo no cobra, el palet de otro proveedor paga su precio, el estante cobra como el piso,
+un producto desconocido no se cobra y el cobro pasa a rojo; el enganche de un cliente no publica. En el mundo real
+(`company_root.tscn`, cuatro sesiones del mismo save): el día 1 no hay camión ni cobro, el día 2 se cobra lo apoyado y no lo
+que se llevó el camión y el cierre muestra `supplier` junto al alquiler; cargado el día 3 el palet ya pagado no se cobra, y
+el día cortado y vuelto a abrir paga una sola vez. Host y cliente por ENet: billeteras, libros y stock iguales, cobrados una
+vez, y el resumen del cliente es el del host. Además `test_pallet_jack` (`take_received`) y `test_supplier_purchase` (`bill`).
+**Hecho cuando:** fuera de `tests/` hay un cobro de `SupplierPurchase` al recibir un palet en el host y el test pasa.
+
 ### D-0504 · Costo de materiales de embalaje — B · Sonnet 5.5 · medium · Aviso: no · F1
 **[x] Hecho (2026-10-05, PR pendiente)** — `PackagingSupplies` (`scripts/gameplay/business/packaging_supplies.gd`): relleno, cinta, etiqueta y sellos se cobran al hacerse, con motivo `packaging`; `test_packaging_supplies`.
 **Depende de:** D-0501, D-0212
@@ -217,4 +244,4 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Qué:** que todos los clientes vean el mismo saldo. Todo cobro o pago nuevo en el mundo compartido se publica con `publish_wallet`, nunca con `earn` / `spend` / `charge` directo en el host.
 **Test** `test_company_money_net`: saldo y último `balance` del libro iguales en los 3 peers tras cada movimiento (ingreso, gasto, rojo, deriva), una sola entrada en el host, evento malformado ignorado, entrada tardía, cliente que no puede publicar.
 **Hecho cuando:** test y auditoría (cumplido).
-**Pendiente (subtareas):** conectar a `publish_wallet` cada camino al enchufarlo (`order_settlement`, `order_tips`, `fixed_costs`, `supplier_purchase`, `company_shop` / D-0518, `warehouse_stages`, deshacer de `build_placement` con pedido `layout_undo` solo del host).
+**Pendiente (subtareas):** conectar a `publish_wallet` cada camino al enchufarlo (`order_settlement`, `order_tips`, `fixed_costs`, `supplier_purchase`, `company_shop` / D-0518, `warehouse_stages`, deshacer de `build_placement` con pedido `layout_undo` solo del host). Enchufados: `fixed_costs` (D-0509.b) y `supplier_purchase` (D-0503.b, 2026-11-11, PR #858).

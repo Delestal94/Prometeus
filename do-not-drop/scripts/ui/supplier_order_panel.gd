@@ -365,8 +365,9 @@ func _add_row(product: StringName, cart: SupplierOrderCart) -> void:
 	row.name = "Row_%s" % product
 	row.add_theme_constant_override("separation", 8)
 	_rows_box.add_child(row)
+	# The seller's unit price (price_factor), the one the total and the supplier bill (D-0503.b) use.
 	var name_label: Label = UiTheme.label(
-		row, tr("UI_SUPPLIER_ROW") % [_product_name(product), SupplierPurchase.cost(product, 1, cart.products)], 17
+		row, tr("UI_SUPPLIER_ROW") % [_product_name(product), cart.unit_price(product)], 17
 	)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.name = "Name"
