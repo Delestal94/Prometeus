@@ -26,7 +26,7 @@
 | D-2016 | Bot `bot_company_day` y guion de QA del día completo (criterio de cierre de F1) | probador-qa | medium | `BOT_OK` sin `BOT_STUB` con 1 y 2 jugadores (D-2016.4) y guion en `docs/qa-recorrido.md` |
 | D-2017 | Recorrido de QA de red par y trío en modo Empresa | probador-qa | high | guion |
 | D-2018 | ✅ `portability-check.sh` incluye los módulos nuevos | escritor-tests | low | CI verde |
-| D-2019 | ◐ (falta el arranque en la build de la PC) Build de Windows con la expansión | empaquetador-release | medium | build y smoke test |
+| D-2019 | ✅ Build de Windows con la expansión | empaquetador-release | medium | build y smoke test |
 | D-2020 | Smoke test del ejecutable arrancando en modo Empresa | empaquetador-release | medium | paso en `release.yml` |
 
 ## Ampliación
