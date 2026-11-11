@@ -62,12 +62,15 @@ Un tag `v*` en `main` (`git tag v0.2.0 && git push origin v0.2.0`) dispara
 `.github/workflows/release.yml`: pone la versión del tag en `config/version` de
 `project.godot` (el menú la muestra abajo a la izquierda), exporta Windows y Linux con
 `tools/export/export_presets.cfg`, prueba que la build de Linux arranque sin errores de
-carga y sube `TakeMyPackage-<versión>-windows.zip` y `-linux.zip` al release del tag.
+carga y que entre al modo Empresa (`tools/export/smoke-company.sh`: tiene que terminar en
+`Empresa OK`, si no no se arma ningún zip) y sube `TakeMyPackage-<versión>-windows.zip` y `-linux.zip` al release del tag.
 También adjunta `SHA256SUMS.txt` para verificar la integridad de los ZIP descargados.
 El `export_presets.cfg` de `do-not-drop/` sigue siendo local de cada uno (está en
 `.gitignore`); si cambiás filtros o rutas en el tuyo, copiá el cambio al de `tools/export/`.
-También se puede correr a mano desde Actions ("Run workflow"): deja los zip como artefacto
-sin publicar un release.
+También se puede correr a mano desde Actions ("Run workflow"): exporta y corre los dos smoke
+tests, pero no publica nada. Como el repo es público, los zip quedan como artefacto solo si
+se marca la entrada `keep_builds`; si el smoke de Empresa falla, sus logs quedan 7 días como
+artefacto `smoke-company-logs`.
 
 ## Commits
 
