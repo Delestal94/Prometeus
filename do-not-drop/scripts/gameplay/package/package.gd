@@ -631,7 +631,7 @@ func release_mount() -> void:
 
 func _is_run_active() -> bool:
 	var run_manager: Node = PackageAutoloads.run_manager(self)
-	return run_manager == null or bool(run_manager.get("is_running"))
+	return run_manager == null or bool(run_manager.get("is_running")) or PackageHandling.on_trip(self)
 
 
 func _award_pending_trap_milestones() -> void:
@@ -644,7 +644,7 @@ func _award_milestone(peer_id: int, milestone: StringName) -> bool:
 
 func _registered_for_run() -> bool:
 	var run: Node = PackageAutoloads.run_manager(self)
-	return run != null and (run.get(&"cargo") as Dictionary).has(package_id)
+	return PackageHandling.on_trip(self) or (run != null and (run.get(&"cargo") as Dictionary).has(package_id))
 
 
 func _trap_kind() -> StringName:

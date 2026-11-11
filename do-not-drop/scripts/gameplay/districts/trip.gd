@@ -28,6 +28,8 @@ var stops: Array[Dictionary] = []
 ## Units that came back to stock / were lost with a broken box when closing.
 var returned_units: int = 0
 var lost_units: int = 0
+## The boxes of this trip that were broken when it closed (close()'s `broken_boxes`, only its own, in box order).
+var broken_ids: Array[StringName] = []
 
 
 ## Starts a trip and moves every PACKED order to OUT. Orders that cannot go out
@@ -128,7 +130,8 @@ func record_settled(order_id: StringName, book: OrderBook) -> bool:
 ## delivered becomes FAILED. Returns the failed ids. A closed trip does nothing.
 ## With an inventory, the products of a failed order come back from its box to
 ## `RETURN_LOCATION` when the box is sound; if the box is in `broken_boxes` they
-## are lost (consumed).
+## are lost (consumed). With or without one, the trip keeps which of its boxes
+## were broken (broken_ids).
 func close(
 	book: OrderBook,
 	now_min: int,
@@ -139,6 +142,9 @@ func close(
 		return []
 	state = STATE_CLOSED
 	return_min = now_min
+	for box_id: StringName in box_ids:
+		if box_id in broken_boxes and not box_id in broken_ids:
+			broken_ids.append(box_id)
 	for order_id: StringName in order_ids:
 		if not order_id in delivered_ids and book.mark_failed(order_id):
 			failed_ids.append(order_id)
