@@ -5,11 +5,12 @@ extends SceneTree
 ## came out of them: company_units_net.gd, company_snapshot_sync.gd, company_crew.gd, company_backdrop.gd,
 ## shed_use.gd), with nothing the peers see changed:
 ## - the protocol: CompanyNet keeps exactly its four @rpc methods (_request, _apply_event, _snapshot, _rejected; RPC
-##   ids go by name) and the kinds it takes, applies, lets the host publish and counts as critical are the same
-##   sets as before the split (FROZEN_*, the network contract's whitelist);
-## - every kind belongs to one domain: each domain script declares its own REQUEST_KINDS / EVENT_KINDS (and
-##   HOST_EVENT_KINDS, CRITICAL_KINDS, a part of those), no kind is in two domains, and CompanyNet's lists are their
-##   union with its own (snapshot_request, clock_anchor, day_phase), so a new kind of a domain touches that domain only;
+##   ids go by name) and no kind it took, applied, let the host publish or counted as critical before the split is
+##   gone (FROZEN_*, main 9204182f: each still in its list, no repeats). Only "nothing lost": a later PR adds kinds
+##   to its domain without editing this test;
+## - every kind belongs to one domain: each domain script declares all four lists, REQUEST_KINDS / EVENT_KINDS and
+##   HOST_EVENT_KINDS / CRITICAL_KINDS (a part of those), empty where it has none; no kind is in two domains, and
+##   CompanyNet's lists are exactly their union with its own (snapshot_request, clock_anchor, day_phase);
 ## - CompanyNet routes by domain: _handle_request() and _apply_state() have one branch per domain list (or per own
 ##   kind) and no catch-all `else:` (read from the source), and every domain with a list has its branch;
 ## - units_moved is never a host event (units move because someone asked, or left);
@@ -33,7 +34,10 @@ const DOMAINS: Array[String] = [
 ## Top-level tests of _apply_state() that are no domain's branch: the guard before it and the prune after it.
 const NOT_ROUTING: Array[String] = ["inventory == null or not EVENT_KINDS.has(kind)", "applied"]
 const RPC_METHODS: Array[String] = ["_request", "_apply_event", "_snapshot", "_rejected"]
-## The lists as they were in company_net.gd before D-0254 (main 9204182f), as sets.
+## The four lists every domain declares and CompanyNet sums.
+const LISTS: Array[String] = ["REQUEST_KINDS", "EVENT_KINDS", "HOST_EVENT_KINDS", "CRITICAL_KINDS"]
+## The lists as they were in company_net.gd before D-0254 (main 9204182f). Never extended: a new kind does not
+## belong here, only in its domain.
 const FROZEN_REQUEST: Array[String] = [
 	"units_take", "units_store", "units_drop", "snapshot_request", "layout_place", "layout_move", "layout_rotate",
 	"layout_sell", "box_start", "box_place", "box_take_out", "box_fill", "box_label", "box_stamp", "box_tape",
@@ -97,8 +101,10 @@ func _check_protocol(source: String) -> void:
 		var now: Array = lists[list_name][0]
 		var before: Array = lists[list_name][1]
 		var got: Array[String] = _strings(now)
-		_expect(_sorted(got) == _sorted(before) and _unique(got),
-			"CompanyNet.%s is the same set as before the split, without repeats (got %s)" % [list_name, got])
+		var lost: Array = before.filter(func(kind: String) -> bool: return not got.has(kind))
+		_expect(lost.is_empty() and _unique(got),
+			"CompanyNet.%s keeps every kind it had before the split, without repeats (lost %s, got %s)"
+			% [list_name, lost, got])
 
 
 func _check_domains() -> void:
@@ -109,6 +115,8 @@ func _check_domains() -> void:
 	for domain: String in DOMAINS:
 		var consts: Dictionary = _consts_of(domain)
 		_expect(not consts.is_empty(), "%s is a class with constants (path %s)" % [domain, _class_paths.get(domain)])
+		for list_name: String in LISTS:
+			_expect(consts.has(list_name), "%s declares its %s (empty when it has none)" % [domain, list_name])
 		var requests: Array[String] = _strings(consts.get("REQUEST_KINDS", []))
 		var events: Array[String] = _strings(consts.get("EVENT_KINDS", []))
 		var host: Array[String] = _strings(consts.get("HOST_EVENT_KINDS", []))

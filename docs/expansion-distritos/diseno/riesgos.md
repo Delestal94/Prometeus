@@ -31,7 +31,7 @@ P3: vigilar.
 | R-13 | `--script` que pierde autoloads al nombrar clases nuevas (N-919) | P2 | D-0243 | F0-F5 |
 | R-14 | Determinismo: pedidos por semilla y tripulación, tránsito por reloj | P2 | D-0246, D-0807, D-1504 | F1-F2 |
 | R-15 | Regresiones en Entrega y Endless por archivos compartidos | P2 | D-0315, D-2039 | todas |
-| R-16 | ~~`CompanyNet` (999) y `CompanyRoot` (1000) en el tope de líneas del lint~~ Mitigado (D-0254: 806 y 692) | P1 | D-0254 | F1 |
+| R-16 | ~~`CompanyNet` (999) y `CompanyRoot` (1000) en el tope de líneas del lint~~ Mitigado (D-0254: 820 y 692) | P1 | D-0254 | F1 |
 | R-17 | El bot del corte mide etapas simuladas como OK | P0 | D-2016.4 | F1 |
 
 ## R-01 · Ancho de banda del galpón — P1 · F1-F2

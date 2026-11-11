@@ -69,6 +69,8 @@ const SOLD: StringName = &"layout_sold"
 ## The shed grew: {stage, minute, money} (D-0910.2).
 const EXPANDED: StringName = &"shed_expanded"
 const EVENT_KINDS: Array[StringName] = [PLACED, MOVED, SOLD, EXPANDED]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 
 ## The requester is not the host: only the host builds (D-0910; the crew's vote is D-0910.1).
 const REASON_HOST_ONLY: StringName = &"host_only"

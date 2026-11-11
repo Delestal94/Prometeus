@@ -21,6 +21,8 @@ const SPOILED: StringName = &"units_spoiled"
 ## The cold chain's kinds as CompanyNet puts them together: one event, the host's own (ColdChainTick).
 const EVENT_KINDS: Array[StringName] = [SPOILED]
 const HOST_EVENT_KINDS: Array[StringName] = [SPOILED]
+const REQUEST_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 
 
 ## Host: the event for one entry of ColdChain.age() ({product, location, qty}), or {} when it is not a

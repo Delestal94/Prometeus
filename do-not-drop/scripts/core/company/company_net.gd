@@ -32,8 +32,11 @@ extends Node
 ## (D-0307.1: its effects go out as wallet_moved and trip_closed) and units_spoiled (D-0616.b, CompanyColdNet); each
 ## is one of the variables below. CompanyNet's own kinds are snapshot_request, clock_anchor and day_phase.
 ## A task that adds an action adds its kinds to its domain's lists and to that domain's check and apply: nothing
-## here changes. Only a new domain touches this file: its lists in the four constants below and one branch in
-## _handle_request() and in _apply_state().
+## here changes, as long as the domain already has its branch for that direction and its call takes `kind`. This
+## file still changes for a new domain (its lists in the four constants below and its branches), for a domain's first
+## request (Trips, Orders, Wallet, Cold) or first event (Packages, Tow) and for a second kind of a domain whose call
+## here takes no `kind` (requests: Packages, Carts, Supplier, Shop, Tow; events: Units, Carts, Supplier, Wallet, Shop, Cold).
+## test_company_net_domains fails if a kind has no branch.
 ##
 ## Units on the floor (D-2006) lie in bundles, floor:<n>, each made by a units_moved with its `pos` (a drop, or
 ## what a peer that left held), kept on every peer (floor_bundles) and taken back with units_take.
@@ -75,26 +78,37 @@ const OWN_REQUEST_KINDS: Array[StringName] = [SNAPSHOT_REQUEST]
 const OWN_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE]
 ## Request kinds the host takes (the contract's section 2 whitelist): its own and each domain's. Anything else
 ## is dropped. A kind is in one list only, so _handle_request() hands it to one domain (test_company_net_domains).
+## Every domain declares the four lists (empty where it has none) and each list below sums all thirteen, so a
+## domain's first critical or host kind changes nothing here either.
 const REQUEST_KINDS: Array[StringName] = (
 	OWN_REQUEST_KINDS + CompanyUnitsNet.REQUEST_KINDS + CompanyLayoutNet.REQUEST_KINDS
 	+ CompanyTableNet.REQUEST_KINDS + CompanyPackages.REQUEST_KINDS + CompanyCarts.REQUEST_KINDS
-	+ CompanyPallets.REQUEST_KINDS + CompanySupplierNet.REQUEST_KINDS + CompanyShopNet.REQUEST_KINDS
-	+ CompanyTowNet.REQUEST_KINDS)
+	+ CompanyPallets.REQUEST_KINDS + CompanyTripsView.REQUEST_KINDS + CompanyOrdersNet.REQUEST_KINDS
+	+ CompanySupplierNet.REQUEST_KINDS + CompanyWalletNet.REQUEST_KINDS + CompanyShopNet.REQUEST_KINDS
+	+ CompanyTowNet.REQUEST_KINDS + CompanyColdNet.REQUEST_KINDS)
 ## Requests whose loss leaves a player stuck (rule 8: letting go; a package ack is sent once).
 ## They spend RpcGuard's critical reserve once the sender's budget is gone.
-const CRITICAL_KINDS: Array[StringName] = CompanyUnitsNet.CRITICAL_KINDS + CompanyPackages.CRITICAL_KINDS
+const CRITICAL_KINDS: Array[StringName] = (
+	CompanyUnitsNet.CRITICAL_KINDS + CompanyLayoutNet.CRITICAL_KINDS
+	+ CompanyTableNet.CRITICAL_KINDS + CompanyPackages.CRITICAL_KINDS + CompanyCarts.CRITICAL_KINDS
+	+ CompanyPallets.CRITICAL_KINDS + CompanyTripsView.CRITICAL_KINDS + CompanyOrdersNet.CRITICAL_KINDS
+	+ CompanySupplierNet.CRITICAL_KINDS + CompanyWalletNet.CRITICAL_KINDS + CompanyShopNet.CRITICAL_KINDS
+	+ CompanyTowNet.CRITICAL_KINDS + CompanyColdNet.CRITICAL_KINDS)
 ## Event kinds every peer applies: its own and each domain's, one list each as for the requests.
 const EVENT_KINDS: Array[StringName] = (
-	OWN_EVENT_KINDS + CompanyUnitsNet.EVENT_KINDS + CompanyLayoutNet.EVENT_KINDS + CompanyTableNet.EVENT_KINDS
-	+ CompanyCarts.EVENT_KINDS + CompanyPallets.EVENT_KINDS + CompanyTripsView.EVENT_KINDS
-	+ CompanyOrdersNet.EVENT_KINDS + CompanySupplierNet.EVENT_KINDS + CompanyWalletNet.EVENT_KINDS
-	+ CompanyShopNet.EVENT_KINDS + CompanyColdNet.EVENT_KINDS)
+	OWN_EVENT_KINDS + CompanyUnitsNet.EVENT_KINDS + CompanyLayoutNet.EVENT_KINDS
+	+ CompanyTableNet.EVENT_KINDS + CompanyPackages.EVENT_KINDS + CompanyCarts.EVENT_KINDS
+	+ CompanyPallets.EVENT_KINDS + CompanyTripsView.EVENT_KINDS + CompanyOrdersNet.EVENT_KINDS
+	+ CompanySupplierNet.EVENT_KINDS + CompanyWalletNet.EVENT_KINDS + CompanyShopNet.EVENT_KINDS
+	+ CompanyTowNet.EVENT_KINDS + CompanyColdNet.EVENT_KINDS)
 ## Kinds the host may publish() with no request, its own rules (clock, phases, trips, truck, orders, its wallet:
 ## publish_wallet(), the supplier order of the day's close: SupplierAutoOrderHook); never units_moved.
 const HOST_EVENT_KINDS: Array[StringName] = (
-	OWN_EVENT_KINDS + CompanyPallets.HOST_EVENT_KINDS + CompanyTripsView.HOST_EVENT_KINDS
-	+ CompanyOrdersNet.HOST_EVENT_KINDS + CompanySupplierNet.HOST_EVENT_KINDS
-	+ CompanyWalletNet.HOST_EVENT_KINDS + CompanyColdNet.HOST_EVENT_KINDS)
+	OWN_EVENT_KINDS + CompanyUnitsNet.HOST_EVENT_KINDS + CompanyLayoutNet.HOST_EVENT_KINDS
+	+ CompanyTableNet.HOST_EVENT_KINDS + CompanyPackages.HOST_EVENT_KINDS + CompanyCarts.HOST_EVENT_KINDS
+	+ CompanyPallets.HOST_EVENT_KINDS + CompanyTripsView.HOST_EVENT_KINDS + CompanyOrdersNet.HOST_EVENT_KINDS
+	+ CompanySupplierNet.HOST_EVENT_KINDS + CompanyWalletNet.HOST_EVENT_KINDS + CompanyShopNet.HOST_EVENT_KINDS
+	+ CompanyTowNet.HOST_EVENT_KINDS + CompanyColdNet.HOST_EVENT_KINDS)
 ## Host: one snapshot request per peer in this long (a broken client asks once per event); the client waits as long.
 const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a later snapshot covers them anyway.

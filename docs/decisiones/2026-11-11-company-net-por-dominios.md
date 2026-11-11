@@ -9,9 +9,14 @@ tripulación (`CompanyCrew`), el fondo (`CompanyBackdrop`) y el uso de piezas (`
 
 - Después de esto vienen cinco o seis PRs en paralelo que suman cada uno un `kind` (la puerta, abrir el palet, la mesa,
   `order_packed`, el estado del remolque). Con las listas y el `match` en `CompanyNet` todos editaban las mismas líneas
-  y chocaban entre sí. Ahora un `kind` nuevo de un dominio que ya existe toca solo ese dominio.
+  y chocaban entre sí. Ahora un `kind` nuevo de un dominio que ya existe toca, en la mayoría de los casos, solo ese
+  dominio: los trece declaran las cuatro listas (vacías si no tienen) y `CompanyNet` las suma todas. Siguen tocando
+  `company_net.gd` un dominio nuevo, la primera rama de un dominio en una dirección (el estado del remolque es el
+  primer evento de `CompanyTowNet`) y un segundo `kind` donde la llamada no recibe `kind`; la lista exacta está en
+  [red-autoridad §18](../expansion-distritos/diseno/red-autoridad.md).
 - El protocolo no cambia: los RPC van por nombre de método y los cuatro `@rpc` siguen iguales; los `kind` viajan como
-  texto y las listas son los mismos conjuntos (lo comprueba `test_company_net_domains`).
+  texto y no se perdió ninguno (`test_company_net_domains` compara con las listas de `main` 9204182f solo eso, que
+  sigan estando, para que un `kind` nuevo no tenga que editar el test).
 - El guardado del día (`save_closed_day()` y compañía) no se movió: el root ya baja a 692 líneas y esas funciones leen
   `_hosted_state`, que tres tests tocan directo. Moverlas sumaba reenvíos sin bajar riesgo.
 - `test_company_layout_net` y `test_company_shed_expand_net` leían las ramas `match` de `_apply_state()` y se adaptaron a

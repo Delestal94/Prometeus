@@ -18,6 +18,8 @@ const PUSH: StringName = &"cart_push"
 const MOVED: StringName = &"cart_moved"
 const REQUEST_KINDS: Array[StringName] = [PUSH]
 const EVENT_KINDS: Array[StringName] = [MOVED]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 const SNAPSHOT_KEY: String = "carts"
 ## Carts a company can have (a snapshot or an event past this is refused).
 const MAX_CARTS: int = 16

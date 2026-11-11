@@ -24,6 +24,7 @@ const REQUEST_KINDS: Array[StringName] = [TAKE, STORE, DROP]
 const CRITICAL_KINDS: Array[StringName] = [DROP]
 ## Never one of CompanyNet.HOST_EVENT_KINDS: units only move because somebody asked, or left.
 const EVENT_KINDS: Array[StringName] = [MOVED]
+const HOST_EVENT_KINDS: Array[StringName] = []
 ## units_drop: a `pos` farther than this (meters) from where the host sees the player lands at
 ## its feet instead. Never a refusal: letting go always empties the hand (row 7).
 const DROP_REACH: float = 2.0

@@ -75,6 +75,8 @@ const DISCARDED: StringName = &"box_discarded"
 const EVENT_KINDS: Array[StringName] = [
 	STARTED, PLACED, TAKEN_OUT, FILLED, LABELED, STAMPED, SEALED, RESTOCKED, DISCARDED,
 ]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 ## Key of the tables in CompanyNet's snapshot (CompanyNet adds the part itself).
 const SNAPSHOT_KEY: String = "packing"
 const TABLE_PREFIX: String = "table:"

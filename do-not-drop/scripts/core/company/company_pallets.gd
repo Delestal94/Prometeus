@@ -49,6 +49,7 @@ const REQUEST_KINDS: Array[StringName] = [PICK, PUT, PUSH, FORK_ACT]
 const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED, DEPARTED, CLEARED, FORK]
 ## The ones the host publishes with no request (CompanyNet.publish()): the truck's pallets and the forklift's state.
 const HOST_EVENT_KINDS: Array[StringName] = [LOADED, DEPARTED, CLEARED, FORK]
+const CRITICAL_KINDS: Array[StringName] = []
 ## The station every request of the jack names: CompanyNet resolves it through its `stations`.
 const STATION: StringName = &"jack"
 const SNAPSHOT_KEY: String = "pallets"

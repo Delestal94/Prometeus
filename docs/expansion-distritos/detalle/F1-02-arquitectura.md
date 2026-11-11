@@ -90,7 +90,7 @@ una salida afuera y llega a `SUMMARY`; en `OPENING` o `SUMMARY` devuelve false; 
 **Hecho cuando:** los tests pasan y el menú de pausa tiene el botón y el aviso (captura con `revisor-visual`).
 
 ### D-0254 · Partir `company_root.gd` y `company_net.gd` — A · Opus 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-11-11, PR #@@PR@@)** — `company_net.gd` 999 → 806 líneas y `company_root.gd` 946 → 692, sin cambiar el protocolo (67) ni las listas de `kind`: cada dominio declara sus `kind` y `CompanyNet` solo los junta y los enruta; `test_company_net_domains`.
+**[x] Hecho (2026-11-11, PR #@@PR@@)** — `company_net.gd` 1000 → 820 líneas y `company_root.gd` 948 → 692, sin cambiar el protocolo (67) ni las listas de `kind`: cada dominio declara sus `kind` y `CompanyNet` solo los junta y los enruta; `test_company_net_domains`.
 **Depende de:** #844 (alquiler), #845 (montacargas), #850 (cierre del día, protocolo 67): los tres en `main`.
 **Qué:** [riesgos.md](../diseno/riesgos.md) R-16 y la [revisión D-0140](../diseno/revision-diseno.md): los dos archivos
 estaban contra el tope de 1000 líneas de gdlint, y la puerta (D-0340), el cobro (D-0815.b), el palet (D-0607.c) y la
@@ -127,11 +127,11 @@ mismos nodos y nombres en el árbol.
 - Decisión: `test_company_layout_net` y `test_company_shed_expand_net` leían las ramas `match` de `_apply_state()`;
   ahora leen las ramas por dominio. Lo que comprueban es lo mismo: cada `kind` cae en una sola rama y no hay rama
   para "lo demás". [Decisión](../../decisiones/2026-11-11-company-net-por-dominios.md).
-- Qué toca después un `kind` nuevo: si es de un dominio que ya existe, solo ese archivo (su lista, su chequeo y su
-  `apply`); un dominio nuevo suma su lista a las constantes de `CompanyNet` y una rama en `_handle_request()` y en
-  `_apply_state()`, y su variable. `PROTOCOL_VERSION` sube igual que antes (convenciones-godot §6).
-**Test** `test_company_net_domains` (nuevo): los cuatro `@rpc` de `CompanyNet`, las cuatro listas iguales como
-conjunto a las de antes de partir, cada `kind` de un solo dominio, las listas de `CompanyNet` = propias + dominios,
+- Qué toca después un `kind` nuevo: ver [red-autoridad §18](../diseno/red-autoridad.md) ("Qué toca una acción
+  nueva"): en la mayoría de los casos solo su dominio, con las excepciones que lista ahí. `PROTOCOL_VERSION` sube
+  igual que antes (convenciones-godot §6).
+**Test** `test_company_net_domains` (nuevo): los cuatro `@rpc` de `CompanyNet`, ningún `kind` de antes de partir
+perdido (solo eso: un `kind` nuevo no edita el test), cada dominio con sus cuatro listas, cada `kind` de un solo dominio, las listas de `CompanyNet` = propias + dominios,
 una rama por dominio y sin `else` en las dos funciones, los alias de `CompanyRoot` y los dos archivos (y los nuevos)
 bajo 850 líneas. `test_company_late_join` y `test_company_rejoin` leen el estado movido en su lugar nuevo
 (`sync._rx_id`, `units._last_origin`) sin cambiar aserciones.
