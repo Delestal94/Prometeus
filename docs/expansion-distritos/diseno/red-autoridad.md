@@ -201,7 +201,7 @@ voto es D-0518.b).
 - `scripts/core/company/company_net.gd` tiene `_request`, `_apply_event` y `_rejected` (protocolo 29) y los
   `kind` `units_take`, `units_store` (filas 5 y 6) y `snapshot_request`. Una tarea que suma una acción agrega
   su `kind` a `REQUEST_KINDS` (y a `CRITICAL_KINDS` si es crítica), lo valida en `_handle_request()` y aplica
-  su evento en `_apply_state()`.
+  su evento en `_apply_state()`. Desde D-0254 eso lo hace el dominio de la acción, no `CompanyNet` (§18).
 - **Quién pide:** el RPC `_request` atribuye al remitente (`RpcGuard.sender`); una petición del propio host
   (`request()`) es siempre del host, aunque la haga mientras atiende el RPC de otro peer.
 - **Estaciones (regla 4):** `CompanyNet.stations` es un `Callable(id) -> {location, spot, accepts?, capacity?}`
@@ -757,3 +757,24 @@ voto es D-0518.b).
 - **Pendiente:** el libro compartido no se entera aún de que un pedido se entregó (filas 19 y 20 de este documento, D-0815.b):
   **cuando la puerta entregue tiene que publicar la entrega como evento del libro compartido**, o el pedido sigue `OUT` y el
   cierre del día lo da por no entregado (−3). Test: `test_company_day_close_orders`, `test_company_day_close_world`.
+
+## 18. Lo construido (D-0254): `CompanyNet` por dominios
+
+- **Sin cambio de protocolo.** Los cuatro `@rpc` (`_request`, `_apply_event`, `_snapshot`, `_rejected`) siguen en
+  `CompanyNet` con la misma firma, y los `kind` que toma, aplica, deja publicar al host y cuenta como críticos son los
+  mismos de antes (`test_company_net_domains` los compara con la lista de antes de partir). `PROTOCOL_VERSION` no se movió.
+- **Cada `kind` es de un dominio.** El dominio es el script que lo chequea y lo aplica, y declara sus listas:
+  `REQUEST_KINDS`, `EVENT_KINDS`, `HOST_EVENT_KINDS` (los que el host publica sin petición, `publish()`) y
+  `CRITICAL_KINDS` (regla 8). Las de `CompanyNet` son la suma de las de cada dominio más las suyas (`snapshot_request`,
+  `clock_anchor`, `day_phase`). Ningún `kind` está en dos dominios.
+- **`CompanyNet` solo enruta.** `_handle_request()` y `_apply_state()` tienen una rama por dominio
+  (`<Dominio>.REQUEST_KINDS.has(kind)`, `<Dominio>.EVENT_KINDS.has(kind)`) y ninguna para "lo demás": un `kind` que no
+  sea de nadie no cae en el código de otro. Las peticiones en una estación (unidades, mesas, carros, palets) pasan por
+  `CompanyUnitsNet.reach()` dentro del `on_request()` de su dominio, con el mismo alcance que antes (regla 4).
+- **Piezas nuevas.** `CompanyUnitsNet` (filas 5 a 7, `units_moved`, el alcance y dónde estuvo cada peer) y
+  `CompanySnapshotSync` (límite de pedidos, numeración y trozos del snapshot; sin RPC). `CompanyNet.units` y
+  `CompanyNet.sync`; la API pública del snapshot y `within_reach()` / `last_known_position()` quedan en `CompanyNet`.
+- **Qué toca una acción nueva:** si es de un dominio que ya existe, solo ese dominio (su lista, su chequeo, su `apply`) y
+  `PROTOCOL_VERSION`; varias tareas en paralelo ya no chocan en `company_net.gd`. Un dominio nuevo suma su variable, sus
+  listas a las cuatro constantes de `CompanyNet` y una rama en cada una de las dos funciones.
+- **Líneas:** `company_net.gd` queda en 806 (tope de gdlint 1000; `test_company_net_domains` pide menos de 850).

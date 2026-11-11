@@ -181,8 +181,10 @@ func _check_routing(source: String, func_name: String, list: String, own: Array)
 func _check_old_names() -> void:
 	_expect(CompanyRoot.CREW_GROUP == CompanyCrew.GROUP and CompanyRoot.SPAWN == CompanyCrew.SPAWN
 		and CompanyRoot.CREW_SPACING == CompanyCrew.SPACING and CompanyRoot.SPAWN_CLEARANCE == CompanyCrew.CLEARANCE
-		and CompanyRoot.PLAYER_PREFIX == CompanyCrew.PLAYER_PREFIX and CompanyRoot.PLAYER_SCENE == CompanyCrew.PLAYER_SCENE,
-		"CompanyRoot's crew constants are CompanyCrew's (group %s, spawn %s)" % [CompanyRoot.CREW_GROUP, CompanyRoot.SPAWN])
+		and CompanyRoot.PLAYER_PREFIX == CompanyCrew.PLAYER_PREFIX
+		and CompanyRoot.PLAYER_SCENE == CompanyCrew.PLAYER_SCENE,
+		"CompanyRoot's crew constants are CompanyCrew's (group %s, spawn %s)"
+		% [CompanyRoot.CREW_GROUP, CompanyRoot.SPAWN])
 	var spots: Array[Vector3] = []
 	for slot: int in range(4):
 		spots.append(CompanyRoot.crew_spawn(slot))
