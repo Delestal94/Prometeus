@@ -1,5 +1,5 @@
 extends SceneTree
-## Run: Godot --headless --path do-not-drop --script res://tests/test_supplier_bill_hook.gd
+## Run: Godot --headless --path do-not-drop --script res://tests/test_company_supplier_bill.gd
 ##
 ## Receiving a supplier pallet charges the company in the game (expansion D-0503.b: supplier_bill_hook.gd, hooked on
 ## the host by company_supplier_link.gd; PalletJack.take_received(), SupplierPurchase.bill()):
@@ -24,7 +24,7 @@ extends SceneTree
 
 const STATE_SCRIPT := preload("res://scripts/core/company/company_state.gd")
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
-const DIR: String = "user://test_supplier_bill_hook"
+const DIR: String = "user://test_company_supplier_bill"
 const PORT: int = 24753
 const REASON: StringName = SupplierPurchase.REASON
 const RENT: int = CompanyTuning.RENT_PER_DAY
