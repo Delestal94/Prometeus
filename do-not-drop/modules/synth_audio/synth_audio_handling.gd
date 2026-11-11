@@ -110,7 +110,8 @@ static func make_tension_pulse() -> AudioStreamWAV:
 
 ## The clipboard's spring clip (D-1913, diseno/portapapeles.md §6): a dry metal snap with a short ring
 ## and the board's knock under it. `raise` (taken out) is brighter and lighter; put away it is a tone
-## lower with more board, so the two read apart without looking.
+## lower with more board, so the two read apart without looking. Seeded: the mix check measures its
+## level (CompanyMix), and unseeded noise moved it half a decibel from one build to the next.
 static func make_clipboard_clip(raise: bool) -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.14
@@ -119,9 +120,11 @@ static func make_clipboard_clip(raise: bool) -> AudioStreamWAV:
 	var sample_count: int = int(RATE * DURATION)
 	var data := PackedByteArray()
 	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1913 if raise else 1914
 	for i: int in range(sample_count):
 		var t: float = float(i) / RATE
-		var snap: float = (randf() * 2.0 - 1.0) * exp(-t * 420.0)
+		var snap: float = rng.randf_range(-1.0, 1.0) * exp(-t * 420.0)
 		var ring: float = (sin(TAU * 3150.0 * pitch * t) * 0.6 + sin(TAU * 4720.0 * pitch * t) * 0.4) * exp(-t * 70.0)
 		var knock: float = sin(TAU * 190.0 * pitch * t) * exp(-t * 38.0) * board
 		var sample: float = snap * 0.7 + ring * 0.35 + knock
@@ -134,17 +137,19 @@ static func make_clipboard_clip(raise: bool) -> AudioStreamWAV:
 
 
 ## A clipboard sheet flicked over (D-1913): a quick, airy paper swish, shorter and brighter than the
-## newspaper's page turn, so changing sheets several times in a row never piles up.
+## newspaper's page turn, so changing sheets several times in a row never piles up. Seeded, like the clip.
 static func make_clipboard_sheet() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.17
 	var sample_count: int = int(RATE * DURATION)
 	var data := PackedByteArray()
 	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1915
 	var low: float = 0.0
 	for i: int in range(sample_count):
 		var t: float = float(i) / RATE
-		var noise: float = randf_range(-1.0, 1.0)
+		var noise: float = rng.randf_range(-1.0, 1.0)
 		# High-passed noise (noise minus its smoothed copy): paper, not cardboard.
 		low = lerpf(low, noise, 0.18)
 		var envelope: float = minf(t * 70.0, 1.0) * exp(-t * 22.0)

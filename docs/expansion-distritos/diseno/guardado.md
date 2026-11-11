@@ -114,10 +114,9 @@ uno ya vio, y la empresa propia no se entera de quién la jugó.
 
 ## 5. Orden con el cobro
 
-Hoy nada paga en el juego: `OrderSettlement.settle` y `FixedCosts.settle` solo los llama
-`tests/bot_company_day.gd`. **D-0251 tiene que estar antes que la tarea que enganche el cobro o el alquiler al
-mundo**, o el agujero de la regla 2 se abre en el juego. La tarea que enganche el cobro lleva
-`Depende de: D-0251`.
+El alquiler se cobra en `CLOSING` (`FixedCostsHook`, D-0509.b). `OrderSettlement.settle` todavía lo llama solo
+`tests/bot_company_day.gd`. **D-0251 tiene que estar antes que la tarea que enganche el cobro al mundo**, o el
+agujero de la regla 2 se abre en el juego. La tarea que enganche el cobro lleva `Depende de: D-0251`.
 
 ## 6. Cambios a otros documentos
 

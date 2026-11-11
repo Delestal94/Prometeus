@@ -45,8 +45,8 @@ extends SceneTree
 ##                       vehicle is out and TripResult reports the deliveries and the clock; the player
 ##                       gets out (leave_seat)
 ##   close_day       ok  the clock jumps to 20:00 and DayCycle goes OPERATING, CLOSING, SUMMARY;
-##                       the summary holds the day's packaging costs and the closed day saves
-##                       and loads back
+##                       the summary holds the day's packaging costs and the rent the game charged
+##                       at CLOSING (D-0509.b) and the closed day saves and loads back
 ## What is not a CompanyNet request yet (REQUEST_KINDS has only units_take, units_store,
 ## units_drop and the build ones) the bot does on the host's own objects, as the world will on the
 ## host: opening a pallet, the box and the table (PackingStation, BoxDispenser,
@@ -671,6 +671,9 @@ static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 	var costs: Dictionary = summary.get("cost_by_reason", {})
 	if not costs.has("boxes") or not costs.has("packaging"):
 		return _fail("summary_without_packing_costs")
+	# The game charges the rent at CLOSING, not the bot (D-0509.b).
+	if int(costs.get("rent", 0)) != CompanyTuning.RENT_PER_DAY:
+		return _fail("summary_without_rent")
 	if int(summary.get("closing", -1)) != int(state.get("money")):
 		return _fail("summary_money")
 	return _save_and_load(level, state, ctx)
