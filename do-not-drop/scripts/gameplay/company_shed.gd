@@ -695,7 +695,7 @@ func rack_slots() -> Dictionary:
 		var rect: Rect2i = piece["rect"]
 		var middle: Vector3 = cell_to_local(Vector2(rect.position) + Vector2(rect.size) * 0.5)
 		for level: int in SHELF_LEVELS:
-			found[StringName("%s-%d" % [piece["uid"], level])] = {"pos": Vector2(middle.x, middle.z),
+			found[CompanyPallets.rack_slot(piece["uid"], level)] = {"pos": Vector2(middle.x, middle.z),
 				"level": SHELF_DECKS[level], "yaw": 0.0 if rect.size.x >= rect.size.y else PI * 0.5}
 	return found
 
