@@ -36,6 +36,9 @@ extends SceneTree
 ##   off with "the host closes it"). The exits warn that leaving loses the day only on the host in
 ##   OPERATING or CLOSING.
 ## - Malformed day_phase data (event or snapshot part) is refused and changes nothing.
+## - The cycle's own poll (its _process, for a world with no BusinessTick) is one poll() per
+##   POLL_SECONDS of frame time, counted again after each poll. Every cycle of this test has it off,
+##   as CompanyRoot does: only the test's poll() moves a phase, whatever the frames last (#713).
 ## Expected in the log: CompanyNet's three warnings (a day_phase with no day cycle on the net) and
 ## two errors (the host could not apply its own day_phase).
 
@@ -84,6 +87,7 @@ func _run() -> void:
 	await _check_solo()
 	_check_big_summary()
 	_check_refused_phase()
+	_check_own_poll()
 	_check_close_early()
 	await _check_two_peers()
 	if _failures == 0:
@@ -109,9 +113,19 @@ func _new_side(name_: String, state: Node) -> Dictionary:
 	cycle.name = "DayCycle"
 	cycle.ticks = func() -> int: return _now
 	side.add_child(cycle)
+	_hand_polled(cycle)
 	_expect(clock.attach(net, state) and cycle.attach(net, clock, state),
 		"A clock and a day cycle attach to their peer's CompanyNet")
 	return {"side": side, "net": net, "clock": clock, "cycle": cycle}
+
+
+## Only the test polls `cycle`. In the tree a DayCycle also polls by itself every POLL_SECONDS of
+## real frame time (its _process; CompanyRoot turns it off for the BusinessTick). Left on, that poll
+## is a second driver on the wall clock: when its quarter second came due in the frame the test had
+## just moved the host to CLOSING, it went on to SUMMARY before the test set the trip out, and the
+## client got events 5, 6 and 7 at once (issue #713, seen only on loaded CI runners).
+func _hand_polled(cycle: DayCycle) -> void:
+	cycle.set_process(false)
 
 
 func _new_state(company_name: String) -> Node:
@@ -359,6 +373,34 @@ func _check_refused_phase() -> void:
 	parts["side"].free()
 
 
+## The cycle's own poll, frame by frame and by hand: one poll() every POLL_SECONDS of frame time,
+## counted again from zero after each one. (In the tree it is off for every cycle of this test.)
+func _check_own_poll() -> void:
+	var state: Node = _new_state("Sola SRL")
+	var parts: Dictionary = _new_side("OwnPollSide", state)
+	parts["side"].add_child(state)
+	var clock: GameClock = parts["clock"]
+	var cycle: DayCycle = parts["cycle"]
+	var frame: float = DayCycle.POLL_SECONDS * 0.6
+	_expect(not cycle.is_processing(), "A cycle of this test doesn't poll by itself")
+	clock.set_speed(SPEED)
+	_expect(cycle.open_day(1), "(day 1 opens)")
+	_now += roundi(CompanyTuning.OPENING_REAL_SECONDS * 1000.0)
+	cycle._process(frame)
+	_expect(cycle.phase() == DayCycle.Phase.OPENING,
+		"The cycle's own _process doesn't poll before POLL_SECONDS of frames (got %s)" % cycle.phase_name())
+	cycle._process(frame)
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING,
+		"...and polls once they add up to it: OPENING is over (got %s)" % cycle.phase_name())
+	_now += 11_000
+	cycle._process(frame)
+	_expect(cycle.phase() == DayCycle.Phase.OPERATING and clock.minute_now() >= 1200.0,
+		"...counting again from zero after a poll: 20:00 waits for the next one (got %s)" % cycle.phase_name())
+	cycle._process(frame)
+	_expect(cycle.phase() == DayCycle.Phase.CLOSING, "...which closes the day (got %s)" % cycle.phase_name())
+	parts["side"].free()
+
+
 ## Day 2 is over at 20:00 with a trip out: CLOSING until it comes back.
 func _check_trip(cycle: DayCycle, clock: GameClock, net: CompanyNet) -> void:
 	_trips = 1
@@ -584,6 +626,7 @@ func _build_peer(side: Node, state: Node) -> Dictionary:
 	cycle.name = "DayCycle"
 	cycle.ticks = func() -> int: return _now
 	side.add_child(cycle)
+	_hand_polled(cycle)
 	_expect(clock.attach(net, state) and cycle.attach(net, clock, state),
 		"This peer's clock and day cycle attach to its CompanyNet")
 	return {"net": net, "clock": clock, "cycle": cycle}
