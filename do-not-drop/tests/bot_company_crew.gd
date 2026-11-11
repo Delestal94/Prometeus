@@ -11,8 +11,10 @@ extends RefCounted
 ## out, and a refusal has no reason (nobody to send it to). D-2017 plays the pair over ENet. A third player and up
 ## are only a number for the day's orders: the stub `crew_size`.
 ##
-## An actor is moved by teleport (go_to(): next to the spot, well inside the reach the host then measures) and never
-## walks: headless the mouse is not captured, so a player's own movement does not run.
+## An actor is moved by teleport (go_to(): next to the spot, well inside the reach the host then measures; the second
+## one through the pose its peer replicates, place()) and never walks: headless the mouse is not captured, so a
+## player's own movement does not run. A box is set down with drop_box() (the second actor's drop is the host's
+## handling of that peer's request_drop).
 ##
 ## Idle (roles-tripulacion.md §1, corte-vertical.md §4 bis): a player is busy with units in the hands (hands:<peer>
 ## in the stock), carrying a box (Player.carried_package), at a wheel (a fleet vehicle's driver_peer_id) or driving
@@ -98,6 +100,8 @@ class IdleWatch extends Node:
 
 	## One look at every actor at `now_msec`.
 	func sample(now_msec: int) -> void:
+		if not running:
+			return
 		for actor: Dictionary in crew:
 			var peer: int = int(actor["peer"])
 			if is_busy(actor):
@@ -201,8 +205,43 @@ static func hands_of(actor: Dictionary) -> StringName:
 
 ## The actor stands next to `spot`, as one walking up to it would.
 static func go_to(tree: SceneTree, actor: Dictionary, spot: Vector3) -> void:
-	(actor["player"] as Node3D).global_position = spot + STAND_OFFSET
+	place(actor, spot + STAND_OFFSET, (actor["player"] as Node3D).rotation.y)
 	await tree.process_frame
+
+
+## The actor stands at `at` looking along `yaw` (0: north, -Z). The host's own player is just moved. The second
+## actor is another peer's player in the host's world: the host puts it, every frame, where the replicated pose
+## says (net_position, net_yaw: Player.Ride.apply_net_state), so the bot writes the pose that peer would replicate.
+## It is never pushed into the pose smoother (Ride.push_net_pose): a teleport a frame after another would be
+## extrapolated as a huge speed, so the host keeps the raw pair, as it does before a remote player's first packet,
+## and measures reach from it (Ride.latest_position).
+static func place(actor: Dictionary, at: Vector3, yaw: float) -> void:
+	var player := actor["player"] as Player
+	player.global_position = at
+	player.rotation.y = yaw
+	if player.is_local():
+		return
+	player.net_in_vehicle = false
+	player.net_vehicle = -1
+	player.net_position = at
+	player.net_yaw = yaw
+	player.net_time = NetPoseSmoother.clock_ms()
+
+
+## The actor sets down the box in its hands, just ahead of where it stands (Player's drop). The host's own player
+## drops it itself; for the second actor the bot hands the host the drop that peer's request_drop would carry (the
+## spot its Player works out, PackageHandling.drop as the sender `peer`): only the transport is left out.
+static func drop_box(actor: Dictionary) -> void:
+	var player := actor["player"] as Player
+	if player.is_local():
+		player.call(&"_drop_carried")
+		return
+	var package: DeliveryPackage = player.carried_package
+	if package == null:
+		return
+	var spot: Vector3 = player.call(&"_drop_position", package.get_half_extents())
+	PackageHandling.drop(package, int(actor["peer"]), Transform3D(player.global_basis, spot), false, -1)
+	player.carried_package = null
 
 
 ## Whether the actor stands within the reach the host measures to `spot` (Interactable.REMOTE_REACH from its reach
@@ -219,7 +258,7 @@ static func ask(level: CompanyRoot, actor: Dictionary, kind: StringName, data: D
 	var before: int = net.seq
 	if int(actor["peer"]) != level.multiplayer.get_unique_id():
 		net.call(TAKE_REQUEST, int(actor["peer"]), kind, data.merged({"rid": 0}, true))
-		return &"" if net.seq > before else &"refused"
+		return &"" if net.seq > before else _refusal_of(level, actor, data)
 	var refusals: Array[StringName] = []
 	var on_refused: Callable = func(_rid: int, reason: StringName) -> void: refusals.append(reason)
 	net.request_rejected.connect(on_refused)
@@ -230,6 +269,21 @@ static func ask(level: CompanyRoot, actor: Dictionary, kind: StringName, data: D
 	if not refusals.is_empty():
 		return refusals[0]
 	return &"" if net.seq > before else &"dropped"
+
+
+## Why the host refused the local actor's request, as far as the bot can tell without the reason (it has no session
+## to hear it through): &"out_of_reach" when the host does not see it within reach of the station (from where the
+## host places it: CompanyNet's own lookup of a peer's player), else &"refused".
+static func _refusal_of(level: CompanyRoot, actor: Dictionary, data: Dictionary) -> StringName:
+	var net: CompanyNet = level.net
+	var known: bool = net.stations.is_valid() and data.has("station")
+	var station: Dictionary = net.stations.call(data["station"]) if known else {}
+	if station.is_empty():
+		return &"refused"
+	var origin: Variant = net.call(&"_origin_of", int(actor["peer"]))
+	if not origin is Vector3 or not CompanyNet.within_reach(origin, station["spot"]):
+		return &"out_of_reach"
+	return &"refused"
 
 
 ## Notes that the run took the shortcut `id` (STUBS): once per run, in the order they were first taken.

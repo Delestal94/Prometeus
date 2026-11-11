@@ -350,10 +350,9 @@ static func carry_to_zone(
 	ctx["zone_used"] = int(ctx["zone_used"]) + 1
 	# Player sets a box down BODY_RADIUS + DROP_GAP + its half depth ahead: it stands that far south, looking north.
 	var back: float = Player.BODY_RADIUS + Player.DROP_GAP + package.get_half_extents().z
-	player.global_rotation = Vector3.ZERO
-	player.global_position = Vector3(spot.x, spot.y + PLAYER_HEIGHT, spot.z + back)
+	CREW.place(actor, Vector3(spot.x, spot.y + PLAYER_HEIGHT, spot.z + back), 0.0)
 	await tree.physics_frame
-	player.call(&"_drop_carried")
+	CREW.drop_box(actor)
 	var calm: int = 0
 	for _frame: int in REST_FRAMES:
 		await tree.physics_frame

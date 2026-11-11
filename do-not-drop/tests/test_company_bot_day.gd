@@ -252,6 +252,7 @@ func _check_stages(bot: GDScript, level: Node3D) -> void:
 			"close_day":
 				_check_closed(root_level, ctx)
 	var seconds: float = (Time.get_ticks_msec() - start) / 1000.0
+	print("company bot: the nine stages took %.1f s" % seconds)
 	_expect(seconds < STAGES_SECONDS, "The stages run in a bounded time (took %.1f s)" % seconds)
 	_check_run(bot, root_level, ctx, results)
 
