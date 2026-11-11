@@ -7,7 +7,7 @@ extends RefCounted
 ## (SupplierOrderCart.suggested(): the units today's orders asked for less the stock, trimmed to leave the
 ## rent and the reserve in the wallet) and the day's summary tells it. It applies to every crew. Pure rule over
 ## the values passed in: no node, no autoload; SupplierAutoOrderHook is the host's wiring. Nothing is charged
-## here: like any order, the bill is paid when each pallet is received (SupplierPurchase.receive).
+## here: like any order, the bill is paid when each pallet is received (SupplierBillHook, D-0503.b).
 
 
 ## The lines to order for tomorrow, [{product, qty}] in product id order (SupplierOrderCart.to_array()), or []

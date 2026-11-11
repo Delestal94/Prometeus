@@ -8,7 +8,11 @@ extends SceneTree
 ## - an invalid, unknown or already received pallet charges nothing;
 ## - can_order() checks the whole order against the wallet;
 ## - a pallet that never arrives costs nothing; receiving past the balance
-##   goes into the red.
+##   goes into the red;
+## - with a supplier named, cost() and pallet_cost() are at its price (its
+##   price_factor, D-0621), and bill() charges a pallet at it, once per call,
+##   returning what it charged: 0 and nothing charged for a pallet that costs
+##   nothing or a wallet that refuses (D-0503.b: the game's SupplierBillHook).
 
 var _failures: int = 0
 var _products: Dictionary = {}
@@ -31,6 +35,7 @@ func _run() -> void:
 	_test_cost()
 	_test_receive(state)
 	_test_can_order_and_red(state)
+	_test_bill(state)
 	state.reset()
 	if _failures == 0:
 		print("PASS: receiving a pallet charges units x buy price to the supplier ledger")
@@ -74,6 +79,43 @@ func _test_can_order_and_red(state: Node) -> void:
 	state.money = 100
 	_expect(SupplierPurchase.receive(state, inv, orders[0], _products), "delivery goes through")
 	_expect(state.money == -200, "balance goes into the red")
+
+
+## A wallet that says no (CompanyNet.publish_wallet() refusing the event).
+class ClosedWallet extends RefCounted:
+	var asked: int = 0
+
+	func charge(_amount: int, _reason: StringName) -> bool:
+		asked += 1
+		return false
+
+
+func _test_bill(state: Node) -> void:
+	state.new_company("Supplier Co")
+	var money: int = state.money
+	var cheap := SupplierDefinition.new()
+	cheap.id = &"cheap"
+	cheap.products = [&"lamp"]
+	cheap.price_factor = 0.9
+	_expect(SupplierPurchase.cost(&"lamp", 10, _products, cheap) == 450, "10 lamps at 0.9 cost 450")
+	var pallet := Pallet.make(&"p9", &"lamp", 10)
+	_expect(SupplierPurchase.pallet_cost(pallet, _products, cheap) == 450
+		and SupplierPurchase.pallet_cost(pallet, _products) == 500, "a pallet costs its supplier's price")
+	_expect(SupplierPurchase.bill(state, pallet, _products, cheap) == 450 and state.money == money - 450,
+		"bill() charges the pallet at its supplier's price (money %d)" % state.money)
+	_expect(state.ledger_total(&"supplier") == -450, "... as supplier")
+	_expect(SupplierPurchase.bill(state, pallet, _products) == 500 and state.money == money - 950,
+		"without a supplier the bill is at list price")
+	var unknown := Pallet.make(&"p8", &"nope", 3)
+	_expect(SupplierPurchase.bill(state, unknown, _products, cheap) == 0
+		and SupplierPurchase.bill(state, {}, _products) == 0 and state.money == money - 950,
+		"a pallet that costs nothing is not billed")
+	var closed := ClosedWallet.new()
+	_expect(SupplierPurchase.bill(closed, pallet, _products) == 0 and closed.asked == 1
+		and SupplierPurchase.bill(null, pallet, _products) == 0, "a wallet that refuses is charged nothing")
+	state.money = 100
+	_expect(SupplierPurchase.bill(state, pallet, _products) == 500 and state.money == -400,
+		"the bill goes through into the red")
 
 
 func _expect(condition: bool, label: String) -> void:
