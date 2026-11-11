@@ -55,7 +55,7 @@ mira el pedido entero; recibir sin saldo lo deja en rojo.
 **Hecho cuando:** el test pasa.
 
 ### D-0503.b · El cobro del proveedor en el juego — A · Opus 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-11-11, PR #@@PR@@)** — `SupplierBillHook` (`scripts/gameplay/supplier_bill_hook.gd`, lo engancha `CompanySupplierLink` en el host): el primer apoyo de un palet del camión cobra sus unidades al precio de su proveedor, una vez, como un `wallet_moved` con motivo `supplier`; `test_company_supplier_bill`.
+**[x] Hecho (2026-11-11, PR #858)** — `SupplierBillHook` (`scripts/gameplay/supplier_bill_hook.gd`, lo engancha `CompanySupplierLink` en el host): el primer apoyo de un palet del camión cobra sus unidades al precio de su proveedor, una vez, como un `wallet_moved` con motivo `supplier`; `test_company_supplier_bill`.
 **Depende de:** D-0503, D-0517, D-0605.b, D-0509.b (el modelo del enganche)
 **Qué:** hasta acá `SupplierPurchase.receive` solo se llamaba en tests: `PalletJack` metía las unidades en el stock y nadie
 cobraba, así que la mercadería era gratis y la ganancia del día que mide el corte vertical (§4.4 de
@@ -244,4 +244,4 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Qué:** que todos los clientes vean el mismo saldo. Todo cobro o pago nuevo en el mundo compartido se publica con `publish_wallet`, nunca con `earn` / `spend` / `charge` directo en el host.
 **Test** `test_company_money_net`: saldo y último `balance` del libro iguales en los 3 peers tras cada movimiento (ingreso, gasto, rojo, deriva), una sola entrada en el host, evento malformado ignorado, entrada tardía, cliente que no puede publicar.
 **Hecho cuando:** test y auditoría (cumplido).
-**Pendiente (subtareas):** conectar a `publish_wallet` cada camino al enchufarlo (`order_settlement`, `order_tips`, `fixed_costs`, `supplier_purchase`, `company_shop` / D-0518, `warehouse_stages`, deshacer de `build_placement` con pedido `layout_undo` solo del host). Enchufados: `fixed_costs` (D-0509.b) y `supplier_purchase` (D-0503.b, 2026-11-11, PR #@@PR@@).
+**Pendiente (subtareas):** conectar a `publish_wallet` cada camino al enchufarlo (`order_settlement`, `order_tips`, `fixed_costs`, `supplier_purchase`, `company_shop` / D-0518, `warehouse_stages`, deshacer de `build_placement` con pedido `layout_undo` solo del host). Enchufados: `fixed_costs` (D-0509.b) y `supplier_purchase` (D-0503.b, 2026-11-11, PR #858).
