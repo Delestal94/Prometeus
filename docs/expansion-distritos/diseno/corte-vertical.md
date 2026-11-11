@@ -73,7 +73,7 @@ Y además, medido en la misma corrida:
 | Sin fugas | huérfanos 0 y objetos que crecen < 2 % entre el día 2 y el 10 | D-2013 |
 | Un solo jugador completa el día | el mismo bot con 1 jugador cierra con ganancia > 0 | D-2016 |
 | Par y trío en red | `net_pair` y `net_trio` en modo Empresa sin desincronización | D-2017 |
-| Ningún frame > 50 ms al manejar del galpón a la última casa de Centro por la carga de celdas | `test_company_cells` | D-0303 |
+| Ningún frame > 50 ms al manejar del galpón a la última casa de Centro por la carga de celdas | `test_company_cells`, sobre las celdas reales (calles, `CentroDecor` y las 30 casas); en ventana lo mide `bench_company` (D-2011.1) | D-0303 (D-0303.1) |
 | Tests viejos de Entrega y Endless siguen verdes | CI completo | — |
 
 Mientras alguna tarea del §2 no exista, el bot la **simula con un stub marcado** y el hueco queda como

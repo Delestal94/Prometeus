@@ -1,9 +1,9 @@
 extends SceneTree
 ## Run (from tools/export/smoke-company.sh, D-2019):
-##   <editor> --headless --main-pack <build>/TakeMyPackage.pck --script <abs>/probe_company.gd -- --mode=company
+##   <editor> --headless --main-pack <build>/TakeMyPackage.pck --script <abs>/probe_company.gd -- --autostart-company
 ##
 ## Looks inside an exported build's .pck: a release template ignores --script, so the same engine version's
-## editor binary mounts the pack. It proves what a quiet log cannot: the menu takes --mode=company as the exe
+## editor binary mounts the pack. It proves what a quiet log cannot: the menu takes --autostart-company as the exe
 ## does, the company world really comes up (crew, shed, day open) and the registries that use DirAccess are
 ## full. A listing is what breaks in an export (x.tres.remap instead of x.tres), and an empty one only shows
 ## as a shed with nothing to buy. Prints "COMPANY_PROBE OK" and exits 0, or names what failed and exits 1.
@@ -50,7 +50,7 @@ func _run() -> void:
 	_expect(not ResourceLoader.exists(MUST_NOT_SHIP), "tests/ is left out of the pack (%s)" % MUST_NOT_SHIP)
 	_expect(change_scene_to_file(MENU_SCENE) == OK, "The menu loads from the pack")
 	var level: Node = await _wait_for_world()
-	_expect(level != null, "--mode=company reaches the company world (at %s)" % current_scene)
+	_expect(level != null, "--autostart-company reaches the company world (at %s)" % current_scene)
 	if level != null:
 		for _frame: int in SETTLE_FRAMES:
 			await physics_frame

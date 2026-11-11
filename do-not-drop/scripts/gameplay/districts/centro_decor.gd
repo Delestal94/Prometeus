@@ -69,9 +69,14 @@ const BENCH_COLOR := Color("7f8584")
 const LIGHT_POLE_COLOR := Color("6a7276")
 const LIGHT_HEAD_COLOR := Color("3c4246")
 
-## A house enters the tree this many per frame after its cell: each one loads its model, makes its walls and
-## its doorbell (10 to 15 ms in software rendering), so a cell with five would be a 60 ms frame.
+## Houses that enter the tree per frame, for the whole map and after their cell: each one loads its model, makes
+## its walls and its doorbell (10 to 20 ms in software rendering), so a cell with five would be a 60 ms frame, and
+## so would three cells that each let one in. take_frame() deals the frames.
 const HOUSES_PER_FRAME: int = 1
+
+## The process frame that already took something heavy into the tree (a cell with content, a house): no house
+## goes in during it. One for every drip of every cell (D-0303.1).
+static var _taken_frame: int = -1
 
 const COLLISION_LAYER: int = 1
 const COLLISION_MASK: int = 6
@@ -223,6 +228,22 @@ func corners(node_id: StringName) -> Array[Dictionary]:
 
 
 # --- The nodes -------------------------------------------------------------------------------------
+
+
+## Whether a house may go in this process frame: true for the first drip that asks, false for the rest and for
+## all of them in a frame hold_houses() marked.
+static func take_frame() -> bool:
+	var frame: int = Engine.get_process_frames()
+	if frame == _taken_frame:
+		return false
+	_taken_frame = frame
+	return true
+
+
+## Keeps the houses out of this process frame. The cells call it when one with content enters the tree
+## (CompanyCells), so the frame that paid for a cell does not pay for a house too.
+static func hold_houses() -> void:
+	_taken_frame = Engine.get_process_frames()
 
 
 ## The `Centro` node of the cell (sidewalks, props, lights, houses), or null when the cell holds none.
@@ -554,16 +575,18 @@ static func _up(ground: Vector2, height: float) -> Vector3:
 	return Vector3(ground.x, height, ground.y)
 
 
-## The houses of a cell, put in the tree a few per frame (HOUSES_PER_FRAME) instead of all with the cell.
-## The ones not in yet are freed with the node if the cell goes first.
+## The houses of a cell, put in the tree a few per frame (HOUSES_PER_FRAME) instead of all with the cell, and
+## only in the frames CentroDecor.take_frame() gives this drip: the drips of every cell share them, the first
+## in the tree first. The ones not in yet are freed with the node if the cell goes first.
 class HouseDrip extends Node3D:
 	var pending: Array[Node3D] = []
 	var per_frame: int = 1
 
 	func _process(_delta: float) -> void:
-		release(per_frame)
+		if CentroDecor.take_frame():
+			release(per_frame)
 
-	## Puts the next `count` pending houses in the tree.
+	## Puts the next `count` pending houses in the tree, whatever the frame (a test's hand).
 	func release(count: int) -> void:
 		for i in count:
 			if pending.is_empty():
