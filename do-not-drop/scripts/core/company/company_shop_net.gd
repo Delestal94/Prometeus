@@ -33,6 +33,8 @@ const BUY: StringName = &"shop_buy"
 const BOUGHT: StringName = &"shop_bought"
 const REQUEST_KINDS: Array[StringName] = [BUY]
 const EVENT_KINDS: Array[StringName] = [BOUGHT]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 
 ## The requester is not the host: only the host spends (D-0518; the crew's vote is D-0518.b).
 const REASON_HOST_ONLY: StringName = &"host_only"

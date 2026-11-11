@@ -75,6 +75,8 @@ const DISCARDED: StringName = &"box_discarded"
 const EVENT_KINDS: Array[StringName] = [
 	STARTED, PLACED, TAKEN_OUT, FILLED, LABELED, STAMPED, SEALED, RESTOCKED, DISCARDED,
 ]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 ## Key of the tables in CompanyNet's snapshot (CompanyNet adds the part itself).
 const SNAPSHOT_KEY: String = "packing"
 const TABLE_PREFIX: String = "table:"
@@ -207,6 +209,15 @@ static func box_location(box: StringName) -> StringName:
 ## Inventory location of a taped box's units (the package it became).
 static func package_location(package: StringName) -> StringName:
 	return StringName(PACKAGE_PREFIX + String(package))
+
+
+## Host: check() for a request `net` (CompanyNet) took from `peer`, at a table within the sender's reach (rule 4,
+## measured as for units: CompanyUnitsNet.reach()) and with the sender's hands.
+func on_request(net: CompanyNet, peer: int, kind: StringName, data: Dictionary) -> Dictionary:
+	var gate: Dictionary = net.units.reach(net, peer, station_ask(data))
+	if gate["reason"] != &"":
+		return gate
+	return check(net.company, net.inventory, kind, data, gate["station"], CompanyNet.hands_location(peer))
 
 
 ## Host: a table request at `station` (CompanyNet looked it up and measured the sender's reach to

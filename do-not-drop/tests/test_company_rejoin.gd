@@ -528,7 +528,7 @@ func _check_solo() -> void:
 		"A leaver with 2 products and no known position: a bundle each at the origin (%s)"
 		% [solo.floor_bundles.to_dict()])
 	solo.inventory.receive(&"hen", 1, &"hands:8")
-	solo._last_origin[8] = Vector3(5.0, 0.0, 5.0)
+	solo.units._last_origin[8] = Vector3(5.0, 0.0, 5.0)
 	solo._on_peer_disconnected(8)
 	_expect(solo.floor_bundles.position_of(&"floor:4") == Vector3(5.0, 0.0, 5.0)
 		and solo.last_known_position(8) == null,
@@ -567,7 +567,7 @@ func _check_solo_feet() -> void:
 	var refusals: Array = []
 	solo.request_rejected.connect(func(rid: int, reason: StringName) -> void:
 		refusals.append([rid, reason]))
-	solo._last_origin.erase(1)
+	solo.units._last_origin.erase(1)
 	solo.inventory.receive(&"hen", 1, &"hands:1")
 	var seq: int = solo.seq
 	var rid: int = solo.drop(&"hen", 1, Vector3.ZERO)
@@ -576,7 +576,7 @@ func _check_solo_feet() -> void:
 		% [refusals])
 
 	solo.inventory.receive(&"hen", 1, &"hands:9")
-	solo._last_origin[9] = Vector3(7.0, 0.0, 7.0)
+	solo.units._last_origin[9] = Vector3(7.0, 0.0, 7.0)
 	solo._applying = true
 	solo._on_peer_disconnected(9)
 	var waited: bool = solo.inventory.count(&"hen", &"hands:9") == 1 and solo.seq == seq
@@ -591,7 +591,7 @@ func _check_solo_feet() -> void:
 		% [solo.floor_bundles.position_of(&"floor:3")])
 
 	solo.inventory.consume(&"hen", 1, &"floor:0")
-	solo._last_origin[1] = Vector3(2.0, 0.0, 0.0)
+	solo.units._last_origin[1] = Vector3(2.0, 0.0, 0.0)
 	solo.drop(&"hen", 1, Vector3(2.0, 0.0, 0.0))
 	_expect(solo.floor_bundles.position_of(&"floor:0") == null
 		and solo.floor_bundles.position_of(&"floor:4") == Vector3(2.0, 0.0, 0.0)
