@@ -10,7 +10,7 @@ extends Node
 ## The "missing for pending orders" marks (StockAlert) read the order book every peer shares
 ## (CompanyNet.orders.book, D-0813.1), so a client marks the same as the host; without a book (book_of
 ## unset or null) the list has no marks. With only_today (CompanyRoot) only today's pending orders
-## count: nothing closes an order of that book yet (D-0815.b, D-0302), so past days' pile up there.
+## count: each day's end closes every order left in that book (D-0851), so no past day's is still pending.
 ## The units already ordered from a supplier count as "on the way" when `real_calendar` (CompanyRoot sets
 ## it: since D-0603.b.2 the calendar holds only real orders, by CompanyNet on every peer).
 ##
