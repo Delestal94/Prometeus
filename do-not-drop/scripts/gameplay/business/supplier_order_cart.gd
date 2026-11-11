@@ -7,7 +7,7 @@ extends RefCounted
 ## supplier's prices, its price_factor: D-0621.b), how many
 ## pallets the truck will bring, and submit(), which checks the wallet and puts the order
 ## in the SupplierSchedule for the next day (arrival_day). Nothing is charged here: the
-## bill is paid when each pallet is received (SupplierPurchase.receive, D-0503), so a
+## bill is paid when each pallet is received (SupplierPurchase.bill, D-0503), so a
 ## truck that never gets unloaded costs nothing. Pure logic over objects passed in: no
 ## node, no autoload, no UI; the host applies a submitted order, clients only ask.
 
