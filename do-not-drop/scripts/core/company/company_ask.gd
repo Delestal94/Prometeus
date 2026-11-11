@@ -81,7 +81,7 @@ static func station_of(ask: Dictionary, bundles: FloorBundles, stations: Callabl
 	return station if station.get("spot") is Vector3 else {}
 
 
-## Host, row 5 past the station's own checks (CompanyNet._take_units()): `ask`'s units from `station` into
+## Host, row 5 past the station's own checks (CompanyUnitsNet.on_request()): `ask`'s units from `station` into
 ## `hands`, free or holding only that product, up to the hand's limit. {reason} when it is refused
 ## (not_enough, hands_busy, hands_full), else {reason: &"", kind: units_moved, data}. Out of company_net.gd
 ## in D-0517.
@@ -99,7 +99,7 @@ static func take(stock: Inventory, ask: Dictionary, station: Dictionary, hands: 
 	return _moved(product, qty, from, hands)
 
 
-## Host, row 6 past the station's own checks (CompanyNet._store_units()): `ask`'s units from `hands` into a
+## Host, row 6 past the station's own checks (CompanyUnitsNet.on_request()): `ask`'s units from `hands` into a
 ## `station` that takes them (not a floor bundle: no_station; a slot labeled for that product, `accepts`:
 ## wrong_product; with room under `capacity`: no_room; units in the hand: not_enough). {reason} or
 ## {reason: &"", kind: units_moved, data} as take(). Out of company_net.gd in D-0517.

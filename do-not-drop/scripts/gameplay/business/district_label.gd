@@ -4,7 +4,7 @@ extends RefCounted
 ##
 ## Static and stateless. Every district has one label colour and one name key, so a crew sorting boxes in
 ## the dispatch zone reads the destination from the colour before the street. The colours are not the
-## ground colours of the map (CompanyRoot.ZONE_COLORS): those are muted for terrain, these are saturated
+## ground colours of the map (CompanyBackdrop.ZONE_COLORS): those are muted for terrain, these are saturated
 ## and far apart so they stay apart on a small paper. Painting the stripe on package_shipping_label.gd is
 ## D-0732.b; this class only decides which colour and name a label carries.
 

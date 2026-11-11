@@ -18,6 +18,8 @@ const PUSH: StringName = &"cart_push"
 const MOVED: StringName = &"cart_moved"
 const REQUEST_KINDS: Array[StringName] = [PUSH]
 const EVENT_KINDS: Array[StringName] = [MOVED]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 const SNAPSHOT_KEY: String = "carts"
 ## Carts a company can have (a snapshot or an event past this is refused).
 const MAX_CARTS: int = 16
@@ -72,6 +74,15 @@ static func push_ask(data: Dictionary) -> Dictionary:
 	if (wanted is float or wanted is int) and is_finite(float(wanted)):
 		step = clampf(float(wanted), CompanyTuning.CART_GRIP_MIN_STEP_M, CompanyTuning.CART_PUSH_STEP_M)
 	return {"cart": StringName(cart), "dir": flat, "step": step}
+
+
+## Host: check() for a cart_push `net` (CompanyNet) took from `peer`, at the cart's own station (cart:<id>),
+## within the sender's reach as for units (CompanyUnitsNet.reach()).
+func on_request(net: CompanyNet, peer: int, data: Dictionary) -> Dictionary:
+	var push: Dictionary = push_ask(data)
+	var gate: Dictionary = net.units.reach(net, peer,
+		{} if push.is_empty() else {"station": PickingCart.location_of(push["cart"])})
+	return gate if gate["reason"] != &"" else check(push, gate["station"])
 
 
 ## Host: the cart_moved a cart_push asks for at `station` (what CompanyNet's `stations` knows of the cart

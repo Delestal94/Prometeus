@@ -24,8 +24,9 @@ extends SceneTree
 ## - a supplier pallet on a shelf's rack slot (D-0606) keeps that shelf: selling it is not_empty, so the pallet never
 ##   ends up on a slot nothing draws or reaches, and another shelf whose uid starts the same still sells; moving the
 ##   shelf takes the pallet along; with the pallet down the shelf sells;
-## - every kind of CompanyNet.EVENT_KINDS has its own branch in _apply_state() (read from the source:
-##   no catch-all `_:` branch);
+## - every kind of CompanyNet.EVENT_KINDS falls in exactly one branch of _apply_state() (read from the source:
+##   one branch per domain list, `if <Domain>.EVENT_KINDS.has(kind)`, or per CompanyNet's own kind, and no
+##   catch-all `else:`, D-0254);
 ## - with a host and a client as ENet peers in one process (each with its CompanyNet, DayCycle and
 ##   CompanyShed following it): 8 placements, turns, moves and sales by the host, in a thawed and in
 ##   a frozen shed, reach the client in order; the layout, money, wallet history, stock, day phase and
@@ -401,31 +402,28 @@ func _check_event_branches() -> void:
 	if start < 0 or end <= start:
 		return
 	var net_consts: Dictionary = (load(NET_SCRIPT) as GDScript).get_script_constant_map()
-	# Another class's constant (CompanyLayoutNet.PLACED, CompanyTableNet.SEALED...): by class name.
+	# A domain's list (CompanyLayoutNet.EVENT_KINDS, CompanyTableNet.EVENT_KINDS...): by class name.
 	var class_paths: Dictionary = {"CompanyLayoutNet": LAYOUT_SCRIPT}
 	for entry: Dictionary in ProjectSettings.get_global_class_list():
 		class_paths[String(entry["class"])] = String(entry["path"])
 	var covered: Array[StringName] = []
 	var catch_all: bool = false
-	# A pattern may go on over lines with a trailing backslash: join them first.
-	var body: String = text.substr(start, end - start).replace("\\\n", "")
-	for line: String in body.split("\n"):
-		if not (line.begins_with("\t\t") and not line.begins_with("\t\t\t") and line.strip_edges().ends_with(":")):
+	# Since D-0254 one branch per domain: `if <Domain>.EVENT_KINDS.has(kind):` or `elif kind == <CONST>:`.
+	for line: String in text.substr(start, end - start).split("\n"):
+		if not (line.begins_with("\t") and not line.begins_with("\t\t")):
 			continue
-		var pattern: String = line.strip_edges().trim_suffix(":")
-		catch_all = catch_all or pattern == "_"
-		for token: String in pattern.split(","):
-			var name_: String = token.strip_edges()
-			var owner_consts: Dictionary = {}
-			var owner_name: String = name_.get_slice(".", 0)
-			if name_.contains(".") and class_paths.has(owner_name):
-				owner_consts = (load(class_paths[owner_name]) as Script).get_script_constant_map()
-			if name_.begins_with("&\""):
-				covered.append(StringName(name_.trim_prefix("&\"").trim_suffix("\"")))
-			elif owner_consts.has(name_.get_slice(".", 1)):
-				covered.append(owner_consts[name_.get_slice(".", 1)])
-			elif net_consts.has(name_):
-				covered.append(net_consts[name_])
+		var branch: String = line.strip_edges()
+		catch_all = catch_all or branch == "else:"
+		if not (branch.begins_with("if ") or branch.begins_with("elif ")) or not branch.ends_with(":"):
+			continue
+		var test: String = branch.trim_prefix("el").trim_prefix("if ").trim_suffix(":").strip_edges()
+		var owner_name: String = test.get_slice(".", 0)
+		if test.ends_with(".EVENT_KINDS.has(kind)") and class_paths.has(owner_name):
+			var owner_consts: Dictionary = (load(class_paths[owner_name]) as Script).get_script_constant_map()
+			for kind: StringName in owner_consts.get("EVENT_KINDS", []):
+				covered.append(kind)
+		elif test.begins_with("kind == ") and net_consts.has(test.trim_prefix("kind == ")):
+			covered.append(net_consts[test.trim_prefix("kind == ")])
 	var missing: Array[StringName] = []
 	for kind: StringName in CompanyNet.EVENT_KINDS:
 		if not covered.has(kind):

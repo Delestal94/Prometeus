@@ -88,3 +88,52 @@ Empresa no tiene menú de pausa y D-1909 es de F5. Decisión: no se espera una t
 una salida afuera y llega a `SUMMARY`; en `OPENING` o `SUMMARY` devuelve false; en un cliente no hace nada.
 `test_company_autosave`: después de cerrar antes, el slot queda en el día siguiente sin `interrupted`.
 **Hecho cuando:** los tests pasan y el menú de pausa tiene el botón y el aviso (captura con `revisor-visual`).
+
+### D-0254 · Partir `company_root.gd` y `company_net.gd` — A · Opus 5.5 · medium · Aviso: no · F1
+**[~] Parcial (2026-11-11, PR #861)** — falta la pasada de `auditor-red` sin hallazgos que pide la fila (un subagente no puede lanzarla; la revisión de aceptación miró la red y no encontró defectos) y la prueba a mano de [`revisar/D-0254.md`](../revisar/D-0254.md). Lo demás está: `company_net.gd` 1000 → 820 líneas y `company_root.gd` 948 → 692, sin cambiar el protocolo (67) ni las listas de `kind`: cada dominio declara sus `kind` y `CompanyNet` solo los junta y los enruta; `test_company_net_domains`.
+**Depende de:** #844 (alquiler), #845 (montacargas), #850 (cierre del día, protocolo 67): los tres en `main`.
+**Qué:** [riesgos.md](../diseno/riesgos.md) R-16 y la [revisión D-0140](../diseno/revision-diseno.md): los dos archivos
+estaban contra el tope de 1000 líneas de gdlint, y la puerta (D-0340), el cobro (D-0815.b), el palet (D-0607.c) y la
+mesa (D-0701.b, D-0715.b) suman cada una un `kind` o un enganche. Solo se mueve código: mismos RPC, mismos `kind`,
+mismos nodos y nombres en el árbol.
+- [x] D-0254.1 **Unidades fuera de `CompanyNet`.** `CompanyUnitsNet` (`scripts/core/company/company_units_net.gd`):
+  `units_take`, `units_store` y `units_drop` (filas 5 a 7), su evento `units_moved`, el alcance de toda petición en
+  una estación (`reach()`, regla 4: unidades, mesas, carros, palets) y dónde estuvo cada peer (`_last_origin`).
+  `CompanyNet.units`; `within_reach()`, `last_known_position()` y `UNITS_DROP` quedan como reenvíos.
+- [x] D-0254.2 **Transporte del snapshot fuera de `CompanyNet`.** `CompanySnapshotSync`
+  (`scripts/core/company/company_snapshot_sync.gd`): el límite de una petición por peer cada 5 s, el número y los
+  trozos de cada snapshot en el host, y en el cliente cuándo volver a pedir y los trozos que junta. Sin RPC ni
+  señales: los cuatro `@rpc` (`_request`, `_apply_event`, `_snapshot`, `_rejected`) siguen en `CompanyNet` con la
+  misma firma, y también la API pública (`grant_snapshot`, `send_snapshot`, `wait_for_snapshot`, `poll_snapshot`,
+  `apply_snapshot`...). `CompanyNet.sync`.
+- [x] D-0254.3 **Cada dominio declara sus `kind`.** `REQUEST_KINDS`, `EVENT_KINDS`, `HOST_EVENT_KINDS` y
+  `CRITICAL_KINDS` de `CompanyNet` son la suma de las listas de cada dominio (`CompanyUnitsNet`, `CompanyLayoutNet`,
+  `CompanyTableNet`, `CompanyPackages`, `CompanyCarts`, `CompanyPallets`, `CompanyTripsView`, `CompanyOrdersNet`,
+  `CompanySupplierNet`, `CompanyWalletNet`, `CompanyShopNet`, `CompanyTowNet`, `CompanyColdNet`) más las propias
+  (`snapshot_request`, `clock_anchor`, `day_phase`). `_handle_request()` y `_apply_state()` tienen una rama por
+  dominio (`<Dominio>.REQUEST_KINDS.has(kind)`), sin `else`; el chequeo de alcance de mesas, carros y palets pasó a
+  su dominio (`on_request()`), y el de vender una pieza con caja o palet a `CompanyLayoutNet.on_request()`.
+- [x] D-0254.4 **Tripulación fuera de `CompanyRoot`.** `CompanyCrew` (`scripts/gameplay/company_crew.gd`): el
+  `World/PlayerSpawner`, quién se spawnea y dónde, `join()`, `in_shed()` (D-0316.1) y el `player` propio.
+  `CompanyRoot.crew`; `CREW_GROUP`, `SPAWN`, `CREW_SPACING`, `SPAWN_CLEARANCE`, `PLAYER_PREFIX`, `PLAYER_SCENE`,
+  `crew_spawn()`, `free_spawn()` y `join_crew()` quedan como alias.
+- [x] D-0254.5 **Fondo y uso de piezas fuera de `CompanyRoot`.** `CompanyBackdrop`
+  (`scripts/gameplay/company_backdrop.gd`: sol, cielo y losas de zona, mismos nombres de nodo) y `ShedUse`
+  (`scripts/gameplay/shed_use.gd`: estante y transpalet → `request_for` / `PalletJackUse`), donde entran después el
+  uso de la mesa (D-0701.b) y del palet (D-0607.c). `CompanyRoot.shed_use`.
+- Decisión: el guardado del día (`save_closed_day`, `save_interrupted_day`, `stock_for_save`, `host_day_seen`) se
+  queda en `CompanyRoot`. Con las piezas de arriba el archivo ya baja a 692 (158 de margen) y esas funciones leen
+  estado privado del root que los tests tocan directo (`_hosted_state`); moverlas sumaba reenvíos sin bajar riesgo.
+- Decisión: `test_company_layout_net` y `test_company_shed_expand_net` leían las ramas `match` de `_apply_state()`;
+  ahora leen las ramas por dominio. Lo que comprueban es lo mismo: cada `kind` cae en una sola rama y no hay rama
+  para "lo demás". [Decisión](../../decisiones/2026-11-11-company-net-por-dominios.md).
+- Qué toca después un `kind` nuevo: ver [red-autoridad §18](../diseno/red-autoridad.md) ("Qué toca una acción
+  nueva"): en la mayoría de los casos solo su dominio, con las excepciones que lista ahí. `PROTOCOL_VERSION` sube
+  igual que antes (convenciones-godot §6).
+**Test** `test_company_net_domains` (nuevo): los cuatro `@rpc` de `CompanyNet`, ningún `kind` de antes de partir
+perdido (solo eso: un `kind` nuevo no edita el test), cada dominio con sus cuatro listas, cada `kind` de un solo dominio, las listas de `CompanyNet` = propias + dominios,
+una rama por dominio y sin `else` en las dos funciones, los alias de `CompanyRoot` y los dos archivos (y los nuevos)
+bajo 850 líneas. `test_company_late_join` y `test_company_rejoin` leen el estado movido en su lugar nuevo
+(`sync._rx_id`, `units._last_origin`) sin cambiar aserciones.
+**Hecho cuando:** los dos archivos bajo 850 líneas, `PROTOCOL_VERSION` igual, `test_protocol_version` sin tocar,
+`tools/run-tests.sh company` y `net` verdes, `tools/lint.sh` sin problemas nuevos.
