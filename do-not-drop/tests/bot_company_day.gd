@@ -42,8 +42,9 @@ extends SceneTree
 ## Prints, in order: BOT_STAGE <stage> ok or BOT_FAIL <stage>:<reason> (the run stops at a failed stage), one
 ## `BOT_STUB <stage> <id> [<tasks>] <what>` per shortcut taken, the BOT_SKIP lines, with two players `BOT_INFO
 ## stay_waits no_order=<n> no_stock=<n>` (the steps the one who stayed found nothing to pack, and why), `BOT_ERROR
-## <message>` per engine error logged during the run (a Logger, ErrorCatcher), the summary block (`BOT_COMPANY key=value`: players, money,
-## profit (closing - opening money, corte-vertical.md §4.4), deliveries, boxes, breaks, assembly_errors,
+## <message>` per engine error logged during the run (a Logger, ErrorCatcher), the summary block (`BOT_COMPANY
+## key=value`: players, money, profit (closing - opening money, corte-vertical.md §4.4), deliveries, boxes, breaks,
+## assembly_errors,
 ## engine_errors, return_bundle_units, idle_max_s_<peer> per player, stage_ms_<stage>) and the final line: BOT_OK
 ## only when every stage was ok, no shortcut was taken, the profit is over 0, no engine error was logged and no
 ## player spent more than CREW.IDLE_LIMIT_SECONDS with neither a box in the hands nor a wheel; else `BOT_FAIL` and

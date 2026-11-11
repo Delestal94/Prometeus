@@ -198,9 +198,11 @@ Bot `tests/bot_company_day.gd` (headless, termina solo; las etapas del galpón e
   ganancia es mayor que 0, no hubo errores del motor y ningún jugador pasó más de 120 s ocioso; si no,
   `BOT_FAIL` con lo que falló (`stages_missing=<n> stubs=<n> profit=<n> engine_errors=<n>
   idle_<peer>=<s>`, salida 1). `BOT_TIMEOUT` (salida 3) si pasó el límite (`--hard`, 900 s por defecto).
-- Hoy (2026-11-11) las 9 etapas pasan con 1 y con 2 jugadores, ganancia positiva y sin errores del motor,
-  y la línea final es `BOT_FAIL stubs=4`: quedan `pallet_unload` (D-0607.c), `table_use` (D-0701.b),
-  `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 + D-0815.b). La corrida completa tarda unos
+- Hoy (2026-11-11) las 9 etapas pasan con 1 y con 2 jugadores, ganancia positiva y sin errores del motor.
+  Con 1 jugador la línea final es `BOT_FAIL stubs=4`: quedan `pallet_unload` (D-0607.c), `table_use`
+  (D-0701.b), `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 + D-0815.b). Con 2 jugadores además
+  `idle_2=157`: el que se queda arma 3 cajas más y después se queda sin stock en los estantes para los
+  pedidos que entran (`BOT_INFO stay_waits no_order=10 no_stock=35`). La corrida completa tarda unos
   7 a 8 minutos (la van visita varias casas de ida y vuelta).
 - Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa que pasa de `ok` a falla, un `BOT_STUB` nuevo,
   `profit` ≤ 0, cualquier `BOT_ERROR`/`ERROR`/`SCRIPT ERROR` del log y un `idle_max_s` sobre 120. Los

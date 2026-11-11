@@ -190,7 +190,16 @@ simulados (peers ENet locales o actores locales).
   para cada etapa que todavía no existe, sin colgarse.
 - [x] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya). Hechas: 9 de 9.
 - [x] **D-2016.3** (2026-10-22, PR pendiente: piloto `drive_to` en `tests/bot_company_van.gd` por `RoadNavigator.route`, la van llega a la calle de cada parada de Centro y vuelve al playón; `off_road_max` 0 m en la ida, `BOT_OK` en 161 s; la puerta sigue con `OrderSettlement` porque el modo Empresa no tiene entrega en la casa; `test_company_bot_autopilot`; revisar: [`revisar/D-2016.3.md`](../revisar/D-2016.3.md)) `drive` lleva la van con piloto automático por el grafo de calles hasta las casas de sus paradas (y `return` la trae por el mismo camino), cuando el grafo esté en el mundo de la empresa (D-0314.a, `use_graph`); `deliver` deja la caja en la puerta cuando la entrega en la casa exista (D-0311).
-- [ ] **D-2016.4** (revisión D-0140, [revisión D-0140](../diseno/revision-diseno.md) §5) Sin etapas simuladas: `deliver` pasa por la puerta del
+- [~] **D-2016.4** **[~] Parcial (2026-11-11, PR #@@PR@@)** — primera parte: el bot juega por los caminos del
+  juego (peticiones `units_*` y `box_*` en las estaciones del mundo, cajas en las manos, tablero de despacho y Cargar,
+  guardado del juego en `SUMMARY`), arma y entrega **6 cajas**, juega un segundo jugador real del equipo, imprime
+  `BOT_STUB` por cada atajo (bloquea `BOT_OK`) y mide `profit`, `engine_errors` e `idle_max_s_<peer>`; límite duro
+  900 s; `CompanyShed.station_for` resuelve las mesas (`table:<uid>`). Con 1 jugador: 9 etapas `ok`,
+  `BOT_FAIL stubs=4`; con 2 además `idle_2=157` (el que se queda se queda sin stock). Quedan los atajos
+  `pallet_unload` (D-0607.c), `table_use` (D-0701.b), `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 +
+  D-0815.b), y el ocio del segundo jugador. Revisar: [`revisar/D-2016.4.md`](../revisar/D-2016.4.md);
+  [decisión](../../decisiones/2026-11-11-bot-empresa-caminos-reales.md).
+  Tarea original (revisión D-0140, [revisión D-0140](../diseno/revision-diseno.md) §5) Sin etapas simuladas: `deliver` pasa por la puerta del
   mundo (`DeliveryHouse`, D-0340) y el bot no llama `OrderSettlement` por su cuenta; arma **6 cajas**; el alquiler lo
   cobra el juego al cierre (D-0509.b); registra por jugador el mayor tramo sin caja ni volante (≤ 120 s); corre
   también con `--players=1`. Cada etapa que siga simulada imprime `BOT_STUB <etapa>` y bloquea `BOT_OK`.
