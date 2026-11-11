@@ -3,7 +3,8 @@ extends SceneTree
 ##
 ## The clipboard's sounds (expansion D-1913, diseno/portapapeles.md §6), synthesized in SynthAudio:
 ## - clipboard_clip_up, clipboard_clip_down and clipboard_sheet are short 16-bit one-shots (under 0.2 s, no
-##   loop), never clipped, built once and shared; the clip taken out and put away are different sounds;
+##   loop), never clipped, built once and shared; the clip taken out and put away are different sounds; each
+##   build gives the same samples, so test_company_mix measures one level, not a roll of the noise;
 ## - CompanyClipboard plays them on its own player on the SFX bus: the clip on raise() and on stow(), the sheet
 ##   when the sheet showing changes (turn(), a tab clicked, raise() on another sheet while raised), and not when
 ##   it opens on a sheet or is asked for the one already showing.
@@ -53,6 +54,15 @@ func _test_streams() -> void:
 		_expect(peak > 3000 and peak < 32767, "%s is heard and not clipped (peak %d)" % [cue, peak])
 	_expect(SynthAudio.clipboard_clip_up() == streams["clip_up"], "the clip is built once and shared")
 	_expect(streams["clip_up"].data != streams["clip_down"].data, "taking it out and putting it away sound apart")
+	var first_up: PackedByteArray = SynthAudioHandling.make_clipboard_clip(true).data
+	var first_down: PackedByteArray = SynthAudioHandling.make_clipboard_clip(false).data
+	var first_sheet: PackedByteArray = SynthAudioHandling.make_clipboard_sheet().data
+	_expect(SynthAudioHandling.make_clipboard_clip(true).data == first_up,
+		"the clip taken out comes out the same on every build")
+	_expect(SynthAudioHandling.make_clipboard_clip(false).data == first_down,
+		"the clip put away comes out the same on every build")
+	_expect(SynthAudioHandling.make_clipboard_sheet().data == first_sheet,
+		"the sheet comes out the same on every build")
 
 
 func _test_cues() -> void:
