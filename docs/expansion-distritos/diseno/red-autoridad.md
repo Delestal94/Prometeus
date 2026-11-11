@@ -126,9 +126,10 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 |---|---|---|
 | Entra un pedido nuevo (D-0803, D-0813) | host, con el ritmo del día (`CompanyOrdersNet.poll`: el plan de `OrderGenerator` con la semilla del día) | evento `order_added` `{order}`: el pedido entero como lo escribe `Order.normalize()` (un pedido ya es un diccionario; no hay `Order.to_dict()`), estado `open`; cada peer lo suma a su `OrderBook` (§10) |
 | Vence un pedido (D-0807, D-0813) | host (`CompanyOrdersNet.poll`, `OrderBook.overdue()`) | evento `order_expired` `{order, minute}`: el pedido pasa a LATE en cada peer (`OrderBook.expire_one()`, con `late_from`) y se sigue pudiendo entregar con −25 % (D-0807). **Decisión (D-0813):** sin `penalty` (vencer no cobra nada en el momento) y sin reserva que liberar (todavía nada reserva antes de `order_claim`, fila 8); `minute` deja el `now_min` del libro igual en todos. Lo que decía esta fila para un pedido que se pierde (se libera la reserva; la caja a medio armar queda en la mesa sin pedido; una caja sellada sigue siendo una caja sin pedido, D-0719) pasa al abandono (`abandon()`, FAILED y reputación), que es otro evento: D-0807.b |
+| Un pedido termina sin entrega (D-0851, D-0807) | host (`CompanyOrdersNet.abandon()`, `close_day()`, `fail_returned()`) | evento `order_closed` `{order, state}` con `state` `failed` o `cancelled` (protocolo 67): cada peer mueve su libro con `OrderBook.mark_failed()` / `cancel()`; la reputación de un `failed` (`OrderPenalties.abandoned()`, −3) la escribe solo el host al publicar. Lo publican el cliente que se cansó (una ventana después de vencer, `OrderDayClose.abandoned()`), la salida que volvió sin entregarlo y el cierre del día en `CLOSING` (§17) |
 | Fases del día (D-0203) | host (`DayCycle`) | evento `day_phase` `{day, phase, frozen, lag, frozen_at[, summary]}` (`phase` es OPENING, OPERATING, CLOSING o SUMMARY; `summary` solo en SUMMARY, `DaySummary.build()`); el mismo evento lleva el congelado del galpón (S4: `frozen`, `lag`, `frozen_at` en minutos). El cliente es pasivo: valida y aplica, y emite `company_day_*` en el EventBus local |
 | Reloj (D-0219) | host | evento `clock_anchor` `{minute, speed, paused}` solo al cambiar (apertura, pausa, salida que cierra tarde); cada peer toma como origen **su propio** tick al recibirlo (o al aplicar el snapshot), menos medio RTT de `NetStats`, y calcula la hora local desde ahí (el tick del host no vale en otra máquina). **Decisión:** ancla y no envío cada 2 s (lo que decía D-0219): no gasta ancho de banda quieto y no hay que interpolar; D-0219 lo construye así |
-| Cierre: cobro, alquiler, penalidades (D-0320, D-0509) | host | evento `day_closed` `{day, summary}`; después el host guarda (solo el host guarda) |
+| Cierre: cobro, alquiler, penalidades (D-0320, D-0509) | host | sin evento propio: el alquiler es un `wallet_moved` en `CLOSING` (`FixedCostsHook`) y el resumen va en el `day_phase` de `SUMMARY`; después el host guarda (solo el host guarda) |
 | Pasar al día siguiente | **solo el host** aprieta "seguir" en el resumen | evento `day_phase` `OPENING` del día siguiente (`DayCycle.next_day()`). **Decisión:** igual que el reinicio de la partida de hoy (`hud_pause.request_restart`): un cliente no puede adelantar el día de todos; si el host tarda, el resumen queda en pantalla |
 | Se abre un bloqueo (D-0306) | host | evento `gate_opened` `{gate}`; no se vuelve a cerrar. En F1 Centro y Campo están abiertos desde el día 1 |
 | Un peer se va (D-2006) | host, en `peer_removed` (o `peer_disconnected` si llega antes; el segundo encuentra las manos vacías) | eventos `units_moved` `hands:<peer>` → `floor:<n>` (uno por producto) con la última posición conocida del jugador: la del nodo del jugador si sigue en pie y, si no, la última que `CompanyNet` guardó en su `units_take` o `units_drop`. Las mesas no tienen dueño, así que no hay nada más que soltar |
@@ -146,7 +147,7 @@ cualquier otro peer se rechaza con `host_only` antes de mirar nada más (el voto
 | 21 | Comprar y colocar una pieza (D-0902) | host, en el modo construcción | `layout_place` `{id, x: int, z: int, turns: 0..3, rid}` | que lo pida el host; `id` del catálogo `data/placeables/` (nombre exacto de archivo); celdas enteras en ±256; `BuildPlacement.preview` en la grilla de la etapa (dentro del piso, fuera de dársena y salida, sin choque, todo alcanzable) con la plata | `layout_placed` `{id, x, z, turns, uid, minute, money}` | `PlaceableShop.buy` desde el saldo del host antes de la compra (`money + price`), así la plata y el `balance` del libro quedan en `money`; libro `placeable_buy` con el `minute` del host; la pieza entra al `layout` con el `uid` nuevo (`<id>_<n>`, el `n` libre más bajo) |
 | 22 | Mover una pieza (D-0903) | host | `layout_move` `{uid, x: int, z: int, rid}` | que lo pida el host; la pieza existe; `preview` ignorando la pieza | `layout_moved` `{uid, x, z, turns}` | la pieza cambia de celda; conserva `uid` (y con él su stock y su estación) |
 | 23 | Girar una pieza (D-0903) | host | `layout_rotate` `{uid, turns: 1..3, rid}` (cuartos de vuelta a sumar) | como 22, alrededor de la celda esquina | `layout_moved` `{uid, x, z, turns}` (absolutos) | como 22 |
-| 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
+| 24 | Vender una pieza (D-0903, D-0920) | host | `layout_sell` `{uid, rid}` | que lo pida el host; la pieza existe; **no tiene unidades** (`shelf:<uid>_<hueco>`, `table:<uid>`) **ni un palet en un hueco de rack** (D-0606): si no, `not_empty` | `layout_sold` `{uid, minute, money}` | `PlaceableShop.sell` desde `money − devolución` (libro `placeable_sell`, saldo final `money`); la pieza sale del `layout` |
 | 25 | Movimiento de plata del host sin pedido propio (cobro al entregar, propina, alquiler, proveedor, tienda; D-0517) | solo el host (`CompanyNet.publish_wallet`) | — (no hay pedido: lo decide el host) | quien cobra comprueba `can_afford` antes; `amount` ≠ 0, `reason` id corto, `money` y `minute` en rango | `wallet_moved` `{amount, reason, money, minute}` (plata absoluta como D-0910) | cada peer parte de `money − amount` y hace un solo `earn` / `charge`; libro con el `minute` del host; deriva → `take_drift()` y snapshot |
 | 26 | Ampliar el galpón a la etapa siguiente (D-0905, D-0910.2) | host | `shed_expand` `{stage, rid}` (`stage`: la etapa a la que se llega) | que lo pida el host; `stage` entero (`bad_data`); hay etapa siguiente (`max_stage`); `stage` es exactamente la siguiente (`wrong_stage`: un segundo apretón no compra dos); plata para el precio de `CompanyTuning` (`no_money`); el layout entero entra en la etapa nueva (`BuildLayoutSave.misfit`: `fixed_area` o `blocks_path` de la primera pieza que no entra, porque dársena y salida se corren con las paredes) | `shed_expanded` `{stage, minute, money}` | `WarehouseStages.expand` desde `money + precio` (libro `warehouse_expand` con el `minute` del host, saldo final `money`); `warehouse_stage` sube uno; `CompanyShed.follow` redibuja piso, paredes, portones y zonas; el layout no cambia |
 
@@ -413,7 +414,7 @@ voto es D-0518.b).
   de `from_dict()`, productos del catálogo con sus celdas del catálogo, cada sello una vez; un id por caja;
   insumos en su rango). Aplicarlo borra el aviso de plata desfasada (`take_drift()`): el snapshot ya trae la
   del host.
-- **Layout:** vender una mesa con caja es `not_empty` (`CompanyNet._build`); `layout_sold` olvida el estado de
+- **Layout:** vender una mesa con caja o un estante con un palet en un hueco (D-0606) es `not_empty` (`CompanyNet._build`); `layout_sold` olvida el estado de
   la mesa vendida (una mesa nueva con el mismo `uid` arranca llena).
 - **Motivos de `_rejected`:** los de `CompanyNet` (`bad_data`, `no_station`, `out_of_reach`, `not_enough`,
   `hands_busy`, `hands_full`, `no_room`) más `no_money`, `has_box`, `no_box`, `sealed`, `no_supply`,
@@ -496,11 +497,10 @@ voto es D-0518.b).
     vehículo sale). `order_claim` (fila 8) llena `CompanyTableNet.order_of` desde este libro. **El PR que traiga
     esos eventos sube `PROTOCOL_VERSION`**: con pedidos que se cierran, la poda del `OPENING` cambia lo que hace un
     `day_phase` sobre el libro (D-0813.1 no lo subió porque hasta entonces no hay pedidos cerrados que podar);
-  - el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio, con la reputación absoluta como la
-    plata (D-0910), junto con el reloj de D-0807.b;
- - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Mientras solo cierre pedidos del libro compartido una salida fallada (D-0302; las filas de arriba), la
-    poda no suelta los entregados y el libro crece hasta 16 por día: lleno (256, unos 16 días de la tripulación más grande en una
-    sola sesión) `poll()` espera y no entran pedidos nuevos (`revisar/D-0813.1.md`).
+  - ~~el abandono (`abandon()`: FAILED y reputación, D-0807) como evento propio~~: hecho en D-0851 (§17), `order_closed`; la
+    reputación la escribe solo el host (no viaja absoluta como la plata);
+ - ~~guardar el libro con el día (D-0206)~~: no se guarda, se vuelve a sortear en `OPENING` ([guardado.md](guardado.md) §4). Desde D-0851 el cierre del día cierra todo lo que queda
+    y la poda del `OPENING` vacía el libro, así que ya no se llena entre días (el tope de 256 solo frena un día: `poll()` espera).
 
 ## 11. Lo construido (D-0715.b): el paquete de la caja encintada
 
@@ -715,3 +715,45 @@ voto es D-0518.b).
     con distinto motivo en el libro (`shop` y `warehouse_expand`);
   - nadie pide `shed_expand` todavía: falta el botón (modo construcción o tienda, D-0943 / D-0511.2) y el texto de
     `max_stage` / `wrong_stage` en `ShedBuilder.HINT_REASON_KEYS` (hoy caen en `UI_BUILD_REASON_OTHER`).
+
+## 17. Lo construido (D-0851): el cierre del día para los pedidos
+
+- **Evento** `order_closed {order, state}` (`CompanyOrdersNet.CLOSED`, `HOST_EVENT_KINDS`, protocolo 67): exactamente esas dos
+  claves, el id de un pedido del libro y `state` `failed` o `cancelled`. Cada peer, el host también, lo aplica en
+  `CompanyOrdersNet.apply()` con `OrderBook.mark_failed()` / `cancel()`: una transición que el libro no permite (cancelar un
+  atrasado, cerrar uno ya cerrado) no se aplica, así que el host no lo publica y un cliente pide snapshot. Sin `minute`: no
+  lo usa nadie.
+- **La reputación es del host.** `_close()` publica y, solo si salió, suma `OrderPenalties.abandoned(order)` (−3, tope por pedido
+  −10) a `net.company`; el aplicar del evento no toca `CompanyState`. Un cliente ve su reputación nueva con el próximo
+  snapshot (no hay evento de reputación): lo mismo que antes con la reputación de cualquier otra fuente. **Decisión:** no se
+  agregó la reputación absoluta al evento (como la plata de D-0517) porque el test de la tarea pide que solo cambie en el
+  host; si el HUD del cliente la muestra, sale una tarea para replicarla.
+- **Quién lo publica.** `CompanyOrdersNet.abandon(net, minuto, on_road)` (el cliente se cansó: tarde, fuera de la ruta, una
+  ventana después de `due_min`) desde `CompanyDayOrders.poll()` en `OPENING`, `OPERATING` y `CLOSING`;
+  `fail_returned(net, ids)` desde `CompanyRoot` cuando `CompanyTrips.trip_closed` trae pedidos sin entregar;
+  `close_day(net, minuto, early)` desde `DayCycle.poll()` en `CLOSING` cuando `trips_out() == 0`, con el minuto del galpón y
+  `early` si el día lo cerró `close_early()`. `OrderDayClose` (`scripts/gameplay/business/`) decide los ids sin tocar el libro
+  (`OrderBook` está en el límite de métodos públicos de gdlint). `DayCycle` espera un `poll` más antes de `SUMMARY` solo si cerró
+  algo; con el libro sin pedidos pasa directo.
+- **Vehículo que sale de noche.** `CompanyTrips.day_open` (`DayCycle.is_day_closed()` negado): la salida se niega con
+  `DAY_CLOSED` (`UI_COMPANY_GATE_DAY_CLOSED`). Con carga se frena en el portón (`hold_at_gate`) y a su conductor le llega
+  `_held_here` con `cap` `DAY_CLOSED_CAP` (−1): sin tope que decir, la copia del cliente no se suelta porque haya menos
+  vehículos afuera. El que cruza igual (sin nodo que frenar) queda en `_night_out`: está afuera (no se le vuelve a negar,
+  `refused_returned` al volver) pero con el día cerrado no cuenta en `trips_out()`, así que no traba el resumen; con el día
+  abierto otra vez, sí. La vista de salidas ve un `trip_refused` y un `trip_closed` sin viaje como con el tope. El tablero de
+  un cliente, sin `trips`, lo sabe por `day_closed` del contexto.
+- **Lo cargado que no salió.** Sigue cargado y frenado durante `CLOSING`; con `SUMMARY` lo suelta `CompanyTrips.drop_staged()`
+  (`OrderDayClose.wire()`, sobre `event_applied` del `day_phase`): cierra esos pedidos en `CompanyTrips.book` y `cargo_dropped` le
+  devuelve las cajas a `CompanyDispatch`. Solo host, nada viaja: lo cargado nunca fue un evento. Así ningún pedido pasa al día
+  siguiente como salida fantasma y el vehículo vuelve a estar disponible en el tablero. Las cajas siguen en su estante
+  (D-0302.2.b.3) hasta que alguien las baje, como una que volvió de un viaje, y ocupan ese lugar (`DispatchRack.with_free_slots()`).
+- **Hora de la entrega.** `CompanyTrips.delivery_minute()` es el minuto del galpón (`shed_minute_now`, regla 4 de
+  [clientes.md](clientes.md)), el que tiene que pasar quien entregue.
+- **Con la salida en el libro compartido (D-0302.2.b.3).** `trip_started` pasa el pedido a `OUT` en todos los peers y
+  `trip_closed` falla los que no se entregaron, pero sin reputación. Por eso `OrderDayClose.wire()` va antes de
+  `CompanyTripsView.follow()` en `CompanyRoot`: `fail_returned()` encuentra el pedido abierto, publica `order_closed` y cobra el
+  −3, y el `trip_closed` que viene atrás ya no lo mueve. Lo cargado que no salió sigue sin estar en ese libro, así que
+  `abandon()` consulta a `CompanyTrips.carries()`.
+- **Pendiente:** el libro compartido no se entera aún de que un pedido se entregó (filas 19 y 20 de este documento, D-0815.b):
+  **cuando la puerta entregue tiene que publicar la entrega como evento del libro compartido**, o el pedido sigue `OUT` y el
+  cierre del día lo da por no entregado (−3). Test: `test_company_day_close_orders`, `test_company_day_close_world`.

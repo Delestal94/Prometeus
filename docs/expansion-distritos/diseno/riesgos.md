@@ -226,6 +226,12 @@ P3: vigilar.
   D-2011.1 mide con contenido real y en ventana (rutina `pc-build`). La medición de D-0313 se repite cuando
   estén D-0315 y D-0314. En CI se cuenta lo que no depende de la GPU ("Sin tarea todavía", punto 2).
 - **Tareas:** D-2011 (D-2011.1), D-0315, D-0314, D-2012.
+- **Estado (2026-11-11, D-0303.1):** `test_company_cells` ya mide el viaje del galpón a la última casa de Centro
+  sobre las celdas reales (peor cuadro 15-19 ms en headless, límite 50) y las casas entran de a una por cuadro
+  para todo el mapa, nunca junto con una celda (`CentroDecor.take_frame()`). Sigue abierto lo demás: una celda
+  se arma entera en un paso (la más cara, la (0, 2) del Camino del Campo, 30 ms; la (-1, 4), 92 ms la primera
+  vez y 22 después: son piezas de calle, D-2012.2), no hay precalentado de modelos en la carga inicial y la
+  medición en ventana es de D-2011.1. Números en [`revisar/D-0303.1.md`](../revisar/D-0303.1.md).
 
 ## R-10 · El host simula todo; celdas fijas y memoria — P1 · F1-F2
 
@@ -358,7 +364,7 @@ P3: vigilar.
 - **Qué puede salir mal:** `bot_company_day` termina en `BOT_OK` aunque la puerta, el alquiler y la red los simula él:
   llama `OrderSettlement.settle` por su cuenta, arma una caja y corre solo en el host. Si con eso se declara cerrado
   el corte, F2 arranca sobre un día que en el juego real no cobra.
-- **Evidencia:** fuera de `tests/` no hay llamadas a `OrderSettlement.settle` ni a `FixedCosts.settle`;
+- **Evidencia:** fuera de `tests/` no hay llamadas a `OrderSettlement.settle` (el alquiler ya lo cobra el juego, D-0509.b);
   encabezado de `tests/bot_company_day.gd` ("None of that is replicated to clients yet").
 - **Mitigación:** D-2016.4 (`BOT_STUB` bloquea `BOT_OK`) y la compuerta F1 → F2 atada a D-2016 en
   `.claude/rutinas/desarrollador.md` §2.

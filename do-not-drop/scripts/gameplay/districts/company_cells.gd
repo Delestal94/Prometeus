@@ -82,6 +82,8 @@ func pin_streets(graph: RoadGraph, streets: Array[StringName] = RoadGraph.MAIN_S
 ## nodes are built only with `spawn_events`. `keep_clear` is a ground rectangle no roadway is laid
 ## inside (the shed's: the streets that start at its middle start at its edge, D-0314.a).
 ## The streets' materials (StreetSurface, D-0304.1b) are made here, so the first cell does not pay for them.
+## From here on a frame takes one heavy thing: the cells of the streamer's slice or one of Centro's houses
+## (_on_cell_in, D-0303.1).
 func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false,
 		keep_clear: Rect2 = Rect2()) -> EdgeCellContent:
 	StreetSurface.warm()
@@ -89,8 +91,17 @@ func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false
 	var content := EdgeCellContent.new(graph, grid.cell_size, world_seed, spawn_events, decor, keep_clear)
 	_graph_content = content
 	content_for = content.build_cell
+	if not cell_loaded.is_connected(_on_cell_in):
+		cell_loaded.connect(_on_cell_in)
 	pin_streets(graph)
 	return content
+
+
+## A cell with content entering the tree is this frame's heavy work: Centro's houses wait for the next one
+## (CentroDecor.hold_houses, D-0303.1). An empty cell costs nothing and holds nobody.
+func _on_cell_in(_cell: Vector2i, node: Node3D) -> void:
+	if node != null and node.get_child_count() > 0:
+		CentroDecor.hold_houses()
 
 
 func _build_cell(cell: Vector2i) -> Node3D:

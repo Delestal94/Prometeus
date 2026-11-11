@@ -38,7 +38,8 @@ extends SceneTree
 ## - only the vehicles of CompanyTrips' own multiplayer are tracked (another session's copy isn't);
 ## - CompanyRoot (solo = host) has a CompanyTrips child with the gate across the far edge of the playon outside
 ##   the north exit (CompanyFleet.gate_of(), D-0302.2.b.2), the shed's wall and exit on the inside of it, and
-##   DayCycle.trips_out reads it.
+##   DayCycle.trips_out reads it;
+## - its own OrderBook, a Node outside the tree, goes with it (D-2019: it leaked at the exported build's exit).
 
 var _failures: int = 0
 
@@ -56,6 +57,7 @@ func _run() -> void:
 	await _test_gate_hold()
 	await _test_gate_brake()
 	await _test_root()
+	_test_book_goes_with_it()
 	quit(_failures)
 
 
@@ -70,6 +72,13 @@ func _packed(trips: CompanyTrips, ids: Array[StringName]) -> void:
 	for id: StringName in ids:
 		trips.book.add(Order.make(id, "Ana", &"centro", &"house_1", [{"product": &"hen", "qty": 1}], 0, products))
 		trips.book.mark_packed(id, StringName("box_" + str(id)))
+
+
+func _test_book_goes_with_it() -> void:
+	var trips := CompanyTrips.new()
+	var book: OrderBook = trips.book
+	trips.free()
+	_expect(not is_instance_valid(book), "A freed CompanyTrips takes its OrderBook with it")
 
 
 func _test_cycle() -> void:

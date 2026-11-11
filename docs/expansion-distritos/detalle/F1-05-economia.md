@@ -110,13 +110,13 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** el test pasa y el panel muestra los mismos números (D-0508.2, hecho); aparece solo al cerrar el día (D-0508.3).
 
 ### D-0509 · Gastos fijos diarios — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `FixedCosts` (`scripts/gameplay/business/fixed_costs.gd`): alquiler diario (`CompanyTuning.RENT_PER_DAY` = 100) con `due`, `total_due`, `shortfall` y `settle`; `test_fixed_costs`.
+**[x] Hecho (2026-10-12, PR pendiente)** — `FixedCosts` (`scripts/gameplay/business/fixed_costs.gd`): alquiler diario (`CompanyTuning.RENT_PER_DAY` = 100) con `due`, `total_due`, `shortfall` y `settle`; `test_fixed_costs`. D-0509.b hecha (2026-11-07, PR pendiente): el cierre del host cobra el alquiler.
 **Depende de:** D-0501
 **Qué:** funciones estáticas sin nodos sobre la billetera (`CompanyState`). `due()` devuelve los costos del día por motivo (hoy solo `rent`; la luz no es un gasto fijo, la maneja D-0912). `settle(company)` los cobra con `charge` (pasan aunque el saldo quede negativo) y devuelve lo cobrado. `shortfall(company)` dice cuánto no cubre la billetera, para que D-0510 decida la quiebra.
 **Decisión:** la clase no guarda estado (no hay "último día cobrado" que replicar ni migrar): el cierre del día (D-0203) la llama una vez por día. Se cobra al cierre, antes del resumen D-0508, así el alquiler aparece como costo `rent`.
-- [ ] **D-0509.b** (revisión D-0140; `constructor-progresion`, low) El host engancha `FixedCosts.settle` a
-  `company_day_closing`, una vez por día y antes del resumen. Hoy solo lo llaman los tests. Depende de D-0251 y D-0254.
+- [x] **D-0509.b** (2026-11-07, PR pendiente; revisión D-0140; `constructor-progresion`, low) `FixedCostsHook` (`scripts/gameplay/fixed_costs_hook.gd`), que `CompanyRoot` engancha: en `CLOSING`, en el host y una vez por día, `FixedCosts.settle` cobra por `CompanyNet.publish_wallet`, así el alquiler llega a todos los pares y entra en el resumen. Dependía de D-0251 (hecha) y D-0254 (abierta): [no la espera](../../decisiones/2026-11-07-alquiler-sin-esperar-d0254.md) porque no hace crecer `company_net.gd`.
 **Test** `test_fixed_costs`: el día cuesta 100; `settle` cobra con motivo `rent`; con 30 de saldo queda en -70 y `shortfall` da 70; saldo negativo debe el alquiler entero; sin empresa no cobra.
+**Test** `test_fixed_costs_hook` (D-0509.b): las 20:00 y `close_early()` cobran una vez en `CLOSING`, antes de `SUMMARY`; un `CLOSING` repetido no cobra de nuevo y cada día nuevo sí; pasa a rojo y deja la empresa en quiebra; el enganche de un cliente no publica nada; con host y cliente por ENet, la plata, el libro y el resumen del cliente son los del host.
 **Hecho cuando:** el test pasa y (D-0509.b) fuera de `tests/` hay una llamada a `FixedCosts.settle` en el cierre del host.
 
 ### D-0510 · Quiebra — A · Sonnet 5.5 · medium · Aviso: no · F1

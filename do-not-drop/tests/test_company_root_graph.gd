@@ -16,6 +16,9 @@ extends SceneTree
 ##   and show their flat block; the ones inside it are drawn; driving there shows them again (D-2012.1);
 ## - a peer whose only anchor is its own player (a client's) still gets the street cells and Centro around
 ##   it, and they unload when it leaves;
+## - left to its own _process, the world brings its cells and Centro's houses in with one heavy thing per
+##   frame: never two houses in a frame, never a house in the frame a cell with content entered the tree
+##   (CentroDecor.take_frame / hold_houses, D-0303.1; test_company_cells times the drive);
 ## - building the cells costs little (a budget per cell, headless software rendering, a wide margin).
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
@@ -26,8 +29,15 @@ const CELL_BUDGET_MSEC: float = 50.0
 const SLAB_TOP: float = -0.1
 const FLOOR_TOP: float = 0.0
 const MAX_STEPS: int = 400
+## Process frames the world gets to bring in the cells around the shed and their houses by itself.
+const BOOT_FRAMES: int = 900
 
 var _failures: int = 0
+## What entered the tree in each process frame while the world loaded by itself: { frame: count }.
+var _cells_in: Dictionary = {}
+var _houses_in: Dictionary = {}
+## The drips (CentroDecor.HouseDrip) of the cells that came in.
+var _drips: Array[Node] = []
 ## The last second _settle stepped the streamer to: a settle never goes back on it, or its first looks are ignored.
 var _clock: float = 0.0
 
@@ -43,11 +53,14 @@ func _run() -> void:
 	var level := (load(SCENE) as PackedScene).instantiate() as CompanyRoot
 	level.save_dir = DIR
 	root.add_child(level)
+	var cells: CompanyCells = level.cells
+	if cells != null:
+		cells.cell_loaded.connect(_on_cell_in)
 	await process_frame
 	await physics_frame
-	var cells: CompanyCells = level.cells
 	_check_one_streamer(level, cells)
 	if cells != null and cells.content_for.is_valid():
+		await _check_one_heavy_thing_per_frame(cells)
 		_settle(cells, 0.0)
 		_check_streets_near_the_shed(cells)
 		_check_no_roadway_in_the_shed(level, cells)
@@ -72,6 +85,55 @@ func _check_one_streamer(level: CompanyRoot, cells: CompanyCells) -> void:
 	_expect(found == 1 and cells != null and cells.name == &"WorldCells",
 		"There is a single WorldCells (got %d)" % found)
 	_expect(cells != null and cells.content_for.is_valid(), "The cells are fed by the road graph (content_for is set)")
+
+
+## The world, stepped by nobody but itself, until its cells and their houses are in: what each frame took.
+func _check_one_heavy_thing_per_frame(cells: CompanyCells) -> void:
+	var frames: int = 0
+	while frames < BOOT_FRAMES and (cells.is_busy() or _houses_waiting() or _houses_in.is_empty()):
+		await process_frame
+		frames += 1
+	_expect(frames < BOOT_FRAMES, "The world brings its cells and houses in by itself (%d frames)" % frames)
+	var houses: int = 0
+	var crowded: int = 0
+	var with_cell: int = 0
+	for frame: int in _houses_in:
+		houses += int(_houses_in[frame])
+		if int(_houses_in[frame]) > CentroDecor.HOUSES_PER_FRAME:
+			crowded += 1
+		if _cells_in.has(frame):
+			with_cell += 1
+	_expect(houses >= 10 and _cells_in.size() >= 10,
+		"Centro's houses and the cells with content came in while it was watched (%d houses, %d frames with cells)"
+		% [houses, _cells_in.size()])
+	_expect(crowded == 0, "No frame takes two houses (%d did, of %d with a house)" % [crowded, _houses_in.size()])
+	_expect(with_cell == 0,
+		"No house enters in the frame a cell with content did (%d did, of %d with a house)"
+		% [with_cell, _houses_in.size()])
+	cells.cell_loaded.disconnect(_on_cell_in)
+
+
+func _on_cell_in(_cell: Vector2i, node: Node3D) -> void:
+	if node == null or node.get_child_count() == 0:
+		return
+	var frame: int = Engine.get_process_frames()
+	_cells_in[frame] = int(_cells_in.get(frame, 0)) + 1
+	var drip: Node = node.get_node_or_null(^"Centro/Houses")
+	if drip != null:
+		drip.child_entered_tree.connect(_on_house_in)
+		_drips.append(drip)
+
+
+func _on_house_in(_house: Node) -> void:
+	var frame: int = Engine.get_process_frames()
+	_houses_in[frame] = int(_houses_in.get(frame, 0)) + 1
+
+
+func _houses_waiting() -> bool:
+	for drip: Node in _drips:
+		if is_instance_valid(drip) and drip.is_inside_tree() and not (drip.get(&"pending") as Array).is_empty():
+			return true
+	return false
 
 
 ## The streets that leave the shed, in the cells around it.

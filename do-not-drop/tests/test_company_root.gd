@@ -43,6 +43,8 @@ extends SceneTree
 ## - D-0508.3: the day's SUMMARY opens the closing screen (DaySummaryPanel) and its "continue" opens the
 ##   next day on the host; D-0614.c: the screen lists the day's delivery note (the root's
 ##   CompanyNet.pallets.note): a product the truck left short shows its row;
+## - D-0509.b: the root's close charges the rent once and its summary shows it (test_fixed_costs_hook has the
+##   rule); the root hooks the rent after the supplier's automatic order, which reads the wallet before it;
 ## - D-0511.2: the closing screen has a Shop button that opens the company's shop (CompanyShopScreen, the
 ##   root's shop_screen) over it; Buy goes through CompanyNet (solo is the host): the cash, the equipment and
 ##   the status line follow, a shed expansion redraws the shed at its new stage, closing the shop gives the
@@ -246,10 +248,18 @@ func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
 	state.call(&"earn", 120, &"order_paid")
 	if level.net != null:
 		level.net.pallets.note.check(day, {&"hen": 10}, {&"hen": 4})
+	_expect(_hook_index(level, &"SupplierAutoOrderHook") >= 0
+		and _hook_index(level, &"SupplierAutoOrderHook") < _hook_index(level, &"FixedCostsHook"),
+		"The automatic order is hooked before the rent, so it reads the wallet the rent has not touched (D-0509.b)")
+	var money: int = int(state.get(&"money"))
 	for next: DayCycle.Phase in [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]:
 		cycle.call(&"_transition", next)
 	_expect(cycle.phase() == DayCycle.Phase.SUMMARY and panel.visible,
 		"SUMMARY opens the closing screen (phase %s)" % cycle.phase_name())
+	var costs: Dictionary = cycle.summary.get("cost_by_reason", {})
+	_expect(int(state.get(&"money")) == money - CompanyTuning.RENT_PER_DAY
+		and int(costs.get("rent", 0)) == CompanyTuning.RENT_PER_DAY,
+		"The close charges the rent once and the summary shows it (money %s, costs %s)" % [state.get(&"money"), costs])
 	var note_box: Control = panel.find_child("Note", true, false) as Control
 	_expect(note_box != null and note_box.visible and panel.find_child("Note_hen", true, false) != null,
 		"The closing screen lists the day's delivery note: hen came 6 short (D-0614.c)")
@@ -257,6 +267,16 @@ func _check_summary_screen(level: CompanyRoot, state: Node) -> void:
 	panel.close()
 	_expect(cycle.phase() == DayCycle.Phase.OPENING and cycle.current_day() == day + 1 and not panel.visible,
 		"Its continue opens the next day (day %d, %s)" % [cycle.current_day(), cycle.phase_name()])
+
+
+## Position of the root's child `hook_name` among the listeners of CompanyNet.event_applied, -1 when it isn't one.
+func _hook_index(level: CompanyRoot, hook_name: StringName) -> int:
+	var listeners: Array = level.net.event_applied.get_connections()
+	for index: int in range(listeners.size()):
+		var target: Object = (listeners[index]["callable"] as Callable).get_object()
+		if target is Node and (target as Node).name == hook_name:
+			return index
+	return -1
 
 
 ## D-0511.2: the closing screen's Shop button opens the shop; buying goes through CompanyNet and the shop,

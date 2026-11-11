@@ -220,6 +220,8 @@ func _ready() -> void:
 	_add_shed()
 	ColdChainTick.add_to(self, net, day_cycle, shed, business_tick)
 	_add_supplier_truck()
+	# After the supplier's hook: the automatic order reads the wallet before the rent (D-0509.b).
+	FixedCostsHook.attach(self, net)
 	_add_cells()
 	_add_packages()
 	_add_interest()
@@ -329,7 +331,7 @@ func _add_business_tick() -> void:
 	business_tick.name = "BusinessTick"
 	add_child(business_tick)
 	business_tick.add_step(&"day_cycle", day_cycle.poll)
-	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle))
+	business_tick.add_step(&"orders", func() -> void: CompanyDayOrders.poll(net, day_cycle, OrderDayClose.out(trips)))
 
 
 ## Host (solo too): the company's day opens, after the snapshot to the peers already up. A client
@@ -761,6 +763,9 @@ func _add_trips() -> void:
 	add_child(trips)
 	trips.use_gate(CompanyFleet.trip_gate(shed, net.company))
 	trips.minute_now = func() -> int: return floori(clock.minute_now()) if clock != null else 0
+	# OrderDayClose before the view: its trip_closed hook charges the orders a vehicle brought back (order_closed)
+	# ahead of the view's trip_closed event, which fails them for free (D-0851; test_company_day_close_world).
+	OrderDayClose.wire(trips, net, day_cycle)
 	trips_view.follow(trips)
 	day_cycle.trips_out = trips.trips_out
 

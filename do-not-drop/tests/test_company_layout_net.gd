@@ -21,6 +21,9 @@ extends SceneTree
 ## - an event whose data doesn't fit (unknown placeable, uid in use or unknown, float cell, turns or
 ##   minute out of range, money missing, negative or a float) is not applied and changes nothing,
 ##   not even the names of pieces saved without a uid (every check comes before the first change);
+## - a supplier pallet on a shelf's rack slot (D-0606) keeps that shelf: selling it is not_empty, so the pallet never
+##   ends up on a slot nothing draws or reaches, and another shelf whose uid starts the same still sells; moving the
+##   shelf takes the pallet along; with the pallet down the shelf sells;
 ## - every kind of CompanyNet.EVENT_KINDS has its own branch in _apply_state() (read from the source:
 ##   no catch-all `_:` branch);
 ## - with a host and a client as ENet peers in one process (each with its CompanyNet, DayCycle and
@@ -84,6 +87,7 @@ func _run() -> void:
 	_check_solo()
 	_check_mirror()
 	_check_legacy_names()
+	await _check_rack_pallet()
 	_check_event_branches()
 	await _check_network()
 	RpcGuard.reset()
@@ -91,6 +95,62 @@ func _run() -> void:
 		print("PASS: the shed layout is built by the host only, checked like the build mode,"
 			+ " equal on host, client and a late joiner, small events without gaps")
 	quit(_failures)
+
+
+# --- A pallet on a rack slot ---
+
+
+func _check_rack_pallet() -> void:
+	var state: Node = _new_state("RackState")
+	state.call(&"new_company", "Rack SRL")
+	var pieces: Array[Dictionary] = [
+		{"id": "shelf", "x": 3, "z": 2, "turns": 0, "uid": "shelf_1"},
+		{"id": "shelf", "x": 3, "z": 4, "turns": 0, "uid": "shelf_10"},
+	]
+	state.set(&"layout", pieces)
+	var net := CompanyNet.new()
+	net.name = "RackNet"
+	net.company = state
+	root.add_child(net)
+	var shed := CompanyShed.new()
+	shed.name = "RackShed"
+	root.add_child(shed)
+	shed.rebuild(state, net.inventory)
+	shed.follow(net)
+	var heard: Array = []
+	net.request_rejected.connect(func(rid: int, reason: StringName) -> void: heard.append([rid, reason]))
+	var pallet: StringName = &"d2_1"
+	var slot: StringName = CompanyPallets.rack_slot(&"shelf_10", 1)
+	_expect(net.pallets.apply(net.inventory, CompanyPallets.LOADED,
+		{"day": 2, "pallets": [Pallet.make(pallet, &"hen", 5)]})
+		and net.pallets.apply(net.inventory, CompanyPallets.PICKED, {"pallet": pallet})
+		and net.pallets.apply(net.inventory, CompanyPallets.PLACED,
+			{"pallet": pallet, "pos": Vector2.ZERO, "slot": slot}),
+		"A pallet goes on the high slot of shelf_10")
+	shed.yard.refresh(net.pallets)
+	_expect(_ask(net, heard, CompanyLayoutNet.SELL, {"uid": &"shelf_1"}) == &"" and _layout(state).size() == 1,
+		"shelf_1 is another shelf, even if shelf_10's name starts with its own: it is sold")
+	var seq: int = net.seq
+	_expect(_ask(net, heard, CompanyLayoutNet.SELL, {"uid": &"shelf_10"}) == CompanyLayoutNet.REASON_NOT_EMPTY
+		and net.seq == seq and _layout(state).size() == 1,
+		"The shelf with a pallet on a slot is not sold: not_empty, no event")
+	_expect(shed.yard.rack_nodes.has(pallet), "The pallet is drawn on its slot")
+	var before: Vector3 = (shed.yard.rack_nodes[pallet] as Node3D).position
+	_expect(_ask(net, heard, CompanyLayoutNet.MOVE, {"uid": &"shelf_10", "x": 6, "z": 4}) == &"", "The shelf moves")
+	await process_frame
+	var yard: PalletYardView = shed.yard
+	var moved: Vector2 = shed.rack_slots()[slot]["pos"]
+	var spot: Vector3 = (yard.rack_nodes[pallet] as Node3D).position if yard.rack_nodes.has(pallet) else before
+	_expect(not is_equal_approx(spot.x, before.x) and Vector2(spot.x, spot.z).is_equal_approx(moved),
+		"... with its pallet, drawn at the slot's new place (%s, was %s)" % [spot, before])
+	_expect(net.pallets.apply(net.inventory, CompanyPallets.PICKED, {"pallet": pallet})
+		and net.pallets.apply(net.inventory, CompanyPallets.PLACED, {"pallet": pallet, "pos": Vector2.ZERO}),
+		"The pallet comes down to the floor")
+	_expect(_ask(net, heard, CompanyLayoutNet.SELL, {"uid": &"shelf_10"}) == &"" and _layout(state).is_empty(),
+		"... and the shelf sells")
+	shed.free()
+	net.free()
+	state.free()
 
 
 # --- Solo ---

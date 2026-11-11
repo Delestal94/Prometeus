@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | D-0301 | ✅ Flujo galpón → distrito → galpón según D-0104 (carga, viaje, regreso con resultados) — **en `detalle/` es: Boceto del mapa del mundo** (el título de esta fila es de antes del mapa continuo; manda el detalle) | constructor-mundo | xhigh | bot sale con la camioneta, entrega en Barrio Centro y vuelve al galpón sin errores |
 | ✅ D-0302 | Portón de salida del galpón como punto de partida (reemplaza el arranque de la entrega actual) | constructor-mundo | high | la camioneta cargada sale por el portón y dispara la carga del distrito |
-| D-0303 | Pantalla/tablero de despacho: elegir distrito, vehículo y pedidos que salen — **en `detalle/` es: Módulo `world_cells`: cargar el mapa por celdas** (el título de esta fila es de antes del mapa continuo; manda el detalle) | constructor-ui | high | test de UI: elegir y confirmar con mando y teclado |
+| D-0303 | ✅ Módulo `world_cells`: cargar el mapa por celdas (el título viejo de esta fila, "tablero de despacho", era de antes del mapa continuo: el despacho vive en D-0310, D-0309 y D-0716). Incluye D-0303.1: el criterio de los 50 ms medido sobre las celdas reales hasta la última casa de Centro | constructor-mundo | xhigh | `test_world_cells` y `test_company_cells` pasan (sin cuadros de más de 50 ms del galpón a la última casa de Centro, con calles, decorado y casas) y CI corre el módulo en `portability-check.sh` |
 | D-0304 | ✅ Generación de ruta por distrito: `RouteStreamer` con conjunto de tramos y decorado del distrito — **en `detalle/` es: Grafo de calles y tramos sobre aristas** (el título de esta fila es de antes del mapa continuo; manda el detalle) | constructor-tramos | xhigh | Barrio Centro y Campo generan rutas distintas con la misma semilla; `route_golden` por distrito |
 | ✅ D-0305 | Varias paradas en una salida (entregar 3-6 pedidos en distintas casas antes de volver) | constructor-tramos | xhigh | ruta con N casas; test entrega las N |
 | D-0306 | ✅ Orden de paradas: el jugador elige o lo sugiere el GPS — **en `detalle/` es: Bloqueos (`GateRequirement`)** (el título de esta fila es de antes del mapa continuo; manda el detalle) | constructor-camion | high | GPS muestra la próxima parada; test cambia el orden |
@@ -52,7 +52,7 @@
 | D-0337 | Rutas con dos caminos (rápido y peligroso vs. lento y seguro) | constructor-tramos | high | bifurcación en 2 distritos |
 | ~~D-0338~~ | ~~Persistencia del distrito (casas ya visitadas, clientes conocidos)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | se guarda y carga |
 | ~~D-0339~~ | ~~Clientes que esperan afuera o salen a recibir (animación existente de casa)~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-mundo | medium | variantes por distrito |
-| D-0340 | Puerta del cliente revisa contenido contra el pedido (no solo daño) | constructor-trampas | high | test: producto faltante baja la paga ; la puerta llama `OrderSettlement.settle` y publica `order_delivered` (D-0815.b): fuera de `tests/` hay ≥ 1 llamada a `settle`. Depende de D-0254 (revisión D-0140) |
+| D-0340 | Puerta del cliente revisa contenido contra el pedido (no solo daño) | constructor-trampas | high | test: producto faltante baja la paga ; la puerta llama `OrderSettlement.settle` con `CompanyTrips.delivery_minute()` (D-0851) y publica `order_delivered` (D-0815.b): fuera de `tests/` hay ≥ 1 llamada a `settle`. Depende de D-0254 (revisión D-0140) |
 
 ## Pulido
 

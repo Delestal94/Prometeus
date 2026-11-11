@@ -5,7 +5,8 @@ extends SceneTree
 ## cells by EdgeCellContent / CompanyCells.use_graph on data/world/road_graph.tres and houses.tres):
 ## - the 30 houses of Centro are built once each, in the cell their origin lies in, standing on the
 ##   ground (not floating), with no wall on any roadway, on a sidewalk or on another house; they enter
-##   the tree one per frame after their cell (HouseDrip), none costing more than the budget;
+##   the tree one per frame after their cell (HouseDrip), one for the whole map and not one per cell
+##   (CentroDecor.take_frame, D-0303.1), none costing more than the budget;
 ## - every street of Centro has a sidewalk on both sides, as wide as CentroDecor says, cut where a
 ##   crossing roadway or a house is in the way and never on a roadway; the roadway half-width it assumes
 ##   is the one a StraightSegment really draws;
@@ -52,6 +53,9 @@ func _run() -> void:
 		return
 	_cells = CompanyCells.new()
 	root.add_child(_cells)
+	# The cells are built by hand here: the streamer stays still (told once it is in the tree: entering it
+	# turns _process on), or its own cells and houses would take the frames the houses of these wait for.
+	_cells.set_process(false)
 	var started: int = Time.get_ticks_usec()
 	_content = _cells.use_graph(_graph)
 	var index_msec: float = float(Time.get_ticks_usec() - started) / 1000.0
@@ -124,6 +128,9 @@ func _settle_houses() -> void:
 			_expect((drip.get(&"pending") as Array).is_empty() and drip.get_child_count() == homes,
 					"The %d houses of the first cell come in by themselves, in %d frames" % [homes, frames])
 			_expect(frames >= homes, "...one per frame, not all at once (%d frames for %d)" % [frames, homes])
+			_expect(_houses_in(cell) == 0,
+					"...and meanwhile no other cell let one in: a frame is for one house of the whole map (%d came in)"
+					% _houses_in(cell))
 		while not (drip.get(&"pending") as Array).is_empty():
 			var t0: int = Time.get_ticks_usec()
 			drip.call(&"release", 1)
@@ -131,6 +138,16 @@ func _settle_houses() -> void:
 	print("  worst house entering the tree: %.1f ms" % worst)
 	_expect(worst < HOUSE_BUDGET_MSEC,
 			"A house enters the tree in under %d ms (worst %.0f)" % [HOUSE_BUDGET_MSEC, worst])
+
+
+## How many houses are in the tree in the cells other than `except`.
+func _houses_in(except: Vector2i) -> int:
+	var count: int = 0
+	for cell: Vector2i in _built:
+		var drip: Node = (_built[cell] as Node).get_node_or_null(^"Houses")
+		if drip != null and cell != except:
+			count += drip.get_child_count()
+	return count
 
 
 func _test_houses() -> void:
