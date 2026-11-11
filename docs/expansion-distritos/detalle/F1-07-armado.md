@@ -91,7 +91,7 @@ Decisión: "sin cinta o sin etiqueta" resta una sola vez (la frase del supuesto 
 **Hecho cuando:** el test pasa con 6 cajas de calidad conocida.
 
 ### D-0710 · Calidad → trampa y su intensidad — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[~] Parcial (2026-11-11, PR #@@PR@@)** — D-0710.d hecho: en una salida de la empresa, sin `RunManager`, la trampa corre y la severidad daña la caja de verdad (`TripCargo`, `test_company_trip_cargo`); la caja rota llega a `Trip.broken_ids` al cerrar el viaje. Falta D-0710.c, que la caja floja sume Equilibrio.
+**[~] Parcial (2026-11-11, PR #863)** — D-0710.d hecho: en una salida de la empresa, sin `RunManager`, la trampa corre y la severidad daña la caja de verdad (`TripCargo`, `test_company_trip_cargo`); la caja rota llega a `Trip.broken_ids` al cerrar el viaje. Falta D-0710.c, que la caja floja sume Equilibrio.
 Antes (2026-11-04, lote local): D-0710.b hecho: el nivel elige la severidad de la trampa (`CompanyTuning.TRAP_SEVERITY_*` 1 / 1,1 / 1,25, `ITrapBehavior.severity`, `PackageRescue.trap_config`) y `sim_trap_balance -- --levels` da más roturas en alto en 7 de 7 (`test_box_trap_levels`).
 Antes (revisión D-0140, 2026-10-22, volvió a ◐ desde hecha el 2026-10-12): `BoxTrap` (`scripts/gameplay/business/box_trap.gd`): intensidad = 1 − Q/100, nivel low/mid/high y Balance bajo (0,3) si la caja va floja; `BoxToPackage.build(box, products, order)` guarda el plan en `META_TRAP_PLAN`; `test_box_trap`.
 **Depende de:** D-0709 (`AssemblyQuality`), D-0213 (`BoxToPackage`), D-0109
@@ -115,7 +115,7 @@ Antes (revisión D-0140, 2026-10-22, volvió a ◐ desde hecha el 2026-10-12): `
   acepten una caja en un `Trip` en curso (ojo: `PackageHandling` también congela con `_is_run_active`) y que las
   rotas lleguen a `trip.close`. Test de integración sin `RunManager` activo: el mismo golpe le saca más a una caja
   armada en alto que a una en bajo, y la que se rompe llega al cierre del viaje.
-  **[x] Hecho (2026-11-11, PR #@@PR@@)** — `TripCargo` (hijo de `CompanyRoot` en cada peer, lo agrega
+  **[x] Hecho (2026-11-11, PR #863)** — `TripCargo` (hijo de `CompanyRoot` en cada peer, lo agrega
   `CompanyDispatch`) marca con `PackageHandling.ON_TRIP_META` las cajas de un viaje en curso. El host las marca desde
   `CompanyTrips` y el cliente desde `CompanyTripsView`. Con esa marca `_is_run_active()` y `_registered_for_run()`
   aceptan la caja y la tarjeta de cuidado vive (`PlayerCargoCare.cared_for`). Al cerrar el viaje (portón, remolque o
