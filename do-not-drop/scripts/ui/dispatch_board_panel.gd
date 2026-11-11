@@ -17,7 +17,8 @@ class_name DispatchBoardPanel
 ##   vehicle: VehicleDefinition (null = no vehicle at the yard), vehicle_name: String (optional),
 ##   box_kg: Dictionary box id -> kg, zones / gates: id -> ZoneDefinition / GateRequirement,
 ##   owned: CompanyState.gate_owned(), opened_gates: Array, can_act: bool (false on a client:
-##   the Load button shows disabled, with the reason, not hidden).
+##   the Load button shows disabled, with the reason, not hidden), day_closed: bool (optional; what a board
+##   with no trips knows of why nobody leaves, D-0851).
 ## Optional bay: Array of {"id", "def": VehicleDefinition} (D-0931.b), the vehicles standing in the bay
 ## (at most DispatchBay.MAX_VEHICLES, the first is "vehicle"). With two or more a "Load all" button shows:
 ## DispatchBay.load_bay() hands every waiting box to the first vehicle that accepts it and `loaded` is
@@ -350,7 +351,8 @@ func _status_line() -> String:
 	if _status_key != "":
 		return reason_text(_status_key, _status_args)
 	if not _acts():
-		return tr("UI_DISPATCH_HOST_ONLY")
+		var verdict: Dictionary = _departure()
+		return tr("UI_DISPATCH_HOST_ONLY") if verdict["ok"] else reason_text(String(verdict["key"]), verdict["args"])
 	if _ctx.get("vehicle") == null:
 		return ""
 	var departure: Dictionary = _departure()
@@ -431,12 +433,13 @@ func _rules_verdict(box_id: StringName) -> Dictionary:
 	)
 
 
-## Whether the vehicle may leave now: CompanyTrips.departure_verdict() (the cap of vehicles out,
-## D-0316); ok when the board has no trips.
+## Whether the vehicle may leave now: CompanyTrips.departure_verdict() (the day closed, D-0851, and the cap of
+## vehicles out, D-0316). A board with no trips (a client) only knows whether the day closed (`day_closed`).
 func _departure() -> Dictionary:
 	var trips: CompanyTrips = _ctx.get("trips")
 	if trips == null:
-		return {"ok": true, "key": "", "args": []}
+		var closed: bool = bool(_ctx.get("day_closed", false))
+		return {"ok": not closed, "key": CompanyTrips.DAY_CLOSED if closed else "", "args": []}
 	return trips.departure_verdict(_vehicle_id())
 
 

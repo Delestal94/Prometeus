@@ -13,7 +13,10 @@ extends RefCounted
 ## - poll(): on the host's business tick, after DayCycle.poll, the orders come in and go late at the
 ##   shed's minute (DayCycle.shed_minute(), which stands still while the shed is frozen, S4) while the day
 ##   is open (OPENING, OPERATING); none in CLOSING or SUMMARY, so a frozen shed costs the day the orders
-##   it never got to.
+##   it never got to. In CLOSING no order comes in but the ones past due still go late and the customers
+##   still give up on the ones a window late (D-0851, rule 6 of clientes.md): otherwise an order that
+##   lapses while the last vehicle is out would be cancelled for free at the close. The close itself is
+##   DayCycle's (CompanyOrdersNet.close_day()).
 ## Telling each order to the presentation (EventBus.order_added) is every peer's CompanyRoot, from
 ## CompanyNet.event_applied.
 
@@ -32,14 +35,19 @@ static func plan(net: CompanyNet, company: Object, day: int, players: int) -> in
 		requirements(), company)
 
 
-## Host: the orders that came in by the shed's minute, and the ones past due, go out (CompanyOrdersNet.poll())
-## while `cycle`'s day is open. Returns how many events went out.
-static func poll(net: CompanyNet, cycle: DayCycle) -> int:
+## Host: the orders that came in by the shed's minute, the ones past due and the ones the customer gave up on go
+## out (CompanyOrdersNet.poll(), abandon()) while `cycle`'s day is open; in CLOSING only the last two (no order
+## comes in); nothing in SUMMARY. `on_road` (Callable(id) -> bool, CompanyTrips.carries()) names the orders a
+## vehicle carries, which nobody gives up on. Returns how many events went out.
+static func poll(net: CompanyNet, cycle: DayCycle, on_road: Callable = Callable()) -> int:
 	if net == null or cycle == null:
 		return 0
-	if cycle.phase() != DayCycle.Phase.OPENING and cycle.phase() != DayCycle.Phase.OPERATING:
+	var phase: DayCycle.Phase = cycle.phase()
+	if phase != DayCycle.Phase.OPENING and phase != DayCycle.Phase.OPERATING and phase != DayCycle.Phase.CLOSING:
 		return 0
-	return net.orders.poll(net, floori(cycle.shed_minute()))
+	var minute: int = floori(cycle.shed_minute())
+	var sent: int = net.orders.poll(net, minute, phase != DayCycle.Phase.CLOSING)
+	return sent + net.orders.abandon(net, minute, on_road)
 
 
 ## The zones of `zones` open to `company`: the ones no gate closes (ZoneDefinition.is_open_at_start()) and

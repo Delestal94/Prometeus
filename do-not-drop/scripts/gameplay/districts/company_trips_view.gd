@@ -10,8 +10,8 @@ extends Node
 ## (follow()) and publishes each fact as a host event (CompanyNet.publish(): its own rule, no client
 ## asks for it), applied here first and then on every ready peer, in seq order with the rest:
 ##   trip_started  {trip, vehicle, orders, boxes, minute}  a vehicle with cargo crossed the gate out
-##   trip_refused  {vehicle, minute}                       one crossed out with VEHICLES_FAR_MAX out:
-##                                                         no trip starts, but it counts as out
+##   trip_refused  {vehicle, minute}                       one crossed out with VEHICLES_FAR_MAX out or after
+##                                                         the day closed: no trip starts, it counts as out
 ##   trip_closed   {trip, vehicle, failed, minute}         it crossed back in. `trip` is "" (and
 ##                                                         `failed` empty) for one out refused
 ## Ids are text up to MAX_ID_LENGTH, `orders`, `boxes` and `failed` lists of them (up to MAX_ITEMS;
@@ -27,7 +27,8 @@ extends Node
 ## Only what is out lives here: a vehicle back is forgotten. The shared book (CompanyNet.orders.book) follows
 ## these events on every peer, in apply_trip() (D-0302.2.b.3): trip_started takes its orders out with their boxes,
 ## trip_closed fails the `failed` ones, the same seq everywhere, so the books agree with no event of their own. An
-## order the book can't move (unknown, already closed) stays as it is. CompanyTrips.book stays the host's own. Reads,
+## order the book can't move (unknown, already closed) stays as it is: in the company world the host's order_closed
+## got there first, with what it costs (OrderDayClose.wire(), D-0851). CompanyTrips.book stays the host's own. Reads,
 ## on any peer: vehicles_out() (in the order they left), trips_out() (what a client's DayCycle.trips_out
 ## reads; the host's reads CompanyTrips, the authority), is_out() and trip_of() (a vehicle's entry,
 ## in trip_started's shape). `changed` fires after every trip event applied here and after a
@@ -65,6 +66,9 @@ const SNAPSHOT_KEY: String = "trips"
 ## Most vehicles a snapshot may carry out at once (rule 5): VEHICLES_FAR_MAX trips plus every
 ## refused vehicle, far over any fleet.
 const MAX_OUT: int = 32
+## What travels in place of the cap when a vehicle was held because the day closed (D-0851): no cap to say, and a
+## client's brake (CompanyGateBrake) never lets go for fewer vehicles out.
+const DAY_CLOSED_CAP: int = -1
 ## Most orders, boxes or failed orders an event or an entry may carry: what CompanyTrips keeps.
 const MAX_ITEMS: int = CompanyTrips.MAX_CARGO
 const MAX_ID_LENGTH: int = CompanyTrips.MAX_ID_LENGTH
@@ -256,17 +260,20 @@ func _on_trip_closed(trip: Trip, failed: Array[StringName]) -> void:
 	})
 
 
-## Host: `vehicle_id` left while VEHICLES_FAR_MAX were out (CompanyTrips.departure_refused). The
-## reason is always the cap (CompanyTrips.FAR_LIMIT): a peer that shows it reads it from there.
+## Host: `vehicle_id` left while it may not (CompanyTrips.departure_refused): VEHICLES_FAR_MAX were out or the day was
+## closed (D-0851). The reason does not travel: no peer shows it (the driver of a held vehicle hears it, _held_here).
 func _on_departure_refused(vehicle_id: StringName, _reason: Dictionary) -> void:
 	_publish(REFUSED, {"vehicle": vehicle_id, "minute": _source_minute()})
 
 
 ## Host: `vehicle_id` was held at the gate (CompanyTrips.departure_held): its driver is told why, the
-## host itself at once, a client through _held_here. The reason is always the cap: its value travels.
+## host itself at once, a client through _held_here. The reason is the cap, its value travels; or the day closed
+## (CompanyTrips.DAY_CLOSED, no cap to say: DAY_CLOSED_CAP travels instead, D-0851).
 func _on_departure_held(vehicle_id: StringName, reason: Dictionary, driver: int) -> void:
 	var args: Array = reason.get("args", [])
 	var cap: int = clampi(int(args[0]) if not args.is_empty() and args[0] is int else 0, 0, MAX_OUT)
+	if reason.get("key", "") == CompanyTrips.DAY_CLOSED:
+		cap = DAY_CLOSED_CAP
 	if driver <= 0 or not is_host() or not _id_ok(String(vehicle_id)):
 		return
 	var link: MultiplayerPeer = multiplayer.multiplayer_peer if is_inside_tree() else null
@@ -276,17 +283,18 @@ func _on_departure_held(vehicle_id: StringName, reason: Dictionary, driver: int)
 		_held_here.rpc_id(driver, String(vehicle_id), cap)
 
 
-## The driver's peer, from the host: the vehicle it drives was held at the gate with `cap` vehicles out.
+## The driver's peer, from the host: the vehicle it drives was held at the gate with `cap` vehicles out, or because the
+## day closed (`cap` DAY_CLOSED_CAP).
 @rpc("authority", "call_remote", "reliable")
 func _held_here(vehicle: String, cap: int) -> void:
-	if not RpcGuard.from_host(self) or not _id_ok(vehicle) or cap < 0 or cap > MAX_OUT:
+	if not RpcGuard.from_host(self) or not _id_ok(vehicle) or cap < DAY_CLOSED_CAP or cap > MAX_OUT:
 		return
 	_tell_held(StringName(vehicle), cap)
 
 
 ## This peer drives `vehicle_id`, held at the gate: departure_held (and held_at_gate) and the reason as a HUD notice.
 func _tell_held(vehicle_id: StringName, cap: int) -> void:
-	var text: String = tr(CompanyTrips.FAR_LIMIT)
+	var text: String = tr(CompanyTrips.DAY_CLOSED if cap == DAY_CLOSED_CAP else CompanyTrips.FAR_LIMIT)
 	if text.count("%") == 1:
 		text = text % cap
 	departure_held.emit(vehicle_id, text)
