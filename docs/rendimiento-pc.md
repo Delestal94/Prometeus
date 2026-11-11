@@ -259,7 +259,8 @@ corrió más larga y se buscó qué crecía, en vez de dar por buena la que pas�
 - **Sin medir: la foto de prensa.** En la corrida A la primera `PressPhotoLens` trajo un tirón de 1.054 ms a los 289 s y
   +42 MiB de privados que no se devolvieron. B y C no sacaron ninguna foto, así que el arreglo no se probó con foto, y no
   se sabe si cada foto suma lo mismo o solo la primera. `NewsPhotographer` saca como mucho 6 por partida, una por tipo,
-  y el lente se libera, así que está acotado por diseño; el peor caso serían ~250 MiB si cada una sumara 42.
+  y el lente se libera, así que está acotado por diseño; el peor caso serían ~250 MiB si cada una sumara 42. La
+  medición quedó como tarea N-992.
 
 | Corrida C, t (s) | Estática MiB | Video MiB | Privados MiB | Objetos | Nodos | Recursos | Orphans |
 |---|---|---|---|---|---|---|---|
