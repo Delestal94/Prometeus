@@ -5,7 +5,7 @@
 > carril. Números de [supuestos.md](supuestos.md) y de [diseno/economia.md](../diseno/economia.md).
 
 ### D-0501 · Billetera de la empresa — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR pendiente)** — `CompanyState.earn/spend/charge/can_afford/ledger_total` + `ledger` (historial de 200 movimientos, guardado con la empresa); `test_company_wallet`.
+**[x] Hecho (2026-10-04, PR #329)** — `CompanyState.earn/spend/charge/can_afford/ledger_total` + `ledger` (historial de 200 movimientos, guardado con la empresa); `test_company_wallet`.
 **Depende de:** D-0202
 **Qué:** la plata sigue en `CompanyState.money` (S8: `CrewProgression.team_money` queda para Entrega/Endless),
 ahora con un historial. Cada movimiento es `{day, minute, amount (con signo), reason, balance}`.
@@ -24,7 +24,7 @@ cambia nada; `charge` deja en rojo; montos ≤ 0 se ignoran; la suma de movimien
 **Hecho cuando:** el test pasa.
 
 ### D-0502 · Precio de un pedido — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR pendiente)** — `OrderPricing` (`scripts/gameplay/business/order_pricing.gd`): cotiza (productos, envío, requisitos, urgencia) y liquida con el bono por estado; `OrderGenerator` usa la misma cuenta; `test_order_pricing`.
+**[x] Hecho (2026-10-04, PR #337)** — `OrderPricing` (`scripts/gameplay/business/order_pricing.gd`): cotiza (productos, envío, requisitos, urgencia) y liquida con el bono por estado; `OrderGenerator` usa la misma cuenta; `test_order_pricing`.
 **Depende de:** D-0802, D-0806, D-0117
 **Qué:** funciones estáticas sin nodos. `quote(items, zone, requirement_ids, products, catalog)` devuelve
 `{goods, shipping, requirements, urgency, total}`: unidades × precio de venta + envío de la zona, y cada
@@ -55,7 +55,7 @@ mira el pedido entero; recibir sin saldo lo deja en rojo.
 **Hecho cuando:** el test pasa.
 
 ### D-0504 · Costo de materiales de embalaje — B · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-05, PR pendiente)** — `PackagingSupplies` (`scripts/gameplay/business/packaging_supplies.gd`): relleno, cinta, etiqueta y sellos se cobran al hacerse, con motivo `packaging`; `test_packaging_supplies`.
+**[x] Hecho (2026-10-05, PR #349)** — `PackagingSupplies` (`scripts/gameplay/business/packaging_supplies.gd`): relleno, cinta, etiqueta y sellos se cobran al hacerse, con motivo `packaging`; `test_packaging_supplies`.
 **Depende de:** D-0501, D-0212
 **Qué:** funciones estáticas sin nodos sobre un `PackedBox` y la billetera (`CompanyState`). La caja vacía ya la cobra `BoxDispenser` (motivo `boxes`); esto es el resto. Precios en `CompanyTuning`: relleno 1 por celda, cinta 1, etiqueta 0, sello 0.
 - `pad(box, cells, wallet)`: rellena hasta `cells` celdas libres y cobra solo las que rellenó; todo o nada si no alcanza la plata. Devuelve cuántas rellenó.
@@ -66,7 +66,7 @@ mira el pedido entero; recibir sin saldo lo deja en rojo.
 **Hecho cuando:** el test pasa.
 
 ### D-0506 · Penalidades — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `OrderPenalties` (equivocado, roto, tarde, mal etiquetado) + `CompanyState.add_reputation`; `test_order_penalties`.
+**[x] Hecho (2026-10-12, PR #371)** — `OrderPenalties` (equivocado, roto, tarde, mal etiquetado) + `CompanyState.add_reputation`; `test_order_penalties`.
 **Depende de:** D-0501, D-0502, D-0212
 **Qué:** `OrderPenalties` (`scripts/gameplay/business/order_penalties.gd`), funciones estáticas sin nodos.
 `assess(order, box, now_min, broken, products)` devuelve `{pay, base, lost, kinds, reputation}`:
@@ -88,7 +88,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** el test pasa.
 
 ### D-0507 · Propinas — A · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `OrderTips` (`scripts/gameplay/business/order_tips.gd`): 15 % de la paga base por entrega perfecta en la primera mitad de la ventana, +1 de reputación; `test_order_tips`.
+**[x] Hecho (2026-10-12, PR #379)** — `OrderTips` (`scripts/gameplay/business/order_tips.gd`): 15 % de la paga base por entrega perfecta en la primera mitad de la ventana, +1 de reputación; `test_order_tips`.
 **Depende de:** D-0501, D-0506
 **Qué:** `OrderTips.assess(order, verdict, now_min)` devuelve `{tip, reputation}`; `apply(company, result)` cobra con motivo `tip` y suma la reputación.
 - Propina solo si `OrderPenalties.assess` no encontró fallas (`kinds` vacío) y se entregó dentro de `TIP_FAST_WINDOW_SHARE` (0,5) de la ventana del pedido.
@@ -98,7 +98,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** el test pasa.
 
 ### D-0508 · Resumen financiero del cierre del día — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-18, PR pendiente)** — `DaySummary` (`scripts/gameplay/business/day_summary.gd`): ingresos, costos, ganancia y saldo de apertura/cierre del día, por motivo, desde el libro; `test_day_summary`. El panel (D-0508.2) es `DaySummaryPanel` (`scripts/ui/day_summary_panel.gd`, claves `finance_*`; `test_day_summary_panel`). Mostrarlo al cerrar el día queda en D-0508.3.
+**[x] Hecho (2026-10-18, PR #458)** — `DaySummary` (`scripts/gameplay/business/day_summary.gd`): ingresos, costos, ganancia y saldo de apertura/cierre del día, por motivo, desde el libro; `test_day_summary`. El panel (D-0508.2) es `DaySummaryPanel` (`scripts/ui/day_summary_panel.gd`, claves `finance_*`; `test_day_summary_panel`). Mostrarlo al cerrar el día queda en D-0508.3.
 **Depende de:** D-0501
 **Qué:**
 - **D-0508.1 (hecha)** `DaySummary.build(company, day)` devuelve `{day, income, costs, profit, opening, closing, income_by_reason, cost_by_reason, truncated}`. Parte los movimientos del libro de ese día por signo; `costs` y los montos por motivo son positivos. `sorted_reasons(dict)` ordena los motivos de mayor a menor para listarlos. `truncated` avisa que el libro está lleno y puede faltar parte del día (`LEDGER_MAX` = 200).
@@ -110,17 +110,17 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** el test pasa y el panel muestra los mismos números (D-0508.2, hecho); aparece solo al cerrar el día (D-0508.3).
 
 ### D-0509 · Gastos fijos diarios — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `FixedCosts` (`scripts/gameplay/business/fixed_costs.gd`): alquiler diario (`CompanyTuning.RENT_PER_DAY` = 100) con `due`, `total_due`, `shortfall` y `settle`; `test_fixed_costs`. D-0509.b hecha (2026-11-07, PR pendiente): el cierre del host cobra el alquiler.
+**[x] Hecho (2026-10-12, PR #390)** — `FixedCosts` (`scripts/gameplay/business/fixed_costs.gd`): alquiler diario (`CompanyTuning.RENT_PER_DAY` = 100) con `due`, `total_due`, `shortfall` y `settle`; `test_fixed_costs`. D-0509.b hecha (2026-11-07, PR #844): el cierre del host cobra el alquiler.
 **Depende de:** D-0501
 **Qué:** funciones estáticas sin nodos sobre la billetera (`CompanyState`). `due()` devuelve los costos del día por motivo (hoy solo `rent`; la luz no es un gasto fijo, la maneja D-0912). `settle(company)` los cobra con `charge` (pasan aunque el saldo quede negativo) y devuelve lo cobrado. `shortfall(company)` dice cuánto no cubre la billetera, para que D-0510 decida la quiebra.
 **Decisión:** la clase no guarda estado (no hay "último día cobrado" que replicar ni migrar): el cierre del día (D-0203) la llama una vez por día. Se cobra al cierre, antes del resumen D-0508, así el alquiler aparece como costo `rent`.
-- [x] **D-0509.b** (2026-11-07, PR pendiente; revisión D-0140; `constructor-progresion`, low) `FixedCostsHook` (`scripts/gameplay/fixed_costs_hook.gd`), que `CompanyRoot` engancha: en `CLOSING`, en el host y una vez por día, `FixedCosts.settle` cobra por `CompanyNet.publish_wallet`, así el alquiler llega a todos los pares y entra en el resumen. Dependía de D-0251 (hecha) y D-0254 (abierta): [no la espera](../../decisiones/2026-11-07-alquiler-sin-esperar-d0254.md) porque no hace crecer `company_net.gd`.
+- [x] **D-0509.b** (2026-11-07, PR #844; revisión D-0140; `constructor-progresion`, low) `FixedCostsHook` (`scripts/gameplay/fixed_costs_hook.gd`), que `CompanyRoot` engancha: en `CLOSING`, en el host y una vez por día, `FixedCosts.settle` cobra por `CompanyNet.publish_wallet`, así el alquiler llega a todos los pares y entra en el resumen. Dependía de D-0251 (hecha) y D-0254 (abierta): [no la espera](../../decisiones/2026-11-07-alquiler-sin-esperar-d0254.md) porque no hace crecer `company_net.gd`.
 **Test** `test_fixed_costs`: el día cuesta 100; `settle` cobra con motivo `rent`; con 30 de saldo queda en -70 y `shortfall` da 70; saldo negativo debe el alquiler entero; sin empresa no cobra.
 **Test** `test_fixed_costs_hook` (D-0509.b): las 20:00 y `close_early()` cobran una vez en `CLOSING`, antes de `SUMMARY`; un `CLOSING` repetido no cobra de nuevo y cada día nuevo sí; pasa a rojo y deja la empresa en quiebra; el enganche de un cliente no publica nada; con host y cliente por ENet, la plata, el libro y el resumen del cliente son los del host.
 **Hecho cuando:** el test pasa y (D-0509.b) fuera de `tests/` hay una llamada a `FixedCosts.settle` en el cierre del host.
 
 ### D-0510 · Quiebra — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `Bankruptcy` (`scripts/gameplay/business/bankruptcy.gd`): `is_bankrupt`, `order_share` y `orders_for_day`; `CompanyTuning.BANKRUPT_ORDER_SHARE` = 0,6; `test_bankruptcy`. D-0510.2 hecha (2026-10-21, PR pendiente): el generador de pedidos y el aviso de apertura usan la quiebra.
+**[x] Hecho (2026-10-12, PR #401)** — `Bankruptcy` (`scripts/gameplay/business/bankruptcy.gd`): `is_bankrupt`, `order_share` y `orders_for_day`; `CompanyTuning.BANKRUPT_ORDER_SHARE` = 0,6; `test_bankruptcy`. D-0510.2 hecha (2026-10-21, PR #568): el generador de pedidos y el aviso de apertura usan la quiebra.
 **Depende de:** D-0501, D-0509
 **Qué:** funciones estáticas sin nodos ni estado. Con la billetera por debajo de cero al cerrar (después de `FixedCosts.settle`), el día siguiente abre con el 60 % de los pedidos y un aviso; no hay reinicio ni préstamo forzado (`diseno/economia.md` §3). `orders_for_day(usual, company)` redondea y nunca baja de 1 si el día tiene pedidos.
 - **D-0510.2 (hecha, `constructor-progresion` + `constructor-ui`)** La apertura del día (`DayCycle`/`OrderBook`, D-0203/D-0210) llama a `orders_for_day` al generar los pedidos y el panel de apertura muestra el aviso (clave `bankrupt_warning`).
@@ -130,16 +130,16 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** el test pasa y la apertura usa `orders_for_day` (D-0510.2).
 
 ### D-0511 · Tienda de la empresa — B · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-21, PR pendiente)** — `ShopItem` (`scripts/gameplay/business/shop_item.gd`, `.tres` en `data/shop/`) y `CompanyShop` (`company_shop.gd`): `items()` lee el catálogo, `check()` / `buy()` devuelven `{ok, key, args}` (`WORLD_SHOP_*`) y `buy()` cobra con motivo `shop` y entrega lo comprado. Tres ítems de arranque (mejora 1 = 450, lectora de etiquetas = 600, ampliación 1 = 800); `test_company_shop`. Falta la pantalla (D-0511.2), quién puede gastar (D-0518) y los precios del resto (D-0512 a D-0514).
+**[x] Hecho (2026-10-21, PR #584)** — `ShopItem` (`scripts/gameplay/business/shop_item.gd`, `.tres` en `data/shop/`) y `CompanyShop` (`company_shop.gd`): `items()` lee el catálogo, `check()` / `buy()` devuelven `{ok, key, args}` (`WORLD_SHOP_*`) y `buy()` cobra con motivo `shop` y entrega lo comprado. Tres ítems de arranque (mejora 1 = 450, lectora de etiquetas = 600, ampliación 1 = 800); `test_company_shop`. Falta la pantalla (D-0511.2), quién puede gastar (D-0518) y los precios del resto (D-0512 a D-0514).
 **Depende de:** D-0501, D-0202
 **Qué:** catálogo de `.tres` con tres tipos: `vehicle` (suma una entrada `{vehicle: fleet_key}` a `CompanyState.fleet`; se puede comprar otra vez), `machine` (suma su clave a `equipment`; una sola vez; `requires` opcional) y `expansion` (sube `warehouse_stage`, de a una etapa). Funciones estáticas sin nodos ni red.
-- ~~**D-0511.2**~~ ✅ (2026-10-22, PR pendiente) `CompanyShopPanel` (`scripts/ui/company_shop_panel.gd`) abierto desde el botón "Tienda" del resumen del cierre (`CompanyShopScreen` lo conecta a `CompanyNet.request(CompanyShopNet.BUY)`); filas con marca, precio y motivo `WORLD_SHOP_*`; el cliente pide y oye `host_only`; la ampliación comprada redibuja el galpón. `test_company_shop_panel`, `test_company_root`. Ver `revisar/D-0511.2.md`.
+- ~~**D-0511.2**~~ ✅ (2026-10-22, PR #682) `CompanyShopPanel` (`scripts/ui/company_shop_panel.gd`) abierto desde el botón "Tienda" del resumen del cierre (`CompanyShopScreen` lo conecta a `CompanyNet.request(CompanyShopNet.BUY)`); filas con marca, precio y motivo `WORLD_SHOP_*`; el cliente pide y oye `host_only`; la ampliación comprada redibuja el galpón. `test_company_shop_panel`, `test_company_root`. Ver `revisar/D-0511.2.md`.
 **Decisión:** el catálogo vive en `data/shop/` y no en `CompanyCatalog` (sus tipos de ítem no son del registro de la empresa y no hay que tocar `KINDS`); los vehículos y las licencias de distrito se agregan como `.tres` en D-0512 y con las barreras (D-0306).
 **Test** `test_company_shop`: catálogo en orden, compra cobra y entrega, motivo `shop` en el libro, rechazos sin cambiar nada.
 **Hecho cuando:** comprar un ítem en test descuenta la plata y lo otorga (cumplido).
 
 ### D-0512 · Precios de vehículos — A · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — seis `ShopItem` de `kind = vehicle` en `data/shop/vehicle_<fleet_key>.tres`: camioneta extra 1 500, bici 250, carrito 900, 4x4 (`offroad`) 2 500, lancha 5 000, avioneta 12 000 (`diseno/economia.md` §4 y `diseno/flota.md`). Nombres en `strings_world.csv` (`WORLD_SHOP_VEHICLE_*`) y `CompanyShop.NAME_KEYS`; `test_company_vehicle_prices`.
+**[x] Hecho (2026-10-22, PR #609)** — seis `ShopItem` de `kind = vehicle` en `data/shop/vehicle_<fleet_key>.tres`: camioneta extra 1 500, bici 250, carrito 900, 4x4 (`offroad`) 2 500, lancha 5 000, avioneta 12 000 (`diseno/economia.md` §4 y `diseno/flota.md`). Nombres en `strings_world.csv` (`WORLD_SHOP_VEHICLE_*`) y `CompanyShop.NAME_KEYS`; `test_company_vehicle_prices`.
 **Depende de:** D-0511, D-0115
 **Qué:** la tabla de precios de la flota como `.tres` del catálogo de la tienda. Cada precio es el de `flota.md`; la escalera bici < carrito < 4x4 < lancha < avioneta sube entre 2× y 3,6× por escalón (la regla de escala del §4).
 **Decisión:** todos van con `enabled = false`: `CompanyShop.items()` no los lista hasta que existe el vehículo (bici D-1207, carrito D-1221, 4x4 D-1231, lancha D-1302, avioneta D-1401); esa tarea solo cambia la línea a `true` y suma la pantalla/venta. Comprarlos por código ya funciona (suma `{vehicle: fleet_key}` a la flota). La camioneta extra (1 500) queda apagada hasta que D-1201 compre por unidad. Las camionetas ágil y vieja (1 800 y 2 000) tienen hito, no entran acá: llevan su `.tres` cuando se desbloqueen (D-0401+).
@@ -148,7 +148,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 
 
 ### D-0513 · Precios de máquinas de automatización — B · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `data/shop/conveyor.tres` (1 500) y `packer.tres` (4 000) junto a `label_reader.tres` (600, ya en la tienda); nombres `WORLD_SHOP_CONVEYOR` / `WORLD_SHOP_PACKER` en `strings_world.csv` y `CompanyShop.NAME_KEYS`; `test_company_machine_prices`.
+**[x] Hecho (2026-10-22, PR #615)** — `data/shop/conveyor.tres` (1 500) y `packer.tres` (4 000) junto a `label_reader.tres` (600, ya en la tienda); nombres `WORLD_SHOP_CONVEYOR` / `WORLD_SHOP_PACKER` en `strings_world.csv` y `CompanyShop.NAME_KEYS`; `test_company_machine_prices`.
 **Depende de:** D-0511
 **Qué:** la tabla de precios de las máquinas como `.tres` del catálogo de la tienda (`diseno/economia.md` §4: lectora de etiquetas 600 · cinta transportadora 1 500 · embaladora 4 000). Cada escalón cuesta entre 2× y 3× el anterior.
 **Decisión:** la cinta y la embaladora van con `enabled = false`, como los vehículos de D-0512: no se listan hasta que existe la máquina (cinta D-1101, embaladora D-1109); esa tarea solo cambia la línea a `true`. La clave de equipo es el id del `.tres` (`conveyor`, `packer`). Las otras máquinas del grupo 11 (encintadora, etiquetadora, balanza…) no tienen precio en el diseño: lo ponen sus tareas.
@@ -156,7 +156,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
 ### D-0514 · Precios de ampliaciones del galpón — A · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `data/shop/expansion_1.tres` (800), `expansion_2.tres` (2 000) y `expansion_3.tres` (5 000), una por etapa (`diseno/economia.md` §4); `CompanyTuning.WAREHOUSE_STAGE_PRICE` pasa de `[0, 1500, 6000, 20000]` a `[0, 800, 2000, 5000]`; nombres `WORLD_SHOP_EXPANSION_2/3` en `strings_world.csv` y `CompanyShop.NAME_KEYS`; `test_company_expansion_prices`.
+**[x] Hecho (2026-10-22, PR #621)** — `data/shop/expansion_1.tres` (800), `expansion_2.tres` (2 000) y `expansion_3.tres` (5 000), una por etapa (`diseno/economia.md` §4); `CompanyTuning.WAREHOUSE_STAGE_PRICE` pasa de `[0, 1500, 6000, 20000]` a `[0, 800, 2000, 5000]`; nombres `WORLD_SHOP_EXPANSION_2/3` en `strings_world.csv` y `CompanyShop.NAME_KEYS`; `test_company_expansion_prices`.
 **Depende de:** D-0511, D-0905
 **Qué:** la tabla de precios de las ampliaciones como `.tres` del catálogo de la tienda: 800 / 2 000 / 5 000, cada escalón 2,5× el anterior (regla de escala del §4).
 **Decisión:** manda `economia.md` §4 (el modelo económico de D-0117) sobre los 1 500 / 6 000 / 20 000 que D-0905 había puesto como supuesto de balance (su propio texto dice que se ajustan junto con D-0117). El precio vive en dos lugares (el `.tres` de la tienda y `WarehouseStages.price_for`) y el test los obliga a coincidir. Las tres van a la venta (`enabled = true`, como la primera): la tienda ya las ofrece en orden y rechaza saltar etapas con `WRONG_STAGE`.
@@ -164,7 +164,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
 ### D-0515 · Sueldos de empleados por rol y nivel — A · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `EmployeeLevel` (`scripts/gameplay/business/employee_level.gd`, recurso) y `EmployeeLevels` (`employee_levels.gd`: `levels()`, `find()`, `wage_for()`, `name_key()`), con `data/employees/novice.tres` (60 por día, rinde 0,5), `regular.tres` (90, 0,7) y `expert.tres` (130, 1,0); nombres `WORLD_EMPLOYEE_*` en `strings_world.csv`; `test_employee_wages`.
+**[x] Hecho (2026-10-22, PR #628)** — `EmployeeLevel` (`scripts/gameplay/business/employee_level.gd`, recurso) y `EmployeeLevels` (`employee_levels.gd`: `levels()`, `find()`, `wage_for()`, `name_key()`), con `data/employees/novice.tres` (60 por día, rinde 0,5), `regular.tres` (90, 0,7) y `expert.tres` (130, 1,0); nombres `WORLD_EMPLOYEE_*` en `strings_world.csv`; `test_employee_wages`.
 **Depende de:** D-0511
 **Qué:** la tabla de sueldos diarios como `.tres` (`diseno/economia.md` §4): novato 60 · normal 90 · experto 130, y cuánto rinde cada nivel frente a un jugador (0,5 / 0,7 / 1,0). El cobro al cierre es D-1009 y los roles son D-1002: leen esta tabla.
 **Decisión:** el sueldo depende del **nivel**, no del rol: los cinco roles (descargador, repositor, armador, controlador, despachante) cobran igual en cada nivel, porque `economia.md` §4 da una sola tabla. Si D-1002 necesita un plus por rol, se suma ahí. Sin costo de alta (`referencia-schedule-1.md`). El recurso no es un `ShopItem`: contratar no es comprar (D-1001).
@@ -172,7 +172,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** tabla en `.tres` (cumplido).
 
 ### D-0518 · Solo el host (o un voto) gasta en la tienda — B · Sonnet 5.5 · high · Aviso: sí (`network_manager.gd`) · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 50; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
+**[x] Hecho (2026-10-22, PR #646)** — `CompanyShopNet` (`scripts/core/company/company_shop_net.gd`, `CompanyNet.shop`): pedido `shop_buy {item}` y evento `shop_bought {item, money, minute}` por `CompanyNet`; compra solo el host (también jugando solo, peer 1) y un cliente oye `host_only`; `PROTOCOL_VERSION` 50; `test_company_shop_net`. El voto de la tripulación queda en la subtarea abierta D-0518.b.
 **Depende de:** D-0511, D-2003, D-2004 (modelo: D-0910 y D-0603.b.2)
 **Qué:** la tienda de D-0511 por red, con el contrato de `diseno/red-autoridad.md` (fila 25 y §13).
 - El host comprueba con `CompanyShop.check()` y publica un evento; cada peer lo aplica con el mismo `CompanyShop.buy()`: máquina → `equipment`, vehículo → `fleet`, ampliación → `warehouse_stage`, libro con motivo `shop`.
@@ -185,7 +185,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** test de red: un cliente no puede comprar solo (cumplido).
 
 ### D-0516 · Cobro al entregar — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — el cobro es **al entregar**, no al cierre del día: ya era así desde D-0815 (`OrderSettlement.settle()` suma la paga a la billetera con motivo `order_paid` en el momento de la puerta). Se fija con test y decisión; no hubo cambio de código.
+**[x] Hecho (2026-10-22, PR #642)** — el cobro es **al entregar**, no al cierre del día: ya era así desde D-0815 (`OrderSettlement.settle()` suma la paga a la billetera con motivo `order_paid` en el momento de la puerta). Se fija con test y decisión; no hubo cambio de código.
 **Depende de:** D-0501, D-0815
 **Qué:** decidir cuándo entra la plata de un pedido (D-0105 deja el reloj de 08:00 a 20:00).
 - La paga (y la propina) entra a `CompanyState.money` en el minuto de la entrega, con el día y la hora del reloj en el historial.
@@ -196,7 +196,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** test y decisión (cumplido).
 
 ### D-0520 · Puntaje de la corrida actual en la salida — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `TripScoring` (`scripts/gameplay/districts/trip_scoring.gd`): cada pedido de una salida vale lo que la misma puerta en una entrega (`RunScoring`: 150 intacta, 75 abollada, 20 rota, -60 sin llegar); `TripResult.build()` suma `score`, `score_points` y `score_breakdown`, y el mérito del que llevó la caja sale de ese puntaje (intacta 10, abollada 5, rota o sin llegar 0). `run_scoring.gd`, `run_manager.gd` y `CrewProgression` no se tocaron; `test_company_trip_scoring`.
+**[x] Hecho (2026-10-22, PR #648)** — `TripScoring` (`scripts/gameplay/districts/trip_scoring.gd`): cada pedido de una salida vale lo que la misma puerta en una entrega (`RunScoring`: 150 intacta, 75 abollada, 20 rota, -60 sin llegar); `TripResult.build()` suma `score`, `score_points` y `score_breakdown`, y el mérito del que llevó la caja sale de ese puntaje (intacta 10, abollada 5, rota o sin llegar 0). `run_scoring.gd`, `run_manager.gd` y `CrewProgression` no se tocaron; `test_company_trip_scoring`.
 **Depende de:** D-0501, D-0815 (y D-0320, que arma el resumen de la salida)
 **Qué:** el resultado de una salida en modo Empresa usa el puntaje de `RunScoring` como componente de su cierre, sin cambiar Entrega ni Endless.
 | Entra / sale | Cuánto | Por qué | Dónde se ve |

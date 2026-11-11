@@ -51,7 +51,7 @@ proveedores se van, o el host tiene que dejar a alguien.
 **Hecho cuando:** el issue está abierto.
 
 ### D-0107 · Análisis de *Schedule I* — B · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `diseno/referencia-schedule-1.md`: empleados, estaciones, crecimiento, bucle y quejas con 41 fuentes; tabla de 31 filas Tomamos/Adaptamos/No tomamos con su tarea `D-`.
+**[x] Hecho (2026-10-12, PR #421)** — `diseno/referencia-schedule-1.md`: empleados, estaciones, crecimiento, bucle y quejas con 41 fuentes; tabla de 31 filas Tomamos/Adaptamos/No tomamos con su tarea `D-`.
 **Depende de:** —
 **Qué:** `diseno/referencia-schedule-1.md` con fuentes web (página de Steam, wiki, reseñas) sobre:
 - empleados (contratación, cama/locker, sueldo diario, asignación con portapapeles);
@@ -63,7 +63,7 @@ Termina en una tabla "Tomamos / Adaptamos / No tomamos", cada fila con la tarea 
 **Hecho cuando:** el documento tiene la tabla con 15+ filas y cada una cita su fuente.
 
 ### D-0108 · Referencias de armado y logística — B · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-19, PR pendiente)** — `diseno/referencias-logistica.md`: Overcooked, Unpacking y encastre, Mini Motorways, shapez, TRDS y Schedule I (crecimiento), cada uno con "lo que copiamos" y su tarea `D-`; tabla de 30 filas, riesgos para un equipo de 2 y 36 fuentes.
+**[x] Hecho (2026-10-19, PR #464)** — `diseno/referencias-logistica.md`: Overcooked, Unpacking y encastre, Mini Motorways, shapez, TRDS y Schedule I (crecimiento), cada uno con "lo que copiamos" y su tarea `D-`; tabla de 30 filas, riesgos para un equipo de 2 y 36 fuentes.
 **Depende de:** —
 **Qué:** `diseno/referencias-logistica.md`: qué hacen bien Overcooked (hojas de pedido, estaciones),
 Unpacking/Box-packing (encastre), Mini Motorways/Shapez (cintas, cuellos de botella), Totally Reliable
@@ -72,7 +72,7 @@ en una línea y la tarea `D-` donde va.
 **Hecho cuando:** 5 juegos cubiertos, con fuentes.
 
 ### D-0109 · Tabla "lo que armás es la trampa" — A · Opus 5.5 · high · Aviso: sí (`data/traps/`, `package_content.gd`) · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/armado-y-trampas.md`: 10 contenidos, fórmula y 6 ejemplos.
+**[x] Hecho (2026-10-04, PR #268)** — `diseno/armado-y-trampas.md`: 10 contenidos, fórmula y 6 ejemplos.
 **Depende de:** —
 **Qué:** `diseno/armado-y-trampas.md`. Para cada uno de los 10 `data/contents/*.tres`:
 - su trampa actual;
@@ -85,7 +85,7 @@ resueltos. Y las reglas de mezcla: dos productos en una caja → manda el de may
 (los repite el test de D-0709).
 
 ### D-0110 · Roles de la tripulación de 1 a 8 — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/roles-tripulacion.md`: regla de 2 min, 4 tablas (1, 2, 3-4, 5-8), qué hace el que se queda y cómo se mide.
+**[x] Hecho (2026-10-04, PR #273)** — `diseno/roles-tripulacion.md`: regla de 2 min, 4 tablas (1, 2, 3-4, 5-8), qué hace el que se queda y cómo se mide.
 **Depende de:** D-0101
 **Qué:** `diseno/roles-tripulacion.md` con una tabla por cantidad de jugadores (1, 2, 3-4, 5-8): quién
 queda en el galpón, quién sale, cuántas salidas por día, y qué hace el que se queda mientras los otros
@@ -94,7 +94,7 @@ o un vehículo que manejar (medible con el bot de D-0111).
 **Hecho cuando:** las 4 tablas están, y cada rol nombra las estaciones de D-0904.
 
 ### D-0111 · Definición exacta del corte vertical F1 — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/corte-vertical.md`: 17 ítems de F1 con su tarea `D-`, lo que no entra, criterio de cierre del bot y umbrales.
+**[x] Hecho (2026-10-04, PR #274)** — `diseno/corte-vertical.md`: 17 ítems de F1 con su tarea `D-`, lo que no entra, criterio de cierre del bot y umbrales.
 **Depende de:** D-0101, D-0110
 **Qué:** `diseno/corte-vertical.md` con la lista cerrada de lo que entra en F1:
 - galpón por defecto, 1 proveedor y los 10 productos de `data/contents/`;
@@ -107,7 +107,7 @@ salida a Barrio Centro, volver y cerrar el día con ganancia > 0, sin `ERROR`/`S
 **Hecho cuando:** el documento existe y cada ítem nombra su tarea `D-`.
 
 ### D-0112 · Crítica de alcance contra la capacidad del equipo — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-19, PR pendiente)** — `diseno/critica-alcance.md`: estimación por grupo, 3 peores costo/valor, 287 tareas tachadas (42 recortadas, 148 pospuestas, 97 fusionadas) sin tocar la fila 5; zona gris y alcance del Early Access en el issue #470 (D-0113).
+**[x] Hecho (2026-10-19, PR #471)** — `diseno/critica-alcance.md`: estimación por grupo, 3 peores costo/valor, 287 tareas tachadas (42 recortadas, 148 pospuestas, 97 fusionadas) sin tocar la fila 5; zona gris y alcance del Early Access en el issue #470 (D-0113).
 **Depende de:** D-0101
 **Qué:** pasada de `critico-diseno` a los 20 grupos. Informe `diseno/critica-alcance.md`:
 - estimación en semanas-persona por grupo;
@@ -123,7 +123,7 @@ en las tablas de grupo lo que se recorte.
 **Hecho cuando:** el issue está abierto.
 
 ### D-0114 · Tabla de distritos definitiva — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/distritos.md`: 9 zonas con vehículos, peligros, casas, ruta, clima, envío y apertura.
+**[x] Hecho (2026-10-04, PR #293)** — `diseno/distritos.md`: 9 zonas con vehículos, peligros, casas, ruta, clima, envío y apertura.
 **Depende de:** D-0101
 **Qué:** `diseno/distritos.md`. Por distrito:
 - vehículos permitidos y peligros (los existentes por nombre de clase: `ChasingDog`, `MudSpot`,
@@ -145,7 +145,7 @@ Incluye los 3 `UnlockManager.TRUCKS` actuales como variantes de la camioneta.
 **Hecho cuando:** 7 filas (camioneta ×3 variantes, 4x4, bici, carrito, lancha, avioneta). Es la fuente de D-0207.
 
 ### D-0116 · Catálogo inicial de productos — A · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/catalogo-productos.md`: 10 de F1 + 30 nuevos en 3 lotes.
+**[x] Hecho (2026-10-04, PR #271)** — `diseno/catalogo-productos.md`: 10 de F1 + 30 nuevos en 3 lotes.
 **Depende de:** D-0109
 **Qué:** `diseno/catalogo-productos.md`. Para los 10 contenidos actuales y 30 nuevos:
 - id, contenido base (`PackageContent` existente o "nuevo, necesita modelo") y celdas (X×Y×Z en celdas de 0,2 m);
@@ -155,7 +155,7 @@ Los 10 primeros alcanzan para F1; los 30 nuevos son el pedido a `sesion-arte` (D
 **Hecho cuando:** 40 filas, y las 10 de F1 con todos los campos que pide `ProductDefinition` (D-0204).
 
 ### D-0117 · Modelo económico en papel — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/economia.md`: pedido medio (210 de ingreso, ≈102 de margen), curva de 20 días para 1/2/4 jugadores, precios de mejoras y lista de constantes para `company_tuning.gd`.
+**[x] Hecho (2026-10-04, PR #282)** — `diseno/economia.md`: pedido medio (210 de ingreso, ≈102 de margen), curva de 20 días para 1/2/4 jugadores, precios de mejoras y lista de constantes para `company_tuning.gd`.
 **Depende de:** D-0116
 **Qué:** `diseno/economia.md` con:
 - ingresos por pedido promedio, costos de insumos, alquiler y precios de mejoras;
@@ -186,7 +186,7 @@ Regla: modo Entrega y Endless no cambian de comportamiento (S1).
 **Hecho cuando:** 15+ sistemas con su fila, y cada fila con archivo y línea de entrada.
 
 ### D-0120 · Riesgos técnicos — B · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `diseno/riesgos.md`: 16 riesgos (1 P0, 9 P1, 6 P2) con evidencia, mitigación y tarea `D-` (todos los P0-P1 con tarea abierta); 4 propuestas "sin tarea todavía".
+**[x] Hecho (2026-10-21, PR #571)** — `diseno/riesgos.md`: 16 riesgos (1 P0, 9 P1, 6 P2) con evidencia, mitigación y tarea `D-` (todos los P0-P1 con tarea abierta); 4 propuestas "sin tarea todavía".
 **Depende de:** D-0119
 **Qué:** `diseno/riesgos.md` con severidad P0-P3:
 - red (galpón con 300+ objetos);
@@ -210,7 +210,7 @@ las tareas de pedidos y cierre (D-0822 mensajes con humor).
 **Hecho cuando:** `diseno/narrativa-empresa.md` alineado con `docs/narrativa.md`.
 
 ### D-0123 · Diseño de eventos del día — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/eventos-del-dia.md`: 15 eventos (6 Núcleo F1, 5 Ampliación F1, 4 Ampliación F2; 4 positivos, 3 negativos, 8 mixtos), reglas de frecuencia y anuncio, sorteo con la corriente `events` de la semilla del día, techo diario de 150 / 300, red por `CompanyNet` y tareas nuevas a crear en el grupo 05.
+**[x] Hecho (2026-10-22, PR #635)** — `diseno/eventos-del-dia.md`: 15 eventos (6 Núcleo F1, 5 Ampliación F1, 4 Ampliación F2; 4 positivos, 3 negativos, 8 mixtos), reglas de frecuencia y anuncio, sorteo con la corriente `events` de la semilla del día, techo diario de 150 / 300, red por `CompanyNet` y tareas nuevas a crear en el grupo 05.
 **Depende de:** D-0101, D-0110, D-0117, D-0121, D-0246, D-2001
 **Qué:** `diseno/eventos-del-dia.md`, que no resucita nada de P14 ni de R4:
 - [x] **D-0123.1** Propósito, qué no son (ni peligros de zona ni contratos de varios días) y cómo conviven con `RouteEventManager` (ids distintos: `shed_inspection` ≠ `inspection`).
@@ -281,7 +281,7 @@ armado con lo que ya dicen `strings_ui.csv` / `strings_world.csv`:
 **Hecho cuando:** `diseno/glosario.md` existe y el test lo cumple sobre las tablas actuales.
 
 ### D-0130 · Tabla de la primera semana — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/onboarding.md`: día 1 = el bucle en 6 objetivos (con pedido de 1 unidad a las 08:00), 12 filas más con disparador y día mínimo, progreso por jugador en `seen_tips` sin RPC ni campo de save; `teaches_key` de los hitos 1-5 queda como repaso. Lo construye D-1901.
+**[x] Hecho (2026-10-22, PR #667)** — `diseno/onboarding.md`: día 1 = el bucle en 6 objetivos (con pedido de 1 unidad a las 08:00), 12 filas más con disparador y día mínimo, progreso por jugador en `seen_tips` sin RPC ni campo de save; `teaches_key` de los hitos 1-5 queda como repaso. Lo construye D-1901.
 **Depende de:** D-0111, D-0118, D-0720, D-0812
 **Qué:** `diseno/onboarding.md` (máx. 120 líneas), con la crítica de `critico-diseno`:
 - [x] D-0130.1 Reglas: el día 1 es el tutorial, una cosa nueva por día, se enseña por disparador y no por
@@ -296,7 +296,7 @@ Decisión: `docs/decisiones/2026-10-22-primera-semana.md`.
 **Hecho cuando:** `diseno/onboarding.md` existe y D-1901 lo puede construir sin preguntar.
 
 ### D-0131 · Portapapeles de gestión — A · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/portapapeles.md`: objeto en la mano desde el día 1 con hojas Stock y Proveedor (Empleados con el hito 8), guardado ↔ levantado en F1 y bajado/apuntar con D-1004, manos ocupadas definidas en código, `held_tool` replicado sin RPC. Lo construye D-1902.
+**[x] Hecho (2026-10-22, PR #671)** — `diseno/portapapeles.md`: objeto en la mano desde el día 1 con hojas Stock y Proveedor (Empleados con el hito 8), guardado ↔ levantado en F1 y bajado/apuntar con D-1004, manos ocupadas definidas en código, `held_tool` replicado sin RPC. Lo construye D-1902.
 **Depende de:** D-0107, D-0603, D-0612
 **Qué:** `diseno/portapapeles.md` con wireframes en texto, con la crítica de `critico-diseno`:
 - [x] D-0131.1 Reglas: objeto que ocupa las manos, desde el día 1, junta paneles existentes (modo `embedded`),
@@ -308,7 +308,7 @@ Decisión: `docs/decisiones/2026-10-22-portapapeles.md`.
 **Hecho cuando:** `diseno/portapapeles.md` existe y D-1902 lo puede construir sin preguntar.
 
 ### D-0134 · Qué se guarda entre sesiones — A · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/guardado.md`: el save siempre es la apertura de un día; un día cortado vuelve a su apertura (D-0251); el host puede cerrar el día antes (D-0253); lo suelto va a un bulto de devolución (D-0252); tabla de lo que se guarda y lo que se recalcula.
+**[x] Hecho (2026-10-22, PR #676)** — `diseno/guardado.md`: el save siempre es la apertura de un día; un día cortado vuelve a su apertura (D-0251); el host puede cerrar el día antes (D-0253); lo suelto va a un bulto de devolución (D-0252); tabla de lo que se guarda y lo que se recalcula.
 **Depende de:** D-0206, D-0236, D-2005
 **Qué:** `diseno/guardado.md` con qué se guarda y qué no (empresa, stock, empleados, día en curso), contrastado con
 `CompanySave`, `CompanyState` y `CompanyRoot`.
@@ -322,7 +322,7 @@ Decisión: `docs/decisiones/2026-10-22-guardado.md`.
 **Hecho cuando:** `diseno/guardado.md` existe y D-0251 a D-0253 se pueden construir sin preguntar.
 
 ### D-0135 · Clima y temperatura por zona — B · Opus 5.5 · medium · Aviso: no · F0 (Ampliación)
-**[x] Hecho (2026-10-22, PR pendiente)** — sección "Clima y temperatura por zona" en `diseno/distritos.md`: clima por zona y por día desde la semilla de la empresa (un frente para el llano, el evento gana, días 1-3 sin lluvia), la lluvia baja el agarre ×0,75 por `GripZones`, temperatura de la zona de destino por salida en `ColdPack`. Lo construye D-0324 (versión mínima); el cruce entre zonas, D-1610.
+**[x] Hecho (2026-10-22, PR #691)** — sección "Clima y temperatura por zona" en `diseno/distritos.md`: clima por zona y por día desde la semilla de la empresa (un frente para el llano, el evento gana, días 1-3 sin lluvia), la lluvia baja el agarre ×0,75 por `GripZones`, temperatura de la zona de destino por salida en `ColdPack`. Lo construye D-0324 (versión mínima); el cruce entre zonas, D-1610.
 **Depende de:** D-0114, D-0205, D-0721
 **Qué:** tabla de clima por zona con su efecto en la carga y el vehículo, contrastada con `WorldMood`,
 `GripZones`, `ColdPack` y el mapa continuo.
@@ -337,7 +337,7 @@ Decisión: `docs/decisiones/2026-10-22-clima-por-zona.md`.
 **Hecho cuando:** la sección existe y D-0324 la puede construir sin preguntar.
 
 ### D-0136 · Horario de clientes y ventanas de entrega — A · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — `diseno/clientes.md`: un solo horario para todos (reciben mientras el día está abierto), desde las 20:00 no sale ningún vehículo y la salida rechazada no frena el resumen, lo que ya está en la ruta se entrega igual, la tardanza se mide con la hora del galpón, sin tope de ventana, en `CLOSING` se sigue venciendo, al cierre lo vencido falla (−3) y lo que está en ventana se cancela gratis, el cierre anticipado falla todo. Lo construye D-0851.
+**[x] Hecho (2026-10-22, PR #693)** — `diseno/clientes.md`: un solo horario para todos (reciben mientras el día está abierto), desde las 20:00 no sale ningún vehículo y la salida rechazada no frena el resumen, lo que ya está en la ruta se entrega igual, la tardanza se mide con la hora del galpón, sin tope de ventana, en `CLOSING` se sigue venciendo, al cierre lo vencido falla (−3) y lo que está en ventana se cancela gratis, el cierre anticipado falla todo. Lo construye D-0851.
 **Depende de:** D-0105, D-0134, D-0807, D-0813.1
 **Qué:** reglas de cuándo recibe un cliente, contrastadas con S3, S4, `guardado.md` y el código de `OrderBook`, `DayCycle` y `CompanyTrips`.
 - [x] D-0136.1 Reglas 1 a 10 y lo que queda afuera (D-0825 y D-0339 siguen pospuestas; aviso de las 19:00 y línea del resumen, a Pulido).
