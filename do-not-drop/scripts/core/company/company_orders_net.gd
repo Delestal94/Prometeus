@@ -34,9 +34,10 @@ const EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED]
 const SNAPSHOT_KEY: String = "orders"
 ## Most orders a book holds: an order_added past it is not applied, a snapshot over it is refused; while
 ## the book is full poll() brings no order in (expiries still go out). Each new day drops the closed orders
-## (prune_closed()), but nothing closes an order of this book yet (D-0815.b, D-0302), so for now prune frees
-## nothing and the busiest crew (CompanyTuning.ORDERS_MAX_PER_DAY) fills it at about day 16 of one session:
-## after that no new orders come in until the session ends (the book isn't saved). About 150 KB of the
+## (prune_closed()), but so far only a failed trip closes one of this book (trip_closed, D-0302): a delivered order
+## stays OUT until order_delivered (D-0815.b), so a crew that delivers everything frees nothing and, at its busiest
+## (CompanyTuning.ORDERS_MAX_PER_DAY), fills it at about day 16 of one session: after that no new orders come in until
+## the session ends (the book isn't saved). About 150 KB of the
 ## snapshot when full (4096 were 2.4 MB and 230 ms to check on a client; revisar/D-0813.md).
 const MAX_ORDERS: int = 256
 ## Longest id or name an order may carry.

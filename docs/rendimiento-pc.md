@@ -225,6 +225,52 @@ dejaba pendiente); con el cargador no aparecen en 100 s.
 8. Poner `--via-loader` en la corrida diaria de `pc-build` (o sumar una segunda serie) para que "frames de más de 33 ms"
    mida lo que ve el jugador; el cambio es de la rutina, no se tocó.
 
+## Memoria en Endless larga (N-980.3), 2026-11-07
+
+Comprueba que la sonda ya no crece sola (N-980.1) y que el juego tampoco. Commit base `d739fd5`, con ventana a
+1920×1080, Alto, semilla 4242, con la PC compartida con otras corridas (por eso los FPS de acá no se comparan):
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --windowed --script res://tests/bench_drive.gd -- --endless --seconds=1000 --seed=4242 --memory-every=20
+```
+
+`--memory-every` imprime una línea `BENCH memory` cada N segundos y no guarda nada en la sonda. Los bytes privados del
+proceso se muestrearon desde afuera cada 10 s (`PrivateMemorySize64` de `Get-Process`).
+
+**Criterio, fijado antes de correr:** de 60 s a 400 s, pendiente (mínimos cuadrados) de memoria estática y de bytes
+privados de 0,045 MiB/s o menos (un décimo de los 0,45 MiB/s de la sonda vieja), orphans en 0, y nodos y recursos sin
+crecer más de 5 % entre el tercio medio y el último. **Resultado: cumple, pero no a la primera.**
+
+| Corrida | Estática MiB/s (60-400) | Privados MiB/s (60-400) | Privados MiB/s (60-1000) | Nodos/s (60-1000) | Objetos/s (60-1000) | `buffer_mem` final | ¿Cumple? |
+|---|---|---|---|---|---|---|---|
+| A, 400 s, sin el arreglo | 0,005 | **0,141** | no llegó | no llegó | no llegó | 61,6 MiB | **No**: escalón de +42 MiB de la foto de prensa |
+| B, 1000 s, sin el arreglo | 0,005 | 0,044 | **0,064** | **0,108** | **0,584** | 75,6 MiB | Al límite en 400 s; a 1000 s se ve la deriva |
+| C, 1000 s, con el arreglo | 0,003 | 0,014 | 0,008 | 0,020 | 0,037 | 61,6 MiB | **Sí** |
+
+B y C recorrieron lo mismo (18.310 m, 46 rescates). La corrida A falló y se dejó el criterio como estaba: por eso se
+corrió más larga y se buscó qué crecía, en vez de dar por buena la que pasó justo.
+
+- **Lo que crecía era del juego, no de la sonda.** Un censo por grupo de nodos dio `GPUParticles3D` sueltos bajo el
+  nivel (15, 37, 53 y 72 a los 200, 400, 600 y 800 s): los `ImpactDebris` de cada golpe fuerte, que nunca se liberaban
+  (`vehicle_effects.gd`). Un `GPUParticles3D` nace emitiendo, y encender un one-shot que ya emite cancela `finished`.
+  Arreglado con `emitting = false` antes de encenderlo; test `test_impact_debris_freed` (falla sin el arreglo).
+- **Corrida C:** bytes privados de 1.118,5 MiB a los 400 s y 1.119,0 a los 1000 s; recursos clavados en 6.081 y orphans
+  en 0 en todos los puntos. La estática sigue subiendo 0,002 MiB/s, 8 MiB por hora; de eso, ~0,0012 MiB/s es la sonda
+  (el `PackedFloat32Array` de ms por frame, 4 bytes por frame a ~300 FPS). Lo demás no se investigó.
+- **Sin medir: la foto de prensa.** En la corrida A la primera `PressPhotoLens` trajo un tirón de 1.054 ms a los 289 s y
+  +42 MiB de privados que no se devolvieron. B y C no sacaron ninguna foto, así que el arreglo no se probó con foto, y no
+  se sabe si cada foto suma lo mismo o solo la primera. `NewsPhotographer` saca como mucho 6 por partida, una por tipo,
+  y el lente se libera, así que está acotado por diseño; el peor caso serían ~250 MiB si cada una sumara 42.
+
+| Corrida C, t (s) | Estática MiB | Video MiB | Privados MiB | Objetos | Nodos | Recursos | Orphans |
+|---|---|---|---|---|---|---|---|
+| 60 | 261,84 | 265,00 | 1.106,8 | 13.993 | 3.104 | 6.081 | 0 |
+| 200 | 262,10 | 264,74 | 1.104,3 | 13.957 | 3.070 | 6.081 | 0 |
+| 400 | 262,51 | 264,60 | 1.118,5 | 13.865 | 3.013 | 6.081 | 0 |
+| 600 | 263,44 | 265,65 | 1.118,6 | 14.074 | 3.167 | 6.081 | 0 |
+| 800 | 263,51 | 265,70 | 1.118,3 | 14.079 | 3.153 | 6.081 | 0 |
+| 1000 | 264,15 | 265,30 | 1.119,0 | 14.044 | 3.129 | 6.081 | 0 |
+
 ## Presupuesto del modo Empresa (D-2012)
 
 Con la GPU de la PC de arriba (RTX 4060 Ti) y el preset **medio** (`WorldQuality`, escala 0,9, MSAA 2x), a
@@ -305,8 +351,51 @@ cuadrado desde la celda del galpón):
 | Al frente y a la derecha, hacia Centro | 4.967 | 2.259 |
 | Adentro, hacia el fondo | 808 | 808 |
 
-Lo que falta para entrar en el presupuesto queda en D-2012.1 a D-2012.3
+Lo que falta para entrar en el presupuesto queda en D-2012.2 y D-2012.3
 (`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`).
+
+### Celdas fijas lejanas, 2026-11-07 (D-2012.1)
+
+Una celda fijada pasado `CELL_LOAD_RADIUS` de toda ancla queda estacionada: conserva nodos y colisión, no se dibuja
+y muestra su impostor. Vuelve a dibujarse al entrar en ese radio y, una vez dibujada, aguanta hasta
+`CELL_UNLOAD_RADIUS`, igual que la carga de una celda común.
+
+**Commit:** `origin/main` `96e0cb55` más este cambio. Cuatro corridas de 30 s por etapa después del cambio y tres
+antes, intercaladas, con el comando de arriba. **PC ocupada** por otros carriles: la tercera corrida de después
+bajó en todas las etapas, también en el manejo que este cambio no toca, y es el piso de cada rango.
+
+| Medida | Antes | Después |
+|---|---|---|
+| `draw_calls_peak` (vuelta por el galpón) | 5.630-5.633 | **2.588-2.590** |
+| `draw_calls` (promedio de la vuelta) | 1.966-1.994 | 977-1.014 |
+| `door_draw_calls` (promedio por la puerta) | 4.779-4.794 | 1.024-1.052 |
+| `door_fps_avg` / `door_fps_low_1pct` | 97-104 / 48-68 | 180-270 / 90-138 |
+| `fps_avg` / `fps_low_1pct` | 159-167 / 51-70 | 153-233 / 68-97 |
+| `centro_fps_avg` | 96-106 | 75-110 |
+| `centro_draw_calls_peak` | 2.654-2.656 | 2.655-2.656 |
+| `nodes` | 15.203 | 15.225 |
+| `physics_active` | 2 | 2 |
+
+Por vista, con `tests/render_company_far.gd` (preset medio, 1280×720), el mismo script sobre el código de antes y
+de después:
+
+| Vista | Draw calls antes | Después |
+|---|---|---|
+| Por la puerta, al frente | 4.707 | 965 |
+| Al frente y a la izquierda | 4.794 | 977 |
+| Al frente y a la derecha, hacia Centro | 4.967 | 2.267 |
+| Adentro, hacia el fondo | 794 | 794 |
+| En la avenida a 640 m, hacia Centro | 1.118 | 1.121 |
+| En la avenida a 640 m, hacia el galpón | 4.087 | 2.496 |
+
+- **Sigue OVER:** el pico de 2.588 es la vista hacia Centro, que está dentro del radio y se dibuja. Manejando por
+  Centro no cambia nada por lo mismo. Es D-2012.2: bajarlo es agrupar las mallas, no esconder celdas.
+- **Se ve igual:** comparando las capturas de antes y después, cambia como mucho el 0,02 % de los píxeles, en la
+  línea del horizonte (postes y objetos lejanos).
+- **Lo que suma:** 22 nodos (dos por cada uno de los 11 impostores nuevos). Prender las 19 celdas estacionadas de una
+  vez costó 2,3 ms y apagarlas 1,9 ms; una sola, 0,7 ms como mucho. Cruzar un borde cambia unas pocas.
+- **Son 19 y no las 24 del experimento:** la van estacionada en el patio es un ancla del host, en la celda al norte
+  del galpón. Las celdas a 3 de ella siguen dibujadas por la histéresis.
 
 ### Serie del presupuesto
 
@@ -317,6 +406,7 @@ esto se comparan el 10 % de "(perf)" y las caídas de la rutina. La primera fila
 | Fecha | Commit | `fps_avg` | `centro_fps_avg` | `draw_calls_peak` | `physics_active` | `nodes` | Notas |
 |---|---|---|---|---|---|---|---|
 | 2026-11-07 | `b61e3802` + bench | 186-248 | 140-165 | 5.632 | 2 | 15.210 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
+| 2026-11-07 | `96e0cb55` + D-2012.1 | 153-233 | 75-110 | 2.590 | 2 | 15.225 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
 
 ## Ancho de banda del modo Empresa (D-2002)
 

@@ -350,19 +350,19 @@ static func park_transform(at_shed: Node3D, company: Object, index: int) -> Tran
 
 
 ## Host: `vehicle_id` is put back in its place in the playon (park_transform()), still, with whoever is at its wheel
-## (the tow home, D-0307.1: CompanyTow). False for a vehicle that is not here or cannot be parked.
+## and the boxes in its bay (the tow home, D-0307.1: CompanyTow). False for a vehicle that is not here or cannot be
+## parked.
 func send_home(vehicle_id: StringName) -> bool:
 	var all: Array[Node3D] = vehicles()
 	for index: int in range(all.size()):
 		if StringName(all[index].name) == vehicle_id and all[index].has_method(&"park"):
-			var company: Object = net.company if net != null else null
-			all[index].call(&"park", park_transform(shed, company, index))
+			_park_at_home(all[index], index)
 			return true
 	return false
 
 
-## Host: a vehicle under FALL_Y_M (it fell through a hole in the ground) is put back where it parks, still, and
-## vehicle_recovered says which. Returns how many were put back. Done every physics tick.
+## Host: a vehicle under FALL_Y_M (it fell through a hole in the ground) is put back where it parks, still, with the
+## boxes in its bay, and vehicle_recovered says which. Returns how many were put back. Done every physics tick.
 func recover_fallen() -> int:
 	var count: int = 0
 	var all: Array[Node3D] = vehicles()
@@ -370,11 +370,16 @@ func recover_fallen() -> int:
 		var body: Node3D = all[index]
 		if body.global_position.y >= FALL_Y_M or not body.has_method(&"park"):
 			continue
-		var company: Object = net.company if net != null else null
-		body.call(&"park", park_transform(shed, company, index))
+		_park_at_home(body, index)
 		vehicle_recovered.emit(StringName(body.name))
 		count += 1
 	return count
+
+
+## `body`, the `index`-th vehicle, parked in its place: only the vehicle moves in park(), so its bay is hauled along.
+func _park_at_home(body: Node3D, index: int) -> void:
+	var place: Transform3D = park_transform(shed, net.company if net != null else null, index)
+	DispatchRack.haul(body, func() -> void: body.call(&"park", place))
 
 
 func _physics_process(_delta: float) -> void:

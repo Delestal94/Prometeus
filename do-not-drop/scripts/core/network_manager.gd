@@ -177,10 +177,12 @@ const MAX_PLAYERS: int = 8
 ## 63: care_state carries held_by and helped_by, the peers steadying the box (their hands grip it), S-205.
 ## 64: player.tscn replicates PlayerHeldTool:held_tool (the company's clipboard in the hand), D-1902.
 ## 65: box_sealed carries assisted and filled, the company snapshot its options (Armado asistido), D-1919.
+## 66: CompanyNet's _apply_event takes a new host kind, jack_cleared {pallets}: the pallets that ran out leave the
+## book on every peer; an older client refuses it and keeps them (company mode), D-0607.b.
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 65
+const PROTOCOL_VERSION: int = 66
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

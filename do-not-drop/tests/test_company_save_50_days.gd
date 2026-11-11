@@ -6,32 +6,43 @@ extends SceneTree
 ## - the generator (here, without playing) builds a synthetic company with everything that grows with
 ##   time, day after day: ORDERS_MAX_PER_DAY paid orders and their costs in the ledger every day, a
 ##   truck of every supplier ordered every day with all the products, the day's pallets loaded,
-##   some put on the floor and the rest left on the bed as the truck goes (a short delivery note every
-##   day), the biggest stage's shed filled with pieces up to WAREHOUSE_STAGE_MAX_PIECES (shelves with
-##   their uids), every product on every shelf slot, pallet, cart, the dock and the floor bundle,
-##   every vehicle, zone reputation and gate;
-## - the 50-day save weighs under 2 MB and CompanySave.load_into() takes under 2 s (the worst of 3,
-##   Time.get_ticks_usec), loading every piece, the ledger capped at LEDGER_MAX and the stock whole;
+##   all but one put on the floor and that one left on the bed as the truck goes (a short delivery note
+##   every day), the oldest floor pallets emptied and cleared off the book as the crew would (D-0607.b),
+##   the biggest stage's shed filled with pieces up to WAREHOUSE_STAGE_MAX_PIECES (shelves with
+##   their uids), every product on every shelf slot, pallet, cart, the dock and the floor bundles, the
+##   cold products' clocks running wherever they lie, every vehicle, zone reputation and gate;
+## - the 50-day save weighs under 2 MB, CompanySave.save() and load_into() each take under 2 s (the
+##   worst of 3, Time.get_ticks_usec), loading every piece, the ledger capped at LEDGER_MAX, the stock
+##   whole and the cold clocks;
 ## - load -> save -> load gives the same CompanyState.to_dict();
+## - every truck of the 100 days puts all its pallets on its bed, and the pallet book never comes near
+##   MAX_PALLETS: it holds what stands in the shed, not what ever came (D-0607.b);
 ## - the delivery note keeps only DELIVERY_NOTE_DAYS_KEPT days line by line, with every day's
 ##   missing units still in its totals (D-2026.2), so a 100-day save weighs no more than twice the
-##   50-day one, and its note no more than the 50-day note.
+##   50-day one, under MAX_GROWTH_BYTES more than it (nothing grows with the days), and its note no more
+##   than the 50-day note.
 
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const DIR: String = "user://test_company_save_50_days"
 const DAYS: int = 50
 const MAX_BYTES: int = 2 * 1024 * 1024
+## What 50 more days may add to the save: nothing grows with the days, only the ids get a digit longer.
+const MAX_GROWTH_BYTES: int = 2048
 const MAX_LOAD_USEC: int = 2_000_000
+const MAX_SAVE_USEC: int = 2_000_000
 const LOAD_RUNS: int = 3
 ## The biggest stage (logistics center): the most pieces.
 const STAGE: int = 3
-## Pallets of each day's truck: one per product. Some go on the floor until FLOOR_PALLETS stand there.
+## Pallets of each day's truck: one per product, all but one go on the floor. The oldest are emptied so that
+## the next truck's fit in FLOOR_PALLETS spots: the most that stand on the floor at once.
 const PALLET_UNITS: int = 12
-const FLOOR_PER_DAY: int = 2
 const FLOOR_PALLETS: int = 60
 ## Units of each product on each storage spot.
 const UNITS_PER_SPOT: int = 9
 const CARTS: int = 4
+const FLOOR_BUNDLES: int = 8
+## Minutes the cold products have been out of a fridge when the save is made.
+const COLD_MINUTES: float = 30.0
 const CREW: int = 8
 const ORDER_PRICE: int = 140
 const ORDER_COST: int = 25
@@ -41,6 +52,8 @@ var _failures: int = 0
 ## Ids of each kind of data (products, suppliers...), from the file names: the save keeps ids only.
 var _ids: Dictionary = {}
 var _layout: Array[Dictionary] = []
+## The most pallets the book held in any day of any company built here.
+var _book_peak: int = 0
 
 
 func _initialize() -> void:
@@ -54,14 +67,19 @@ func _run() -> void:
 	_clean()
 	var fifty: Node = _company(DAYS)
 	var hundred: Node = _company(DAYS * 2)
-	_expect(CompanySave.save(fifty, "fifty", DIR), "The 50-day company saves")
+	_expect(_book_peak > 0 and _book_peak <= CompanyPallets.MAX_PALLETS / 2,
+		"The pallet book stays far from MAX_PALLETS in 100 days (peak %d)" % _book_peak)
+	_check_save_time(fifty)
 	_expect(CompanySave.save(hundred, "hundred", DIR), "The 100-day company saves")
 	var size_50: int = _bytes("fifty")
 	var size_100: int = _bytes("hundred")
-	print("D-2026 save: %d pieces, 50 days %d bytes, 100 days %d bytes" % [_layout.size(), size_50, size_100])
+	print("D-2026 save: %d pieces, 50 days %d bytes, 100 days %d bytes, book peak %d"
+		% [_layout.size(), size_50, size_100, _book_peak])
 	_expect(size_50 > 0 and size_50 < MAX_BYTES, "The 50-day save weighs under 2 MB (got %d bytes)" % size_50)
 	_expect(size_100 <= 2 * size_50,
 		"A 100-day save weighs no more than twice the 50-day one (got %d vs %d bytes)" % [size_100, size_50])
+	_expect(size_100 - size_50 < MAX_GROWTH_BYTES,
+		"50 more days add under %d bytes (got %d)" % [MAX_GROWTH_BYTES, size_100 - size_50])
 	_check_load_time()
 	_check_round_trip(fifty)
 	_check_note(fifty, hundred)
@@ -77,6 +95,18 @@ func _expect(cond: bool, label: String) -> void:
 	if not cond:
 		_failures += 1
 		push_error("FAIL: " + label)
+
+
+## The worst of LOAD_RUNS saves of the 50-day company.
+func _check_save_time(company: Node) -> void:
+	var worst: int = 0
+	for run: int in LOAD_RUNS:
+		var started: int = Time.get_ticks_usec()
+		_expect(CompanySave.save(company, "fifty", DIR), "Save %d of the 50-day company works" % run)
+		worst = maxi(worst, Time.get_ticks_usec() - started)
+	print("D-2026 save: worst of %d is %.1f ms" % [LOAD_RUNS, worst / 1000.0])
+	_expect(worst < MAX_SAVE_USEC, "save() takes under 2 s, worst of %d (got %.1f ms)"
+		% [LOAD_RUNS, worst / 1000.0])
 
 
 ## The worst of LOAD_RUNS loads of the 50-day file, each into a fresh state.
@@ -113,6 +143,9 @@ func _check_round_trip(source: Node) -> void:
 	var stock_out: Inventory = first.call(&"stock")
 	_expect(stock_out.total_units() == stock_in.total_units() and stock_in.total_units() > 0,
 		"The whole stock comes back (got %d of %d units)" % [stock_out.total_units(), stock_in.total_units()])
+	var clocks: Dictionary = source.get(&"cold_clocks")
+	_expect(not clocks.is_empty() and JSON.stringify(first.get(&"cold_clocks")) == JSON.stringify(clocks),
+		"The cold clocks come back")
 	_expect(int(first.get(&"day")) == DAYS + 1 and int(first.get(&"money")) == int(source.get(&"money")),
 		"Day and money come back (got day %s, money %s)" % [first.get(&"day"), first.get(&"money")])
 	first.free()
@@ -152,13 +185,15 @@ func _company(days: int) -> Node:
 	var schedule := SupplierSchedule.new()
 	var pallets := CompanyPallets.new()
 	var stock := Inventory.new()
+	var on_floor: Array[StringName] = []
 	for day: int in range(1, days + 1):
 		state.set(&"day", day)
 		state.set(&"clock_minutes", CompanyTuning.DAY_START_MIN)
-		_play_day(state, day, products, suppliers, schedule, pallets, stock)
+		_play_day(state, day, products, suppliers, schedule, pallets, stock, on_floor)
 	state.set(&"day", days + 1)
 	state.set(&"clock_minutes", CompanyTuning.DAY_START_MIN)
 	_fill_stock(stock, products)
+	state.set(&"cold_clocks", _cold_clocks(stock, products))
 	state.call(&"store_stock", stock)
 	state.set(&"supplier_calendar", schedule.to_dict())
 	state.set(&"pallets", pallets.to_save())
@@ -167,34 +202,45 @@ func _company(days: int) -> Node:
 
 
 func _play_day(state: Node, day: int, products: Array[StringName], suppliers: Array[StringName],
-		schedule: SupplierSchedule, pallets: CompanyPallets, stock: Inventory) -> void:
+		schedule: SupplierSchedule, pallets: CompanyPallets, stock: Inventory,
+		on_floor: Array[StringName]) -> void:
 	for order: int in CompanyTuning.ORDERS_MAX_PER_DAY:
 		state.set(&"clock_minutes", CompanyTuning.DAY_START_MIN + order * 30)
 		state.call(&"earn", ORDER_PRICE + order, &"order_paid")
 		state.call(&"charge", ORDER_COST, &"trip_fuel")
 	state.call(&"charge", RENT, &"rent")
-	# The truck of today comes with one pallet per product; a few go to the floor, the rest leaves.
+	# The truck of today comes with one pallet per product; all but one go to the floor, that one leaves.
 	schedule.forget_before(day)
-	var planned: Array = []
+	var planned: Array[Dictionary] = []
 	for product: StringName in products:
 		planned.append(Pallet.make(StringName("d%d_%s" % [day, product]), product, PALLET_UNITS))
-	_expect(pallets.apply(stock, CompanyPallets.LOADED, {"day": day, "pallets": planned}),
-		"Day %d: the truck's pallets load on the bed" % day)
-	var on_floor: int = pallets.book.ids_at(PalletJack.AT_FLOOR).size()
-	for n: int in FLOOR_PER_DAY:
-		if on_floor >= FLOOR_PALLETS:
-			break
-		var id: StringName = (planned[n] as Dictionary)["id"]
-		var spot := Vector2(float(on_floor % 10) * 1.3, float(on_floor / 10) * 0.9)
+	var loading: Dictionary = pallets.loaded_event(day, planned, stock)
+	_expect((loading.get("pallets", []) as Array).size() == planned.size()
+		and pallets.apply(stock, CompanyPallets.LOADED, loading),
+		"Day %d: all the truck's pallets load on the bed" % day)
+	_book_peak = maxi(_book_peak, pallets.book.places.size())
+	var unloading: int = planned.size() - 1
+	for n: int in unloading:
+		var id: StringName = planned[n]["id"]
+		# Taken by the day and the pallet, each stands on a spot the oldest ones left free.
+		var spot_index: int = ((day - 1) * unloading + n) % FLOOR_PALLETS
+		var spot := Vector2(float(spot_index % 10) * 1.3, float(spot_index / 10) * 0.9)
 		pallets.apply(stock, CompanyPallets.PICKED, {"pallet": id})
 		_expect(pallets.apply(stock, CompanyPallets.PLACED, {"pallet": id, "pos": spot}),
 			"Day %d: a pallet stands on the floor" % day)
-		on_floor += 1
+		on_floor.append(id)
 	var lines: Array = []
 	for product: StringName in products:
 		lines.append({"product": String(product), "ordered": PALLET_UNITS * 2, "received": PALLET_UNITS})
 	_expect(pallets.apply(stock, CompanyPallets.DEPARTED, {"day": day, "lines": lines}),
 		"Day %d: the truck leaves with a short note" % day)
+	# The crew empties the oldest pallets onto the dock, and the host clears them off the book.
+	while on_floor.size() > FLOOR_PALLETS - unloading:
+		var oldest: StringName = on_floor.pop_front()
+		var product: StringName = pallets.book.places[oldest]["pallet"]["product"]
+		stock.move(product, PALLET_UNITS, Pallet.location(oldest), &"dock")
+	CompanyPallets.clear_empties(pallets, stock, func(kind: StringName, data: Dictionary) -> void:
+		_expect(pallets.apply(stock, kind, data), "Day %d: the emptied pallets leave the book" % day))
 	# Tomorrow's trucks, one per supplier, every product.
 	var order_lines: Array = []
 	for product: StringName in products:
@@ -203,9 +249,11 @@ func _play_day(state: Node, day: int, products: Array[StringName], suppliers: Ar
 		schedule.place(day, order_lines, supplier)
 
 
-## Every product on every shelf slot, cart, the dock and the return bundle (pallets already hold theirs).
+## Every product on every shelf slot, cart, the dock and the floor bundles (pallets already hold theirs).
 func _fill_stock(stock: Inventory, products: Array[StringName]) -> void:
-	var spots: Array[StringName] = [&"dock", FloorBundles.location(0)]
+	var spots: Array[StringName] = [&"dock"]
+	for bundle: int in FLOOR_BUNDLES:
+		spots.append(FloorBundles.location(bundle))
 	for cart: int in range(1, CARTS + 1):
 		spots.append(PickingCart.location_of(StringName("cart_%d" % cart)))
 	for piece: Dictionary in _layout:
@@ -215,6 +263,16 @@ func _fill_stock(stock: Inventory, products: Array[StringName]) -> void:
 	for product: StringName in products:
 		for spot: StringName in spots:
 			stock.receive(product, UNITS_PER_SPOT, spot)
+
+
+## ColdChain's clocks, as saved, with COLD_MINUTES gone by for the cold products wherever they lie.
+func _cold_clocks(stock: Inventory, products: Array[StringName]) -> Dictionary:
+	var defs: Dictionary = {}
+	for product: StringName in products:
+		defs[product] = load("%s/%s/%s.tres" % [CompanyCatalog.DATA_ROOT, CompanyCatalog.PRODUCTS, product])
+	var chain := ColdChain.new()
+	chain.age(stock, defs, {}, COLD_MINUTES)
+	return chain.to_dict()
 
 
 func _fill_company(state: Node) -> void:

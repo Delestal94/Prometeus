@@ -4,6 +4,12 @@ extends SceneTree
 ## pivot sits on the ground and centred before placing it in the world.
 
 const PATHS: Array[String] = [
+	# D-0936 outside of the shed: signs centred on their base; the lamp's pivot is under its pole, arm toward +Z.
+	"res://assets/models/environment/depot/sm_env_shed_sign_small.glb",
+	"res://assets/models/environment/depot/sm_env_shed_sign_medium.glb",
+	"res://assets/models/environment/depot/sm_env_shed_sign_large.glb",
+	"res://assets/models/environment/depot/sm_env_shed_sign_logistics.glb",
+	"res://assets/models/environment/depot/sm_env_shed_lamp_post.glb",
 	"res://assets/models/truck_reference_lowpoly.glb",
 	"res://assets/models/props/cargo/sm_prop_cargo_toolbox.glb",
 	"res://assets/models/props/cargo/sm_prop_cargo_thermos.glb",
