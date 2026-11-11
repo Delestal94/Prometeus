@@ -25,7 +25,9 @@ cobra una vez por palet, sus unidades al precio del proveedor cuyo camión lo tr
   `company_root.gd` ni `company_net.gd` (D-0254 los está partiendo en otro carril).
 - Qué palet entró lo dice el libro (`PalletJack.take_received()`): mover otra vez un palet ya recibido no cobra.
 - El precio sale de `SupplierPurchase.bill`, con el mismo `SupplierOrderCart.unit_cost` que mostró el tablero al pedir:
-  el palet de otro proveedor (D-0621) paga el `price_factor` de ese proveedor.
+  el palet de otro proveedor (D-0621) paga el `price_factor` de ese proveedor. Cada fila del tablero muestra ese mismo
+  precio por unidad (`cart.unit_price`); antes mostraba el de lista (`buy_price`) aunque el total ya usaba el del
+  proveedor, y con el cobro esa diferencia llegaba a la caja (aviso `docs/avisos/2026-11-11-precio-fila-proveedor.md`).
 - Sin protocolo nuevo: no hay evento ni campo nuevo, el cobro es un `wallet_moved` más.
 
 **¿Una empresa nueva puede jugar el día 1?** Sí, sin cambiar nada: el día 1 no hay camión. Lo que hay en el galpón al

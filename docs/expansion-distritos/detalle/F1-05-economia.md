@@ -63,7 +63,7 @@ cobraba, así que la mercadería era gratis y la ganancia del día que mide el c
 - `PalletJack.take_received()` dice qué palet entró al stock en el último apoyo (en el piso con la zorra o en un estante con
   el autoelevador), una sola vez: mover de nuevo un palet ya recibido no lo nombra, ni lo nombra una copia del libro.
 - `SupplierPurchase.bill(wallet, pallet, products, seller)` cobra el palet al precio del proveedor (`price_factor`, el mismo
-  `SupplierOrderCart.unit_cost` que mostró el tablero); `cost` y `pallet_cost` aceptan el proveedor. `receive` queda para
+  `SupplierOrderCart.unit_cost` que mostró el tablero, en el total y en cada fila); `cost` y `pallet_cost` aceptan el proveedor. `receive` queda para
   quien tiene el palet y el stock en la mano.
 - `SupplierBillHook` escucha `jack_placed` en el host (como `FixedCostsHook` y `SupplierAutoOrderHook`, sin tocar
   `company_root.gd` ni `company_net.gd`), busca el proveedor con `SupplierIds.pallet_supplier` y cobra por

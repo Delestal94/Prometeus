@@ -3,6 +3,8 @@ extends SceneTree
 ##
 ## The supplier order screen (expansion D-0603.b, supplier_order_panel.gd), driven by injected data
 ## only:
+## - each row shows the seller's unit price (price_factor), the one the total and the supplier bill
+##   use (D-0503.b), not the list price;
 ## - one row per product the supplier sells (a product it does not sell has none); plus / minus
 ##   change the units, the total and the pallet count follow, and a line shows "✓" when it has units;
 ## - Order puts the order in the SupplierSchedule for the next day (the truck of day + 1 carries
@@ -44,6 +46,7 @@ func _run() -> void:
 	await _test_refusals()
 	await _test_client()
 	await _test_focus_and_cancel()
+	await _test_row_price()
 	if _failures == 0:
 		print("PASS: the supplier screen edits the cart and orders the next-day pallets")
 	quit(_failures)
@@ -102,6 +105,25 @@ func _press(action: StringName) -> void:
 func _focus_name() -> String:
 	var owner: Control = root.gui_get_focus_owner()
 	return String(owner.name) if owner != null else ""
+
+
+## D-0503.b: the row shows the seller's unit price (price_factor), the same one the total and the
+## supplier bill use, not the list price.
+func _test_row_price() -> void:
+	var ctx: Dictionary = _ctx(1000)
+	var cart: SupplierOrderCart = ctx["cart"]
+	cart.supplier.price_factor = 1.2
+	var panel: SupplierOrderPanel = await _panel(ctx)
+	var row: Node = panel.find_child("Row_lamp", true, false)
+	var label: Label = row.get_node_or_null("Name") as Label if row != null else null
+	_expect(label != null, "the lamp row has its name label")
+	if label != null:
+		_expect(label.text.contains("$60"), "the row shows the seller's price 50 x 1.2: " + label.text)
+		_expect(not label.text.contains("$50"), "the row does not show the list price: " + label.text)
+	panel.more(&"lamp")
+	_expect(panel.total_text().contains("60"), "the total uses the same unit price")
+	panel.queue_free()
+	await process_frame
 
 
 func _test_keys() -> void:
