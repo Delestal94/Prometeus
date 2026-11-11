@@ -214,7 +214,7 @@ que aparezcan en la salida).
 **Hecho cuando:** CI muestra cada módulo nuevo pasando solo en un proyecto vacío.
 
 ### D-2019 · Build de Windows con la expansión — B · Opus 5.5 · medium · Aviso: no · F0
-**[~] Parcial (2026-10-21, PR pendiente)** — `test_release_build` exige `export_filter="all_resources"` en cada preset y que su `exclude_filter` (matcheado como Godot: ruta desde `res://` o nombre suelto) no deje afuera nada del Modo Empresa (`data/` de la expansión, `scenes/company/`, `company_root`, `scripts/core/company/`, `business/`, `districts/`, `fleet/`); hoy no excluye nada. `pc-build.md` suma el segundo smoke (`--mode=company`, 60 s, sin `ERROR`). Falta el arranque real en la build de la PC ([`revisar/D-2019.md`](../revisar/D-2019.md)).
+**[x] Hecho (2026-11-07, PR pendiente)** — La build de la PC arranca el modo Empresa: export release de "Windows Desktop" (143 MB) sin errores, `tools/export/smoke-company.sh` da `Empresa OK` y con ventana, en la RTX 4060 Ti, llega al mundo con el log limpio (fila 2026-11-07 de `docs/rendimiento-pc.md`). `test_release_build` exige `export_filter="all_resources"`, que el `exclude_filter` no deje afuera nada del Modo Empresa ni ninguna ruta que el juego nombre (salvo `DEBUG_ONLY_PATHS`, con sus guardas) y que `pc-build.md` use el smoke. Se arregló la fuga que el smoke destapó: el `OrderBook` propio de `CompanyTrips` no se liberaba. Pendientes en [`revisar/D-2019.md`](../revisar/D-2019.md).
 **Depende de:** D-0214
 **Qué:** verificar que `export_presets.cfg` incluye `data/products|zones|vehicles|boxes|suppliers|gates/`
 y `scenes/company/`; si filtra recursos, agregarlos. Pedido a la rutina `pc-build`.
@@ -223,5 +223,6 @@ y `scenes/company/`; si filtra recursos, agregarlos. Pedido a la rutina `pc-buil
 ### D-2020 · Smoke del ejecutable en modo Empresa — B · Opus 5.5 · medium · Aviso: sí (`.github/workflows/release.yml`) · F0
 **Depende de:** D-2019
 **Qué:** el smoke de `release.yml` hoy arranca el juego. Agregar una segunda corrida con
-`--autostart-company` 20 s que falle si el log tiene `SCRIPT ERROR` o `ERROR`.
+`--autostart-company` 20 s que falle si el log tiene `SCRIPT ERROR` o `ERROR`. `tools/export/smoke-company.sh`
+(D-2019) ya hace eso y contempla Linux, aunque ahí todavía no se probó; con `timeout` a secas no alcanza (matar el proceso ensucia el log).
 **Hecho cuando:** el workflow tiene el paso y pasa en la siguiente release.
