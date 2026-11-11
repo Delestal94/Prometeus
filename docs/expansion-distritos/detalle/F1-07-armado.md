@@ -5,7 +5,7 @@
 > cuando le toque a un carril. Números de [supuestos.md](supuestos.md).
 
 ### D-0701 · Estación de armado — A · Sonnet 5.5 · high · Aviso: no · F1
-**[~] Parcial (2026-11-11, PR #@@PR@@)** — volvió de hecha: la lógica y la red de la mesa están (`PackingStation`, `CompanyTableNet`) y la mesa se ve en el galpón (D-0911), pero en el juego no se puede usar: `CompanyShed.station_for` no resuelve mesas, `CompanyRoot._on_piece_used` solo atiende el rol `storage` y ningún script fuera de `tests/` manda una petición `box_*`. Falta D-0701.b.
+**[~] Parcial (2026-11-11, PR #860)** — volvió de hecha: la lógica y la red de la mesa están (`PackingStation`, `CompanyTableNet`) y la mesa se ve en el galpón (D-0911), pero en el juego no se puede usar: `CompanyShed.station_for` no resuelve mesas, `CompanyRoot._on_piece_used` solo atiende el rol `storage` y ningún script fuera de `tests/` manda una petición `box_*`. Falta D-0701.b.
 Antes (hecha, 2026-10-04, PR #340) — lógica de la mesa: `PackingStation` (`scripts/gameplay/business/packing_station.gd`); `test_packing_station`. Quedan abiertas la mesa visible y la captura (ver `revisar/D-0701.md`).
 **Subtareas abiertas:**
 - [ ] **D-0701.b** (`constructor-negocio` + `constructor-jugador`; F1, [corte-vertical.md](../diseno/corte-vertical.md) §2 #9) La mesa usable en el mundo. La mesa de armado del galpón necesita su estación (`CompanyShed.station_for` con `table:<uid>`), puntos de uso que manden las peticiones de `CompanyTableNet` que ya existen (`box_start`, `box_place`, `box_take_out`, `box_fill`, `box_label`, `box_stamp`, `box_tape`, `box_restock`, `box_discard`) y su rama en `CompanyRoot._on_piece_used` (rol `assembly`). Es el enganche que esperan, cada una en su bloque: elegir la celda con vista previa (D-0703), el gesto de la cinta (D-0706), la etiqueta dibujada (D-0707), el sello y su gesto (D-0708), la hoja del pedido junto a la mesa (D-0714), reponer y el cartel de «falta cinta» (D-0718), y el cartel del tutorial con su marca de visto (D-0720). Con ella van D-0702.b (el dispensador y su menú) y `order_claim` (tomar el pedido para la mesa, fila 8 de `diseno/red-autoridad.md`; hoy lo da `CompanyTableNet.order_of`). Captura de `revisor-visual`. **Hecho cuando:** un test del mundo arma y encinta una caja en `company_root.tscn` usando solo los puntos de interacción, y `bot_company_day` arma así sus cajas (D-2016.4).
@@ -26,7 +26,7 @@ Antes (hecha, 2026-10-04, PR #340) — lógica de la mesa: `PackingStation` (`sc
 `assembly_table`) y su captura quedan para la subtarea D-0701.b.
 
 ### D-0702 · Dispensador de cajas — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[~] Parcial (2026-11-11, PR #@@PR@@)** — volvió de hecha: la lógica y su test están, pero en el juego no se puede abrir una caja. Falta D-0702.b, que va con D-0701.b.
+**[~] Parcial (2026-11-11, PR #860)** — volvió de hecha: la lógica y su test están, pero en el juego no se puede abrir una caja. Falta D-0702.b, que va con D-0701.b.
 Antes (hecha, 2026-10-04, PR #345) — lógica: `BoxDispenser` (`scripts/gameplay/business/box_dispenser.gd`); `test_box_dispenser`. El objeto del dispensador y su menú de tamaños quedan para D-0702.b (ver `revisar/D-0702.md`).
 - [ ] **D-0702.b** (`constructor-negocio`; F1, con D-0701.b) El dispensador en el mundo: el objeto (hoy una caja naranja del layout por defecto, D-0911) con su punto de uso y el menú de tamaños S, M, L y XL con mando y mouse, que manda `box_start`; captura.
 **Depende de:** D-0701 (`PackingStation`), D-0501 (billetera de `CompanyState`)

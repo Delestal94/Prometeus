@@ -196,7 +196,7 @@ el minuto límite); etiqueta ajena y caja sin etiqueta; todo apilado (200 → 77
 **Hecho cuando:** test y decisión (cumplido).
 
 ### D-0520 · Puntaje de la corrida actual en la salida — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[~] Parcial (2026-11-11, PR #@@PR@@)** — volvió de hecha: `TripScoring` y su test están, pero el puntaje solo se calcula dentro de `TripResult.build()`, que nadie llama fuera de `tests/`. En el juego una salida no tiene puntaje ni reparte mérito. Falta D-0320.b (`detalle/F1-03-distritos.md`).
+**[~] Parcial (2026-11-11, PR #860)** — volvió de hecha: `TripScoring` y su test están, pero el puntaje solo se calcula dentro de `TripResult.build()`, que nadie llama fuera de `tests/`. En el juego una salida no tiene puntaje ni reparte mérito. Falta D-0320.b (`detalle/F1-03-distritos.md`).
 Antes (hecha, 2026-10-22, PR #648) — `TripScoring` (`scripts/gameplay/districts/trip_scoring.gd`): cada pedido de una salida vale lo que la misma puerta en una entrega (`RunScoring`: 150 intacta, 75 abollada, 20 rota, -60 sin llegar); `TripResult.build()` suma `score`, `score_points` y `score_breakdown`, y el mérito del que llevó la caja sale de ese puntaje (intacta 10, abollada 5, rota o sin llegar 0). `run_scoring.gd`, `run_manager.gd` y `CrewProgression` no se tocaron; `test_company_trip_scoring`.
 **Depende de:** D-0501, D-0815 (y D-0320, que arma el resumen de la salida)
 **Qué:** el resultado de una salida en modo Empresa usa el puntaje de `RunScoring` como componente de su cierre, sin cambiar Entrega ni Endless.

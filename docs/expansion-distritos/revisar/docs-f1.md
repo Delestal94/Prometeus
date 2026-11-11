@@ -1,4 +1,4 @@
-# Revisar la pasada de docs de F1 (2026-11-11, PR #@@PR@@)
+# Revisar la pasada de docs de F1 (2026-11-11, PR #860)
 
 Pasada solo de documentación: las tablas de grupo y los archivos de `detalle/` de F1 quedaron diciendo lo que hace el
 código de `main`. No cambió código ni tests. La regla que se usó está en
