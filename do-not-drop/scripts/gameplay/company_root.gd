@@ -227,6 +227,7 @@ func _ready() -> void:
 	fleet = CompanyFleet.add_to(_world, net, session, shed)
 	if trips != null:
 		fleet.vehicle_recovered.connect(trips.forget)
+		fleet.vehicle_retired.connect(trips.forget)
 		CompanyTow.add_to(self, trips, fleet, net)
 	CompanyGpsLink.add_to(_world, fleet, trips_view, net)
 	_add_crew()

@@ -10,6 +10,9 @@ extends SceneTree
 ## (--seconds is wall-clock time of the run, not game time.)
 ## The probe keeps running totals and a few capped lists, never a sample per
 ## frame or tick, so a long run does not grow its own memory (N-980).
+## --memory-every=30 prints a "BENCH memory" line every 30 s of the run (0, the
+## default, prints none): static and video memory, objects, nodes, resources and
+## orphans, to tell a flat run from a leak. Nothing of it is kept in the probe.
 ## --endless drives Endless instead (level_endless.tscn), following the
 ## streamed road's own centre line (RouteStreamer.point_at()).
 ## --mood=lluvia_noche (world_mood.gd) forces the weather and time of day.
@@ -94,6 +97,9 @@ var _step_peak: float = 0.0
 var _memory_static_peak: float = 0.0
 var _memory_video_peak: float = 0.0
 var _last_progress: float = 0.0
+## --memory-every: seconds between "BENCH memory" lines, and when the next is due.
+var _memory_every: float = 0.0
+var _next_memory_at: float = 0.0
 var _hitch_count: int = 0
 ## The first MAX_HITCH_LINES hitch frames, whole.
 var _hitch_frames: Array[Dictionary] = []
@@ -260,6 +266,8 @@ func _run() -> void:
 	first_ms = (Time.get_ticks_usec() - first_frame_start) / 1000.0
 	_last_usec = Time.get_ticks_usec()
 	var elapsed: float = 0.0
+	_memory_every = maxf(float(_arg("memory-every", "0")), 0.0)
+	_print_memory_line(elapsed)
 	while elapsed < seconds and not _done:
 		await process_frame
 		var now: int = Time.get_ticks_usec()
@@ -304,8 +312,30 @@ func _run() -> void:
 			"progress": _progress(),
 			"rescues": _rescues,
 		})
+		_print_memory_line(elapsed)
 	_report(first_ms)
 	quit()
+
+
+## One point of the memory series, when one is due (--memory-every).
+func _print_memory_line(elapsed: float) -> void:
+	if _memory_every <= 0.0 or elapsed < _next_memory_at:
+		return
+	_next_memory_at += _memory_every
+	print("%s along_m=%.0f rescues=%d" % [memory_line(elapsed), _endless_best, _rescues])
+
+
+## What the series prints for a moment of the run, from the live monitors.
+static func memory_line(elapsed: float) -> String:
+	return "BENCH memory t=%.0f static_mib=%.2f video_mib=%.2f objects=%d nodes=%d resources=%d orphans=%d" % [
+		elapsed,
+		Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+		Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+		Performance.get_monitor(Performance.OBJECT_COUNT),
+		Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+		Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT),
+		Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT),
+	]
 
 
 ## Route fraction driven; endless has no end to measure against, so it has none.

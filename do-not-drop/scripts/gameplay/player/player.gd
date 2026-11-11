@@ -454,17 +454,7 @@ func _physics_process(delta: float) -> void:
 		_interaction_component.publish_lid_hint(null)
 		return
 	if _seated:
-		var candidate: DeliveryPackage = (_cargo_care.assist_candidate() if tended_package != null
-				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
-		_interaction_component.publish_prompt(
-				candidate.assist_prompt() if candidate != null and assisted_package == null else "")
-		_interaction_component.publish_lid_hint(_lid_target())
-		if carried_package != null:
-			_carry_component.update_carried_package()
-		if assisted_package != null:
-			_cargo_care.update_assisting()
-		elif candidate != null and Input.is_action_just_pressed(&"interact"):
-			candidate.rpc_id(1, &"request_assist")
+		_seat_pose_component.seated_step()
 		return
 	Movement.on_foot_step(self, delta)
 
@@ -682,9 +672,10 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 
 ## Seats are a temporary safe spot, not a lock-in. Leaving restores the
 ## on-foot controller at the seat's location, so passengers can react to
-## loose cargo while the van is moving.
-func leave_seat() -> void:
-	_seat_pose_component.leave_seat()
+## loose cargo while the van is moving. `tell_host` false: the host let the
+## seat go already (its vehicle left the fleet, CompanyFleet.prune()).
+func leave_seat(tell_host: bool = true) -> void:
+	_seat_pose_component.leave_seat(tell_host)
 
 
 ## Where to stand when getting up: the seat's own "ExitPoint" if it has one

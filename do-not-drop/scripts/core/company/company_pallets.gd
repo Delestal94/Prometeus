@@ -12,12 +12,14 @@ extends RefCounted
 ##   jack_pick {pallet}  -> jack_picked {pallet}     a pallet of the bed or the floor goes on the jack
 ##   jack_put {}         -> jack_placed {pallet, pos} the carried pallet stands on the floor, at the jack
 ##   jack_push {dir}     -> jack_moved {pos}          the jack rolls CompanyTuning.JACK_PUSH_STEP_M along `dir`
-## and two events nobody asks for, published by the host when the day's truck comes and when it leaves
-## (CompanyNet.publish):
+## and three events nobody asks for, published by the host when the day's truck comes, when it leaves and when a
+## pallet runs out (CompanyNet.publish):
 ##   jack_loaded {day, pallets}  the pallets on the truck's bed (what stayed on the bed of an older truck left
 ##   with it: PalletJack.left_on_bed). `pos` is in the shed's own frame (X east, Z south), in metres.
 ##   jack_departed {day, lines}  the truck drove off (D-0618.b): what was still on its bed goes with it, and the
 ##   delivery note (D-0614.b, `note`) keeps `lines`, the lines of the day that did not come out even.
+##   jack_cleared {pallets}      the ids of pallets on the floor or a rack with no units left (D-0607.b): they leave the
+##   book, and the shed, for good, so the book only holds pallets that still mean something (MAX_PALLETS).
 ##
 ## The forklift (D-0606.b, CompanyForklift) takes the same book and the same two pallet events (`by` and `slot` say
 ## it was the forklift and which rack slot): its one request, fork_act {act}, is checked at the station `forklift`,
@@ -38,12 +40,13 @@ const PLACED: StringName = &"jack_placed"
 const MOVED: StringName = &"jack_moved"
 const LOADED: StringName = &"jack_loaded"
 const DEPARTED: StringName = &"jack_departed"
+const CLEARED: StringName = &"jack_cleared"
 ## The forklift: its request, the station it names and the event of its state (CompanyForklift).
 const FORK_ACT: StringName = &"fork_act"
 const FORK_STATION: StringName = &"forklift"
 const FORK: StringName = &"fork_state"
 const REQUEST_KINDS: Array[StringName] = [PICK, PUT, PUSH, FORK_ACT]
-const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED, DEPARTED, FORK]
+const EVENT_KINDS: Array[StringName] = [PICKED, PLACED, MOVED, LOADED, DEPARTED, CLEARED, FORK]
 ## The station every request of the jack names: CompanyNet resolves it through its `stations`.
 const STATION: StringName = &"jack"
 const SNAPSHOT_KEY: String = "pallets"
@@ -82,6 +85,9 @@ var note: DeliveryNote = DeliveryNote.new()
 var departed_day: int = 0
 ## The forklift a player drives (D-0606.b).
 var forklift: CompanyForklift = CompanyForklift.new()
+## Host: the pallets the last loaded_event() kept off the truck's bed because the book was full: they never reached
+## the shed, so the delivery note must not count them. Not saved: a day reopens before its truck comes and asks again.
+var _left_off: Array[StringName] = []
 
 
 ## A pallet or jack id that came over the network: letters, digits, '_' and '-', at most MAX_ID_LENGTH long.
@@ -153,7 +159,7 @@ func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dic
 		return {}
 	var room: int = MAX_PALLETS - book.places.size() + book.ids_at(PalletJack.AT_BED).size()
 	var found: Array = []
-	var left_out: int = 0
+	_left_off.clear()
 	for planned_pallet: Dictionary in planned:
 		var pallet: Dictionary = _pallet_of(planned_pallet)
 		if pallet.is_empty() or book.places.has(pallet["id"]):
@@ -161,19 +167,20 @@ func loaded_event(day: int, planned: Array[Dictionary], stock: Inventory) -> Dic
 		if not stock.contents_at(Pallet.location(pallet["id"])).is_empty():
 			continue
 		if found.size() >= room:
-			left_out += 1
+			_left_off.append(StringName(pallet["id"]))
 			continue
 		found.append({"id": String(pallet["id"]), "product": String(pallet["product"]), "qty": int(pallet["qty"])})
-	if left_out > 0:
+	if not _left_off.is_empty():
 		push_warning("CompanyPallets: the book is full (%d pallets); %d of day %d's truck stay off its bed"
-			% [MAX_PALLETS, left_out, day])
+			% [MAX_PALLETS, _left_off.size(), day])
 	return {} if found.is_empty() else {"day": day, "pallets": found}
 
 
 ## Host: the jack_departed event for `day` once its truck has left at `minute` (SupplierDeparture), or {}: no delivery
 ## that day, or the truck is still there. The pallets of `planned` that are not on the bed (on the floor, on the jack,
-## in a rack, or the shed's first ones, which never were) count as unloaded. `schedule` is not touched (the truck
-## keeps showing as left); `departed_day` stops a second departure of the same day, and a refused publish asks again.
+## in a rack, or the shed's first ones, which never were) count as unloaded, but for the ones a full book kept off it
+## (loaded_event()): those never came. `schedule` is not touched (the truck keeps showing as left); `departed_day`
+## stops a second departure of the same day, and a refused publish asks again.
 ## `lines` is the whole comparison of the order against what was unloaded, exact or not.
 func departed_event(schedule: SupplierSchedule, day: int, minute: int, planned: Array[Dictionary]) -> Dictionary:
 	if day <= departed_day or not schedule.has_delivery(day):
@@ -181,7 +188,8 @@ func departed_event(schedule: SupplierSchedule, day: int, minute: int, planned: 
 	var on_bed: Array[StringName] = book.ids_at(PalletJack.AT_BED)
 	var unloaded: Array = []
 	for pallet: Dictionary in planned:
-		if not on_bed.has(StringName(pallet.get("id", &""))):
+		var id := StringName(pallet.get("id", &""))
+		if not on_bed.has(id) and not _left_off.has(id):
 			unloaded.append(pallet.get("id", &""))
 	var scratch: SupplierSchedule = SupplierSchedule.from_dict(schedule.to_dict())
 	var result: Dictionary = SupplierDeparture.resolve(scratch, day, minute, planned, unloaded)
@@ -203,6 +211,22 @@ static func send_truck_off(pallets: CompanyPallets, schedule: SupplierSchedule, 
 	var event: Dictionary = pallets.departed_event(schedule, day, minute, schedule.pallets_for(day))
 	if not event.is_empty():
 		publish.call(DEPARTED, event)
+
+
+## Host: the jack_cleared event for the pallets that ran out in `stock` (PalletJack.emptied_ids()), or {}: none did.
+func cleared_event(stock: Inventory) -> Dictionary:
+	var ids: Array = []
+	for id: StringName in book.emptied_ids(stock):
+		ids.append(String(id))
+	return {} if ids.is_empty() else {"pallets": ids}
+
+
+## Host, once a game minute: publish jack_cleared (through `publish`, CompanyNet.publish) when a pallet ran out; a
+## refused publish asks again the next minute.
+static func clear_empties(pallets: CompanyPallets, stock: Inventory, publish: Callable) -> void:
+	var event: Dictionary = pallets.cleared_event(stock)
+	if not event.is_empty():
+		publish.call(CLEARED, event)
 
 
 ## Host: check() for a request `net` (CompanyNet) took from `peer`: the station with what only the host knows of
@@ -316,6 +340,8 @@ func apply(inventory: Inventory, kind: StringName, data: Dictionary) -> bool:
 			return true
 		LOADED, DEPARTED:
 			return _apply_loaded(data) if kind == LOADED else _apply_departed(data)
+		CLEARED:
+			return _apply_cleared(data)
 	return false
 
 
@@ -398,6 +424,23 @@ func _apply_departed(data: Dictionary) -> bool:
 		book.remove(id)
 	note.check(int(day), ordered, received)
 	departed_day = int(day)
+	return true
+
+
+## jack_cleared: the listed pallets leave the book. Every id has to stand on the floor or a rack: nothing changes when
+## one does not (a truck's pallet or the carried one is never cleared).
+func _apply_cleared(data: Dictionary) -> bool:
+	var raw: Variant = data.get("pallets")
+	if not raw is Array or (raw as Array).is_empty() or (raw as Array).size() > MAX_PALLETS:
+		return false
+	for id: Variant in raw:
+		if not id_ok(id) or not book.places.has(StringName(id)):
+			return false
+		var at: StringName = book.places[StringName(id)]["at"]
+		if at != PalletJack.AT_FLOOR and at != PalletJack.AT_RACK:
+			return false
+	for id: Variant in raw:
+		book.remove(StringName(id))
 	return true
 
 

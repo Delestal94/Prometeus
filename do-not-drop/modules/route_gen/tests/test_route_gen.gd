@@ -13,6 +13,8 @@ extends SceneTree
 ## - GripZones: two zones over one vehicle in either order leave the lowest
 ##   grip while either holds and the original when both are gone; entering
 ##   twice never compounds;
+## - GripArea: a vehicle in its footprint drops to its slip and one outside does not; a body that is no
+##   vehicle is ignored; leaving, or the area going away with the vehicle inside, gives the grip back;
 ## - every code-built segment builds without assets, exits where it says,
 ##   and CurveSegment's exit really turns;
 ## - a TerrainField with a span builds tiles with the default shader, is
@@ -49,6 +51,7 @@ func _run() -> void:
 	await _test_streamer(scene)
 	await _test_hooks(scene)
 	_test_grip_zones(scene)
+	await _test_grip_area(scene)
 	await _test_terrain(scene)
 	await _test_sliced_terrain(scene)
 	await _test_sliced_conform(scene)
@@ -149,6 +152,56 @@ func _test_grip_zones(scene: Node3D) -> void:
 	wet.free()
 	ice.free()
 	vehicle.free()
+
+
+func _test_grip_area(scene: Node3D) -> void:
+	var vehicle := _grip_body(&"vehicle")
+	var bystander := _grip_body(&"crate")
+	scene.add_child(vehicle)
+	scene.add_child(bystander)
+	vehicle.global_position = Vector3(100.0, 0.0, 0.0)
+	var area := GripArea.new()
+	area.slip = 0.9
+	scene.add_child(area)
+	area.add_box(Transform3D(Basis(), Vector3(0.0, 0.0, -20.0)), Vector2(12.0, 8.0))
+	await _physics(3)
+	_expect(_slips_are(vehicle, 3.5), "Outside its footprint a GripArea does nothing (%s)" % [_slips(vehicle)])
+	vehicle.global_position = Vector3(0.0, 0.5, -20.0)
+	bystander.global_position = Vector3(1.0, 0.5, -20.0)
+	await _physics(3)
+	_expect(_slips_are(vehicle, 0.9), "A vehicle in the footprint drops to its slip (%s)" % [_slips(vehicle)])
+	_expect(_slips_are(bystander, 3.5), "...what is not a vehicle does not (%s)" % [_slips(bystander)])
+	vehicle.global_position = Vector3(100.0, 0.0, 0.0)
+	await _physics(3)
+	_expect(_slips_are(vehicle, 3.5), "Leaving gives the grip back (%s)" % [_slips(vehicle)])
+	vehicle.global_position = Vector3(0.0, 0.5, -20.0)
+	await _physics(3)
+	area.free()
+	_expect(_slips_are(vehicle, 3.5), "Going away with a vehicle inside gives it back (%s)" % [_slips(vehicle)])
+	vehicle.free()
+	bystander.free()
+
+
+## A body an Area3D sees when it is moved by hand, on the layer vehicles are on, with one wheel.
+func _grip_body(group: StringName) -> VehicleBody3D:
+	var body := VehicleBody3D.new()
+	body.collision_layer = GripArea.VEHICLE_LAYER
+	body.collision_mask = 0
+	body.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+	body.freeze = true
+	body.add_to_group(group)
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	body.add_child(shape)
+	var wheel := VehicleWheel3D.new()
+	wheel.wheel_friction_slip = 3.5
+	body.add_child(wheel)
+	return body
+
+
+func _physics(frames: int) -> void:
+	for _i: int in frames:
+		await physics_frame
 
 
 func _slips_are(vehicle: Node, expected: float) -> bool:

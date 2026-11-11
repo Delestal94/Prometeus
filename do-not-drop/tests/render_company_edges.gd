@@ -12,9 +12,15 @@ extends SceneTree
 ## Views per street: the driver's eye at its start, a 3/4 view from above the
 ## middle, an almost top-down view of the middle stretch and a close look at the
 ## first joint between two pieces (gaps, steps or kinks show there).
+## And a crossing where two surfaces meet (JUNCTION, the asphalt avenue over the cobbled calle_v_640): every
+## street that reaches the node, from low down and from above, each twice with the camera 0.3 m apart
+## (render_company_edge_junction_*.png). One surface must show, the same in both: a toothed wedge of the
+## other, or one that changes with the camera, is z-fighting (StreetSurface.LIFT).
+## CI runs this (tests.yml, runtime-audit): the headless tests never compile the shader, this does.
 
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const STREETS: Array[StringName] = [&"avenida_este_1", &"camino_campo_3", &"chacra_1", &"calle_v_640_m384"]
+const JUNCTION: StringName = &"c_640_0"
 
 var _camera: Camera3D
 
@@ -36,6 +42,7 @@ func _run() -> void:
 		return
 	for street: StringName in STREETS:
 		await _shoot(graph, street)
+	await _shoot_junction(graph)
 	quit(0)
 
 
@@ -71,6 +78,35 @@ func _shoot(graph: RoadGraph, street: StringName) -> void:
 	var joint: Vector3 = _ground(graph, street, _first_joint(graph, street))
 	await _view(street, "joint", joint + side * 8.0 + Vector3.UP * 6.0, joint)
 
+	world.queue_free()
+	await process_frame
+
+
+func _shoot_junction(graph: RoadGraph) -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	_take_game_light(world)
+	var sky := RouteSky.new()
+	sky.name = "RouteSky"
+	world.add_child(sky)
+	for edge: RoadEdge in graph.edges_at(JUNCTION):
+		for segment: RouteSegment in EdgePieces.build(graph, edge.id, world):
+			segment.set_physics_process(false)
+	_camera = Camera3D.new()
+	_camera.fov = 70.0
+	_camera.far = 4000.0
+	world.add_child(_camera)
+	_camera.current = true
+	var point: Vector2 = graph.node_by_id(JUNCTION).position
+	var centre := Vector3(point.x, 0.0, point.y)
+	var cab: Vector3 = centre + Vector3(-14.0, 2.4, 11.0)
+	var close: Vector3 = centre + Vector3(-5.0, 1.6, 8.0)
+	var nudge := Vector3(0.3, 0.0, 0.0)
+	await _view(&"junction", "cab", cab, centre)
+	await _view(&"junction", "cab_nudged", cab + nudge, centre + nudge)
+	await _view(&"junction", "close", close, centre)
+	await _view(&"junction", "close_nudged", close + nudge, centre + nudge)
+	await _view(&"junction", "above", centre + Vector3(0.0, 40.0, 6.0), centre)
 	world.queue_free()
 	await process_frame
 

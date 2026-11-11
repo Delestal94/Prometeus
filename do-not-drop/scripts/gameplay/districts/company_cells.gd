@@ -6,7 +6,9 @@ extends WorldCellStreamer
 ## Pinned for good: the industrial park around the shed (cells -1..1) and the
 ## cells under the three main streets of diseno/mapa.md, so the shed and the
 ## streets are there before anyone drives. `pin_streets` pins them again from the
-## road graph's real curves (RoadGraph, D-0304). A cell's content comes from
+## road graph's real curves (RoadGraph, D-0304). Past CELL_LOAD_RADIUS of every
+## anchor a pinned cell is parked: its colliders and nodes stay, it is not drawn
+## and its flat block shows instead (D-2012.1). A cell's content comes from
 ## `content_for` (the road graph's pieces, once the mesh per edge exists); until
 ## then a cell is an empty `Node3D` named `Cell_<x>_<z>` so the flow is testable.
 

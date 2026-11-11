@@ -10,6 +10,9 @@ extends SceneTree
 ##   host's own view shows the vehicle out with its trip, orders, boxes and minute, the same count
 ##   as CompanyTrips; `changed` fires once per event, after it is applied. Coming back is one
 ##   trip_closed with the failed order, and the view's trip_closed signal carries it.
+## - The shared book follows the events (D-0302.2.b.3), solo and on the client: trip_started takes its orders OUT with
+##   their box and trip, trip_closed fails the failed ones (the delivered one stays OUT until order_delivered, row 20);
+##   an order the book doesn't have, and a refused vehicle, change nothing there.
 ## - Malformed data (missing or extra keys, an empty or non-id order, a bad minute, a vehicle
 ##   already out or not out, a trip id that isn't the vehicle's) is refused by apply_trip() and by
 ##   the snapshot part, and changes nothing; a client can't publish a trip event.
@@ -32,6 +35,7 @@ extends SceneTree
 ## Expected in the log: the six warnings above (cargo cut, id too long, ids left out, the close never
 ## sent, over MAX_OUT and its return), and the engine's leak notes at exit, as in test_company_trips.
 
+const HEN: ProductDefinition = preload("res://data/products/hen.tres")
 const PORT: int = 24673
 const MINUTE: int = 600
 ## Where the test's gate lies and the two sides of it (out is -Z).
@@ -129,11 +133,19 @@ func _new_side(side: Node, with_trips: bool) -> Dictionary:
 
 ## `ids` PACKED in `trips`' own book, each in a box named box_<id>.
 func _packed(trips: CompanyTrips, ids: Array[StringName]) -> void:
-	var products: Dictionary = {&"hen": load("res://data/products/hen.tres")}
+	var products: Dictionary = {&"hen": HEN}
 	for id: StringName in ids:
 		trips.book.add(Order.make(id, "Ana", &"centro", &"house_1",
 			[{"product": &"hen", "qty": 1}], 0, products))
 		trips.book.mark_packed(id, StringName("box_" + str(id)))
+
+
+## `ids` waiting in `net`'s shared book, the one every peer has (CompanyNet.orders.book).
+func _waiting(net: CompanyNet, ids: Array[StringName]) -> void:
+	var products: Dictionary = {&"hen": HEN}
+	for id: StringName in ids:
+		net.orders.book.add(Order.make(id, "Ana", &"centro", &"centro_house_1",
+			[{"product": &"hen", "qty": 1}], 0, products))
 
 
 ## `vehicle` leaves through the gate with `orders` staged (none: it just crosses).
@@ -172,7 +184,13 @@ func _check_solo() -> void:
 	_expect(net.snapshot().get(CompanyTripsView.SNAPSHOT_KEY) == [],
 		"The snapshot carries the trips out, none yet")
 	_packed(trips, [&"o1", &"o2"])
+	_waiting(net, [&"o1"])
 	_leave(trips, &"van", [&"o1", &"o2"])
+	var shared: OrderBook = net.orders.book
+	_expect(shared.state_of(&"o1") == Order.STATE_OUT and shared.box_of(&"o1") == &"box_o1"
+		and not shared.has(&"o2"),
+		"The shared book takes out the order it has, with its box; one it lacks is left alone (%s)"
+		% shared.state_of(&"o1"))
 	_expect(kinds == [CompanyTripsView.STARTED] and net.seq == 1,
 		"A trip that starts is one trip_started event (got %s, seq %d)" % [kinds, net.seq])
 	var shown: Dictionary = view.trip_of(&"van")
@@ -191,6 +209,8 @@ func _check_solo() -> void:
 		"Coming back is one trip_closed and the view is empty (got %s)" % [kinds])
 	_expect(_closed[view] == [[trip.id, &"van", [&"o2"]]] and _changes[view] == 2,
 		"...the view's trip_closed carries the failed order (got %s)" % [_closed[view]])
+	_expect(shared.state_of(&"o1") == Order.STATE_OUT and not shared.has(&"o2"),
+		"...and the shared book fails only what the event says failed (%s)" % shared.state_of(&"o1"))
 	_expect(busy == [false, false], "`changed` never fires while CompanyNet applies (got %s)" % [busy])
 	side.free()
 
@@ -388,8 +408,15 @@ func _check_peers() -> void:
 func _check_trip_reaches_client() -> void:
 	var changes: int = _changes[_client_view]
 	_expect(changes == 1, "The client's snapshot fired `changed` once (got %d)" % changes)
+	for net: CompanyNet in [_host_net, _client_net]:
+		_waiting(net, [&"o1", &"o2"])
 	_leave(_host_trips, &"van_1", [&"o1", &"o2"])
 	await _wait_seq(_client_net)
+	for net: CompanyNet in [_host_net, _client_net]:
+		var book: OrderBook = net.orders.book
+		_expect(book.state_of(&"o2") == Order.STATE_OUT and book.box_of(&"o2") == &"box_o2"
+			and StringName(book.get_order(&"o2").get("trip_id", "")) == _host_trips.trip_of(&"van_1").id,
+			"%s: the shared book has the order out with its box and trip" % net.get_parent().name)
 	var shown: Dictionary = _client_view.trip_of(&"van_1")
 	var trip: Trip = _host_trips.trip_of(&"van_1")
 	_expect(trip != null and shown.get("trip") == trip.id and shown.get("orders") == [&"o1", &"o2"]
@@ -405,6 +432,9 @@ func _check_trip_reaches_client() -> void:
 		"Its close empties the client's view")
 	_expect(trip != null and _closed[_client_view] == [[trip.id, &"van_1", [&"o1"]]],
 		"...and the failed order arrives with the client's trip_closed (got %s)" % [_closed[_client_view]])
+	for net: CompanyNet in [_host_net, _client_net]:
+		_expect(net.orders.book.state_of(&"o1") == Order.STATE_FAILED,
+			"%s: the shared book fails it (%s)" % [net.get_parent().name, net.orders.book.state_of(&"o1")])
 
 
 func _check_refused_reaches_client() -> void:

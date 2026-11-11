@@ -154,9 +154,17 @@ func confirm() -> int:
 	_status_key = "UI_DISPATCH_LOADED"
 	_status_args = [count]
 	loaded.emit(_vehicle_id(), chosen)
+	count = _status_args[0]
 	refresh(_ctx)
 	_focus_first()
 	return count
+
+
+## `count` of the boxes just handed over found no place on the vehicle after all (CompanyDispatch): the line, and
+## what confirm() answers, say what really went.
+func left_out(count: int) -> void:
+	if count > 0 and _status_key == "UI_DISPATCH_LOADED":
+		_status_args = [maxi(int(_status_args[0]) - count, 0)]
 
 
 ## Loads the whole zone onto the bay's vehicles (DispatchBay.load_bay): each box goes to the first vehicle that
@@ -187,6 +195,7 @@ func confirm_bay() -> int:
 	_status_args = [count]
 	for entry: Array in sent:
 		loaded.emit(entry[0], entry[1])
+	count = _status_args[0]
 	refresh(_ctx)
 	_focus_first()
 	return count

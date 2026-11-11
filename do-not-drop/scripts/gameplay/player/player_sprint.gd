@@ -232,13 +232,22 @@ func measure_hazard() -> float:
 	return clampf(hazard, 0.0, 1.0)
 
 
-## The route says how rough the ground is under the runner (gravel, the verge);
-## anywhere else (the depot, the yard) it is flat.
+## The route says how rough the ground is under the runner (gravel, the verge). With no route (the company's
+## world) the floor itself does: a street's bodies carry it (StreetSurface). Anywhere else it is flat.
 func ground_roughness() -> float:
 	var route: Node = player.get_tree().get_first_node_in_group(&"route") if player.is_inside_tree() else null
-	if route == null or not route.has_method(&"ground_roughness"):
-		return 0.0
-	return float(route.call(&"ground_roughness", player.global_position))
+	if route != null and route.has_method(&"ground_roughness"):
+		return float(route.call(&"ground_roughness", player.global_position))
+	for index: int in player.get_slide_collision_count():
+		var collision: KinematicCollision3D = player.get_slide_collision(index)
+		if collision.get_normal().y >= 0.5:
+			return roughness_of(collision.get_collider())
+	return 0.0
+
+
+## What a floor says of itself: 0 unless it carries `ground_roughness`.
+static func roughness_of(collider: Object) -> float:
+	return float(collider.get_meta(&"ground_roughness", 0.0)) if collider != null else 0.0
 
 
 # --- Host: the shaking and the trip -----------------------------------------------------------
