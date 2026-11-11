@@ -90,7 +90,7 @@ una salida afuera y llega a `SUMMARY`; en `OPENING` o `SUMMARY` devuelve false; 
 **Hecho cuando:** los tests pasan y el menú de pausa tiene el botón y el aviso (captura con `revisor-visual`).
 
 ### D-0254 · Partir `company_root.gd` y `company_net.gd` — A · Opus 5.5 · medium · Aviso: no · F1
-**[~] Parcial (2026-11-11, PR #@@PR@@)** — falta la pasada de `auditor-red` sin hallazgos que pide la fila (un subagente no puede lanzarla; la revisión de aceptación miró la red y no encontró defectos) y la prueba a mano de [`revisar/D-0254.md`](../revisar/D-0254.md). Lo demás está: `company_net.gd` 1000 → 820 líneas y `company_root.gd` 948 → 692, sin cambiar el protocolo (67) ni las listas de `kind`: cada dominio declara sus `kind` y `CompanyNet` solo los junta y los enruta; `test_company_net_domains`.
+**[~] Parcial (2026-11-11, PR #861)** — falta la pasada de `auditor-red` sin hallazgos que pide la fila (un subagente no puede lanzarla; la revisión de aceptación miró la red y no encontró defectos) y la prueba a mano de [`revisar/D-0254.md`](../revisar/D-0254.md). Lo demás está: `company_net.gd` 1000 → 820 líneas y `company_root.gd` 948 → 692, sin cambiar el protocolo (67) ni las listas de `kind`: cada dominio declara sus `kind` y `CompanyNet` solo los junta y los enruta; `test_company_net_domains`.
 **Depende de:** #844 (alquiler), #845 (montacargas), #850 (cierre del día, protocolo 67): los tres en `main`.
 **Qué:** [riesgos.md](../diseno/riesgos.md) R-16 y la [revisión D-0140](../diseno/revision-diseno.md): los dos archivos
 estaban contra el tope de 1000 líneas de gdlint, y la puerta (D-0340), el cobro (D-0815.b), el palet (D-0607.c) y la
