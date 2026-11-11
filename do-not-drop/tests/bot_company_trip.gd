@@ -92,7 +92,7 @@ static func deliver(
 					return _fail("house_out_of_zone")
 				var money: int = int(wallet.get("money"))
 				var settled: Dictionary = OrderSettlement.settle(
-					book, wallet, order_id, box, trips.minute(), [], products)
+					book, wallet, order_id, box, trips.delivery_minute(), [], products)
 				if not bool(settled["ok"]) or int(settled["paid"]) <= 0:
 					return _fail("not_settled")
 				if int(wallet.get("money")) != money + int(settled["paid"]) + int(settled["tip"]):
