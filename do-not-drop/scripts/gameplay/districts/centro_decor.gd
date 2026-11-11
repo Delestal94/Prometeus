@@ -20,7 +20,7 @@ const ROADWAY_HALF_WIDTH: float = 6.0
 const SIDEWALK_WIDTH: float = 2.0
 ## Over the roadway's top (y = 0); a curb a van can drive up if it has to.
 const SIDEWALK_HEIGHT: float = 0.15
-## The ground slab of the zone (CompanyRoot._add_zone_slab: centre -0.2, 0.2 thick): houses stand on it.
+## The ground slab of the zone (CompanyBackdrop.add_zone_slab(): centre -0.2, 0.2 thick): houses stand on it.
 const GROUND_TOP: float = -0.1
 ## Length of one sidewalk piece along a street (evened out per street, RoadNetwork.sample_every).
 const SIDEWALK_STEP: float = 32.0

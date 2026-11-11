@@ -10,8 +10,8 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| ✅ D-0701 | Estación de armado (mesa) con huecos para caja, insumos y productos | constructor-negocio | high | captura y test de interacción |
-| ✅ D-0702 | Elegir tamaño de caja (S, M, L, XL) del dispensador | constructor-negocio | medium | test: caja aparece abierta en la mesa |
+| D-0701 | ◐ (la lógica, la red y la mesa a la vista están; falta D-0701.b: en el juego la mesa no se puede usar, ningún punto de interacción manda las peticiones `box_*`) Estación de armado (mesa) con huecos para caja, insumos y productos | constructor-negocio | high | captura y test de interacción |
+| D-0702 | ◐ (la lógica está; falta D-0702.b: el dispensador y su menú de tamaños en el mundo, con D-0701.b) Elegir tamaño de caja (S, M, L, XL) del dispensador | constructor-negocio | medium | test: caja aparece abierta en la mesa |
 | ✅ D-0703 | Meter productos en la caja (físico simple o encastre en grilla) | constructor-negocio | xhigh | test: 3 productos dentro, la caja conoce su contenido |
 | D-0704 | ✅ Armado en grilla de celdas de 0,2 m | — | — | decidido |
 | ✅ D-0705 | Relleno (papel, burbuja, espuma) llena el hueco libre y da protección | constructor-negocio | high | test: % de hueco libre baja con relleno |
@@ -19,12 +19,12 @@
 | ✅ D-0707 | Etiqueta de envío impresa con dirección del pedido (reusa `package_shipping_label.gd`) | constructor-negocio | medium | etiqueta muestra calle y número del pedido |
 | ✅ D-0708 | Sellos (FRÁGIL, ESTE LADO ARRIBA, FRÍO) | constructor-negocio | medium | sello queda en la caja y la puerta lo valida |
 | ✅ D-0709 | Cálculo de calidad del armado (contenido correcto, hueco, protección, sellos) 0-100 | constructor-negocio | high | test con 6 cajas de calidad conocida |
-| D-0710 | ◐ (D-0710.b hecho: el nivel elige la severidad de la trampa; falta D-0710.c, la caja floja suma Equilibrio, y D-0710.d, que eso corra en las salidas de la empresa; ver detalle) Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
+| D-0710 | ◐ (D-0710.b y D-0710.d hechos: el nivel elige la severidad de la trampa y eso daña la caja en las salidas de la empresa; falta D-0710.c, la caja floja suma Equilibrio; ver detalle) Calidad → trampa y su intensidad para el viaje (tabla D-0109) | constructor-trampas | xhigh | test: vidrio sin burbuja da Frágil alto; con burbuja, Frágil bajo |
 | ✅ D-0711 | Caja armada sigue siendo `DeliveryPackage`: se lleva, se cuida y se entrega como hoy | constructor-trampas | xhigh | tests de paquete actuales verdes |
 | ✅ D-0712 | Error de contenido (falta un producto o sobra) detectable al cerrar o en la puerta | constructor-negocio | medium | test de los dos momentos |
 | ✅ D-0713 | Balanza de control: peso esperado vs. real | constructor-negocio | medium | test |
 | ✅ D-0714 | Hoja de pedido visible en la mesa (qué lleva este paquete) | constructor-ui | medium | captura legible |
-| ✅ D-0715 | Varias personas en la misma mesa (uno pone productos, otro cinta) | constructor-red | xhigh | test de red con 2 peers armando la misma caja |
+| D-0715 | ◐ (la mesa compartida por red y D-0715.c hechas; falta el resto de D-0715.b: `order_packed`, las cajas vivas en el snapshot y el `_serial` guardado) Varias personas en la misma mesa (uno pone productos, otro cinta) | constructor-red | xhigh | test de red con 2 peers armando la misma caja |
 | ✅ D-0716 | Despacho: dejar la caja armada en la zona de salida la asocia a una salida | constructor-negocio | medium | test |
 | ✅ D-0717 | Cargar el vehículo desde despacho (reusa la carga actual del depósito) | constructor-mundo | high | camioneta cargada con cajas armadas sale |
 | ✅ D-0718 | Insumos que se gastan (cinta, cajas, relleno) y se reponen | constructor-negocio | medium | test |

@@ -120,6 +120,8 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 | 19a | Volver con grúa (D-0307, D-0307.1) | cualquier peer, con el vehículo atascado o roto | `trip_tow` `{vehicle, rid}` (`vehicle`: id corto de un vehículo de la flota) | `vehicle` texto corto (`bad_data` si no); el vehículo tiene un viaje abierto (`WORLD_TOW_NO_TRIP`), está `STUCK` (`CompanyTow`: con conductor, pedal y casi sin velocidad `TOW_STUCK_SECONDS`, no en barro) o roto (`set_broken`) (`WORLD_TOW_NOT_STUCK`) y la plata alcanza para `TOW_COST` (`WORLD_TOW_NO_MONEY`). El rechazo vuelve al que pidió como `request_rejected` con la clave | ninguno propio: sale como `wallet_moved` `{amount: -TOW_COST, reason: tow, money, minute}` (fila 25) y `trip_closed` `{trip, vehicle, failed, minute}` (fila 19); el host además deja el vehículo en su lugar del playón (`CompanyFleet.send_home`) | `CompanyTripsView`: el vehículo deja de estar afuera y los pedidos sin entregar fallaron; la billetera baja en cada peer. Falta la pantalla negra (`black_screen_s`) y el botón del tablero (D-0307.1) |
 | 20 | Entregar en la casa (D-0340, D-0815, D-0502, D-0506) | jugador toca el timbre (`DoorbellPoint` → `DeliveryHouse` como hoy) | el de hoy (`Interactable.request_interact`) | como hoy, más: contenido contra el pedido, daño, plazo | `order_delivered` `{order, package_id, paid, tip, stars, penalties: {…}}` (`stars` 1-5 la calcula el host en `OrderSettlement.settle` y cada peer la pasa tal cual a `OrderBook.mark_delivered`, validada como en el snapshot, `CompanyOrdersNet._stars_ok`; no se recalcula, D-0816.b) | `OrderBook`: pedido entregado; `Inventory.consume` de todo lo que hay en `package:<package_id>` (y lo que quede reservado del pedido se libera); `money += paid + tip − penalties` |
 
+**Estado en el código (2026-11-11).** La tabla es el contrato, no el inventario. Todavía no existen: la petición `pallet_open` de la fila 4 (D-0607.c), `order_claim` de la fila 8 (va con D-0701.b; hoy el pedido de la mesa lo da `CompanyTableNet.order_of`), `order_packed` de la fila 15 (el resto de D-0715.b), `box_dispatched` y `box_undispatched` de la fila 17 (D-0310.c; hoy cada peer lee la zona de su copia de los paquetes) y `order_delivered` de la fila 20 (D-0815.b, con D-0340: fuera de `tests/` nadie llama a `OrderSettlement.settle`). Los nombres `supply_arrived` y `pallet_placed` de las filas 2 y 3 tampoco existen: la llegada y la descarga de los palets viajan por los eventos `jack_*` de `CompanyPallets` (D-0605.b).
+
 ### Fuera de las 20, sin petición de cliente
 
 | Qué | Quién | Cómo viaja |
@@ -201,7 +203,7 @@ voto es D-0518.b).
 - `scripts/core/company/company_net.gd` tiene `_request`, `_apply_event` y `_rejected` (protocolo 29) y los
   `kind` `units_take`, `units_store` (filas 5 y 6) y `snapshot_request`. Una tarea que suma una acción agrega
   su `kind` a `REQUEST_KINDS` (y a `CRITICAL_KINDS` si es crítica), lo valida en `_handle_request()` y aplica
-  su evento en `_apply_state()`.
+  su evento en `_apply_state()`. Desde D-0254 eso lo hace el dominio de la acción, no `CompanyNet` (§18).
 - **Quién pide:** el RPC `_request` atribuye al remitente (`RpcGuard.sender`); una petición del propio host
   (`request()`) es siempre del host, aunque la haga mientras atiende el RPC de otro peer.
 - **Estaciones (regla 4):** `CompanyNet.stations` es un `Callable(id) -> {location, spot, accepts?, capacity?}`
@@ -277,11 +279,11 @@ voto es D-0518.b).
   validaciones de datos de las peticiones de unidades y el catálogo, separadas de `company_net.gd`); `pos`
   `Vector3` finito (un `NaN` o fuera del mundo no pasa `dict_ok` y se descarta en silencio; otro tipo es
   `bad_data`); que la mano tenga esa cantidad de ese producto (`not_enough`, también si tiene otro).
-- **Los pies del jugador** (`_feet_of`): la posición del **cuerpo** (`global_position` del nodo del
+- **Los pies del jugador** (`CompanyUnitsNet.feet_of()`, D-0254): la posición del **cuerpo** (`global_position` del nodo del
   jugador, no su `reach_origin()`; con `player_origin` puesto, su valor) y, si el nodo ya no está, la última
-  que se anotó en `_last_origin`. Solo si no hay ninguna de las dos se rechaza con `out_of_reach`. Si `pos`
+  que se anotó en `CompanyUnitsNet._last_origin`. Solo si no hay ninguna de las dos se rechaza con `out_of_reach`. Si `pos`
   está a más de `DROP_REACH` = 2 m más `NetStats.reach_slack()` de los pies, suelta ahí: nunca rechaza por
-  distancia. Anota los pies en `_last_origin`.
+  distancia. Anota los pies en `CompanyUnitsNet._last_origin`.
 - **Bultos en el piso**: cada soltada es un bulto nuevo, `floor:<n>` con el `n` libre más bajo (sin unidades
   y sin posición: el `floor:0` que deja un guardado, `CompanyRoot.SAVED_HANDS_LOCATION`, no se pisa). El
   evento es `units_moved {product, qty, from: hands:<peer>, to: floor:<n>, pos}`; en cada peer
@@ -298,8 +300,8 @@ voto es D-0518.b).
   del `peer_disconnected` de un fantasma que suelta, N-221), en `multiplayer.peer_disconnected` (lo que
   llegue primero; el segundo encuentra las manos vacías) o en `NetworkManager.peer_returned(id, id)` (Steam
   le devuelve el mismo id al que vuelve y no hubo ni `peer_removed` ni desconexión), publica un
-  `units_moved` por producto de `hands:<peer>` a un bulto nuevo, en sus pies (`_feet_of`) y si no en el
-  origen; después olvida `_last_origin[peer]`. Solo en el host. Si llega mientras se aplica un evento, se
+  `units_moved` por producto de `hands:<peer>` a un bulto nuevo, en sus pies (`feet_of()`) y si no en el
+  origen; después olvida `_last_origin[peer]` (`CompanyUnitsNet.forget()`). Solo en el host. Si llega mientras se aplica un evento, se
   difiere al frame siguiente (sin olvidar dónde estaba); si un evento no se puede publicar, `push_error`.
   El que vuelve recibe el snapshot de D-2004 con el piso así.
 - **Snapshot**: clave propia `floor` (en `SNAPSHOT_KEYS`), `{floor:<n>: Vector3}`. El cliente la valida antes
@@ -387,7 +389,7 @@ voto es D-0518.b).
   oye el motivo (`has_box`, `cell_taken`). La del host se atiende al pedirla; la de un cliente, al llegar.
 - **Estación (regla 4):** una mesa es una estación de `CompanyNet.stations` con `location` `table:<uid>` (el
   `uid` de la pieza del layout) y `spot` en el hueco de la caja; el alcance se mide como en las unidades
-  (`_lookup_station` / `_station_problem`). Cualquier otra ubicación es `no_station`.
+  (`CompanyUnitsNet.reach()`: `station_of()` / `station_problem()`, D-0254). Cualquier otra ubicación es `no_station`.
 - **Estado:** un `PackingStation` por mesa tocada (caja, insumos de D-0718) y el id de su caja, en
   `CompanyNet.table` y no en `CompanyShed.stations` (que solo dibuja). Los ids de caja los da el host,
   `box_<n>` después del último, salteando los que todavía tienen unidades (`box:<id>` o `package:<id>`: un
@@ -757,3 +759,23 @@ voto es D-0518.b).
 - **Pendiente:** el libro compartido no se entera aún de que un pedido se entregó (filas 19 y 20 de este documento, D-0815.b):
   **cuando la puerta entregue tiene que publicar la entrega como evento del libro compartido**, o el pedido sigue `OUT` y el
   cierre del día lo da por no entregado (−3). Test: `test_company_day_close_orders`, `test_company_day_close_world`.
+
+## 18. Lo construido (D-0254): `CompanyNet` por dominios
+
+- **Sin cambio de protocolo.** Los cuatro `@rpc` (`_request`, `_apply_event`, `_snapshot`, `_rejected`) siguen en
+  `CompanyNet` con la misma firma, y los `kind` que toma, aplica, deja publicar al host y cuenta como críticos son los
+  mismos de antes (`test_company_net_domains` comprueba que no falte ninguno de la lista de antes de partir; no pide
+  igualdad, para que un `kind` nuevo no edite el test). `PROTOCOL_VERSION` no se movió.
+- **Cada `kind` es de un dominio.** El dominio es el script que lo chequea y lo aplica, y declara sus listas:
+  `REQUEST_KINDS`, `EVENT_KINDS`, `HOST_EVENT_KINDS` (los que el host publica sin petición, `publish()`) y
+  `CRITICAL_KINDS` (regla 8), las cuatro en los trece dominios (vacías si no tiene). Las de `CompanyNet` son la suma de las de cada dominio más las suyas (`snapshot_request`,
+  `clock_anchor`, `day_phase`). Ningún `kind` está en dos dominios.
+- **`CompanyNet` solo enruta.** `_handle_request()` y `_apply_state()` tienen una rama por dominio
+  (`<Dominio>.REQUEST_KINDS.has(kind)`, `<Dominio>.EVENT_KINDS.has(kind)`) y ninguna para "lo demás": un `kind` que no
+  sea de nadie no cae en el código de otro. Las peticiones en una estación (unidades, mesas, carros, palets) pasan por
+  `CompanyUnitsNet.reach()` dentro del `on_request()` de su dominio, con el mismo alcance que antes (regla 4).
+- **Piezas nuevas.** `CompanyUnitsNet` (filas 5 a 7, `units_moved`, el alcance y dónde estuvo cada peer) y
+  `CompanySnapshotSync` (límite de pedidos, numeración y trozos del snapshot; sin RPC). `CompanyNet.units` y
+  `CompanyNet.sync`; la API pública del snapshot y `within_reach()` / `last_known_position()` quedan en `CompanyNet`.
+- **Qué toca una acción nueva:** si es de un dominio que ya existe, solo ese dominio (su lista, su chequeo, su `apply`) y `PROTOCOL_VERSION`, siempre que el dominio ya tenga su rama en esa dirección y su llamada reciba el `kind`. `company_net.gd` se sigue tocando para: un dominio nuevo (su variable, sus listas en las cuatro constantes y sus ramas); la primera petición de `CompanyTripsView`, `CompanyOrdersNet`, `CompanyWalletNet` o `CompanyColdNet`, o el primer evento de `CompanyPackages` o `CompanyTowNet` (el estado del remolque), que todavía no tienen rama; y el segundo `kind` de un dominio cuya llamada no recibe `kind` (peticiones: paquetes, carros, proveedor, tienda, remolque; eventos: unidades, carros, proveedor, billetera, tienda, frío). El primer `kind` crítico o de host de cualquier dominio ya no toca `CompanyNet`: los trece dominios declaran las cuatro listas (vacías si no tienen) y `CompanyNet` suma todas. `test_company_net_domains` falla si un `kind` queda sin rama.
+- **Líneas:** `company_net.gd` queda en 820 (tope de gdlint 1000; `test_company_net_domains` pide menos de 850).

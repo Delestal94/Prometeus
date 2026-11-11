@@ -3,6 +3,9 @@ name: Release builds
 # N-210: every v* tag exports Windows and Linux with tools/export/export_presets.cfg
 # and attaches both zips to a DRAFT release of that tag (public repo: never published by CI). The tag (without the
 # "v") becomes application/config/version, which the main menu shows.
+# D-2020: the Linux build must also boot the company mode (tools/export/smoke-company.sh) before anything is
+# zipped, so a build whose expansion does not come up never reaches a release.
+# A manual run publishes nothing: no release whatever the ref, and no run artifact unless keep_builds asks for it.
 
 on:
   push:
@@ -13,6 +16,11 @@ on:
         description: 'Version to stamp (no release is published for manual runs)'
         required: false
         default: '0.0.0-dev'
+      keep_builds:
+        description: 'Keep the zips as a run artifact (public repo: anyone signed in to GitHub can download it)'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -92,6 +100,34 @@ jobs:
             echo "::error::exported build logged load errors"; exit 1
           fi
 
+      - name: Smoke test (Linux build boots the company mode)
+        env:
+          # The guard only has to end a boot that never quits: a slow runner is not a hang.
+          SMOKE_GUARD_SECONDS: 300
+          SMOKE_LOGS: ${{ runner.temp }}/smoke-company
+        run: |
+          # D-2020: the menu says nothing about the expansion. The script boots the build to the menu and into
+          # the company (--autostart-company), wants the company's save written and looks inside the pack with
+          # the editor (GODOT, set by setup-godot). Its last line is the verdict: anything but "Empresa OK" fails.
+          set +e
+          bash tools/export/smoke-company.sh builds/linux | tee /tmp/smoke-company.txt
+          smoke_status=${PIPESTATUS[0]}
+          set -e
+          verdict="$(tail -n 1 /tmp/smoke-company.txt)"
+          if [[ "$smoke_status" -ne 0 || "$verdict" != "Empresa OK" ]]; then
+            echo "::error::company smoke of the exported build: ${verdict:-no verdict} (exit $smoke_status)"
+            exit 1
+          fi
+
+      - name: Keep the logs of a failed company smoke
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: smoke-company-logs
+          path: ${{ runner.temp }}/smoke-company
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Zip builds
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -103,6 +139,9 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Upload artifacts
+        # A run artifact of a public repo is a download for anyone signed in to GitHub. A tag needs it (the publish
+        # job attaches it to the draft); a manual run keeps it only when asked.
+        if: github.event_name == 'push' || inputs.keep_builds
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: builds-${{ steps.version.outputs.version }}
@@ -112,7 +151,8 @@ jobs:
 
   publish:
     name: Publish GitHub release
-    if: github.ref_type == 'tag'
+    # Only a pushed tag: a manual run on a tag ref would otherwise upload over that tag's release.
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: export
     runs-on: ubuntu-latest
     permissions:

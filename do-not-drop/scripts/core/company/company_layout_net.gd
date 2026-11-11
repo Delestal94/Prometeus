@@ -69,6 +69,8 @@ const SOLD: StringName = &"layout_sold"
 ## The shed grew: {stage, minute, money} (D-0910.2).
 const EXPANDED: StringName = &"shed_expanded"
 const EVENT_KINDS: Array[StringName] = [PLACED, MOVED, SOLD, EXPANDED]
+const HOST_EVENT_KINDS: Array[StringName] = []
+const CRITICAL_KINDS: Array[StringName] = []
 
 ## The requester is not the host: only the host builds (D-0910; the crew's vote is D-0910.1).
 const REASON_HOST_ONLY: StringName = &"host_only"
@@ -104,6 +106,16 @@ func placement_for(state: Object) -> BuildPlacement:
 	WarehouseStages.apply_to(int(state.get(&"warehouse_stage")), checker)
 	checker.navigation = navigation
 	return checker
+
+
+## Host: check() for a request `net` (CompanyNet) took from `peer`: only the host's own goes through, and a
+## packing table with a box (D-0715) or a shelf with a pallet (D-0606) is not sold (not_empty).
+func on_request(net: CompanyNet, peer: int, kind: StringName, data: Dictionary) -> Dictionary:
+	var answer: Dictionary = check(net.company, net.inventory, kind, data, peer == net.multiplayer.get_unique_id())
+	var sold: StringName = answer["data"]["uid"] if answer["reason"] == &"" and kind == SELL else &""
+	if sold != &"" and (net.table.has_box(sold) or net.pallets.on_rack_of(sold)):
+		return _refused(REASON_NOT_EMPTY)
+	return answer
 
 
 ## Host: a build request, as {reason} when it is refused or {reason: &"", kind, data} with the one

@@ -5,7 +5,8 @@ extends SceneTree
 ## CompanyNet; contract docs/expansion-distritos/diseno/red-autoridad.md, row 26 and section 8), on the
 ## default shed (DefaultShed):
 ## - shed_expand is a request kind and shed_expanded an event kind of CompanyNet, neither critical nor a
-##   host-only publish, and shed_expanded has its own branch in _apply_state() (read from the source);
+##   host-only publish, and shed_expanded is applied by the layout's branch of _apply_state(), with no
+##   catch-all (read from the source);
 ## - solo (offline): growing pays CompanyTuning's price (WarehouseStages.price_for) with a warehouse_expand
 ##   wallet entry at the host's minute, moves warehouse_stage one up and leaves the layout as it was, in
 ##   one shed_expanded event {stage, minute, money} that is plain and small; the build checker takes the
@@ -100,16 +101,17 @@ func _check_kinds() -> void:
 	var branch: bool = false
 	var catch_all: bool = false
 	if start >= 0 and end > start:
+		# One branch per domain list since D-0254: the layout's takes every kind of CompanyLayoutNet.EVENT_KINDS.
 		for line: String in text.substr(start, end - start).split("\n"):
-			if not (line.begins_with("\t\t") and not line.begins_with("\t\t\t") and line.strip_edges().ends_with(":")):
+			if not (line.begins_with("\t") and not line.begins_with("\t\t")):
 				continue
-			var tokens: Array = []
-			for token: String in line.strip_edges().trim_suffix(":").split(","):
-				tokens.append(token.strip_edges())
-			branch = branch or tokens.has("CompanyLayoutNet.EXPANDED")
-			catch_all = catch_all or tokens.has("_")
+			var test: String = line.strip_edges()
+			branch = branch or test in ["if CompanyLayoutNet.EVENT_KINDS.has(kind):",
+				"elif CompanyLayoutNet.EVENT_KINDS.has(kind):"]
+			catch_all = catch_all or test == "else:"
 	_expect(branch and not catch_all,
-		"_apply_state() has a branch that names CompanyLayoutNet.EXPANDED and no catch-all (branch %s)" % branch)
+		"_apply_state() has the branch of CompanyLayoutNet.EVENT_KINDS (shed_expanded's) and no catch-all (branch %s)"
+		% branch)
 
 
 # --- Solo ---

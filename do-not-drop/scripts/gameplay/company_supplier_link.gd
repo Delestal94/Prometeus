@@ -1,7 +1,8 @@
 class_name CompanySupplierLink
 extends RefCounted
 ## The supplier side of the company's world, wired out of CompanyRoot (N-985): the supplier's truck beside the
-## shed (D-0601), the order board (D-0603.b.2) and the truck's pallets on the bed (D-0605.b, D-0618.b).
+## shed (D-0601), the order board (D-0603.b.2), the truck's pallets on the bed (D-0605.b, D-0618.b) and, on the
+## host, the bill of each pallet received (D-0503.b, SupplierBillHook).
 ##
 ## attach() builds everything on every peer in the frame the world comes up, as CompanyRoot did before; the
 ## root keeps `truck`, `board` and `schedule` as its own `supplier_truck`, `supplier_board` and
@@ -44,7 +45,8 @@ static func attach(root: Node, world: Node3D, net: CompanyNet, schedule: Supplie
 ## The supplier orders, on every peer: the truck reads CompanyNet's calendar (the host checks an
 ## order, every peer applies it) and the shed's board opens the order screen on the peer that used it. The
 ## host's calendar comes from its save and goes back to it after every order (CompanySupplierNet.load_saved);
-## the host also hooks the automatic order of the day's close (SupplierAutoOrderHook, D-0151.3b).
+## the host also hooks the automatic order of the day's close (SupplierAutoOrderHook, D-0151.3b) and the bill of
+## each pallet as its units enter the stock (SupplierBillHook, D-0503.b: after load_catalog(), whose prices it reads).
 func _add_orders(root: Node, shed: CompanyShed, player_of: Callable, building: Callable) -> void:
 	if _net == null:
 		return
@@ -55,6 +57,7 @@ func _add_orders(root: Node, shed: CompanyShed, player_of: Callable, building: C
 		hosted.supplier_calendar = CompanySupplierNet.load_saved(_schedule, hosted)
 		_net.event_applied.connect(_on_ordered)
 		SupplierAutoOrderHook.attach(root, _net)
+		SupplierBillHook.attach(root, _net)
 	board = SupplierBoard.new()
 	board.name = "SupplierBoard"
 	root.add_child(board)

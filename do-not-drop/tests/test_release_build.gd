@@ -13,6 +13,9 @@ extends SceneTree
 ##   (DEBUG_ONLY_PATHS, guarded in every file that names them); tools/export/probe_company.gd compiles and looks
 ##   for what must stay out in a way that can fail, and the PC build routine runs the smoke
 ##   (tools/export/smoke-company.sh).
+## - D-2020: release.yml runs that smoke on the exported Linux build (after the export, before the zips) and the
+##   step fails unless its last line is "Empresa OK"; the flag it boots with is one main_menu.gd takes; a manual
+##   run of the workflow publishes nothing and keeps no downloadable build unless asked.
 ## - D-2019 (expansion): every preset exports all resources and its exclude_filter leaves in
 ##   everything the Modo Empresa loads at run time (the data/ registries, company_root.tscn and
 ##   the company scripts), matched like Godot does: the path from res:// or the bare file name.
@@ -186,6 +189,37 @@ func _check_smoke(repo: String, presets: ConfigFile) -> void:
 	_check_probe_look(presets, probe.get_script_constant_map(), probe.source_code)
 	var routine: String = FileAccess.get_file_as_string(repo.path_join(PC_ROUTINE))
 	_expect(routine.contains("tools/export/smoke-company.sh"), "The PC build routine runs the smoke of the build")
+	_check_release_smoke(repo)
+
+
+## D-2020: the release job boots the exported Linux build in company mode before anything is zipped, the step
+## fails unless the script's last line is "Empresa OK", and a manual run of the workflow publishes nothing.
+func _check_release_smoke(repo: String) -> void:
+	var workflow: String = FileAccess.get_file_as_string(repo.path_join(WORKFLOW_PATH))
+	var call_at: int = workflow.find("tools/export/smoke-company.sh builds/linux")
+	_expect(call_at != -1, "release.yml runs tools/export/smoke-company.sh on the Linux build")
+	var exported_at: int = workflow.find("--export-release \"Linux\"")
+	var zipped_at: int = workflow.find("name: Zip builds")
+	_expect(call_at > exported_at and exported_at != -1 and call_at < zipped_at,
+		"The company smoke runs after the Linux export and before the zips (at %d, export %d, zip %d)"
+		% [call_at, exported_at, zipped_at])
+	var step: String = workflow.substr(call_at, maxi(zipped_at - call_at, 0))
+	_expect(step.contains("PIPESTATUS[0]") and step.contains("!= \"Empresa OK\""),
+		"The step fails on the script's exit status or on a last line other than 'Empresa OK'")
+	_expect(workflow.contains("if: github.event_name == 'push' && github.ref_type == 'tag'"),
+		"Only a pushed tag publishes: a manual run (the way to try the smoke on a branch) attaches nothing")
+	_expect(workflow.contains("if: github.event_name == 'push' || inputs.keep_builds"),
+		"A manual run keeps no downloadable build unless asked (public repo)")
+	# The flag the script boots with has to be one the menu takes, or the boot stays in the menu and only the
+	# missing save tells why.
+	var script: String = FileAccess.get_file_as_string(repo.path_join(SMOKE_SCRIPT))
+	var flag: RegExMatch = RegEx.create_from_string("COMPANY_FLAG='([^']+)'").search(script)
+	_expect(flag != null, "smoke-company.sh names its company flag in COMPANY_FLAG")
+	if flag != null:
+		var menu: String = FileAccess.get_file_as_string("res://scripts/ui/main_menu.gd")
+		_expect(menu.contains("\"%s\" in args" % flag.get_string(1)),
+			"main_menu.gd takes the script's flag %s" % flag.get_string(1))
+	_expect(not script.contains("\r"), "smoke-company.sh has LF line endings (bash on the Linux runner)")
 
 
 ## The probe's look for what must stay out: a script in a pack is .gdc plus .gd.remap, so only ResourceLoader can

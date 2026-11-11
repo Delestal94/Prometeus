@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | D-0501 | ✅ Billetera de la empresa (reemplaza o envuelve la plata compartida actual) con historial de movimientos | constructor-progresion | high | test: movimientos suman el saldo |
 | D-0502 | ✅ Precio de un pedido = productos + envío por distrito + urgencia + bonus por estado | constructor-progresion | high | test con 10 pedidos contra la tabla de D-0117 |
-| D-0503 | ✅ Costo de compra de mercadería al proveedor | constructor-progresion | medium | test: recibir palet descuenta plata |
+| D-0503 | ✅ Costo de compra de mercadería al proveedor (D-0503.b: el primer apoyo de un palet del camión lo cobra en el juego) | constructor-progresion | medium | test: recibir palet descuenta plata |
 | D-0504 | ✅ Costo de materiales de embalaje (cajas, cinta, relleno, etiquetas) | constructor-progresion | medium | test: armar una caja consume insumos |
 | D-0505 | ✅ Sin combustible ni energía; el costo operativo es el mantenimiento (D-0527) | — | — | decidido |
 | D-0506 | ✅ Penalidades: rotura, producto equivocado, tarde, caja mal etiquetada | constructor-progresion | high | test por tipo |
@@ -27,7 +27,7 @@
 | ✅ D-0517 | Plata replicada: todos los clientes ven el mismo saldo | auditor-red | high | test de red |
 | ✅ D-0518 | Solo el host (o un voto) puede gastar en compras grandes (incluye D-0428, fusión de D-0112) | constructor-red | high | test: cliente no puede comprar solo |
 | ~~D-0519~~ | ~~Número de plata en el HUD durante el día~~ **Fusionada en D-1903 (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-ui | low | captura |
-| D-0520 | ✅ Integrar puntaje de corrida actual (`run_scoring`) como parte del cobro de la salida | constructor-progresion | xhigh | tests de puntaje actuales verdes |
+| D-0520 | ◐ (`TripScoring` y su test están; falta D-0320.b: nadie llama a `TripResult` en el juego, así que una salida no tiene puntaje ni mérito) Integrar puntaje de corrida actual (`run_scoring`) como parte del cobro de la salida | constructor-progresion | xhigh | tests de puntaje actuales verdes |
 
 ## Ampliación
 

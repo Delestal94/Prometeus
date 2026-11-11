@@ -5,7 +5,7 @@
 > cuando le toque a un carril. Números de [supuestos.md](supuestos.md).
 
 ### D-0901 · Modo construcción: activar, cámara elevada, grilla visible — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-05, PR pendiente)** — `BuildMode` (`scripts/gameplay/business/build_mode.gd`): estado, cámara elevada y líneas de grilla como datos; `test_build_mode`. El adaptador con nodos (dibujar la grilla, mover la cámara, tecla) queda para D-0917/D-0943.
+**[x] Hecho (2026-10-05, PR #347)** — `BuildMode` (`scripts/gameplay/business/build_mode.gd`): estado, cámara elevada y líneas de grilla como datos; `test_build_mode`. El adaptador con nodos (dibujar la grilla, mover la cámara, tecla) queda para D-0917/D-0943.
 **Depende de:** D-0904 (la celda `WAREHOUSE_GRID_M`); la validación de choque llega con D-0225/D-0902
 **Qué:** `class_name BuildMode` (`RefCounted`, sin nodos ni autoloads):
 - `enter(size, can_build)`: refusa con `last_refusal` (`already_active`, `empty_floor`, `busy`); si entra, grilla visible, zoom 1, foco al centro, señal `entered`.
@@ -16,7 +16,7 @@
 **Hecho cuando:** el test pasa.
 
 ### D-0902 · Colocar un objeto comprado con previsualización verde/roja — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `BuildPlacement` (`scripts/gameplay/business/build_placement.gd`): previsualización verde/roja y colocación que compra solo si es verde; `test_build_placement`. El adaptador con nodos (dibujar la huella con `preview_color()`, el cursor) queda para D-0917/D-0943.
+**[x] Hecho (2026-10-12, PR #377)** — `BuildPlacement` (`scripts/gameplay/business/build_placement.gd`): previsualización verde/roja y colocación que compra solo si es verde; `test_build_placement`. El adaptador con nodos (dibujar la huella con `preview_color()`, el cursor) queda para D-0917/D-0943.
 **Depende de:** D-0901 (grilla), D-0904 (definiciones) y D-0920 (`PlaceableShop`); la grilla portable D-0225 todavía no existe: la lógica de choque vive acá y se mueve cuando exista.
 **Qué:** `class_name BuildPlacement` (`RefCounted`, sin nodos ni autoloads):
 - `preview(layout, def, x, z, turns, money)` → `{ok, reason, rect}`; motivos `out_of_bounds`, `fixed_area` (rectángulos `fixed_blocked`, para dársena y salida de D-0906), `overlap`, `no_definition`, `no_money`.
@@ -26,7 +26,7 @@
 **Hecho cuando:** el test de choque pasa.
 
 ### D-0903 · Rotar, mover y vender objetos colocados — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `BuildPlacement.rotate_piece/move_piece/sell_piece` (`build_placement.gd`): las mismas comprobaciones que al colocar, ignorando la pieza misma; `test_build_edit`. El adaptador con nodos (elegir la pieza con el cursor, teclas) queda para D-0917/D-0943.
+**[x] Hecho (2026-10-12, PR #383)** — `BuildPlacement.rotate_piece/move_piece/sell_piece` (`build_placement.gd`): las mismas comprobaciones que al colocar, ignorando la pieza misma; `test_build_edit`. El adaptador con nodos (elegir la pieza con el cursor, teclas) queda para D-0917/D-0943.
 **Depende de:** D-0902 (`BuildPlacement`) y D-0920 (`PlaceableShop.sell`)
 **Qué:** sobre una pieza ya en `layout` (por índice):
 - `preview(..., ignore_index)`: el choque no cuenta las celdas de la propia pieza.
@@ -37,7 +37,7 @@
 **Hecho cuando:** el test de las 3 acciones pasa.
 
 ### D-0904 · Objetos colocables iniciales — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR pendiente)** — `PlaceableDefinition` (`scripts/gameplay/business/placeable_definition.gd`) + 4 `.tres` en `data/placeables/` (mesa de armado, estante, heladera, zona de despacho); `test_placeable_definitions`.
+**[x] Hecho (2026-10-04, PR #314)** — `PlaceableDefinition` (`scripts/gameplay/business/placeable_definition.gd`) + 4 `.tres` en `data/placeables/` (mesa de armado, estante, heladera, zona de despacho); `test_placeable_definitions`.
 **Depende de:** nada que falte (solo datos; la grilla de colocación D-0225 y el layout D-0620 los usan, no al revés)
 **Qué:** `class_name PlaceableDefinition`, `Resource` solo de datos como `ProductDefinition`:
 `id`, `display_key` (`WORLD_PLACEABLE_<ID>`), `footprint` (celdas X×Z), `height_m`, `price`, `role`
@@ -59,13 +59,13 @@ puede pisar, la rotación y el reembolso.
 **Hecho cuando:** 4 objetos `.tres` y el test pasa.
 
 ### D-0912 · Electricidad como restricción de máquinas — A · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR pendiente)** — decidido **no**: sin enchufes ni tablero; `docs/decisiones/2026-10-04-sin-electricidad-en-galpon.md`.
+**[x] Hecho (2026-10-04, PR #335)** — decidido **no**: sin enchufes ni tablero; `docs/decisiones/2026-10-04-sin-electricidad-en-galpon.md`.
 **Depende de:** nada
 **Qué:** decidir si las máquinas necesitan enchufe. Decisión: no, coherente con D-0505 (sin energía).
 **Test:** ninguno (decisión). **Hecho cuando:** decisión escrita y el detalle de D-0904 y D-0922 coherente.
 
 ### D-0920 · Precio y venta con devolución parcial — B · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-04, PR pendiente)** — `PlaceableShop` (`scripts/gameplay/business/placeable_shop.gd`): `buy` cobra el precio y suma la pieza al `layout`, `sell` la saca y paga `PlaceableDefinition.refund()` (50 %); `test_placeable_shop`.
+**[x] Hecho (2026-10-04, PR #342)** — `PlaceableShop` (`scripts/gameplay/business/placeable_shop.gd`): `buy` cobra el precio y suma la pieza al `layout`, `sell` la saca y paga `PlaceableDefinition.refund()` (50 %); `test_placeable_shop`.
 **Depende de:** D-0904 (`PlaceableDefinition`), D-0501 (billetera)
 **Qué:** helpers estáticos sobre el `CompanyState` que recibe el llamador (sin nombrar autoloads). Una pieza
 colocada es una entrada de `layout`: `{id, x, z, turns}`. Si la celda está libre lo decide la grilla
@@ -76,7 +76,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa.
 
 ### D-0905 · Etapas del galpón que amplían la grilla — A · Sonnet 5.5 · xhigh · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `WarehouseStages` (`scripts/gameplay/business/warehouse_stages.gd`) + `CompanyState.warehouse_stage` (en el save) + constantes en `CompanyTuning`; `test_warehouse_stages`. El adaptador con nodos (rehacer paredes y piso desde `wall_rects()` sin recargar el nivel) queda para D-0917/D-0943.
+**[x] Hecho (2026-10-12, PR #389)** — `WarehouseStages` (`scripts/gameplay/business/warehouse_stages.gd`) + `CompanyState.warehouse_stage` (en el save) + constantes en `CompanyTuning`; `test_warehouse_stages`. El adaptador con nodos (rehacer paredes y piso desde `wall_rects()` sin recargar el nivel) queda para D-0917/D-0943.
 **Depende de:** D-0901 (`BuildMode.grid_size`), D-0902 (`BuildPlacement.grid_size`), D-0920 (billetera). El tope por progresión es D-0436 (llega como `unlocked_stage`).
 **Qué:** cuatro etapas, grilla en celdas y precio de la mejora **hacia** esa etapa (`CompanyTuning.WAREHOUSE_STAGE_*`):
 
@@ -95,7 +95,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** ampliar cambia grilla y paredes sin recargar el nivel (la parte de datos pasa el test; el adaptador de nodos va con D-0917).
 
 ### D-0906 · Paredes y portones fijos que no se pueden tapar (dársena, salida) — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `WarehouseStages.dock_rect/exit_rect/fixed_rects/gate_rects` (`warehouse_stages.gd`) + `CompanyTuning.WAREHOUSE_DOCK_CELLS/EXIT_CELLS`; `apply_to` deja las zonas en `BuildPlacement.fixed_blocked`; test ampliado en `test_warehouse_stages`. El adaptador con nodos (abrir el hueco de los portones en las paredes con `gate_rects()`) queda para D-0917/D-0943.
+**[x] Hecho (2026-10-12, PR #399)** — `WarehouseStages.dock_rect/exit_rect/fixed_rects/gate_rects` (`warehouse_stages.gd`) + `CompanyTuning.WAREHOUSE_DOCK_CELLS/EXIT_CELLS`; `apply_to` deja las zonas en `BuildPlacement.fixed_blocked`; test ampliado en `test_warehouse_stages`. El adaptador con nodos (abrir el hueco de los portones en las paredes con `gate_rects()`) queda para D-0917/D-0943.
 **Depende de:** D-0902 (`fixed_blocked`), D-0905 (etapas)
 **Qué:**
 - La dársena (portón de carga) es el centro del muro sur y la salida de clientes el centro del muro norte, en todas las etapas. Delante de cada una queda un rectángulo de piso libre: 4×2 celdas la dársena y 2×2 la salida (`CompanyTuning`).
@@ -106,7 +106,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa.
 
 ### D-0907 · Caminos libres: validación de que se puede llegar a cada estación — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `WalkReachability` (`scripts/gameplay/business/walk_reachability.gd`) + `BuildPlacement.entry_areas` y razón `blocks_path`; `apply_to` deja la dársena y la salida como entradas; `test_walk_reachability`. El adaptador con nodos (mostrar el motivo en rojo) queda para D-0917/D-0943.
+**[x] Hecho (2026-10-12, PR #414)** — `WalkReachability` (`scripts/gameplay/business/walk_reachability.gd`) + `BuildPlacement.entry_areas` y razón `blocks_path`; `apply_to` deja la dársena y la salida como entradas; `test_walk_reachability`. El adaptador con nodos (mostrar el motivo en rojo) queda para D-0917/D-0943.
 **Depende de:** D-0902 (`BuildPlacement`), D-0906 (dársena y salida)
 **Qué:**
 - Inundación 4-vecinos sobre la grilla desde las celdas de la dársena y la salida. Las celdas cubiertas por piezas con `blocks_walking` no se pisan; la zona de despacho (no bloquea) sí.
@@ -117,7 +117,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa.
 
 ### D-0908 · Navmesh que se rehornea al colocar objetos (para empleados) — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `WalkNavigation` (`scripts/gameplay/business/walk_navigation.gd`) + `BuildPlacement.navigation` y `rebake_navigation()`; `test_walk_navigation`. El adaptador que lo cree y se lo dé a `BuildPlacement` queda para D-0917; quien lo consume son los empleados (D-1011).
+**[x] Hecho (2026-10-12, PR #422)** — `WalkNavigation` (`scripts/gameplay/business/walk_navigation.gd`) + `BuildPlacement.navigation` y `rebake_navigation()`; `test_walk_navigation`. El adaptador que lo cree y se lo dé a `BuildPlacement` queda para D-0917; quien lo consume son los empleados (D-1011).
 **Depende de:** D-0907 (misma grilla de 4 vecinos)
 **Qué:**
 - `WalkNavigation.rebake(size, layout)` arma un `AStarGrid2D` sin diagonales con las celdas de `WalkReachability.blocked_cells` como sólidas y sube `version` (quien guardó un camino compara la versión para saber que quedó viejo).
@@ -128,7 +128,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa.
 
 ### D-0911 · Layout por defecto que ya funciona sin tocar nada — A · Opus 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `DefaultShed` (`scripts/gameplay/business/default_shed.gd`) + `data/shed/default_shed.tres` + `CompanyShed` (`scripts/gameplay/company_shed.gd`, el galpón con nodos); `test_company_default_layout`. Gris: lo dibuja con cajas y los GLB del depósito actual; los modelos finales son la subtarea de arte `arte-pendiente/D-0911.md`.
+**[x] Hecho (2026-10-12, PR #431)** — `DefaultShed` (`scripts/gameplay/business/default_shed.gd`) + `data/shed/default_shed.tres` + `CompanyShed` (`scripts/gameplay/company_shed.gd`, el galpón con nodos); `test_company_default_layout`. Gris: lo dibuja con cajas y los GLB del depósito actual; los modelos finales son la subtarea de arte `arte-pendiente/D-0911.md`.
 **Depende de:** D-0904 (objetos), D-0902 (`BuildPlacement`), D-0906 (dársena y salida), D-0907 (alcanzable), D-0214 (escena)
 **Qué:** el galpón de una empresa nueva sale armado, sin construir nada, y es el mismo en todos los peers:
 - El layout es **dato**: un `DefaultShed` (`Resource`) con las piezas (id de `data/placeables/`, celda, giros y `uid`), los huecos de estante con su stock inicial, el primer pedido al proveedor y las zonas pintadas. Entra por `BuildPlacement.place(free)`: las mismas comprobaciones del modo construcción (dentro del piso, fuera de dársena y salida, sin choque, todo alcanzable), así después se mueve, gira o vende igual. `problems()` dice qué está mal en el dato.
@@ -143,7 +143,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa y el corte vertical arranca con este galpón.
 
 ### D-0909 · Guardar el layout en el save de empresa — B · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-12, PR pendiente)** — `BuildLayoutSave.sanitize` (`scripts/gameplay/business/build_layout_save.gd`) y `CompanyState.from_dict` lo usa para el `layout`; `test_build_layout_save`. El layout ya viajaba en el save (`CompanyState.layout`, D-0205/D-0206); faltaba que al cargar fuera siempre uno que el modo construcción pudo armar.
+**[x] Hecho (2026-10-12, PR #429)** — `BuildLayoutSave.sanitize` (`scripts/gameplay/business/build_layout_save.gd`) y `CompanyState.from_dict` lo usa para el `layout`; `test_build_layout_save`. El layout ya viajaba en el save (`CompanyState.layout`, D-0205/D-0206); faltaba que al cargar fuera siempre uno que el modo construcción pudo armar.
 **Depende de:** D-0905 (la etapa define la grilla), D-0902 (`BuildPlacement.preview`)
 **Qué:**
 - `sanitize(raw, stage)` rearma la lista como `{id: String, x: int, z: int, turns: 0-3}` (JSON devuelve floats) y conserva solo las piezas que `BuildPlacement.preview` aceptaría una tras otra en la grilla de esa etapa: definición conocida, dentro del piso, fuera de dársena y salida, sin superponerse y sin cortar los caminos.
@@ -153,22 +153,22 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa. Los tests `test_company_state` y `test_company_save` pasaron a usar el formato `{id, x, z, turns}`.
 
 ### D-0910 · Layout replicado en red; solo host o voto coloca — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F1
-**[x] Hecho (2026-10-18, PR pendiente)** — `CompanyLayoutNet` (`scripts/core/company/company_layout_net.gd`, `CompanyNet.build`): colocar, mover, girar y vender una pieza como peticiones de `CompanyNet` que valida el host y eventos que aplica cada peer; solo construye el host; `CompanyShed.follow(net)` redibuja; `PROTOCOL_VERSION` 34; `test_company_layout_net`. El voto de la tripulación queda en la subtarea abierta D-0910.1.
+**[x] Hecho (2026-10-18, PR #460)** — `CompanyLayoutNet` (`scripts/core/company/company_layout_net.gd`, `CompanyNet.build`): colocar, mover, girar y vender una pieza como peticiones de `CompanyNet` que valida el host y eventos que aplica cada peer; solo construye el host; `CompanyShed.follow(net)` redibuja; `PROTOCOL_VERSION` 34; `test_company_layout_net`. El voto de la tripulación queda en la subtarea abierta D-0910.1.
 **Depende de:** D-0902, D-0903 (`BuildPlacement`), D-0920 (`PlaceableShop`), D-0911 (`uid` de las piezas, `CompanyShed`), D-2003 / D-2004 (`CompanyNet` y snapshot)
 **Qué:**
 - **Peticiones y eventos** (contrato `diseno/red-autoridad.md` §2 filas 21 a 24 y §8), por el `_request` / `_apply_event` de siempre (ningún RPC nuevo): `layout_place {id, x, z, turns}` → `layout_placed {id, x, z, turns, uid, minute, money}`; `layout_move {uid, x, z}` y `layout_rotate {uid, turns: 1..3}` → `layout_moved {uid, x, z, turns}` (pose final); `layout_sell {uid}` → `layout_sold {uid, minute, money}`. Todo enteros y ids cortos (< 200 bytes por evento).
 - **El host valida** con lo mismo que el modo construcción: `BuildPlacement.preview` en la grilla de la etapa (`WarehouseStages.apply_to`: dentro del piso, fuera de dársena y salida, sin choque, todo alcanzable) y la plata. Rechaza con los motivos de `BuildPlacement` más `host_only`, `no_piece`, `not_empty` (vender un estante o una mesa con unidades) y `bad_data` (un id que no es exactamente un archivo de `data/placeables/`, celdas no enteras o fuera de ±256, giros fuera de rango). El rechazo le llega solo al que pidió y no gasta `seq`.
 - **Cada peer aplica** con las mismas llamadas (`PlaceableShop.buy` / `sell`, la pose en el dict de la pieza) y solo comprueba los datos (regla 6), todo antes del primer cambio. La plata va absoluta: `money` es el saldo del host después del movimiento y cada peer arranca desde el saldo del host antes, así plata y `balance` del libro quedan iguales; si el espejo estaba desfasado lo corrige y `CompanyNet` pide un snapshot (`take_drift()`). `minute` va solo a la entrada del libro (el `clock_minutes` del cliente no se escribe). `CompanyNet._apply_state` tiene una rama explícita para los tres eventos. Antes de cada evento las piezas sin `uid` guardan el que se les deducía (vender una no renombra a otra) y un nombre repetido le da a la segunda pieza uno nuevo.
 - **Join tardío**: el layout ya viaja en el snapshot (`CompanyState.to_dict()`), sin parte nueva. `CompanyShed.follow(net)` redibuja en cada evento de layout y en `company_state_restored` (y las etiquetas en `units_moved`); `CompanyRoot` lo usa en vez de redibujar por su cuenta.
-- **D-0910.1 (abierta, `constructor-red` + `constructor-ui`)** Voto de la tripulación para que un cliente construya: el cliente pide, el host abre una votación (`modules/coop_vote`) y aplica si pasa; hoy `CompanyLayoutNet.check()` recibe `by_host` y ahí entraría "o el voto pasó".
-- **D-0910.2 (hecha, 2026-10-22, PR pendiente, `constructor-red`)** Ampliar la etapa por red: `WarehouseStages.expand` es local; hace falta un `kind` (`shed_expand`) para que la grilla nueva llegue a todos sin esperar un snapshot.
+- [ ] **D-0910.1** (`constructor-red` + `constructor-ui`; fuera de la lista del corte, no frena F1) Voto de la tripulación para que un cliente construya: el cliente pide, el host abre una votación (`modules/coop_vote`) y aplica si pasa; hoy `CompanyLayoutNet.check()` recibe `by_host` y ahí entraría "o el voto pasó".
+- **D-0910.2 (hecha, 2026-10-22, PR #722, `constructor-red`)** Ampliar la etapa por red: `WarehouseStages.expand` es local; hace falta un `kind` (`shed_expand`) para que la grilla nueva llegue a todos sin esperar un snapshot.
   Quedó: `shed_expand {stage}` → `shed_expanded {stage, minute, money}` en `CompanyLayoutNet` (solo el host; plata absoluta; el host además exige que el layout entre entero en la etapa nueva, `BuildLayoutSave.misfit`), `CompanyShed.follow` redibuja con la grilla nueva y `ShedBuilder` la toma; `PROTOCOL_VERSION` 59; `test_company_shed_expand_net`; contrato `red-autoridad.md` fila 26 y §16, `revisar/D-0910.2.md`.
 **Decisión:** solo el host construye (el cliente puede pedir y oye `host_only`, para que el modo construcción le diga por qué); construir no depende de la fase del día ni del galpón congelado, porque ni el contrato ni D-0203 lo piden; las piezas se nombran por `uid` y no por índice (dos pedidos en vuelo no se confunden de pieza); no se vende una pieza con unidades (se perderían). `docs/decisiones/2026-10-18-construccion-solo-host.md`.
 **Test** `test_company_layout_net`: solo, colocar paga y nombra `<id>_<n>`, mover y girar gratis, vender devuelve; un espejo con la plata desfasada termina en el saldo del host, con el minuto del host en el libro y su `clock_minutes` (centinela) intacto; cada evento de `EVENT_KINDS` tiene su rama en `_apply_state` (leído del código); nombres repetidos; un evento rechazado no guarda nombres; cada rechazo (choque, dársena, fuera del piso, camino cortado, sin plata, con unidades, pieza que no existe, datos malos) no cambia nada; nombres de piezas sin `uid`; eventos que no encajan no se aplican; con host + cliente ENet, 8 cambios con el galpón descongelado y congelado llegan en orden, iguales (layout, plata, libro, stock, día, dibujo) y sin tocar el día; el cliente que pide oye `host_only` 4 veces y nada cambia; el host gana plata sin evento y compra: el cliente queda en su plata y saldo, pide snapshot y termina igual; un tercero que entra tarde recibe el layout por snapshot, lo dibuja y sigue; `seq` sin huecos en los tres.
 **Hecho cuando:** el test de red pasa.
 
 ### D-0913 · Iluminación que se adapta al layout (sin rincones oscuros) — B · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR pendiente)** — `ShedLighting` (`scripts/gameplay/business/shed_lighting.gd`) + constantes `SHED_LAMP_*` en `CompanyTuning` + `CompanyShed._build_lights`; `test_shed_lighting`. La captura con luz real queda en `revisar/D-0913.md` (la nube renderiza por software).
+**[x] Hecho (2026-10-19, PR #465)** — `ShedLighting` (`scripts/gameplay/business/shed_lighting.gd`) + constantes `SHED_LAMP_*` en `CompanyTuning` + `CompanyShed._build_lights`; `test_shed_lighting`. La captura con luz real queda en `revisar/D-0913.md` (la nube renderiza por software).
 **Depende de:** D-0905 (etapas), D-0911 (`CompanyShed`)
 **Qué:** las luces del galpón salen del dato, no de posiciones a mano:
 - Rejilla de lámparas de techo: una por baldosa de hasta 8 m (`SHED_LAMP_SPACING_M`), centrada en su baldosa; crece con la etapa (2 lámparas en la chica, 12 en el centro logístico). Alcance 8,5 m: el punto más lejano de una baldosa está a 5,7 m, dentro del 75 % del alcance (`SHED_LAMP_REACH`), así que ninguna celda queda oscura.
@@ -180,7 +180,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa y la captura del galpón (a mano) no muestra rincones oscuros.
 
 ### D-0914 · Interacción con objetos colocados igual que con los fijos — A · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR pendiente)** — `ShedPiecePoint` (`scripts/gameplay/interaction/shed_piece_point.gd`) + `CompanyShed._add_use_point` / `use_points` / `piece_used`; claves `WORLD_SHED_USE_*`; `test_shed_interaction`. Qué hace cada uso (abrir el estante, trabajar la mesa) es de las tareas de cada estación (D-0703 y el grupo 06); acá solo se dice quién usó qué pieza.
+**[x] Hecho (2026-10-19, PR #477)** — `ShedPiecePoint` (`scripts/gameplay/interaction/shed_piece_point.gd`) + `CompanyShed._add_use_point` / `use_points` / `piece_used`; claves `WORLD_SHED_USE_*`; `test_shed_interaction`. Qué hace cada uso (abrir el estante, trabajar la mesa) es de las tareas de cada estación (D-0703 y el grupo 06); acá solo se dice quién usó qué pieza.
 **Depende de:** D-0911 (`CompanyShed`), D-0903 (mover y vender)
 **Qué:** cada estante, mesa de armado y zona de despacho del layout recibe, al dibujarse, un punto de uso (`Interactable`, la misma sonda, aviso y alcance que el resto del juego). Se cuelga en el mismo dibujado para las piezas por defecto y las que puso la tripulación, así que no hay dos caminos.
 - El punto está **delante de la pieza**, a 0,45 m de su huella (una esfera de 0,8 m): el collider del estante es macizo, un punto adentro no se vería ni se alcanzaría (`Player.within_reach`). Gira con la pieza (sus cuatro giros). La zona de despacho no bloquea el paso: su punto está en el medio.
@@ -191,7 +191,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test pasa.
 
 ### D-0917 · Modo construcción con mando — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR pendiente)** — `BuildCursor` (`scripts/gameplay/business/build_cursor.gd`, lógica pura) + `ShedBuilder` (`scripts/gameplay/shed_builder.gd`, el adaptador con nodos, colgado de `CompanyRoot.builder`); teclado, mouse y mando hacen lo mismo; `test_build_input`. Gris: grilla de líneas y fantasma de caja verde/roja; el holograma es D-0944.
+**[x] Hecho (2026-10-19, PR #501)** — `BuildCursor` (`scripts/gameplay/business/build_cursor.gd`, lógica pura) + `ShedBuilder` (`scripts/gameplay/shed_builder.gd`, el adaptador con nodos, colgado de `CompanyRoot.builder`); teclado, mouse y mando hacen lo mismo; `test_build_input`. Gris: grilla de líneas y fantasma de caja verde/roja; el holograma es D-0944.
 **Depende de:** D-0901 (`BuildMode`), D-0902/D-0903 (`BuildPlacement`), D-0910 (peticiones por `CompanyNet`)
 **Qué:**
 - `BuildCursor` (`RefCounted`): celda apuntada (no sale del piso), objeto elegido del catálogo (`data/placeables/`, ciclo con envoltura), giros del fantasma. `confirm()` en celda libre pide colocar; sobre una pieza la **toma**, y el siguiente `confirm()` pide moverla a la celda; `cancel()` la suelta; `rotate()` pide un cuarto de vuelta de la pieza tomada (o gira el fantasma); `sell()` pide vender la pieza bajo el cursor. Solo devuelve `{kind, data}`: no cambia el layout.
@@ -202,7 +202,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** el test de input pasa.
 
 ### D-0916 · Deshacer la última colocación — A · Sonnet 5.5 · low · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR pendiente)** — `BuildPlacement.undo_last_placement/can_undo` (`scripts/gameplay/business/build_placement.gd`) + `UNDO_DEPTH`; `test_build_undo`. El botón o la tecla (Ctrl+Z) quedan para el adaptador de D-0917/D-0943.
+**[x] Hecho (2026-10-19, PR #485)** — `BuildPlacement.undo_last_placement/can_undo` (`scripts/gameplay/business/build_placement.gd`) + `UNDO_DEPTH`; `test_build_undo`. El botón o la tecla (Ctrl+Z) quedan para el adaptador de D-0917/D-0943.
 **Depende de:** D-0902 (`BuildPlacement.place`)
 **Qué:** `place()` recuerda las últimas 8 piezas compradas (las entradas del layout mismas); `undo_last_placement()` saca la más nueva que siga en el layout y devuelve **el precio entero** (vender devuelve el 50 %).
 - Una pieza movida o girada después se encuentra igual; una vendida entremedio se saltea. Las piezas que no pasaron por `place()` (layout cargado o por defecto) no se deshacen.
@@ -210,7 +210,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Test** `test_build_undo`. **Hecho cuando:** el test pasa.
 
 ### D-0915 · Límite de objetos por etapa (presupuesto de rendimiento) — B · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR pendiente)** — `CompanyTuning.WAREHOUSE_STAGE_MAX_PIECES` (16 / 36 / 64 / 100) + `WarehouseStages.max_pieces_for` + `BuildPlacement.max_pieces` y razón `piece_limit`; `apply_to` lo fija; `test_shed_piece_limit`. El texto en rojo del motivo queda para el adaptador de D-0917.
+**[x] Hecho (2026-10-19, PR #490)** — `CompanyTuning.WAREHOUSE_STAGE_MAX_PIECES` (16 / 36 / 64 / 100) + `WarehouseStages.max_pieces_for` + `BuildPlacement.max_pieces` y razón `piece_limit`; `apply_to` lo fija; `test_shed_piece_limit`. El texto en rojo del motivo queda para el adaptador de D-0917.
 **Depende de:** D-0905 (etapas), D-0902 (`BuildPlacement`)
 **Qué:** cada etapa admite como máximo una pieza cada seis casillas de piso. Una pieza más es roja con `piece_limit`; mover, girar y vender no cuentan, y vender libera lugar.
 **Medido** (galpón lleno con estantes, mesas, heladeras y zonas, headless): etapa 0 con 16 piezas, 1 con 36, 2 con 64 y 3 con 100; el de 100 piezas dibuja unos 460 nodos y 110 cuerpos físicos. El test fija un techo holgado por etapa (nodos 300/450/650/900, cuerpos 40/70/110/150) para que sumar un mueble más caro rompa el test. Los FPS con ventana los mide `bench_company` en la PC.
@@ -218,7 +218,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Test** `test_shed_piece_limit`. **Hecho cuando:** el test pasa.
 
 ### D-0918 · Reusar `depot_layout.gd`/`depot_zones.gd` como base de las zonas — A · Sonnet 5.5 · high · Aviso: no · F1
-**[x] Hecho (2026-10-19, PR pendiente)** — las zonas pintadas del galpón (`CompanyShed`) toman colores y rótulos del depósito (`DepotLayout`, `DepotLabels.floor_text`) en vez de una copia propia; `test_shed_zone_reuse`.
+**[x] Hecho (2026-10-19, PR #512)** — las zonas pintadas del galpón (`CompanyShed`) toman colores y rótulos del depósito (`DepotLayout`, `DepotLabels.floor_text`) en vez de una copia propia; `test_shed_zone_reuse`.
 **Depende de:** D-0911 (layout por defecto con zonas pintadas)
 **Qué:** el galpón ya usaba `DepotKit` para las mallas; lo que duplicaba era la paleta (`ZONE_COLORS` con `Color(...)` sueltos) y el rótulo del piso (un `Label3D` armado a mano). Ahora `ZONE_COLORS` apunta a la paleta de `DepotLayout` (muelle = amarillo de carril, salida = teal, recepción = verde de paso, almacén = azul de estantes, armado = rojo de taller, despacho = naranja de oficina) y el nombre se escribe con `DepotLabels.floor_text` (fuente del depósito, color papel, plano).
 **Decisión:** no se movió geometría de `depot_zones.gd` (cajas del hall, escalera, oficina) porque son medidas en metros del depósito fijo y el galpón trabaja en celdas; compartir eso sería acoplar dos mundos que cambian por separado. Se comparte lo que sí es lo mismo: paleta y rótulos. Si el galpón gana más tipos de zona, el color se agrega en `DepotLayout`.
@@ -232,7 +232,7 @@ devuelve `floor(precio × ratio)` y quita la pieza; índice o id inválido devue
 **Hecho cuando:** captura con las zonas rotuladas — el nombre sale en el piso en el layout por defecto.
 
 ### D-0948 · Test de layouts inválidos (estación encerrada) — B · Sonnet 5.5 · medium · Aviso: no · F1
-**[x] Hecho (2026-10-22, PR pendiente)** — `tests/test_build_invalid_layouts.gd`: mover, girar y colocar piezas que encierran una estación (o la celda de acceso) son rojas con `blocks_path` y no cambian nada, un layout inválido cargado se limpia sin perder lo válido, mover o girar una estantería con productos conserva `uid` e Inventory, y deshacer devuelve el estado exacto. Sin cambios de código de producción.
+**[x] Hecho (2026-10-22, PR #701)** — `tests/test_build_invalid_layouts.gd`: mover, girar y colocar piezas que encierran una estación (o la celda de acceso) son rojas con `blocks_path` y no cambian nada, un layout inválido cargado se limpia sin perder lo válido, mover o girar una estantería con productos conserva `uid` e Inventory, y deshacer devuelve el estado exacto. Sin cambios de código de producción.
 **Depende de:** D-0902/D-0903 (`BuildPlacement`), D-0907 (`WalkReachability`), D-0909 (`BuildLayoutSave`), D-0910 (`CompanyLayoutNet`), D-0916 (deshacer)
 **Qué:** (1) colocar/mover/girar algo que cierra el último lado libre de una estación, o que queda encerrado él mismo, es rojo y no toca layout, dinero ni stock, en local y en el chequeo del host; a una celda de distancia es verde, y una zona de despacho (pintada) nunca encierra. (2) Un guardado (con ida y vuelta por JSON) o un snapshot (`CompanyState.from_dict`) con estación encerrada, solape, pieza fuera del piso o sobre el muelle, id desconocido o basura carga solo lo válido, en orden y con sus `uid`; el resultado es siempre caminable, el stock no se borra y el galpón por defecto no pierde piezas. (3) D-0940 (fusionada): mover o girar una estantería con unidades (con `uid` guardado o sin él) conserva la pieza y el Inventory; venderla es `not_empty` y no cambia nada; vacía se vende y la vecina sin `uid` conserva nombre y unidades. (4) Deshacer tras colocar (y mover/girar), uno por uno en varias colocaciones, deja layout y dinero idénticos; una colocación roja no deja nada que deshacer.
 **Decisión:** el que carga un layout inválido descarta la pieza que no entra (regla de D-0909, "nunca se arregla a mano") y no la reubica: depende del orden del guardado y su stock queda en el Inventory sin pieza. Es raro (solo un guardado editado o de otra versión) y cambiarlo es de diseño, no de este test. `BuildPlacement.sell_piece`/`move_piece` (modo local) no los usa el juego: la red pasa por `CompanyLayoutNet`, que sí frena la venta con unidades.

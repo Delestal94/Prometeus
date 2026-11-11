@@ -5,7 +5,7 @@
 > Aviso en `docs/avisos/` cuando se toque `event_bus.gd`, `network_manager.gd`, `run_manager.gd` o `modules/`.
 
 ### D-0201 · Arquitectura de la expansión documentada — A · Opus 5.5 · xhigh · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — sección 10 "Modo Empresa" de `docs/arquitectura.md`: capas, autoridad, señales de `EventBus`, carpetas y flujo de una caja.
+**[x] Hecho (2026-10-04, PR #308)** — sección 10 "Modo Empresa" de `docs/arquitectura.md`: capas, autoridad, señales de `EventBus`, carpetas y flujo de una caja.
 **Depende de:** D-0119
 **Qué:** sección "Modo Empresa" en `docs/arquitectura.md`:
 - **Capas.** `CompanyState` (persistente, autoload) → `DayCycle` (día en curso) → `WorldCells` (qué
@@ -18,7 +18,7 @@
 **Hecho cuando:** la sección existe, y `auditor-red` la leyó sin hallazgos de autoridad.
 
 ### D-0202 · Autoload `CompanyState` y `company_tuning.gd` — A · Opus 5.5 · xhigh · Aviso: sí (`project.godot` autoloads) · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `company_state.gd` (autoload tras `UnlockManager`), `company_tuning.gd` (`class_name CompanyTuning`, todos los números de supuestos.md); `Order`, `Pallet` y `ProductDefinition` leen de ahí; `test_company_state` y `test_hud_script_loads` ampliado.
+**[x] Hecho (2026-10-04, PR #309)** — `company_state.gd` (autoload tras `UnlockManager`), `company_tuning.gd` (`class_name CompanyTuning`, todos los números de supuestos.md); `Order`, `Pallet` y `ProductDefinition` leen de ahí; `test_company_state` y `test_hud_script_loads` ampliado.
 **Depende de:** D-0201
 **Qué:**
 - `scripts/core/company/company_state.gd`, autoload `CompanyState` registrado después de
@@ -38,7 +38,7 @@
 **Hecho cuando:** los dos tests pasan y la batería de CI sigue verde.
 
 ### D-0203 · `DayCycle`: apertura, operación y cierre — A · Opus 5.5 · high · Aviso: sí (`event_bus.gd`) · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `day_cycle.gd` (`DayCycle`, hijo del mundo): fases como hechos del host (evento `day_phase` de `CompanyNet`, parte `day_cycle` del snapshot, `PROTOCOL_VERSION` 32), señales `company_day_*` emitidas al aplicar en cada peer, galpón congelado como minuto propio (`shed_minute()`, no el reloj pausado), cableado en `company_root.gd` (`GameClock` + `DayCycle` en todos los peers; el host abre el día); `test_day_cycle` (solo + dos peers ENet). Falta: el área del galpón para `crew_in_shed` y `trips_out` (D-0319), guardar al `SUMMARY` (D-0206) y la pantalla de cierre.
+**[x] Hecho (2026-10-12, PR #393)** — `day_cycle.gd` (`DayCycle`, hijo del mundo): fases como hechos del host (evento `day_phase` de `CompanyNet`, parte `day_cycle` del snapshot, `PROTOCOL_VERSION` 32), señales `company_day_*` emitidas al aplicar en cada peer, galpón congelado como minuto propio (`shed_minute()`, no el reloj pausado), cableado en `company_root.gd` (`GameClock` + `DayCycle` en todos los peers; el host abre el día); `test_day_cycle` (solo + dos peers ENet). Lo que faltaba ya está en `company_root.gd`: `crew_in_shed` (D-0316.1), `trips_out` (`CompanyTrips`, D-0302.1), guardar al cierre (`save_closed_day()`) y la pantalla de cierre (D-0508.3).
 **Depende de:** D-0202, D-0219
 **Qué:** `scripts/core/company/day_cycle.gd` (nodo hijo del mundo, no autoload).
 - **Estados** `OPENING` (08:00, 5 s reales: aparece el proveedor) → `OPERATING` → `CLOSING` (20:00 o
@@ -67,7 +67,7 @@
 **Hecho cuando:** el test pasa.
 
 ### D-0205 · Recurso `ZoneDefinition` (antes "DistrictDefinition") — A · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `ZoneDefinition` + 9 `.tres` en `data/zones/` (bounds provisorios en grilla de 256 m hasta D-0301; gates `gate_*` que D-0306 crea); `test_zone_definitions`.
+**[x] Hecho (2026-10-04, PR #298)** — `ZoneDefinition` + 9 `.tres` en `data/zones/` (bounds provisorios en grilla de 256 m hasta D-0301; gates `gate_*` que D-0306 crea); `test_zone_definitions`.
 **Depende de:** D-0114
 **Qué:** `scripts/gameplay/districts/zone_definition.gd`. En el mapa continuo un distrito es una **zona**
 del mapa.
@@ -82,7 +82,7 @@ del mapa.
 **Hecho cuando:** el test pasa.
 
 ### D-0206 · Guardado de empresa versionado — A · Opus 5.5 · xhigh · Aviso: sí (`modules/persistence/`) · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `company_save.gd` (`CompanySave`: `save`/`load_into`/`migrate` sobre `SafeJson`, `user://saves/company/<slot>.json`, versión 1, `MIGRATIONS` vacía); `test_company_save`. Engancharlo al cierre del día y al menú queda para D-0203/D-0214.
+**[x] Hecho (2026-10-04, PR #326)** — `company_save.gd` (`CompanySave`: `save`/`load_into`/`migrate` sobre `SafeJson`, `user://saves/company/<slot>.json`, versión 1, `MIGRATIONS` vacía); `test_company_save`. El cierre del día ya guarda (`CompanyRoot.save_closed_day()`) y el menú ya lista las empresas (`CompanySlotsPage`).
 **Depende de:** D-0202
 **Qué:** `scripts/core/company/company_save.gd`. Usa `SafeJson` (`modules/persistence/safe_json.gd`) como
 `CrewProgression`.
@@ -119,15 +119,15 @@ bloqueo abre: `&"water"`, `&"altitude"`…), `price: int`. Tres `.tres` en `data
 componente, para que lancha, avioneta y bici no hereden de `VehicleBody3D`. Recomendado: **componente**
 `scripts/gameplay/fleet/fleet_seats.gd` + `fleet_cargo.gd` que la camioneta usa por composición. No mover
 lógica de manejo.
-- [ ] **D-0208.1** Inventario de qué partes de `vehicle.gd` son asientos y carga (con líneas). Ojo: otra
+- [x] **D-0208.1** Inventario de qué partes de `vehicle.gd` son asientos y carga (con líneas). Ojo: otra
   sesión puede estar tocando `vehicle.gd`: rebase antes de empezar y cambios mínimos.
-- [ ] **D-0208.2** Extraer a componentes con la misma API pública.
-- [ ] **D-0208.3** Actualizar `docs/agregar-vehiculo.md`.
+- [x] **D-0208.2** Extraer a componentes con la misma API pública (`FleetCargo`, `FleetSeats`; PR #525).
+- [x] **D-0208.3** Actualizar `docs/agregar-vehiculo.md` (ya describe los dos componentes).
 **Hecho cuando:** los tests con filtros `vehicle`, `truck`, `seat` y `cargo` están verdes, `auditor-red`
 no tiene hallazgos y `vehicle.gd` bajó de líneas.
 
 ### D-0209 · Interfaz de movimiento del vehículo — B · Opus 5.5 · xhigh · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `fleet_motion.gd` (`speed_kmh`, `forward`, `right`, `to_local`, `ground_contact`, `cargo_acceleration`) expuesto por la furgoneta como `fleet_motion`; `package_rescue.gd` lee espacio local y ejes por la interfaz con respaldo en la transformada; `road_impacts.gd`/`package_impacts.gd` no leían el vehículo, quedan igual; `test_fleet_motion`.
+**[x] Hecho (2026-10-21, PR #543)** — `fleet_motion.gd` (`speed_kmh`, `forward`, `right`, `to_local`, `ground_contact`, `cargo_acceleration`) expuesto por la furgoneta como `fleet_motion`; `package_rescue.gd` lee espacio local y ejes por la interfaz con respaldo en la transformada; `road_impacts.gd`/`package_impacts.gd` no leían el vehículo, quedan igual; `test_fleet_motion`.
 **Depende de:** D-0208
 **Qué:** `scripts/gameplay/fleet/fleet_motion.gd`, interfaz con `speed_kmh()`, `forward()`,
 `ground_contact() -> float` (0-1; 1 = apoyado), `cargo_acceleration() -> Vector3` (lo que sienten las
@@ -138,7 +138,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa y los tests de carga actuales siguen verdes.
 
 ### D-0210 · `OrderBook` — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `order_book.gd` (Node, autoridad del host) con `add/mark_packed/mark_out/mark_delivered/mark_failed/cancel/expire/open_orders` y `to_dict/from_dict`; `test_order_book`.
+**[x] Hecho (2026-10-04, PR #323)** — `order_book.gd` (Node, autoridad del host) con `add/mark_packed/mark_out/mark_delivered/mark_failed/cancel/expire/open_orders` y `to_dict/from_dict`; `test_order_book`.
 **Depende de:** D-0202, D-0204
 **Qué:** `scripts/gameplay/business/order_book.gd`, hijo del mundo, autoridad en el host.
 - **Pedido** = `Dictionary` con `id`, `customer`, `zone`, `house_id`, `items: Array[{product, qty}]`,
@@ -153,7 +153,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa.
 
 ### D-0211 · `Inventory` — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `inventory.gd` (RefCounted, solo datos) con `receive/consume/move/count/reserve/release`, `to_dict/from_dict`; `test_inventory`.
+**[x] Hecho (2026-10-04, PR #292)** — `inventory.gd` (RefCounted, solo datos) con `receive/consume/move/count/reserve/release`, `to_dict/from_dict`; `test_inventory`.
 **Depende de:** D-0204
 **Qué:** `scripts/gameplay/business/inventory.gd`.
 - **Stock** por `product_id` y ubicación (`&"dock"`, `&"shelf:<slot_id>"`, `&"cart:<id>"`,
@@ -166,7 +166,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa.
 
 ### D-0212 · `PackedBox` — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `packed_box.gd` (`PackedBox`, RefCounted: grilla de la caja, `place`/`fill_free_cells`/`contents`/`free_ratio`/`fill_ratio`, `to_dict`/`from_dict` aptos para JSON); `test_packed_box`.
+**[x] Hecho (2026-10-04, PR #338)** — `packed_box.gd` (`PackedBox`, RefCounted: grilla de la caja, `place`/`fill_free_cells`/`contents`/`free_ratio`/`fill_ratio`, `to_dict`/`from_dict` aptos para JSON); `test_packed_box`.
 **Depende de:** D-0204
 **Qué:** `scripts/gameplay/business/packed_box.gd` (`RefCounted`).
 - **Campos:** `box_size` (`&"S"`…`&"XL"`), `grid: Dictionary` (celda `Vector3i` → product id o
@@ -179,7 +179,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa.
 
 ### D-0213 · De `PackedBox` a `DeliveryPackage` con su trampa — A · Opus 5.5 · xhigh · Aviso: sí (`package.gd`, `package_content.gd`, de Slatex) · F0
-**[x] Hecho (2026-10-05, PR pendiente)** — `box_to_package.gd` (`BoxToPackage.build`): trampa y contenido del producto más difícil, absorción por relleno, metadata `packed_box`/`order_id`/`loose_box`; `test_box_to_package`. Sin cambios en `package.gd`.
+**[x] Hecho (2026-10-05, PR #346)** — `box_to_package.gd` (`BoxToPackage.build`): trampa y contenido del producto más difícil, absorción por relleno, metadata `packed_box`/`order_id`/`loose_box`; `test_box_to_package`. Sin cambios en `package.gd`.
 **Depende de:** D-0212, D-0109
 **Qué:** `scripts/gameplay/business/box_to_package.gd`. Instancia `scenes/gameplay/package/package.tscn`
 (como `Depot.PACKAGE_SCENE`) y configura:
@@ -196,7 +196,7 @@ Agregar antes que cambiar: ninguna firma existente cambia.
 **Hecho cuando:** el test pasa y el aviso está en `docs/avisos/`.
 
 ### D-0214 · Escena del mundo de la empresa — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` `LEVEL_SCENES`, `main_menu.gd`) · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — la raíz es `company_root.tscn` (`CompanyRoot`, PR #324); la continuación la pone en línea: en `LEVEL_SCENES` (`PROTOCOL_VERSION` 38), llama a `level_ready()`, el host spawnea un jugador por peer por `World/PlayerSpawner` (`join_crew()`, `crew_spawn()`) y lo saca cuando se va; `--autostart-company [--slot=<n>]` (alias `--mode=company`) y `--host-company` (sin botón: uno más en la página Jugar empuja "Volver" fuera de una pantalla de 720 px; queda para quien reacomode esa página); `test_company_world_boot`, `test_company_online` y `tools/run-net-pair.sh --company`. Aviso `docs/avisos/2026-10-21-d0214-empresa-en-linea.md`.
+**[x] Hecho (2026-10-21, PR #567)** — la raíz es `company_root.tscn` (`CompanyRoot`, PR #324); la continuación la pone en línea: en `LEVEL_SCENES` (`PROTOCOL_VERSION` 38), llama a `level_ready()`, el host spawnea un jugador por peer por `World/PlayerSpawner` (`join_crew()`, `crew_spawn()`) y lo saca cuando se va; `--autostart-company [--slot=<n>]` (alias `--mode=company`) y `--host-company` (sin botón: uno más en la página Jugar empuja "Volver" fuera de una pantalla de 720 px; queda para quien reacomode esa página); `test_company_world_boot`, `test_company_online` y `tools/run-net-pair.sh --company`. Aviso `docs/avisos/2026-10-21-d0214-empresa-en-linea.md`.
 **Depende de:** D-0202, D-0301
 **Qué:** `scenes/company/company_world.tscn` con raíz `CompanyWorld` (`scripts/gameplay/districts/company_world.gd`).
 - **Hijos:** `WorldCells` (D-0303), `DayCycle`, `OrderBook`, `Inventory`, el galpón (D-0620), el
@@ -210,7 +210,7 @@ verdadero, hay `DayCycle` en `OPENING` y no hay `ERROR` en el log (Logger que cu
 **Hecho cuando:** el test pasa y Entrega/Endless arrancan igual que antes.
 
 ### D-0215 · Señales de negocio en `EventBus` — A · Opus 5.5 · medium · Aviso: sí (`event_bus.gd`) · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — 11 señales al final de `event_bus.gd` (sin relay: cada peer las emite al aplicar); `CompanyState` ya emite `money_changed` y `gate_opened`; las demás las conecta la tarea de su emisor; `test_event_bus_company`.
+**[x] Hecho (2026-10-12, PR #369)** — 11 señales al final de `event_bus.gd` (sin relay: cada peer las emite al aplicar); `CompanyState` ya emite `money_changed` y `gate_opened`; las demás las conecta la tarea de su emisor; `test_event_bus_company`.
 **Depende de:** D-0201
 **Qué:** agregar al final de `event_bus.gd` (sin reordenar las 58 actuales):
 - `company_day_started`, `company_day_closing`, `company_day_summary`;
@@ -224,7 +224,7 @@ para que todas existan con su firma.
 **Hecho cuando:** el test pasa y el aviso está.
 
 ### D-0216 · Registros leídos de `data/` — A · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-19, PR pendiente)** — `CompanyCatalog` (`scripts/core/company/catalog.gd`): lee las seis carpetas de `data/` (y raíces extra) por id, resuelve `.remap`, junta ids repetidos o faltantes en `errors`; `company_root.load_zones()` lo usa; `test_company_catalog`.
+**[x] Hecho (2026-10-19, PR #515)** — `CompanyCatalog` (`scripts/core/company/catalog.gd`): lee las seis carpetas de `data/` (y raíces extra) por id, resuelve `.remap`, junta ids repetidos o faltantes en `errors`; `company_root.load_zones()` lo usa; `test_company_catalog`.
 **Depende de:** D-0204, D-0205, D-0207
 **Qué:** `scripts/core/company/catalog.gd` (`RefCounted` estático o hijo de `CompanyState`). Lee
 `data/products/`, `data/zones/`, `data/vehicles/`, `data/gates/`, `data/suppliers/` y `data/boxes/` con
@@ -236,7 +236,7 @@ ruta alternativa del catálogo) aparece sin tocar código; los ids repetidos dan
 **Hecho cuando:** el test pasa.
 
 ### D-0217 · Cajas como datos — A · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `BoxDefinition` (`scripts/gameplay/business/box_definition.gd`: `id`, `cells`, `cost`, `model`, `volume()`, `size_m()`), `data/boxes/S|M|L|XL.tres` con los números de `CompanyTuning.BOX_CELLS`/`BOX_COST` y `sm_cargo_box_cube.glb`, y `CompanyCatalog.box()`/`boxes()` (de menor a mayor); `test_company_catalog`. Los usuarios de `BOX_CELLS` siguen igual.
+**[x] Hecho (2026-10-21, PR #544)** — `BoxDefinition` (`scripts/gameplay/business/box_definition.gd`: `id`, `cells`, `cost`, `model`, `volume()`, `size_m()`), `data/boxes/S|M|L|XL.tres` con los números de `CompanyTuning.BOX_CELLS`/`BOX_COST` y `sm_cargo_box_cube.glb`, y `CompanyCatalog.box()`/`boxes()` (de menor a mayor); `test_company_catalog`. Los usuarios de `BOX_CELLS` siguen igual.
 **Depende de:** D-0216
 **Qué:** `scripts/gameplay/business/box_definition.gd` (`id`, `cells: Vector3i`, `cost`, `model`). Cuatro
 `.tres` en `data/boxes/` (S, M, L, XL con los números de supuestos). `model` usa
@@ -245,7 +245,7 @@ ruta alternativa del catálogo) aparece sin tocar código; los ids repetidos dan
 **Hecho cuando:** el test pasa.
 
 ### D-0218 · Proveedores como datos — A · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `SupplierDefinition` (`scripts/gameplay/business/supplier_definition.gd`: `id`, `products`, `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`, `sells()`, `unit_price()`), `data/suppliers/distribuidora_central.tres` (10 productos, 08:30, 180 min, factor 1,0, camión `null` hasta D-0601) y `CompanyCatalog.supplier()`; `test_company_catalog`.
+**[x] Hecho (2026-10-21, PR #537)** — `SupplierDefinition` (`scripts/gameplay/business/supplier_definition.gd`: `id`, `products`, `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`, `sells()`, `unit_price()`), `data/suppliers/distribuidora_central.tres` (10 productos, 08:30, 180 min, factor 1,0, camión `null` hasta D-0601) y `CompanyCatalog.supplier()`; `test_company_catalog`.
 **Depende de:** D-0216
 **Qué:** `scripts/gameplay/business/supplier_definition.gd` (`id`, `products: Array[StringName]`,
 `price_factor`, `arrival_min`, `wait_minutes`, `truck_scene`). Un `.tres` para F1: `distribuidora_central`,
@@ -254,7 +254,7 @@ que vende los 10 productos, llega a las 08:30 y espera 180 min.
 **Hecho cuando:** el test pasa.
 
 ### D-0219 · Reloj del juego desde el host — A · Opus 5.5 · high · Aviso: sí (`network_manager.gd` si hace falta un RPC) · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `modules/day_clock/` (`DayClock`, ancla y `minute_at`) + adaptador `game_clock.gd` (`GameClock`): evento `clock_anchor` de `CompanyNet` solo al cambiar la marcha, ancla en el snapshot (parte `clock`), `PROTOCOL_VERSION` 31; `test_game_clock` con dos peers ENet. Falta cablearlo al mundo (D-0203/D-0214).
+**[x] Hecho (2026-10-12, PR #381)** — `modules/day_clock/` (`DayClock`, ancla y `minute_at`) + adaptador `game_clock.gd` (`GameClock`): evento `clock_anchor` de `CompanyNet` solo al cambiar la marcha, ancla en el snapshot (parte `clock`), `PROTOCOL_VERSION` 31; `test_game_clock` con dos peers ENet. Ya está cableado al mundo: `CompanyRoot` crea el `GameClock` en cada peer.
 **Depende de:** D-0202
 **Qué:** `scripts/core/company/game_clock.gd`. Lógica en `modules/day_clock/` (D-0223): sin nombres del
 juego, con adaptador.
@@ -270,7 +270,7 @@ juego, con adaptador.
 **Hecho cuando:** el test pasa y `auditor-red` lo revisó.
 
 ### D-0220 · Carpetas y módulos — A · Opus 5.5 · medium · Aviso: sí (`docs/arquitectura.md`, `.claude/hooks/lib.sh`) · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `README.md` en las carpetas que faltaban; tabla "Qué va a `modules/`" en `docs/arquitectura.md` §10.4; las carpetas de la expansión son de Nacho en `file_domain` y en `colaboracion-equipo.md` (cierra D-0144); `tools/test-file-domain.sh` en CI.
+**[x] Hecho (2026-10-12, PR #402)** — `README.md` en las carpetas que faltaban; tabla "Qué va a `modules/`" en `docs/arquitectura.md` §10.4; las carpetas de la expansión son de Nacho en `file_domain` y en `colaboracion-equipo.md` (cierra D-0144); `tools/test-file-domain.sh` en CI.
 **Depende de:** D-0201
 **Qué:** crear las carpetas con un `README.md` de 3 líneas cada una:
 - `scripts/core/company/`, `scripts/gameplay/business/`, `scripts/gameplay/districts/`,
@@ -307,7 +307,7 @@ tiene `BusinessTick` con el paso `day_cycle` y el `_process` del `DayCycle` apag
 **Hecho cuando:** los dos tests pasan y `check_modules` / `portability-check` están verdes.
 
 ### D-0235 · Varias empresas guardadas (slots) — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú queda para la UI.
+**[x] Hecho (2026-10-21, PR #582)** — `CompanySave.list_slots` (nombre, día, plata, fecha, última jugada primero, sin mover archivos), `delete` (con `.bak`/`.tmp`/`.bad`) y `new_slot_id`; `test_company_slots`. La lista en el menú ya existe (`CompanySlotsPage`, `scripts/ui/company_slots_page.gd`, D-1904).
 **Depende de:** D-0206
 **Qué:** en `scripts/core/company/company_save.gd` (`CompanySave`), solo datos; la pantalla que los muestra
 es de la UI del menú (Jugar → Empresa) y no entra acá.
@@ -324,7 +324,7 @@ es de la UI del menú (Jugar → Empresa) y no entra acá.
 **Hecho cuando:** el test pasa.
 
 ### D-0236 · Guardado automático al cerrar el día y al salir — B · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-21, PR pendiente)** — `CompanyRoot.save_closed_day()`: el host guarda el slot en cuanto se aplica el SUMMARY, como la apertura del día siguiente (día + 1 a las 08:00, sin `interrupted`, stock con las manos en el piso); al salir durante el resumen guarda eso mismo en vez del día interrumpido; a mitad de día sigue el guardado interrumpido de D-2005; `test_company_autosave`.
+**[x] Hecho (2026-10-21, PR #588)** — `CompanyRoot.save_closed_day()`: el host guarda el slot en cuanto se aplica el SUMMARY, como la apertura del día siguiente (día + 1 a las 08:00, sin `interrupted`, stock con las manos en el piso); al salir durante el resumen guarda eso mismo en vez del día interrumpido; a mitad de día sigue el guardado interrumpido de D-2005; `test_company_autosave`.
 **Depende de:** D-0203, D-0206, D-2005
 **Qué:** en `scripts/gameplay/company_root.gd`, solo el host (también solo):
 - al aplicarse el `day_phase` SUMMARY (`CompanyNet.event_applied`), guardar el slot como **la apertura del
@@ -406,7 +406,7 @@ sección dice qué `.tres` crear (campos y rangos leídos de su clase), cómo lo
 **Hecho cuando:** la guía existe, está enlazada desde el README de la expansión y `agregar-vehiculo.md`.
 
 ### D-0245 · Validador de los `.tres` de la expansión en CI — B · Opus 5.5 · medium · Aviso: no · F0 (Pulido)
-**[x] Hecho (2026-10-22, PR pendiente)** — `ExpansionResourceCheck.run()` (`scripts/core/company/expansion_resource_check.gd`): ids únicos e iguales al archivo en las diez carpetas, referencias (proveedor → productos, producto → zonas y trampa, zona → gates, gate y tienda → flota), escenas existentes y rangos; `test_expansion_resources`.
+**[x] Hecho (2026-10-22, PR #613)** — `ExpansionResourceCheck.run()` (`scripts/core/company/expansion_resource_check.gd`): ids únicos e iguales al archivo en las diez carpetas, referencias (proveedor → productos, producto → zonas y trampa, zona → gates, gate y tienda → flota), escenas existentes y rangos; `test_expansion_resources`.
 **Depende de:** D-0216, D-0217, D-0218
 **Qué:** un chequeo transversal de todo `data/` de la expansión, que los tests por clase no ven: ids
 únicos por carpeta (lo que `CompanyCatalog` ya junta en `errors`, más `placeables/`, `order_requirements/`,
@@ -421,7 +421,7 @@ da un problema por cada uno, con el archivo y el id.
 **Hecho cuando:** `test_expansion_resources` falla con un id repetido.
 
 ### D-0246 · Semilla de la empresa para pedidos y proveedores — B · Opus 5.5 · high · Aviso: no · F0 (Pulido)
-**[x] Hecho (2026-10-22, PR pendiente)** — `CompanySeed` (`scripts/core/company/company_seed.gd`) y `CompanyState.company_seed` / `day_seed(stream, day)`: una semilla por empresa, guardada y en el snapshot, de la que sale la de cada día y cada corriente (`ORDERS`, `SUPPLIERS`); `test_company_seed`. Auditoría de `auditor-red` en el PR.
+**[x] Hecho (2026-10-22, PR #622)** — `CompanySeed` (`scripts/core/company/company_seed.gd`) y `CompanyState.company_seed` / `day_seed(stream, day)`: una semilla por empresa, guardada y en el snapshot, de la que sale la de cada día y cada corriente (`ORDERS`, `SUPPLIERS`); `test_company_seed`. Auditoría de `auditor-red` en el PR.
 **Depende de:** D-0202 (`CompanyState`), D-0206 (guardado), D-0801 / D-0803 (generador y ritmo), D-0813 (pedidos por red)
 **Qué:** que todos vean el mismo día. El contrato (`diseno/red-autoridad.md` §10) ya decidió que los pedidos viajan
 enteros y los clientes nunca sortean, así que lo que faltaba era **de dónde sale "la semilla del día"** que el host le
