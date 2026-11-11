@@ -74,7 +74,7 @@ const WALLET: StringName = CompanyWalletNet.MOVED
 const OWN_REQUEST_KINDS: Array[StringName] = [SNAPSHOT_REQUEST]
 const OWN_EVENT_KINDS: Array[StringName] = [CLOCK_ANCHOR, DAY_PHASE]
 ## Request kinds the host takes (the contract's section 2 whitelist): its own and each domain's. Anything else
-## is dropped. A kind is in one list only, so _handle_request() hands it to one domain (test_company_split).
+## is dropped. A kind is in one list only, so _handle_request() hands it to one domain (test_company_net_domains).
 const REQUEST_KINDS: Array[StringName] = (
 	OWN_REQUEST_KINDS + CompanyUnitsNet.REQUEST_KINDS + CompanyLayoutNet.REQUEST_KINDS
 	+ CompanyTableNet.REQUEST_KINDS + CompanyPackages.REQUEST_KINDS + CompanyCarts.REQUEST_KINDS
