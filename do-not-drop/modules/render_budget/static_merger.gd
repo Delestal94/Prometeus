@@ -85,9 +85,9 @@ static func merge(
 
 
 ## merge() in steps, for a caller that spreads the work over several frames: begin() once, fold() each root
-## (or fold_branch() each of its children; they need not all come in one frame, and nothing is added to `holder` meanwhile), then finish() once,
-## which adds the merged meshes and returns what merge() returns. The roots fold into the meshes as they
-## stand in the tree when each is folded; `holder` must not move in between.
+## (or fold_branch() each of its children; they need not all come in one frame, and nothing is added to
+## `holder` meanwhile), then finish() once, which adds the merged meshes and returns what merge() returns. The
+## roots fold into the meshes as they stand in the tree when each is folded; `holder` must not move in between.
 static func begin(holder: Node3D, drop_hidden: bool = false, claim: Callable = Callable()) -> RefCounted:
 	var job := _Job.new()
 	job.to_holder = holder.global_transform.affine_inverse()

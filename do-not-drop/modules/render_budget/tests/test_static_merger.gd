@@ -225,7 +225,10 @@ func _test_models() -> void:
 		"Two copies of a model become one MergedModels of two instances")
 	if batch != null:
 		var placed: Array = batch.get_meta(StaticMerger.INSTANCES_META, [])
-		_expect(placed.size() == 2 and (placed[1] as Transform3D).origin.distance_to((placed[0] as Transform3D).origin) > 2.9,
+		var apart: float = 0.0
+		if placed.size() == 2:
+			apart = (placed[1] as Transform3D).origin.distance_to((placed[0] as Transform3D).origin)
+		_expect(placed.size() == 2 and apart > 2.9,
 			"...each where its copy stood (%s)" % [placed])
 	_expect(not is_instance_valid(copies[0]) and not is_instance_valid(copies[1]), "...and the copies go")
 	holder.free()

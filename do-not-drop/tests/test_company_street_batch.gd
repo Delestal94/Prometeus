@@ -212,7 +212,8 @@ func _check_streamed(graph: RoadGraph) -> void:
 			break
 		await process_frame
 	var cell: Node3D = cells.cell_node(CENTRO)
-	_expect(cell != null and cells.is_finished(CENTRO) and seen_hidden, "The streamer bakes the cell (%d steps)" % steps)
+	_expect(cell != null and cells.is_finished(CENTRO) and seen_hidden,
+		"The streamer bakes the cell (%d steps)" % steps)
 	if cell != null:
 		_expect(cell.visible and cell.get_node_or_null(NodePath(String(StreetBatcher.STREETS_NAME))) != null,
 			"...and draws it, baked, once it is done")
@@ -255,9 +256,11 @@ func _check_house_ranges() -> void:
 	var parts: Array[Node] = panel.find_children("*", "GeometryInstance3D", true, false) if panel != null else []
 	var bare: int = 0
 	for part: Node in parts:
-		if not is_equal_approx(float(part.get_meta(WorldQuality.BASE_RANGE_META, 0.0)), DeliveryHouse.DOORBELL_VIEW_RANGE):
+		var base: float = float(part.get_meta(WorldQuality.BASE_RANGE_META, 0.0))
+		if not is_equal_approx(base, DeliveryHouse.DOORBELL_VIEW_RANGE):
 			bare += 1
-	_expect(parts.size() >= 5 and bare == 0, "Every part of a house's doorbell panel is drawn up to %.0f m (%d of %d not)"
+	_expect(parts.size() >= 5 and bare == 0,
+		"Every part of a house's doorbell panel is drawn up to %.0f m (%d of %d not)"
 		% [DeliveryHouse.DOORBELL_VIEW_RANGE, bare, parts.size()])
 	house.free()
 	await process_frame
