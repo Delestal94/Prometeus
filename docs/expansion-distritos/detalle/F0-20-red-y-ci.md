@@ -4,7 +4,7 @@
 > `network_manager.gd:68`) como dice `docs/convenciones-godot.md` §6. Siempre `auditor-red` antes del PR.
 
 ### D-2001 · Modelo de autoridad del modo Empresa — A · Opus 5.5 · xhigh · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — [`diseno/red-autoridad.md`](../diseno/red-autoridad.md): 4 RPC de `CompanyNet`, 10 reglas, las 20 acciones con petición, validación y evento, eventos del host, snapshot; aprobada por `auditor-red`.
+**[x] Hecho (2026-10-04, PR #320)** — [`diseno/red-autoridad.md`](../diseno/red-autoridad.md): 4 RPC de `CompanyNet`, 10 reglas, las 20 acciones con petición, validación y evento, eventos del host, snapshot; aprobada por `auditor-red`.
 **Depende de:** D-0201
 **Qué:** subsección "Red" de la arquitectura de la expansión. Tabla por estado:
 
@@ -25,7 +25,7 @@ Cada acción de cliente (tomar producto, colocar en la caja, encintar, despachar
 **Hecho cuando:** la tabla cubre las 20 acciones del corte vertical y `auditor-red` la aprobó.
 
 ### D-2002 · Presupuesto de ancho de banda del modo Empresa — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — galpón, una salida y 2 vehículos lejos medidos con 4 y 8 (modelo con techo de Steam + ENet real, `test_company_bandwidth_budget`); entran los seis y el test exige todos (con `net_vehicle` de D-0302.2.b.4.b: galpón 9,4 / 6,1 y 20,9 / 12,9-13,0, salida 28,2 / 19,4-20,6 y 39,7 / 24,6-26,6, 2 lejos 42,2 / 32,5-33,0 y 53,6 / 36,0-38,4 KB/s), con D-2002.5 la caja en la mano sin pose. Números y culpables en `docs/rendimiento-pc.md`. Queda rehacer el galpón con `bot_company_day` ([`revisar/D-2002.5.md`](../revisar/D-2002.5.md)).
+**[x] Hecho (2026-10-22, PR #739)** — galpón, una salida y 2 vehículos lejos medidos con 4 y 8 (modelo con techo de Steam + ENet real, `test_company_bandwidth_budget`); entran los seis y el test exige todos (con `net_vehicle` de D-0302.2.b.4.b: galpón 9,4 / 6,1 y 20,9 / 12,9-13,0, salida 28,2 / 19,4-20,6 y 39,7 / 24,6-26,6, 2 lejos 42,2 / 32,5-33,0 y 53,6 / 36,0-38,4 KB/s), con D-2002.5 la caja en la mano sin pose. Números y culpables en `docs/rendimiento-pc.md`. Queda rehacer el galpón con `bot_company_day` ([`revisar/D-2002.5.md`](../revisar/D-2002.5.md)).
 **Depende de:** D-2001
 **Qué:** medir con el overlay de red (N-216) un día de `bot_company_day` con 4 peers ENet locales. El
 presupuesto queda en `docs/rendimiento-pc.md`:
@@ -35,13 +35,13 @@ presupuesto queda en `docs/rendimiento-pc.md`:
 Si se pasa: lista de culpables, en orden.
 - [x] **D-2002.1** Galpón (4 y 8 jugadores): modelo + medición ENet; falla si con 4 jugadores pasa 24 KB/s.
 - [x] **D-2002.2** Una salida afuera (≤ 40 KB/s) y 2 vehículos lejos (≤ 64 KB/s), con 4 y 8 jugadores: 4 entran en lo que se cuenta (el test lo exige; salvedades en D-2002.4); 8 se pasan en el modelo, culpables en `docs/rendimiento-pc.md`. Revisar: [`revisar/D-2002.2.md`](../revisar/D-2002.2.md).
-- [x] **D-2002.4** (2026-10-22, PR pendiente) Contado lo que faltaba (`care_state` real de 912 B a su ritmo, una caja en la mano por cada uno que carga en el galpón, pulsos de keepalive desfasados por cliente, la camioneta estacionada esperada con `is_resting()`, test con 2 camionetas en `test_company_multi_vehicle`) y 4 palancas solo en Empresa: camioneta cada 0,03 s, sentados a 15/s, keepalive que no despierta, `care_state` cada 0,2 s ([decisión](../../decisiones/2026-10-22-palancas-ancho-de-banda-salidas.md)); `FULL_CREW_FITS["far"]` = true; la salida con 8 sigue afuera. Sin cambio de protocolo. Revisar: [`revisar/D-2002.4.md`](../revisar/D-2002.4.md).
+- [x] **D-2002.4** (2026-10-22, PR #702) Contado lo que faltaba (`care_state` real de 912 B a su ritmo, una caja en la mano por cada uno que carga en el galpón, pulsos de keepalive desfasados por cliente, la camioneta estacionada esperada con `is_resting()`, test con 2 camionetas en `test_company_multi_vehicle`) y 4 palancas solo en Empresa: camioneta cada 0,03 s, sentados a 15/s, keepalive que no despierta, `care_state` cada 0,2 s ([decisión](../../decisiones/2026-10-22-palancas-ancho-de-banda-salidas.md)); `FULL_CREW_FITS["far"]` = true; la salida con 8 sigue afuera. Sin cambio de protocolo. Revisar: [`revisar/D-2002.4.md`](../revisar/D-2002.4.md).
 - [x] **D-2002.3** Galpón con 8 jugadores dentro de 24 KB/s: juntar las poses reenviadas en paquetes propios del host (~21,6 KB/s; cambia quién manda las poses: un espejo de cada jugador en el host o un RPC por lote, y suma un tick de latencia) o bajar el envío del jugador en el galpón a 15/s (~19,7 KB/s).
-- [x] **D-2002.5** (2026-10-22, PR pendiente) La caja en la mano de un jugador a pie no manda su pose (el host mutea su `NetRestThrottle`: una cada 5 s) y cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del jugador; `hold_offset` sale de la replicación (98 B por caja en vez de 150); al soltarla queda donde se dibujó hasta la primera pose nueva. Salida con 8: 67,3 → 39,0 (ENet 54,0 → 25,0-26,7); con `net_vehicle` mezclado, 39,7 (ENet 24,6-26,6); el galpón cuenta una caja en la mano por jugador (muteada: 0,1-0,2 KB/s; a 30/s habrían sido ~58 con 8); `FULL_CREW_FITS["trip"]` = true. Todos los modos; protocolo 60 ([decisión](../../decisiones/2026-10-22-caja-en-la-mano-sin-pose.md)). Pendiente: rehacer el galpón con `bot_company_day`. Revisar: [`revisar/D-2002.5.md`](../revisar/D-2002.5.md).
+- [x] **D-2002.5** (2026-10-22, PR #739) La caja en la mano de un jugador a pie no manda su pose (el host mutea su `NetRestThrottle`: una cada 5 s) y cada peer la dibuja con `PlayerCarry.hands_pose()` de su copia del jugador; `hold_offset` sale de la replicación (98 B por caja en vez de 150); al soltarla queda donde se dibujó hasta la primera pose nueva. Salida con 8: 67,3 → 39,0 (ENet 54,0 → 25,0-26,7); con `net_vehicle` mezclado, 39,7 (ENet 24,6-26,6); el galpón cuenta una caja en la mano por jugador (muteada: 0,1-0,2 KB/s; a 30/s habrían sido ~58 con 8); `FULL_CREW_FITS["trip"]` = true. Todos los modos; protocolo 60 ([decisión](../../decisiones/2026-10-22-caja-en-la-mano-sin-pose.md)). Pendiente: rehacer el galpón con `bot_company_day`. Revisar: [`revisar/D-2002.5.md`](../revisar/D-2002.5.md).
 **Hecho cuando:** los números están medidos y anotados con commit y fecha.
 
 ### D-2003 · Eventos de negocio por RPC confiable con número de secuencia — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `company_net.gd` (`CompanyNet`, hijo de `CompanyRoot`): `_request` / `_apply_event` con `seq` / `_rejected`, `units_take`, `units_store` y `snapshot_request`; protocolo 29; `test_company_net`. Snapshot en D-2004.
+**[x] Hecho (2026-10-04, PR #336)** — `company_net.gd` (`CompanyNet`, hijo de `CompanyRoot`): `_request` / `_apply_event` con `seq` / `_rejected`, `units_take`, `units_store` y `snapshot_request`; protocolo 29; `test_company_net`. Snapshot en D-2004.
 **Depende de:** D-2001, D-0210, D-0211
 **Qué:** `scripts/core/company/company_net.gd` (hijo de `CompanyWorld`), con un solo RPC
 `_apply_event(seq: int, kind: StringName, data: Dictionary)` (reliable, host → todos) y un RPC
@@ -77,7 +77,7 @@ arranca ese día desde la apertura.
 **Hecho cuando:** el test pasa.
 
 ### D-2006 · Un cliente se cae y vuelve — B · Opus 5.5 · high · Aviso: sí (`network_manager.gd`) · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `CompanyNet`: al irse un peer (`peer_removed`, `peer_disconnected` o `peer_returned` con el mismo id) el host suelta lo de `hands:<peer>` en un `floor:<n>` nuevo a sus pies; petición crítica `units_drop`; bultos con posición en `FloorBundles` (snapshot `floor`), tomables con `units_take`; protocolo 33; `test_company_rejoin`.
+**[x] Hecho (2026-10-12, PR #400)** — `CompanyNet`: al irse un peer (`peer_removed`, `peer_disconnected` o `peer_returned` con el mismo id) el host suelta lo de `hands:<peer>` en un `floor:<n>` nuevo a sus pies; petición crítica `units_drop`; bultos con posición en `FloorBundles` (snapshot `floor`), tomables con `units_take`; protocolo 33; `test_company_rejoin`.
 **Depende de:** D-2004
 **Qué:** reusar el reingreso de N-221 (slot de color, `_displaced_players`). Lo que tenía en las manos
 se suelta en el piso al caerse (evento `hands → floor`). Al volver recibe el snapshot.
@@ -86,7 +86,7 @@ piso del host, el stock total no cambia y al volver ve el mismo stock.
 **Hecho cuando:** el test pasa.
 
 ### D-2007 · `RpcGuard` en todos los RPC nuevos — A · Opus 5.5 · medium · Aviso: no · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `test_rpc_guard` ya recorría todo `res://`; ahora fija `EXPANSION_DIRS` (`scripts/core/company/`, `scripts/gameplay/business/`), exige `CompanyNet._request` entre los RPC y prueba un RPC de negocio temporal (texto dentro del test): sin guardas lo marca, con guardas pasa.
+**[x] Hecho (2026-10-12, PR #375)** — `test_rpc_guard` ya recorría todo `res://`; ahora fija `EXPANSION_DIRS` (`scripts/core/company/`, `scripts/gameplay/business/`), exige `CompanyNet._request` entre los RPC y prueba un RPC de negocio temporal (texto dentro del test): sin guardas lo marca, con guardas pasa.
 **Depende de:** D-2003
 **Qué:** ampliar el test de N-238 que recorre los RPC del proyecto para que incluya
 `scripts/core/company/` y `scripts/gameplay/business/`. Cada `@rpc("any_peer")` debe pasar por
@@ -102,7 +102,7 @@ que cambien RPC suben de nuevo según §6, y la tabla de §6 anota "expansión" 
 **Hecho cuando:** el número subió y `docs/convenciones-godot.md` §6 tiene la fila.
 
 ### D-2009 · Lobby de Steam con nombre de empresa y día — B · Opus 5.5 · medium · Aviso: sí (`net_session.gd`) · F0
-**[x] Hecho (2026-10-12, PR pendiente)** — `NetSteamPresence` (módulo `net_session`, `NetSession.steam_presence`): guarda la metadata del lobby y la rich presence, las escribe con Steam (lobby: solo el dueño, al crearse y en cada cambio) y sin Steam solo las guarda; `CompanyLobbyMeta` arma `company_name`/`company_day` (texto) y `status` traducido (`UI_COMPANY_PRESENCE`, `UI_COMPANY_PRESENCE_UNNAMED`), sin empresa activa las claves en `""` (Steam las borra); `CompanyRoot` lo publica al subir el mundo, en cada `day_phase` y con el snapshot del cliente, y lo limpia al salir. Sin cambio de protocolo; `test_company_lobby_meta`, `test_net_steam_presence`, `test_company_root`. Falta la prueba con Steam real ([`revisar/D-2009.md`](../revisar/D-2009.md)).
+**[x] Hecho (2026-10-12, PR #418)** — `NetSteamPresence` (módulo `net_session`, `NetSession.steam_presence`): guarda la metadata del lobby y la rich presence, las escribe con Steam (lobby: solo el dueño, al crearse y en cada cambio) y sin Steam solo las guarda; `CompanyLobbyMeta` arma `company_name`/`company_day` (texto) y `status` traducido (`UI_COMPANY_PRESENCE`, `UI_COMPANY_PRESENCE_UNNAMED`), sin empresa activa las claves en `""` (Steam las borra); `CompanyRoot` lo publica al subir el mundo, en cada `day_phase` y con el snapshot del cliente, y lo limpia al salir. Sin cambio de protocolo; `test_company_lobby_meta`, `test_net_steam_presence`, `test_company_root`. Falta la prueba con Steam real ([`revisar/D-2009.md`](../revisar/D-2009.md)).
 **Depende de:** D-0202
 **Qué:** metadata del lobby `company_name` y `company_day`. Rich presence `"Empresa <nombre> — día N"`
 (texto traducible). Sin Steam (ENet), se ignora.
@@ -118,8 +118,8 @@ no está hecha, anotar la ruta en su tarea.
 **Hecho cuando:** la ruta figura en la configuración de Auto-Cloud documentada.
 
 ### D-2011 · `bench_company` en CI — A · Opus 5.5 · high · Aviso: sí (`.github/workflows/`) · F0
-**[x] Hecho (2026-10-22, PR pendiente)** — D-2011.1: la etapa `drive` sube al jugador a la van de la flota (`bot_company_van.gd`), mantiene el acelerador `--seconds` y dobla hacia la Avenida Este (`steer_toward`/`drive_target`) con cámara de persecución (`chase_pose`); el resumen suma `drive_frames`, `drive_frame_ms_p50/p95`, `drive_draw_calls`, `drive_objects`, `drive_metres`. CPU 30 s: 554 m, pasa la entrada de Centro (x = 256). Revisar: [`revisar/D-2011.1.md`](../revisar/D-2011.1.md).
-**[~] Parcial (2026-10-12, PR pendiente)** — `tests/bench_company.gd` abre `company_root.tscn` (save en `user://bench_company`, se borra), recorre el galpón con una cámara por un camino fijo (vuelta a x ±18, z ±10 desde `SPAWN` y barrido por la puerta hacia las losas de zonas) e imprime `BENCH_COMPANY key=value` (objects, nodes, draw_calls, physics_bodies, frame_ms p50/p95, memory_static_kb) y `BENCH_COMPANY_OK`; paso informativo "Measure company world performance" en `tests.yml` (`|| true`); `test_company_bench`. Falta D-2011.1.
+**[x] Hecho (2026-10-22, PR #731)** — D-2011.1: la etapa `drive` sube al jugador a la van de la flota (`bot_company_van.gd`), mantiene el acelerador `--seconds` y dobla hacia la Avenida Este (`steer_toward`/`drive_target`) con cámara de persecución (`chase_pose`); el resumen suma `drive_frames`, `drive_frame_ms_p50/p95`, `drive_draw_calls`, `drive_objects`, `drive_metres`. CPU 30 s: 554 m, pasa la entrada de Centro (x = 256). Revisar: [`revisar/D-2011.1.md`](../revisar/D-2011.1.md).
+Antes (parcial, 2026-10-12, PR #428) — `tests/bench_company.gd` abre `company_root.tscn` (save en `user://bench_company`, se borra), recorre el galpón con una cámara por un camino fijo (vuelta a x ±18, z ±10 desde `SPAWN` y barrido por la puerta hacia las losas de zonas) e imprime `BENCH_COMPANY key=value` (objects, nodes, draw_calls, physics_bodies, frame_ms p50/p95, memory_static_kb) y `BENCH_COMPANY_OK`; paso informativo "Measure company world performance" en `tests.yml` (`|| true`); `test_company_bench`. Falta D-2011.1.
 **Depende de:** D-0214
 **Qué:** `tests/bench_company.gd`, como `bench_drive`.
 - **Qué hace:** arranca el mundo de la empresa, recorre el galpón con la cámara por un camino fijo de
@@ -215,7 +215,7 @@ despacho y la puerta corren con el armador o el repartidor en un cliente, no en 
 `bot_company_day` dice en su encabezado qué acciones siguen fuera de `CompanyNet._request`.
 
 ### D-2018 · Módulos nuevos en `portability-check.sh` — A · Opus 5.5 · low · Aviso: no · F0
-**[x] Hecho (2026-10-12, a1374c1, PR pendiente)** — ya estaba: `portability-check.sh` descubre solo cada `modules/<x>/` con `module.cfg` y `check_modules.py` (CI, lint) rechaza un módulo sin `module.cfg` o sin `tests/test_*.gd`; el run de main de a1374c1 da `OK day_clock`, `OK world_cells`, 25/25. `inventory`, `order_queue` y `build_grid` entran solos cuando D-0221, D-0222 y D-0225 los creen.
+**[x] Hecho (2026-10-12, a1374c1, PR #428)** — ya estaba: `portability-check.sh` descubre solo cada `modules/<x>/` con `module.cfg` y `check_modules.py` (CI, lint) rechaza un módulo sin `module.cfg` o sin `tests/test_*.gd`; el run de main de a1374c1 da `OK day_clock`, `OK world_cells`, 25/25. `inventory`, `order_queue` y `build_grid` entran solos cuando D-0221, D-0222 y D-0225 los creen.
 **Depende de:** D-0220
 **Qué:** cada `modules/<nuevo>/` (`day_clock`, `world_cells`, `inventory`, `order_queue`, `build_grid`)
 tiene `module.cfg` y `tests/`, y `tools/portability-check.sh` lo recorre (si los descubre solo, verificar
@@ -230,8 +230,9 @@ y `scenes/company/`; si filtra recursos, agregarlos. Pedido a la rutina `pc-buil
 **Hecho cuando:** la build de la PC arranca el modo Empresa (anotado en el informe de `pc-build`).
 
 ### D-2020 · Smoke del ejecutable en modo Empresa — B · Opus 5.5 · medium · Aviso: sí (`.github/workflows/release.yml`) · F0
+**[~] Parcial (2026-11-11, PR #859)** — `release.yml` corre `tools/export/smoke-company.sh builds/linux` después del export y antes de los zips, y el paso falla si la última línea no es `Empresa OK` (arranque al menú, arranque con `--autostart-company` de unos 6000 cuadros, el guardado de la empresa y la sonda dentro del `.pck`); en Windows, con una build nueva de `main`, da `Empresa OK`. Una corrida manual ya no publica nada. `test_release_build` lo exige. Falta la corrida en GitHub (Linux). Revisar: [`revisar/D-2020.md`](../revisar/D-2020.md).
 **Depende de:** D-2019
 **Qué:** el smoke de `release.yml` hoy arranca el juego. Agregar una segunda corrida con
-`--autostart-company` 20 s que falle si el log tiene `SCRIPT ERROR` o `ERROR`. `tools/export/smoke-company.sh`
+`--autostart-company` (el script corre unos 6000 cuadros, cerca de un minuto; `SMOKE_COMPANY_FRAMES` lo sube) que falle si el log tiene `SCRIPT ERROR` o `ERROR`. `tools/export/smoke-company.sh`
 (D-2019) ya hace eso y contempla Linux, aunque ahí todavía no se probó; con `timeout` a secas no alcanza (matar el proceso ensucia el log).
 **Hecho cuando:** el workflow tiene el paso y pasa en la siguiente release.

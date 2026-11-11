@@ -360,12 +360,12 @@ func _check_gap_recovery() -> void:
 	var refused: bool = not _host_net.grant_snapshot(_client_id, later)
 	refused = refused and not _host_net.grant_snapshot(_client_id, later)
 	_expect(refused and _snapshot_asks.size() == 1
-		and _host_net._oversize_reported.has(_client_id),
+		and _host_net.sync._oversize_reported.has(_client_id),
 		"A snapshot too big to send is not granted (asks %s)" % [_snapshot_asks])
 	_host_net.snapshot_chunk_bytes = CompanyNet.SNAPSHOT_CHUNK_BYTES
 	var granted: bool = _host_net.grant_snapshot(_client_id, later)
 	var sent: bool = await _wait_for(func() -> bool: return _restored.size() == 3)
-	_expect(granted and sent and not _host_net._oversize_reported.has(_client_id),
+	_expect(granted and sent and not _host_net.sync._oversize_reported.has(_client_id),
 		"...and the next request that fits goes through at once (restored %s)" % [_restored])
 
 
@@ -405,7 +405,7 @@ func _check_chunks() -> void:
 	]
 	for case: Array in bad:
 		rx._snapshot(case[0], case[1], case[2], case[3], case[4])
-	_expect(not rx.awaiting_snapshot() and rx._rx_id == 0,
+	_expect(not rx.awaiting_snapshot() and rx.sync._rx_id == 0,
 		"Malformed chunks (%s) start nothing" % ", ".join(bad.map(func(c: Array) -> String:
 			return c[5])))
 

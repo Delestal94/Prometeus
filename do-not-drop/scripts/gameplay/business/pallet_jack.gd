@@ -6,7 +6,8 @@ extends RefCounted
 ## the shed floor at a point in meters, or on a rack slot (D-0606).
 ## The jack takes one pallet at a time. Units reach the Inventory
 ## (Pallet.receive) once, when a pallet from the bed is first put down (its place's `received`), so a pallet that never
-## leaves the bed is never counted and leaves with the truck. The nodes that draw and drive it come
+## leaves the bed is never counted and leaves with the truck. That put-down is also what the supplier bills
+## (take_received(), D-0503.b). The nodes that draw and drive it come
 ## with D-0605.b. Host authority: peers apply the same calls in the same order.
 
 const AT_BED: StringName = &"bed"
@@ -20,6 +21,9 @@ const AT_RACK: StringName = &"rack"
 var places: Dictionary = {}
 ## Id of the pallet on the jack, &"" when it is empty.
 var carrying: StringName = &""
+## The pallet whose units the last put-down brought into the Inventory, until someone takes it (take_received()).
+## Not part of to_dict(): it lives for the one event that set it.
+var _just_received: StringName = &""
 
 
 ## Puts the day's pallets on the truck bed. Invalid or repeated ids are skipped; returns how many went on.
@@ -112,11 +116,22 @@ func put_on_rack(slot: StringName, pos: Vector2, inventory: Inventory) -> bool:
 ## even once it was emptied (D-0605.b). Units already at its location count as received. False when they do not fit.
 func _receive_carried(inventory: Inventory) -> bool:
 	var place: Dictionary = places[carrying]
+	_just_received = &""
 	if not _received(place) and inventory.contents_at(Pallet.location(carrying)).is_empty():
 		if not Pallet.receive(inventory, place["pallet"]):
 			return false
+		_just_received = carrying
 	place["received"] = true
 	return true
+
+
+## The pallet whose units the last put-down brought into the Inventory, once: &"" when that put-down moved a pallet
+## received before (or one whose units were already there), and &"" again after this call. The host bills the
+## supplier's goods with it (SupplierBillHook, D-0503.b): a pallet is received once, so it is billed once.
+func take_received() -> StringName:
+	var id: StringName = _just_received
+	_just_received = &""
+	return id
 
 
 ## Whether a place's units were received (its `received` is true; missing or not a bool, no).

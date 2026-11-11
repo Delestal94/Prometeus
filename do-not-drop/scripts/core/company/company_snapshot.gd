@@ -9,7 +9,7 @@ extends RefCounted
 ## edge); CompanyNet keeps pack_snapshot(), unpack_snapshot() and stock_ok() as the same calls. The
 ## limits are CompanyNet's own constants (SNAPSHOT_*) and CompanyTableNet's (MAX_*), read here. The
 ## checks of one chunk and the joining (chunk_ok(), join()) came out of CompanyNet._take_chunk() in
-## D-0518, for the same reason.
+## D-0518, for the same reason; that one is CompanySnapshotSync.take_chunk() since D-0254.
 
 
 ## A snapshot as _snapshot carries it: {size: its var_to_bytes size, chunks: the compressed

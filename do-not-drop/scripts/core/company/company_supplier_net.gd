@@ -35,6 +35,9 @@ const ORDER: StringName = &"supplier_order"
 const ORDERED: StringName = &"supplier_ordered"
 const REQUEST_KINDS: Array[StringName] = [ORDER]
 const EVENT_KINDS: Array[StringName] = [ORDERED]
+## supplier_ordered also goes out with no request: the automatic order of the day's close (SupplierAutoOrderHook).
+const HOST_EVENT_KINDS: Array[StringName] = [ORDERED]
+const CRITICAL_KINDS: Array[StringName] = []
 ## Key of the calendar in CompanyNet's snapshot (SupplierSchedule.to_dict()).
 const SNAPSHOT_KEY: String = "supplier"
 ## Key of the supplier in a supplier_order request and in a supplier_ordered event (D-0621.b).

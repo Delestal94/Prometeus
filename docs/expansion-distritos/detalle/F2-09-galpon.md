@@ -4,7 +4,7 @@
 > en la tabla de [09-galpon-construible.md](../09-galpon-construible.md). Números de [supuestos.md](supuestos.md).
 
 ### D-0931 · Zona de carga para varios vehículos a la vez — B · Sonnet 5.5 · medium · Aviso: no · F2
-**[~] ◐ Parcial (2026-10-22, PR pendiente)** — la lógica (D-0931.a): `DispatchBay` y `test_dispatch_bay`.
+**[~] ◐ Parcial (2026-10-22, PR #720)** — la lógica (D-0931.a): `DispatchBay` y `test_dispatch_bay`.
 **Depende de:** D-0716 (`DispatchZone`), D-0717 (`DispatchLoading`)
 **Qué:** con varios vehículos parados en la dársena, cada caja que espera en despacho (la más vieja primero) va al primer vehículo que la acepta.
 - **D-0931.a (hecha) — la lógica.** `DispatchBay` (`scripts/gameplay/business/dispatch_bay.gd`, `RefCounted`): `plan()` reparte entre hasta `MAX_VEHICLES` (3) vehículos según `DispatchRules`, `cargo_slots` y `cargo_kg`; `load_bay()` deja la carga de cada uno en el portón (`CompanyTrips.stage_cargo`). Lo que nadie acepta sigue esperando con el motivo del primer vehículo que pasó las reglas pero estaba lleno (o el de las reglas).
@@ -13,8 +13,8 @@
 **Hecho cuando:** test de carga simultánea (D-0931.a); jugable cuando esté D-0931.b.
 
 ### D-0936 · Exterior del galpón que cambia con la etapa (cartel, playón) — B · Sonnet 5.5 · medium · Aviso: no · F2
-**[x] Hecho (2026-10-22, PR pendiente)** — `ShedExteriorPlan` (datos) y `ShedExterior` (dibujo): 4 variantes de cartel y playón, una por etapa.
-**[x] Arte (2026-11-07, PR pendiente)** — modelos de cartel, marcas del playón y farol (`build_depot_props.py`, grupo `shed_exterior`).
+**[x] Hecho (2026-10-22, PR #736)** — `ShedExteriorPlan` (datos) y `ShedExterior` (dibujo): 4 variantes de cartel y playón, una por etapa.
+**[x] Arte (2026-11-07, PR #848)** — modelos de cartel, marcas del playón y farol (`build_depot_props.py`, grupo `shed_exterior`).
 **Depende de:** D-0905 (etapas del galpón)
 **Qué:** lo de afuera del galpón crece con la etapa, así se ve que la empresa creció antes de entrar.
 - **Cartel** sobre el muro de la dársena (cara a +Z, hacia el patio), con el nombre de la etapa (`WORLD_SHED_SIGN_*`): galpón, galpón grande, centro de distribución, centro logístico. Ancho 4 / 6 / 8 / 11 m, nunca más que el muro.

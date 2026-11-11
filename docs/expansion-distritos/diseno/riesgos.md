@@ -31,7 +31,7 @@ P3: vigilar.
 | R-13 | `--script` que pierde autoloads al nombrar clases nuevas (N-919) | P2 | D-0243 | F0-F5 |
 | R-14 | Determinismo: pedidos por semilla y tripulación, tránsito por reloj | P2 | D-0246, D-0807, D-1504 | F1-F2 |
 | R-15 | Regresiones en Entrega y Endless por archivos compartidos | P2 | D-0315, D-2039 | todas |
-| R-16 | `CompanyNet` (999) y `CompanyRoot` (1000) en el tope de líneas del lint | P1 | D-0254 | F1 |
+| R-16 | ~~`CompanyNet` (999) y `CompanyRoot` (1000) en el tope de líneas del lint~~ Mitigado (D-0254: 820 y 692) | P1 | D-0254 | F1 |
 | R-17 | El bot del corte mide etapas simuladas como OK | P0 | D-2016.4 | F1 |
 
 ## R-01 · Ancho de banda del galpón — P1 · F1-F2
@@ -226,6 +226,12 @@ P3: vigilar.
   D-2011.1 mide con contenido real y en ventana (rutina `pc-build`). La medición de D-0313 se repite cuando
   estén D-0315 y D-0314. En CI se cuenta lo que no depende de la GPU ("Sin tarea todavía", punto 2).
 - **Tareas:** D-2011 (D-2011.1), D-0315, D-0314, D-2012.
+- **Estado (2026-11-11, D-0303.1):** `test_company_cells` ya mide el viaje del galpón a la última casa de Centro
+  sobre las celdas reales (peor cuadro 15-19 ms en headless, límite 50) y las casas entran de a una por cuadro
+  para todo el mapa, nunca junto con una celda (`CentroDecor.take_frame()`). Sigue abierto lo demás: una celda
+  se arma entera en un paso (la más cara, la (0, 2) del Camino del Campo, 30 ms; la (-1, 4), 92 ms la primera
+  vez y 22 después: son piezas de calle, D-2012.2), no hay precalentado de modelos en la carga inicial y la
+  medición en ventana es de D-2011.1. Números en [`revisar/D-0303.1.md`](../revisar/D-0303.1.md).
 
 ## R-10 · El host simula todo; celdas fijas y memoria — P1 · F1-F2
 
@@ -352,6 +358,11 @@ P3: vigilar.
   dominio (como `CompanyTableNet`), con los tests `company` en verde y sin cambiar el protocolo.
 - **Tareas:** D-0254 (revisión D-0140: hoy `company_net.gd` tiene 999 líneas y `company_root.gd` 1000, y enchufar la
   puerta y el alquiler pasa por los dos) y D-2041.
+- **Estado (2026-11-11, D-0254):** mitigado. `company_net.gd` quedó en 806 líneas y `company_root.gd` en 692, con el
+  mismo protocolo: las unidades y el transporte del snapshot salieron a `CompanyUnitsNet` y `CompanySnapshotSync`, y
+  cada dominio declara sus `kind`, así que una acción nueva de un dominio que ya existe no toca `company_net.gd`
+  ([red-autoridad.md](red-autoridad.md) §18). `test_company_net_domains` falla si alguno de los dos vuelve a pasar
+  de 850.
 
 ## R-17 · El bot del corte mide etapas simuladas como OK — P0 · F1
 
