@@ -1,8 +1,8 @@
 class_name FixedCosts
 extends RefCounted
 ## Daily fixed costs of the company (expansion D-0509, "Modo Empresa"): today only the
-## shed's rent. Pure functions, no node, no autoload, no UI. The day's close (D-0203)
-## calls settle() once per day; the amount lives in CompanyTuning.RENT_PER_DAY.
+## shed's rent. Pure functions, no node, no autoload, no UI. The host's FixedCostsHook
+## calls settle() once per day, at CLOSING; the amount lives in CompanyTuning.RENT_PER_DAY.
 
 const REASON_RENT: StringName = &"rent"
 
@@ -29,7 +29,8 @@ static func shortfall(company: Object) -> int:
 
 
 ## Charges the day's fixed costs, even into the red (charge, not spend). Returns the
-## amount charged. company is a node with charge().
+## amount charged. company is anything with charge() -> bool: in the game the crew's wallet
+## (FixedCostsHook.CrewWallet, the same money on every peer), CompanyState in a bare test.
 static func settle(company: Object) -> int:
 	if company == null:
 		return 0

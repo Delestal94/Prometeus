@@ -18,7 +18,7 @@ extends Node
 ## never moves the phase by itself. Without a CompanyNet (attach() not called) the phase applies
 ## and the signal goes out here at once, like GameClock's pace.
 ##
-## Who listens to what: a host rule that reacts to a phase (rent at company_day_closing, D-0320)
+## Who listens to what: a host rule that reacts to a phase (the rent at CLOSING, FixedCostsHook)
 ## listens to CompanyNet.event_applied (kind DAY_PHASE), guarded by is_host(): from there it may
 ## publish or request, and what it writes to CompanyState must come back as an event, never run on
 ## every mirror. EventBus' company_day_* signals are for presentation (sounds, notices). Applying a
@@ -34,8 +34,8 @@ extends Node
 ##   OPERATING  until the world clock reads DAY_END_MIN (20:00).
 ##   CLOSING    from 20:00 on, or earlier when the host closes the day (close_early(), D-0253).
 ##              S3: a trip out is never cut, so SUMMARY waits until trips_out() is 0. It lasts at
-##              least one poll, so what listens to company_day_closing (rent, D-0320) lands in the
-##              summary.
+##              least one poll, so what the host does at CLOSING (the rent, FixedCostsHook) lands in
+##              the summary.
 ##   SUMMARY    the closing screen: DaySummary.build() of the day goes out inside the event and the
 ##              world clock stops. Only the host's next_day() moves on (a client can't hurry the day).
 ##

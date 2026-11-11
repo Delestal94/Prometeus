@@ -10,6 +10,8 @@ extends SceneTree
 ##   the whole book was lost);
 ## - load_save() refuses what does not fit (not a dictionary, a spot that is not two numbers, a pallet on the
 ##   jack that the book does not carry) and changes nothing;
+## - the forklift at work (a pallet on a rack slot, another on the forks, the forks up and rising) comes back with both
+##   pallets where they were, nobody driving and the forks still at their height (D-0606);
 ## - CompanyState keeps it through CompanySave's JSON; a broken `pallets` loads the company with an empty book,
 ##   and a save from before D-0605.c (no key) too;
 ## - a truck that already drove off that day brings nothing again (loaded_event after departed_day): an
@@ -37,6 +39,7 @@ func _run() -> void:
 	_test_round_trip()
 	_test_refused()
 	_test_moved_forklift()
+	_test_forklift_at_work()
 	_test_state()
 	_test_no_second_truck()
 	await _test_root()
@@ -104,6 +107,35 @@ func _test_moved_forklift() -> void:
 		"The forklift stands where it was, with no driver")
 	_expect(back.book.carrying == &"d2_2" and back.departed_day == DAY - 1 and back.loaded_day == DAY,
 		"The book and departed_day came back")
+
+
+## The forklift as a closed day leaves it (D-0606): a pallet on a rack slot, another on the forks up the mast.
+func _test_forklift_at_work() -> void:
+	var stock := Inventory.new()
+	var pallets: CompanyPallets = _filled(stock)
+	var slot: StringName = CompanyPallets.rack_slot(&"shelf_1", 1)
+	var units: int = stock.total_units()
+	_expect(pallets.apply(stock, CompanyPallets.PLACED, {"pallet": &"d2_2", "pos": SPOT, "slot": slot})
+		and pallets.apply(stock, CompanyPallets.PICKED, {"pallet": &"d2_3", "by": CompanyForklift.BY}),
+		"One pallet on a rack slot, one on the forks")
+	_expect(stock.total_units() == units + 6, "The rack pallet's units are in the stock (%d, was %d)"
+		% [stock.total_units(), units])
+	_expect(pallets.forklift.apply({"driver": 7, "at": Vector2(-2.5, 6.0), "yaw": 2.0, "dir": 1, "height": 1.0},
+		Time.get_ticks_msec()), "The forklift is driven, its forks rising")
+	var saved: Variant = _json(pallets.to_save())
+	_expect(saved is Dictionary and saved["forklift"]["dir"] == 0 and saved["forklift"]["holds"] == true,
+		"The save keeps the pallet on the forks and no forks in motion")
+	var height: float = float(saved["forklift"]["height"])
+	var back := CompanyPallets.new()
+	_expect(back.load_save(saved), "A save with the forklift at work loads")
+	_expect(back.book.rack_pallet(slot) == &"d2_2" and back.book.places[&"d2_2"]["at"] == PalletJack.AT_RACK
+		and bool(back.book.places[&"d2_2"]["received"]), "The pallet stands on its slot, received")
+	_expect(back.book.carrying == &"d2_3" and back.forklift.holds and back.forklift.driver == 0,
+		"The other one is still on the forks, with nobody driving")
+	var now: int = Time.get_ticks_msec()
+	_expect(is_equal_approx(back.forklift.height_at(now), height) and height >= 1.0 and not back.forklift.moving_at(now)
+		and is_equal_approx(back.forklift.yaw, 2.0),
+		"The forks are where they were and stay there (%.3f, saved %.3f)" % [back.forklift.height_at(now), height])
 
 
 func _test_refused() -> void:
