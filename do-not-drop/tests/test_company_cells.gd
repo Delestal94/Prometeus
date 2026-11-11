@@ -27,8 +27,8 @@ extends SceneTree
 ## built and put in the tree inside the streamer's slice) plus every house that enters the tree in the
 ## real process frame that follows (from child_entered_tree to the house's `ready`; the drips run by
 ## themselves, as in the game). Headless, so no GPU upload: the window's number is bench_company's
-## (D-2011.1). The limit is the criterion's own 50 ms, about three times the worst this measures on a
-## busy PC (16 to 18 ms: one house). A whole frame's clock is not used because on a busy machine an
+## (D-2011.1). The limit is the criterion's own 50 ms, over 2.5 times the worst this measures on a
+## busy PC (15 to 19 ms: one house). A whole frame's clock is not used because on a busy machine an
 ## empty frame takes 50 to 100 ms now and then; for the same reason a frame over the limit is driven
 ## again, up to three drives, each on new cells: only something that is in a frame over the limit in
 ## EVERY drive fails. The catch: a cost paid only the first time something is used (a model's first

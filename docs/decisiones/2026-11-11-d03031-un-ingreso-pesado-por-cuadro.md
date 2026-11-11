@@ -26,7 +26,7 @@ poco y con un runner más lento no pasaba.
 2. **El test mide trabajo de celdas, no el cuadro entero**: por paso de 60 fps, lo que tarda
    `CompanyCells.step()` más lo que tarda en estar lista cada casa que entra en el cuadro real que sigue. El
    reloj del cuadro entero no sirve: en una PC ocupada un cuadro vacío tarda 50-100 ms cada tanto.
-3. **El límite es el del criterio, 50 ms**, sin margen extra para CI. Lo medido (16-18 ms) deja unas tres veces.
+3. **El límite es el del criterio, 50 ms**, sin margen extra para CI. Lo medido (15-19 ms) deja más de dos veces y media.
 4. **Un cuadro pasado del límite se repite**: hasta 3 viajes, cada uno con celdas nuevas, y solo falla lo que
    aparece en un cuadro pasado en los 3. Lo que sí es determinista (más de una casa por cuadro, casa junto con
    celda) falla al primer viaje.
@@ -35,7 +35,7 @@ poco y con un runner más lento no pasaba.
 
 ## Por qué
 - El criterio es del juego: si el límite se pasa, se arregla el juego y no el número (nota del análisis de la
-  tarea). Repartir los cuadros baja el peor cuadro del viaje de 40-47 ms a 16-18 ms sin tocar las piezas de calle
+  tarea). Repartir los cuadros baja el peor cuadro del viaje de 40-47 ms a 15-19 ms sin tocar las piezas de calle
   (D-2012.2, otro carril) ni la casa.
 - El costo es que las casas tardan más en estar todas: al abrir el mundo, unos 30 cuadros después de las celdas.
   Entran a 512 m o más de quien maneja, así que no se ve.
