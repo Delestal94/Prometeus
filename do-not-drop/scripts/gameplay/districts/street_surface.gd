@@ -66,6 +66,8 @@ const UNDERFOOT: Dictionary = {
 const DETAILS: Array[String] = ["asphalt", "gravel", "earth", "stone", "grass"]
 
 static var _materials: Dictionary = {}
+## The same materials for a mesh of many boxes merged (StreetBatcher), by the same key.
+static var _batched: Dictionary = {}
 
 
 ## The shared material of `surface` (a RoadEdge.surface, or VERGE).
@@ -84,12 +86,34 @@ static func material(surface: StringName) -> ShaderMaterial:
 	return _materials[key] as ShaderMaterial
 
 
+## material(surface) for a mesh that is many boxes merged into one (StreetBatcher, D-2012.2): the same
+## shader and numbers with `batched` on, so it reads each box's own x and heading off the vertices
+## (UV) instead of the mesh's own space, which is the cell's. One per surface for the whole map.
+static func batched_material(surface: StringName) -> ShaderMaterial:
+	var key: StringName = surface if surface == VERGE or SURFACES.has(surface) else FALLBACK
+	if not _batched.has(key):
+		var made := material(key).duplicate() as ShaderMaterial
+		made.set_shader_parameter(&"batched", true)
+		_batched[key] = made
+	return _batched[key] as ShaderMaterial
+
+
+## The surface (a key of SURFACES, or VERGE) that `drawn` is material() of; &"" for any other material.
+static func surface_drawn_by(drawn: Material) -> StringName:
+	for key: StringName in _materials:
+		if _materials[key] == drawn:
+			return key
+	return &""
+
+
 ## Makes every surface's material now (its detail maps load with it): a level calls it while it is being
 ## built, so the first piece of a street does not load them in the frame its cell enters the tree.
 static func warm() -> void:
 	for surface: StringName in SURFACES:
 		material(surface)
+		batched_material(surface)
 	material(VERGE)
+	batched_material(VERGE)
 
 
 ## The surface a piece is drawn with on a street of `street_surface`: its own when it is a surface of its own.

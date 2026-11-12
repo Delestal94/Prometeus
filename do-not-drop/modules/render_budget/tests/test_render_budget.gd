@@ -6,7 +6,8 @@ extends SceneTree
 ##   shadow distance, a batch's draw range and a particle count from their
 ##   base values, keeps a ranked lamp's shadow only while its rank is under
 ##   the level's budget ("shadowed_lights"), and watch() catches nodes added later
-##   -- and logs nothing for one freed in the frame it was added;
+##   -- and logs nothing for one freed in the frame it was added; set_view_range()
+##   gives a part and what is drawn under it a base draw range the level scales;
 ## - DetailMaterials: with the game's tables handed in, a palette material
 ##   gets one shared triplanar twin per (entry, colour), unknown entries stay
 ##   flat, autumn tints only what the tables say, night glow lights only
@@ -68,6 +69,24 @@ func _test_world_quality(scene: Node3D) -> void:
 	WorldQuality.apply_to(batch)
 	_expect(is_equal_approx(batch.visibility_range_end, 100.0 * WorldQuality.setting("range_scale")),
 		"A batch's draw range is its base times the level's scale")
+	# set_view_range (D-2012.2): a part and everything drawn under it get the base range, scaled now and on a
+	# level change; what is not drawn (a plain Node3D) is left alone.
+	var part := Node3D.new()
+	var screw := MeshInstance3D.new()
+	var plate := Label3D.new()
+	part.add_child(screw)
+	screw.add_child(plate)
+	scene.add_child(part)
+	_expect(WorldQuality.set_view_range(part, 40.0) == 2, "set_view_range ranges the two drawn parts under it")
+	_expect(is_equal_approx(screw.visibility_range_end, 40.0 * WorldQuality.setting("range_scale"))
+			and is_equal_approx(plate.visibility_range_end, 40.0 * WorldQuality.setting("range_scale")),
+		"...at the base range times the level's scale (got %.1f)" % screw.visibility_range_end)
+	_expect(not part.has_meta(WorldQuality.BASE_RANGE_META), "...and leaves the plain holder alone")
+	WorldQuality.apply(self, WorldQuality.Level.HIGH)
+	_expect(is_equal_approx(screw.visibility_range_end, 40.0 * WorldQuality.setting("range_scale")),
+		"A level change scales a ranged part again (got %.1f)" % screw.visibility_range_end)
+	WorldQuality.apply(self, WorldQuality.Level.LOW)
+	part.free()
 	var particles := GPUParticles3D.new()
 	particles.amount = 100
 	scene.add_child(particles)

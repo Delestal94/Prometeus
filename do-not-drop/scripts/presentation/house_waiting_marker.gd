@@ -63,6 +63,14 @@ const BALLOON_AHEAD: float = 0.7
 ## Widest the trap's name may run on a board, in metres.
 const TRAP_TEXT_WIDTH: float = 2.1
 const BALLOON_BOB_SECONDS: float = 1.2
+## How far the parts that only read up close are still drawn at full quality (WorldQuality.set_view_range,
+## D-2012.2): the mailbox with its numbers, the sign's text and the porch bulb. Past it the sign's boards, the
+## glow and the balloon say "this one" (see above: the code reads at ~40 m); every house in sight drew them
+## all, the houses of Barrio Centro 300-800 m off included.
+const CLOSE_VIEW_RANGE: float = 120.0
+## The same for what is thin rather than small: the sign's legs (8 cm), the balloon's string (2.5 cm) and its
+## knot, under half a pixel wide past it on 1080p. The boards and the ball themselves have no range.
+const THIN_VIEW_RANGE: float = 250.0
 ## Used when the house has no model to measure (tests building a bare house).
 const DEFAULT_BOUNDS := AABB(Vector3(-3.0, 0.0, -2.7), Vector3(6.0, 3.2, 5.4))
 
@@ -90,6 +98,10 @@ func _ready() -> void:
 	_build_mailbox()
 	_build_sign()
 	_build_balloon()
+	WorldQuality.set_view_range(get_node(^"PorchBulb"), CLOSE_VIEW_RANGE)
+	WorldQuality.set_view_range(get_node(^"Mailbox"), CLOSE_VIEW_RANGE)
+	for label_node: Label3D in code_labels + trap_labels:
+		WorldQuality.set_view_range(label_node, CLOSE_VIEW_RANGE)
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
@@ -234,7 +246,8 @@ func _build_sign() -> void:
 		sign_board.add_child(face)
 		var post_height: float = BOARD_HEIGHT + BOARD_SIZE.y * 0.5
 		for leg_x: float in [-BOARD_SIZE.x * 0.5 + 0.1, BOARD_SIZE.x * 0.5 - 0.1]:
-			_box(face, Vector3(0.08, post_height, 0.08), Vector3(leg_x, post_height * 0.5, 0.05), POST_COLOR)
+			var leg := _box(face, Vector3(0.08, post_height, 0.08), Vector3(leg_x, post_height * 0.5, 0.05), POST_COLOR)
+			WorldQuality.set_view_range(leg, THIN_VIEW_RANGE)
 		var board := _box(face, Vector3(BOARD_SIZE.x, BOARD_SIZE.y, 0.05), Vector3(0.0, BOARD_HEIGHT, 0.0), SIGN_COLOR)
 		# Unshaded: it has to read at noon as much as at night.
 		(board.material_override as StandardMaterial3D).shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -259,6 +272,7 @@ func _build_balloon() -> void:
 	# A string, not a post: thin, and no shadow slashed across the house.
 	var string := _box(balloon, Vector3(0.025, height, 0.025), Vector3(0.0, height * 0.5, 0.0), Color("3a3a3a"))
 	string.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	WorldQuality.set_view_range(string, THIN_VIEW_RANGE)
 	var ball := MeshInstance3D.new()
 	ball.name = "BalloonBall"
 	var sphere := SphereMesh.new()
@@ -287,6 +301,7 @@ func _build_balloon() -> void:
 	knot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	knot.position = Vector3(0.0, -BALLOON_RADIUS * 1.15 - 0.06, 0.0)
 	ball.add_child(knot)
+	WorldQuality.set_view_range(knot, THIN_VIEW_RANGE)
 	_bob = create_tween().set_loops()
 	_bob.tween_property(ball, "scale", Vector3.ONE * 1.1, BALLOON_BOB_SECONDS * 0.5).set_trans(Tween.TRANS_SINE)
 	_bob.tween_property(ball, "scale", Vector3.ONE * 0.9, BALLOON_BOB_SECONDS * 0.5).set_trans(Tween.TRANS_SINE)

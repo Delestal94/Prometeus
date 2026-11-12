@@ -232,6 +232,11 @@ P3: vigilar.
   se arma entera en un paso (la más cara, la (0, 2) del Camino del Campo, 30 ms; la (-1, 4), 92 ms la primera
   vez y 22 después: son piezas de calle, D-2012.2), no hay precalentado de modelos en la carga inicial y la
   medición en ventana es de D-2011.1. Números en [`revisar/D-0303.1.md`](../revisar/D-0303.1.md).
+- **Estado (2026-11-11, D-2012.2):** las piezas de calle de una celda se hornean en pocas mallas desde el paso
+  siguiente a su entrada, unas ramas por paso (el más largo medido, 16 ms), y una pieza de cada tipo se arma y
+  hornea en la carga inicial (`CompanyCells.warm_pieces`, ~240 ms): la primera celda del Campo ya no paga 90-130 ms
+  con el mundo a la vista. Sigue abierto: la celda se sigue armando entera en un paso (la (0, 2), 30-80 ms con la PC
+  ocupada). Números en [`revisar/D-2012.2.md`](../revisar/D-2012.2.md).
 
 ## R-10 · El host simula todo; celdas fijas y memoria — P1 · F1-F2
 

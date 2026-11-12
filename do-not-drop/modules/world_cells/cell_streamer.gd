@@ -16,6 +16,16 @@ extends Node3D
 ##
 ## A cell's content is authored in world coordinates (the streamer does not move it).
 ##
+## `finish_for.call(cell, node)` (optional) is a second pass over a cell that is already in the
+## tree: merging its meshes, say, which needs the nodes built first. It runs in the step after the
+## one that instanced the cell, within the same `slice_msec`, and a step never does both: the frame
+## that pays for a cell's nodes does not pay for their merge too. A pass too long for one frame does
+## a part and returns `false`: it is called again the next step (anything else means done). Until it
+## is done the cell is in the tree, solid, and not drawn, so nobody sees (or counts) the cell as it
+## was before the pass; then `cell_finished` is emitted. `is_busy()` stays true until every loaded
+## cell has had it. Its impostor stays until then too, so the cell's place is never left empty: the
+## block goes in the step the cell is drawn.
+##
 ## Loose bodies (crates dropped on a sidewalk) are not part of any cell, so
 ## `track_body` hands them to the streamer: while their cell is not instanced
 ## (far away, no floor), they are frozen with their velocities saved, and they
@@ -26,6 +36,8 @@ extends Node3D
 
 signal cell_loaded(cell: Vector2i, node: Node3D)
 signal cell_unloaded(cell: Vector2i)
+## A loaded cell has had its `finish_for` pass to the end and is drawn from now on (only with a `finish_for`).
+signal cell_finished(cell: Vector2i, node: Node3D)
 
 var grid := WorldCellGrid.new()
 ## Where the anchors are now (players, vehicles), world positions.
@@ -33,6 +45,8 @@ var anchors: Array[Vector3] = []
 var path_for: Callable
 var build_for: Callable
 var impostor_for: Callable
+## Callable(cell: Vector2i, node: Node3D): the second pass over a loaded cell. Unset: none.
+var finish_for: Callable
 ## Work budget per frame for instancing, in milliseconds.
 var slice_msec: float = 4.0
 ## Seconds between two looks at the anchors (the cell of an anchor changes slowly).
@@ -47,8 +61,12 @@ var _threaded: Dictionary = {}
 ## Ready to instance: [{cell, scene or node}], closest first as asked.
 var _ready_queue: Array = []
 var _impostors: Dictionary = {}
+## Loaded cells still owed their `finish_for`, in the order they arrived.
+var _unfinished: Array[Vector2i] = []
 ## Longest single instancing step so far, microseconds (tests and tuning).
 var longest_step_usec: int = 0
+## Longest single `finish_for` so far, microseconds.
+var longest_finish_usec: int = 0
 ## RigidBody3D -> true, the loose bodies whose cell decides if they run.
 var _tracked: Dictionary = {}
 ## RigidBody3D -> {freeze, freeze_mode, linear, angular}, the ones frozen here.
@@ -67,7 +85,8 @@ func step(now_sec: float) -> void:
 		_apply(grid.update(anchors, now_sec))
 		_sync_impostors()
 	_poll_threads()
-	_instance_ready()
+	if not _finish_ready():
+		_instance_ready()
 	_sync_bodies()
 
 
@@ -75,9 +94,14 @@ func is_loaded(cell: Vector2i) -> bool:
 	return _nodes.has(cell)
 
 
-## True while some cell is still waiting for its thread or its slice.
+## True while some cell is still waiting for its thread, its slice or its second pass.
 func is_busy() -> bool:
-	return not _threaded.is_empty() or not _ready_queue.is_empty()
+	return not _threaded.is_empty() or not _ready_queue.is_empty() or not _unfinished.is_empty()
+
+
+## True for a loaded cell that has had its `finish_for` (or needs none).
+func is_finished(cell: Vector2i) -> bool:
+	return _nodes.has(cell) and not _unfinished.has(cell)
 
 
 func loaded_cells() -> Array[Vector2i]:
@@ -199,15 +223,50 @@ func _instance_ready() -> void:
 		var t0 := Time.get_ticks_usec()
 		var node: Node3D = _make_cell(cell, item.get("scene"))
 		if node != null:
-			node.visible = not grid.is_parked(cell)
+			# With a second pass to come, not drawn until it has had it.
+			node.visible = not grid.is_parked(cell) and not finish_for.is_valid()
 			add_child(node)
+			if finish_for.is_valid():
+				_unfinished.append(cell)
 		_nodes[cell] = node
-		if not grid.is_parked(cell):
+		if not grid.is_parked(cell) and not _waits_to_draw(cell):
 			_remove_impostor(cell)
 		longest_step_usec = maxi(longest_step_usec, Time.get_ticks_usec() - t0)
 		cell_loaded.emit(cell, node)
 		if Time.get_ticks_usec() - start >= budget:
 			break
+
+
+## The second pass of the cells that wait for it, oldest first, within the slice budget; each one is drawn
+## once its pass is done. A pass that answers `false` is not done: it is called again next step, before any
+## other. True if it ran any: the step instances nothing more.
+func _finish_ready() -> bool:
+	var start := Time.get_ticks_usec()
+	var budget := int(slice_msec * 1000.0)
+	var ran: bool = false
+	while not _unfinished.is_empty():
+		var cell: Vector2i = _unfinished[0]
+		var node: Node3D = _nodes.get(cell)
+		if node == null:
+			_unfinished.pop_front()
+			continue
+		var done: bool = true
+		if finish_for.is_valid():
+			var t0 := Time.get_ticks_usec()
+			var answer: Variant = finish_for.call(cell, node)
+			done = not (answer is bool and answer == false)
+			longest_finish_usec = maxi(longest_finish_usec, Time.get_ticks_usec() - t0)
+		ran = true
+		if not done:
+			break
+		_unfinished.pop_front()
+		node.visible = not grid.is_parked(cell)
+		if node.visible:
+			_remove_impostor(cell)
+		cell_finished.emit(cell, node)
+		if Time.get_ticks_usec() - start >= budget:
+			break
+	return ran
 
 
 func _make_cell(cell: Vector2i, scene: Variant) -> Node3D:
@@ -220,6 +279,7 @@ func _make_cell(cell: Vector2i, scene: Variant) -> Node3D:
 
 func _unload(cell: Vector2i) -> void:
 	_threaded.erase(cell)
+	_unfinished.erase(cell)
 	var node: Node3D = _nodes.get(cell)
 	_nodes.erase(cell)
 	if node != null:
@@ -228,11 +288,12 @@ func _unload(cell: Vector2i) -> void:
 	cell_unloaded.emit(cell)
 
 
-## Draws a loaded cell or stops drawing it. A cell still on its way takes this from the grid when it arrives.
+## Draws a loaded cell or stops drawing it. A cell still on its way takes this from the grid when it arrives,
+## and one that waits for its second pass when it has had it.
 func _show_cell(cell: Vector2i, drawn: bool) -> void:
 	var node: Node3D = _nodes.get(cell)
 	if node != null:
-		node.visible = drawn
+		node.visible = drawn and not _unfinished.has(cell)
 
 
 func _sync_impostors() -> void:
@@ -242,8 +303,17 @@ func _sync_impostors() -> void:
 		if not _impostors.has(cell):
 			_add_impostor(cell)
 	for cell: Vector2i in _impostors.keys():
-		if not want.has(cell):
+		if not want.has(cell) and not _waits_to_draw(cell):
 			_remove_impostor(cell)
+
+
+## A cell the grid has loaded and wants drawn whose second pass is not done yet (still on its way,
+## or in the tree and hidden): its impostor holds its place until it is drawn. Without a
+## `finish_for` a cell never waits.
+func _waits_to_draw(cell: Vector2i) -> bool:
+	if not finish_for.is_valid() or not grid.is_loaded(cell) or grid.is_parked(cell):
+		return false
+	return not _nodes.has(cell) or _unfinished.has(cell)
 
 
 func _add_impostor(cell: Vector2i) -> void:

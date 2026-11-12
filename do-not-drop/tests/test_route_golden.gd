@@ -249,8 +249,10 @@ func _node_line(route: Node3D, node: Node) -> String:
 	if node is CollisionShape3D and not batched_art:
 		var shape: Shape3D = (node as CollisionShape3D).shape
 		parts.append("shape=%s" % (_shape(shape)))
-	# A batch's draw range is a size bucket of its merged model's AABB (dressing_batcher.gd:278-281): art.
-	parts.append(_meta(node, batched_art))
+	# A batch's draw range is a size bucket of its merged model's AABB (dressing_batcher.gd:278-281): art. So is
+	# the draw range of a house's waiting marker (HouseWaitingMarker, WorldQuality.set_view_range, D-2012.2):
+	# how far the graphics level draws its mailbox and its sign's text, not the route.
+	parts.append(_meta(node, batched_art or path.contains("/WaitingMarker/")))
 	return " | ".join(parts)
 
 
@@ -312,10 +314,10 @@ func _merged_mesh(mesh: Mesh) -> String:
 		mesh.get_class(), _vec(bounds.position), _vec(bounds.size), signed, text]
 
 
-func _meta(node: Node, batched_art: bool = false) -> String:
+func _meta(node: Node, unsigned_range: bool = false) -> String:
 	var entries: Array[String] = []
 	for key: StringName in node.get_meta_list():
-		if batched_art and key == &"quality_base_range":
+		if unsigned_range and key == &"quality_base_range":
 			continue
 		entries.append("%s=%s" % [key, _variant(node.get_meta(key))])
 	entries.sort()

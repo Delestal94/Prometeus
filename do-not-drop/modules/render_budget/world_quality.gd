@@ -7,7 +7,8 @@ class_name WorldQuality
 ## What a level changes -- all of it per machine, none of it gameplay:
 ##   - how far the sun's shadows reach (DirectionalLight3D);
 ##   - how far away the batched roadside dressing is still drawn
-##     (DressingBatcher's visibility ranges, scaled);
+##     (DressingBatcher's visibility ranges, scaled), and the small parts
+##     given a range with set_view_range();
 ##   - how many particles dust and rain emit (GPUParticles3D.amount);
 ##   - the 3D render resolution (Viewport.scaling_3d_scale);
 ##   - multisample antialiasing (Viewport.msaa_3d, N-314): the low-poly
@@ -58,6 +59,22 @@ static var _watched: SceneTree = null
 
 static func setting(key: String) -> float:
 	return float(PRESETS[level][key])
+
+
+## Gives `node` and every GeometryInstance3D under it a draw range of `base_range` metres at full quality,
+## scaled by the level like the batched dressing's (and again by apply() when the level changes): for the small
+## parts of something big that read from afar only as a whole (a doorbell's screws on a house 400 m away), each
+## of which would otherwise be a draw call of a pixel or less. Returns how many it ranged.
+static func set_view_range(node: Node, base_range: float) -> int:
+	var count: int = 0
+	var parts: Array[Node] = node.find_children("*", "GeometryInstance3D", true, false)
+	if node is GeometryInstance3D:
+		parts.push_front(node)
+	for part: Node in parts:
+		part.set_meta(BASE_RANGE_META, base_range)
+		(part as GeometryInstance3D).visibility_range_end = base_range * setting("range_scale")
+		count += 1
+	return count
 
 
 ## Sets the level and applies it to everything already in `tree`.

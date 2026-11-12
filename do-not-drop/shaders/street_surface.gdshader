@@ -10,6 +10,9 @@ render_mode diffuse_burley;
 // that where they overlap (a crossing, a curve's chords) they never share a depth, each is drawn a few
 // millimetres off the box's top: `lift` by surface, the priority at a crossing, and a little more the
 // more it runs east-west, which tells apart two streets of one surface (one has to win, steadily).
+// A world cell draws all its pieces as one mesh (StreetBatcher, D-2012.2), whose space is the cell's and
+// not a box's: with `batched` on, each vertex carries its box's x in UV.x and its box's heading in UV.y,
+// and the surface draws exactly as it did box by box.
 // Palette: route_terrain.gdshader's asphalt, gravel, earth and grass, so a street of the company world
 // reads as the same road as the delivery run's.
 
@@ -25,6 +28,8 @@ uniform float lift : hint_range(0.0, 0.02) = 0.0;
 // Added to `lift` for a street along the world's x axis, nothing for one along z. Less than the step
 // between two surfaces' lifts, or it would change which shows.
 uniform float lift_by_heading : hint_range(0.0, 0.004) = 0.003;
+// The mesh is many boxes merged (StreetBatcher): UV.x is the box's own x, UV.y how much it runs east-west.
+uniform bool batched = false;
 
 group_uniforms detail;
 // Greyscale grain maps (art/tools/make_detail_textures.py), the terrain's: white (no-op) when missing.
@@ -69,12 +74,15 @@ float wheel_tracks(float x, float wobble) {
 }
 
 void vertex() {
+	// Read before the lift moves anything: the box's own x, and how much the box runs along the world's x.
+	float own_x = batched ? UV.x : VERTEX.x;
+	float heading = batched ? UV.y : abs(MODEL_MATRIX[2].x);
 	// Not the verge: it reads no `lateral`, two of its boxes draw the same.
 	if (surface != 4) {
-		VERTEX.y += lift + lift_by_heading * abs(MODEL_MATRIX[2].x);
+		VERTEX.y += lift + lift_by_heading * heading;
 	}
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	lateral = VERTEX.x;
+	lateral = own_x;
 	facing_up = (MODEL_NORMAL_MATRIX * NORMAL).y;
 }
 
