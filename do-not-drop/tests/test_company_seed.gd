@@ -20,7 +20,8 @@ extends SceneTree
 const BUSINESS_DIRS: Array[String] = ["res://scripts/gameplay/business", "res://scripts/core/company",
 		"res://scripts/gameplay/districts"]
 const BUSINESS_FILES: Array[String] = ["res://scripts/gameplay/company_root.gd",
-		"res://scripts/gameplay/company_shed.gd"]
+		"res://scripts/gameplay/company_shed.gd", "res://scripts/gameplay/company_crew.gd",
+		"res://scripts/gameplay/company_backdrop.gd", "res://scripts/gameplay/shed_use.gd"]
 ## for_day(1234, 3, ORDERS) as Godot 4.7.2 hashes it: a new engine that hashes otherwise would
 ## plan other days from the same saves.
 const PINNED_DAY_SEED: int = 550168617

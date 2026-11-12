@@ -20,6 +20,9 @@ const EXPANSION_DIRS: Array[String] = [
 ]
 const EXPANSION_FILES: Array[String] = [
 	"res://scripts/gameplay/company_root.gd",
+	"res://scripts/gameplay/company_crew.gd",
+	"res://scripts/gameplay/company_backdrop.gd",
+	"res://scripts/gameplay/shed_use.gd",
 	"res://scripts/gameplay/company_shed.gd",
 	"res://scripts/gameplay/shed_builder.gd",
 ]
