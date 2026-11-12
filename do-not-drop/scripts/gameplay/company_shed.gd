@@ -63,6 +63,9 @@ const SHELF_LABELS: Array[float] = [0.62, 1.47]
 const SHELF_LABEL_PIXEL: float = 0.0028
 const CRATE_SIZE: Vector3 = Vector3(0.38, 0.3, 0.4)
 const TABLE_TOP: float = 0.9
+## How far over the table's top the middle of its box stands (m): half the tallest box (XL, 0.8 m) and a gap, so
+## the package a taped box becomes never starts inside the table.
+const TABLE_BOX_LIFT: float = 0.45
 const MODEL_TABLE: String = "sm_env_depot_packing_table"
 ## The shed's 8-slot shelf (D-1811): centred on its footprint, front toward +Z, 2 m wide, 1 m deep, 2 m high.
 const MODEL_SHELF: String = "sm_env_shed_shelf"
@@ -559,8 +562,8 @@ func cold_shelves() -> Dictionary:
 
 ## The shelf slot a units request names (ShelfPicking.station_id) as CompanyNet's `stations` resolver
 ## wants it: where its units lie, the spot to reach (the piece's use point), what it accepts and holds
-## (D-0609). A picking cart is a station too, named by its location, cart:<id> (D-0610.b). {} for anything
-## else, or a slot with no label.
+## (D-0609). A picking cart is a station too, named by its location, cart:<id> (D-0610.b), and so is a packing
+## table, table:<uid> (D-0715, _table_station()). {} for anything else, or a slot with no label.
 func station_for(id: StringName) -> Dictionary:
 	if id == CompanyPallets.STATION:
 		return _jack_station()
@@ -569,6 +572,9 @@ func station_for(id: StringName) -> Dictionary:
 	var cart_id: StringName = PickingCart.parse_location(id)
 	if cart_id != &"":
 		return _cart_station(cart_id)
+	var table_uid: StringName = CompanyTableNet.table_of(id)
+	if table_uid != &"":
+		return _table_station(table_uid)
 	var named: Dictionary = ShelfPicking.parse_station(id)
 	if named.is_empty():
 		return {}
@@ -582,6 +588,23 @@ func station_for(id: StringName) -> Dictionary:
 		"location": shelf.location(slot), "spot": point.global_position,
 		"accepts": shelf.label_of(slot), "capacity": CompanyTuning.SHELF_SLOT_CAPACITY,
 	}
+
+
+## A packing table drawn here as CompanyNet's `stations` resolver wants it (the box_* requests, CompanyTableNet,
+## D-0715): its location is its station id, table:<uid>, and its spot the box's hollow, TABLE_BOX_LIFT over the
+## middle of its top: where reach is measured to and where the box it tapes appears as a package (box_sealed's
+## `pos`). {} for a uid that is no table of this shed, or out of the tree.
+func _table_station(uid: StringName) -> Dictionary:
+	if not is_inside_tree() or not stations.has(uid):
+		return {}
+	for piece: Dictionary in pieces:
+		if piece["uid"] != uid:
+			continue
+		var rect: Rect2i = piece["rect"]
+		var middle: Vector2 = Vector2(rect.position) + Vector2(rect.size) * 0.5
+		var hollow: Vector3 = cell_to_local(middle, TABLE_TOP + TABLE_BOX_LIFT)
+		return {"location": StringName(CompanyTableNet.TABLE_PREFIX + String(uid)), "spot": to_global(hollow)}
+	return {}
 
 
 # --- Picking carts ---

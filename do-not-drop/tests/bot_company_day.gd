@@ -1,83 +1,64 @@
 extends SceneTree
-## Bot that plays a whole Modo Empresa day (D-2016, the closing criterion of the F1 vertical
-## slice D-0111). Not a test_*.gd: the runner does not pick it up. Run:
+## Bot that plays a whole Modo Empresa day (D-2016, the closing criterion of the F1 vertical slice D-0111;
+## D-2016.4 moved it onto the game's own paths). Not a test_*.gd: the runner does not pick it up. Run:
 ##   <godot> --headless --path do-not-drop --script res://tests/bot_company_day.gd -- --players=2
-## Opens the company world (scenes/gameplay/company_root.tscn, like bench_company.gd), waits for
-## the day to reach OPENING (bounded, 10 s) and runs the stages in STAGES order on that one world,
-## each one using what the one before left. Each stage returns {"status": "ok"|"fail"|
-## "not_implemented", "reason": String} and is timed in ms. D-2016.2 fills in the stages whose F1
-## pieces exist:
-##   receive_pallet  ok  the day's supplier pallets are in reception (drawn and in the stock), a
-##                       sealed one gives nothing, the bot opens them (Pallet.open) and takes a
-##                       handful with units_take through CompanyNet
-##   shelve_stock    ok  carries the pallets to the slots labelled for each product with
-##                       units_store (a slot labelled for another product refuses wrong_product)
-##   take_orders     ok  the world brings the day's orders in (D-0813.1): planned at the OPENING
-##                       from the company's seed, published by the business tick into the shared
-##                       book (CompanyNet.orders.book) as the clock reaches the last arrival; the
-##                       bot copies them, OPEN, into CompanyTrips' own book, the one packing and
-##                       dispatch use until those are events, each with its fields
-##   pack_boxes      ok  at a packing table: units from the shelves by units_take, box size by
-##                       BoxDispenser, products in, padding, label, seals, tape; order is PACKED
-##   dispatch        ok  DispatchZone ties the sealed box to its order, DispatchRules clears the
-##                       van, load_into() stages the cargo in CompanyTrips (the trip starts
-##                       when the van crosses the gate)
-##   drive           ok  the fleet's van (CompanyFleet, parked frozen in the playon) gets a driver:
-##                       the player opens the cab door and takes the wheel (SeatPoint.interact), the
-##                       pedal is pressed (drive_accelerate) and the van leaves the yard under its own
-##                       physics; CompanyTrips' gate, which follows the node every tick, starts the
-##                       Trip (the order goes OUT). Then the autopilot (D-2016.3, tests/bot_company_van.gd
-##                       and bot_company_trip.gd) drives it along the street graph (RoadNavigator.route
-##                       over the company world's RoadGraph, pure pursuit with analog steering): a Bezier
-##                       leg from the yard to the first avenue (the graph has no street through the
-##                       playon) and then the route to the street point in front of the Trip's first
-##                       stop's house (about 85 s to Centro). Fails if it does not get there or if the van
-##                       leaves the roadway (off_road_max over VAN.OFF_ROAD_LIMIT_M, D-0304.3)
-##   deliver         ok  at each stop of the Trip the van is at the house (the autopilot drives there if
-##                       it is not; within HOUSE_REACH_M), the house is one of the fixed map's (HouseMap,
-##                       D-0311) in the order's zone, the door settles each order (OrderSettlement: pay
-##                       into the wallet, reputation) and the Trip records it (record_settled), until no
-##                       stop is left. Not yet the house's own door: DeliveryHouse is the delivery run's
-##                       (doorbell and carried package) and the company world has no delivery at it
-##   return          ok  the autopilot takes the van back the way it came: a K-turn first if it stands
-##                       facing away (VAN.turn_around, strokes forward and in reverse), the route to the
-##                       avenue, the leg into the playon; the gate closes the Trip with nothing failed, no
-##                       vehicle is out and TripResult reports the deliveries and the clock; the player
-##                       gets out (leave_seat)
-##   close_day       ok  the clock jumps to 20:00 and DayCycle goes OPERATING, CLOSING, SUMMARY;
-##                       the summary holds the day's packaging costs and the rent the game charged
-##                       at CLOSING (D-0509.b) and the closed day saves and loads back
-## What is not a CompanyNet request yet (REQUEST_KINDS has only units_take, units_store,
-## units_drop and the build ones) the bot does on the host's own objects, as the world will on the
-## host: opening a pallet, the box and the table (PackingStation, BoxDispenser,
-## PackagingSupplies), moving units hand -> box -> package in the Inventory, the order book and
-## the dispatch zone. CompanyRoot does not set CompanyNet.stations yet (D-0611), so the bot
-## installs its own lookup for pallets and shelf slots and walks (teleports) the player to each
-## spot first, so the reach check is a real one. None of that is replicated to clients yet: this
-## is a host-side run (the peers come with D-2017).
-## Prints:
-##   BOT_FAIL not_implemented:<stage>   a stage with nothing behind it yet (the run goes on)
-##   BOT_FAIL <stage>:<reason>          a failed stage (the run stops there)
-##   BOT_FAIL no_opening                the day never reached OPENING
-##   BOT_STAGE <stage> ok               a stage that passed
-## then a summary block, one `BOT_COMPANY key=value` line each (players, money, deliveries,
-## breaks, assembly_errors, return_bundle_units: what the closed day's save left in the return bundle,
-## D-0252; stage_ms_<stage>), and the final line: `BOT_OK` if every stage was
-## ok, else `BOT_FAIL stages_missing=<n>`.
-## The van's crossings are the real node's: nothing feeds the gate by hand (CompanyTrips.track).
-## The day's clock runs in real time while the van drives (90 s an hour): the whole bot takes about 3.5 minutes
-## and the day may reach 20:00 on the way (close_day accepts the phases it finds from there on).
+## Opens the company world (scenes/gameplay/company_root.tscn, like bench_company.gd) on a new company of seed
+## ORDERS_SEED, waits for the day to reach OPENING (bounded, 10 s) and runs the stages in STAGES order on that one
+## world, each one using what the one before left. Each stage returns {"status": "ok"|"fail"|"not_implemented",
+## "reason"} and is timed in ms.
+##
+## Who plays (bot_company_crew.gd): the host's own player and, with --players=2 or more, a second player of the crew
+## in the host's world whose requests go through the host's own check of a peer's request (no transport: D-2017
+## plays the pair over ENet). Both are moved by teleport next to what they use, so every reach check is a real one.
+## Everything the game can do, the bot does through the game: CompanyNet requests at the stations the world itself
+## resolves (CompanyShed.station_for; CompanyRoot sets it as CompanyNet.stations, the bot never replaces it), boxes
+## carried by hand, the dispatch board, the fleet's van under its own physics, the day's own phases and save.
+##   receive_pallet  the first truck's pallets are in reception (in the stock, drawn), a sealed one gives nothing.
+##                   STUB pallet_unload: the bot opens them and takes their units itself (D-0607.c)
+##   shelve_stock    a slot labelled for another product refuses the handful (wrong_product); every unit goes to the
+##                   slot labelled for it with units_store at ShelfPicking's station, the players taking turns
+##   take_orders     the world plans the day at its OPENING and brings each order into the shared book as the
+##                   shed's minute reaches it (D-0813.1); the bot jumps the clock (BOT_SKIP) to the arrival that
+##                   completes BOXES_GOAL orders it can pack and keeps those, copied nowhere
+##   pack_boxes      one box per order (BOXES_GOAL), the players taking turns at the tables: box_start, units_take
+##                   at the shelves, box_place unit by unit, box_fill, box_label, box_stamp, box_tape (box_restock
+##                   when a table runs out). Each taped box is a DeliveryPackage under World/Packages with its order.
+##                   STUBS table_use (nothing in the game sends the box_* requests: D-0701.b) and order_claim (the bot
+##                   tells CompanyTableNet.order_of which order a table packs: D-0804 / D-0807)
+##   dispatch        each packer carries its box to the dispatch zone and sets it down; the host's player uses the
+##                   dispatch station, picks every box on the board and presses Load: DispatchZone.load_boxes ->
+##                   CompanyTrips.stage_cargo, DispatchRack.store (the boxes ride the van's rack) and the trip
+##                   book learns the orders (CompanyDispatch._bridge)
+##   drive           the player opens the cab, takes the wheel, presses the pedal; the gate starts the Trip (the
+##                   orders go OUT); the autopilot (D-2016.3) follows the street graph to the first stop's house.
+##                   With two players the second stays in the shed and packs the orders still coming in, at a
+##                   person's pace, until the van is back
+##   deliver         stop by stop the van goes to the house (HouseMap, in the order's zone). STUB door_settle: the
+##                   bot settles each order itself (OrderSettlement.settle + Trip.record_settled: D-0340 + D-0815.b),
+##                   a box broken on the way (its trap runs on the trip, D-0710.d) with every unit broken (breaks)
+##   return          the autopilot drives back (K-turn, avenue, the yard's leg); the gate closes the Trip
+##   close_day       the clock jumps to 20:00 (BOT_SKIP); DayCycle goes OPERATING, CLOSING, SUMMARY; the summary
+##                   carries the packing costs and the rent the game charged at CLOSING (D-0509.b); the game saved
+##                   the closed day itself at SUMMARY (CompanyRoot.save_closed_day): the bot only reads that save
+## Prints, in order: BOT_STAGE <stage> ok or BOT_FAIL <stage>:<reason> (the run stops at a failed stage), one
+## `BOT_STUB <stage> <id> [<tasks>] <what>` per shortcut taken, the BOT_SKIP lines, with two players `BOT_INFO
+## stay_waits no_order=<n> no_stock=<n>` (the steps the one who stayed found nothing to pack, and why), `BOT_ERROR
+## <message>` per engine error logged during the run (a Logger, ErrorCatcher), the summary block (`BOT_COMPANY
+## key=value`: players, money, profit (closing - opening money, corte-vertical.md §4.4), deliveries, boxes, breaks,
+## assembly_errors,
+## engine_errors, return_bundle_units, idle_max_s_<peer> per player, stage_ms_<stage>) and the final line: BOT_OK
+## only when every stage was ok, no shortcut was taken, the profit is over 0, no engine error was logged and no
+## player spent more than CREW.IDLE_LIMIT_SECONDS with neither a box in the hands nor a wheel; else `BOT_FAIL` and
+## what failed (stages_missing=<n> stubs=<n> profit=<n> engine_errors=<n> idle_<peer>=<s>).
 ## Exit codes: 0 BOT_OK, 1 any BOT_FAIL, 3 hard wall-clock timeout (`BOT_TIMEOUT`).
-## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders through
-## CompanyRoot.order_crew, the peers come with D-2017) --hard=<seconds> (the hard timeout, default 300).
-## new_context(players, drive_cap_m): with drive_cap_m > 0 the autopilot drives only that many metres of
-## street out of the yard instead of the whole way to the house (the way back is always the whole one from
-## wherever the van is): test_company_bot_day uses it to keep the stages near 40 s; the bot run by hand does
-## all of it (cap 0).
+## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders through CompanyRoot.order_crew;
+## two of them play, the rest is the stub crew_size) --hard=<seconds> (the hard timeout, default 1200: six boxes and
+## a van that visits three to six houses, about 85 s each way to Centro).
+## new_context(players, drive_cap_m): with drive_cap_m > 0 the autopilot drives only that many metres of street out
+## of the yard and deliver does not drive (test_company_bot_day uses it); the bot run by hand does all of it (cap 0).
 ## The company saves into a temp folder (user://bot_company_day), never the game's slot.
-## The pure parts (stage_names, stage_line, summary_lines, final_line), the world helpers
-## (open_world, wait_opening, close_world) and the stages (new_context, run_stage) are static:
-## tests/test_company_bot_day.gd drives them on its own tree.
+## The pure parts (stage_names, stage_line, summary_lines, final_line), the world helpers (open_world, wait_opening,
+## close_world) and the stages (new_context, run_stage) are static: tests/test_company_bot_day.gd drives them.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const DAY_CYCLE: GDScript = preload("res://scripts/core/company/day_cycle.gd")
@@ -91,35 +72,54 @@ const STAGES: Array[String] = [
 const PENDING: Dictionary = {}
 const OPENING_WAIT_SECONDS: float = 10.0
 const DEFAULT_PLAYERS: int = 2
-const DEFAULT_HARD_SECONDS: float = 300.0
+const DEFAULT_HARD_SECONDS: float = 1200.0
+## Boxes the day packs and loads (D-2016.4).
+const BOXES_GOAL: int = 6
+## Engine errors printed one by one (the count is always printed).
+const MAX_ERROR_LINES: int = 20
 
-const PRODUCTS_DIR: String = "res://data/products/"
-const ZONE_DIR: String = "res://data/zones/"
-const GATE_DIR: String = "res://data/gates/"
-const VAN_PATH: String = "res://data/vehicles/van_classic.tres"
 ## The bot's company seed (CompanyState.company_seed, D-0246): the same day of orders on every run.
 const ORDERS_SEED: int = 2016
-## How long (real msec) the business tick may take to bring the day's orders in before take_orders
-## fails: it runs every 250 ms.
-const ORDER_WAIT_MSEC: int = 3000
-## The bot stands this far from a station's spot (meters) when it uses it, well inside the reach.
-const STAND_OFFSET: Vector3 = Vector3(0.0, 0.5, 1.0)
 ## Frames a phase change may take (DayCycle moves one step per poll()) before the stage fails.
 const PHASE_FRAMES: int = 120
-## How far ahead the day's own timer is moved so OPENING does not make the bot wait its 5 s: the
-## clock is jumped to 20:00 anyway.
+## How far ahead the day's own timer is moved so OPENING does not make the bot wait its 5 s: the clock is jumped to
+## 20:00 anyway.
 const SKIP_OPENING_MSEC: int = 10000
-## Drives the fleet's van out of the yard and back (drive and return).
-const VAN := preload("res://tests/bot_company_van.gd")
-## The stages that drive it (drive, deliver, return: the autopilot, D-2016.3).
+## The stages that drive the van (drive, deliver, return: the autopilot, D-2016.3).
 const TRIP := preload("res://tests/bot_company_trip.gd")
+## The shed's stages (receive_pallet ... dispatch) and the crew they share.
+const SHED := preload("res://tests/bot_company_shed.gd")
+const CREW := preload("res://tests/bot_company_crew.gd")
 
 var _players: int = DEFAULT_PLAYERS
 var _hard_seconds: float = DEFAULT_HARD_SECONDS
 var _finished: bool = false
+var _catcher := ErrorCatcher.new()
+
+
+## Engine errors (not warnings) logged during the run, from any thread (net_pair_company.gd's).
+class ErrorCatcher extends Logger:
+	var _mutex := Mutex.new()
+	var _messages: Array[String] = []
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type == Logger.ERROR_TYPE_WARNING:
+			return
+		_mutex.lock()
+		_messages.append("%s (%s:%d in %s)" % [rationale if not rationale.is_empty() else code, file, line, function])
+		_mutex.unlock()
+
+	func take() -> Array[String]:
+		_mutex.lock()
+		var out: Array[String] = _messages.duplicate()
+		_messages.clear()
+		_mutex.unlock()
+		return out
 
 
 func _initialize() -> void:
+	OS.add_logger(_catcher)
 	_run.call_deferred()
 
 
@@ -146,33 +146,70 @@ static func stage_ok_line(stage: String) -> String:
 	return "BOT_STAGE %s ok" % stage
 
 
-## One `BOT_COMPANY key=value` line per key: the fixed counters, then stage_ms_<stage> in order.
+## One `BOT_COMPANY key=value` line per key: the fixed counters, idle_max_s_<peer> per player (stats.idle: peer ->
+## seconds), then stage_ms_<stage> in order.
 static func summary_lines(stats: Dictionary) -> PackedStringArray:
 	var lines := PackedStringArray()
-	for key: String in ["players", "money", "deliveries", "breaks", "assembly_errors", "return_bundle_units"]:
+	for key: String in [
+		"players", "money", "profit", "deliveries", "boxes", "breaks", "assembly_errors", "engine_errors",
+		"return_bundle_units",
+	]:
 		lines.append("%s %s=%s" % [PREFIX, key, str(stats.get(key, 0))])
+	var idle: Dictionary = stats.get("idle", {})
+	var peers: Array = idle.keys()
+	peers.sort()
+	for peer: Variant in peers:
+		lines.append("%s idle_max_s_%d=%.1f" % [PREFIX, int(peer), float(idle[peer])])
 	var times: Dictionary = stats.get("stage_ms", {})
 	for stage: String in STAGES:
 		lines.append("%s stage_ms_%s=%s" % [PREFIX, stage, str(times.get(stage, 0))])
 	return lines
 
 
-## BOT_OK only when every stage in STAGES has an "ok" result; else BOT_FAIL stages_missing=<n>.
-static func final_line(results: Dictionary) -> String:
+## The BOT_STUB line of every shortcut the run took (stats.stubs: ids of CREW.STUBS), in the order taken.
+static func stub_lines(stubs: Array) -> PackedStringArray:
+	var lines := PackedStringArray()
+	for id: Variant in stubs:
+		lines.append(CREW.stub_line(StringName(id)))
+	return lines
+
+
+## BOT_OK only when every stage in STAGES is "ok" and the day was played for real (stats): no shortcut taken
+## (stubs), a profit over 0, no engine error and no player idle over CREW.IDLE_LIMIT_SECONDS. Else `BOT_FAIL` and
+## each thing that failed: stages_missing=<n>, stubs=<n>, profit=<n>, engine_errors=<n>, idle_<peer>=<s>. A key
+## missing from stats counts as failed (a run that measured nothing is no BOT_OK).
+static func final_line(results: Dictionary, stats: Dictionary) -> String:
+	var problems := PackedStringArray()
 	var missing: int = 0
 	for stage: String in STAGES:
 		var result: Dictionary = results.get(stage, {})
 		if str(result.get("status", "")) != "ok":
 			missing += 1
-	return "BOT_OK" if missing == 0 else "BOT_FAIL stages_missing=%d" % missing
+	if missing > 0:
+		problems.append("stages_missing=%d" % missing)
+	var stubs: Array = stats.get("stubs", [])
+	if not stubs.is_empty():
+		problems.append("stubs=%d" % stubs.size())
+	if int(stats.get("profit", 0)) <= 0:
+		problems.append("profit=%d" % int(stats.get("profit", 0)))
+	if int(stats.get("engine_errors", -1)) != 0:
+		problems.append("engine_errors=%d" % int(stats.get("engine_errors", -1)))
+	var idle: Dictionary = stats.get("idle", {})
+	if idle.is_empty():
+		problems.append("idle_unmeasured")
+	var peers: Array = idle.keys()
+	peers.sort()
+	for peer: Variant in peers:
+		if float(idle[peer]) > CREW.IDLE_LIMIT_SECONDS:
+			problems.append("idle_%d=%.0f" % [int(peer), float(idle[peer])])
+	return "BOT_OK" if problems.is_empty() else "BOT_FAIL " + " ".join(problems)
 
 
 # --- The world (static: the test drives them on its own tree) ---
 
 
-## The company world with its save folder pointed at a temp dir, before it enters the tree, on a new
-## company of seed ORDERS_SEED (the same orders every run) whose orders are planned for `players` (0:
-## the session's crew, one).
+## The company world with its save folder pointed at a temp dir, before it enters the tree, on a new company of seed
+## ORDERS_SEED (the same orders every run) whose orders are planned for `players` (0: the session's crew, one).
 static func open_world(tree: SceneTree, players: int = 0) -> Node3D:
 	clean_save_dir()
 	var state: Node = tree.root.get_node_or_null(^"/root/CompanyState")
@@ -200,8 +237,8 @@ static func wait_opening(tree: SceneTree, level: Node3D, max_seconds: float) -> 
 	return false
 
 
-## Leaving the world: its exit saves into the temp folder, which is then removed, and the company
-## and the mouse go back to how a test leaves them.
+## Leaving the world: its exit saves into the temp folder, which is then removed, and the company and the mouse go
+## back to how a test leaves them.
 static func close_world(tree: SceneTree, level: Node3D) -> void:
 	tree.root.remove_child(level)
 	level.free()
@@ -224,9 +261,9 @@ static func clean_save_dir() -> void:
 # --- The run ---
 
 
-func _arg(name: String, fallback: String) -> String:
+func _arg(arg_name: String, fallback: String) -> String:
 	for arg: String in OS.get_cmdline_user_args():
-		if arg.begins_with("--%s=" % name):
+		if arg.begins_with("--%s=" % arg_name):
 			return arg.get_slice("=", 1)
 	return fallback
 
@@ -255,19 +292,26 @@ func _run() -> void:
 		if str(result.get("status", "")) == "fail":
 			break
 
-	var money: int = 0
-	var state: Node = root.get_node_or_null(^"/root/CompanyState")
-	if state != null:
-		money = int(state.get("money"))
-	var stats: Dictionary = {
-		"players": _players, "money": money, "deliveries": int(ctx["deliveries"]),
-		"breaks": int(ctx["breaks"]), "assembly_errors": int(ctx["assembly_errors"]),
-		"return_bundle_units": int(ctx["return_bundle_units"]), "stage_ms": times,
-	}
+	CREW.stop_idle(ctx)
+	SHED.stop_staying(ctx)
+	var stats: Dictionary = stats_of(level as CompanyRoot, ctx)
+	stats["stage_ms"] = times
 	close_world(self, level)
+	var errors: Array[String] = _catcher.take()
+	stats["engine_errors"] = errors.size()
+	for line: String in stub_lines(ctx["stubs"]):
+		print(line)
+	for line: String in ctx["skips"]:
+		print(line)
+	var waits: Dictionary = ctx["stay_waits"]
+	if not waits.is_empty():
+		print("BOT_INFO stay_waits no_order=%d no_stock=%d (steps of %.0f s with nothing to pack)" % [
+			int(waits.get("no_order", 0)), int(waits.get("no_stock", 0)), CREW.STEP_SECONDS])
+	for index: int in mini(errors.size(), MAX_ERROR_LINES):
+		print("BOT_ERROR %s" % errors[index])
 	for line: String in summary_lines(stats):
 		print(line)
-	var final: String = final_line(results)
+	var final: String = final_line(results, stats)
 	_end(final, 0 if final == "BOT_OK" else 1)
 
 
@@ -290,23 +334,36 @@ func _on_hard_timeout() -> void:
 # --- Stages (static: each takes the tree, the opened world and the run's context) ---
 
 
-## What the stages hand to each other, and the counters of the summary. `players` sizes the orders.
+## What the stages hand to each other, and the counters of the summary. `players` sizes the orders (and, with 2 or
+## more, a second player plays).
 static func new_context(players: int, drive_cap_m: float = 0.0) -> Dictionary:
 	return {
 		"players": players, "assembly_errors": 0, "breaks": 0, "deliveries": 0, "return_bundle_units": 0,
-		# Pallets the bot opened: id -> the Pallet dictionary (state open).
-		"opened": {},
-		# What the bot holds after receive_pallet: {product, qty}.
-		"hands": {},
-		"orders": [], "order": {}, "box": null, "box_id": &"", "quality": -1.0,
+		# The crew (CREW.ensure): [{peer, player}], the shortcuts taken (CREW.STUBS ids), the clock jumps (lines), the
+		# world's IdleWatch and, once the day is over, its numbers (peer -> seconds).
+		"crew": [], "stubs": [], "skips": [], "idle_watch": null, "idle": {},
+		# The wallet when the first stage ran, and at the day's SUMMARY (profit = closing - opening).
+		"money_open": null, "money_close": null,
+		"boxes_goal": BOXES_GOAL,
+		# Catalog (SHED.products_of), pallets opened (id -> Pallet dictionary) and where they are drawn, what the host
+		# holds after receive_pallet ({product, qty, pallet}).
+		"products": {}, "opened": {}, "pallet_spots": {}, "hands": {},
+		# The orders taken (the shared book's dictionaries), and every order id someone took to pack.
+		"orders": [], "taken": {},
+		# The boxes packed and loaded ({order_id, box_id, peer, table, errors, quality}); the ones the second player
+		# packed while the van was out; table -> the order it packs (the stub order_claim).
+		"packed": [], "extra": [], "table_orders": {},
+		# Spots of the dispatch zone used so far; whether the one who stays in the shed works, and what went wrong.
+		"zone_used": 0, "worker_on": false, "worker_failure": "",
+		# The steps the one who stays found nothing to pack, by why (SHED._note_wait): no_order, no_stock.
+		"stay_waits": {},
 		# The vehicle dispatch loaded, and the trip it is on (deliver -> return).
 		"vehicle_id": &"", "trip": null,
 		# Metres the van covered from its parking spot to where it stopped outside the yard.
 		"drive_m": 0.0,
-		# Autopilot (D-2016.3): 0 drives the whole way along the street graph to the houses of the trip and
-		# back (about 85 s each way to Centro); > 0 (a test) ends the way out after that many metres of the
-		# street past the yard's leg, short of the first house, and deliver does not drive nor check the
-		# distance to the house. The way back is always the whole one, from wherever the van stands.
+		# Autopilot (D-2016.3): 0 drives the whole way along the street graph to the houses of the trip and back;
+		# > 0 (a test) ends the way out after that many metres of the street past the yard's leg and deliver does not
+		# drive nor check the distance to the house. The way back is always the whole one.
 		"drive_cap_m": drive_cap_m,
 		# Where the van stood parked and where it stopped outside the yard, with the way it looked.
 		"park_point": Vector2.ZERO, "yard_exit": Vector2.ZERO, "yard_dir": Vector2.UP,
@@ -315,354 +372,111 @@ static func new_context(players: int, drive_cap_m: float = 0.0) -> Dictionary:
 	}
 
 
-## Runs one stage by name on the world `level` (a CompanyRoot opened by open_world) and returns its
-## result. A coroutine: the stages wait a frame after walking the player. An unknown name fails.
-static func run_stage(
-	tree: SceneTree, level: Node3D, stage: String, ctx: Dictionary
-) -> Dictionary:
+## Runs one stage by name on the world `level` (a CompanyRoot opened by open_world) and returns its result. A
+## coroutine. The crew is made on the first stage (CREW.ensure). An unknown name fails.
+static func run_stage(tree: SceneTree, level: Node3D, stage: String, ctx: Dictionary) -> Dictionary:
 	if PENDING.has(stage):
 		return _pending(str(PENDING[stage]))
 	var missing: String = _missing_part(level)
 	if missing != "":
 		return _fail(missing)
+	var root := level as CompanyRoot
+	var crew: String = CREW.ensure(root, ctx)
+	if crew != "":
+		return _fail(crew)
+	if ctx["money_open"] == null:
+		ctx["money_open"] = int(root.net.company.get("money"))
 	match stage:
 		"receive_pallet":
-			return await _receive_pallet(tree, level as CompanyRoot, ctx)
+			return await SHED.receive_pallet(tree, root, ctx)
 		"shelve_stock":
-			return await _shelve_stock(tree, level as CompanyRoot, ctx)
+			return await SHED.shelve_stock(tree, root, ctx)
 		"take_orders":
-			return await _take_orders(tree, level as CompanyRoot, ctx)
+			return await SHED.take_orders(tree, root, ctx)
 		"pack_boxes":
-			return await _pack_boxes(tree, level as CompanyRoot, ctx)
+			return await SHED.pack_boxes(tree, root, ctx)
 		"dispatch":
-			return _dispatch(level as CompanyRoot, ctx)
+			return await SHED.dispatch(tree, root, ctx)
 		"drive":
-			return await TRIP.drive(tree, level as CompanyRoot, ctx)
+			return await _drive(tree, root, ctx)
 		"deliver":
-			return await TRIP.deliver(tree, level as CompanyRoot, ctx, _products())
+			return await TRIP.deliver(tree, root, ctx, SHED.products_of(ctx))
 		"return":
-			return await TRIP.come_back(tree, level as CompanyRoot, ctx)
+			return await _come_back(tree, root, ctx)
 		"close_day":
-			return await _close_day(tree, level as CompanyRoot, ctx)
+			return await _close_day(tree, root, ctx)
 	return _fail("unknown_stage")
 
 
-## Supplier pallets: the first truck's (DefaultShed.first_order) are in reception when the company
-## opens. The bot checks each one is in the stock and drawn at the dock, that a sealed one gives
-## nothing, opens them and takes a handful of the first into its hands.
-static func _receive_pallet(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var net: CompanyNet = level.net
-	_install_stations(level)
-	var pallets: Array[Dictionary] = DefaultShed.load_default().first_pallets()
-	if pallets.is_empty():
-		return _fail("no_delivery")
-	for pallet: Dictionary in pallets:
-		var id: StringName = pallet["id"]
-		if Pallet.units_left(net.inventory, pallet) != int(pallet["qty"]):
-			return _fail("pallet_not_in_stock")
-		if not level.shed.pallet_nodes.has(String(id)):
-			return _fail("pallet_not_drawn")
-		if Pallet.take(net.inventory, pallet, 1, &"hands:probe"):
-			return _fail("sealed_pallet_gave_units")
-		if not Pallet.open(net.inventory, pallet):
-			return _fail("pallet_not_opened")
-		if Pallet.open(net.inventory, pallet):
-			return _fail("pallet_opened_twice")
-		(ctx["opened"] as Dictionary)[id] = pallet
-	var first: Dictionary = pallets[0]
-	var product: StringName = first["product"]
-	var qty: int = mini(CompanyTuning.HAND_MAX_UNITS, int(first["qty"]))
-	var reason: StringName = await _take_from(
-		tree, level, "pallet_%s" % first["id"], product, qty)
-	if reason != &"":
-		return _fail("take_%s" % reason)
-	var hands: StringName = CompanyNet.hands_location(level.multiplayer.get_unique_id())
-	if net.inventory.count(product, hands) != qty:
-		return _fail("hands_not_filled")
-	if net.inventory.count(product, Pallet.location(first["id"])) != int(first["qty"]) - qty:
-		return _fail("pallet_not_emptied")
-	ctx["hands"] = {"product": product, "qty": qty, "pallet": first["id"]}
-	return _ok()
+## The numbers of the summary from the world and the run's context (before the world closes).
+static func stats_of(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
+	var money: int = int(level.net.company.get("money")) if level != null and level.net != null else 0
+	var opening: int = int(ctx["money_open"]) if ctx["money_open"] != null else money
+	var closing: int = int(ctx["money_close"]) if ctx["money_close"] != null else money
+	return {
+		"players": int(ctx["players"]), "money": money, "profit": closing - opening,
+		"deliveries": int(ctx["deliveries"]), "boxes": (ctx["packed"] as Array).size() + (ctx["extra"] as Array).size(),
+		"breaks": int(ctx["breaks"]), "assembly_errors": int(ctx["assembly_errors"]),
+		"return_bundle_units": int(ctx["return_bundle_units"]), "idle": CREW.idle_report(ctx), "stubs": ctx["stubs"],
+	}
 
 
-## Carries what the bot holds, and then a handful of every other pallet, to the slot labelled for
-## its product. First a store into a slot labelled for another product must be refused.
-static func _shelve_stock(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var net: CompanyNet = level.net
-	var hands: Dictionary = ctx["hands"]
-	if hands.is_empty():
-		return _fail("nothing_in_hands")
-	var product: StringName = hands["product"]
-	var stray: String = _slot_station(level, &"", product)
-	if stray != "":
-		var refused: StringName = await _store_at(tree, level, stray, product, 1)
-		if refused != CompanyNet.REASON_WRONG_PRODUCT:
-			return _fail("wrong_slot_%s" % refused)
-	var shelved: int = 0
-	var opened: Dictionary = ctx["opened"]
-	for id: StringName in opened:
-		var pallet: Dictionary = opened[id]
-		var item: StringName = pallet["product"]
-		var qty: int = int(hands["qty"]) if id == hands["pallet"] else mini(
-			CompanyTuning.HAND_MAX_UNITS, Pallet.units_left(net.inventory, pallet))
-		if id != hands["pallet"]:
-			var taken: StringName = await _take_from(tree, level, "pallet_%s" % id, item, qty)
-			if taken != &"":
-				return _fail("take_%s" % taken)
-		var slot: String = _slot_station(level, item)
-		if slot == "":
-			return _fail("no_labelled_slot")
-		var location: StringName = StringName(_station_of(net, slot)["location"])
-		var before: int = net.inventory.count(item, location)
-		var reason: StringName = await _store_at(tree, level, slot, item, qty)
-		if reason != &"":
-			return _fail("store_%s" % reason)
-		if net.inventory.count(item, location) != before + qty:
-			return _fail("slot_not_filled")
-		shelved += qty
-	var hands_at: StringName = CompanyNet.hands_location(level.multiplayer.get_unique_id())
-	if not net.inventory.contents_at(hands_at).is_empty():
-		return _fail("hands_not_empty")
-	ctx["hands"] = {}
-	return _ok() if shelved > 0 else _fail("nothing_shelved")
+## The van leaves (TRIP.drive); with two players the second stays in the shed packing the orders still coming in
+## (SHED.stay_behind, beside the drive until the van is back).
+static func _drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
+	var result: Dictionary = await TRIP.drive(tree, level, ctx)
+	if result["status"] == "ok" and (ctx["crew"] as Array).size() >= 2:
+		SHED.stay_behind(tree, level, ctx)
+	return result
 
 
-## The day's orders as the world brings them in (D-0813.1): the host's world planned them at the OPENING
-## from the company's seed, and its business tick publishes each one into the book every peer shares
-## (CompanyNet.orders.book) once the shed's minute reaches it. The bot moves the clock so the shed's minute
-## is the last arrival and waits for the tick (the ones already past due are LATE there by then, and the ones
-## a window past due failed: the customer gave up, D-0851). Then it copies the live ones into CompanyTrips' own
-## book, OPEN as OrderBook.add() leaves them: the book packing and dispatch work on, which doesn't become the
-## shared one until marking packed, out and delivered are events.
-static func _take_orders(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	if level.trips == null:
-		return _fail("no_trips")
-	var shared: OrderBook = level.net.orders.book
-	if shared.size() + level.net.orders.planned().size() == 0:
-		return _fail("no_orders")
-	if level.day_cycle.is_frozen():
-		return _fail("shed_frozen")
-	var lag: float = level.clock.minute_now() - level.day_cycle.shed_minute()
-	if not level.clock.start(float(CompanyTuning.ORDER_LAST_ARRIVAL_MIN) + lag):
-		return _fail("clock_not_started")
-	var start: int = Time.get_ticks_msec()
-	while not level.net.orders.planned().is_empty() and Time.get_ticks_msec() - start < ORDER_WAIT_MSEC:
-		await tree.process_frame
-	if not level.net.orders.planned().is_empty():
-		return _fail("orders_not_in")
-	var orders: Array[Dictionary] = shared.open_orders()
-	# The jump to 19:00 is a day of waiting: the customers gave up on the ones a window past due (D-0851), failed.
-	var gone: int = 0
-	for order: Dictionary in shared.to_dict()["orders"]:
-		gone += 1 if order["state"] == Order.STATE_FAILED else 0
-	if orders.is_empty() or orders.size() + gone != shared.size():
-		return _fail("shared_book_size")
-	var book: OrderBook = level.trips.book
-	for order: Dictionary in orders:
-		if not Order.validate(order).is_empty():
-			return _fail("bad_order")
-		if not book.add(order):
-			return _fail("order_not_added")
-	if book.size() != orders.size() or book.open_orders().size() != orders.size():
-		return _fail("book_size")
-	for order: Dictionary in orders:
-		var stored: Dictionary = book.get_order(order["id"])
-		for key: String in ["id", "customer", "zone", "house_id", "items", "due_min", "pay"]:
-			if not stored.has(key) or str(stored[key]) == "":
-				return _fail("order_field_%s" % key)
-		if book.state_of(order["id"]) != Order.STATE_OPEN:
-			return _fail("order_not_open")
-		if int(stored["due_min"]) <= int(stored["created_min"]) or int(stored["pay"]) <= 0:
-			return _fail("order_numbers")
-	ctx["orders"] = orders
-	return _ok()
+## The van comes back (TRIP.come_back) and whoever stayed in the shed stops; its work has to have gone well.
+static func _come_back(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
+	var result: Dictionary = await TRIP.come_back(tree, level, ctx)
+	var worker: String = SHED.stop_staying(ctx)
+	if result["status"] == "ok" and worker != "":
+		return _fail("stayed_%s" % worker)
+	return result
 
 
-## Packs the first order the shed can fill at a packing table, the way a player would: the units
-## from the shelves into the hands, onto the table, into a box of the smallest size that holds
-## them, then padding, label, seals and tape. The finished order is PACKED in the book.
-static func _pack_boxes(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var net: CompanyNet = level.net
-	var products: Dictionary = _products()
-	var wallet: Node = net.company as Node
-	var opened: Dictionary = ctx["opened"]
-	var order: Dictionary = {}
-	var size: StringName = &""
-	var best: int = 0
-	for candidate: Dictionary in ctx["orders"]:
-		var fits: StringName = _box_size_for(candidate, products)
-		var work: int = _work_of(candidate)
-		if fits != &"" and work > best and _in_reach_of_hands(net, candidate, opened):
-			order = candidate
-			size = fits
-			best = work
-	if order.is_empty():
-		return _fail("no_packable_order")
-	var table_uid: StringName = _first_table(level)
-	if table_uid == &"":
-		return _fail("no_packing_table")
-	var table: PackingStation = level.shed.stations[table_uid]
-	var order_id: StringName = order["id"]
-	var money: int = int(wallet.get("money"))
-	if not BoxDispenser.dispense(table, size, wallet):
-		return _fail("box_not_dispensed")
-	if int(wallet.get("money")) != money - BoxDispenser.cost_of(size):
-		return _fail("box_not_charged")
-	var in_box: StringName = StringName("box:%s" % order_id)
-	for item: Dictionary in order["items"]:
-		var product: StringName = item["product"]
-		for unit: int in int(item["qty"]):
-			var source: Dictionary = _source_of(net, product, opened)
-			if source.is_empty():
-				return _fail("no_source_%s" % product)
-			var reason: StringName = await _take_from(tree, level, source["station"], product, 1)
-			if reason != &"":
-				return _fail("take_%s" % reason)
-			await _go_to_spot(tree, level, level.shed.use_points[table_uid].global_position)
-			if not table.stage_product(product):
-				return _fail("table_full")
-			var hands: StringName = CompanyNet.hands_location(level.multiplayer.get_unique_id())
-			if not net.inventory.move(product, 1, hands, in_box):
-				return _fail("hands_empty")
-			var def: ProductDefinition = products[product]
-			var spot: Vector3i = table.box.first_fit(def)
-			if spot == PackedBox.NO_SPOT or not table.put_in_box(def, spot):
-				return _fail("no_room_in_box")
-	return _finish_box(level, ctx, table, order, products)
-
-
-## The box on the table is padded, labelled, stamped and taped; it leaves the table sealed, its
-## units go from box:<order> to package:<id> and the order is PACKED. Counts what is wrong with it.
-static func _finish_box(
-	level: CompanyRoot, ctx: Dictionary, table: PackingStation, order: Dictionary,
-	products: Dictionary
-) -> Dictionary:
-	var net: CompanyNet = level.net
-	var wallet: Node = net.company as Node
-	var book: OrderBook = level.trips.book
-	var order_id: StringName = order["id"]
-	var box: PackedBox = table.box
-	table.pad(box.total_cells() - box.grid.size(), wallet)
-	if not table.label_for(order, wallet):
-		return _fail("label_refused")
-	for kind: StringName in BoxSeals.required(order):
-		if not table.stamp(kind, wallet):
-			return _fail("stamp_%s_refused" % kind)
-	var diff: Dictionary = table.content_errors(order)
-	var errors: int = BoxSeals.missing(box, order).size()
-	for part: String in ["missing", "extra"]:
-		for qty: int in (diff[part] as Dictionary).values():
-			errors += qty
-	if not table.seal(wallet) or not table.is_sealed():
-		return _fail("not_sealed")
-	var sealed: PackedBox = table.dispatch()
-	if sealed == null or table.has_box():
-		return _fail("box_not_left_the_table")
-	ctx["assembly_errors"] = int(ctx["assembly_errors"]) + errors
-	ctx["quality"] = AssemblyQuality.score(sealed, order, products)
-	var box_id: StringName = StringName("box_%s" % order_id)
-	var in_box: StringName = StringName("box:%s" % order_id)
-	var in_package: StringName = StringName("package:%s" % box_id)
-	for product: StringName in sealed.contents():
-		if not net.inventory.move(product, sealed.contents()[product], in_box, in_package):
-			return _fail("units_not_in_package")
-	if not net.inventory.contents_at(in_box).is_empty():
-		return _fail("units_left_in_box")
-	if not book.mark_packed(order_id, box_id) or book.state_of(order_id) != Order.STATE_PACKED:
-		return _fail("order_not_packed")
-	var package: DeliveryPackage = BoxToPackage.build(sealed, products, order)
-	if package == null:
-		return _fail("no_package")
-	var carries: bool = StringName(package.get_meta(BoxToPackage.META_ORDER_ID)) == order_id
-	package.free()
-	if not carries:
-		return _fail("package_without_order")
-	ctx["order"] = order
-	ctx["box"] = sealed
-	ctx["box_id"] = box_id
-	return _ok()
-
-
-## The sealed box waits in the dispatch zone tied to its order (and is untied if it leaves), the
-## dispatch rules clear the van for the order's zone, and loading hands the cargo to CompanyTrips.
-static func _dispatch(level: CompanyRoot, ctx: Dictionary) -> Dictionary:
-	var order: Dictionary = ctx["order"]
-	var box: PackedBox = ctx["box"]
-	if order.is_empty() or box == null:
-		return _fail("nothing_packed")
-	var book: OrderBook = level.trips.book
-	var order_id: StringName = order["id"]
-	var box_id: StringName = ctx["box_id"]
-	var area: AABB = _dispatch_area(level)
-	if not area.has_surface():
-		return _fail("no_dispatch_zone")
-	var zone := DispatchZone.new(area)
-	var inside: Vector3 = area.get_center()
-	var outside: Vector3 = inside + Vector3(area.size.x + 2.0, 0.0, 0.0)
-	var none: StringName = DispatchZone.RESULT_NONE
-	if zone.update_box(box_id, order_id, inside, false, true, book) != none:
-		return _fail("open_box_dispatched")
-	if zone.update_box(box_id, order_id, outside, true, true, book) != none:
-		return _fail("box_outside_dispatched")
-	if zone.update_box(box_id, order_id, inside, true, false, book) != none:
-		return _fail("box_in_hands_dispatched")
-	var tied: StringName = DispatchZone.RESULT_DISPATCHED
-	if zone.update_box(box_id, order_id, inside, true, true, book) != tied:
-		return _fail("box_not_dispatched")
-	if not zone.is_dispatched(box_id) or zone.order_of(box_id) != order_id:
-		return _fail("box_not_tied_to_order")
-	var untied: StringName = DispatchZone.RESULT_UNDISPATCHED
-	if zone.update_box(box_id, order_id, outside, true, true, book) != untied:
-		return _fail("box_not_untied")
-	if zone.update_box(box_id, order_id, inside, true, true, book) != tied:
-		return _fail("box_not_dispatched_again")
-	var van: VehicleDefinition = load(VAN_PATH) as VehicleDefinition
-	var state: Node = level.net.company as Node
-	var verdict: Dictionary = DispatchRules.check_order(
-		order, van, _load_dir(ZONE_DIR), _load_dir(GATE_DIR), state.call(&"gate_owned"),
-		state.get(&"opened_gates"))
-	if not bool(verdict["ok"]):
-		return _fail("rules_%s" % verdict["key"])
-	if zone.load_into(level.trips, van.id) != 1 or not zone.boxes().is_empty():
-		return _fail("cargo_not_loaded")
-	if book.state_of(order_id) != Order.STATE_PACKED or level.trips.trips_out() != 0:
-		return _fail("trip_started_early")
-	ctx["vehicle_id"] = van.id
-	return _ok()
-
-
-## The day closes the way its clock does: 20:00 comes, OPERATING goes to CLOSING and, with no trip
-## out, to SUMMARY. The summary must carry what the day cost and the closed day must save and load.
+## The day closes the way its clock does: 20:00 comes (BOT_SKIP), OPERATING goes to CLOSING and, with no trip out, to
+## SUMMARY. The summary must carry what the day cost (packing and the rent the game charged at CLOSING) and the game
+## must have saved the closed day itself (CompanyRoot.save_closed_day at SUMMARY): the bot only reads that save.
 static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var cycle: DayCycle = level.day_cycle
 	var state: Node = level.net.company as Node
-	if not level.clock.start(float(CompanyTuning.DAY_END_MIN)):
-		return _fail("clock_not_started")
+	# The jump only goes forward: the van may come back past 20:00 (the day waits in CLOSING for a trip out). The day
+	# ends by the world's clock (DayCycle._world_minute), not the shed's.
+	var world_now: float = level.clock.minute_now()
+	if world_now < float(CompanyTuning.DAY_END_MIN):
+		CREW.skip(ctx, "close_day", world_now, float(CompanyTuning.DAY_END_MIN))
+		if not level.clock.start(float(CompanyTuning.DAY_END_MIN)):
+			return _fail("clock_not_started")
 	# The opening's 5 s of real time are skipped; the clock jump above is the same kind of skip.
 	cycle.ticks = func() -> int: return Time.get_ticks_msec() + SKIP_OPENING_MSEC
 	# The phase it starts from too: after a real drive the day may be OPERATING already.
 	var seen: Array[int] = [int(cycle.phase())]
 	var came: int = seen[0]
-	# Only the bot polls while it watches: the host's BusinessTick (4 Hz) polls the same cycle and
-	# could cross a phase between two of the bot's reads, so CLOSING would go unseen.
+	# Only the bot polls while it watches: the host's BusinessTick (4 Hz) polls the same cycle and could cross a phase
+	# between two of the bot's reads, so CLOSING would go unseen.
 	var tick: BusinessTick = level.business_tick
 	if tick != null:
 		tick.set_process(false)
 	for _frame: int in PHASE_FRAMES:
 		cycle.poll()
-		if seen.is_empty() or seen[seen.size() - 1] != int(cycle.phase()):
+		if seen[seen.size() - 1] != int(cycle.phase()):
 			seen.append(int(cycle.phase()))
 		if cycle.phase() == DayCycle.Phase.SUMMARY:
 			break
 		await tree.process_frame
 	if tick != null:
 		tick.set_process(true)
-	var path: Array[int] = [
-		DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]
+	CREW.stop_idle(ctx)
+	var path: Array[int] = [DayCycle.Phase.OPERATING, DayCycle.Phase.CLOSING, DayCycle.Phase.SUMMARY]
 	if cycle.phase() != DayCycle.Phase.SUMMARY:
 		return _fail("no_summary")
-	# The real clock runs while the van drives (90 s an hour): the day may be CLOSING, or closed, when it
-	# gets here; the rest of the path must be walked, in order, from the phase it started from.
+	# The real clock runs while the van drives (90 s an hour): the day may be CLOSING, or closed, when it gets here;
+	# the rest of the path must be walked, in order, from the phase it started from.
 	if path.find(came) < 0 or seen != path.slice(path.find(came)):
 		return _fail("phases_skipped")
 	var summary: Dictionary = cycle.summary
@@ -676,28 +490,27 @@ static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 		return _fail("summary_without_rent")
 	if int(summary.get("closing", -1)) != int(state.get("money")):
 		return _fail("summary_money")
-	return _save_and_load(level, state, ctx)
+	ctx["money_close"] = int(summary["closing"])
+	return _check_saved(level, state, ctx)
 
 
-## What the closing screen's continue will do (D-0206's hook): the closed day is saved as a finished
-## day and read back into a scratch company that must hold the same day, money, ledger and stock.
-## The units the save leaves in the return bundle go to ctx (D-0252: with a full crew it may have to
-## be one bundle per product).
-static func _save_and_load(level: CompanyRoot, state: Node, ctx: Dictionary) -> Dictionary:
-	var kept: Inventory = CompanyRoot.stock_for_save(level.net.inventory)
-	ctx["return_bundle_units"] = CompanyAsk.units_at(kept, CompanyRoot.SAVED_HANDS_LOCATION)
-	state.call(&"store_stock", kept)
-	if not CompanySave.save(state, level.save_slot, level.save_dir):
-		return _fail("save_failed")
+## The save the game wrote at SUMMARY (D-0236): the next day's opening, day + 1, with the same money, ledger and
+## stock (as a save keeps it, CompanyRoot.stock_for_save). The units it left in the return bundle go to ctx (D-0252).
+static func _check_saved(level: CompanyRoot, state: Node, ctx: Dictionary) -> Dictionary:
+	if not FileAccess.file_exists(CompanySave.path_for(level.save_slot, level.save_dir)):
+		return _fail("day_not_saved")
 	var scratch: Node = CompanyRoot.COMPANY_STATE.new()
 	var loaded: int = CompanySave.load_into(scratch, level.save_slot, level.save_dir)
+	var stock: Inventory = scratch.call(&"stock") as Inventory
 	var same: bool = (
 		loaded == CompanySave.LoadResult.LOADED
 		and int(scratch.get("money")) == int(state.get("money"))
-		and int(scratch.get("day")) == int(state.get("day"))
+		and int(scratch.get("day")) == int(state.get("day")) + 1
 		and (scratch.get("ledger") as Array).size() == (state.get("ledger") as Array).size()
-		and (scratch.call(&"stock") as Inventory).total_units() == level.net.inventory.total_units()
+		and stock != null and stock.total_units() == level.net.inventory.total_units()
 	)
+	if stock != null:
+		ctx["return_bundle_units"] = CompanyAsk.units_at(stock, CompanyRoot.SAVED_HANDS_LOCATION)
 	scratch.free()
 	return _ok() if same else _fail("saved_day_differs")
 
@@ -729,218 +542,3 @@ static func _missing_part(level: Node3D) -> String:
 	if root.day_cycle == null or root.clock == null:
 		return "no_day"
 	return ""
-
-
-static func _products() -> Dictionary:
-	var found: Dictionary = {}
-	for file: String in DirAccess.get_files_at(PRODUCTS_DIR):
-		if file.ends_with(".tres"):
-			var def := load(PRODUCTS_DIR + file) as ProductDefinition
-			if def != null:
-				found[def.id] = def
-	return found
-
-
-static func _load_dir(dir: String) -> Dictionary:
-	var found: Dictionary = {}
-	for file: String in DirAccess.get_files_at(dir):
-		if file.ends_with(".tres"):
-			var res: Resource = load(dir + file)
-			found[res.get("id")] = res
-	return found
-
-
-## The smallest box size that holds every unit of the order with PackedBox.first_fit, or &"".
-static func _box_size_for(order: Dictionary, products: Dictionary) -> StringName:
-	for size: StringName in BoxDispenser.SIZES:
-		var box := PackedBox.new(size)
-		var fits: bool = true
-		for item: Dictionary in order["items"]:
-			var def: ProductDefinition = products.get(item["product"])
-			for unit: int in int(item["qty"]):
-				var spot: Vector3i = box.first_fit(def) if def != null else PackedBox.NO_SPOT
-				fits = fits and spot != PackedBox.NO_SPOT and box.place(def, spot)
-		if fits:
-			return size
-	return &""
-
-
-## How much there is to do in an order: its units plus its requirements (seals). The bot packs the
-## one with the most, so padding, label and seals are exercised and not just one unit in a box.
-static func _work_of(order: Dictionary) -> int:
-	var units: int = 0
-	for item: Dictionary in order["items"]:
-		units += int(item["qty"])
-	return units + (order["requirements"] as Array).size()
-
-
-## True when every product of the order is on a shelf or an opened pallet, in the quantity asked.
-static func _in_reach_of_hands(net: CompanyNet, order: Dictionary, opened: Dictionary) -> bool:
-	for item: Dictionary in order["items"]:
-		var total: int = 0
-		for source: Dictionary in _sources(net, item["product"], opened):
-			total += int(source["qty"])
-		if total < int(item["qty"]):
-			return false
-	return true
-
-
-## Where units of a product can be taken from: slots of the shed's shelves and opened pallets, as
-## {station, location, qty}, shelves first, each group in name order.
-static func _sources(
-	net: CompanyNet, product: StringName, opened: Dictionary
-) -> Array[Dictionary]:
-	var found: Array[Dictionary] = []
-	var by_location: Dictionary = net.inventory.to_dict().get("stock", {}).get(product, {})
-	var places: Array = by_location.keys()
-	places.sort()
-	for place: Variant in places:
-		var text: String = String(place)
-		var qty: int = int(by_location[place])
-		if text.begins_with("shelf:"):
-			var station: String = "slot_%s" % text.trim_prefix("shelf:")
-			if not _station_of(net, station).is_empty():
-				found.append({"station": station, "location": text, "qty": qty})
-	for place: Variant in places:
-		var text: String = String(place)
-		var id: StringName = StringName(text.trim_prefix("pallet:"))
-		if text.begins_with("pallet:") and opened.has(id):
-			found.append({
-				"station": "pallet_%s" % id, "location": text, "qty": int(by_location[place]),
-			})
-	return found
-
-
-static func _source_of(net: CompanyNet, product: StringName, opened: Dictionary) -> Dictionary:
-	var sources: Array[Dictionary] = _sources(net, product, opened)
-	return sources[0] if not sources.is_empty() else {}
-
-
-## The first packing table of the shed, by name, or &"".
-static func _first_table(level: CompanyRoot) -> StringName:
-	var uids: Array = level.shed.stations.keys()
-	uids.sort()
-	return StringName(uids[0]) if not uids.is_empty() else &""
-
-
-## The floor of the shed's dispatch piece in world coordinates (height 2 m), or an empty AABB.
-static func _dispatch_area(level: CompanyRoot) -> AABB:
-	for piece: Dictionary in level.shed.pieces:
-		var def: PlaceableDefinition = PlaceableShop.definition(StringName(str(piece["id"])))
-		if def == null or def.role != &"dispatch":
-			continue
-		var rect: Rect2i = piece["rect"]
-		var from: Vector3 = level.shed.to_global(level.shed.cell_to_local(Vector2(rect.position)))
-		var to: Vector3 = level.shed.to_global(level.shed.cell_to_local(Vector2(rect.end)))
-		var low := Vector3(minf(from.x, to.x), 0.0, minf(from.z, to.z))
-		return AABB(low, Vector3(absf(to.x - from.x), 2.0, absf(to.z - from.z)))
-	return AABB()
-
-
-## The id of the shelf slot labelled for `product` ("slot_<shelf>_<n>"), or, with `product` empty,
-## the first slot labelled for anything but `other`. "" when there is none.
-static func _slot_station(
-	level: CompanyRoot, product: StringName, other: StringName = &""
-) -> String:
-	var uids: Array = level.shed.shelves.keys()
-	uids.sort()
-	for uid: Variant in uids:
-		var shelf: Shelf = level.shed.shelves[uid]
-		for slot: int in shelf.slot_count():
-			var label: StringName = shelf.label_of(slot)
-			var wanted: bool = label == product
-			if product == &"":
-				wanted = label != &"" and label != other
-			if wanted:
-				return "slot_%s_%d" % [uid, slot]
-	return ""
-
-
-## The bot's lookup for CompanyNet.stations (CompanyRoot sets none yet): `pallet_<id>` for a pallet
-## drawn in reception, `slot_<shelf uid>_<n>` for a slot of a shelf (it takes its label's product).
-## The spot is where the shed draws it: the pallet itself, the shelf's use point.
-static func _station(shed: CompanyShed, id: StringName) -> Dictionary:
-	var text: String = String(id)
-	if text.begins_with("pallet_"):
-		var pallet_id: String = text.trim_prefix("pallet_")
-		var node: Node3D = shed.pallet_nodes.get(pallet_id) as Node3D
-		if node == null:
-			return {}
-		return {"location": Pallet.location(StringName(pallet_id)), "spot": node.global_position}
-	if not text.begins_with("slot_"):
-		return {}
-	var body: String = text.trim_prefix("slot_")
-	var cut: int = body.rfind("_")
-	if cut < 0 or not body.substr(cut + 1).is_valid_int():
-		return {}
-	var uid: StringName = StringName(body.left(cut))
-	var slot: int = int(body.substr(cut + 1))
-	var shelf: Shelf = shed.shelves.get(uid) as Shelf
-	var point: Node3D = shed.use_points.get(uid) as Node3D
-	if shelf == null or point == null or slot < 0 or slot >= shelf.slot_count():
-		return {}
-	var station: Dictionary = {
-		"location": shelf.location(slot), "spot": point.global_position,
-		"capacity": CompanyTuning.SHELF_SLOT_CAPACITY,
-	}
-	if shelf.label_of(slot) != &"":
-		station["accepts"] = shelf.label_of(slot)
-	return station
-
-
-static func _install_stations(level: CompanyRoot) -> void:
-	var shed: CompanyShed = level.shed
-	level.net.stations = func(id: StringName) -> Dictionary: return _station(shed, id)
-
-
-static func _station_of(net: CompanyNet, id: String) -> Dictionary:
-	if not net.stations.is_valid():
-		return {}
-	return net.stations.call(StringName(id))
-
-
-## The player stands next to a spot, as one walking up to it would.
-static func _go_to_spot(tree: SceneTree, level: CompanyRoot, spot: Vector3) -> void:
-	level.player.global_position = spot + STAND_OFFSET
-	await tree.process_frame
-
-
-## units_take of `qty` at `station`, standing at it. &"" when it went through, else the reason.
-static func _take_from(
-	tree: SceneTree, level: CompanyRoot, station: String, product: StringName, qty: int
-) -> StringName:
-	return await _units_request(tree, level, &"units_take", station, product, qty)
-
-
-static func _store_at(
-	tree: SceneTree, level: CompanyRoot, station: String, product: StringName, qty: int
-) -> StringName:
-	return await _units_request(tree, level, &"units_store", station, product, qty)
-
-
-static func _units_request(
-	tree: SceneTree, level: CompanyRoot, kind: StringName, station: String, product: StringName,
-	qty: int
-) -> StringName:
-	var found: Dictionary = _station_of(level.net, station)
-	if found.is_empty():
-		return CompanyNet.REASON_NO_STATION
-	await _go_to_spot(tree, level, found["spot"])
-	return _ask(level.net, kind, {"station": StringName(station), "product": product, "qty": qty})
-
-
-## A CompanyNet request as the host's own player makes it (solo: it goes through at once). &"" when
-## an event came out of it, else the host's refusal; &"dropped" when nothing happened and nobody
-## said so.
-static func _ask(net: CompanyNet, kind: StringName, data: Dictionary) -> StringName:
-	var refusals: Array[StringName] = []
-	var on_refused: Callable = func(_rid: int, reason: StringName) -> void: refusals.append(reason)
-	net.request_rejected.connect(on_refused)
-	var before: int = net.seq
-	var rid: int = net.request(kind, data)
-	net.request_rejected.disconnect(on_refused)
-	if rid == 0:
-		return &"no_request"
-	if not refusals.is_empty():
-		return refusals[0]
-	return &"" if net.seq > before else &"dropped"
