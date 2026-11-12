@@ -272,16 +272,16 @@ static func ask(level: CompanyRoot, actor: Dictionary, kind: StringName, data: D
 
 
 ## Why the host refused the local actor's request, as far as the bot can tell without the reason (it has no session
-## to hear it through): &"out_of_reach" when the host does not see it within reach of the station (from where the
-## host places it: CompanyNet's own lookup of a peer's player), else &"refused".
+## to hear it through): &"out_of_reach" when it is not within reach of the station from where the host measures it
+## (its Player.reach_origin(), the newest pose on the host), else &"refused".
 static func _refusal_of(level: CompanyRoot, actor: Dictionary, data: Dictionary) -> StringName:
 	var net: CompanyNet = level.net
 	var known: bool = net.stations.is_valid() and data.has("station")
 	var station: Dictionary = net.stations.call(data["station"]) if known else {}
 	if station.is_empty():
 		return &"refused"
-	var origin: Variant = net.call(&"_origin_of", int(actor["peer"]))
-	if not origin is Vector3 or not CompanyNet.within_reach(origin, station["spot"]):
+	var origin: Vector3 = (actor["player"] as Player).reach_origin()
+	if not CompanyNet.within_reach(origin, station["spot"]):
 		return &"out_of_reach"
 	return &"refused"
 
