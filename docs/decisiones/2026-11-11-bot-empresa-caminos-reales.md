@@ -40,8 +40,14 @@ funciona" sin que el juego pudiera hacer ese día: un `BOT_OK` falso escondía j
   cobro del atajo `door_settle`; con la puerta real puede cambiar.
 - **Errores del motor:** un `Logger` (como el de `net_pair_company.gd`) cuenta todo error que no sea aviso; cualquiera da
   `BOT_FAIL`.
-- **Límite duro por defecto: 900 s** (antes 300). Con 6 cajas la van visita varias casas: la corrida con 1 jugador tardó
-  unos 450 s (ida 75 s, entregas 257 s, vuelta 115 s). `test_company_bot_day` sigue manejando solo 20 m de calle y sin
-  ir a las casas; su tope de tiempo pasó de 45 a 90 s por las 6 cajas.
+- **Límite duro por defecto: 1200 s** (antes 300). Con 6 cajas la van visita varias casas: la corrida con 1 jugador
+  tardó unos 450 s con la PC libre (ida 75 s, entregas 257 s, vuelta 115 s), y una de 2 jugadores con la PC cargada por
+  otras corridas de Godot tardó 706 s y otra se cortó en 900 s. `test_company_bot_day` sigue manejando solo 20 m de
+  calle y sin ir a las casas; su tope de tiempo pasó de 45 a 90 s por las 6 cajas (tarda unos 52 s).
+- **Cajas rotas en la salida:** desde D-0710.d las trampas corren en el viaje y el piloto no cuida las cajas: en las
+  corridas, 4 de 6 se arruinan en el camino. El atajo `door_settle` las cobra como llegan (todas sus unidades rotas,
+  `TripCargo.is_broken`) y las cuenta en `breaks`: la ganancia baja y es la real del día del bot, no una que esconde
+  las roturas.
 - **`close_day` ya no guarda:** el juego guarda el día cerrado al llegar a `SUMMARY` (`CompanyRoot.save_closed_day`,
-  la apertura del día siguiente); el bot solo lee ese archivo y comprueba día + 1, plata, libro y stock.
+  la apertura del día siguiente); el bot solo lee ese archivo y comprueba día + 1, plata, libro y stock. El salto a las
+  20:00 solo va hacia adelante: si la van vuelve pasadas las 20:00, el reloj no se toca.

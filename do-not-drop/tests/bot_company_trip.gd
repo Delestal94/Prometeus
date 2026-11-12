@@ -62,7 +62,8 @@ static func drive(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dicti
 
 ## Stop by stop, the van goes to the stop's house (the autopilot; it stays if it is there) and each house
 ## is checked against the fixed map and its orders are settled with the box each one rides in (the package's
-## own PackedBox): the customer pays into the wallet (OrderSettlement) and the Trip records the delivery. That
+## own PackedBox; a box that broke on the way, D-0710.d, arrives with every unit broken and counts in ctx.breaks):
+## the customer pays into the wallet (OrderSettlement) and the Trip records the delivery. That
 ## is the stub door_settle (CREW.STUBS): the company world has no delivery at a house's door yet (D-0340 +
 ## D-0815.b: DeliveryHouse is the delivery run's, doorbell and carried package); the van stands within
 ## HOUSE_REACH_M of the house first.
@@ -97,10 +98,12 @@ static func deliver(
 				if box == null:
 					return _fail("no_box_for_%s" % order_id)
 				CREW.stub(ctx, &"door_settle")
+				var broken: Array = broken_units(level, book.box_of(order_id), box)
+				ctx["breaks"] = int(ctx["breaks"]) + (1 if not broken.is_empty() else 0)
 				var money: int = int(wallet.get("money"))
 				var settled: Dictionary = OrderSettlement.settle(
-					book, wallet, order_id, box, trips.delivery_minute(), [], products)
-				if not bool(settled["ok"]) or int(settled["paid"]) <= 0:
+					book, wallet, order_id, box, trips.delivery_minute(), broken, products)
+				if not bool(settled["ok"]) or (broken.is_empty() and int(settled["paid"]) <= 0):
 					return _fail("not_settled")
 				if int(wallet.get("money")) != money + int(settled["paid"]) + int(settled["tip"]):
 					return _fail("not_paid")
@@ -150,6 +153,20 @@ static func box_of(level: CompanyRoot, box_id: StringName) -> PackedBox:
 	if not saved is Dictionary or (saved as Dictionary).is_empty():
 		return null
 	return PackedBox.from_dict(saved)
+
+
+## The units that arrive broken in the box `box_id` (OrderSettlement's `broken`: one product id per unit): every
+## unit of `box` when its package broke on the way (TripCargo.is_broken: ruined by its trap or its contents out and
+## not put back, D-0710.d), none when it is whole.
+static func broken_units(level: CompanyRoot, box_id: StringName, box: PackedBox) -> Array:
+	var units: Array = []
+	if not TripCargo.is_broken(DispatchRack.package_of(level.packages, box_id)):
+		return units
+	var contents: Dictionary = box.contents()
+	for product: StringName in contents:
+		for _unit: int in int(contents[product]):
+			units.append(product)
+	return units
 
 
 ## Where the yard's leg joins the street: {point: Vector2 (x z), dir: Vector2 unit, the way the avenue goes}.

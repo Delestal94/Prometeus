@@ -34,7 +34,8 @@ extends SceneTree
 ##                   With two players the second stays in the shed and packs the orders still coming in, at a
 ##                   person's pace, until the van is back
 ##   deliver         stop by stop the van goes to the house (HouseMap, in the order's zone). STUB door_settle: the
-##                   bot settles each order itself (OrderSettlement.settle + Trip.record_settled: D-0340 + D-0815.b)
+##                   bot settles each order itself (OrderSettlement.settle + Trip.record_settled: D-0340 + D-0815.b),
+##                   a box broken on the way (its trap runs on the trip, D-0710.d) with every unit broken (breaks)
 ##   return          the autopilot drives back (K-turn, avenue, the yard's leg); the gate closes the Trip
 ##   close_day       the clock jumps to 20:00 (BOT_SKIP); DayCycle goes OPERATING, CLOSING, SUMMARY; the summary
 ##                   carries the packing costs and the rent the game charged at CLOSING (D-0509.b); the game saved
@@ -51,7 +52,7 @@ extends SceneTree
 ## what failed (stages_missing=<n> stubs=<n> profit=<n> engine_errors=<n> idle_<peer>=<s>).
 ## Exit codes: 0 BOT_OK, 1 any BOT_FAIL, 3 hard wall-clock timeout (`BOT_TIMEOUT`).
 ## Optional user args: -- --players=N (1..8, default 2; it sizes the day's orders through CompanyRoot.order_crew;
-## two of them play, the rest is the stub crew_size) --hard=<seconds> (the hard timeout, default 900: six boxes and
+## two of them play, the rest is the stub crew_size) --hard=<seconds> (the hard timeout, default 1200: six boxes and
 ## a van that visits three to six houses, about 85 s each way to Centro).
 ## new_context(players, drive_cap_m): with drive_cap_m > 0 the autopilot drives only that many metres of street out
 ## of the yard and deliver does not drive (test_company_bot_day uses it); the bot run by hand does all of it (cap 0).
@@ -71,7 +72,7 @@ const STAGES: Array[String] = [
 const PENDING: Dictionary = {}
 const OPENING_WAIT_SECONDS: float = 10.0
 const DEFAULT_PLAYERS: int = 2
-const DEFAULT_HARD_SECONDS: float = 900.0
+const DEFAULT_HARD_SECONDS: float = 1200.0
 ## Boxes the day packs and loads (D-2016.4).
 const BOXES_GOAL: int = 6
 ## Engine errors printed one by one (the count is always printed).
@@ -444,9 +445,13 @@ static func _come_back(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> 
 static func _close_day(tree: SceneTree, level: CompanyRoot, ctx: Dictionary) -> Dictionary:
 	var cycle: DayCycle = level.day_cycle
 	var state: Node = level.net.company as Node
-	CREW.skip(ctx, "close_day", level.day_cycle.shed_minute(), float(CompanyTuning.DAY_END_MIN))
-	if not level.clock.start(float(CompanyTuning.DAY_END_MIN)):
-		return _fail("clock_not_started")
+	# The jump only goes forward: the van may come back past 20:00 (the day waits in CLOSING for a trip out). The day
+	# ends by the world's clock (DayCycle._world_minute), not the shed's.
+	var world_now: float = level.clock.minute_now()
+	if world_now < float(CompanyTuning.DAY_END_MIN):
+		CREW.skip(ctx, "close_day", world_now, float(CompanyTuning.DAY_END_MIN))
+		if not level.clock.start(float(CompanyTuning.DAY_END_MIN)):
+			return _fail("clock_not_started")
 	# The opening's 5 s of real time are skipped; the clock jump above is the same kind of skip.
 	cycle.ticks = func() -> int: return Time.get_ticks_msec() + SKIP_OPENING_MSEC
 	# The phase it starts from too: after a real drive the day may be OPERATING already.

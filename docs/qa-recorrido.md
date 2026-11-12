@@ -197,7 +197,7 @@ Bot `tests/bot_company_day.gd` (headless, termina solo; las etapas del galpón e
 - Línea final: `BOT_OK` (salida 0) solo si las 9 etapas dieron `ok`, no hubo ningún `BOT_STUB`, la
   ganancia es mayor que 0, no hubo errores del motor y ningún jugador pasó más de 120 s ocioso; si no,
   `BOT_FAIL` con lo que falló (`stages_missing=<n> stubs=<n> profit=<n> engine_errors=<n>
-  idle_<peer>=<s>`, salida 1). `BOT_TIMEOUT` (salida 3) si pasó el límite (`--hard`, 900 s por defecto).
+  idle_<peer>=<s>`, salida 1). `BOT_TIMEOUT` (salida 3) si pasó el límite (`--hard`, 1200 s por defecto).
 - Hoy (2026-11-11) las 9 etapas pasan con 1 y con 2 jugadores, ganancia positiva y sin errores del motor.
   Con 1 jugador la línea final es `BOT_FAIL stubs=4`: quedan `pallet_unload` (D-0607.c), `table_use`
   (D-0701.b), `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 + D-0815.b). Con 2 jugadores además
