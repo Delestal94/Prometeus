@@ -190,7 +190,7 @@ simulados (peers ENet locales o actores locales).
   para cada etapa que todavía no existe, sin colgarse.
 - [x] **D-2016.2** Etapas, a medida que las tareas F1 se cierran (cada PR de F1 suma la suya). Hechas: 9 de 9.
 - [x] **D-2016.3** (2026-10-22, PR pendiente: piloto `drive_to` en `tests/bot_company_van.gd` por `RoadNavigator.route`, la van llega a la calle de cada parada de Centro y vuelve al playón; `off_road_max` 0 m en la ida, `BOT_OK` en 161 s; la puerta sigue con `OrderSettlement` porque el modo Empresa no tiene entrega en la casa; `test_company_bot_autopilot`; revisar: [`revisar/D-2016.3.md`](../revisar/D-2016.3.md)) `drive` lleva la van con piloto automático por el grafo de calles hasta las casas de sus paradas (y `return` la trae por el mismo camino), cuando el grafo esté en el mundo de la empresa (D-0314.a, `use_graph`); `deliver` deja la caja en la puerta cuando la entrega en la casa exista (D-0311).
-- [~] **D-2016.4** **[~] Parcial (2026-11-11, PR #@@PR@@)** — primera parte: el bot juega por los caminos del
+- [~] **D-2016.4** **[~] Parcial (2026-11-11, PR #866)** — primera parte: el bot juega por los caminos del
   juego (peticiones `units_*` y `box_*` en las estaciones del mundo, cajas en las manos, tablero de despacho y Cargar,
   guardado del juego en `SUMMARY`), arma y entrega **6 cajas**, juega un segundo jugador real del equipo, imprime
   `BOT_STUB` por cada atajo (bloquea `BOT_OK`) y mide `profit`, `engine_errors` e `idle_max_s_<peer>`; límite duro
