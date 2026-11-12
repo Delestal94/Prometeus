@@ -248,7 +248,7 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	var at: DeliveryHouse = house(StringName(net.orders.book.get_order(order_id).get("house_id", "")))
 	if at != null and at.reaction != null:
 		var shown: Dictionary = reaction_of(data, at.house_index, _session_seed())
-		# The sound follows the customer's verdict, not the box's looks: a box in good shape missing a product is no cheer.
+		# The sound follows the customer's verdict, not the box's looks (a sound box missing a product is no cheer).
 		at.play_reaction_sound(shown["scene"])
 		at.reaction.react(shown["scene"], tr(shown["line"]))
 
