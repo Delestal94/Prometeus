@@ -353,7 +353,7 @@ cuadrado desde la celda del galpón):
 | Adentro, hacia el fondo | 808 | 808 |
 
 Lo que falta para entrar en el presupuesto queda en D-2012.2 y D-2012.3
-(`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`).
+(`docs/expansion-distritos/detalle/F0-20-red-y-ci.md`). D-2012.2 entró el 2026-11-11 (más abajo).
 
 ### Celdas fijas lejanas, 2026-11-07 (D-2012.1)
 
@@ -398,6 +398,54 @@ de después:
 - **Son 19 y no las 24 del experimento:** la van estacionada en el patio es un ancla del host, en la celda al norte
   del galpón. Las celdas a 3 de ella siguen dibujadas por la histéresis.
 
+### Calles horneadas por celda, 2026-11-11 (D-2012.2)
+
+Las piezas de calle de cada celda se hornean desde el paso siguiente a su entrada al árbol (`StreetBatcher`, segunda
+pasada del streamer `finish_for`, unas ramas por paso): calzadas y banquinas en una malla `Streets` por celda (una
+superficie por tipo de calle; el shader de la calle lee de cada vértice el x propio y el rumbo de su caja), el resto
+de la geometría estática en `MergedStatic`/`MergedModels` (`StaticMerger`, `modules/render_budget`) y la colisión de
+las banquinas en un solo cuerpo `Verge`. Quedan las piezas (`RouteSegment`), su `Road`, los `GripArea` y lo que se
+mueve o tiene script. Las piezas chicas de las casas (el portero eléctrico, el buzón, el texto del cartel, la
+lamparita, las patas del cartel, el hilo del globo) se dibujan hasta 40, 120 o 250 m según el preset
+(`WorldQuality.set_view_range`): las casas de Centro, a 300-800 m del galpón, eran ~650 draw calls de la peor vista.
+
+**Commit:** `exp/D-2012.2-street-batching` sobre `origin/main` `819059f8`. Comando de arriba con ventana, 1920×1080,
+preset medio. **PC ocupada** por otros carriles y programas del usuario: valen nodos, draw calls y cuerpos; **los FPS
+no**. "Antes" es el mismo código con la pasada apagada y las casas sin rango (15 s por etapa: el manejo no llegó a
+Centro); "después", 30 s por etapa.
+
+| Medida | Antes | Después |
+|---|---|---|
+| `nodes` | 15.363 | **5.177** |
+| `draw_calls_peak` (vuelta por el galpón) | 2.598 | **746** |
+| `door_draw_calls_peak` | 2.492 | 458 |
+| `drive_draw_calls_peak` | 2.292 | 676 |
+| `centro_draw_calls_peak` | 2.655 (D-2012.1) | 676 |
+| `physics_bodies` / `physics_active` | 930 / 2 | 626 / 2 |
+
+Por vista, con `tests/render_company_far.gd` (preset medio, 1280×720):
+
+| Vista | Draw calls antes | Después |
+|---|---|---|
+| Por la puerta, al frente | 969 | 227 |
+| Al frente y a la izquierda | 981 | 199 |
+| Al frente y a la derecha, hacia Centro | 2.271 | 460 |
+| Adentro, hacia el fondo | 794 | 541 |
+| En la avenida a 640 m, hacia Centro | 1.123 | 260 |
+| En la avenida a 640 m, hacia el galpón | 2.506 | 829 |
+
+- **Se ve igual:** las capturas de `render_company_far` y `render_company_edges` de antes y de después difieren en
+  menos del 0,3 % de los píxeles, y lo que difiere es el HUD (la hora, un aviso) y un cartel a lo lejos; en las
+  calles, nada.
+- **Lo que queda en la peor vista (746):** ~280 son la van del patio (sus 283 piezas) y ~230 las casas de Centro (la
+  malla de cada casa tiene 11 materiales). Es el margen para lo que se sume.
+- **Lo que cuesta hornear:** de 5 a 38 ms por celda en la PC ocupada (la (0, 2) del Campo es la más cara), repartido
+  en pasos de la rebanada de 4 ms; el paso más largo medido fue de 16 ms. Armar las piezas sigue siendo lo caro: la
+  primera vez que entraba cada tipo de pieza costaba 80-130 ms (R-09); ahora se arma y hornea uno de cada tipo en la
+  carga (`CompanyCells.warm_pieces`, ~240 ms), no en los primeros cuadros en el galpón.
+- **`test_company_cells`** (headless, PC ocupada; el test no llama al precalentado): peor cuadro del viaje a Centro
+  17-31 ms en cuatro corridas (límite 50), vuelta 1-13 ms. Antes de repartir el horneado en pasos llegó a 49 ms.
+
 ### Serie del presupuesto
 
 Una fila por corrida de `pc-build`, con los valores de las líneas `BENCH_COMPANY_BUDGET` aunque todos entren: contra
@@ -408,6 +456,7 @@ esto se comparan el 10 % de "(perf)" y las caídas de la rutina. La primera fila
 |---|---|---|---|---|---|---|---|
 | 2026-11-07 | `b61e3802` + bench | 186-248 | 140-165 | 5.632 | 2 | 15.210 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
 | 2026-11-07 | `96e0cb55` + D-2012.1 | 153-233 | 75-110 | 2.590 | 2 | 15.225 | A mano, no `pc-build`. PC ocupada: FPS piso. OVER: draw calls, nodos |
+| 2026-11-11 | `819059f8` + D-2012.2 | 191 | 139 | 746 | 2 | 5.177 | A mano, no `pc-build`. PC ocupada: FPS no válidos. Ningún OVER |
 
 ## Ancho de banda del modo Empresa (D-2002)
 
