@@ -23,7 +23,8 @@ extends Node3D
 ## a part and returns `false`: it is called again the next step (anything else means done). Until it
 ## is done the cell is in the tree, solid, and not drawn, so nobody sees (or counts) the cell as it
 ## was before the pass; then `cell_finished` is emitted. `is_busy()` stays true until every loaded
-## cell has had it.
+## cell has had it. Its impostor stays until then too, so the cell's place is never left empty: the
+## block goes in the step the cell is drawn.
 ##
 ## Loose bodies (crates dropped on a sidewalk) are not part of any cell, so
 ## `track_body` hands them to the streamer: while their cell is not instanced
@@ -228,7 +229,7 @@ func _instance_ready() -> void:
 			if finish_for.is_valid():
 				_unfinished.append(cell)
 		_nodes[cell] = node
-		if not grid.is_parked(cell):
+		if not grid.is_parked(cell) and not _waits_to_draw(cell):
 			_remove_impostor(cell)
 		longest_step_usec = maxi(longest_step_usec, Time.get_ticks_usec() - t0)
 		cell_loaded.emit(cell, node)
@@ -260,6 +261,8 @@ func _finish_ready() -> bool:
 			break
 		_unfinished.pop_front()
 		node.visible = not grid.is_parked(cell)
+		if node.visible:
+			_remove_impostor(cell)
 		cell_finished.emit(cell, node)
 		if Time.get_ticks_usec() - start >= budget:
 			break
@@ -300,8 +303,14 @@ func _sync_impostors() -> void:
 		if not _impostors.has(cell):
 			_add_impostor(cell)
 	for cell: Vector2i in _impostors.keys():
-		if not want.has(cell):
+		if not want.has(cell) and not _waits_to_draw(cell):
 			_remove_impostor(cell)
+
+
+## A cell the grid has loaded and wants drawn whose second pass is not done yet (still on its way, or in the tree
+## and hidden): its impostor holds its place until it is drawn. Without a `finish_for` a cell never waits.
+func _waits_to_draw(cell: Vector2i) -> bool:
+	return finish_for.is_valid() and grid.is_loaded(cell) and not grid.is_parked(cell) 		and (not _nodes.has(cell) or _unfinished.has(cell))
 
 
 func _add_impostor(cell: Vector2i) -> void:

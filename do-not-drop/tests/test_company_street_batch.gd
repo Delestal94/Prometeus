@@ -17,7 +17,9 @@ extends SceneTree
 ## - In steps (StreetBatcher.start() / step() with a small budget, as the streamer runs it) the cell comes out the
 ##   same as baked at once, in more than one step.
 ## - Through CompanyCells: a streamed cell is not drawn until its bake is done, then it is, baked; warm_pieces()
-##   builds and bakes one piece of every kind and leaves nothing behind.
+##   builds and bakes one piece of every kind and leaves nothing behind; its pieces run under a MultiplayerAPI of
+##   their own with no peers (a client's mud piece would otherwise ask the host for its state from a path no peer
+##   has), and the tree's API is back afterwards.
 ## - The houses' small parts get a draw range (WorldQuality.set_view_range): the doorbell panel's and the waiting
 ##   marker's mailbox, sign text and porch bulb, the sign's legs and the balloon's string; the sign's boards and the
 ##   balloon itself have none.
@@ -190,11 +192,25 @@ func _check_streamed(graph: RoadGraph) -> void:
 	cells.set_process(false)
 	cells.use_graph(graph)
 	var orphans: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
+	var seen := {"pieces": 0, "shared": 0}
+	var tree_api: MultiplayerAPI = get_multiplayer()
+	var on_added := func(added: Node) -> void:
+		if added is RouteSegment and String(added.get_path()).contains("/WarmPieces/"):
+			seen.pieces += 1
+			if added.multiplayer == tree_api or not added.multiplayer.get_peers().is_empty():
+				seen.shared += 1
+	node_added.connect(on_added)
 	var warmed: int = cells.warm_pieces()
+	node_added.disconnect(on_added)
 	_expect(warmed >= 5, "warm_pieces builds a piece of every kind (%d)" % warmed)
 	_expect(cells.get_node_or_null(^"WarmPieces") == null
 			and int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)) <= orphans,
 		"...and leaves nothing behind")
+	_expect(seen.pieces == warmed and seen.shared == 0,
+		"...its pieces run under an API of their own with no peers, so no RPC leaves (%d of %d shared)"
+		% [seen.shared, seen.pieces])
+	_expect(get_multiplayer(NodePath(String(cells.get_path()) + "/WarmPieces")) == tree_api,
+		"...and the tree's API is back for that path afterwards")
 	var anchors: Array[Vector3] = [Vector3(CENTRO.x * CELL_SIZE + 128.0, 0.0, CENTRO.y * CELL_SIZE + 128.0)]
 	cells.anchors = anchors
 	var now: float = 0.0

@@ -10,6 +10,8 @@ extends SceneTree
 ## - A pass that answers `false` is not done: it is called again the next step, before any other cell; anything
 ##   else (true, nothing) means done.
 ## - A cell unloaded halfway through its pass is dropped: its pass is never called again.
+## - The impostor of a cell that comes into reach stays while the cell waits for its pass (in the tree, hidden),
+##   and goes in the step the cell is drawn: the cell's place is never left empty.
 ## - Without a finish_for a cell is drawn as soon as it is instanced, as before.
 
 const CELL := Vector2i(0, 0)
@@ -29,6 +31,7 @@ func _run() -> void:
 	await _test_order()
 	await _test_resumable()
 	await _test_unload_midway()
+	await _test_impostor_holds()
 	await _test_without_pass()
 	if _failures == 0:
 		print("PASS: a streamed cell gets its second pass a step later, in slices, and is drawn only after it")
@@ -135,6 +138,34 @@ func _test_unload_midway() -> void:
 	streamer.step(5.0)
 	_expect(_calls.count(CELL) == calls, "...and its pass is never called again (%d calls)" % _calls.count(CELL))
 	_expect(not _finished.has(CELL), "...nor reported finished")
+	streamer.free()
+
+
+func _test_impostor_holds() -> void:
+	var streamer := _streamer()
+	streamer.grid.impostor_radius = 2
+	streamer.impostor_for = func(cell: Vector2i) -> Node3D:
+		var block := Node3D.new()
+		block.name = "imp_%d_%d" % [cell.x, cell.y]
+		return block
+	var next_door := Vector2i(1, 0)
+	_anchor_at(streamer, next_door)
+	streamer.step(1.0)
+	streamer.step(2.0)
+	_expect(streamer.get_node_or_null(^"imp_0_0") != null, "A cell near the anchor but out of reach has an impostor")
+	_rounds[CELL] = 2
+	_anchor_at(streamer, CELL)
+	streamer.step(3.0)
+	var node: Node3D = streamer.cell_node(CELL)
+	_expect(node != null and not node.visible, "In reach, the cell is instanced and waits for its pass, hidden")
+	_expect(streamer.get_node_or_null(^"imp_0_0") != null, "...and its impostor holds its place meanwhile")
+	streamer.step(4.0)
+	streamer.step(5.0)
+	_expect(not streamer.is_finished(CELL) and streamer.get_node_or_null(^"imp_0_0") != null,
+		"...through every step its pass answers false")
+	streamer.step(6.0)
+	_expect(streamer.is_finished(CELL) and node.visible, "The pass done, the cell is drawn")
+	_expect(streamer.get_node_or_null(^"imp_0_0") == null, "...and its impostor goes in that same step")
 	streamer.free()
 
 

@@ -113,6 +113,8 @@ func use_graph(graph: RoadGraph, world_seed: int = 0, spawn_events: bool = false
 ## frame a cell of the Campo enters the tree at the shed (R-09: 80-130 ms the first time, D-0303.1). Needs to
 ## be in the tree (a piece builds itself in _ready) and to have had use_graph(); otherwise it does nothing.
 ## CompanyRoot calls it right after use_graph(), which stays the planning alone. Returns how many pieces.
+## The pieces run under a MultiplayerAPI of their own with no peers: a piece that talks to the host in _ready (a
+## client's mud or rail crossing asking for the host's state) would otherwise send an RPC from a path no peer has.
 func warm_pieces() -> int:
 	var content: EdgeCellContent = _graph_content
 	if content == null or not is_inside_tree():
@@ -123,6 +125,8 @@ func warm_pieces() -> int:
 	holder.visible = false
 	add_child(holder)
 	holder.global_position = Vector3(0.0, WARM_DEPTH, 0.0)
+	var holder_path: NodePath = holder.get_path()
+	get_tree().set_multiplayer(MultiplayerAPI.create_default_interface(), holder_path)
 	var built: int = 0
 	for piece: Dictionary in content.one_piece_per_kind():
 		var segment: RouteSegment = EdgePieces.build_piece(piece)
@@ -132,6 +136,7 @@ func warm_pieces() -> int:
 	StreetBatcher.bake(holder)
 	remove_child(holder)
 	holder.free()
+	get_tree().set_multiplayer(null, holder_path)
 	warm_msec = (Time.get_ticks_usec() - start) / 1000.0
 	return built
 

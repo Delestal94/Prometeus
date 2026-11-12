@@ -70,7 +70,6 @@ func piece_count(cell: Vector2i) -> int:
 	return (_by_cell.get(cell, []) as Array).size()
 
 
-## The events (EdgeEvents) whose point lies in the cell, ordered by street and distance.
 ## One planned piece of every kind the map's streets use (EdgePieces.plan), the first of each in the graph's
 ## order: what CompanyCells.warm_pieces() builds once at load (D-2012.2).
 func one_piece_per_kind() -> Array[Dictionary]:
@@ -84,6 +83,7 @@ func one_piece_per_kind() -> Array[Dictionary]:
 	return out
 
 
+## The events (EdgeEvents) whose point lies in the cell, ordered by street and distance.
 func events_in(cell: Vector2i) -> Array[Dictionary]:
 	var found: Array[Dictionary] = []
 	found.assign(_events_by_cell.get(cell, []))
