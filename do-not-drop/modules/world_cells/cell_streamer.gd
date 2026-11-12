@@ -307,10 +307,13 @@ func _sync_impostors() -> void:
 			_remove_impostor(cell)
 
 
-## A cell the grid has loaded and wants drawn whose second pass is not done yet (still on its way, or in the tree
-## and hidden): its impostor holds its place until it is drawn. Without a `finish_for` a cell never waits.
+## A cell the grid has loaded and wants drawn whose second pass is not done yet (still on its way,
+## or in the tree and hidden): its impostor holds its place until it is drawn. Without a
+## `finish_for` a cell never waits.
 func _waits_to_draw(cell: Vector2i) -> bool:
-	return finish_for.is_valid() and grid.is_loaded(cell) and not grid.is_parked(cell) 		and (not _nodes.has(cell) or _unfinished.has(cell))
+	if not finish_for.is_valid() or not grid.is_loaded(cell) or grid.is_parked(cell):
+		return false
+	return not _nodes.has(cell) or _unfinished.has(cell)
 
 
 func _add_impostor(cell: Vector2i) -> void:
