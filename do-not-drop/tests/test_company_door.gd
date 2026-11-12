@@ -204,6 +204,7 @@ func _deliver(level: CompanyRoot, at: DeliveryHouse, box: DeliveryPackage, order
 	var heard := func(id: StringName, result: Dictionary) -> void: results.append([id, result])
 	door.settled.connect(heard)
 	at.doorbell.interact(player)
+	var spent: int = net.seq - seq
 	net.event_applied.disconnect(note)
 	door.settled.disconnect(heard)
 	await process_frame
@@ -224,7 +225,7 @@ func _deliver(level: CompanyRoot, at: DeliveryHouse, box: DeliveryPackage, order
 		expected.append(CompanyNet.WALLET)
 	if int(result.get("tip", 0)) > 0:
 		expected.append(CompanyNet.WALLET)
-	_expect(kinds == expected and net.seq == seq + expected.size(),
+	_expect(kinds == expected and spent == expected.size(),
 		"%s: order_delivered, then the wallet's movements (got %s)" % [order_id, kinds])
 	var reasons: Array = (net.company.get(&"ledger") as Array).slice(ledger_size).map(
 		func(entry: Dictionary) -> String: return str(entry.get("reason")))
