@@ -11,8 +11,8 @@ extends SceneTree
 ##   what failed (D-2016.4: a bot that always said OK would hide the shortcuts it still takes);
 ## - stub_lines prints BOT_STUB <stage> <id> [<tasks>] for each shortcut; summary_lines carries profit, boxes,
 ##   engine_errors, return_bundle_units and idle_max_s_<peer> per player, with the BOT_COMPANY prefix;
-## - the crew's idle watch: a player with nothing in the hands for longer than the limit is reported, one with units
-##   in the hands is busy;
+## - the crew's idle watch: a player with nothing in the hands for longer than the limit is reported, and on the
+##   played world one with units in the hands is busy (no stretch while they are there, it starts once they go);
 ## - integration: open_world/wait_opening open the company world and the day reaches OPENING; the world's own
 ##   station lookup (CompanyShed.station_for, set by CompanyRoot) is the one CompanyNet uses and resolves a packing
 ##   table (table:<uid>: D-0715's box_* requests reach a station in the company world);
@@ -44,6 +44,9 @@ const DRIVE_CAP_M: float = 20.0
 const STUBS_LEFT: Array[StringName] = [&"pallet_unload", &"table_use", &"order_claim", &"door_settle"]
 ## Wall-clock bound of the nine stages here (six boxes packed and carried, the van out 20 m and back).
 const STAGES_SECONDS: float = 90.0
+## _check_busy: a peer no player of the run uses, and a product id only it holds (so no reservation is touched).
+const BUSY_PEER: int = 99
+const BUSY_PRODUCT: StringName = &"bot_idle_probe"
 
 var _failures: int = 0
 
@@ -162,10 +165,34 @@ func _check_world(bot: GDScript) -> void:
 	_check_stations(level as CompanyRoot)
 	await _check_out_of_order(bot, level)
 	await _check_stages(bot, level)
+	_check_busy(level as CompanyRoot)
 	bot.call(&"close_world", self, level)
 	await process_frame
 	_expect(not is_instance_valid(level), "The world is freed on close")
 	_expect(current_scene == null or current_scene != level, "No stale current scene")
+
+
+## The idle watch on the world: units in a player's hands keep it busy (no stretch while they are there), and the
+## stretch starts once they are gone. A peer no player uses (BUSY_PEER) so the day's own hands stay as they were.
+func _check_busy(level: CompanyRoot) -> void:
+	if level == null:
+		return
+	var watch := CREW.IdleWatch.new()
+	watch.level = level
+	var hands: StringName = CompanyNet.hands_location(BUSY_PEER)
+	var stock: Inventory = level.net.inventory
+	_expect(stock.contents_at(hands).is_empty(), "Nobody holds anything in hands:%d" % BUSY_PEER)
+	watch.restart([{"peer": BUSY_PEER, "player": level.player}], 0)
+	stock.receive(BUSY_PRODUCT, 2, hands)
+	_expect(watch.is_busy({"peer": BUSY_PEER, "player": level.player}), "Units in the hands make a player busy")
+	watch.sample(200000)
+	_expect(is_zero_approx(float(watch.report().get(BUSY_PEER, -1.0))),
+		"No idle stretch while units are in the hands (got %s)" % [watch.report()])
+	stock.discard(BUSY_PRODUCT, 2, hands)
+	watch.sample(260000)
+	_expect(is_equal_approx(float(watch.report().get(BUSY_PEER, -1.0)), 60.0),
+		"Once the hands are empty the stretch counts from the last busy look (got %s)" % [watch.report()])
+	watch.free()
 
 
 ## CompanyNet asks the world's own lookup (the bot never replaces it), and that lookup knows a packing table.

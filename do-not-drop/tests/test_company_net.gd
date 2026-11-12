@@ -14,7 +14,8 @@ extends SceneTree
 ##   over a pallet, a float qty, no station: bad_data), an unknown station (no_station), a
 ##   far one (out_of_reach), another product in hand (hands_busy), the hand's limit
 ##   (hands_full), storing what isn't in hand (not_enough), in another product's slot
-##   (wrong_product) or in a full one (no_room);
+##   (wrong_product) or in a full one (no_room); a packing table (table:<uid>, a station of the
+##   box_* requests only) is no station for units_take or units_store (no_station, D-2016.4);
 ## - a request without an int rid, of an unknown kind or with nested data is dropped in
 ##   silence, and a `peer` field doesn't change who acts: the sender does;
 ## - the host's own request takes the same path and hears its own refusal locally, also when
@@ -173,6 +174,7 @@ static func _stations() -> Dictionary:
 		&"dock": {"location": &"dock", "spot": Vector3(-1.0, 0.0, 0.0)},
 		&"bin": {"location": &"cart:c1", "spot": Vector3(-1.0, 0.0, 1.0)},
 		&"far": {"location": &"pallet:p9", "spot": Vector3(80.0, 0.0, 0.0)},
+		&"table:t1": {"location": &"table:t1", "spot": Vector3(0.5, 0.0, 1.5)},
 	}
 
 
@@ -331,6 +333,10 @@ func _check_refusals() -> void:
 			CompanyNet.REASON_WRONG_PRODUCT, "storing hens in the puppy slot"],
 		[&"units_store", {"station": &"slot_hen", "product": &"hen", "qty": 2},
 			CompanyNet.REASON_NO_ROOM, "storing 2 in a slot of 4 that holds 3"],
+		[&"units_store", {"station": &"table:t1", "product": &"hen", "qty": 2},
+			CompanyNet.REASON_NO_STATION, "storing at a packing table (its box takes units: box_place)"],
+		[&"units_take", {"station": &"table:t1", "product": &"hen", "qty": 1},
+			CompanyNet.REASON_NO_STATION, "taking from a packing table"],
 	]
 	stock = _host_net.inventory.to_dict()
 	seq = _host_net.seq

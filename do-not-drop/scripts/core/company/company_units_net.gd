@@ -130,7 +130,7 @@ func feet_of(net: CompanyNet, peer: int) -> Variant:
 ## may put a reserved unit in which box is checked at box_place, D-0807 / D-0703).
 func _check_take(net: CompanyNet, peer: int, data: Dictionary) -> Dictionary:
 	var ask: Dictionary = CompanyAsk.at_station(data)
-	var gate: Dictionary = reach(net, peer, ask)
+	var gate: Dictionary = _units_gate(net, peer, ask)
 	if gate["reason"] != &"":
 		return gate
 	return CompanyAsk.take(net.inventory, ask, gate["station"], CompanyNet.hands_location(peer))
@@ -141,10 +141,23 @@ func _check_take(net: CompanyNet, peer: int, data: Dictionary) -> Dictionary:
 ## (no_station): letting go on the floor is units_drop, a bundle of its own.
 func _check_store(net: CompanyNet, peer: int, data: Dictionary) -> Dictionary:
 	var ask: Dictionary = CompanyAsk.at_station(data)
-	var gate: Dictionary = reach(net, peer, ask)
+	var gate: Dictionary = _units_gate(net, peer, ask)
 	if gate["reason"] != &"":
 		return gate
 	return CompanyAsk.store(net.inventory, ask, gate["station"], CompanyNet.hands_location(peer))
+
+
+## reach() for units_take / units_store: a packing table (table:<uid>) is a station of the box_* requests only
+## (CompanyTableNet: units go into its box with box_place, out with box_take_out), never one units lie at, so
+## it is no_station here. Without this a table, having no `accepts` and no `capacity`, would take any units into
+## a location nothing draws, saves back or returns (D-2016.4 review).
+func _units_gate(net: CompanyNet, peer: int, ask: Dictionary) -> Dictionary:
+	var gate: Dictionary = reach(net, peer, ask)
+	if gate["reason"] != &"":
+		return gate
+	if CompanyTableNet.table_of((gate["station"] as Dictionary).get("location")) != &"":
+		return {"reason": CompanyNet.REASON_NO_STATION}
+	return gate
 
 
 ## Host, section 2 row 7 (D-2006): units from the sender's hands into a new floor bundle at

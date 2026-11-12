@@ -18,7 +18,10 @@ funciona" sin que el juego pudiera hacer ese día: un `BOT_OK` falso escondía j
 - **Las mesas son estaciones del mundo:** `CompanyShed.station_for` no resolvía `table:<uid>`, así que las peticiones
   `box_*` de D-0715 no podían llegar a ninguna mesa del mundo de empresa (`no_station`). Se agregó: el punto es el hueco de
   la caja, `TABLE_BOX_LIFT` (0,45 m) sobre la tapa, para que el paquete en que se convierte la caja cerrada no nazca dentro
-  de la mesa. Es un arreglo del juego, chico y cubierto por `test_company_bot_day`.
+  de la mesa. Es un arreglo del juego, chico y cubierto por `test_company_bot_day`. La mesa es estación solo de las
+  peticiones `box_*`: `units_take` y `units_store` en `table:<uid>` se rechazan con `no_station`
+  (`CompanyUnitsNet._units_gate`, cubierto en `test_company_net`). Sin eso, una mesa (sin `accepts` ni `capacity`)
+  aceptaba cualquier cantidad de unidades en un lugar que nada dibuja ni devuelve: lo encontró la revisión del PR.
 - **El segundo jugador es un actor local, no un peer ENet:** un `Player` más del equipo en el mundo del host
   (`Player_2`, autoridad 2). Sus pedidos entran por `CompanyNet._take_request` (el chequeo del host de un pedido de otro
   peer: alcance desde su nodo, sus manos, los mismos eventos) y se mueve escribiendo la pose que replicaría
