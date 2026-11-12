@@ -210,6 +210,13 @@ func trip_of(vehicle_id: StringName) -> Trip:
 	return _active.get(vehicle_id)
 
 
+## The trips out now, in the order they left (the customer's door looks for the order a box settles, D-0340).
+func active_trips() -> Array[Trip]:
+	var out: Array[Trip] = []
+	out.assign(_active.values())
+	return out
+
+
 ## Vehicles out: those with a trip out and those that left while refused for the cap (what DayCycle waits for).
 ## One that left after the day closed (DAY_CLOSED) is not counted while the day is closed: no customer waits for it.
 func trips_out() -> int:

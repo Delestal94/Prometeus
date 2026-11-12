@@ -724,7 +724,7 @@ func _apply_state(kind: StringName, data: Dictionary) -> bool:
 	elif CompanyPallets.EVENT_KINDS.has(kind):
 		applied = pallets.apply(inventory, kind, data)
 	elif CompanyOrdersNet.EVENT_KINDS.has(kind):
-		applied = orders.apply(kind, data)
+		applied = orders.apply(kind, data, inventory, company)
 	elif CompanySupplierNet.EVENT_KINDS.has(kind):
 		applied = supplier.apply(data)
 	elif CompanyWalletNet.EVENT_KINDS.has(kind):

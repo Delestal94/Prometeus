@@ -152,6 +152,13 @@ var visual_variant: int = 0
 var assigned_package_id: StringName = &""
 var assigned_label: String = ""
 signal wrong_package_offered(expected_label: String)
+## The company world's door (D-0340), set by CompanyDoor on the host; unset, this is the delivery run's door exactly
+## as before. Callable(house: DeliveryHouse, box: DeliveryPackage, outcome: StringName) -> bool, asked with the box
+## rung with and the outcome its state gives (outcome_for()): true when it settled an order with that box (the box is
+## handed over and consumed, `resolved` fires), false when this house takes no such box now (handed back,
+## wrong_package_offered with assigned_label). With it the house never latches (`delivered` stays false): an
+## empty-handed ring only rings, and the house takes another order the same day or the next.
+var door_check: Callable = Callable()
 var doorbell: DoorbellPoint
 ## Porch light, mailbox and order sign: tells the crew from the road that this
 ## house is still waiting, and for which box (N-501).
@@ -211,6 +218,9 @@ func close_lost() -> void:
 
 
 func _on_doorbell_rung(carried_package: Node) -> void:
+	if door_check.is_valid():
+		_ring_checked(carried_package as DeliveryPackage)
+		return
 	if delivered:
 		return
 	_bell_player.play()
@@ -219,27 +229,59 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		_resolve(OUTCOME_MISSED, null)
 		return
 	if assigned_package_id != &"" and box.package_id != assigned_package_id:
-		# Not theirs: the resident shakes their head and the box stays with
-		# whoever brought it -- the delivery isn't spent on a mix-up.
-		_reaction_player.stream = SynthAudio.creature_groan()
-		_reaction_player.volume_db = WorldMix.RESIDENT_GROAN_DB + WorldMix.RESIDENT_WRONG_BOX_OFFSET_DB
-		_reaction_player.play()
-		wrong_package_offered.emit(assigned_label)
+		_hand_back()
 		return
 	# The box's latest rescue record, so what the door inspects is current.
 	if box.is_inside_tree() and box.is_multiplayer_authority():
 		box._publish_care()
+	# Whatever's inside may be perfect, but a box handed over open has obviously been gone through: it counts as
+	# delivered with reservations, same as a dented one (outcome_for()).
+	if _sound(box):
+		handed_over_open = box.is_open
+	_resolve(outcome_for(box), box)
+
+
+## Neither ruined nor dented: only being open can make it less than fine.
+static func _sound(box: DeliveryPackage) -> bool:
+	return box.trap_state != ITrapBehavior.TrapState.RUINED and box.trap_state != ITrapBehavior.TrapState.AT_RISK
+
+
+## What a box handed over here comes to by its state: ruined, dented (or handed over open) or fine.
+static func outcome_for(box: DeliveryPackage) -> StringName:
 	match box.trap_state:
 		ITrapBehavior.TrapState.RUINED:
-			_resolve(OUTCOME_RUINED, box)
+			return OUTCOME_RUINED
 		ITrapBehavior.TrapState.AT_RISK:
-			_resolve(OUTCOME_AT_RISK, box)
-		_:
-			# Whatever's inside may be perfect, but a box handed over open
-			# has obviously been gone through: it counts as delivered with
-			# reservations, same as a dented one.
-			handed_over_open = box.is_open
-			_resolve(OUTCOME_AT_RISK if box.is_open else OUTCOME_OK, box)
+			return OUTCOME_AT_RISK
+	return OUTCOME_AT_RISK if box.is_open else OUTCOME_OK
+
+
+## The company world's door (door_check): the bell, and with a box the door's say. Nothing latches.
+func _ring_checked(box: DeliveryPackage) -> void:
+	_bell_player.play()
+	if box == null:
+		return
+	if box.is_inside_tree() and box.is_multiplayer_authority():
+		box._publish_care()
+	var result: StringName = outcome_for(box)
+	if not bool(door_check.call(self, box, result)):
+		_hand_back()
+		return
+	outcome = result
+	handed_over_open = _sound(box) and box.is_open
+	delivered_package_id = box.package_id
+	box.consume(_resident.global_position)
+	_play_reaction_sound(result)
+	resolved.emit(result, delivered_package_id)
+
+
+## Not theirs: the resident shakes their head and the box stays with whoever brought it -- the delivery isn't spent on
+## a mix-up.
+func _hand_back() -> void:
+	_reaction_player.stream = SynthAudio.creature_groan()
+	_reaction_player.volume_db = WorldMix.RESIDENT_GROAN_DB + WorldMix.RESIDENT_WRONG_BOX_OFFSET_DB
+	_reaction_player.play()
+	wrong_package_offered.emit(assigned_label)
 
 
 func _resolve(result: StringName, package: DeliveryPackage) -> void:
@@ -254,14 +296,17 @@ func _resolve(result: StringName, package: DeliveryPackage) -> void:
 		# (level_base.gd -> RunManager) still sees a valid package. consume()
 		# also empties the carrier's hands, which a bare free never did.
 		package.consume(_resident.global_position)
-	# The resident's reaction follows what they were actually handed: a groan
-	# for a wreck, the same groan quieter for something dented, a cheer for
-	# a box that made it.
-	_reaction_player.stream = SynthAudio.creature_groan() if result in [OUTCOME_RUINED, OUTCOME_AT_RISK] else SynthAudio.neighbor_cheer()
+	_play_reaction_sound(result)
+	resolved.emit(result, delivered_package_id)
+
+
+## The resident's reaction follows what they were actually handed: a groan for a wreck, the same groan quieter for
+## something dented, a cheer for a box that made it.
+func _play_reaction_sound(result: StringName) -> void:
 	var groan: bool = result in [OUTCOME_RUINED, OUTCOME_AT_RISK]
+	_reaction_player.stream = SynthAudio.creature_groan() if groan else SynthAudio.neighbor_cheer()
 	_reaction_player.volume_db = (WorldMix.RESIDENT_GROAN_DB if groan else WorldMix.RESIDENT_CHEER_DB) + (WorldMix.RESIDENT_AT_RISK_OFFSET_DB if result == OUTCOME_AT_RISK else 0.0)
 	_reaction_player.play()
-	resolved.emit(result, delivered_package_id)
 
 
 func _build_house() -> void:

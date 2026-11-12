@@ -26,20 +26,38 @@ extends RefCounted
 ##                  (close_day()). failed pays 0 and costs OrderPenalties.abandoned() reputation, cancelled
 ##                  costs nothing. The reputation is the host's alone: it writes CompanyState when it publishes,
 ##                  a mirror only moves its book (a mirror's reputation comes with the next snapshot).
+##   order_delivered {order: id, package_id: the box's, paid, tip: ints the customer paid, stars: the rating, quality:
+##                  0..100, intact: bool, penalties: OrderPenalties kinds, reputation: the host's after it} (D-0815.b,
+##                  row 20): the customer's door settled the order (CompanyDoor, D-0340). Every peer closes it with
+##                  OrderBook.mark_delivered() with the host's pay and stars, and the units of the box leave its
+##                  Inventory location (package:<package_id>). The money does not ride here: the host moves it
+##                  right after as wallet_moved (order_paid, then tip). Reputation travels absolute, as the wallet
+##                  does: every peer takes the host's, so a delivery also puts right what an order_closed left off.
 ## In the company world (D-0813.1) the host's CompanyRoot plans each new day at its OPENING and polls on
 ## its business tick while the day is open and, with no new orders, while it closes (CompanyDayOrders; D-0851:
 ## the expiries and the customers giving up go on, and DayCycle closes what is left with close_day()), and
 ## every peer's tells EventBus.order_added
 ## from CompanyNet.event_applied. Each new day's opening drops the closed orders on every peer, inside
 ## its day_phase event (prune_closed(), from DayCycle.apply_phase()). CompanyTrips and OrderBoxLink keep
-## a book of their own until packing, dispatch and delivery are events (rows 15, 17, 19 and 20).
+## a book of their own until packing and dispatch are events (rows 15, 17 and 19); the delivery is one
+## (order_delivered, row 20, D-0815.b).
 
 const ADDED: StringName = &"order_added"
 const EXPIRED: StringName = &"order_expired"
 const CLOSED: StringName = &"order_closed"
-const EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED, CLOSED]
-## All three are the host's own rules (the day's plan, the clock, the day's close): CompanyNet.publish() takes them.
-const HOST_EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED, CLOSED]
+const DELIVERED: StringName = &"order_delivered"
+const EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED, CLOSED, DELIVERED]
+## All four are the host's own rules (the day's plan, the clock, the day's close, the door): CompanyNet.publish() takes
+## them.
+const HOST_EVENT_KINDS: Array[StringName] = [ADDED, EXPIRED, CLOSED, DELIVERED]
+## Keys of an order_delivered, exactly.
+const DELIVERED_KEYS: Array[String] = [
+	"order", "package_id", "paid", "tip", "stars", "quality", "intact", "penalties", "reputation",
+]
+## The penalty kinds an order_delivered may name (OrderPenalties.assess()), each once.
+const PENALTY_KINDS: Array[StringName] = [
+	OrderPenalties.KIND_WRONG, OrderPenalties.KIND_BROKEN, OrderPenalties.KIND_LATE, OrderPenalties.KIND_MISLABELED,
+]
 const REQUEST_KINDS: Array[StringName] = []
 const CRITICAL_KINDS: Array[StringName] = []
 ## The states an order_closed may carry, as they travel.
@@ -174,8 +192,9 @@ func poll(net: CompanyNet, now_min: int, arrivals: bool = true) -> int:
 ## Every peer, the host too (CompanyNet._apply_state()): an order event in the book, checked only as data
 ## (rule 6). order_added carries exactly one whole open order (order_ok()) whose id the book doesn't have,
 ## with room for it (MAX_ORDERS); order_expired exactly an id of the book and the host's minute, at which
-## that order is due (OrderBook.expire_one()). False, changing nothing, when it doesn't fit.
-func apply(kind: StringName, data: Dictionary) -> bool:
+## that order is due (OrderBook.expire_one()); order_delivered (_apply_delivered()) also takes the box's units out of
+## `stock` and the host's reputation into `company`. False, changing nothing, when it doesn't fit.
+func apply(kind: StringName, data: Dictionary, stock: Inventory = null, company: Object = null) -> bool:
 	match kind:
 		ADDED:
 			var order: Variant = data.get("order")
@@ -190,7 +209,69 @@ func apply(kind: StringName, data: Dictionary) -> bool:
 			return book.expire_one(StringName(id), int(minute))
 		CLOSED:
 			return _apply_closed(data)
+		DELIVERED:
+			return _apply_delivered(data, stock, company)
 	return false
+
+
+## An order_delivered (delivered_ok()): the order closes as the host's door closed it, with its pay, quality and stars
+## (OrderBook.mark_delivered(), which only lets an order out on the road or late be delivered); then the units of its
+## box leave `stock` (consume(), or discard() when what other orders promised would not let them go: they are the
+## customer's now) and `company` takes the host's reputation. Every check comes before the first change.
+func _apply_delivered(data: Dictionary, stock: Inventory, company: Object) -> bool:
+	if not delivered_ok(data):
+		return false
+	var id := StringName(data["order"])
+	if book.mark_delivered(id, int(data["quality"]), bool(data["intact"]), -1, int(data["paid"]),
+			int(data["stars"])) < 0:
+		return false
+	if stock != null:
+		var location: StringName = CompanyTableNet.package_location(StringName(data["package_id"]))
+		var held: Dictionary = stock.contents_at(location)
+		for product: StringName in held:
+			if not stock.consume(product, int(held[product]), location, id):
+				stock.discard(product, int(held[product]), location)
+	if company != null and is_instance_valid(company):
+		company.set(&"reputation", float(data["reputation"]))
+	return true
+
+
+## An order_delivered as data (rule 5): exactly DELIVERED_KEYS; order and package_id short text; paid and tip ints in
+## 0..MAX_PAY; stars an int STARS_MIN..STARS_MAX; quality an int 0..100; intact a bool; penalties a list of
+## PENALTY_KINDS, each once; reputation a number in REPUTATION_MIN..REPUTATION_MAX.
+static func delivered_ok(data: Dictionary) -> bool:
+	if data.size() != DELIVERED_KEYS.size():
+		return false
+	for key: String in DELIVERED_KEYS:
+		if not data.has(key):
+			return false
+	if not (_text_ok(data["order"]) and _text_ok(data["package_id"])):
+		return false
+	for key: String in ["paid", "tip"]:
+		if typeof(data[key]) != TYPE_INT or int(data[key]) < 0 or int(data[key]) > MAX_PAY:
+			return false
+	var quality: Variant = data["quality"]
+	if typeof(quality) != TYPE_INT or int(quality) < 0 or int(quality) > 100 or typeof(data["intact"]) != TYPE_BOOL:
+		return false
+	if not _stars_ok(data["stars"], Order.STATE_DELIVERED) or not _penalties_ok(data["penalties"]):
+		return false
+	var reputation: Variant = data["reputation"]
+	if typeof(reputation) != TYPE_FLOAT and typeof(reputation) != TYPE_INT:
+		return false
+	return is_finite(float(reputation)) and float(reputation) >= CompanyTuning.REPUTATION_MIN \
+		and float(reputation) <= CompanyTuning.REPUTATION_MAX
+
+
+## A list of PENALTY_KINDS (text), each once.
+static func _penalties_ok(value: Variant) -> bool:
+	if not value is Array or (value as Array).size() > PENALTY_KINDS.size():
+		return false
+	var seen: Dictionary = {}
+	for kind: Variant in value:
+		if not _text_ok(kind) or not PENALTY_KINDS.has(StringName(kind)) or seen.has(StringName(kind)):
+			return false
+		seen[StringName(kind)] = true
+	return true
 
 
 ## An order_closed: exactly {order: id of the book, state: failed or cancelled}, and a move the book allows.
