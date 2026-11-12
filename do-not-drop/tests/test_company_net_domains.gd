@@ -13,6 +13,9 @@ extends SceneTree
 ##   CompanyNet's lists are exactly their union with its own (snapshot_request, clock_anchor, day_phase);
 ## - CompanyNet routes by domain: _handle_request() and _apply_state() have one branch per domain list (or per own
 ##   kind) and no catch-all `else:` (read from the source), and every domain with a list has its branch;
+## - a branch that doesn't hand `kind` on to its domain (carts.on_request(self, peer, data), wallet.apply(...)) can
+##   only route one kind: that domain's list in that direction holds at most one, or a second kind would pass the
+##   summed whitelist into code written for the first (network audit of #861);
 ## - units_moved is never a host event (units move because someone asked, or left);
 ## - the old names still answer: CompanyRoot's crew constants and statics (CREW_GROUP, SPAWN, crew_spawn(),
 ##   free_spawn()) are CompanyCrew's, and CompanyNet.within_reach() / UNITS_DROP are CompanyUnitsNet's;
@@ -75,6 +78,8 @@ func _run() -> void:
 	_check_domains()
 	_check_routing(source, "_handle_request", "REQUEST_KINDS", ["SNAPSHOT_REQUEST"])
 	_check_routing(source, "_apply_state", "EVENT_KINDS", ["CLOCK_ANCHOR", "DAY_PHASE"])
+	_check_blind_branches(source, "_handle_request", "REQUEST_KINDS")
+	_check_blind_branches(source, "_apply_state", "EVENT_KINDS")
 	_check_old_names()
 	_check_sizes()
 	if _failures == 0:
@@ -184,6 +189,44 @@ func _check_routing(source: String, func_name: String, list: String, own: Array)
 	_expect(missing.is_empty() and extra.is_empty() and not catch_all,
 		"%s() has one branch per domain's %s and per own kind, no catch-all (missing %s, extra %s, catch-all %s)"
 		% [func_name, list, missing, extra, catch_all])
+
+
+## Each domain branch of `func_name` (`if/elif <Domain>.<list>.has(kind):`) either hands `kind` to its domain (an
+## argument `kind` somewhere in the branch's body) or routes a domain whose `list` has a single kind.
+func _check_blind_branches(source: String, func_name: String, list: String) -> void:
+	var start: int = source.find("\nfunc %s(" % func_name)
+	var end: int = source.find("\nfunc ", start + 1)
+	if start < 0 or end <= start:
+		return
+	var passes_kind := RegEx.create_from_string("[(,]\\s*kind\\s*[,)]")
+	var lines: PackedStringArray = source.substr(start, end - start).split("\n")
+	var seen: Array[String] = []
+	var crowded: Array[String] = []
+	for index: int in range(lines.size()):
+		var test: String = lines[index].strip_edges()
+		var top: bool = lines[index].begins_with("\t") and not lines[index].begins_with("\t\t")
+		var branch: bool = test.begins_with("if ") or test.begins_with("elif ")
+		if not (top and branch and test.ends_with(".%s.has(kind):" % list)):
+			continue
+		var domain: String = test.trim_prefix("el").trim_prefix("if ").get_slice(".", 0)
+		if not DOMAINS.has(domain):
+			continue
+		seen.append(domain)
+		var hands_kind: bool = false
+		for body: int in range(index + 1, lines.size()):
+			if not lines[body].begins_with("\t\t"):
+				break
+			hands_kind = hands_kind or passes_kind.search(lines[body]) != null
+		var kinds: Array[String] = _strings(_consts_of(domain).get(list, []))
+		if not hands_kind and kinds.size() > 1:
+			crowded.append("%s %s" % [domain, kinds])
+	var expected: int = DOMAINS.filter(func(domain: String) -> bool:
+		return not _strings(_consts_of(domain).get(list, [])).is_empty()).size()
+	_expect(seen.size() == expected,
+		"%s(): every domain with %s has a branch read here (read %s, expected %d)" % [func_name, list, seen, expected])
+	_expect(crowded.is_empty(),
+		"%s(): a branch that doesn't pass `kind` routes one kind only; pass `kind` or split the domain (got %s)"
+		% [func_name, crowded])
 
 
 func _check_old_names() -> void:
