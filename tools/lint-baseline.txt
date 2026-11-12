@@ -20,7 +20,7 @@ do-not-drop/scripts/gameplay/package/package.gd|max-public-methods 1
 do-not-drop/scripts/gameplay/player/player_carry.gd|max-line-length 1
 do-not-drop/scripts/gameplay/player/player_seat_pose.gd|max-line-length 6
 do-not-drop/scripts/gameplay/route/chasing_dog.gd|max-line-length 3
-do-not-drop/scripts/gameplay/route/delivery_house.gd|max-line-length 3
+do-not-drop/scripts/gameplay/route/delivery_house.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
 do-not-drop/scripts/gameplay/route/route.gd|max-line-length 4

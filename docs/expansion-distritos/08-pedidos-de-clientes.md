@@ -21,9 +21,9 @@
 | ✅ D-0812 | Tamaño de pedidos acorde a los primeros días (1-2 productos) | pulidor-jugabilidad | low | sim |
 | ✅ D-0813 | Pedidos replicados en red | auditor-red | high | test de red |
 | ✅ D-0814 | Notificación de pedido nuevo en el celular del jugador | constructor-ui | medium | test |
-| D-0815 | ◐ (la lógica y su test están; falta D-0815.b: nadie llama a `OrderSettlement.settle` en el juego, ninguna entrega cobra; se construye con D-0340) Pedido completado → cobro y reputación | constructor-progresion | medium | test |
-| D-0816 | ◐ (la lógica y D-0816.b están; en el juego ninguna entrega se califica hasta D-0815.b, que lleva las estrellas en `order_delivered`) Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
-| D-0817 | ◐ (la lógica y su test están; falta D-0817.b: que la puerta la llame y muestre la línea y el gesto, después de D-0815.b) Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
+| D-0815 | ◐ (D-0815.b construida con D-0340, PR #@@PR@@: la puerta cobra y publica `order_delivered`; falta `auditor-red`) Pedido completado → cobro y reputación | constructor-progresion | medium | test |
+| D-0816 | ✅ (la puerta califica y las estrellas viajan en `order_delivered`, PR #@@PR@@) Calificación del cliente (1-5 estrellas) en la puerta | constructor-progresion | medium | test |
+| D-0817 | ✅ (D-0817.b: el cliente reacciona en su puerta en cada peer, PR #@@PR@@) Reacción del cliente en la puerta según calificación (reusa `client_complaints.gd`) | constructor-mundo | medium | 3 reacciones |
 | ~~D-0818~~ | ~~Firma del cliente en el celular/remito~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-jugador | low | gesto |
 | ~~D-0819~~ | ~~Cliente ausente: dejar en buzón, vecino o volver~~ **Pospuesta a post-lanzamiento (D-0112, [crítica](diseno/critica-alcance.md))** | constructor-progresion | medium | test de las 3 opciones |
 | ✅ D-0820 | Datos de 40 pedidos plantilla por distrito | constructor-progresion | medium | `.tres` validados |

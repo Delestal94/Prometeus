@@ -12,8 +12,9 @@ extends SceneTree
 ##   DELIVERED with the host's stars in the shared book and in the trips' book, recorded on the Trip, the box consumed
 ##   and its units gone from package:<box>, the events order_delivered then wallet_moved (order_paid, then tip), the
 ##   money moved by exactly what was paid, EventBus.order_delivered heard; one house takes two orders in a row; a box
-##   missing a product pays less than the order (penalty `wrong`) and the customer reacts angry; the van comes back
-##   with nothing failed and no reputation lost;
+##   missing a product pays less than the order (penalty `wrong`), costs reputation and the customer reacts angry
+##   (5, 3 and 1 stars cheer, shrug and fume with a translated line); the van comes back with nothing failed and no
+##   order charged the -3 of a failed one;
 ## - order_delivered's shape: the host publishes none for an unknown order, one already delivered, stars 0, an unknown
 ##   or repeated penalty, a missing or extra key, a float pay, a reputation out of range (no seq);
 ## - a host and a client as ENet peers, each with its CompanyNet, trips view, door and a house of Centro: a box rung
@@ -166,12 +167,16 @@ func _play_world(level: CompanyRoot, door: CompanyDoor) -> void:
 		"...a clean delivery: the customer cheers or shrugs (got %s)" % _reaction(house_a))
 	_take(packages[&"d_two"], player)
 	var money: int = int(net.company.get(&"money"))
+	var rep_before: float = float(net.company.get(&"reputation"))
 	var settled: Dictionary = await _deliver(level, house_a, packages[&"d_two"], &"d_two", trip)
 	_expect(int(settled.get("paid", -1)) < int(two["pay"]) and (settled.get("kinds", []) as Array).has(
 		OrderPenalties.KIND_WRONG) and int(net.company.get(&"money")) == money + int(settled.get("paid", 0)),
 		"The box missing a product pays less than the order (%s of %d, %s)"
 		% [settled.get("paid"), two["pay"], settled.get("kinds")])
 	_expect(_reaction(house_a) == &"grab_head", "...and the customer reacts angry (got %s)" % _reaction(house_a))
+	_expect(float(net.company.get(&"reputation")) < rep_before,
+		"...and it costs reputation (%.1f to %.1f)" % [rep_before, float(net.company.get(&"reputation"))])
+	_check_reactions(house_a.house_index)
 
 	trips.gate.returned.emit(van)
 	_expect(trips.trip_of(van) == null and trip.failed_ids.is_empty()
@@ -234,6 +239,18 @@ func _deliver(level: CompanyRoot, at: DeliveryHouse, box: DeliveryPackage, order
 		% [order_id, money, net.company.get(&"money"), reasons])
 	_expect(_delivered_heard.has(order_id), "%s: EventBus.order_delivered was heard" % order_id)
 	return result
+
+
+## The three reactions (D-0817.b): 5 stars cheer, 3 shrug, 1 angry, each with its scene and a line.
+func _check_reactions(house_index: int) -> void:
+	var scenes: Array = []
+	for stars: int in [5, 3, 1]:
+		var shown: Dictionary = CompanyDoor.reaction_of({"stars": stars, "penalties": []}, house_index, 7)
+		_expect(not String(shown["line"]).is_empty() and tr(shown["line"]) != String(shown["line"]),
+			"%d stars: the customer says a translated line (%s)" % [stars, shown["line"]])
+		scenes.append(shown["scene"])
+	_expect(scenes == [DeliveryHouse.OUTCOME_OK, DeliveryHouse.OUTCOME_AT_RISK, DeliveryHouse.OUTCOME_RUINED],
+		"...and plays cheer, shrug and angry at the door (got %s)" % [scenes])
 
 
 ## Malformed order_delivered: the host publishes none.
@@ -359,6 +376,8 @@ func _play_network() -> void:
 		and _client.house.reaction.last_line == _host.house.reaction.last_line,
 		"The customer reacts on the client too, with the host's line (got '%s')" % _client.house.reaction.last_line)
 	hands.free()
+	if is_instance_valid(package):
+		package.free()
 
 
 # --- Helpers ---
