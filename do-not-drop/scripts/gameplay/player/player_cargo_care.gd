@@ -109,18 +109,15 @@ func _tick(delta: float) -> void:
 	tapping = false
 	_update_practice(delta, run)
 	target = null
-	if not bool(run.get(&"is_running")) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED \
-			or String(player.seat_node_path).contains("DriverEyePoint"):
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED or String(player.seat_node_path).contains("DriverEyePoint"):
 		card.visible = false
 		return
-	var handling: bool = true
-	if is_instance_valid(player.carried_package):
-		target = player.carried_package
-	elif is_instance_valid(player.tended_package):
-		target = player.tended_package
-	else:
-		handling = false
-		target = player._lid_target()
+	var running: bool = bool(run.get(&"is_running"))
+	target = pick_target(running)
+	if not running and target == null:
+		card.visible = false
+		return
+	var handling: bool = target != null and (target == player.carried_package or target == player.tended_package)
 	card.visible = target != null
 	if target != _card_target:
 		_card_target = target
@@ -147,6 +144,25 @@ func _tick(delta: float) -> void:
 	if handling:
 		send_input(target, &"submit_care_input", input)
 	_refresh_card(run, care, kind, tool, int(supplies.get(tool, 0)), input, handling)
+
+
+## The box the card is for now: the one in the hands, else the one tended from a seat, else, only during a delivery
+## run (`running`), the one aimed at. None when nobody looks after it now (cared_for()).
+func pick_target(running: bool) -> DeliveryPackage:
+	var box: DeliveryPackage = null
+	if is_instance_valid(player.carried_package):
+		box = player.carried_package
+	elif is_instance_valid(player.tended_package):
+		box = player.tended_package
+	elif running:
+		box = player._lid_target()
+	return box if cared_for(running, box) else null
+
+
+## Whether the card and the care input live for `box` now: during a delivery run (`running`, whatever the box, as
+## always), or with no run for a box out on a company trip (PackageHandling.on_trip(), D-0710.d).
+static func cared_for(running: bool, box: DeliveryPackage) -> bool:
+	return running or (box != null and PackageHandling.on_trip(box))
 
 
 func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: int, input: Dictionary,

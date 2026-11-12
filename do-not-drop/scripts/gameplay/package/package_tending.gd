@@ -5,7 +5,7 @@ extends RefCounted
 ## on the DeliveryPackage, which keeps thin wrappers (and the RPCs: who may ask, and how often, is checked
 ## there before anything here runs).
 ##
-## By name on purpose (N-224.4, test_dynamic_dispatch_budget): RunManager's cargo and CrewProgression's
+## By name on purpose (N-224.4, test_dynamic_dispatch_budget): RunManager's cargo and is_running, and CrewProgression's
 ## color and award_milestone (see package_autoloads.gd: typing the autoloads makes a compile cycle).
 
 ## Seconds of continuous help it takes to earn one "assist" merit.
@@ -157,7 +157,8 @@ static func award_pending_trap_milestones(p: DeliveryPackage) -> void:
 
 
 static func award_milestone(p: DeliveryPackage, peer_id: int, milestone: StringName) -> bool:
-	if peer_id <= 0 or milestone.is_empty() or not p.is_inside_tree():
+	if peer_id <= 0 or milestone.is_empty() or not p.is_inside_tree() \
+			or (PackageHandling.on_trip(p) and not delivery_running(p)):
 		return false
 	var progression: Node = PackageAutoloads.crew(p)
 	if progression == null or not progression.has_method(&"award_milestone"):
@@ -167,3 +168,11 @@ static func award_milestone(p: DeliveryPackage, peer_id: int, milestone: StringN
 		return false
 	p._milestone_counts[milestone] = occurrence
 	return true
+
+
+## A classic delivery run is going (or there is no RunManager, as in a bare test). Unlike
+## DeliveryPackage._is_run_active(), a company trip box (D-0710.d) alone does not count: its saves pay no
+## campaign merit (CrewProgression.merit is the classic campaign's, saved with it).
+static func delivery_running(p: DeliveryPackage) -> bool:
+	var run: Node = PackageAutoloads.run_manager(p)
+	return run == null or bool(run.get("is_running"))

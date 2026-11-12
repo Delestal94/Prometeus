@@ -45,6 +45,11 @@ extends Node
 ##
 ## A delivery is timed with the shed's clock, the one its order's window ran on (delivery_minute(), rule 4 of
 ## clientes.md), not with minute(): whoever settles at a door (D-0340) passes that minute to OrderSettlement.settle.
+##
+## A box that broke on the road reaches the close of its trip (D-0710.d): when a trip closes, by the gate, by a tow
+## or because its vehicle left the world, the boxes of it that `box_broken` names go to Trip.close() and stay in
+## Trip.broken_ids, which trip_closed's listeners read. Still ids only: what a broken box is, is asked (TripCargo
+## answers from its package). Their products are not moved here, as tow() says.
 
 signal trip_started(trip: Trip)
 signal trip_closed(trip: Trip, failed: Array[StringName])
@@ -88,6 +93,9 @@ var hold_at_gate: bool = true
 ## Whether a vehicle doesn't carry a box staged on it, Callable(vehicle_id: StringName, box_id: StringName) -> bool
 ## (CompanyDispatch). Unset: it carries them all.
 var left_behind: Callable = Callable()
+## Whether a box is broken now, Callable(box_id: StringName) -> bool (TripCargo.add_to(): its package is ruined, or its
+## contents are out). Asked for each box of a trip as it closes. Unset: none is.
+var box_broken: Callable = Callable()
 ## Real milliseconds between two departure_held of the same vehicle.
 var held_notice_msec: int = roundi(CompanyTuning.GATE_HELD_NOTICE_REAL_SECONDS * 1000.0)
 
@@ -285,10 +293,11 @@ func forget(vehicle_id: StringName) -> void:
 ## Answers as tow_home() does; only when it went through (ok) the trip leaves the active ones and trip_closed says what
 ## failed, so the day stops waiting for it. The vehicle is put in the yard by the caller (CompanyFleet.send_home()):
 ## when the gate then sees it come in, there is no trip left to close. The products of the boxes are not moved (no
-## Inventory is handed: that move is an event of its own, as when the gate closes a trip).
+## Inventory is handed: that move is an event of its own, as when the gate closes a trip); the boxes that broke are
+## told (broken_boxes()).
 func tow(vehicle_id: StringName, vehicle_state: StringName, wallet: Object) -> Dictionary:
 	var trip: Trip = _active.get(vehicle_id)
-	var answer: Dictionary = TripTow.tow_home(trip, vehicle_state, wallet, book, minute())
+	var answer: Dictionary = TripTow.tow_home(trip, vehicle_state, wallet, book, minute(), null, broken_boxes(trip))
 	if bool(answer["ok"]):
 		_active.erase(vehicle_id)
 		_closed.append(trip)
@@ -418,9 +427,21 @@ func _on_returned(vehicle_id: StringName) -> void:
 	if trip == null:
 		return
 	_active.erase(vehicle_id)
-	var failed: Array[StringName] = trip.close(book, minute())
+	var failed: Array[StringName] = trip.close(book, minute(), null, broken_boxes(trip))
 	_closed.append(trip)
 	trip_closed.emit(trip, failed)
+
+
+## The boxes of `trip` that are broken now (box_broken), in the trip's order: what its close is told. None for no
+## trip, or with nobody to ask.
+func broken_boxes(trip: Trip) -> Array[StringName]:
+	var broken: Array[StringName] = []
+	if trip == null or not box_broken.is_valid():
+		return broken
+	for box_id: StringName in trip.box_ids:
+		if bool(box_broken.call(box_id)):
+			broken.append(box_id)
+	return broken
 
 
 ## The game minute now (minute_now's, 0 while it is unset): the trips' times, and the minute a
