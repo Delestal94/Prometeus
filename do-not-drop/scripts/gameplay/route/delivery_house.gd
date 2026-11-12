@@ -271,7 +271,7 @@ func _ring_checked(box: DeliveryPackage) -> void:
 	handed_over_open = _sound(box) and box.is_open
 	delivered_package_id = box.package_id
 	box.consume(_resident.global_position)
-	_play_reaction_sound(result)
+	# No sound of the box's looks here: the door plays the customer's verdict on every peer (CompanyDoor).
 	resolved.emit(result, delivered_package_id)
 
 
@@ -296,13 +296,13 @@ func _resolve(result: StringName, package: DeliveryPackage) -> void:
 		# (level_base.gd -> RunManager) still sees a valid package. consume()
 		# also empties the carrier's hands, which a bare free never did.
 		package.consume(_resident.global_position)
-	_play_reaction_sound(result)
+	play_reaction_sound(result)
 	resolved.emit(result, delivered_package_id)
 
 
 ## The resident's reaction follows what they were actually handed: a groan for a wreck, the same groan quieter for
-## something dented, a cheer for a box that made it.
-func _play_reaction_sound(result: StringName) -> void:
+## something dented, a cheer for a box that made it. The company world's door calls it with the customer's verdict.
+func play_reaction_sound(result: StringName) -> void:
 	var groan: bool = result in [OUTCOME_RUINED, OUTCOME_AT_RISK]
 	_reaction_player.stream = SynthAudio.creature_groan() if groan else SynthAudio.neighbor_cheer()
 	_reaction_player.volume_db = (WorldMix.RESIDENT_GROAN_DB if groan else WorldMix.RESIDENT_CHEER_DB) + (WorldMix.RESIDENT_AT_RISK_OFFSET_DB if result == OUTCOME_AT_RISK else 0.0)

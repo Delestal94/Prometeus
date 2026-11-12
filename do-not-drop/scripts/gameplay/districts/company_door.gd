@@ -12,7 +12,7 @@ extends Node
 ## next (DeliveryHouse.door_check: the delivery run's door is unchanged).
 ##
 ## Settling (settle(), host): OrderSettlement.settle() on the trips' own book (CompanyTrips.book) with what the box
-## holds (BoxToPackage.META_PACKED_BOX) against the order, its broken units (every unit of a ruined box, broken_of())
+## holds (BoxToPackage.META_PACKED_BOX) against the order, its broken units (every unit of a wrecked box, broken_of())
 ## and the shed's minute (CompanyTrips.delivery_minute()); the Trip records it (Trip.record_settled()). The customer's
 ## money never goes into CompanyState straight: settle() is handed a Till that keeps each earn(), and the host
 ## publishes, in this order, order_delivered (CompanyOrdersNet: every peer closes the order in the shared book with
@@ -22,8 +22,8 @@ extends Node
 ##
 ## Every peer, on order_delivered (CompanyNet.event_applied): EventBus.order_delivered(order) and the customer's
 ## reaction at that house's door when the house is in this peer's tree (D-0817.b: OrderDoorReaction from the host's
-## stars, cheer, shrug or angry, its line in this peer's language and its gesture, the same seed and house on every
-## peer). It names no autoload: EventBus and NetworkManager are reached by path (N-919).
+## stars, cheer, shrug or angry, its line in this peer's language, its gesture and the resident's sound, the same seed
+## and house on every peer). It names no autoload: EventBus and NetworkManager are reached by path (N-919).
 ##
 ## A script (the company-day bot) delivers through the game's path: take the DeliveryPackage off the van's rack
 ## (its InteractionArea's interact(player)), ring the DoorbellPoint of the order's house (house.doorbell.interact(
@@ -93,16 +93,17 @@ func is_host() -> bool:
 	return net != null and is_instance_valid(net) and net.is_host() and trips != null and is_instance_valid(trips)
 
 
-## Host, DeliveryHouse.door_check: `box` rung at `at` with `outcome` (DeliveryHouse.outcome_for()). True when it
-## settled the order it was dispatched for (settle()), false when the house hands it back.
-func ring(at: DeliveryHouse, box: DeliveryPackage, outcome: StringName) -> bool:
+## Host, DeliveryHouse.door_check: `box` rung at `at` (the outcome its state gives is the house's, for its own
+## sound; the door judges the box by TripCargo.is_broken()). True when it settled the order it was dispatched for
+## (settle()), false when the house hands it back.
+func ring(at: DeliveryHouse, box: DeliveryPackage, _outcome: StringName) -> bool:
 	if box == null or at == null:
 		return false
 	var order_id: StringName = order_for(StringName(at.name), box)
 	if order_id == &"":
 		return false
 	var packed: PackedBox = packed_box_of(box)
-	return bool(settle(order_id, packed, broken_of(packed, outcome), box.package_id)["ok"])
+	return bool(settle(order_id, packed, broken_of(packed, TripCargo.is_broken(box)), box.package_id)["ok"])
 
 
 ## Host: the order `box` settles at house `house_id`: one of a trip out, for that house, not delivered yet, whose box
@@ -134,6 +135,10 @@ func settle(order_id: StringName, packed: PackedBox, broken: Array, package_id: 
 	var trip: Trip = _trip_of(order_id)
 	var shared: StringName = net.orders.book.state_of(order_id)
 	if trip == null or (shared != Order.STATE_OUT and shared != Order.STATE_LATE):
+		return failed
+	# What would keep order_delivered from going out is checked before anything changes: refused after settling, the
+	# shared book would keep the order out (-3 at the close) for a box already paid for and gone.
+	if net.is_applying() or not CompanyOrdersNet.delivered_ok(_probe(order_id, package_id)):
 		return failed
 	var till := Till.new(net.company)
 	var result: Dictionary = OrderSettlement.settle(
@@ -170,17 +175,27 @@ static func packed_box_of(box: DeliveryPackage) -> PackedBox:
 	return PackedBox.new()
 
 
-## The broken units of a box handed over with `outcome`: every unit of a ruined one (one product id per unit), none
-## otherwise (a dented or open box arrives whole: decisión 2026-11-11-puerta-del-cliente).
-static func broken_of(packed: PackedBox, outcome: StringName) -> Array:
+## The broken units of a box handed over `wrecked` (TripCargo.is_broken(): ruined, or its contents out and not put
+## back, care.needs_restore, the rule the trip's close uses): every unit of it, one product id per unit; none for a
+## box only dented or open (it arrives whole: decisión 2026-11-11-puerta-del-cliente).
+static func broken_of(packed: PackedBox, wrecked: bool) -> Array:
 	var broken: Array = []
-	if packed == null or outcome != DeliveryHouse.OUTCOME_RUINED:
+	if packed == null or not wrecked:
 		return broken
 	var contents: Dictionary = packed.contents()
 	for product: StringName in contents:
 		for _unit: int in int(contents[product]):
 			broken.append(product)
 	return broken
+
+
+## An order_delivered for `order_id` and the box `package_id` with every number settle() can give in range: what
+## delivered_ok() says of it is what it says of the real one for the ids and the host's reputation.
+func _probe(order_id: StringName, package_id: StringName) -> Dictionary:
+	return {
+		"order": order_id, "package_id": package_id, "paid": 0, "tip": 0, "stars": CompanyTuning.STARS_MIN,
+		"quality": 0, "intact": true, "penalties": [], "reputation": float(net.company.get(&"reputation")),
+	}
 
 
 ## The trip out that carries `order_id`, or null.
@@ -233,6 +248,8 @@ func _on_event_applied(_seq: int, kind: StringName, data: Dictionary) -> void:
 	var at: DeliveryHouse = house(StringName(net.orders.book.get_order(order_id).get("house_id", "")))
 	if at != null and at.reaction != null:
 		var shown: Dictionary = reaction_of(data, at.house_index, _session_seed())
+		# The sound follows the customer's verdict, not the box's looks: a box in good shape missing a product is no cheer.
+		at.play_reaction_sound(shown["scene"])
 		at.reaction.react(shown["scene"], tr(shown["line"]))
 
 

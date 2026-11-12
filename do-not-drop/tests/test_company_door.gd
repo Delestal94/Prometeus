@@ -11,16 +11,19 @@ extends SceneTree
 ##   (wrong_package_offered, still in the hands); the right box settles its order: OrderSettlement through the door,
 ##   DELIVERED with the host's stars in the shared book and in the trips' book, recorded on the Trip, the box consumed
 ##   and its units gone from package:<box>, the events order_delivered then wallet_moved (order_paid, then tip), the
-##   money moved by exactly what was paid, EventBus.order_delivered heard; one house takes two orders in a row; a box
-##   missing a product pays less than the order (penalty `wrong`), costs reputation and the customer reacts angry
-##   (5, 3 and 1 stars cheer, shrug and fume with a translated line); the van comes back with nothing failed and no
-##   order charged the -3 of a failed one;
+##   money moved by exactly what was paid, EventBus.order_delivered heard; a settle whose order_delivered the host
+##   would refuse changes nothing; one house takes two orders in a row; a box missing a product pays less than the
+##   order (penalty `wrong`), costs reputation and the customer reacts angry with the verdict's groan, not a cheer
+##   (5, 3 and 1 stars cheer, shrug and fume with a translated line); a box wrecked and taped with its contents still
+##   out (care.needs_restore) pays as broken and is not intact in either book; the van comes back with nothing failed
+##   and no order charged the -3 of a failed one;
 ## - order_delivered's shape: the host publishes none for an unknown order, one already delivered, stars 0, an unknown
 ##   or repeated penalty, a missing or extra key, a float pay, a reputation out of range (no seq);
 ## - a host and a client as ENet peers, each with its CompanyNet, trips view, door and a house of Centro: a box rung
 ##   at the host's house leaves both books equal (DELIVERED, the host's stars), the same money and last ledger
 ##   entries, the same reputation (it travels absolute) and the box's units gone on both; the client hears
-##   EventBus.order_delivered and its house's customer reacts with the same line; a client's door settles nothing.
+##   EventBus.order_delivered and its house's customer reacts with the same line and sound; a client's door settles
+##   nothing.
 ## Expected in the log: CompanyNet's error for each malformed order_delivered the host refuses ("could not apply its
 ## own").
 
@@ -29,6 +32,7 @@ const DIR: String = "user://test_company_door"
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
 const HEN: ProductDefinition = preload("res://data/products/hen.tres")
 const BREAD: ProductDefinition = preload("res://data/products/sourdough.tres")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const PORT: int = 24761
 const ZONE: StringName = &"centro"
 
@@ -114,18 +118,19 @@ func _play_world(level: CompanyRoot, door: CompanyDoor) -> void:
 	var two: Dictionary = _order(&"d_two", homes[0].id,
 		[{"product": &"hen", "qty": 1}, {"product": &"sourdough", "qty": 1}])
 	var three: Dictionary = _order(&"d_three", homes[1].id, [{"product": &"hen", "qty": 1}])
-	for order: Dictionary in [one, two, three]:
+	var four: Dictionary = _order(&"d_four", homes[1].id, [{"product": &"hen", "qty": 1}])
+	for order: Dictionary in [one, two, three, four]:
 		_expect(net.publish(CompanyOrdersNet.ADDED, {"order": order}), "Order %s comes in" % order["id"])
 	var boxes: Array[StringName] = []
 	var packages: Dictionary = {}
-	for order: Dictionary in [one, two, three]:
+	for order: Dictionary in [one, two, three, four]:
 		var package: DeliveryPackage = _box(level, order["id"])
 		packages[order["id"]] = package
 		boxes.append(package.package_id)
 		dispatch._order_of[package.package_id] = order["id"]
 	var van_body: Node3D = level.fleet.vehicles()[0]
 	var van := StringName(van_body.name)
-	trips.stage_cargo(van, [&"d_one", &"d_two", &"d_three"], boxes)
+	trips.stage_cargo(van, [&"d_one", &"d_two", &"d_three", &"d_four"], boxes)
 	dispatch._on_loaded(van, boxes)
 	trips.gate.departed.emit(van)
 	var trip: Trip = trips.trip_of(van)
@@ -137,6 +142,7 @@ func _play_world(level: CompanyRoot, door: CompanyDoor) -> void:
 		return
 	var player: Player = level.player as Player
 	var rep_start: float = float(net.company.get(&"reputation"))
+	var money_start: int = int(net.company.get(&"money"))
 
 	# An empty-handed ring changes nothing.
 	var seq: int = net.seq
@@ -158,6 +164,11 @@ func _play_world(level: CompanyRoot, door: CompanyDoor) -> void:
 		and net.orders.book.state_of(&"d_three") == Order.STATE_OUT,
 		"Another house's order and a house with no order hand the box back (refusals %d, seq %d)"
 		% [refusals.size(), net.seq - seq])
+	# An order_delivered the host would refuse (a box id that is no short id) settles nothing: both books keep it out.
+	var refused: Dictionary = door.settle(&"d_three", CompanyDoor.packed_box_of(box_three), [], &"")
+	_expect(not bool(refused["ok"]) and net.seq == seq and trips.book.state_of(&"d_three") == Order.STATE_OUT
+		and not (&"d_three" in trip.delivered_ids) and int(net.company.get(&"money")) == money_start,
+		"A settle whose order_delivered would be refused changes nothing (got %s)" % [refused])
 	await _deliver(level, house_b, box_three, &"d_three", trip)
 
 	# One house, two orders in a row.
@@ -174,17 +185,35 @@ func _play_world(level: CompanyRoot, door: CompanyDoor) -> void:
 		"The box missing a product pays less than the order (%s of %d, %s)"
 		% [settled.get("paid"), two["pay"], settled.get("kinds")])
 	_expect(_reaction(house_a) == &"grab_head", "...and the customer reacts angry (got %s)" % _reaction(house_a))
+	_expect(is_equal_approx(_sound_db(house_a), WorldMix.RESIDENT_GROAN_DB),
+		"...with the groan of the verdict, not the cheer of an untouched box (%.1f dB)" % _sound_db(house_a))
 	_expect(float(net.company.get(&"reputation")) < rep_before,
 		"...and it costs reputation (%.1f to %.1f)" % [rep_before, float(net.company.get(&"reputation"))])
 	_check_reactions(house_a.house_index)
 
+	# A box wrecked on the way and taped, its contents not put back (care.needs_restore: the box only reads dented).
+	var box_four: DeliveryPackage = packages[&"d_four"]
+	box_four.care.begin_crisis(&"fragile", true)
+	box_four.care.complete_tool(&"tape")
+	_take(box_four, player)
+	_expect(box_four.care.needs_restore and box_four.trap_state == ITrapBehavior.TrapState.AT_RISK,
+		"The fourth box is taped with its contents still out (needs_restore, reads AT_RISK)")
+	var wrecked: Dictionary = await _deliver(level, house_b, box_four, &"d_four", trip)
+	var four_shared: Dictionary = net.orders.book.get_order(&"d_four")
+	_expect(int(wrecked.get("paid", -1)) < int(four["pay"]) and (wrecked.get("kinds", []) as Array).has(
+		OrderPenalties.KIND_BROKEN) and not bool(four_shared.get("intact", true))
+		and not bool(trips.book.get_order(&"d_four").get("intact", true)),
+		"A wrecked box pays less, as broken, and is not intact in either book (%s of %d, %s, intact %s)"
+		% [wrecked.get("paid"), four["pay"], wrecked.get("kinds"), four_shared.get("intact")])
+
+	var rep_back: float = float(net.company.get(&"reputation"))
 	trips.gate.returned.emit(van)
 	_expect(trips.trip_of(van) == null and trip.failed_ids.is_empty()
 		and net.orders.book.state_of(&"d_one") == Order.STATE_DELIVERED,
 		"The van comes back with nothing failed (failed %s)" % [trip.failed_ids])
-	_expect(float(net.company.get(&"reputation")) >= rep_start - 1.0,
-		"...no order cost the -3 of a failed one (reputation %.1f to %.1f)"
-		% [rep_start, float(net.company.get(&"reputation"))])
+	_expect(is_equal_approx(float(net.company.get(&"reputation")), rep_back),
+		"...no order cost the -3 of a failed one at the van's return (reputation %.1f to %.1f, %.1f at the start)"
+		% [rep_back, float(net.company.get(&"reputation")), rep_start])
 
 
 ## Rings `at` with `box` in the player's hands and checks the order settled everywhere. Returns settle()'s result.
@@ -376,6 +405,10 @@ func _play_network() -> void:
 	_expect(_client.house.reaction.last_line == tr(expected["line"]) and not String(expected["line"]).is_empty()
 		and _client.house.reaction.last_line == _host.house.reaction.last_line,
 		"The customer reacts on the client too, with the host's line (got '%s')" % _client.house.reaction.last_line)
+	_expect(_client.house._reaction_player.stream != null
+		and is_equal_approx(_sound_db(_client.house), _sound_db(_host.house)),
+		"...and the resident's sound plays on the client too, the host's (%.1f dB, host %.1f dB)"
+		% [_sound_db(_client.house), _sound_db(_host.house)])
 	hands.free()
 	if is_instance_valid(package):
 		package.free()
@@ -412,6 +445,11 @@ func _take(box: DeliveryPackage, player: Player) -> void:
 
 func _reaction(house: DeliveryHouse) -> StringName:
 	return house.reaction.last_action if house.reaction != null else &""
+
+
+## The volume of the resident's last sound at `house`: the groan and the cheer each have their own.
+func _sound_db(house: DeliveryHouse) -> float:
+	return house._reaction_player.volume_db
 
 
 func _order(id: StringName, house: StringName, items: Array) -> Dictionary:
