@@ -64,6 +64,7 @@ extends Node3D
 ## when a trip starts or closes; the "TripsView" child (CompanyTripsView, every peer) is how every peer, the host
 ## too, knows which vehicles are out (CompanyNet events and the snapshot). A client has no CompanyTrips; its
 ## "GateBrake" (D-0316.4) brakes its copy at the gate. The host's "Tow" (CompanyTow, D-0307.1) takes a stuck van home.
+## The customer's door is the "CompanyDoor" child (every peer, D-0340): a box rung at a house settles its order.
 ##
 ## A taped box becomes a DeliveryPackage on every peer, under World/Packages (D-0715.b, CompanyNet's
 ## table.packages); the host's are tracked by the cells, so one left where no cell is loaded freezes
@@ -206,6 +207,7 @@ func _ready() -> void:
 	_add_builder()
 	_add_stock_board()
 	CompanyDispatch.add_to(self)
+	CompanyDoor.add_to(self, net, trips)
 	CompanyOnboardingTracker.add_to(self)
 	CompanyUi.add_to(self)
 	_add_summary_panel()
