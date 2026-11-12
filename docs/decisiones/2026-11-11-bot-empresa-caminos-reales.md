@@ -31,7 +31,7 @@ funciona" sin que el juego pudiera hacer ese día: un `BOT_OK` falso escondía j
   un volante o el autoelevador. Como el bot se teletransporta, el número del jugador del host es chico (menos de 1 s);
   el que dice algo es el del segundo jugador mientras la van está afuera, que trabaja a ritmo de persona (6 s entre
   cosa y cosa, `STEP_SECONDS`).
-- **El ocio del segundo jugador queda medido y en rojo:** con 2 jugadores el que se queda pasa 157 s sin trabajo
+- **El ocio del segundo jugador queda medido y en rojo:** con 2 jugadores el que se queda pasa de 157 a 342 s sin trabajo
   mientras la van está afuera, casi siempre porque los estantes no tienen lo que piden los pedidos que entran. No se
   ablanda el límite de 120 s ni se le inventa trabajo en el bot: es un número del día (stock inicial, proveedor) que
   queda para decidir en [`revisar/D-2016.4.md`](../expansion-distritos/revisar/D-2016.4.md). Para explicarlo, el bot

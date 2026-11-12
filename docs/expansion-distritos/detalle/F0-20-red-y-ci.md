@@ -195,7 +195,7 @@ simulados (peers ENet locales o actores locales).
   guardado del juego en `SUMMARY`), arma y entrega **6 cajas**, juega un segundo jugador real del equipo, imprime
   `BOT_STUB` por cada atajo (bloquea `BOT_OK`) y mide `profit`, `engine_errors` e `idle_max_s_<peer>`; límite duro
   1200 s; las cajas rotas en la salida (D-0710.d) cuentan en `breaks`; `CompanyShed.station_for` resuelve las mesas (`table:<uid>`). Con 1 jugador: 9 etapas `ok`,
-  `BOT_FAIL stubs=4`; con 2 además `idle_2=157` (el que se queda se queda sin stock). Quedan los atajos
+  `BOT_FAIL stubs=4`; con 2 además `idle_2` de 157 a 342 s (el que se queda se queda sin stock); 4 de 6 cajas se rompen en la salida (D-0710.d). Quedan los atajos
   `pallet_unload` (D-0607.c), `table_use` (D-0701.b), `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 +
   D-0815.b), y el ocio del segundo jugador. Revisar: [`revisar/D-2016.4.md`](../revisar/D-2016.4.md);
   [decisión](../../decisiones/2026-11-11-bot-empresa-caminos-reales.md).

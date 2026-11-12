@@ -201,9 +201,11 @@ Bot `tests/bot_company_day.gd` (headless, termina solo; las etapas del galpón e
 - Hoy (2026-11-11) las 9 etapas pasan con 1 y con 2 jugadores, ganancia positiva y sin errores del motor.
   Con 1 jugador la línea final es `BOT_FAIL stubs=4`: quedan `pallet_unload` (D-0607.c), `table_use`
   (D-0701.b), `order_claim` (D-0804 / D-0807) y `door_settle` (D-0340 + D-0815.b). Con 2 jugadores además
-  `idle_2=157`: el que se queda arma 3 cajas más y después se queda sin stock en los estantes para los
-  pedidos que entran (`BOT_INFO stay_waits no_order=10 no_stock=35`). La corrida completa tarda unos
-  7 a 8 minutos (la van visita varias casas de ida y vuelta).
+  `idle_2` entre 157 y 342 s según cuánto tarde la van: el que se queda arma 3 cajas más y después se queda
+  sin stock en los estantes para los pedidos que entran (`BOT_INFO stay_waits no_order=1 no_stock=44`).
+  Desde D-0710.d las trampas corren en la salida y el piloto no cuida las cajas: 4 de 6 llegan rotas
+  (`breaks=4`) y la ganancia baja (582 con 1 jugador, 349 con 2). La corrida completa tarda de 8 a 13
+  minutos según la carga de la PC (la van visita varias casas de ida y vuelta).
 - Son hallazgos: `no_opening`, `BOT_TIMEOUT`, una etapa que pasa de `ok` a falla, un `BOT_STUB` nuevo,
   `profit` ≤ 0, cualquier `BOT_ERROR`/`ERROR`/`SCRIPT ERROR` del log y un `idle_max_s` sobre 120. Los
   avisos de fin de proceso (`ObjectDB instances were leaked`, `resources still in use`, de todo
